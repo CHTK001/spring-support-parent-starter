@@ -101,7 +101,13 @@
         <dependencies>
             <dependency>
                 <groupId>com.chua</groupId>
-                <artifactId>utils-support-common-starter</artifactId>
+                <artifactId>utils-support-hibernate-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-httpclient-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
         </dependencies>
