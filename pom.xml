@@ -17,13 +17,14 @@
     <version>3.1.0</version>
     <modules>
         <module>spring-support-datasource-starter</module>
+        <module>spring-support-common-starter</module>
     </modules>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
-        <module.version>2.7.0</module.version>
+        <module.version>3.1.0</module.version>
 
         <mybatis-plus.version>3.4.0</mybatis-plus.version>
         <dubbo.version>3.1.1</dubbo.version>
@@ -97,6 +98,13 @@
 
 
     <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-common-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+        </dependencies>
     </dependencyManagement>
 
 
