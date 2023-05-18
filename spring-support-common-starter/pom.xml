@@ -19,6 +19,12 @@
 
     <dependencies>
         <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-core</artifactId>
+            <version>4.4.0</version>
+        </dependency>
+
+        <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-httpclient-starter</artifactId>
         </dependency>
@@ -26,6 +32,16 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-hibernate-starter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-guava-starter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-groovy-starter</artifactId>
         </dependency>
     </dependencies>
 
