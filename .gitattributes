@@ -1,0 +1,3 @@
+*.so !text !filter !merge !diff
+*.dll !text !filter !merge !diff
+*.dylib !text !filter !merge !diff
