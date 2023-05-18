@@ -3,13 +3,13 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>spring-starter-support-parent</artifactId>
+        <artifactId>spring-support-parent-starter</artifactId>
         <groupId>com.chua</groupId>
-        <version>2.7.0</version>
+        <version>3.1.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>spring-support-database-starter</artifactId>
+    <artifactId>spring-support-datasource-starter</artifactId>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
