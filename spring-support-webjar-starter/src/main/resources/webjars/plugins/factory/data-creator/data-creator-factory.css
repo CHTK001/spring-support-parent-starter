@@ -1,0 +1,25 @@
+@CHARSET "UTF-8";
+
+.data-creator-datas-grid {
+	display: grid;
+}
+.data-creator-datas-grid .item-result {
+	margin: 5px 5px;
+}
+
+.g-nodata {
+	display: flex;
+	justify-content: center;
+	text-align: center;
+	top: 111px;
+	position: relative;
+	top: 50%;
+}
+
+.data-creator-paginate .pagination {
+	position: relative;
+	left: 44%;
+}
+.pagination > li {
+	cursor: pointer;
+}

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+		<style>
+			.test_mask {
+				border: 1px solid #000000;
+			}
+			button{
+				outline: none;
+				padding: 5px 15px;
+				border: 1px solid #eee;
+				background-color: #FFFFFF;
+				border-radius: 5px;
+				font-size: 12px;
+			}
+			button:hover{
+				cursor: pointer;
+			}#
+			
+			.test_mask{
+				width: 800px;
+				height: 300px;
+				border: 1px solid #BCE8F1;
+			}
+			.top {
+				margin-top: 40px;
+				border-bottom: 1px dashed #ccc;
+			}
+		</style>
+	</head>
+	<body>
+		<div>
+			<button onclick="mask_close_full()">全屏加载层</button>
+			<button onclick="mask_close_all()" style="z-index: 20000">关闭所有加载层</button>
+		</div>
+		<div class="col-md-6">
+			<div class="col-md-12 top">
+				<div class="col-md-2">
+					类型
+				</div>
+				<div class="col-md-10">
+					<select></select>
+				</div>
+			</div>
+			<div class="col-md-12 top">
+				<div class="col-md-2">
+					大小
+				</div>
+				<div class="col-md-10">
+					<input id="w" data-slider-id='ex1Slider' type="text" data-slider-min="0" data-slider-max="40" data-slider-step="1"
+					 data-slider-value="40" />
+					<input id="h" data-slider-id='ex1Slider' type="text" data-slider-min="0" data-slider-max="40" data-slider-step="1"
+					 data-slider-value="20" />
+				</div>
+			</div>
+			<div class="col-md-12 top">
+				<span class="col-md-2">位置top</span>
+				<div class="col-md-10">
+					<input id="top" data-slider-id='ex1Slider' type="text" data-slider-min="-40" data-slider-max="200"
+					 data-slider-step="1" data-slider-value="0" />
+				</div>
+			</div>
+
+			<div class="col-md-12 top">
+				<span class="col-md-2">位置left</span>
+				<div class="col-md-10">
+					<input id="left" data-slider-id='ex1Slider' type="text" data-slider-min="-40" data-slider-max="200"
+					 data-slider-step="1" data-slider-value="0" />
+				</div>
+			</div>
+
+
+			<div class="col-md-12 top">
+				<span class="col-md-2">超时时间</span>
+				<label class="col-md-10">
+					<input id="t" data-slider-id='ex1Slider' type="text" data-slider-min="0" data-slider-max="10000" data-slider-step="1"
+					 data-slider-value="0" />
+				</label>
+			</div>
+
+			<div class="col-md-12 top">
+				<span class="col-md-2">居中</span>
+				<label class="col-md-10">
+					<input type="checkbox" name="my-checkbox" checked>
+				</label>
+			</div>
+
+			<div class="col-md-12 top">
+				<span class="col-md-2">上下排列</span>
+				<label class="col-md-10">
+					<input type="checkbox" name="my-ul" checked>
+				</label>
+			</div>
+		</div>
+
+		<div class="col-md-6">
+			<div class="test_mask_1 col-md-6" style="border: 1px solid #000; height: 400px;"></div>
+			<div class="test_mask_2 col-md-6" style="border: 1px solid #000; height: 400px;"></div>
+			<div style="clear: both;"></div>
+			<div class="test_mask" style="height: 100px; width: 100px"></div>
+			<div style="margin-top: 40px;" class="test_mask">数据1:</div>
+			<div style="margin-top: 40px;" class="test_mask">数据2:</div>
+			<div style="margin-top: 40px;"><span class="test_mask">数据3</span></div>
+			<div style="margin-top: 40px;"><span>数据：</span><span class="test_mask">数据4</span></div>
+			<div style="margin-top: 40px; background-color: #002DF7;"><span>数据：</span><span class="test_mask">数据5</span></div>
+			
+			<div style="margin-top: 40px;">
+				<table>
+					<tr>
+						<td>t</td>
+						<td id="test_mask_3" class="test_mask">1</td>
+                    </tr>
+                    <tr>
+                        <td>t1</td>
+                        <td>11</td>
+                    </tr>
+                </table>
+            </div>
+
+        </div>
+    </body>
+    <script type="text/javascript" src="../../../core.js" data-core></script>
+    <script type="text/javascript">
+        modulejs.plugins(['factory-loading', 'bootstrap-slider', 'bootstrap-switch']);
+    </script>
+    <script type="text/javascript" src="js/loading-factory-main.js"></script>
+
+
+    <script type="text/javascript">
+        let load = function () {
+            let on = $("[name='my-checkbox']").bootstrapSwitch('state');
+            let ul = $("[name='my-ul']").bootstrapSwitch('state');
+
+			$('.test_mask').loading({
+				tl: $('select option:selected').val(),
+				size: [$('#w').val(), $('#h').val()],
+				timeout: $('#t').val(),
+				top: $('#top').val() + 'px',
+				left: left.value + 'px',
+				center: on,
+				layout: ul ? 'ud' : 'lr'
+			});
+
+			$('.test_mask_1').loading({
+				tl: $('select option:selected').val(),
+				size: [$('#w').val() * 2, $('#h').val() * 2],
+				timeout: $('#t').val(),
+				top: $('#top').val() + 'px',
+				left: left.value + 'px',
+				center: on,
+				time: !0,
+				message: '请等待...',
+				layout: ul ? 'ud' : 'lr'
+			});
+
+			$('.test_mask_2').loading({
+				tl: $('select option:selected').val(),
+				size: [$('#w').val() * 2, $('#h').val() * 2],
+				timeout: $('#t').val(),
+				top: $('#top').val() + 'px',
+				left: left.value + 'px',
+				center: on,
+				time: !1,
+				message: '请等待...',
+				layout: ul ? 'ud' : 'lr'
+			});
+		}
+
+		var mask_close_all = function() {
+			$.loaded();
+		}
+
+		var mask_close_full = function() {
+			let ul = $("[name='my-ul']").bootstrapSwitch('state');
+			let on = $("[name='my-checkbox']").bootstrapSwitch('state');
+			$.loading({
+				tl: $('select option:selected').val(),
+				size: [$('#w').val(), $('#h').val()],
+				timeout: $('#t').val(),
+				top: $('#top').val() + 'px',
+				left: left.value + 'px',
+				center: on,
+				layout: ul ? 'ud' : 'lr'
+			});
+		}
+		load();
+	</script>
+</html>
