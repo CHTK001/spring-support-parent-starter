@@ -1,0 +1,39 @@
+$('#imageInput').fileinput({
+				uploadUrl: url,
+				allowedFileExtensions: ['jpg', 'png', 'gif', 'JPEG'],
+				/*上传文件格式*/
+				overwriteInitial: false,
+				maxFileSize: 20000,
+				/*上传文件大小*/
+				language: 'zh',
+				/*中文设置*/
+				showUpload: false,
+				/*是否显示上传按钮*/
+				showPreview: true,
+				showCancel: false,
+				showCaption: false,
+				/*是否显示标题按钮*/
+				showBrowse: false,
+				/*是否显示浏览按钮*/
+				showRemove: false,
+				autoReplace: true,
+				showUploadedThumbs: false,
+				dropZoneTitle: '拖拽文件到这里...',
+				dropZoneClickTitle: '<br>(或点击选择文件,上限1张图片)',
+				browseOnZoneClick: true,
+				maxFilesNum: 1,
+				maxFileCount: 1,
+				/*最大上传文件数量*/
+				showAjaxErrorDetails: false,
+				slugCallback: function(filename) {
+					return filename.replace(new RegExp('\\(', 'gm'), '_').replace(new RegExp(']', 'gm'),
+						'_');
+				}，
+				 uploadExtraData: function () {
+                    debugger
+                }
+			})
+			.on('fileuploaded', function(event, data) {})
+			.on("filebatchselected", function(event, data) {})
+			.on("filebatchuploaderror", function(event, data) {})
+			.on('filecleared', function(event, id) {});

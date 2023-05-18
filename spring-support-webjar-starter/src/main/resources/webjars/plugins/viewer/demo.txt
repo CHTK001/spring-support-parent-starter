@@ -1,0 +1,41 @@
+=============jquery==============
+$(elem).viewer(options);
+==============javascript=============
+var viewer = new Viewer(elem, options);
+
+==============方法=============
+show: Function
+hide: Function
+view: Function
+prev: Function
+next: Function
+move: Function
+==============options=============
+inline: false  启用inline模式
+button: true  显示右上角关闭按钮
+navbar: true  显示缩略图导航
+title: true  显示当前图片标题
+toolbar: true 显示工具栏
+tooltip:true 显示缩放百分比
+moveable: true 可以移动
+zoomable: true 可以缩放
+rotatable: true 可以旋转
+scalable: true 可以翻转
+transition: true css3过度
+fullscreen: true 播放时是否全屏
+keyboard: true 是否支持键盘
+interval: 5000 播放间隔
+zoomRatio: 0.1 缩放比例
+minZoomRatito: 0.01 缩放最小比例
+maxZoomRatito: 100 缩放最大比例
+zIndex: 2015 层级
+zIndexInline: 0
+url: src
+build: Function
+built: Function
+show: Function
+shown: Function
+hide: Function
+hidden: Function
+view: Function
+viewed: Function

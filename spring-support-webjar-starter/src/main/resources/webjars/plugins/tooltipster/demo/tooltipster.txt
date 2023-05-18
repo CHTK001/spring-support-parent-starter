@@ -1,0 +1,69 @@
+1. 引入jQuery和Tooltipster's文件
+
+你可以 点击这里下载, 引入 jQuery 和 Tooltipster's CSS 还有 JavaScript 文件在你的页面
+
+<head>
+    <link rel="stylesheet" type="text/css" href="tooltipster/dist/css/tooltipster.bundle.min.css" />
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.10.0.min.js"></script>
+    <script type="text/javascript" src="tooltipster/dist/js/tooltipster.bundle.min.js"></script>
+</head>
+兼容提醒: jQuery 1.7已经足够了,除非你需要SVG兼容IE(需要使用jQuery 1.10+). Tooltipster 不能正常运行在IE9中引用jQuery1.8
+
+2. 设置你的HTML
+
+想让一个元素加入工具提醒, 我们会给他加上一个类名class 'tooltip' . 你也可以选择使用自定义的类名或选择器(请继续往下看), 由你决定. 之后, 我们将设置标题title 属性为我们想要的提示. 这里有几个例子:
+
+// 在图片加入工具提醒:
+<img src="my-image.png" class="tooltip" title="This is my image's tooltip message!" />
+// 在文字加入工具提醒 (span, div or whatever):
+<span class="tooltip" title="This is my span's tooltip message!">Some text</span>
+注意：如果您使用Twitter's Bootstrap，请使用另一个类名，因为“工具提示”会产生冲突。
+
+3. 激活 Tooltipster
+
+我们要做的最后一件事是激活Tooltipster. 我们需要在头部得问 </head> 标签加入script并激活Tooltipster (你可以选择使用自己定义的选择器 - 我们的栗子是使用 'tooltip' class):
+
+<head>
+    ...
+    <script>
+        $(document).ready(function() {
+            $('.tooltip').tooltipster();
+        });
+    </script>
+</head>
+4. 定义你的tooltips风格
+
+第一个是默认样式, Tooltipster还为你提供另外五种主题风格.
+
+未标题-3.png
+
+Default Light Borderless Punk Noir Shadow
+
+要使用这些主题,需要引用一个css文件 (他的路径是 dist/css/plugins/tooltipster/sideTip/themes 文件里) 在你的页面并指定其名称在Tooltipster's 选项
+
+$('.tooltip').tooltipster({
+    theme: 'tooltipster-noir' //使用Noir主题
+});
+你可以通过修改tooltips的样式达到你想要的效果, 自定义主题部分 在下面等着你.
+
+注: "sideTip" 是 Tooltipster默认插件的名称. 我们稍后会看到这个插件.
+
+5. 在HTML内使用你的tooltips
+
+Tooltipster 允许你使用任何HTML标记触发提醒. 这意味着可以插入像图像和文本格式标记之类的东西。.
+
+代替之前加入的title 属性, 这次我们使用 data-tooltip-content 属性来提供与HTML页面内对应的元素选择器,该元素作为内容显示. 栗子如下:
+
+<span class="tooltip" data-tooltip-content="#tooltip_content">This span has a tooltip with HTML when you hover over it!</span>
+<div class="tooltip_templates">
+    <span id="tooltip_content">
+        <img src="myimage.png" /> <strong>This is the content of my tooltip!</strong>
+    </span>
+</div>
+在你的CSS文件, 加入 .tooltip_templates { display: none; } 这样内容不会在工具提示之外显示出来.
+
+重点: 如果你有两个(或以上)的tooltips有相同的 data-tooltip-content 属性 (也就是说, 你想用一样的HTML元素), 请将 contentCloning 选项设置为 true 当你初始化你的tooltips:
+
+$('.tooltip').tooltipster({
+    contentCloning: true
+});
