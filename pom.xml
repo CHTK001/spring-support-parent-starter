@@ -30,6 +30,7 @@
         <module>spring-support-config-client-starter</module>
         <module>spring-support-config-server-starter</module>
         <module>spring-support-cacheable-starter</module>
+        <module>spring-support-webjar-extension-starter</module>
     </modules>
 
     <properties>
