@@ -1,0 +1,9 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+  com.chua.starter.oauth.client.support.configuration.AuthClientConfiguration
+com.chua.starter.oauth.client.support.advice.AdviceResolver=\
+  com.chua.starter.oauth.client.support.advice.HtmlAdviceResolver,\
+  com.chua.starter.oauth.client.support.advice.JsonAdviceResolver,\
+  com.chua.starter.oauth.client.support.advice.OctetAdviceResolver,\
+  com.chua.starter.oauth.client.support.advice.XmlAdviceResolver
+com.chua.starter.oauth.client.support.protocol.Protocol=\
+  com.chua.starter.oauth.client.support.protocol.HttpProtocol

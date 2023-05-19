@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<configuration scan="false" scanPeriod="60000" debug="false">
+    <statusListener class="ch.qos.logback.core.status.NopStatusListener"/>
+    <property name="ROTATE_PATTERN" value="%d{yyyy-MM-dd}.%i"/>
+    <property name="MONITOR_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS}|%thread|%X{serverId}|%msg%n"/>
+
+    <!-- 彩色日志 -->
+    <!-- 彩色日志依赖的渲染类 -->
+    <conversionRule conversionWord="clr" converterClass="org.springframework.boot.logging.logback.ColorConverter"/>
+    <conversionRule conversionWord="wex"
+                    converterClass="org.springframework.boot.logging.logback.WhitespaceThrowableProxyConverter"/>
+    <conversionRule conversionWord="wEx"
+                    converterClass="org.springframework.boot.logging.logback.ExtendedWhitespaceThrowableProxyConverter"/>
+    <property name="LOG_FILE_LOCATION" value="./log-file"/>
+    <!-- 彩色日志格式 -->
+    <property name="CONSOLE_LOG_PATTERN_COLOR"
+              value="%red([%date{yyyy-MM-dd HH:mm:ss}]) %highlight([%-5level]) %blue([%X{traceId}]) %red([%thread]) %boldMagenta([%logger:%L]) - %msg%n"/>
+    <property name="CONSOLE_LOG_PATTERN"
+              value="[%date{yyyy-MM-dd HH:mm:ss}] [%-5level] [%X{traceId}] [%thread] %logger:%L - %msg%n"/>
+    <!-- 设置 logger context 名称,一旦设置不可改变，默认为default -->
+    <contextName>sso-server</contextName>
+    <!-- Console 输出设置 -->
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <!-- encoder class为空时, 默认也为 ch.qos.logback.classic.encoder.PatternLayoutEncoder -->
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>${CONSOLE_LOG_PATTERN_COLOR}</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 按照每天生成日志文件 -->
+    <appender name="MONITOR_LOGGER_DB_OPERATION_APPENDER" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_FILE_LOCATION}/database.log</file>
+        <encoder>
+            <pattern>${MONITOR_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_FILE_LOCATION}/log.${ROTATE_PATTERN}</fileNamePattern>
+            <maxHistory>3</maxHistory>
+            <maxFileSize>200MB</maxFileSize>
+            <totalSizeCap>1000MB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <!-- 至多只能配置一个root -->
+    <root level="info">
+        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="FILE"/>
+    </root>
+
+</configuration>

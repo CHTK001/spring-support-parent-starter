@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.server.mapper.DeptMapper">
+
+    <select id="getSanmen2" resultType="com.boren.biz.entity.dict.EleDict">
+        select dict_name from sanmen_park.ele_admin_dict union all select dict_item_name dict_name from zxb2_school.ele_dict_item
+    </select>
+</mapper>

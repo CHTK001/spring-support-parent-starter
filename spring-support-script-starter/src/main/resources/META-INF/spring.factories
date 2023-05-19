@@ -1,0 +1,11 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+  com.chua.starter.script.configuration.ScriptConfiguration
+com.chua.starter.script.adaptor.Adaptor=\
+  com.chua.starter.script.adaptor.FileAdaptor,\
+  com.chua.starter.script.adaptor.MysqlAdaptor
+com.chua.starter.script.watchdog.Watchdog=\
+  com.chua.starter.script.watchdog.FileWatchdog,\
+  com.chua.starter.script.watchdog.MysqlWatchdog
+com.chua.starter.script.marker.Marker=\
+  com.chua.starter.script.marker.JavaMarker,\
+  com.chua.starter.script.marker.GroovyMarker

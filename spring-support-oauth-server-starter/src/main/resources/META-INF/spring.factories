@@ -1,0 +1,6 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+  com.chua.starter.oauth.server.support.configuration.EnableAuthServerConfiguration,\
+  com.chua.starter.oauth.server.support.configuration.EnableRedisTokenManagerConfiguration
+org.springframework.boot.env.EnvironmentPostProcessor=\
+  com.chua.starter.oauth.server.support.configuration.EnableAuthServerConfiguration
+  
