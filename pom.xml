@@ -18,6 +18,15 @@
     <modules>
         <module>spring-support-datasource-starter</module>
         <module>spring-support-common-starter</module>
+        <module>spring-support-schedule-server-starter</module>
+        <module>spring-support-schedule-client-starter</module>
+        <module>spring-support-starter-demo-server</module>
+        <module>spring-support-starter-demo-client</module>
+        <module>spring-support-mybatis-starter</module>
+        <module>spring-support-script-starter</module>
+        <module>spring-support-shell-starter</module>
+        <module>spring-support-oauth-client-starter</module>
+        <module>spring-support-oauth-server-starter</module>
     </modules>
 
     <properties>
@@ -25,6 +34,7 @@
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
         <module.version>3.1.0</module.version>
+        <spring-boot.version>2.7.8</spring-boot.version>
 
         <mybatis-plus.version>3.4.0</mybatis-plus.version>
         <dubbo.version>3.1.1</dubbo.version>
@@ -114,6 +124,66 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-guava-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-schedule-client-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-common-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-datasource-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-schedule-server-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>s-support-datasource-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-mybatis-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-script-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-shell-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-oauth-client-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-oauth-server-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
         </dependencies>

@@ -1,0 +1,26 @@
+server:
+  port: 9999
+plugin:
+  configuration:
+    config-address: 127.0.0.1:8888
+    config-name: test
+    config-app-name: test-app
+  cors:
+    enable: true
+  oauth:
+    auth-address: http://127.0.0.1:8888
+    whitelist:
+      - /config/listener
+  remote:
+    application:
+      name: client
+    protocols:
+      - name: dubbo
+        port: 20880
+    registry:
+      protocol: zookeeper
+      address: 127.0.0.1:2181
+spring:
+  application:
+    name: test
+
