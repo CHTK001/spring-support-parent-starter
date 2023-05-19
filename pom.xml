@@ -29,6 +29,7 @@
         <module>spring-support-oauth-server-starter</module>
         <module>spring-support-config-client-starter</module>
         <module>spring-support-config-server-starter</module>
+        <module>spring-support-cacheable-starter</module>
     </modules>
 
     <properties>
@@ -205,6 +206,12 @@
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-config-server-starter</artifactId>
                 <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-cacheable-starter</artifactId>
+                <version>3.1.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

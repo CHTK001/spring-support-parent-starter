@@ -20,7 +20,7 @@
     <dependencies>
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-config-client-support</artifactId>
+            <artifactId>spring-support-config-client-starter</artifactId>
         </dependency>
 
         <dependency>
@@ -30,7 +30,7 @@
 
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-oauth-client-support</artifactId>
+            <artifactId>spring-support-oauth-client-starter</artifactId>
         </dependency>
 
     </dependencies>

@@ -21,7 +21,7 @@
 
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-config-server-support</artifactId>
+            <artifactId>spring-support-config-server-starter</artifactId>
         </dependency>
 
         <dependency>
@@ -31,7 +31,7 @@
 
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-oauth-server-support</artifactId>
+            <artifactId>spring-support-oauth-server-starter</artifactId>
         </dependency>
 
         <dependency>
