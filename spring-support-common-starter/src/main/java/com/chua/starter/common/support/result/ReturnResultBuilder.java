@@ -1,6 +1,6 @@
 package com.chua.starter.common.support.result;
 
-import com.chua.common.support.reflect.reflections.ReflectionUtils;
+import com.chua.common.support.utils.ClassUtils;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -133,13 +133,13 @@ public class ReturnResultBuilder<T> {
      * @param value    value
      */
     private void render(Class<?> aClass, T realType, String entryKey, Object value) {
-        Field field = ReflectionUtils.findField(aClass, entryKey);
+        Field field = ClassUtils.findField(aClass, entryKey);
         if (null == field) {
             return;
         }
-        ReflectionUtils.makeAccessible(field);
+        ClassUtils.setAccessible(field);
         try {
-            ReflectionUtils.setField(field, realType, value);
+            ClassUtils.setFieldValue(field, value, realType);
         } catch (Exception ignored) {
         }
     }

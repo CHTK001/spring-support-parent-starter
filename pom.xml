@@ -27,6 +27,8 @@
         <module>spring-support-shell-starter</module>
         <module>spring-support-oauth-client-starter</module>
         <module>spring-support-oauth-server-starter</module>
+        <module>spring-support-config-client-starter</module>
+        <module>spring-support-config-server-starter</module>
     </modules>
 
     <properties>
@@ -184,6 +186,24 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-oauth-server-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-webjar-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-config-client-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-config-server-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
         </dependencies>
