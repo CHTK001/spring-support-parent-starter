@@ -9,7 +9,7 @@
         <version>3.1.0</version>
     </parent>
 
-    <artifactId>spring-support-starter-demo-client</artifactId>
+    <artifactId>spring-support-cacheable-starter</artifactId>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -18,20 +18,34 @@
     </properties>
 
     <dependencies>
+
         <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-config-client-starter</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
         </dependency>
 
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-support-schedule-client-starter</artifactId>
+            <artifactId>spring-support-common-starter</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-oauth-client-starter</artifactId>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+            <scope>provided</scope>
         </dependency>
 
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>net.sf.ehcache</groupId>
+            <artifactId>ehcache</artifactId>
+        </dependency>
     </dependencies>
+
+
 </project>
