@@ -12,7 +12,6 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
-import org.hibernate.dialect.pagination.LimitHandler;
 
 import java.lang.reflect.Method;
 import java.util.Map;
@@ -54,7 +53,7 @@ public class LimitAspect {
             }
             rateLimiter = limitMap.get(key);
             // 拿令牌
-            boolean acquire = rateLimiter.tryAcquire(limit.timeout(), TimeUnit.SECONDS);
+            boolean acquire = rateLimiter.tryAcquire(limit.key(), limit.timeout(), TimeUnit.SECONDS);
             // 拿不到命令，直接返回异常提示
             if (!acquire) {
                 log.debug("令牌桶:{}，获取令牌失败", key);
@@ -64,8 +63,8 @@ public class LimitAspect {
         return joinPoint.proceed();
     }
 
-    private LimitHandler create(double permitsPerSecond, String type) {
-        return ServiceProvider.of(LimitHandler.class).getNewExtension(type, permitsPerSecond);
+    private LimiterProvider create(double permitsPerSecond, String type) {
+        return ServiceProvider.of(LimiterProvider.class).getNewExtension(type, permitsPerSecond);
     }
 
     /**
