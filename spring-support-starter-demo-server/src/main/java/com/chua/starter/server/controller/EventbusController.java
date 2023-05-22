@@ -1,9 +1,9 @@
 package com.chua.starter.server.controller;
 
 
-import com.chua.starter.core.support.eventbus.EventbusTemplate;
-import com.chua.starter.core.support.eventbus.EventbusType;
-import com.chua.starter.core.support.eventbus.Subscribe;
+import com.chua.common.support.eventbus.EventbusType;
+import com.chua.common.support.eventbus.Subscribe;
+import com.chua.starter.common.support.eventbus.EventbusTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

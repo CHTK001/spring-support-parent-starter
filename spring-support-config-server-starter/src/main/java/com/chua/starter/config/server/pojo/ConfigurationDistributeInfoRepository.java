@@ -12,15 +12,16 @@ import java.util.List;
 
 /**
  * TConfigurationDistributeInfo
+ *
  * @author CH
  * @since 2022/8/1 13:06
  */
 @SuppressWarnings("ALL")
 @Repository
 public interface ConfigurationDistributeInfoRepository extends
-        PagingAndSortingRepository<TConfigurationCenterInfo, Integer>,
-        CrudRepository<TConfigurationCenterInfo, Integer>,
-        JpaRepository<TConfigurationCenterInfo, Integer> {
+        PagingAndSortingRepository<TConfigurationDistributeInfo, Integer>,
+        CrudRepository<TConfigurationDistributeInfo, Integer>,
+        JpaRepository<TConfigurationDistributeInfo, Integer> {
     /**
      * 查询数据
      * @param configId 配置ID
@@ -29,6 +30,7 @@ public interface ConfigurationDistributeInfoRepository extends
      */
     @Query(value = "select t.* from T_CONFIGURATION_DISTRIBUTE_INFO t where t.config_id in (?1) and t.config_item = ?2", nativeQuery = true)
     List<TConfigurationDistributeInfo> queryById(List<Integer> configId, String configItem);
+
     /**
      * 查询数据
      * @param configItem 标识

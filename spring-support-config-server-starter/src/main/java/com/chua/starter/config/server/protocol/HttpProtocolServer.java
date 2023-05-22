@@ -1,8 +1,8 @@
 package com.chua.starter.config.server.protocol;
 
-import com.chua.common.support.result.ReturnResult;
+import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.spi.Spi;
+import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.config.server.cammand.CommandProvider;
 import com.chua.starter.config.server.entity.NotifyConfig;
 import com.chua.starter.config.server.manager.ConfigurationManager;

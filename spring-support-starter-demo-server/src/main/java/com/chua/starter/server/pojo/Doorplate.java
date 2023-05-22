@@ -2,8 +2,8 @@ package com.chua.starter.server.pojo;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.chua.starter.core.support.annotations.PrivacyEncrypt;
-import com.chua.starter.core.support.rule.PrivacyTypeEnum;
+import com.chua.starter.common.support.annotations.PrivacyEncrypt;
+import com.chua.starter.common.support.rule.PrivacyTypeEnum;
 import lombok.Data;
 
 import javax.validation.constraints.Size;
