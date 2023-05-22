@@ -32,6 +32,7 @@
         <module>spring-support-cacheable-starter</module>
         <module>spring-support-webjar-extension-starter</module>
         <module>spring-support-webjar-starter</module>
+        <module>spring-support-redis-starter</module>
     </modules>
 
     <properties>
@@ -213,7 +214,13 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-cacheable-starter</artifactId>
-                <version>3.1.0</version>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-redis-starter</artifactId>
+                <version>${module.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

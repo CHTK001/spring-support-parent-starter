@@ -50,8 +50,10 @@ import static com.chua.starter.common.support.constant.Constant.DEFAULT_SER;
 public class DatabaseConfigurationManager implements ConfigurationManager, ApplicationContextAware {
 
 
+    @Resource
     private ConfigurationCenterInfoRepository configurationCenterInfoRepository;
 
+    @Resource
     private ConfigurationDistributeInfoRepository configurationDistributeInfoRepository;
 
     @Resource

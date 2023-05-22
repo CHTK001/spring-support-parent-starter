@@ -5,6 +5,7 @@ import org.hibernate.annotations.Comment;
 
 import javax.persistence.*;
 
+
 /**
  * 配置中心
  * @author CH
