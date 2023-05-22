@@ -1,7 +1,7 @@
 package com.chua.starter.common.support.version;
 
 
-import com.chua.starter.core.support.annotations.ApiVersion;
+import com.chua.starter.common.support.annotations.ApiVersion;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.servlet.mvc.condition.RequestCondition;
 
