@@ -20,7 +20,7 @@ import java.util.Map;
 /**
  * @author CH
  */
-@Spi({"xml", "html"})
+@Spi({"xml"})
 public class XmlMediaTypeHandler implements MediaTypeHandler {
     @Override
     public byte[] asByteArray(Object o) {
