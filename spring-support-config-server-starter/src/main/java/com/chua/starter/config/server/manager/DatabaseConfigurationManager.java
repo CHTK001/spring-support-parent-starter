@@ -4,9 +4,9 @@ import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.crypto.Encrypt;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.starter.common.support.key.KeyManagerProvider;
 import com.chua.starter.config.entity.KeyValue;
 import com.chua.starter.config.server.entity.NotifyConfig;
 import com.chua.starter.config.server.pojo.ConfigurationCenterInfoRepository;
@@ -22,8 +22,8 @@ import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.expression.BeanFactoryAccessor;
+import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.expression.EvaluationException;
 import org.springframework.expression.Expression;
@@ -32,13 +32,11 @@ import org.springframework.expression.common.TemplateParserContext;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
-import javax.sql.DataSource;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.chua.starter.core.support.constant.Constant.DEFAULT_SER;
+import static com.chua.starter.common.support.constant.Constant.DEFAULT_SER;
 
 
 /**
@@ -61,20 +59,6 @@ public class DatabaseConfigurationManager implements ConfigurationManager, Appli
 
     @Resource
     private ApplicationContext applicationContext;
-    @PostConstruct
-    public void initial() {
-        DataSource dataSource = getDataSource();
-        DataSourceRepositoryFactory factory = new DataSourceRepositoryFactory(dataSource);
-        configurationCenterInfoRepository = factory.buildRepository(ConfigurationCenterInfoRepository.class, dataSource);
-        configurationDistributeInfoRepository = factory.buildRepository(ConfigurationDistributeInfoRepository.class, dataSource);
-
-    }
-
-    protected DataSource getDataSource() {
-        Map<String, DataSource> beansOfType = applicationContext.getBeansOfType(DataSource.class);
-        return (DataSource) MapUtils.getObject(beansOfType, configServerProperties.getDatabase(), CollectionUtils.findFirst(beansOfType.values()));
-    }
-
 
     @Override
     public void register(Map<String, Object> data, String binderName) {
@@ -82,7 +66,7 @@ public class DatabaseConfigurationManager implements ConfigurationManager, Appli
         TConfigurationCenterInfo tConfigurationCenterInfo = new TConfigurationCenterInfo();
         tConfigurationCenterInfo.setConfigItem(binderName);
 
-        boolean exists = configurationCenterInfoRepository.exists(tConfigurationCenterInfo);
+        boolean exists = configurationCenterInfoRepository.exists(Example.of(tConfigurationCenterInfo));
         log.info("检测到 {}:{}注入配置", MapUtils.getString(data, "binder-client"), MapUtils.getString(data, "binder-port"));
         if (refresh) {
             configurationCenterInfoRepository.delete(binderName);
@@ -112,7 +96,7 @@ public class DatabaseConfigurationManager implements ConfigurationManager, Appli
         query.setConfigItem(binderName);
 
         TConfigurationCenterInfo tConfigurationCenterInfo1 = configurationCenterInfoRepository
-                .findOne(query);
+                .findOne(Example.of(query)).get();
         if (null != tConfigurationCenterInfo1 && refresh) {
             configurationCenterInfoRepository.update(name, port, binderName);
         } else {
@@ -158,7 +142,7 @@ public class DatabaseConfigurationManager implements ConfigurationManager, Appli
 
             tConfigurationCenterInfoList.add(item);
         }
-        configurationCenterInfoRepository.saveBatch(tConfigurationCenterInfoList);
+        configurationCenterInfoRepository.saveAll(tConfigurationCenterInfoList);
     }
 
     /**
@@ -268,7 +252,8 @@ public class DatabaseConfigurationManager implements ConfigurationManager, Appli
         Encrypt encrypt = serviceProvider.getExtension(configServerProperties.getEncrypt());
 
         for (NotifyConfig config : notifyConfig) {
-            String providerKey = configServerProperties.isOpenKey() ? keyManagerProvider.getKey(config.getConfigItem()) : DEFAULT_SER;
+            String providerKey = configServerProperties.isOpenKey() ?
+                    keyManagerProvider.getKey(config.getConfigItem()) : DEFAULT_SER;
             KeyValue keyValue = new KeyValue();
             keyValue.setDataId(config.getConfigName());
             keyValue.setData(config.getConfigValue());
@@ -282,7 +267,7 @@ public class DatabaseConfigurationManager implements ConfigurationManager, Appli
     public void notifyConfig(Integer configId, String configValue, Integer disable, ProtocolServer protocolServer) {
         List<NotifyConfig> notifyConfig = new ArrayList<>();
         try {
-            TConfigurationCenterInfo referenceById = configurationCenterInfoRepository.findById(configId);
+            TConfigurationCenterInfo referenceById = configurationCenterInfoRepository.findById(configId).get();
             referenceById.setConfigValue(configValue);
             referenceById.setDisable(disable);
             configurationCenterInfoRepository.update(configValue, disable, configId);
@@ -329,14 +314,7 @@ public class DatabaseConfigurationManager implements ConfigurationManager, Appli
     public Page<TConfigurationCenterInfo> findAll(Integer page, Integer pageSize, String profile) {
         TConfigurationCenterInfo query = new TConfigurationCenterInfo();
         query.setConfigProfile(profile);
-
-        SearchResult<TConfigurationCenterInfo> result = configurationCenterInfoRepository.query(MapUtils.builder().field(TConfigurationCenterInfo::getConfigProfile, profile)
-                .limit((long) page * pageSize, pageSize));
-
-        if(null == result) {
-            return new PageImpl<>(Collections.emptyList());
-        }
-        return new PageImpl<>(result.getData(), PageRequest.of(page, pageSize), result.getTotal().longValue());
+        return configurationCenterInfoRepository.findAll(Example.of(query), PageRequest.of(page, pageSize));
     }
 
     @Override
@@ -353,7 +331,7 @@ public class DatabaseConfigurationManager implements ConfigurationManager, Appli
             rs.add(item);
         }
 
-        configurationDistributeInfoRepository.saveBatch(rs);
+        configurationDistributeInfoRepository.saveAll(rs);
     }
 
     @Override
@@ -362,7 +340,6 @@ public class DatabaseConfigurationManager implements ConfigurationManager, Appli
             return;
         }
 
-        initial();
     }
 
     @Override

@@ -1,7 +1,7 @@
 package com.chua.starter.config.server.manager;
 
+import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.database.DataSourceUtils;
-import com.chua.common.support.spi.Spi;
 
 import javax.sql.DataSource;
 
@@ -13,7 +13,6 @@ import javax.sql.DataSource;
 @Spi("file")
 public class FileConfigurationManager extends DatabaseConfigurationManager{
 
-    @Override
     protected DataSource getDataSource() {
         return DataSourceUtils.createLocalFileDataSource("../config", "config-db");
     }

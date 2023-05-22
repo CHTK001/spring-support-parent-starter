@@ -43,6 +43,7 @@ public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAw
 
     @Resource
     private CorsProperties corsProperties;
+
     @Resource
     private CoreProperties coreProperties;
     private List<HttpMessageConverter<?>> messageConverters;
