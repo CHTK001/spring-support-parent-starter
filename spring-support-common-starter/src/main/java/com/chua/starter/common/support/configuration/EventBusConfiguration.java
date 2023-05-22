@@ -1,11 +1,13 @@
 package com.chua.starter.common.support.configuration;
 
 import com.chua.starter.common.support.eventbus.EventbusTemplate;
+import com.chua.starter.common.support.profile.EnvironmentProfile;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.env.Environment;
 
 import java.util.concurrent.Executor;
 
@@ -15,11 +17,10 @@ import java.util.concurrent.Executor;
 public class EventBusConfiguration  {
 
 
-
     @Bean
     @ConditionalOnMissingBean
-    public EventbusTemplate EventbusTemplate(Executor executor) {
-        return new EventbusTemplate(executor);
+    public EventbusTemplate EventbusTemplate(Environment environment, Executor executor) {
+        return new EventbusTemplate(new EnvironmentProfile(environment), executor);
     }
 
     @AutoConfigureAfter({EventBusConfiguration.class, EventbusTemplate.class})

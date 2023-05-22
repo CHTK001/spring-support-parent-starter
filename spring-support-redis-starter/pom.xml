@@ -20,9 +20,8 @@
     <dependencies>
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-support-redis-starter</artifactId>
+            <artifactId>utils-support-redis-starter</artifactId>
         </dependency>
-
 
         <!--redisson-->
         <dependency>

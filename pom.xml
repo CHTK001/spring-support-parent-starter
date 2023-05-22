@@ -114,6 +114,11 @@
                 <artifactId>utils-support-hibernate-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-redis-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
 
             <dependency>
                 <groupId>com.chua</groupId>
