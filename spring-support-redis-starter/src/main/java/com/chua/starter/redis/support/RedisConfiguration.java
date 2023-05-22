@@ -4,12 +4,14 @@ import com.chua.starter.redis.support.properties.RedisServerProperties;
 import com.chua.starter.redis.support.server.RedisEmbeddedServer;
 import org.springframework.beans.BeansException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.core.Ordered;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -22,7 +24,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
  * @author CH
  */
 @EnableConfigurationProperties(RedisServerProperties.class)
-public class RedisConfiguration implements ApplicationContextAware {
+public class RedisConfiguration implements ApplicationContextAware, Ordered {
 
     RedisServerProperties redisServerProperties;
 
@@ -34,6 +36,7 @@ public class RedisConfiguration implements ApplicationContextAware {
 
     @Bean
     @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = "plugin.redis.server", name = "open-embedded", havingValue = "true", matchIfMissing = false)
     public RedisEmbeddedServer embeddedServer() {
         return new RedisEmbeddedServer(redisServerProperties);
     }
@@ -62,5 +65,10 @@ public class RedisConfiguration implements ApplicationContextAware {
         template.setHashKeySerializer(new StringRedisSerializer());
         template.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
         return template;
+    }
+
+    @Override
+    public int getOrder() {
+        return Ordered.HIGHEST_PRECEDENCE;
     }
 }

@@ -14,7 +14,7 @@ public class RedisServerProperties {
     /**
      * 嵌入式服务
      */
-    private boolean openEmbedded = true;
+    private boolean openEmbedded = false;
     /**
      * 端口
      */
