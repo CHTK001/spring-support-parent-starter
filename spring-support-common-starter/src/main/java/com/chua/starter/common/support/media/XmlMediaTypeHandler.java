@@ -1,6 +1,6 @@
 package com.chua.starter.common.support.media;
 
-import com.chua.common.support.annotations.Extension;
+import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.unit.name.NamingCase;
 import com.chua.common.support.utils.ClassUtils;
@@ -20,7 +20,7 @@ import java.util.Map;
 /**
  * @author CH
  */
-@Extension("xml")
+@Spi({"xml", "html"})
 public class XmlMediaTypeHandler implements MediaTypeHandler {
     @Override
     public byte[] asByteArray(Object o) {
