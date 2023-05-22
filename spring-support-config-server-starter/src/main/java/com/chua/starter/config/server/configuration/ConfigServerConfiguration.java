@@ -1,6 +1,10 @@
 package com.chua.starter.config.server.configuration;
 
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.starter.config.server.pojo.ConfigurationCenterInfoRepository;
+import com.chua.starter.config.server.pojo.ConfigurationDistributeInfoRepository;
+import com.chua.starter.config.server.pojo.TConfigurationCenterInfo;
+import com.chua.starter.config.server.pojo.TConfigurationDistributeInfo;
 import com.chua.starter.config.server.properties.ConfigServerProperties;
 import com.chua.starter.config.server.protocol.ProtocolServer;
 import com.chua.starter.config.server.provider.ConfigurationCenterProvider;
@@ -11,10 +15,12 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.core.env.Environment;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 /**
  * 配置中心配置
@@ -22,6 +28,8 @@ import org.springframework.core.env.Environment;
  * @since 2022/8/1 8:51
  */
 @Slf4j
+@EntityScan(basePackageClasses = {TConfigurationCenterInfo.class, TConfigurationDistributeInfo.class})
+@EnableJpaRepositories(basePackageClasses = {ConfigurationCenterInfoRepository.class, ConfigurationDistributeInfoRepository.class})
 @EnableConfigurationProperties(ConfigServerProperties.class)
 public class ConfigServerConfiguration implements BeanDefinitionRegistryPostProcessor, EnvironmentAware {
 
