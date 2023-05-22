@@ -1,6 +1,7 @@
 package com.chua.starter.common.support.result;
 
 import com.chua.common.support.log.Log;
+import com.chua.starter.common.support.converter.ResultDataHttpMessageConverter;
 import lombok.SneakyThrows;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpStatus;
@@ -42,6 +43,9 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
     @SneakyThrows
     @Override
     public Object beforeBodyWrite(Object o, MethodParameter methodParameter, MediaType mediaType, Class<? extends HttpMessageConverter<?>> aClass, ServerHttpRequest serverHttpRequest, ServerHttpResponse serverHttpResponse) {
-        return ResultData.success(o);
+        if (aClass == ResultDataHttpMessageConverter.class) {
+            return ResultData.success(o);
+        }
+        return o;
     }
 }

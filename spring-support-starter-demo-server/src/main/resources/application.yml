@@ -42,8 +42,8 @@ plugin:
       - type: MYSQL
   script:
     config:
-      #      - source: E:\workspace\spring-starter-support-parent\spring-demo-server\src\main\resources
-      - type: MYSQL
+      - source: classpath:*.*
+  #      - type: MYSQL
 
 
   core:

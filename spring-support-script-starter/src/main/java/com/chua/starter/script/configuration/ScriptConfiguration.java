@@ -2,7 +2,6 @@ package com.chua.starter.script.configuration;
 
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -28,12 +27,11 @@ public class ScriptConfiguration implements ApplicationContextAware, BeanDefinit
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
-        registry.registerBeanDefinition(ScriptRegister.class.getTypeName(),
-                BeanDefinitionBuilder.rootBeanDefinition(ScriptRegister.class)
-                        .addConstructorArgValue(scriptProperties)
-                        .addConstructorArgValue(registry).getBeanDefinition()
-        );
-
+        ScriptRegister scriptRegister = new ScriptRegister(scriptProperties, registry);
+        try {
+            scriptRegister.afterPropertiesSet();
+        } catch (Exception ignored) {
+        }
     }
 
     @Override
