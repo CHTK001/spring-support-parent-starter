@@ -1,12 +1,19 @@
+//
 package com.chua.tools
 
 import com.chua.starter.server.script.TDemoInfo
+import org.springframework.context.ApplicationContext
+
+import javax.annotation.Resource
 
 
 /**
  * @author CH* @version 1.0.0* @since 2020/10/28
  */
 class TDemoInfoImpl1 implements TDemoInfo {
+
+    @Resource
+    private ApplicationContext applicationContext;
     Integer id
     Date time
     String name
