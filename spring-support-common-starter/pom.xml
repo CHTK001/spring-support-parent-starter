@@ -43,6 +43,11 @@
             <groupId>com.chua</groupId>
             <artifactId>utils-support-groovy-starter</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-xml</artifactId>
+        </dependency>
     </dependencies>
 
 </project>
