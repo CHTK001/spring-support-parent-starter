@@ -19,13 +19,13 @@ public class EventBusConfiguration  {
     @Bean
     @ConditionalOnMissingBean
     public EventbusTemplate EventbusTemplate(Executor executor) {
-        return (EventbusTemplate) EventbusTemplate.builder().executor(executor).build();
+        return new EventbusTemplate(executor);
     }
 
     @AutoConfigureAfter({EventBusConfiguration.class, EventbusTemplate.class})
     public static class EventBussProcessor implements SmartInstantiationAwareBeanPostProcessor{
 
-        private EventbusTemplate eventbusTemplate;
+        private final EventbusTemplate eventbusTemplate;
         private static final String SPRING = "org.spring";
 
         public EventBussProcessor(EventbusTemplate eventbusTemplate) {
