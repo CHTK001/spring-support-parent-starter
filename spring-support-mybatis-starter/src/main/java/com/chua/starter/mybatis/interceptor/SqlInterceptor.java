@@ -1,8 +1,9 @@
 package com.chua.starter.mybatis.interceptor;
 
-import com.chua.starter.core.support.formatter.DmlFormatter;
-import com.chua.starter.core.support.formatter.HighlightingFormatter;
-import com.chua.starter.core.support.log.Log;
+import com.chua.common.support.lang.formatter.DmlFormatter;
+import com.chua.common.support.lang.formatter.Formatter;
+import com.chua.common.support.lang.formatter.HighlightingFormatter;
+import com.chua.common.support.log.Log;
 import com.sun.deploy.util.StringUtils;
 import org.apache.ibatis.cache.CacheKey;
 import org.apache.ibatis.executor.Executor;
@@ -47,7 +48,7 @@ public class SqlInterceptor implements Interceptor {
     private static final SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     static final DmlFormatter FORMATTER = new DmlFormatter();
-    static final com.chua.starter.core.support.formatter.Formatter HIGHLIGHTING_FORMATTER = HighlightingFormatter.INSTANCE;
+    static final Formatter HIGHLIGHTING_FORMATTER = HighlightingFormatter.INSTANCE;
 
     /**
      * 重写intercept，拦截sql，拼接完整sql语句

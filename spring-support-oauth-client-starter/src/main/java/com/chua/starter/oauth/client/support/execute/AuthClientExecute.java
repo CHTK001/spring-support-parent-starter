@@ -195,7 +195,7 @@ public class AuthClientExecute {
         item2.put(AuthConstant.OAUTH_KEY, key);
         item2.put("x-oauth-uid", uid);
         request = encode.encodeHex(Json.toJson(item2), serviceKey);
-        Robin<String> robin1 = SpringFactoriesLoaderUtils.loader(Robin.class).getOne(authClientProperties.getBalance());
+        Robin<String> robin1 = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
         Robin<String> balance = robin1.create();
         String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(authClientProperties.getAuthAddress()).split(",");
         balance.addNode(split);

@@ -26,7 +26,7 @@ public class ShellController {
 
     @GetMapping("index")
     public ModelView<String> index(HttpServletRequest request) {
-        String ipAddr = RequestUtils.getIpAddr(request);
+        String ipAddr = RequestUtils.getIpAddress(request);
         if (shellProperties.getIpPass().contains(ipAddr)) {
             return new ModelView<>("shell", MediaType.TEXT_HTML);
         }
