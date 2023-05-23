@@ -65,6 +65,9 @@ plugin:
       oss:
         path: Z://other
         plugins:
+  auto:
+    table:
+      scan: com.chua.starter.server.pojo
 #  remote:
 #    application:
 #      name: server

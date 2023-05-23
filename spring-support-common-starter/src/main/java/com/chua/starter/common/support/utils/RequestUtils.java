@@ -15,7 +15,7 @@ public class RequestUtils {
     /**
      * 获取客户端IP地址
      *
-     * @return 获取客户端IP地址
+     * @return 获取客户端IP地址S
      */
     public static String getIpAddress(HttpServletRequest request) {
         String ip = request.getHeader("x-forwarded-for");
