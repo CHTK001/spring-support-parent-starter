@@ -18,9 +18,22 @@ public class AutoTableProperties {
     /**
      * 开启
      */
-    private boolean open = false;
+    private boolean open = true;
     /**
      * 扫描包
      */
-    private String[] scann;
+    private String[] scan;
+
+    /**
+     * 前缀
+     */
+    private String prefix;
+    /**
+     * 后缀
+     */
+    private String suffix;
+    /**
+     * auto
+     */
+    private String auto = "UPDATE";
 }
