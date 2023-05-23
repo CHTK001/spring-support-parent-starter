@@ -1,9 +1,9 @@
 package com.chua.starter.oauth.client.support.filter;
 
 
+import com.chua.common.support.log.Log;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.web.WebRequest;
-import lombok.extern.slf4j.Slf4j;
 
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
@@ -17,9 +17,9 @@ import java.util.Objects;
  *
  * @author CH
  */
-@Slf4j
 public class AuthFilter implements Filter {
 
+    private static final Log log = Log.getLogger(AuthFilter.class);
 
     private final WebRequest webRequest;
 
