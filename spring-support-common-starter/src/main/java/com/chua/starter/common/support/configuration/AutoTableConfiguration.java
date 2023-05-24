@@ -6,6 +6,7 @@ import com.chua.common.support.database.executor.MetadataExecutor;
 import com.chua.common.support.log.Log;
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.hibernate.support.database.resolver.HibernateMetadataResolver;
+import com.chua.starter.common.support.annotations.DS;
 import com.chua.starter.common.support.properties.AutoTableProperties;
 import org.springframework.beans.BeansException;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
@@ -14,11 +15,13 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.type.classreading.CachingMetadataReaderFactory;
 import org.springframework.core.type.classreading.MetadataReader;
 import org.springframework.core.type.classreading.MetadataReaderFactory;
+import org.springframework.util.MultiValueMap;
 
 import javax.sql.DataSource;
 import java.io.IOException;
@@ -39,7 +42,7 @@ public class AutoTableConfiguration implements ApplicationContextAware {
     private static final Log log = Log.getLogger(AutoTableProperties.class);
     AutoTableProperties autoTableProperties;
 
-    private DataSource dataSource;
+    private Map<String, DataSource> beansOfType;
 
     private void refresh() {
         String[] scann = autoTableProperties.getScan();
@@ -88,6 +91,11 @@ public class AutoTableConfiguration implements ApplicationContextAware {
 
 
         for (Class<?> aClass : classList) {
+            DataSource dataSource = getDataSource(aClass);
+            if (null == dataSource) {
+                log.warn("数据源不存在");
+                continue;
+            }
             MetadataExecutor metadataExecutor = autoMetadata.doExecute(aClass);
             try {
                 metadataExecutor.execute(dataSource, Action.valueOf(autoTableProperties.getAuto()));
@@ -97,31 +105,43 @@ public class AutoTableConfiguration implements ApplicationContextAware {
         }
     }
 
+    private DataSource getDataSource(Class<?> aClass) {
+        if (beansOfType.size() == 1) {
+            return beansOfType.values().iterator().next();
+        }
+
+        if (!AnnotatedElementUtils.hasAnnotation(aClass, DS.class)) {
+            if (beansOfType.containsKey("master")) {
+                log.info("建表数据源 :{}", "master");
+                return beansOfType.get("master");
+            } else {
+                for (Map.Entry<String, DataSource> entry : beansOfType.entrySet()) {
+                    DataSource source = entry.getValue();
+                    if (
+                            ClassUtils.isPresent("org.springframework.jdbc.datasource.lookup.AbstractRoutingDataSource") &&
+                                    ClassUtils.isAssignableFrom(source, ClassUtils.forName("org.springframework.jdbc.datasource.lookup.AbstractRoutingDataSource"))
+                    ) {
+                        continue;
+                    }
+                    log.info("建表数据源 :{}", entry.getKey());
+                    return source;
+                }
+            }
+            return null;
+        }
+
+        MultiValueMap<String, Object> annotationAttributes = AnnotatedElementUtils.getAllAnnotationAttributes(aClass, DS.class.getTypeName());
+        try {
+            return beansOfType.get(annotationAttributes.getFirst("value").toString());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         autoTableProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(AutoTableProperties.PRE, AutoTableProperties.class);
-        Map<String, DataSource> beansOfType = applicationContext.getBeansOfType(DataSource.class);
-        if (beansOfType.size() == 1) {
-            dataSource = applicationContext.getBean(DataSource.class);
-        } else if (beansOfType.containsKey("master")) {
-            dataSource = beansOfType.get("master");
-            log.info("建表数据源 :{}", "master");
-
-        } else {
-            for (Map.Entry<String, DataSource> entry : beansOfType.entrySet()) {
-                DataSource source = entry.getValue();
-                if (
-                        ClassUtils.isPresent("org.springframework.jdbc.datasource.lookup.AbstractRoutingDataSource") &&
-                                ClassUtils.isAssignableFrom(source, ClassUtils.forName("org.springframework.jdbc.datasource.lookup.AbstractRoutingDataSource"))
-                ) {
-                    continue;
-                }
-                dataSource = source;
-                log.info("建表数据源 :{}", entry.getKey());
-
-                break;
-            }
-        }
+        this.beansOfType = applicationContext.getBeansOfType(DataSource.class);
         if (autoTableProperties.isOpen()) {
             refresh();
         }

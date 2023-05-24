@@ -1,6 +1,6 @@
 package com.chua.starter.datasource.support;
 
-import com.chua.starter.datasource.DS;
+import com.chua.starter.common.support.annotations.DS;
 import com.chua.starter.datasource.datasource.MultiDataSource;
 import lombok.Setter;
 import org.aopalliance.intercept.MethodInvocation;
@@ -173,7 +173,7 @@ public class DynamicDataSourceAspect {
      *
      * @param point 切入点
      */
-    public void afterSwitchDS(JoinPoint point) {
+    public synchronized void afterSwitchDS(JoinPoint point) {
         DataSourceContextSupport.clearDbType();
         DataSourceContextSupport.setDbType(DataSourceContextSupport.DEFAULT_DATASOURCE);
     }

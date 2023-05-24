@@ -1,6 +1,6 @@
 package com.chua.starter.datasource.support;
 
-import com.chua.starter.datasource.DS;
+import com.chua.starter.common.support.annotations.DS;
 import org.springframework.aop.support.StaticMethodMatcherPointcutAdvisor;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 
