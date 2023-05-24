@@ -21,6 +21,9 @@ import springfox.documentation.spi.DocumentationType;
 import springfox.documentation.spring.web.plugins.Docket;
 import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
+import java.util.Collections;
+import java.util.Optional;
+
 /**
  * @author CH
  */
@@ -54,7 +57,7 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
-        for (Knife4jProperties.Knife4j knife4j : knife4jProperties.getKnife4j()) {
+        for (Knife4jProperties.Knife4j knife4j : Optional.ofNullable(knife4jProperties.getKnife4j()).orElse(Collections.emptyList())) {
             AutowireCapableBeanFactory autowireCapableBeanFactory = applicationContext.getAutowireCapableBeanFactory();
             if (autowireCapableBeanFactory instanceof ConfigurableListableBeanFactory) {
                 ((ConfigurableListableBeanFactory) autowireCapableBeanFactory).registerSingleton(
