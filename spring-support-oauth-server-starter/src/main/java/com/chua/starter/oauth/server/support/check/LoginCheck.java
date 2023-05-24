@@ -31,6 +31,24 @@ public class LoginCheck {
     private ApplicationContext applicationContext;
 
     /**
+     * 是否匹配类型
+     *
+     * @param userInfoService 服务
+     * @param authType        类型
+     * @return 是否匹配类型
+     */
+    private boolean isMatch(UserInfoService userInfoService, String authType) {
+        Class<? extends UserInfoService> aClass = userInfoService.getClass();
+        UserLoginType userLoginType = aClass.getDeclaredAnnotation(UserLoginType.class);
+        if (null == userLoginType) {
+            return true;
+        }
+        String value = userLoginType.value();
+        return null != value && value.equals(authType);
+    }
+
+
+    /**
      * 登入校验
      *
      * @param address  地址
@@ -45,6 +63,8 @@ public class LoginCheck {
                     " + #args[1] + " +
                     "'登录系统(状态: '" +
                     " + #result['code'] + " +
+                    "'  ' " +
+                    "  #result['msg'] + " +
                     "') 登录方式('" +
                     " + #args[3] + " +
                     "' ) '")
@@ -88,22 +108,4 @@ public class LoginCheck {
         }
         return token;
     }
-
-    /**
-     * 是否匹配类型
-     *
-     * @param userInfoService 服务
-     * @param authType        类型
-     * @return 是否匹配类型
-     */
-    private boolean isMatch(UserInfoService userInfoService, String authType) {
-        Class<? extends UserInfoService> aClass = userInfoService.getClass();
-        UserLoginType userLoginType = aClass.getDeclaredAnnotation(UserLoginType.class);
-        if (null == userLoginType) {
-            return true;
-        }
-        String value = userLoginType.value();
-        return null != value && value.equals(authType);
-    }
-
 }

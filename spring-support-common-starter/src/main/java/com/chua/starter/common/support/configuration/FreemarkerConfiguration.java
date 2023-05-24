@@ -23,6 +23,7 @@ public class FreemarkerConfiguration implements EnvironmentPostProcessor {
         properties.setProperty("spring.freemarker.request-context-attribute", "request");
         properties.setProperty("spring.freemarker.number_format", "0.##########");
         properties.setProperty("spring.freemarker.cache", "false");
+        properties.setProperty("spring.mvc.pathmatch.matching-strategy", "ant_path_matcher");
         properties.setProperty("spring.resources.static-locations", "classpath:/static/,classpath:/webjar/");
         properties.setProperty("spring.mvc.static-path-pattern", "/static/**,/webjar/**");
         PropertiesPropertySource propertiesPropertySource = new PropertiesPropertySource("core", properties);

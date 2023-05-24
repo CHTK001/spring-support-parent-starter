@@ -316,7 +316,7 @@ public class LoginProvider implements InitializingBean {
         }
 
         if (result.getCode().equals(403)) {
-            modelMap.addFlashAttribute("msg", "当前登陆端限制登录, 需要注册密钥");
+            modelMap.addFlashAttribute("msg", Optional.ofNullable(result.getMsg()).orElse("当前登陆端限制登录, 需要注册密钥"));
             try {
                 return new AdviceView("redirect:" + contextPath + "/login?redirect_url=" + URLEncoder.encode(url, "UTF-8"));
             } catch (UnsupportedEncodingException e) {
