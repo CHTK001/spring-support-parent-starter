@@ -1,8 +1,8 @@
 package com.chua.starter.cacheable.support.handler;
 
+import com.chua.common.support.value.Value;
 import com.chua.starter.cacheable.support.manager.ConcurrentMapCache;
 import com.chua.starter.cacheable.support.properties.CacheProperties;
-import com.chua.starter.cacheable.support.value.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.cache.Cache;

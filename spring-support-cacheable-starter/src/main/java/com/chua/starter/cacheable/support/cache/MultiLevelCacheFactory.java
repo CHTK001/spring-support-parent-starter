@@ -1,8 +1,7 @@
 package com.chua.starter.cacheable.support.cache;
 
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.value.Value;
-import com.chua.starter.cacheable.support.utils.ClassUtils;
-import com.chua.starter.cacheable.support.value.Value;
 import com.chua.starter.cacheable.support.handler.CacheManagerHandler;
 import com.chua.starter.cacheable.support.properties.CacheProperties;
 import com.google.common.base.Strings;
@@ -27,7 +26,7 @@ public class MultiLevelCacheFactory implements ApplicationContextAware {
     private static final List<CacheManagerHandler> REAL = new LinkedList<>();
 
     static {
-        Set<CacheManagerHandler> subOfObject = ClassUtils.getSubOfObject("com.chua.starter.common.cacheable", CacheManagerHandler.class);
+        List<CacheManagerHandler> subOfObject = ServiceProvider.of(CacheManagerHandler.class).collect();
         for (CacheManagerHandler cacheManagerHandler : subOfObject) {
             CACHE_MANAGER.put(cacheManagerHandler.getBeanName(), cacheManagerHandler);
         }
