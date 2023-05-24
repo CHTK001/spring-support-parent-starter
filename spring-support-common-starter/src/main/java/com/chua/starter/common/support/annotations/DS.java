@@ -1,4 +1,4 @@
-package com.chua.starter.datasource;
+package com.chua.starter.common.support.annotations;
 
 import java.lang.annotation.*;
 
