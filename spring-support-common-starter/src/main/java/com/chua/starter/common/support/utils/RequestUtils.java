@@ -18,6 +18,10 @@ public class RequestUtils {
      * @return 获取客户端IP地址S
      */
     public static String getIpAddress(HttpServletRequest request) {
+        if (null == request) {
+            return "";
+        }
+
         String ip = request.getHeader("x-forwarded-for");
         if (ip == null || ip.length() == 0 || "unknow".equalsIgnoreCase(ip)) {
             ip = request.getHeader("Proxy-Client-IP");
@@ -73,5 +77,19 @@ public class RequestUtils {
         } catch (Exception ignored) {
         }
         return null;
+    }
+
+    /**
+     * 访问地址
+     *
+     * @param request 请求
+     * @return 地址
+     */
+    public static String getUrl(HttpServletRequest request) {
+        if (null == request) {
+            return null;
+        }
+
+        return request.getRequestURI();
     }
 }
