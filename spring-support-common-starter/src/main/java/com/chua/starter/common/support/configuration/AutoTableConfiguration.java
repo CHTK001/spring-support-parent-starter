@@ -131,11 +131,12 @@ public class AutoTableConfiguration implements ApplicationContextAware {
         }
 
         MultiValueMap<String, Object> annotationAttributes = AnnotatedElementUtils.getAllAnnotationAttributes(aClass, DS.class.getTypeName());
-        try {
-            return beansOfType.get(annotationAttributes.getFirst("value").toString());
-        } catch (Exception e) {
+        Object value = annotationAttributes.getFirst("value");
+        log.info("建表数据源 :{}", value);
+        if (null == value) {
             return null;
         }
+        return beansOfType.get(value.toString());
     }
 
     @Override
