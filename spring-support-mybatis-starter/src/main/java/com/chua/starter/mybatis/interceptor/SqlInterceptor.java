@@ -4,7 +4,7 @@ import com.chua.common.support.lang.formatter.DmlFormatter;
 import com.chua.common.support.lang.formatter.Formatter;
 import com.chua.common.support.lang.formatter.HighlightingFormatter;
 import com.chua.common.support.log.Log;
-import com.sun.deploy.util.StringUtils;
+import com.chua.common.support.utils.StringUtils;
 import org.apache.ibatis.cache.CacheKey;
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.executor.statement.StatementHandler;
