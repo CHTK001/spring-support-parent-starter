@@ -1,5 +1,6 @@
 package com.chua.starter.swagger.support;
 
+import com.github.xiaoymin.knife4j.spring.annotations.EnableKnife4j;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
@@ -12,18 +13,21 @@ import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.ComponentScan;
 import springfox.documentation.builders.ApiInfoBuilder;
 import springfox.documentation.builders.PathSelectors;
 import springfox.documentation.builders.RequestHandlerSelectors;
 import springfox.documentation.spi.DocumentationType;
 import springfox.documentation.spring.web.plugins.Docket;
+import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
 /**
  * @author CH
  */
 @Slf4j
-@Configuration
+@EnableSwagger2
+@EnableKnife4j
+@ComponentScan("springfox.documentation.spring.web")
 @EnableConfigurationProperties(Knife4jProperties.class)
 public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware {
 
