@@ -26,6 +26,11 @@ public class FreemarkerConfiguration implements EnvironmentPostProcessor {
         properties.setProperty("spring.mvc.pathmatch.matching-strategy", "ant_path_matcher");
         properties.setProperty("spring.resources.static-locations", "classpath:/static/,classpath:/webjar/");
         properties.setProperty("spring.mvc.static-path-pattern", "/static/**,/webjar/**");
+        properties.setProperty("knife4j.production", "true");
+        properties.setProperty("knife4j.enable", "true");
+        properties.setProperty("knife4j.basic.enable", "true");
+        properties.setProperty("knife4j.basic.username", "root");
+        properties.setProperty("knife4j.basic.password", "RoOt");
         PropertiesPropertySource propertiesPropertySource = new PropertiesPropertySource("core", properties);
         MutablePropertySources propertySources = environment.getPropertySources();
         propertySources.addLast(propertiesPropertySource);
