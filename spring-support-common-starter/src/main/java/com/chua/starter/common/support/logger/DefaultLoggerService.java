@@ -18,7 +18,5 @@ public class DefaultLoggerService implements LoggerService {
 
     @Override
     public void save(SysLog sysLog) {
-        if (log.isDebugEnabled()) {
-        }
     }
 }
