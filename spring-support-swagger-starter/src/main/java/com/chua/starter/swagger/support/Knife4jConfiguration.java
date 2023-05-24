@@ -2,12 +2,10 @@ package com.chua.starter.swagger.support;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
-import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.Binder;
@@ -27,14 +25,11 @@ import springfox.documentation.spring.web.plugins.Docket;
 @Slf4j
 @Configuration
 @EnableConfigurationProperties(Knife4jProperties.class)
-public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware, CommandLineRunner {
+public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware {
 
     Knife4jProperties knife4jProperties;
     private ApplicationContext applicationContext;
-    @Value("${server.servlet.context-path:}")
-    private String context;
-    @Value("${server.port:8080}")
-    private Integer port;
+
 
     @ConditionalOnMissingBean
     @Bean(value = "defaultApi2")
@@ -88,8 +83,4 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
         knife4jProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate("plugin.swagger", Knife4jProperties.class);
     }
 
-    @Override
-    public void run(String... args) throws Exception {
-        log.info("当前swagger文档地址: http://127.0.0.1: {}/{}/doc.html", context, port);
-    }
 }
