@@ -93,7 +93,10 @@ public class ResultDataHttpMessageConverter
     private void output(MediaType contentType, Object o, HttpOutputMessage outputMessage) {
         String subtype = contentType.getSubtype();
         MediaTypeHandler mediaTypeHandler = ServiceProvider.of(MediaTypeHandler.class).getExtension(subtype);
-        byte[] bytes = mediaTypeHandler.asByteArray(o);
+        byte[] bytes = new byte[0];
+        if (null != mediaTypeHandler) {
+            bytes = mediaTypeHandler.asByteArray(o);
+        }
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             HttpHeaders headers = outputMessage.getHeaders();
             baos.write(bytes);

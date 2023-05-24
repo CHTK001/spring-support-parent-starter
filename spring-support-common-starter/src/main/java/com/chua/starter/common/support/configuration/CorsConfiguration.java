@@ -5,6 +5,7 @@ import com.chua.starter.common.support.converter.ResultDataHttpMessageConverter;
 import com.chua.starter.common.support.limit.LimitAspect;
 import com.chua.starter.common.support.logger.LogGuidAspect;
 import com.chua.starter.common.support.logger.LoggerPointcutAdvisor;
+import com.chua.starter.common.support.logger.LoggerService;
 import com.chua.starter.common.support.processor.ResponseModelViewMethodProcessor;
 import com.chua.starter.common.support.properties.CoreProperties;
 import com.chua.starter.common.support.properties.CorsProperties;
@@ -13,6 +14,7 @@ import com.chua.starter.common.support.result.ResponseAdvice;
 import com.chua.starter.common.support.version.ApiVersionRequestMappingHandlerMapping;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.web.servlet.WebMvcRegistrations;
@@ -20,6 +22,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -85,8 +88,9 @@ public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAw
 
     @Bean
     @ConditionalOnMissingBean
-    public LoggerPointcutAdvisor loggerPointcutAdvisor() {
-        return new LoggerPointcutAdvisor();
+    @Lazy
+    public LoggerPointcutAdvisor loggerPointcutAdvisor(@Autowired(required = false) LoggerService loggerService) {
+        return new LoggerPointcutAdvisor(loggerService);
     }
 
     @Bean

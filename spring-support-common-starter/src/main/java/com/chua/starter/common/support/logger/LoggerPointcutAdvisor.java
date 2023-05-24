@@ -4,18 +4,16 @@ import com.chua.common.support.lang.expression.parser.ExpressionParser;
 import com.chua.common.support.lang.pinyin.Pinyin;
 import com.chua.common.support.lang.pinyin.PinyinFactory;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.expression.SpelExpressionParser;
 import com.chua.starter.common.support.utils.RequestUtils;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.aop.support.StaticMethodMatcherPointcutAdvisor;
-import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 
 import javax.annotation.Nonnull;
@@ -25,20 +23,26 @@ import javax.servlet.http.HttpServletResponse;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Date;
-import java.util.Map;
+import java.util.Optional;
 
 /**
  * 切面
  *
  * @author CH
  */
-public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor implements InitializingBean, ApplicationContextAware {
+@Lazy
+public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor implements InitializingBean {
 
     @Autowired(required = false)
     HttpServletRequest request;
     @Autowired(required = false)
     HttpServletResponse response;
     private LoggerService loggerService;
+    private ApplicationContext applicationContext;
+
+    public LoggerPointcutAdvisor(LoggerService loggerService) {
+        this.loggerService = Optional.ofNullable(loggerService).orElse(DefaultLoggerService.getInstance());
+    }
 
     @Override
     public boolean matches(Method method, Class<?> targetClass) {
@@ -107,9 +111,4 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
         });
     }
 
-    @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        Map<String, LoggerService> beansOfType = applicationContext.getBeansOfType(LoggerService.class);
-        this.loggerService = beansOfType.isEmpty() ? DefaultLoggerService.getInstance() : MapUtils.getFirst(beansOfType).getValue();
-    }
 }
