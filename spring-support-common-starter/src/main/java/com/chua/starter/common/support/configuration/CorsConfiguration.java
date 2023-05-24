@@ -3,6 +3,8 @@ package com.chua.starter.common.support.configuration;
 import com.chua.starter.common.support.converter.FastJsonHttpMessageConverter;
 import com.chua.starter.common.support.converter.ResultDataHttpMessageConverter;
 import com.chua.starter.common.support.limit.LimitAspect;
+import com.chua.starter.common.support.logger.LogGuidAspect;
+import com.chua.starter.common.support.logger.LoggerPointcutAdvisor;
 import com.chua.starter.common.support.processor.ResponseModelViewMethodProcessor;
 import com.chua.starter.common.support.properties.CoreProperties;
 import com.chua.starter.common.support.properties.CorsProperties;
@@ -79,6 +81,18 @@ public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAw
     @ConditionalOnProperty(name = "plugin.core.uniform-parameter", havingValue = "true", matchIfMissing = true)
     public ResponseAdvice responseAdvice() {
         return new ResponseAdvice();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public LoggerPointcutAdvisor loggerPointcutAdvisor() {
+        return new LoggerPointcutAdvisor();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public LogGuidAspect logGuidAspect() {
+        return new LogGuidAspect();
     }
 
     /**

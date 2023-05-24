@@ -2,6 +2,7 @@ package com.chua.starter.oauth.server.support.check;
 
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.Md5Utils;
+import com.chua.starter.common.support.logger.Logger;
 import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.oauth.client.support.annotation.UserLoginType;
 import com.chua.starter.oauth.client.support.user.LoginResult;
@@ -36,6 +37,17 @@ public class LoginCheck {
      * @param username 用户名
      * @param passwd   密码
      */
+    @Logger(value = "登陆模块", content =
+            "T(com.chua.common.support.lang.date.DateTime).now().toStandard() + " +
+                    "' 账号在( '" +
+                    "+ #args[0] + " +
+                    "' )' " +
+                    " + #args[1] + " +
+                    "'登录系统(状态: '" +
+                    " + #result['code'] + " +
+                    "') 登录方式('" +
+                    " + #args[3] + " +
+                    "' ) '")
     public ReturnResult<LoginResult> doLogin(String address, String username, String passwd, String authType) {
         UserResult userResult = null;
         Map<String, UserInfoService> beansOfType = applicationContext.getBeansOfType(UserInfoService.class);
