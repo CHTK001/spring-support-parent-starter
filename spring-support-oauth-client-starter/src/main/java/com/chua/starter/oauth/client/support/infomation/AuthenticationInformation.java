@@ -50,4 +50,13 @@ public class AuthenticationInformation {
     public static AuthenticationInformation authServerNotFound() {
         return new AuthenticationInformation(AUTHENTICATION_SERVER_NO_EXIST, null);
     }
+
+    /**
+     * 认证服务器异常
+     *
+     * @return 信息
+     */
+    public static AuthenticationInformation noAuth() {
+        return new AuthenticationInformation(AUTHENTICATION_FAILURE, null);
+    }
 }
