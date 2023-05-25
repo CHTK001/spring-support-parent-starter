@@ -71,12 +71,12 @@ public class CaptchaProperties {
         /**
          * 长度
          */
-        private int length = 4;
+        private int length = 5;
 
         /**
          * 字符集
          */
-        private String string = "1234567890";
+        private String string = "abcdeghijklmnopqrstuvwxyzABCDEGHIJKLMNOPQRSTUVWXYZ0123456789";
         /**
          * 间距
          */

@@ -123,8 +123,8 @@ public class RedisTokenResolver implements TokenResolver {
     public ReturnResult<UserResult> resolve(Cookie[] cookies, String token) {
         Cookie cookie = CookieUtil.getCookie(cookies, authServerProperties.getCookieName());
         String cv = token;
-        if (null != cookie) {
-            cv = cookie.getValue();
+        if (null == cv) {
+            cv = null == cookie ? null : cookie.getValue();
         }
 
         if (null == cv) {

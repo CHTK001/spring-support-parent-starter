@@ -13,7 +13,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class CoreProperties {
 
     /**
-     * 开启统一参数
+     * 是否开启统一响应(返回值自动包裹对象)
      */
     private boolean uniformParameter = true;
     /**

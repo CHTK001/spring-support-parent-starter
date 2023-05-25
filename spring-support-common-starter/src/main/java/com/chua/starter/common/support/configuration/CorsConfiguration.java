@@ -61,7 +61,9 @@ public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAw
 
     @Override
     public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
-        converters.add(0, new ResultDataHttpMessageConverter());
+        if (coreProperties.isUniformParameter()) {
+            converters.add(0, new ResultDataHttpMessageConverter());
+        }
     }
 
     @Override
