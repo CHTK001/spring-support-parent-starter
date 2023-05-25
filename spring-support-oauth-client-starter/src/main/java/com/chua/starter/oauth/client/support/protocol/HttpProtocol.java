@@ -165,7 +165,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         }
 
         for (Cookie cookie : cookies) {
-            if(cookie.getName().equals(authClientProperties.getTokenName())) {
+            if(cookie.getName().equals("x-oauth-cookie")) {
                 return cookie.getValue();
             }
         }
