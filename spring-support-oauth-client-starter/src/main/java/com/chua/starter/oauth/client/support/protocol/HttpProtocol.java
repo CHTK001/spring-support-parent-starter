@@ -64,14 +64,13 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         jsonObject.put("x-oauth-cookie", cookies);
         jsonObject.put("x-oauth-token", token);
         String cacheKey = getCacheKey(cookies, token);
-        if(null == cacheKey) {
-            return AuthenticationInformation.noAuth();
+        if(null != cacheKey) {
+            Object o = CACHEABLE.get(cacheKey);
+            if(null != o) {
+                return (AuthenticationInformation) o;
+            }
         }
 
-        Object o = CACHEABLE.get(cacheKey);
-        if(null != o) {
-            return (AuthenticationInformation) o;
-        }
         String accessKey = authClientProperties.getAccessKey();
         String secretKey = authClientProperties.getSecretKey();
         String serviceKey = authClientProperties.getServiceKey();
@@ -101,7 +100,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         try {
             String url = robin.getContent();
             if (null == url) {
-                return (AuthenticationInformation) CACHEABLE.put(cacheKey, AuthenticationInformation.authServerError());
+                return inCache(cacheKey, AuthenticationInformation.authServerError());
             }
 
             httpResponse = Unirest.post(
@@ -114,14 +113,14 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         }
 
         if (null == httpResponse) {
-            return (AuthenticationInformation) CACHEABLE.put(cacheKey, AuthenticationInformation.authServerError());
+            return inCache(cacheKey, AuthenticationInformation.authServerError());
         }
 
 
         int status = httpResponse.getStatus();
         String body = httpResponse.getBody();
         if (status > 400 && status < 600 || Strings.isNullOrEmpty(body)) {
-            return (AuthenticationInformation) CACHEABLE.put(cacheKey, AuthenticationInformation.authServerNotFound());
+            return inCache(cacheKey, AuthenticationInformation.authServerNotFound());
         }
 
         if (status == 200) {
@@ -133,23 +132,31 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
                     CookieUtil.remove(servletRequest, ResponseUtils.getResponse(), "x-oauth-cookie");
                 }
 
-                return (AuthenticationInformation) CACHEABLE.put(cacheKey, new AuthenticationInformation(AUTHENTICATION_FAILURE, null));
+                return inCache(cacheKey, new AuthenticationInformation(AUTHENTICATION_FAILURE, null));
             }
 
             Object data = returnResult.getData();
             if (Objects.isNull(data)) {
-                return (AuthenticationInformation) CACHEABLE.put(cacheKey, new AuthenticationInformation(AUTHENTICATION_SERVER_EXCEPTION, null));
+                return inCache(cacheKey, new AuthenticationInformation(AUTHENTICATION_SERVER_EXCEPTION, null));
             }
 
             if (code >= 200 && code < 300) {
                 body = decode.decodeHex(data.toString(), key);
-                return (AuthenticationInformation) CACHEABLE.put(cacheKey, new AuthenticationInformation(OK, Json.fromJson(body, UserResume.class)));
+                return inCache(cacheKey, new AuthenticationInformation(OK, Json.fromJson(body, UserResume.class)));
             }
 
 
-            return (AuthenticationInformation) CACHEABLE.put(cacheKey, new AuthenticationInformation(OTHER, null));
+            return inCache(cacheKey, new AuthenticationInformation(OTHER, null));
         }
-        return (AuthenticationInformation) CACHEABLE.put(cacheKey, AuthenticationInformation.authServerNotFound());
+        return inCache(cacheKey, AuthenticationInformation.authServerNotFound());
+    }
+
+    private AuthenticationInformation inCache(String cacheKey, AuthenticationInformation authenticationInformation) {
+        if(null == cacheKey) {
+            return authenticationInformation;
+        }
+
+        return (AuthenticationInformation) CACHEABLE.put(cacheKey, authenticationInformation);
     }
 
     private String getCacheKey(Cookie[] cookies, String token) {
