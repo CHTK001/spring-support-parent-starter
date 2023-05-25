@@ -53,7 +53,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
     private KeyEncode encode;
 
     private static final Cacheable CACHEABLE = new GuavaCacheable().configuration(CacheConfiguration.builder()
-                    .expireAfterWrite(10)
+                    .expireAfterWrite(60)
             .build());
 
     @Override
