@@ -222,6 +222,7 @@ public class MybatisGeneratorController implements InitializingBean {
                 .controller(aPackage.controller)
                 .xml(aPackage.xml)
                 .mapper(aPackage.mapper)
+                .parent(aPackage.parent)
                 .build();
     }
 
