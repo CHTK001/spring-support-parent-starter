@@ -12,7 +12,7 @@ public class AnyAdviceResolver extends JsonAdviceResolver {
 
     @Override
     public String type() {
-        return MediaType.ALL_VALUE;
+        return MediaType.APPLICATION_JSON_VALUE;
     }
 
 }
