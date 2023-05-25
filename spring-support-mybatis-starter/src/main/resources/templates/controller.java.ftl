@@ -12,6 +12,7 @@ import ${superControllerClassPackage};
 import ${package.Entity}.${entity};
 import ${package.Service}.${table.serviceName};
 
+import javax.annotation.Resource;
 /**
  * <p>
  * ${table.comment!} 前端控制器
@@ -20,6 +21,9 @@ import ${package.Service}.${table.serviceName};
  * @author ${author}
  * @since ${date}
  */
+<#if swagger>
+@Api(tags = "${table.comment!.replace('表', '')}接口")
+</#if>
 <#if restControllerStyle>
 @RestController
 <#else>
@@ -31,8 +35,17 @@ class ${table.controllerName}<#if superControllerClass??> : ${superControllerCla
 <#else>
 <#if superControllerClass??>
 public class ${table.controllerName} extends ${superControllerClass}<${table.serviceName}, ${entity}> {
+    @Resource
+    private ${table.serviceName} service;
+
+    @Override
+    public ${table.serviceName} getService() {
+        return service;
+    }
 <#else>
 public class ${table.controllerName} {
+  @Resource
+  private ${table.serviceName} service;
 </#if>
 
 }

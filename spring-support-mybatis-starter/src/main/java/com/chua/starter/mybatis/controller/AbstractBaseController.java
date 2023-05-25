@@ -16,10 +16,9 @@ import javax.annotation.Resource;
  *
  * @author CH
  */
-public class AbstractBaseController<S extends IService<T>, T> {
+public abstract class AbstractBaseController<S extends IService<T>, T> {
 
-    @Resource
-    private S service;
+    private final S service = getService();
 
     /**
      * 分页查询数据
@@ -65,4 +64,6 @@ public class AbstractBaseController<S extends IService<T>, T> {
     public ResultData<Boolean> save(@RequestBody T t) {
         return ResultData.success(service.save(t));
     }
+
+    abstract public S getService();
 }
