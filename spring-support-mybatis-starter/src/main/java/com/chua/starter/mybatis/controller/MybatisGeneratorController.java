@@ -1,14 +1,24 @@
 package com.chua.starter.mybatis.controller;
 
+import com.baomidou.mybatisplus.core.toolkit.StringPool;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.generator.AutoGenerator;
 import com.baomidou.mybatisplus.generator.config.*;
+import com.baomidou.mybatisplus.generator.config.querys.DbQueryDecorator;
+import com.baomidou.mybatisplus.generator.engine.VelocityTemplateEngine;
+import com.baomidou.mybatisplus.generator.keywords.BaseKeyWordsHandler;
 import com.chua.common.support.bean.BeanMap;
 import com.chua.common.support.collection.TypeHashMap;
+import com.chua.common.support.database.inquirer.JdbcInquirer;
+import com.chua.common.support.file.compress.ZipCompressFile;
+import com.chua.common.support.function.Splitter;
 import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.FileUtils;
 import com.chua.common.support.utils.IdUtils;
+import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.NetAddress;
+import com.chua.starter.common.support.result.ResultData;
 import lombok.Data;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
@@ -16,17 +26,13 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.sql.DataSource;
 import java.io.File;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.io.FileInputStream;
+import java.util.*;
 
 /**
  * 代码生成器
@@ -47,14 +53,68 @@ public class MybatisGeneratorController implements InitializingBean {
      */
     private String output = ".";
 
-    @GetMapping
-    public ResponseEntity<byte[]> generator(Generator generator) {
+    /**
+     * 页面
+     *
+     * @return 页面
+     */
+    @GetMapping("index")
+    public String index() {
+        return "index";
+    }
+
+    /**
+     * 数据库
+     *
+     * @return 数据库
+     */
+    @ResponseBody
+    @GetMapping("db")
+    public ResultData<Collection<String>> db() throws Exception {
+        return ResultData.success(dataSourceMap.keySet());
+    }
+
+    /**
+     * 生成代码
+     *
+     * @param dataSource 条件
+     * @return 生成代码
+     */
+    @ResponseBody
+    @GetMapping("find")
+    public ResultData<List<Map<String, Object>>> pageForTable(String dataSource) throws Exception {
+        DataSource dataSource1 = dataSourceMap.get(dataSource);
+        if (null == dataSource1) {
+            return ResultData.success(Collections.emptyList());
+        }
+        DataSourceConfig dataSourceConfig = builderDataSourceConfig(dataSource1);
+        DbQueryDecorator dbQueryDecorator = new DbQueryDecorator(dataSourceConfig, new StrategyConfig.Builder().build());
+        String tablesSql = dbQueryDecorator.tablesSql();
+        JdbcInquirer jdbcInquirer = new JdbcInquirer(dataSource1, true);
+        List<Map<String, Object>> query = jdbcInquirer.query(tablesSql);
+        return ResultData.success(query);
+    }
+
+    /**
+     * 生成代码
+     *
+     * @param generator 条件
+     * @return 生成代码
+     */
+    @PostMapping
+    public ResponseEntity<byte[]> generator(@RequestBody Generator generator) {
         DataSource dataSource = dataSourceMap.get(generator.getName());
         if (null == dataSource) {
             return ResponseEntity.noContent().header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).build();
         }
 
-        File newOutput = new File(output + "/" + DateTime.now().toStandard() + "/" + IdUtils.createTimeId());
+        String include = generator.getInclude();
+        String[] split = Splitter.on(',').omitEmptyStrings().trimResults().split(include);
+        File newOutput = new File(output + "/" + IdUtils.createTimeId());
+        File zip = new File(newOutput, DateTime.now().toFormat("yyyyMMdd") + ".zip");
+        if (split.length == 1) {
+            zip = new File(newOutput, split[0] + ".zip");
+        }
         try {
             FileUtils.forceMkdir(newOutput);
             GlobalConfig globalConfig = buildGlobal(newOutput, generator);
@@ -67,11 +127,20 @@ public class MybatisGeneratorController implements InitializingBean {
                             .strategy(strategyConfig)
                             .global(globalConfig)
                             .packageInfo(packageConfig);
-            generator1.execute();
-        } catch (IOException ignored) {
+            generator1.execute(new VelocityTemplateEngine());
+            ZipCompressFile zipCompressFile = new ZipCompressFile(zip);
+            zipCompressFile.pack(newOutput.getAbsolutePath(), false, "*");
+            try (FileInputStream fileInputStream = new FileInputStream(zip)) {
+                return ResponseEntity.ok()
+                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment;filename=" + zip.getName())
+                        .contentType(MediaType.APPLICATION_OCTET_STREAM).body(
+                                IoUtils.toByteArray(fileInputStream)
+                        );
+            }
+        } catch (Exception ignored) {
         } finally {
             try {
-                newOutput.delete();
+                FileUtils.forceDeleteDirectory(newOutput);
             } catch (Exception ignored) {
             }
         }
@@ -84,9 +153,11 @@ public class MybatisGeneratorController implements InitializingBean {
             TypeHashMap typeHashMap = new TypeHashMap();
             typeHashMap.addProfile(BeanMap.of(dataSource1));
             NetAddress netAddress = NetAddress.of(typeHashMap.getString("driver-url", "url", "jdbc-url"));
-            IDbQuery dbQuery = ServiceProvider.of(IDbQuery.class).getExtension("com.baomidou.mybatisplus.generator.config.querys." + netAddress.getProtocol() + "Query");
-            ITypeConvert typeConvert = ServiceProvider.of(ITypeConvert.class).getExtension("com.baomidou.mybatisplus.generator.config.converts." + netAddress.getProtocol() + "TypeConvert");
-            IKeyWordsHandler keyWordsHandler = ServiceProvider.of(IKeyWordsHandler.class).getExtension("com.baomidou.mybatisplus.generator.keywords." + netAddress.getProtocol() + "KeyWordsHandler");
+            String protocol = netAddress.getProtocol().replace("jdbc:", "");
+
+            IDbQuery dbQuery = ServiceProvider.of(IDbQuery.class).getExtension("com.baomidou.mybatisplus.generator.config.querys." + protocol + "Query");
+            ITypeConvert typeConvert = ServiceProvider.of(ITypeConvert.class).getExtension("com.baomidou.mybatisplus.generator.config.converts." + protocol + "TypeConvert");
+            IKeyWordsHandler keyWordsHandler = ServiceProvider.of(BaseKeyWordsHandler.class).getExtension("com.baomidou.mybatisplus.generator.keywords." + protocol + "KeyWordsHandler");
             return new DataSourceConfig.Builder(dataSource1)
                     .dbQuery(dbQuery)
                     .typeConvert(typeConvert)
@@ -100,7 +171,7 @@ public class MybatisGeneratorController implements InitializingBean {
         buildEntity(strategyBuilder.entityBuilder(), generator.getEntity());
         buildMapper(strategyBuilder.mapperBuilder(), generator.getMapper());
 
-        return strategyBuilder.addInclude(generator.getInclude().toArray(new String[0])).build();
+        return strategyBuilder.addInclude(Splitter.on(",").trimResults().omitEmptyStrings().split(generator.getInclude())).build();
     }
 
     private void buildMapper(com.baomidou.mybatisplus.generator.config.builder.Mapper.Builder mapperBuilder, Mapper mapper) {
@@ -125,15 +196,17 @@ public class MybatisGeneratorController implements InitializingBean {
 
     private PackageConfig buildPackage(Generator generator) {
         Package aPackage = generator.getPackages();
-        return new PackageConfig.Builder().controller(aPackage.getController())
-                .entity(aPackage.entity)
-                .mapper(aPackage.mapper)
-                .service(aPackage.service)
-                .serviceImpl(aPackage.serviceImpl)
-                .controller(aPackage.getController())
+        String parent = aPackage.getParent();
+        return new PackageConfig.Builder()
+                .entity("java." + (StringUtils.isBlank(parent) ? aPackage.entity : (parent + StringPool.DOT + aPackage.entity)))
+                .mapper("java." + (StringUtils.isBlank(parent) ? aPackage.mapper : (parent + StringPool.DOT + aPackage.mapper)))
+                .service("java." + (StringUtils.isBlank(parent) ? aPackage.service : (parent + StringPool.DOT + aPackage.service)))
+                .serviceImpl("java." + (StringUtils.isBlank(parent) ? aPackage.serviceImpl : (parent + StringPool.DOT + aPackage.serviceImpl)))
+                .controller("java." + (StringUtils.isBlank(parent) ? aPackage.controller : (parent + StringPool.DOT + aPackage.controller)))
+                .parent("")
+                .xml("resources." + aPackage.xml)
                 .moduleName(aPackage.moduleName)
-                .xml(aPackage.xml)
-                .parent(aPackage.parent).build();
+                .build();
     }
 
     private GlobalConfig buildGlobal(File newOutput, Generator generator) {
@@ -147,7 +220,7 @@ public class MybatisGeneratorController implements InitializingBean {
         if (generator.isSpringdoc()) {
             builder.enableSpringdoc();
         }
-        return builder.outputDir(newOutput.getAbsolutePath()).commentDate("yyyy-MM-dd").build();
+        return builder.disableOpenDir().outputDir(newOutput.getAbsolutePath()).commentDate("yyyy-MM-dd").build();
     }
 
 
@@ -193,7 +266,7 @@ public class MybatisGeneratorController implements InitializingBean {
         /**
          * Mapper XML包名
          */
-        private String xml = "mapper.xml";
+        private String xml = "mapper";
 
         /**
          * Controller包名
@@ -209,7 +282,7 @@ public class MybatisGeneratorController implements InitializingBean {
          * @since 3.5.1
          * @deprecated 3.5.4
          */
-        private boolean mapperAnnotation;
+        private boolean mapperAnnotation = true;
     }
 
     @Data
@@ -226,13 +299,13 @@ public class MybatisGeneratorController implements InitializingBean {
          *
          * @since 3.3.2
          */
-        private boolean chain;
+        private boolean chain = true;
 
         /**
          * 【实体】是否为lombok模型（默认 false）<br>
          * <a href="https://projectlombok.org/">document</a>
          */
-        private boolean lombok;
+        private boolean lombok = true;
     }
 
     @Data
@@ -240,7 +313,7 @@ public class MybatisGeneratorController implements InitializingBean {
         /**
          * 需要包含的表名，允许正则表达式（与exclude二选一配置）<br/>
          */
-        private final Set<String> include = new HashSet<>();
+        private String include;
         /**
          * 数据库名称
          */
@@ -249,11 +322,11 @@ public class MybatisGeneratorController implements InitializingBean {
          * 启用 schema 默认 false
          */
         private boolean enableSchema;
-        private Entity entity;
+        private Entity entity = new Entity();
 
 
-        private Mapper mapper;
-        private Package packages;
+        private Mapper mapper = new Mapper();
+        private Package packages = new Package();
 
         /**
          * 作者

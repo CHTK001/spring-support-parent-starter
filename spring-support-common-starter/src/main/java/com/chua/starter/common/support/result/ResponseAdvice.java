@@ -44,9 +44,14 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
     @Override
     public Object beforeBodyWrite(Object o, MethodParameter methodParameter, MediaType mediaType, Class<? extends HttpMessageConverter<?>> aClass, ServerHttpRequest serverHttpRequest, ServerHttpResponse serverHttpResponse) {
         String typeName = methodParameter.getDeclaringClass().getTypeName();
-        if(typeName.contains("swagger")) {
+        if (typeName.contains("swagger")) {
             return o;
         }
+
+        if (o instanceof ResultData) {
+            return o;
+        }
+
         if (aClass == ResultDataHttpMessageConverter.class) {
             return ResultData.success(o);
         }

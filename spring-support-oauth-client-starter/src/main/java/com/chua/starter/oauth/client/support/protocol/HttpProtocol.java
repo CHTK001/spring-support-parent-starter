@@ -12,7 +12,9 @@ import com.chua.common.support.utils.Md5Utils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.result.ReturnResult;
-import com.chua.starter.common.support.utils.*;
+import com.chua.starter.common.support.utils.CookieUtil;
+import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.starter.common.support.utils.ResponseUtils;
 import com.chua.starter.oauth.client.support.advice.def.DefSecret;
 import com.chua.starter.oauth.client.support.contants.AuthConstant;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
@@ -22,7 +24,6 @@ import com.google.common.base.Strings;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
-import org.hibernate.annotations.Loader;
 import org.springframework.beans.factory.InitializingBean;
 
 import javax.annotation.Resource;
@@ -105,7 +106,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
 
         if (status == 200) {
             ReturnResult returnResult = Json.fromJson(body, ReturnResult.class);
-            int code = returnResult.getCode();
+            Integer code = returnResult.getCode();
             if (403 == code) {
                 HttpServletRequest servletRequest = RequestUtils.getRequest();
                 if (null != servletRequest) {
