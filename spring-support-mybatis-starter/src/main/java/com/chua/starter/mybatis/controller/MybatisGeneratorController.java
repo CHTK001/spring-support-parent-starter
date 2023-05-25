@@ -171,6 +171,14 @@ public class MybatisGeneratorController implements InitializingBean {
         StrategyConfig.Builder strategyBuilder = new StrategyConfig.Builder();
         buildEntity(strategyBuilder.entityBuilder(), generator.getEntity());
         buildMapper(strategyBuilder.mapperBuilder(), generator.getMapper());
+        com.baomidou.mybatisplus.generator.config.builder.Controller.Builder controllerBuilder = strategyBuilder.controllerBuilder();
+        if(generator.swagger) {
+            controllerBuilder.superClass(AbstractSwaggerController.class);
+        } else {
+            controllerBuilder.superClass(AbstractBaseController.class);
+        }
+
+        controllerBuilder.serviceBuilder().convertServiceFileName((entityName -> entityName + ConstVal.SERVICE));
 
         return strategyBuilder.addInclude(Splitter.on(",").trimResults().omitEmptyStrings().split(generator.getInclude())).build();
     }

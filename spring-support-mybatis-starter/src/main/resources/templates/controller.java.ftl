@@ -9,7 +9,8 @@ import org.springframework.stereotype.Controller;
 <#if superControllerClassPackage??>
 import ${superControllerClassPackage};
 </#if>
-
+import ${package.Entity}.${entity};
+import ${package.Service}.${table.serviceName};
 /**
  * <p>
  * ${table.comment!} 前端控制器
@@ -28,7 +29,7 @@ import ${superControllerClassPackage};
 class ${table.controllerName}<#if superControllerClass??> : ${superControllerClass}()</#if>
 <#else>
 <#if superControllerClass??>
-public class ${table.controllerName} extends ${superControllerClass} {
+public class ${table.controllerName} extends ${superControllerClass}<${table.serviceName},${entity}> {
 <#else>
 public class ${table.controllerName} {
 </#if>
