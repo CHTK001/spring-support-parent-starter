@@ -1,6 +1,7 @@
 package com.chua.starter.oauth.client.support.protocol;
 
 import com.chua.common.support.annotations.Extension;
+import com.chua.common.support.annotations.SpiDefault;
 import com.chua.common.support.crypto.decode.KeyDecode;
 import com.chua.common.support.crypto.encode.KeyEncode;
 import com.chua.common.support.crypto.utils.DigestUtils;
@@ -8,8 +9,11 @@ import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.robin.Node;
 import com.chua.common.support.lang.robin.Robin;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.task.cache.CacheConfiguration;
+import com.chua.common.support.task.cache.Cacheable;
 import com.chua.common.support.utils.Md5Utils;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.guava.support.cache.GuavaCacheable;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.common.support.utils.CookieUtil;
@@ -21,6 +25,7 @@ import com.chua.starter.oauth.client.support.infomation.AuthenticationInformatio
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.google.common.base.Strings;
+import com.google.common.cache.Cache;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
@@ -38,6 +43,7 @@ import static com.chua.starter.oauth.client.support.infomation.Information.*;
  *
  * @author CH
  */
+@SpiDefault
 @Extension("http")
 public class HttpProtocol extends AbstractProtocol implements InitializingBean {
 
@@ -45,6 +51,10 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
     private AuthClientProperties authClientProperties;
     private KeyDecode decode;
     private KeyEncode encode;
+
+    private static final Cacheable CACHEABLE = new GuavaCacheable().configuration(CacheConfiguration.builder()
+                    .expireAfterWrite(10)
+            .build());
 
     @Override
     public AuthenticationInformation approve(Cookie[] cookie, String token) {
@@ -72,6 +82,11 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         item2.put(AuthConstant.OAUTH_KEY, key);
         request = encode.encodeHex(Json.toJson(item2), serviceKey);
 
+        Object o = CACHEABLE.get(request);
+        if(null != o) {
+            return (AuthenticationInformation) o;
+        }
+
         Robin<String> balance = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
         Robin<String> stringRobin = balance.create();
         String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(authClientProperties.getAuthAddress()).split(",");
@@ -81,7 +96,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         try {
             String url = robin.getContent();
             if (null == url) {
-                return AuthenticationInformation.authServerError();
+                return (AuthenticationInformation) CACHEABLE.put(request, AuthenticationInformation.authServerError());
             }
 
             httpResponse = Unirest.post(
@@ -94,14 +109,14 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         }
 
         if (null == httpResponse) {
-            return AuthenticationInformation.authServerError();
+            return (AuthenticationInformation) CACHEABLE.put(request, AuthenticationInformation.authServerError());
         }
 
 
         int status = httpResponse.getStatus();
         String body = httpResponse.getBody();
         if (status > 400 && status < 600 || Strings.isNullOrEmpty(body)) {
-            return AuthenticationInformation.authServerNotFound();
+            return (AuthenticationInformation) CACHEABLE.put(request, AuthenticationInformation.authServerNotFound());
         }
 
         if (status == 200) {
@@ -113,23 +128,23 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
                     CookieUtil.remove(servletRequest, ResponseUtils.getResponse(), "x-oauth-cookie");
                 }
 
-                return new AuthenticationInformation(AUTHENTICATION_FAILURE, null);
+                return (AuthenticationInformation) CACHEABLE.put(request, new AuthenticationInformation(AUTHENTICATION_FAILURE, null));
             }
 
             Object data = returnResult.getData();
             if (Objects.isNull(data)) {
-                return new AuthenticationInformation(AUTHENTICATION_SERVER_EXCEPTION, null);
+                return (AuthenticationInformation) CACHEABLE.put(request, new AuthenticationInformation(AUTHENTICATION_SERVER_EXCEPTION, null));
             }
 
             if (code >= 200 && code < 300) {
                 body = decode.decodeHex(data.toString(), key);
-                return new AuthenticationInformation(OK, Json.fromJson(body, UserResume.class));
+                return (AuthenticationInformation) CACHEABLE.put(request, new AuthenticationInformation(OK, Json.fromJson(body, UserResume.class)));
             }
 
 
-            return new AuthenticationInformation(OTHER, null);
+            return (AuthenticationInformation) CACHEABLE.put(request, new AuthenticationInformation(OTHER, null));
         }
-        return AuthenticationInformation.authServerNotFound();
+        return (AuthenticationInformation) CACHEABLE.put(request, AuthenticationInformation.authServerNotFound());
     }
 
     @Override
