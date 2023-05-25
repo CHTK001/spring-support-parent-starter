@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.generator.AutoGenerator;
 import com.baomidou.mybatisplus.generator.config.*;
 import com.baomidou.mybatisplus.generator.config.querys.DbQueryDecorator;
+import com.baomidou.mybatisplus.generator.engine.FreemarkerTemplateEngine;
 import com.baomidou.mybatisplus.generator.engine.VelocityTemplateEngine;
 import com.baomidou.mybatisplus.generator.keywords.BaseKeyWordsHandler;
 import com.chua.common.support.bean.BeanMap;
@@ -118,7 +119,7 @@ public class MybatisGeneratorController implements InitializingBean {
         try {
             FileUtils.forceMkdir(newOutput);
             GlobalConfig globalConfig = buildGlobal(newOutput, generator);
-            PackageConfig packageConfig = buildPackage(generator);
+            PackageConfig packageConfig = buildPackage(newOutput, generator);
             StrategyConfig strategyConfig = buildStrategy(generator);
 
             DataSourceConfig dataSourceConfig = builderDataSourceConfig(dataSource);
@@ -127,7 +128,7 @@ public class MybatisGeneratorController implements InitializingBean {
                             .strategy(strategyConfig)
                             .global(globalConfig)
                             .packageInfo(packageConfig);
-            generator1.execute(new VelocityTemplateEngine());
+            generator1.execute(new FreemarkerTemplateEngine());
             ZipCompressFile zipCompressFile = new ZipCompressFile(zip);
             zipCompressFile.pack(newOutput.getAbsolutePath(), false, "*");
             try (FileInputStream fileInputStream = new FileInputStream(zip)) {
@@ -194,18 +195,25 @@ public class MybatisGeneratorController implements InitializingBean {
         }
     }
 
-    private PackageConfig buildPackage(Generator generator) {
+    private PackageConfig buildPackage(File newOutput, Generator generator) {
         Package aPackage = generator.getPackages();
         String parent = aPackage.getParent();
+        Map<OutputFile, String> path = new HashMap<>();
+        path.put(OutputFile.xml, newOutput.getAbsolutePath() + "/resources/" + aPackage.xml);
+        path.put(OutputFile.entity, newOutput.getAbsolutePath() + "/java/" + ((StringUtils.isBlank(parent) ? aPackage.entity : (parent + StringPool.DOT + aPackage.entity))).replace(StringPool.DOT, StringPool.SLASH));
+        path.put(OutputFile.mapper, newOutput.getAbsolutePath() + "/java/" + ((StringUtils.isBlank(parent) ? aPackage.mapper : (parent + StringPool.DOT + aPackage.mapper))).replace(StringPool.DOT, StringPool.SLASH));
+        path.put(OutputFile.service, newOutput.getAbsolutePath() + "/java/" + ((StringUtils.isBlank(parent) ? aPackage.service : (parent + StringPool.DOT + aPackage.service))).replace(StringPool.DOT, StringPool.SLASH));
+        path.put(OutputFile.serviceImpl,newOutput.getAbsolutePath() + "/java/" + ((StringUtils.isBlank(parent) ? aPackage.serviceImpl : (parent + StringPool.DOT + aPackage.serviceImpl))).replace(StringPool.DOT, StringPool.SLASH));
+        path.put(OutputFile.controller, newOutput.getAbsolutePath() + "/java/" + ((StringUtils.isBlank(parent) ? aPackage.controller : (parent + StringPool.DOT + aPackage.controller))).replace(StringPool.DOT, StringPool.SLASH));
         return new PackageConfig.Builder()
-                .entity("java." + (StringUtils.isBlank(parent) ? aPackage.entity : (parent + StringPool.DOT + aPackage.entity)))
-                .mapper("java." + (StringUtils.isBlank(parent) ? aPackage.mapper : (parent + StringPool.DOT + aPackage.mapper)))
-                .service("java." + (StringUtils.isBlank(parent) ? aPackage.service : (parent + StringPool.DOT + aPackage.service)))
-                .serviceImpl("java." + (StringUtils.isBlank(parent) ? aPackage.serviceImpl : (parent + StringPool.DOT + aPackage.serviceImpl)))
-                .controller("java." + (StringUtils.isBlank(parent) ? aPackage.controller : (parent + StringPool.DOT + aPackage.controller)))
-                .parent("")
-                .xml("resources." + aPackage.xml)
+                .pathInfo(path)
                 .moduleName(aPackage.moduleName)
+                .entity(aPackage.entity)
+                .service(aPackage.service)
+                .serviceImpl(aPackage.serviceImpl)
+                .controller(aPackage.controller)
+                .xml(aPackage.xml)
+                .mapper(aPackage.mapper)
                 .build();
     }
 

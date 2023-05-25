@@ -151,7 +151,7 @@
                                         </tr>
                                         <tr>
                                             <td class="text-right" style="vertical-align: middle !important;">Service Impl包名</td>
-                                            <td class="text-left"><input type="text" id="serviceImpl" placeholder="serviceImpl" value="serviceImpl" /></td>
+                                            <td class="text-left"><input type="text" id="serviceImpl" placeholder="serviceImpl" value="service.impl" /></td>
                                         </tr>
                                         <tr>
                                             <td class="text-right" style="vertical-align: middle !important;">Mapper包名</td>
