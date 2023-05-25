@@ -60,9 +60,18 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
     public AuthenticationInformation approve(Cookie[] cookie, String token) {
         String key = UUID.randomUUID().toString();
         Map<String, Object> jsonObject = new HashMap<>(2);
-        jsonObject.put("x-oauth-cookie", Optional.ofNullable(cookie).orElse(new Cookie[0]));
+        Cookie[] cookies = Optional.ofNullable(cookie).orElse(new Cookie[0]);
+        jsonObject.put("x-oauth-cookie", cookies);
         jsonObject.put("x-oauth-token", token);
+        String cacheKey = getCacheKey(cookies, token);
+        if(null == cacheKey) {
+            return AuthenticationInformation.noAuth();
+        }
 
+        Object o = CACHEABLE.get(cacheKey);
+        if(null != o) {
+            return (AuthenticationInformation) o;
+        }
         String accessKey = authClientProperties.getAccessKey();
         String secretKey = authClientProperties.getSecretKey();
         String serviceKey = authClientProperties.getServiceKey();
@@ -82,10 +91,6 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         item2.put(AuthConstant.OAUTH_KEY, key);
         request = encode.encodeHex(Json.toJson(item2), serviceKey);
 
-        Object o = CACHEABLE.get(request);
-        if(null != o) {
-            return (AuthenticationInformation) o;
-        }
 
         Robin<String> balance = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
         Robin<String> stringRobin = balance.create();
@@ -96,7 +101,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         try {
             String url = robin.getContent();
             if (null == url) {
-                return (AuthenticationInformation) CACHEABLE.put(request, AuthenticationInformation.authServerError());
+                return (AuthenticationInformation) CACHEABLE.put(cacheKey, AuthenticationInformation.authServerError());
             }
 
             httpResponse = Unirest.post(
@@ -109,14 +114,14 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         }
 
         if (null == httpResponse) {
-            return (AuthenticationInformation) CACHEABLE.put(request, AuthenticationInformation.authServerError());
+            return (AuthenticationInformation) CACHEABLE.put(cacheKey, AuthenticationInformation.authServerError());
         }
 
 
         int status = httpResponse.getStatus();
         String body = httpResponse.getBody();
         if (status > 400 && status < 600 || Strings.isNullOrEmpty(body)) {
-            return (AuthenticationInformation) CACHEABLE.put(request, AuthenticationInformation.authServerNotFound());
+            return (AuthenticationInformation) CACHEABLE.put(cacheKey, AuthenticationInformation.authServerNotFound());
         }
 
         if (status == 200) {
@@ -128,23 +133,37 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
                     CookieUtil.remove(servletRequest, ResponseUtils.getResponse(), "x-oauth-cookie");
                 }
 
-                return (AuthenticationInformation) CACHEABLE.put(request, new AuthenticationInformation(AUTHENTICATION_FAILURE, null));
+                return (AuthenticationInformation) CACHEABLE.put(cacheKey, new AuthenticationInformation(AUTHENTICATION_FAILURE, null));
             }
 
             Object data = returnResult.getData();
             if (Objects.isNull(data)) {
-                return (AuthenticationInformation) CACHEABLE.put(request, new AuthenticationInformation(AUTHENTICATION_SERVER_EXCEPTION, null));
+                return (AuthenticationInformation) CACHEABLE.put(cacheKey, new AuthenticationInformation(AUTHENTICATION_SERVER_EXCEPTION, null));
             }
 
             if (code >= 200 && code < 300) {
                 body = decode.decodeHex(data.toString(), key);
-                return (AuthenticationInformation) CACHEABLE.put(request, new AuthenticationInformation(OK, Json.fromJson(body, UserResume.class)));
+                return (AuthenticationInformation) CACHEABLE.put(cacheKey, new AuthenticationInformation(OK, Json.fromJson(body, UserResume.class)));
             }
 
 
-            return (AuthenticationInformation) CACHEABLE.put(request, new AuthenticationInformation(OTHER, null));
+            return (AuthenticationInformation) CACHEABLE.put(cacheKey, new AuthenticationInformation(OTHER, null));
         }
-        return (AuthenticationInformation) CACHEABLE.put(request, AuthenticationInformation.authServerNotFound());
+        return (AuthenticationInformation) CACHEABLE.put(cacheKey, AuthenticationInformation.authServerNotFound());
+    }
+
+    private String getCacheKey(Cookie[] cookies, String token) {
+        if(null != token) {
+            return token;
+        }
+
+        for (Cookie cookie : cookies) {
+            if(cookie.getName().equals(authClientProperties.getTokenName())) {
+                return cookie.getValue();
+            }
+        }
+
+        return null;
     }
 
     @Override
