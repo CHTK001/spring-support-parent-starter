@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.starter.common.support.result.ResultData;
+import com.chua.starter.mybatis.entity.DelegatePage;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,8 +19,6 @@ import javax.annotation.Resource;
  */
 public abstract class AbstractBaseController<S extends IService<T>, T> {
 
-    private final S service = getService();
-
     /**
      * 分页查询数据
      *
@@ -28,8 +27,8 @@ public abstract class AbstractBaseController<S extends IService<T>, T> {
      * @return 分页结果
      */
     @GetMapping("page")
-    public ResultData<Page<T>> page(Page<T> page, T entity) {
-        return ResultData.success(service.page(page, Wrappers.lambdaQuery(entity)));
+    public ResultData<Page<T>> page(DelegatePage<T> page, T entity) {
+        return ResultData.success(getService().page(page.createPage(), Wrappers.lambdaQuery(entity)));
     }
 
     /**
@@ -40,7 +39,7 @@ public abstract class AbstractBaseController<S extends IService<T>, T> {
      */
     @GetMapping("delete/{id}")
     public ResultData<Boolean> delete(@PathVariable("id") String id) {
-        return ResultData.success(service.removeById(id));
+        return ResultData.success(getService().removeById(id));
     }
 
     /**
@@ -51,7 +50,7 @@ public abstract class AbstractBaseController<S extends IService<T>, T> {
      */
     @PostMapping("update")
     public ResultData<Boolean> updateById(@RequestBody T t) {
-        return ResultData.success(service.updateById(t));
+        return ResultData.success(getService().updateById(t));
     }
 
     /**
@@ -62,7 +61,7 @@ public abstract class AbstractBaseController<S extends IService<T>, T> {
      */
     @PostMapping("save")
     public ResultData<Boolean> save(@RequestBody T t) {
-        return ResultData.success(service.save(t));
+        return ResultData.success(getService().save(t));
     }
 
     abstract public S getService();

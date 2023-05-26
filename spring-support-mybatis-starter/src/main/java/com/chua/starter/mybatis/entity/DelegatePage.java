@@ -1,31 +1,33 @@
 package com.chua.starter.mybatis.entity;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.PageDTO;
+import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.database.annotation.ColumnIgnore;
+import com.chua.common.support.utils.CollectionUtils;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
-import io.swagger.annotations.ApiParam;
 import lombok.Data;
-import springfox.documentation.annotations.ApiIgnore;
+
+import java.util.Collections;
+import java.util.List;
 
 /**
  * page
  * @author CH
  */
-@ApiModel("分页信息")
 @Data
-public class RequestPage<T>{
+public class DelegatePage<T>{
     /**
      * 每页显示条数，默认 10
      */
     @ColumnIgnore
-    @ApiModelProperty("每页显示条数，默认 10")
     protected long pageSize = 10;
 
     /**
      * 当前页
      */
     @ColumnIgnore
-    @ApiModelProperty("当前页")
     protected long pageNo = 1;
 
     public com.baomidou.mybatisplus.extension.plugins.pagination.Page<T> createPage() {
