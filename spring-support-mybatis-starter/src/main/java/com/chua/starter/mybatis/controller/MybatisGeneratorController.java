@@ -177,6 +177,7 @@ public class MybatisGeneratorController implements InitializingBean {
         } else {
             controllerBuilder.superClass(AbstractBaseController.class);
         }
+        controllerBuilder.enableRestStyle();
 
         controllerBuilder.serviceBuilder().convertServiceFileName((entityName -> entityName + ConstVal.SERVICE));
 
