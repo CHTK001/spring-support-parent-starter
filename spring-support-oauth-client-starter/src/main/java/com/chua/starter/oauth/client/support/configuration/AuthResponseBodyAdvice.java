@@ -1,5 +1,7 @@
 package com.chua.starter.oauth.client.support.configuration;
 
+import com.chua.starter.common.support.converter.ResultDataHttpMessageConverter;
+import com.chua.starter.common.support.result.ResultData;
 import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.oauth.client.support.advice.Advice;
 import com.chua.starter.oauth.client.support.advice.AdviceResolver;
@@ -126,7 +128,10 @@ public class AuthResponseBodyAdvice implements ResponseBodyAdvice<Object> {
 
     @Override
     public boolean supports(MethodParameter returnType, Class converterType) {
-        return returnType.getGenericParameterType() != ReturnResult.class;
+        return
+                !ResultDataHttpMessageConverter.class.isAssignableFrom(converterType) &&
+                !ReturnResult.class.isAssignableFrom(returnType.getMethod().getReturnType())&&
+                !ResultData.class.isAssignableFrom(returnType.getMethod().getReturnType());
     }
 
     @Override

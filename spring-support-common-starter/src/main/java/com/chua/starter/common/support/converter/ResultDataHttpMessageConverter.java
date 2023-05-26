@@ -52,7 +52,7 @@ public class ResultDataHttpMessageConverter
         if (null == mediaType) {
             return false;
         }
-        return ServiceProvider.of(MediaTypeHandler.class).isSupport(mediaType.getSubtype());
+        return false;
     }
 
     @Override
