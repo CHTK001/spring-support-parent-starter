@@ -28,7 +28,7 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> {
      */
     @ApiOperation("分页查询基础数据")
     @GetMapping("page")
-    public ResultData<ResultPage<T>> page(@Valid RequestPage<T> page, T entity, @ApiIgnore BindingResult bindingResult) {
+    public ResultData<ResultPage<T>> page(RequestPage<T> page, @Valid T entity, @ApiIgnore BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
             return ResultData.failure(1, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
