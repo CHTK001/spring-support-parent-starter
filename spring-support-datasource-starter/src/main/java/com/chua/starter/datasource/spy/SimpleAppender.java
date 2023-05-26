@@ -4,6 +4,7 @@ import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.lang.formatter.DdlFormatter;
 import com.chua.common.support.lang.formatter.HighlightingFormatter;
 import com.chua.common.support.log.Log;
+import com.chua.common.support.utils.StringUtils;
 import com.p6spy.engine.spy.appender.MessageFormattingStrategy;
 
 /**
@@ -26,13 +27,16 @@ public class SimpleAppender implements MessageFormattingStrategy {
     private static final Log log = Log.getLogger(MessageFormattingStrategy.class);
     @Override
     public String formatMessage(int connectionId, String now, long elapsed, String category, String prepared, String sql, String url) {
+        if(StringUtils.isEmpty(sql)) {
+            return "";
+        }
         log.info("数据库链接ID{}", connectionId);
         log.info("查询耗时{}", elapsed);
         if(log.isDebugEnabled()) {
             log.debug("查询时间: {}", DateTime.of(now).toStandard());
             log.debug("数据库连接地址: {}", url);
         }
-        log.info("查询SQL \r\n", HighlightingFormatter.INSTANCE.format(sql));
+        log.info("查询SQL \r\n {}", HighlightingFormatter.INSTANCE.format(sql));
         return "";
     }
 }
