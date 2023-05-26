@@ -2,8 +2,10 @@ package com.chua.starter.oauth.client.support.user;
 
 import com.google.common.base.Strings;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.springframework.util.AntPathMatcher;
 
+import java.util.HashMap;
 import java.util.Objects;
 import java.util.Set;
 
@@ -13,8 +15,9 @@ import java.util.Set;
  * @author CH
  * @since 2022/7/23 8:48
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
-public class UserResume {
+public class UserResume extends HashMap<String, Object> {
     /**
      * 索引
      */

@@ -1,5 +1,6 @@
 package com.chua.starter.oauth.client.support.configuration;
 
+import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.oauth.client.support.annotation.UserValue;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
@@ -77,6 +78,10 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
         Class<?> parameterType = parameter.getParameterType();
         Object o = cacheValue.get(paramName);
 
+        if (null == o) {
+            o = MapUtils.getString(com.chua.common.support.bean.BeanMap.create(cacheValue.get("ext")), paramName);
+        }
+
 
         if (null == o) {
             o = requestValue.defaultValue();
@@ -99,7 +104,12 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
             }
         }
         if (null == convert) {
-            Object newInstance = parameterType.newInstance();
+            Object newInstance = null;
+            try {
+                newInstance = parameterType.newInstance();
+            } catch (Exception e) {
+                return null;
+            }
             BeanMap beanMap = BeanMap.create(newInstance);
             beanMap.putAll(cacheValue);
             return beanMap.getBean();
@@ -135,7 +145,7 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
         Map<String, Object> rs = new LinkedHashMap<>();
         AuthenticationInformation authentication = webRequest1.authentication();
         UserResume returnResult = authentication.getReturnResult();
-        rs.putAll(BeanMap.create(returnResult));
+        rs.putAll(returnResult);
         return rs;
     }
 }
