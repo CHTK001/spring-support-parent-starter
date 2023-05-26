@@ -1,6 +1,9 @@
 package com.chua.starter.swagger.support;
 
 import com.github.xiaoymin.knife4j.spring.annotations.EnableKnife4j;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableTable;
+import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
@@ -47,27 +50,13 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
     Knife4jProperties knife4jProperties;
     private ApplicationContext applicationContext;
 
-
-    @ConditionalOnMissingBean
-    @Bean(value = "defaultApi2")
-    public Docket defaultApi2() {
-        return new Docket(DocumentationType.SWAGGER_2)
-                .apiInfo(new ApiInfoBuilder()
-                        .description("# Empty")
-                        .version("1.0")
-                        .build())
-                //分组名称
-                .groupName("2.X版本")
-                .select()
-                //这里指定Controller扫描包路径
-                .apis(RequestHandlerSelectors.basePackage("com.hua.demo.controller"))
-                .paths(PathSelectors.any())
-                .build();
-    }
-
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
-        for (Knife4jProperties.Knife4j knife4j : Optional.ofNullable(knife4jProperties.getKnife4j()).orElse(Collections.emptyList())) {
+        for (Knife4jProperties.Knife4j knife4j : Optional.ofNullable(knife4jProperties.getKnife4j())
+                .orElse(Lists.newArrayList(new Knife4jProperties.Knife4j()
+                        .setGroupName("说明")
+                        .setBasePackage("com.hua.demo.controller")
+                ))) {
             AutowireCapableBeanFactory autowireCapableBeanFactory = applicationContext.getAutowireCapableBeanFactory();
             if (autowireCapableBeanFactory instanceof ConfigurableListableBeanFactory) {
                 ((ConfigurableListableBeanFactory) autowireCapableBeanFactory).registerSingleton(
