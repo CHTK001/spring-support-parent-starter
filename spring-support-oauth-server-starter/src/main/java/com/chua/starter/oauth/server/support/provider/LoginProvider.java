@@ -296,7 +296,7 @@ public class LoginProvider implements InitializingBean {
             }
         }
         String sessionKey = Optional.ofNullable(request.getSession().getAttribute("KAPTCHA_SESSION_KEY")).orElse("").toString();
-        if (Strings.isNullOrEmpty(code) || !code.equals(sessionKey)) {
+        if (Strings.isNullOrEmpty(code) || !code.equalsIgnoreCase(sessionKey)) {
             loggerResolver.register("doWebLogin", 400, "[" + sessionKey + "][" + code + "]校验码错误", address);
             modelMap.addFlashAttribute("msg", "校验码错误");
             try {
