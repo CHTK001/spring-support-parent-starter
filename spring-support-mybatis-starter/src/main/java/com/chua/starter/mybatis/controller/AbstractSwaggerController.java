@@ -1,9 +1,9 @@
 package com.chua.starter.mybatis.controller;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.starter.common.support.result.ResultData;
+import com.chua.starter.mybatis.entity.Page;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import org.springframework.web.bind.annotation.*;
