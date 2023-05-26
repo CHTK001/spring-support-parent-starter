@@ -39,18 +39,26 @@ public class CaptchaProperties {
      * 干扰线
      */
     private NoiseProperties noise = new NoiseProperties();
+    /**
+     * 图片样式
+     */
+    private Obscurificator obscurificator = new Obscurificator();
+    @Data
+    public static class Obscurificator {
 
+        private String impl = "com.google.code.kaptcha.impl.WaterRipple";
+    }
 
     @Data
     public static class NoiseProperties {
         /**
          * 实现
          */
-        private String impl = "com.google.code.kaptcha.impl.NoNoise";
+        private String impl = "com.google.code.kaptcha.impl.DefaultNoise";
         /**
          * 颜色
          */
-        private String color = "";
+        private String color = "black";
     }
 
     @Data
@@ -76,7 +84,7 @@ public class CaptchaProperties {
         /**
          * 字符集
          */
-        private String string = "abcdeghijklmnopqrstuvwxyzABCDEGHIJKLMNOPQRSTUVWXYZ0123456789";
+        private String string = "abcde2345678gfynmnpwxABCDEGFYNMNPWX";
         /**
          * 间距
          */
@@ -96,6 +104,6 @@ public class CaptchaProperties {
         /**
          * 文本字体样式
          */
-        private String names = "";
+        private String names = "宋体,楷体,微软雅黑";
     }
 }

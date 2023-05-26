@@ -42,7 +42,7 @@ public class CaptchaConfiguration {
         properties.put(KAPTCHA_TEXTPRODUCER_CHAR_STRING, captchaProperties.getText().getChars().getString());
         properties.put(KAPTCHA_NOISE_IMPL, captchaProperties.getNoise().getImpl());
         properties.put(KAPTCHA_NOISE_COLOR, captchaProperties.getNoise().getColor());
-        properties.put(KAPTCHA_OBSCURIFICATOR_IMPL, "com.google.code.kaptcha.impl.ShadowGimpy");
+        properties.put(KAPTCHA_OBSCURIFICATOR_IMPL, captchaProperties.getObscurificator().getImpl());
         Config config = new Config(properties);
         DefaultKaptcha defaultKaptcha = new DefaultKaptcha();
         defaultKaptcha.setConfig(config);
@@ -61,7 +61,7 @@ public class CaptchaConfiguration {
         properties.put(KAPTCHA_TEXTPRODUCER_IMPL, CaptchaFormulaCreator.class.getTypeName());
         properties.put(KAPTCHA_NOISE_IMPL, captchaProperties.getNoise().getImpl());
         properties.put(KAPTCHA_NOISE_COLOR, captchaProperties.getNoise().getColor());
-        properties.put(KAPTCHA_OBSCURIFICATOR_IMPL, "com.google.code.kaptcha.impl.ShadowGimpy");
+        properties.put(KAPTCHA_OBSCURIFICATOR_IMPL, captchaProperties.getObscurificator().getImpl());
 
         Config config = new Config(properties);
         DefaultKaptcha defaultKaptcha = new DefaultKaptcha();
