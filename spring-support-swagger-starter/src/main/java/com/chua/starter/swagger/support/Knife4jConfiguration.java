@@ -31,7 +31,11 @@ import springfox.bean.validators.configuration.BeanValidatorPluginsConfiguration
 import springfox.documentation.builders.ApiInfoBuilder;
 import springfox.documentation.builders.PathSelectors;
 import springfox.documentation.builders.RequestHandlerSelectors;
+import springfox.documentation.builders.RequestParameterBuilder;
+import springfox.documentation.schema.ModelSpecification;
 import springfox.documentation.service.ApiKey;
+import springfox.documentation.service.ParameterType;
+import springfox.documentation.service.RequestParameter;
 import springfox.documentation.service.SecurityScheme;
 import springfox.documentation.spi.DocumentationType;
 import springfox.documentation.spring.web.plugins.Docket;
@@ -74,19 +78,33 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
                                 //这里指定Controller扫描包路径
                                 .apis(RequestHandlerSelectors.basePackage(knife4j.getBasePackage()))
                                 .paths(PathSelectors.any())
-                                .build().securitySchemes(apiKeys())
+                                .build()
+                                .globalRequestParameters(Lists.newArrayList(
+                                        new RequestParameterBuilder()
+                                                .name("x-oauth-token")
+                                                .description("token")
+                                                .required(true)
+                                                .parameterIndex(1)
+                                                .in(ParameterType.HEADER)
+                                                .build(),
+                                        new RequestParameterBuilder()
+                                                .name("x-header-from")
+                                                .description("from")
+                                                .required(true)
+                                                .parameterIndex(2)
+                                                .in(ParameterType.HEADER)
+                                                .build(),
+                                        new RequestParameterBuilder()
+                                                .name("x-header-timestamp")
+                                                .description("timestamp")
+                                                .required(true)
+                                                .parameterIndex(3)
+                                                .in(ParameterType.HEADER)
+                                                .build()
+                                ))
                 );
             }
         }
-    }
-
-    private List<SecurityScheme> apiKeys(){
-        List<SecurityScheme> apiKeys = new ArrayList<>();
-        ApiKey token = new ApiKey("x-oauth-token","x-oauth-token","header");
-        apiKeys.add(token);
-        ApiKey platform = new ApiKey("x-header-form","x-header-form","web");
-        apiKeys.add(platform);
-        return apiKeys;
     }
 
     @Override
