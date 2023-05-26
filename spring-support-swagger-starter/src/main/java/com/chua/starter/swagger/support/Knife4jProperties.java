@@ -1,6 +1,7 @@
 package com.chua.starter.swagger.support;
 
 import lombok.Data;
+import lombok.experimental.Accessors;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.List;
@@ -19,6 +20,7 @@ public class Knife4jProperties {
 
 
     @Data
+    @Accessors(chain = true)
     public static class Knife4j {
         /**
          * 描述
