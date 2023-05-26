@@ -1,5 +1,6 @@
 package com.chua.starter.mybatis;
 
+import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.mybatis.controller.MybatisGeneratorController;
@@ -57,6 +58,18 @@ public class MybatisConfiguration {
     @ConditionalOnMissingBean
     public OptimisticLockerInnerInterceptor optimisticLockerInnerInterceptor() {
         return new OptimisticLockerInnerInterceptor();
+    }
+    /**
+     * MybatisPlusInterceptor
+     *
+     * @return MybatisPlusInterceptor
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public MybatisPlusInterceptor mybatisPlusInterceptor(OptimisticLockerInnerInterceptor optimisticLockerInnerInterceptor ) {
+        MybatisPlusInterceptor mybatisPlusInterceptor = new MybatisPlusInterceptor();
+        mybatisPlusInterceptor.addInnerInterceptor(optimisticLockerInnerInterceptor);
+        return mybatisPlusInterceptor;
     }
 
     /**

@@ -227,8 +227,8 @@
 
         let selectionIds = [];    //保存选中ids
         $selectLeo.off('change')
-        let initialTable = function () {
-            $table.bootstrapTable({
+        let opt = function() {
+            return {
                 url: "find?dataSource=" + $selectLeo.find('option:selected').text(),
                 editable: !0,
                 height: "100%",
@@ -271,11 +271,14 @@
                     field: 'Update_time',
                     title: '更新时间'
                 }]
-            });
+            };
+        }
+        let initialTable = function () {
+            $table.bootstrapTable(opt());
         }
         initialTable();
         $selectLeo.on('change', (e) => {
-            initial();
+            $table.bootstrapTable("refresh", opt());
         })
     });
 </script>

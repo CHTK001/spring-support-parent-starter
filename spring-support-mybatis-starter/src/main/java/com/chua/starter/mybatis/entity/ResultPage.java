@@ -59,13 +59,6 @@ public class ResultPage<T>{
         return oPageDTO;
     }
 
-    public static <T,O> ResultPage<T> copyList(IPage<O> oiPage){
-        ResultPage<T> tPageDTO = new ResultPage<>();
-        tPageDTO.setTotalPage(oiPage.getPages());
-        tPageDTO.setCurrent(oiPage.getCurrent());
-        tPageDTO.setTotal(oiPage.getTotal());
-        return tPageDTO;
-    }
 
     public static <T> ResultPage<T> copy(IPage<T> tiPage){
         ResultPage<T> oPageDTO = new ResultPage<>();

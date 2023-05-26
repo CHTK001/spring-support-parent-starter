@@ -34,6 +34,7 @@ import javax.sql.DataSource;
 import java.io.File;
 import java.io.FileInputStream;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 代码生成器
@@ -72,7 +73,7 @@ public class MybatisGeneratorController implements InitializingBean {
     @ResponseBody
     @GetMapping("db")
     public ResultData<Collection<String>> db() throws Exception {
-        return ResultData.success(dataSourceMap.keySet());
+        return ResultData.success(dataSourceMap.keySet().stream().filter(it -> !"dynamicDataSource".equals(it)).collect(Collectors.toList()));
     }
 
     /**
