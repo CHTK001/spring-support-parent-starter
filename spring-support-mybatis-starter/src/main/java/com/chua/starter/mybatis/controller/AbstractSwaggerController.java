@@ -1,14 +1,13 @@
 package com.chua.starter.mybatis.controller;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.starter.common.support.result.ResultData;
-import com.chua.starter.mybatis.entity.Page;
+import com.chua.starter.mybatis.entity.RequestPage;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import org.springframework.web.bind.annotation.*;
-
-import javax.annotation.Resource;
 
 /**
  * 超类
@@ -28,8 +27,8 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> {
      */
     @ApiOperation("分页查询基础数据")
     @GetMapping("page")
-    public ResultData<Page<T>> page(@ApiParam("页码") Page<T> page, T entity) {
-        return ResultData.success(service.page(page, Wrappers.lambdaQuery(entity)));
+    public ResultData<Page<T>> page(@ApiParam("页码") RequestPage<T> page, T entity) {
+        return ResultData.success(service.page(page.getPage(), Wrappers.lambdaQuery(entity)));
     }
 
     /**
