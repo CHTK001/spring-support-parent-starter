@@ -3,6 +3,7 @@ package com.chua.starter.datasource.spy;
 import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.lang.formatter.DdlFormatter;
 import com.chua.common.support.lang.formatter.HighlightingFormatter;
+import com.chua.common.support.lang.formatter.SqlFormatter;
 import com.chua.common.support.log.Log;
 import com.chua.common.support.utils.StringUtils;
 import com.p6spy.engine.spy.appender.MessageFormattingStrategy;
@@ -36,7 +37,7 @@ public class SimpleAppender implements MessageFormattingStrategy {
             log.debug("查询时间: {}", DateTime.of(now).toStandard());
             log.debug("数据库连接地址: {}", url);
         }
-        log.info("查询SQL \r\n {}", HighlightingFormatter.INSTANCE.format(sql));
+        log.info("查询SQL \r\n {}", HighlightingFormatter.INSTANCE.format(SqlFormatter.format(sql)));
         return "";
     }
 }
