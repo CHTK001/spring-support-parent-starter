@@ -1,6 +1,6 @@
 package com.chua.starter.config.protocol;
 
-import com.chua.common.support.crypto.Encrypt;
+import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.function.NamedThreadFactory;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.spi.ServiceProvider;
@@ -97,7 +97,7 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Cons
             return Collections.emptyList();
         }
 
-        Encrypt encrypt = ServiceProvider.of(Encrypt.class).getExtension(configProperties.getEncrypt());
+        Codec encrypt = ServiceProvider.of(Codec.class).getExtension(configProperties.getEncrypt());
         Map<String, Object> req = new HashMap<>(12);
 
         renderData(req);
@@ -346,7 +346,7 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Cons
         run.set(false);
         Map<String, Object> rs = new HashMap<>(3);
 
-        Encrypt provider = ServiceProvider.of(Encrypt.class).getExtension(configProperties.getEncrypt());
+        Codec provider = ServiceProvider.of(Codec.class).getExtension(configProperties.getEncrypt());
         rs.put("binder-client", Optional.ofNullable(configProperties.getBindIp()).orElse(getHostIp()));
         if(null != configProperties.getNetPort()) {
             rs.put("binder-port", configProperties.getNetPort());

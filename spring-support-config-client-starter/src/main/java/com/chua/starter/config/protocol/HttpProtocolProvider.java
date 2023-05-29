@@ -2,7 +2,7 @@ package com.chua.starter.config.protocol;
 
 import com.alibaba.fastjson2.JSON;
 import com.chua.common.support.annotations.Spi;
-import com.chua.common.support.crypto.Encrypt;
+import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.config.entity.KeyValue;
@@ -75,7 +75,7 @@ public class HttpProtocolProvider extends AbstractProtocolProvider {
     @Override
     public void listener(String data) {
         //服务端主动发起信息
-        Encrypt provider = ServiceProvider.of(Encrypt.class).getExtension(configProperties.getEncrypt());
+        Codec provider = ServiceProvider.of(Codec.class).getExtension(configProperties.getEncrypt());
         String decode = provider.decodeHex(data, StringUtils.defaultString(configProperties.getKey(), DEFAULT_SER));
         if (Strings.isNullOrEmpty(decode)) {
             log.warn("参数无法解析");
