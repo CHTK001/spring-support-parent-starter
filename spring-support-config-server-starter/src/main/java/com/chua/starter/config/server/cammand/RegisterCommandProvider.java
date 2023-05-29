@@ -1,6 +1,6 @@
 package com.chua.starter.config.server.cammand;
 
-import com.chua.common.support.crypto.Encrypt;
+import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.MapUtils;
@@ -27,8 +27,8 @@ public class RegisterCommandProvider implements CommandProvider, Constant {
     @Override
     public ReturnResult<String> command(String binder, String data, ConfigServerProperties configServerProperties, HttpServletRequest request) {
 
-        ServiceProvider<Encrypt> serviceProvider = ServiceProvider.of(Encrypt.class);
-        Encrypt encrypt = serviceProvider.getExtension(configServerProperties.getEncrypt());
+        ServiceProvider<Codec> serviceProvider = ServiceProvider.of(Codec.class);
+        Codec encrypt = serviceProvider.getExtension(configServerProperties.getEncrypt());
         if(null == encrypt) {
             return ReturnResult.illegal();
         }

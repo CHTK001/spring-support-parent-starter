@@ -1,6 +1,6 @@
 package com.chua.starter.config.server.cammand;
 
-import com.chua.common.support.crypto.Encrypt;
+import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.common.support.key.KeyManagerProvider;
 import com.chua.starter.common.support.result.ReturnResult;
@@ -22,8 +22,8 @@ public class UnRegisterCommandProvider implements CommandProvider {
             return ReturnResult.ok();
         }
 
-        ServiceProvider<Encrypt> serviceProvider = ServiceProvider.of(Encrypt.class);
-        Encrypt encrypt = serviceProvider.getExtension(configServerProperties.getEncrypt());
+        ServiceProvider<Codec> serviceProvider = ServiceProvider.of(Codec.class);
+        Codec encrypt = serviceProvider.getExtension(configServerProperties.getEncrypt());
         if(null == encrypt) {
             return ReturnResult.illegal();
         }

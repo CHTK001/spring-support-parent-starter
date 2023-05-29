@@ -1,7 +1,7 @@
 package com.chua.starter.config.server.manager;
 
 import com.chua.common.support.annotations.Spi;
-import com.chua.common.support.crypto.Encrypt;
+import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.MapUtils;
@@ -250,8 +250,8 @@ public class DatabaseConfigurationManager implements ConfigurationManager, Appli
     public void notifyConfig(List<NotifyConfig> notifyConfig, ProtocolServer protocolServer) {
         ServiceProvider<KeyManagerProvider> providerServiceProvider = ServiceProvider.of(KeyManagerProvider.class);
         KeyManagerProvider keyManagerProvider = providerServiceProvider.getExtension(configServerProperties.getKeyManager());
-        ServiceProvider<Encrypt> serviceProvider = ServiceProvider.of(Encrypt.class);
-        Encrypt encrypt = serviceProvider.getExtension(configServerProperties.getEncrypt());
+        ServiceProvider<Codec> serviceProvider = ServiceProvider.of(Codec.class);
+        Codec encrypt = serviceProvider.getExtension(configServerProperties.getEncrypt());
 
         for (NotifyConfig config : notifyConfig) {
             String providerKey = configServerProperties.isOpenKey() ?
