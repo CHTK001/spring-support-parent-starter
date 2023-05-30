@@ -3,12 +3,19 @@ let rq = $('#rq').val();
 if (!!msg) {
     toastr.info(msg);//提醒
 }
+
 const refreshCode = function () {
     $('img')[0].src = rq + "/captcha.jpg?ver=" + Math.ceil(Math.random() * 1000000);
 }
 
 $(function () {
 
+    $('#gitee').off("click");
+    $('#gitee').on("click", function (e) {
+        $.get(rq + "/gitee", xhr => {
+            window.location.href = xhr;
+        })
+    });
     // input iCheck
     $('input').iCheck({
         checkboxClass: 'icheckbox_square-blue',
