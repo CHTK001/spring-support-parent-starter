@@ -6,12 +6,12 @@ import com.chua.starter.common.support.utils.BeanDefinitionRegistryUtils;
 import com.chua.starter.oauth.server.support.check.LoginCheck;
 import com.chua.starter.oauth.server.support.processor.ResponseAdviceMethodProcessor;
 import com.chua.starter.oauth.server.support.properties.AuthServerProperties;
+import com.chua.starter.oauth.server.support.properties.ThirdPartyProperties;
 import com.chua.starter.oauth.server.support.protocol.Protocol;
 import com.chua.starter.oauth.server.support.provider.LoginProvider;
+import com.chua.starter.oauth.server.support.provider.ThirdPartyProvider;
 import com.chua.starter.oauth.server.support.resolver.SimpleLoggerResolver;
 import com.chua.starter.oauth.server.support.resolver.SimpleUserInfoResolver;
-import com.chua.starter.oauth.server.support.third.properties.DingDingProperties;
-import com.chua.starter.oauth.server.support.third.properties.ThirdProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.DisposableBean;
@@ -47,7 +47,7 @@ import java.util.*;
  * @since 2022/7/23 8:51
  */
 @Slf4j
-@EnableConfigurationProperties({AuthServerProperties.class, ThirdProperties.class, DingDingProperties.class})
+@EnableConfigurationProperties({AuthServerProperties.class, ThirdPartyProperties.class})
 public class EnableAuthServerConfiguration implements BeanDefinitionRegistryPostProcessor,
         EnvironmentPostProcessor,
         CommandLineRunner,
@@ -63,6 +63,7 @@ public class EnableAuthServerConfiguration implements BeanDefinitionRegistryPost
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         BeanDefinitionRegistryUtils.registerBeanDefinition(registry, LoginCheck.class);
         BeanDefinitionRegistryUtils.registerBeanDefinition(registry, LoginProvider.class);
+        BeanDefinitionRegistryUtils.registerBeanDefinition(registry, ThirdPartyProvider.class);
         BeanDefinitionRegistryUtils.registerBeanDefinition(registry, SimpleLoggerResolver.class);
         BeanDefinitionRegistryUtils.registerBeanDefinition(registry, SimpleUserInfoResolver.class);
 
