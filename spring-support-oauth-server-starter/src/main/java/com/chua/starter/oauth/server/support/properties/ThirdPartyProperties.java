@@ -42,6 +42,6 @@ public class ThirdPartyProperties {
         /**
          * 登录成功后的回调地址
          */
-        private String redirectUri;
+        private String redirectUri = "http://127.0.0.1:19180/third-index";
     }
 }

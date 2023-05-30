@@ -13,6 +13,7 @@ import com.chua.common.support.task.cache.CacheConfiguration;
 import com.chua.common.support.task.cache.Cacheable;
 import com.chua.common.support.utils.Md5Utils;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.value.Value;
 import com.chua.guava.support.cache.GuavaCacheable;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.result.ReturnResult;
@@ -64,9 +65,9 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         jsonObject.put("x-oauth-token", token);
         String cacheKey = getCacheKey(cookies, token);
         if(null != cacheKey) {
-            Object o = CACHEABLE.get(cacheKey);
+            Value o = CACHEABLE.get(cacheKey);
             if(null != o) {
-                return (AuthenticationInformation) o;
+                return (AuthenticationInformation) o.getValue();
             }
         }
 
@@ -157,7 +158,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
             return authenticationInformation;
         }
 
-        return (AuthenticationInformation) CACHEABLE.put(cacheKey, authenticationInformation);
+        return (AuthenticationInformation) CACHEABLE.put(cacheKey, authenticationInformation).getValue();
     }
 
     private String getCacheKey(Cookie[] cookies, String token) {

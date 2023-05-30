@@ -34,12 +34,24 @@ public class ThirdPartyProvider {
      * @return 登录页
      */
     @ResponseBody
+    @GetMapping("/third-index")
+    public String thirdIndex(HttpServletRequest request) {
+
+        return "third-index";
+    }
+    /**
+     * gitee页面
+     *
+     * @return 登录页
+     */
+    @ResponseBody
     @GetMapping("/gitee")
     public String gitee() {
         AuthRequest authRequest = new AuthGiteeRequest(AuthConfig.builder()
                 .clientId(thirdPartyProperties.getGitee().getClientId())
+                .deviceId("gitee")
                 .clientSecret(thirdPartyProperties.getGitee().getClientSecret())
-                .redirectUri("https://www.baidu.com/")
+                .redirectUri(thirdPartyProperties.getGitee().getRedirectUri())
                 .build());
 
         return authRequest.authorize(AuthStateUtils.createState());
