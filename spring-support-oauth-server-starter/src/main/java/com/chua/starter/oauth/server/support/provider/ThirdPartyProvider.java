@@ -3,6 +3,7 @@ package com.chua.starter.oauth.server.support.provider;
 import com.chua.starter.oauth.server.support.condition.OnBeanCondition;
 import com.chua.starter.oauth.server.support.properties.ThirdPartyProperties;
 import me.zhyd.oauth.config.AuthConfig;
+import me.zhyd.oauth.model.AuthCallback;
 import me.zhyd.oauth.request.AuthGiteeRequest;
 import me.zhyd.oauth.request.AuthRequest;
 import me.zhyd.oauth.utils.AuthStateUtils;
@@ -34,9 +35,14 @@ public class ThirdPartyProvider {
      * @return 登录页
      */
     @ResponseBody
-    @GetMapping("/third-index")
-    public String thirdIndex(HttpServletRequest request) {
-
+    @GetMapping("/gitee-index")
+    public String thirdIndex(AuthCallback authCallback) {
+        AuthRequest authRequest = new AuthGiteeRequest(AuthConfig.builder()
+                .clientId(thirdPartyProperties.getGitee().getClientId())
+                .clientSecret(thirdPartyProperties.getGitee().getClientSecret())
+                .redirectUri(thirdPartyProperties.getGitee().getRedirectUri())
+                .build());
+        authRequest.login(authCallback);
         return "third-index";
     }
     /**
@@ -46,10 +52,9 @@ public class ThirdPartyProvider {
      */
     @ResponseBody
     @GetMapping("/gitee")
-    public String gitee() {
+    public String gitee(@RequestParam("redirect_url") String url) {
         AuthRequest authRequest = new AuthGiteeRequest(AuthConfig.builder()
                 .clientId(thirdPartyProperties.getGitee().getClientId())
-                .deviceId("gitee")
                 .clientSecret(thirdPartyProperties.getGitee().getClientSecret())
                 .redirectUri(thirdPartyProperties.getGitee().getRedirectUri())
                 .build());
