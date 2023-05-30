@@ -1,6 +1,7 @@
 package com.chua.starter.oauth.server.support.provider;
 
 import com.chua.starter.oauth.server.support.condition.OnBeanCondition;
+import com.chua.starter.oauth.server.support.properties.ThirdPartyProperties;
 import me.zhyd.oauth.config.AuthConfig;
 import me.zhyd.oauth.request.AuthGiteeRequest;
 import me.zhyd.oauth.request.AuthRequest;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 
 /**
@@ -24,6 +26,8 @@ import javax.servlet.http.HttpServletRequest;
 @RequestMapping("${plugin.auth.server.context-path:}")
 public class ThirdPartyProvider {
 
+    @Resource
+    private ThirdPartyProperties thirdPartyProperties;
     /**
      * gitee页面
      *
@@ -33,9 +37,9 @@ public class ThirdPartyProvider {
     @GetMapping("/gitee")
     public String gitee() {
         AuthRequest authRequest = new AuthGiteeRequest(AuthConfig.builder()
-                .clientId("Client ID")
-                .clientSecret("Client Secret")
-                .redirectUri("应用回调地址")
+                .clientId(thirdPartyProperties.getGitee().getClientId())
+                .clientSecret(thirdPartyProperties.getGitee().getClientSecret())
+                .redirectUri("https://www.baidu.com/")
                 .build());
 
         return authRequest.authorize(AuthStateUtils.createState());

@@ -70,6 +70,9 @@
             </div>
         </div>
     </form>
+    <div>
+        <div id="gitee" style="cursor:pointer;"><img src="https://gitee.com/static/images/logo.svg?t=158106664" width="60px" height="60px"> </div>
+    </div>
 </div>
 
 </body>
