@@ -12,7 +12,7 @@ $(function () {
 
     $('#gitee').off("click");
     $('#gitee').on("click", function (e) {
-        $.get(rq + "/gitee", xhr => {
+        $.get(rq + "/gitee" + window.location.search, xhr => {
             window.location.href = xhr;
         })
     });
