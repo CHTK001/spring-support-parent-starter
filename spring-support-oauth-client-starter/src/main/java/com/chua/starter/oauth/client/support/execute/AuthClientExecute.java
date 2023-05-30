@@ -23,9 +23,9 @@ import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.chua.starter.oauth.client.support.web.WebRequest;
 import com.google.common.base.Strings;
-import com.mashape.unirest.http.HttpResponse;
-import com.mashape.unirest.http.Unirest;
-import com.mashape.unirest.http.exceptions.UnirestException;
+import kong.unirest.HttpResponse;
+import kong.unirest.Unirest;
+import kong.unirest.UnirestException;
 import org.springframework.beans.BeanUtils;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -49,10 +49,6 @@ public class AuthClientExecute {
     private final AuthClientProperties authClientProperties;
     private final KeyEncode encode;
     private final KeyDecode decode;
-
-    static {
-        Unirest.setTimeouts(5000, 5000);
-    }
 
     public AuthClientExecute() {
         this.authClientProperties = Binder.binder(AuthClientProperties.PRE, AuthClientProperties.class);
@@ -140,7 +136,7 @@ public class AuthClientExecute {
                     .header("accept", "application/json")
                     .header("x-oauth-timestamp", System.nanoTime() + "")
                     .field("data", request)
-                    .field("type", logoutType)
+                    .field("type", logoutType.name())
                     .asString();
 
         } catch (UnirestException ignored) {
@@ -215,7 +211,7 @@ public class AuthClientExecute {
                     .field("data", request)
                     .field("username", username)
                     .field("passwd", password)
-                    .field("type", authType)
+                    .field("type", authType.name())
                     .asString();
 
         } catch (UnirestException ignored) {
