@@ -20,6 +20,7 @@ import com.chua.common.support.utils.IdUtils;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.NetAddress;
 import com.chua.starter.common.support.result.ResultData;
+import com.chua.starter.common.support.utils.RequestUtils;
 import lombok.Data;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
