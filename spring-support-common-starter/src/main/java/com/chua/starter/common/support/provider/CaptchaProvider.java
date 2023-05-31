@@ -3,7 +3,9 @@ package com.chua.starter.common.support.provider;
 import com.chua.starter.common.support.properties.CaptchaProperties;
 import com.google.code.kaptcha.Constants;
 import com.google.code.kaptcha.Producer;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -30,7 +32,7 @@ public class CaptchaProvider {
 
     private final Producer formula;
 
-    public CaptchaProvider(Producer producer, Producer formula) {
+    public CaptchaProvider( @Autowired(required = false)Producer producer,  @Autowired(required = false)Producer formula) {
         this.producer = producer;
         this.formula = formula;
     }
