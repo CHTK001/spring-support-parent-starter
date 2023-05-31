@@ -23,7 +23,7 @@ public class Knife4jRunner implements CommandLineRunner {
             contextPath = contextPath + "/";
         }
         String port = environment.getProperty("server.port", "8080");
-        log.info("\r\n当前swagger文档地址      http://127.0.0.1:{}/{}doc.html"
-                + "\r\n健康检查               http://127.0.0.1:{}/{}actuator", port, contextPath, port, contextPath);
+        log.info("\r\n当前swagger文档地址      http://127.0.0.1:{}{}doc.html"
+                + "\r\n健康检查               http://127.0.0.1:{}{}actuator", port, contextPath, port, contextPath);
     }
 }
