@@ -170,7 +170,7 @@ public class LoginProvider implements InitializingBean {
     public ReturnResult<?> doLogin(String username, String passwd, String authType, String data, HttpServletRequest request, HttpServletResponse response) {
         String address = RequestUtils.getIpAddress(request);
 
-        ReturnResult result = loginCheck.doLogin(address, username, passwd, authType);
+        ReturnResult result = loginCheck.doLogin(address, username, passwd, authType, null);
         if (!result.getCode().equals(200)) {
             loggerResolver.register("doLogin", 500, "认证服务器离线", address);
             request.setAttribute(authServerProperties.getTokenName(), ((LoginResult) result.getData()).getToken());
@@ -307,7 +307,7 @@ public class LoginProvider implements InitializingBean {
         }
 
         boolean ifRem = "on".equals(ifRemember);
-        ReturnResult<LoginResult> result = loginCheck.doLogin(address, username, passwd, type);
+        ReturnResult<LoginResult> result = loginCheck.doLogin(address, username, passwd, type, null);
         loggerResolver.register("doWebLogin", result.getCode(), "认证服务器离线", address);
 
         if (result.getCode().equals(500)) {

@@ -14,7 +14,8 @@ public interface UserInfoService {
      * @param accessKey ak
      * @param secretKey sk
      * @param address   地址
+     * @param ext       额外参数
      * @return 检验ak/sk是否合法
      */
-    UserResult checkLogin(String accessKey, String secretKey, String address);
+    UserResult checkLogin(String accessKey, String secretKey, String address, Object ext);
 }

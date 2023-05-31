@@ -23,7 +23,7 @@ public class ThirdPartyProperties {
         public Gitee() {
             this.setClientId("5117d2bf0e3f32c866afb7dd752cdcbc7947dafdb31bf7d9dc47bc4839609c50");
             this.setClientSecret("d467db8847cad16b1924c1210cb073b52a44b3370ea2d227b2a52957c2b6a42e");
-            this.setRedirectUri("http://127.0.0.1:19180/gitee-index");
+            this.setRedirectUri("http://127.0.0.1:19180/gitee/gitee-index");
         }
     }
 
