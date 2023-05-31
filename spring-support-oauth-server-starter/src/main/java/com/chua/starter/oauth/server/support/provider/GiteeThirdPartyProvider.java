@@ -57,24 +57,24 @@ public class GiteeThirdPartyProvider implements InitializingBean {
      */
     @ResponseBody
     @GetMapping("/gitee-index")
-    public AdviceView thirdIndex(AuthCallback authCallback, HttpServletResponse response) {
-        AuthResponse authResponse = authRequest.login(authCallback);
-        AuthUser data = (AuthUser) authResponse.getData();
+    public AdviceView<String> thirdIndex(AuthCallback authCallback, HttpServletResponse response) {
+        AuthResponse<AuthUser> authResponse = authRequest.login(authCallback);
+        AuthUser data = authResponse.getData();
         ReturnResult<LoginResult> result = loginCheck.doLogin(data.getLocation(), data.getUsername(), null, "gitee", data);
         loggerResolver.register("gitee", result.getCode(), "认证服务器离线", null);
         if (result.getCode().equals(403)) {
             try {
-                return new AdviceView("redirect:" + contextPath + "/login?redirect_url=" +
+                return new AdviceView<String>("redirect:" + contextPath + "/login?redirect_url=" +
                         URLEncoder.encode("", "UTF-8"));
             } catch (UnsupportedEncodingException e) {
-                return new AdviceView("redirect:" + contextPath + "/login?redirect_url=" + "");
+                return new AdviceView<String>("redirect:" + contextPath + "/login?redirect_url=" + "");
             }
         }
 
         LoginResult loginResult = result.getData();
         loggerResolver.register("gitee", 200, "登录成功", null);
         CookieUtil.set(response, authServerProperties.getCookieName(), loginResult.getToken(), true);
-        return new AdviceView("third-index");
+        return new AdviceView<String>("third-index");
     }
     /**
      * gitee页面
