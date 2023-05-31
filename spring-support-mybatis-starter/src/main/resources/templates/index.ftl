@@ -250,13 +250,13 @@
                         return index + 1;
                     }
                 }, {
-                    field: 'Name',
+                    field: 'name',
                     title: '表名'
                 }, {
-                    field: 'Comment',
+                    field: 'comment',
                     title: '描述'
                 }, {
-                    field: 'Create_time',
+                    field: 'createTime',
                     title: '创建时间',
                     formatter: function (row, data, v) {
                         let date = new Date(~~data['Create_time'] * 1000);
