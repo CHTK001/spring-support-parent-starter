@@ -78,10 +78,10 @@
         let base = '';
         let tables = '';
         bootstrapTable.forEach(item => {
-            tables += ',' + item['Name'];
+            tables += ',' + item['name'];
             base += '<div class="form-group" style="overflow: auto">' +
-                '<label class="col-md-6" for="name">' + item['Name'] + '</label>' +
-                '<label class="col-md-6" for="name">' + item['Comment'] + '</label>' +
+                '<label class="col-md-6" for="name">' + item['name'] + '</label>' +
+                '<label class="col-md-6" for="name">' + item['comment'] + '</label>' +
                 '</div>';
         })
         let tablesEle = '<label id="tables" class="hidden"> ' + tables + '</label>'
@@ -117,7 +117,7 @@
                                         </tr>
                                         <tr>
                                             <td class="text-right" style="vertical-align: middle !important;">swagger</td>
-                                            <td class="text-left form-check form-check-inline"><label class="checkbox-inline"><input type="checkbox" id="swagger"  />开启</label></td>
+                                            <td class="text-left form-check form-check-inline"><label class="checkbox-inline"><input type="checkbox" id="swagger"  checked/>开启</label></td>
                                         </tr>
                                         <tr>
                                             <td class="text-right" style="vertical-align: middle !important;">springdoc</td>
@@ -259,7 +259,7 @@
                     field: 'createTime',
                     title: '创建时间',
                     formatter: function (row, data, v) {
-                        let date = new Date(~~data['Create_time'] * 1000);
+                        let date = new Date(~~data['createTime'] * 1000);
                         let year = date.getFullYear();    //  返回的是年份
                         let month = date.getMonth() + 1;  //  返回的月份上个月的月份，记得+1才是当月
                         let dates = date.getDate();

@@ -76,7 +76,9 @@ public class MybatisGeneratorController implements InitializingBean {
     @ResponseBody
     @GetMapping("db")
     public ResultData<Collection<String>> db() throws Exception {
-        return ResultData.success(dataSourceMap.keySet().stream().filter(it -> !"dynamicDataSource".equals(it)).collect(Collectors.toList()));
+        return ResultData.success(dataSourceMap.keySet().stream().filter(it -> {
+            return !"dynamicDataSource".equals(it) && !"master".equals(it);
+        }).collect(Collectors.toList()));
     }
 
     /**
@@ -171,6 +173,11 @@ public class MybatisGeneratorController implements InitializingBean {
 
     private StrategyConfig buildStrategy(Generator generator) {
         StrategyConfig.Builder strategyBuilder = new StrategyConfig.Builder();
+        strategyBuilder.mapperBuilder().enableFileOverride();
+        strategyBuilder.serviceBuilder().enableFileOverride();
+        strategyBuilder.entityBuilder().enableFileOverride();
+        strategyBuilder.controllerBuilder().enableFileOverride();
+
         buildEntity(strategyBuilder.entityBuilder(), generator.getEntity());
         buildMapper(strategyBuilder.mapperBuilder(), generator.getMapper());
         com.baomidou.mybatisplus.generator.config.builder.Controller.Builder controllerBuilder = strategyBuilder.controllerBuilder();
