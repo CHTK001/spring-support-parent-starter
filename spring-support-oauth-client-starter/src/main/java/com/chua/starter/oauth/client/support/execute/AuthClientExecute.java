@@ -50,7 +50,13 @@ public class AuthClientExecute {
     private final KeyEncode encode;
     private final KeyDecode decode;
 
-    public AuthClientExecute() {
+    public static final AuthClientExecute INSTANCE = new AuthClientExecute();
+
+    public static AuthClientExecute getInstance() {
+        return INSTANCE;
+    }
+
+    private AuthClientExecute() {
         this.authClientProperties = Binder.binder(AuthClientProperties.PRE, AuthClientProperties.class);
         this.encode = ServiceProvider.of(KeyEncode.class).getExtension(authClientProperties.getEncryption());
         this.decode = ServiceProvider.of(KeyDecode.class).getExtension(authClientProperties.getEncryption());
@@ -159,6 +165,7 @@ public class AuthClientExecute {
         return loginAuthResult;
 
     }
+
     /**
      * 获取token
      *
