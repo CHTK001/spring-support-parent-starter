@@ -11,9 +11,9 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <!-- Tell the browser to be responsive to screen width -->
     <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
-    <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/webjars/bootstrap-table/bootstrap-table.min.css" rel="stylesheet">
-    <link href="/webjars/style.css" rel="stylesheet">
+    <link href="${request.contextPath}/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="${request.contextPath}/webjars/bootstrap-table/bootstrap-table.min.css" rel="stylesheet">
+    <link href="${request.contextPath}/webjars/style.css" rel="stylesheet">
     <style>
         .modal-backdrop {
             opacity: 0 !important;
@@ -52,12 +52,12 @@
     </div>
 </div>
 
-<script type="text/javascript" src="/webjars/jquery-3.2.1.min.js"></script>
-<script type="text/javascript" src="/webjars/bootstrap/js/bootstrap.bundle.min.js"></script>
-<script type="text/javascript" src="/webjars/jquery.easing.min.js"></script>
-<script type="text/javascript" src="/webjars/bootstrap-table/bootstrap-table.min.js"></script>
-<script type="text/javascript" src="/webjars/bootstrap-table/locale/bootstrap-table-zh-CN.min.js"></script>
-<script type="text/javascript" src="/webjars/script.js"></script>
+<script type="text/javascript" src="${request.contextPath}/webjars/jquery-3.2.1.min.js"></script>
+<script type="text/javascript" src="${request.contextPath}/webjars/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script type="text/javascript" src="${request.contextPath}/webjars/jquery.easing.min.js"></script>
+<script type="text/javascript" src="${request.contextPath}/webjars/bootstrap-table/bootstrap-table.min.js"></script>
+<script type="text/javascript" src="${request.contextPath}/webjars/bootstrap-table/locale/bootstrap-table-zh-CN.min.js"></script>
+<script type="text/javascript" src="${request.contextPath}/webjars/script.js"></script>
 <script>
     var selectionIds = [];	//保存选中ids
 
