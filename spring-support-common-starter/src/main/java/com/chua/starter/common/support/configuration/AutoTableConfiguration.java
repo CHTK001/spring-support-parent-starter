@@ -112,7 +112,7 @@ public class AutoTableConfiguration implements ApplicationContextAware {
 
         if (!AnnotatedElementUtils.hasAnnotation(aClass, DS.class)) {
             if (beansOfType.containsKey("master")) {
-                log.info("建表数据源 :{}", "master");
+                log.debug("建表数据源 :{}", "master");
                 return beansOfType.get("master");
             } else {
                 for (Map.Entry<String, DataSource> entry : beansOfType.entrySet()) {
@@ -123,7 +123,7 @@ public class AutoTableConfiguration implements ApplicationContextAware {
                     ) {
                         continue;
                     }
-                    log.info("建表数据源 :{}", entry.getKey());
+                    log.debug("建表数据源 :{}", entry.getKey());
                     return source;
                 }
             }
@@ -132,7 +132,7 @@ public class AutoTableConfiguration implements ApplicationContextAware {
 
         MultiValueMap<String, Object> annotationAttributes = AnnotatedElementUtils.getAllAnnotationAttributes(aClass, DS.class.getTypeName());
         Object value = annotationAttributes.getFirst("value");
-        log.info("建表数据源 :{}", value);
+        log.debug("建表数据源 :{}", value);
         if (null == value) {
             return null;
         }

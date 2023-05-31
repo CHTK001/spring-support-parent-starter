@@ -11,6 +11,8 @@ import com.baomidou.mybatisplus.generator.keywords.BaseKeyWordsHandler;
 import com.chua.common.support.bean.BeanMap;
 import com.chua.common.support.collection.TypeHashMap;
 import com.chua.common.support.database.inquirer.JdbcInquirer;
+import com.chua.common.support.database.sqldialect.SqlDialect;
+import com.chua.common.support.database.sqldialect.SqlTable;
 import com.chua.common.support.file.compress.ZipCompressFile;
 import com.chua.common.support.function.Splitter;
 import com.chua.common.support.lang.date.DateTime;
@@ -85,17 +87,15 @@ public class MybatisGeneratorController implements InitializingBean {
      */
     @ResponseBody
     @GetMapping("find")
-    public ResultData<List<Map<String, Object>>> pageForTable(String dataSource) throws Exception {
+    public ResultData<List<SqlTable>> pageForTable(String dataSource) throws Exception {
         DataSource dataSource1 = dataSourceMap.get(dataSource);
         if (null == dataSource1) {
             return ResultData.success(Collections.emptyList());
         }
         DataSourceConfig dataSourceConfig = builderDataSourceConfig(dataSource1);
-        DbQueryDecorator dbQueryDecorator = new DbQueryDecorator(dataSourceConfig, new StrategyConfig.Builder().build());
-        String tablesSql = dbQueryDecorator.tablesSql();
-        JdbcInquirer jdbcInquirer = new JdbcInquirer(dataSource1, true);
-        List<Map<String, Object>> query = jdbcInquirer.query(tablesSql);
-        return ResultData.success(query);
+        NetAddress netAddress = NetAddress.of(dataSourceConfig.getUrl());
+        SqlDialect sqlDialect = ServiceProvider.of(SqlDialect.class).getNewExtension(netAddress.getProtocol(), dataSource1);
+        return ResultData.success(sqlDialect.getSqlTable(netAddress.getPath()));
     }
 
     /**
