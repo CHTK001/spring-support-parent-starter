@@ -1,6 +1,7 @@
 package com.chua.starter.oauth.client.support.configuration;
 
 import com.chua.common.support.utils.MapUtils;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.oauth.client.support.annotation.UserValue;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
@@ -73,7 +74,7 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
         UserValue requestValue = parameter.getParameterAnnotation(UserValue.class);
         Map<String, Object> cacheValue = analysisAsParamMap(webRequest);
         Parameter parameter1 = parameter.getParameter();
-        String paramName = Strings.isNullOrEmpty(parameter.getParameterName()) ? parameter1.getName() : parameter.getParameterName();
+        String paramName = StringUtils.defaultString(requestValue.name(), StringUtils.defaultString(parameter1.getName(), parameter.getParameterName()));
 
         Class<?> parameterType = parameter.getParameterType();
         Object o = cacheValue.get(paramName);
