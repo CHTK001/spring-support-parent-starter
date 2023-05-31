@@ -12,6 +12,9 @@ import com.p6spy.engine.spy.appender.MessageFormattingStrategy;
  * @author CH
  */
 public class SimpleAppender implements MessageFormattingStrategy {
+
+    private static final Log log = Log.getLogger(MessageFormattingStrategy.class);
+
     /**
      * 日志格式化方式（打印SQL日志会进入此方法，耗时操作，生产环境不建议使用）
      *
@@ -24,7 +27,6 @@ public class SimpleAppender implements MessageFormattingStrategy {
      * @param url          数据库连接地址
      * @return 格式化日志结果
      **/
-    private static final Log log = Log.getLogger(MessageFormattingStrategy.class);
     @Override
     public String formatMessage(int connectionId, String now, long elapsed, String category, String prepared, String sql, String url) {
         if(StringUtils.isEmpty(sql)) {
