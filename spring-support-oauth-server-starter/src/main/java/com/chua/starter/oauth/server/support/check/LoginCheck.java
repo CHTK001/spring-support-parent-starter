@@ -68,7 +68,7 @@ public class LoginCheck {
                     "') 登录方式('" +
                     " + #args[3] + " +
                     "' ) '")
-    public ReturnResult<LoginResult> doLogin(String address, String username, String passwd, String authType) {
+    public ReturnResult<LoginResult> doLogin(String address, String username, String passwd, String authType, Object ext) {
         UserResult userResult = null;
         Map<String, UserInfoService> beansOfType = applicationContext.getBeansOfType(UserInfoService.class);
         for (Map.Entry<String, UserInfoService> entry : beansOfType.entrySet()) {
@@ -77,14 +77,15 @@ public class LoginCheck {
                 continue;
             }
 
-            userResult = userInfoService.checkLogin(username, passwd, address);
+            userResult = userInfoService.checkLogin(username, passwd, address, ext);
             if (null != userResult && Strings.isNullOrEmpty(userResult.getMessage())) {
                 Class<?> userClass = ClassUtils.getUserClass(userInfoService.getClass());
                 userResult.setBeanType(userClass.getTypeName());
                 userResult.setAuthType(authType);
-                userResult.setUid(Md5Utils.getInstance().getMd5String(userResult.getBeanType() +
+                userResult.setUid(Md5Utils.getInstance().getMd5String(
+                        userResult.getId() +
+                        userResult.getBeanType() +
                         username +
-                        userResult.getPassword() +
                         userResult.getAuthType()));
                 break;
             }

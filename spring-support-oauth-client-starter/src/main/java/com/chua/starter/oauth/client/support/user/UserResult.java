@@ -20,8 +20,9 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserResult {
+    private String id;
     /**
-     * 索引(唯一, 必填)
+     * 索引唯一由系统生成
      */
     private String uid;
     /**

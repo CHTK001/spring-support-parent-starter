@@ -4,6 +4,7 @@ import com.chua.common.support.annotations.Extension;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.json.TypeReference;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.IdUtils;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.common.support.utils.CookieUtil;
@@ -14,6 +15,7 @@ import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.server.support.generation.TokenGeneration;
 import com.chua.starter.oauth.server.support.properties.AuthServerProperties;
 import com.google.common.base.Strings;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
@@ -46,27 +48,26 @@ public class RedisTokenResolver implements TokenResolver {
     public ReturnResult<LoginResult> createToken(String address, UserResult userResult, String authType) {
         TokenGeneration tokenGeneration = ServiceProvider.of(TokenGeneration.class).getExtension(authServerProperties.getTokenGeneration());
         //token
-        String generation = tokenGeneration.generation(
-                authType + address + userResult.getUsername() + UUID.randomUUID());
+        String generation = tokenGeneration.generation(userResult.getUid()) + "0" + DigestUtils.md5Hex(IdUtils.createTid());
         userResult.setAddress(address);
         String uid = userResult.getUid();
 
-        String serviceKey = PRE_KEY + uid + ":" + generation;
+//        String serviceKey = PRE_KEY + uid + ":" + generation;
         String redisKey = AuthConstant.TOKEN_PRE + generation;
 
         AuthServerProperties.Online online = authServerProperties.getOnline();
         if (online == AuthServerProperties.Online.SINGLE) {
-            registerSingle(uid);
+            registerSingle(generation);
         }
         ValueOperations<String, String> forValue = stringRedisTemplate.opsForValue();
 
-        forValue.set(serviceKey, Json.toJson(userResult));
+//        forValue.set(serviceKey, Json.toJson(userResult));
         forValue.set(redisKey, Json.toJson(userResult));
 
         long expire = userResult.getExpire() == null ? authServerProperties.getExpire() : userResult.getExpire();
 
         if (expire > 0) {
-            stringRedisTemplate.expire(serviceKey, Duration.ofSeconds(expire));
+//            stringRedisTemplate.expire(serviceKey, Duration.ofSeconds(expire));
             stringRedisTemplate.expire(redisKey, Duration.ofSeconds(expire));
         }
 
@@ -76,17 +77,13 @@ public class RedisTokenResolver implements TokenResolver {
     /**
      * 单例模式
      *
-     * @param uid 用户信息
+     * @param generation 用户信息
      */
-    private void registerSingle(String uid) {
-        Set<String> keys = stringRedisTemplate.keys(PRE_KEY + uid + ":*");
-        Set<String> tokenKeys = new HashSet<>(keys.size());
-        for (String member : keys) {
-            tokenKeys.add(TOKEN_PRE + member.substring(member.indexOf(uid) + uid.length() + 1));
-        }
+    private void registerSingle(String generation) {
+        String uid = generation.substring(0, 128);
+        Set<String> keys = stringRedisTemplate.keys(PRE_KEY + uid + "0*");
         try {
             stringRedisTemplate.delete(keys);
-            stringRedisTemplate.delete(tokenKeys);
         } catch (Throwable ignored) {
         }
     }
