@@ -2,6 +2,7 @@ package com.chua.starter.mybatis;
 
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.mybatis.controller.MybatisGeneratorController;
 import com.chua.starter.mybatis.endpoint.MybatisEndpoint;
@@ -50,6 +51,17 @@ public class MybatisConfiguration {
     }
 
     /**
+     * 分页
+     *
+     * @return OptimisticLockerInnerInterceptor
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public PaginationInnerInterceptor paginationInnerInterceptor() {
+        return new PaginationInnerInterceptor();
+    }
+
+    /**
      * 乐观锁
      *
      * @return OptimisticLockerInnerInterceptor
@@ -66,9 +78,13 @@ public class MybatisConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    public MybatisPlusInterceptor mybatisPlusInterceptor(OptimisticLockerInnerInterceptor optimisticLockerInnerInterceptor ) {
+    public MybatisPlusInterceptor mybatisPlusInterceptor(
+            OptimisticLockerInnerInterceptor optimisticLockerInnerInterceptor,
+            PaginationInnerInterceptor paginationInnerInterceptor
+            ) {
         MybatisPlusInterceptor mybatisPlusInterceptor = new MybatisPlusInterceptor();
         mybatisPlusInterceptor.addInnerInterceptor(optimisticLockerInnerInterceptor);
+        mybatisPlusInterceptor.addInnerInterceptor(paginationInnerInterceptor);
         return mybatisPlusInterceptor;
     }
 

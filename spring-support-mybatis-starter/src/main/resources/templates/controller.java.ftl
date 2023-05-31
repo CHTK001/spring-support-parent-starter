@@ -22,7 +22,7 @@ import javax.annotation.Resource;
  * @since ${date}
  */
 <#if swagger>
-@Api(tags = "${table.comment!.replace('表', '')}接口")
+@Api(tags = "${table.comment!}接口")
 </#if>
 <#if restControllerStyle>
 @RestController
