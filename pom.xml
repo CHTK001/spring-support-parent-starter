@@ -34,6 +34,7 @@
         <module>spring-support-webjar-starter</module>
         <module>spring-support-redis-starter</module>
         <module>spring-support-swagger-starter</module>
+        <module>spring-support-mail-starter</module>
     </modules>
 
     <properties>
@@ -237,6 +238,12 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-swagger-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-email-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
         </dependencies>
