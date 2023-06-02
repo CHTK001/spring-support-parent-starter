@@ -71,6 +71,7 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
                 sysLog.setMethodName(method.getName());
                 sysLog.setClassName(method.getDeclaringClass().getName());
                 sysLog.setLogName(logger.value());
+                sysLog.setLogAction(logger.action());
                 sysLog.setLogCode(getCode(logger));
                 sysLog.setLogAddress(RequestUtils.getIpAddress(request));
 

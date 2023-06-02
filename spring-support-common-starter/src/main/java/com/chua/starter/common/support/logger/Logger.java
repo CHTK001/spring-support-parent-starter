@@ -22,6 +22,12 @@ public @interface Logger {
     String value();
 
     /**
+     * 动作
+     * @return 动作
+     */
+    String action();
+
+    /**
      * 模块编号
      *
      * @return 模块编号

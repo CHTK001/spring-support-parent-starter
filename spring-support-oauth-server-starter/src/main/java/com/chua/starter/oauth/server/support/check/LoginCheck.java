@@ -55,7 +55,7 @@ public class LoginCheck {
      * @param username 用户名
      * @param passwd   密码
      */
-    @Logger(value = "登陆模块", content =
+    @Logger(value = "登陆模块", action = "登录", content =
             "T(com.chua.common.support.lang.date.DateTime).now().toStandard() + " +
                     "' 账号在( '" +
                     "+ #args[0] + " +
