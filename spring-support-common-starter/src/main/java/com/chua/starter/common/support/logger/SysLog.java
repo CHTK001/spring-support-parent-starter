@@ -55,4 +55,8 @@ public class SysLog {
      * 請求地址
      */
     private String logAddress;
+    /**
+     * 动作
+     */
+    private String logAction;
 }
