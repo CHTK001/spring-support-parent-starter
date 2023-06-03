@@ -1,12 +1,11 @@
 package com.chua.starter.oauth.client.support.advice;
 
+import com.alibaba.fastjson2.JSON;
 import com.chua.starter.common.support.result.ReturnResult;
 import org.springframework.http.MediaType;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * json
@@ -30,7 +29,7 @@ public class JsonAdviceResolver implements AdviceResolver {
         response.setStatus(status);
         try {
             response.setHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE);
-            response.getOutputStream().write(rs.toString().getBytes(UTF_8));
+            response.getOutputStream().write(JSON.toJSONBytes(rs));
         } catch (IOException e) {
             e.printStackTrace();
         }

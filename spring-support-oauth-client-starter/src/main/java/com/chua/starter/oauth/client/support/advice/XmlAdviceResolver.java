@@ -1,16 +1,12 @@
 package com.chua.starter.oauth.client.support.advice;
 
+import com.chua.common.support.file.xml.XML;
 import com.chua.starter.common.support.result.ReturnResult;
-import com.chua.starter.common.support.result.ReturnXmlResult;
 import org.springframework.http.MediaType;
 
+import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 
 /**
  * json
@@ -27,23 +23,11 @@ public class XmlAdviceResolver implements AdviceResolver {
 
     @Override
     public Object resolve(HttpServletResponse response, Integer status, String message) {
-        OutputStream os = null;
-        if (null == response) {
-            os = new ByteArrayOutputStream();
-        } else {
-            response.setStatus(status);
-            response.setHeader("Content-Type", type());
-            try {
-                os = response.getOutputStream();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+
         try {
-            JAXBContext jaxbContext = JAXBContext.newInstance(ReturnXmlResult.class);
-            Marshaller marshaller = jaxbContext.createMarshaller();
-            marshaller.marshal(status.equals(403) ? ReturnResult.noAuth().toString() : ReturnResult.newBuilder().code(status).msg(message).build(), os);
-        } catch (JAXBException e) {
+            ServletOutputStream outputStream = response.getOutputStream();
+            outputStream.write(XML.toString(ReturnResult.newBuilder().code(status).msg(message).build()).getBytes(StandardCharsets.UTF_8));
+        } catch (Exception e) {
             e.printStackTrace();
         }
 
