@@ -1,6 +1,7 @@
 package com.chua.starter.oauth.client.support.web;
 
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.starter.oauth.client.support.annotation.AuthIgnore;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.infomation.Information;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
@@ -9,6 +10,8 @@ import com.google.common.base.Strings;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.AntPathMatcher;
+import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
@@ -16,6 +19,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.Set;
 
 /**
@@ -28,12 +32,14 @@ public class WebRequest {
     @Getter
     private final AuthClientProperties authProperties;
     private HttpServletRequest request;
+    private RequestMappingHandlerMapping requestMappingHandlerMapping;
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
 
-    public WebRequest(AuthClientProperties authProperties, HttpServletRequest request) {
+    public WebRequest(AuthClientProperties authProperties, HttpServletRequest request, RequestMappingHandlerMapping requestMappingHandlerMapping) {
         this.authProperties = authProperties;
         this.request = request;
+        this.requestMappingHandlerMapping = requestMappingHandlerMapping;
     }
 
     public WebRequest(AuthClientProperties authProperties) {
@@ -49,6 +55,18 @@ public class WebRequest {
         Set<String> whitelist = authProperties.getWhitelist();
         if (null == whitelist) {
             return false;
+        }
+
+        if (null != requestMappingHandlerMapping) {
+            try {
+                Method method = ((HandlerMethod) requestMappingHandlerMapping.getHandler(request)
+                        .getHandler()).getMethod();
+                boolean annotationPresent = method.isAnnotationPresent(AuthIgnore.class);
+                if (annotationPresent) {
+                    return true;
+                }
+            } catch (Exception ignored) {
+            }
         }
 
         String uri = request.getRequestURI();

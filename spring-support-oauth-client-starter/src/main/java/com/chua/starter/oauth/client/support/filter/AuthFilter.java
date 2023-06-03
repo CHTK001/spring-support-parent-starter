@@ -4,6 +4,7 @@ package com.chua.starter.oauth.client.support.filter;
 import com.chua.common.support.log.Log;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.web.WebRequest;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
@@ -22,9 +23,11 @@ public class AuthFilter implements Filter {
     private static final Log log = Log.getLogger(AuthFilter.class);
 
     private final WebRequest webRequest;
+    private final RequestMappingHandlerMapping requestMappingHandlerMapping;
 
-    public AuthFilter(WebRequest webRequest) {
+    public AuthFilter(WebRequest webRequest, RequestMappingHandlerMapping requestMappingHandlerMapping) {
         this.webRequest = webRequest;
+        this.requestMappingHandlerMapping = requestMappingHandlerMapping;
     }
 
     @Override
@@ -37,7 +40,7 @@ public class AuthFilter implements Filter {
         if (log.isDebugEnabled()) {
             log.debug("拦截到请求: {}", request instanceof HttpServletRequest ? ((HttpServletRequest) request).getRequestURI() : request.getRemoteAddr());
         }
-        WebRequest webRequest = new WebRequest(this.webRequest.getAuthProperties(), (HttpServletRequest) request);
+        WebRequest webRequest = new WebRequest(this.webRequest.getAuthProperties(), (HttpServletRequest) request, requestMappingHandlerMapping);
         if (webRequest.isPass()) {
             chain.doFilter(request, response);
             return;

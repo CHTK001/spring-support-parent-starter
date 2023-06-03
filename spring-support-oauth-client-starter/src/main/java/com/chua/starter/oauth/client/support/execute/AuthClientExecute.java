@@ -77,7 +77,7 @@ public class AuthClientExecute {
         HttpServletRequest request = attributes.getRequest();
         WebRequest webRequest1 = new WebRequest(
                 authClientProperties,
-                request);
+                request, null);
 
         UserResult userResult = new UserResult();
         AuthenticationInformation authentication = webRequest1.authentication();

@@ -7,7 +7,6 @@ import com.chua.starter.oauth.client.support.annotation.UserValue;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.chua.starter.oauth.client.support.web.WebRequest;
-import com.google.common.base.Strings;
 import lombok.Setter;
 import org.springframework.beans.factory.config.BeanExpressionContext;
 import org.springframework.beans.factory.config.BeanExpressionResolver;
@@ -141,7 +140,7 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
     private Map<String, Object> analysisAsParamMap(NativeWebRequest webRequest) {
         WebRequest webRequest1 = new WebRequest(
                 this.webRequest.getAuthProperties(),
-                webRequest.getNativeRequest(HttpServletRequest.class));
+                webRequest.getNativeRequest(HttpServletRequest.class), null);
 
         Map<String, Object> rs = new LinkedHashMap<>();
         AuthenticationInformation authentication = webRequest1.authentication();
