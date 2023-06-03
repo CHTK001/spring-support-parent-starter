@@ -23,7 +23,7 @@ public class JsonAdviceResolver implements AdviceResolver {
 
     @Override
     public Object resolve(HttpServletResponse response, Integer status, String message) {
-        ReturnResult rs = status.equals(403) ? ReturnResult.noAuth() : ReturnResult.newBuilder().code(status).msg(message).build();
+        ReturnResult rs = ReturnResult.newBuilder().code(status).msg(message).build();
         if (null == response) {
             return rs;
         }
