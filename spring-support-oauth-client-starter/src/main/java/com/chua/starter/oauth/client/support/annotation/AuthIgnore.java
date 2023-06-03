@@ -9,7 +9,7 @@ import java.lang.annotation.*;
  * @author CH
  * @see org.springframework.web.bind.annotation.RequestParam
  */
-@Target(ElementType.METHOD)
+@Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface AuthIgnore {

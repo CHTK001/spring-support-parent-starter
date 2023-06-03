@@ -58,14 +58,22 @@ public class WebRequest {
         }
 
         if (null != requestMappingHandlerMapping) {
+            HandlerMethod handlerMethod = null;
             try {
-                Method method = ((HandlerMethod) requestMappingHandlerMapping.getHandler(request)
-                        .getHandler()).getMethod();
+                handlerMethod = (HandlerMethod) requestMappingHandlerMapping.getHandler(request).getHandler();
+            } catch (Exception ignored) {
+            }
+            if (null != handlerMethod) {
+                Method method = handlerMethod.getMethod();
                 boolean annotationPresent = method.isAnnotationPresent(AuthIgnore.class);
                 if (annotationPresent) {
                     return true;
                 }
-            } catch (Exception ignored) {
+
+                boolean annotationPresent1 = handlerMethod.getBeanType().isAnnotationPresent(AuthIgnore.class);
+                if (annotationPresent1) {
+                    return true;
+                }
             }
         }
 
