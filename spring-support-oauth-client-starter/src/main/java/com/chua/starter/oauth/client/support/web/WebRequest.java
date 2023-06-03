@@ -147,7 +147,7 @@ public class WebRequest {
      */
     public void doFailureChain(FilterChain chain, HttpServletResponse response) throws IOException, ServletException {
         WebResponse webResponse = new WebResponse(authProperties, chain, request, response);
-        webResponse.doFailureChain(null);
+        webResponse.doFailureChain(Information.AUTHENTICATION_FAILURE);
     }
 
     /**
