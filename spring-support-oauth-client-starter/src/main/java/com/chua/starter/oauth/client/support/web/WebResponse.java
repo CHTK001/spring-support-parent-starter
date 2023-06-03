@@ -1,7 +1,5 @@
 package com.chua.starter.oauth.client.support.web;
 
-import com.chua.common.support.json.Json;
-import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.advice.Advice;
 import com.chua.starter.oauth.client.support.advice.AdviceResolver;
@@ -14,7 +12,6 @@ import javax.servlet.FilterChain;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 
 /**
  * 响应
@@ -51,12 +48,7 @@ public class WebResponse {
         }
         response.setHeader("Content-Type", resolve.type());
         try {
-            response.getOutputStream().write(
-                    Json.toJson(
-                                    ReturnResult.newBuilder()
-                                            .setCode(null == information ? 403 : information.getCode())
-                                            .setMsg(null == information ? "鉴权失败" : information.getMessage()).build())
-                            .getBytes(StandardCharsets.UTF_8));
+            resolve.resolve(response, information.getCode(), information.getMessage());
         } catch (IOException e) {
             e.printStackTrace();
         }
