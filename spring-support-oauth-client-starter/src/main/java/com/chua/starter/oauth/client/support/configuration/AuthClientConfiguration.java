@@ -19,6 +19,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.core.Ordered;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import java.util.List;
 
@@ -42,13 +43,13 @@ public class AuthClientConfiguration implements ApplicationContextAware, BeanDef
      */
     @Bean("authFilterFilterRegistrationBean")
     @ConditionalOnMissingClass("com.chua.starter.oauth.server.support.SsoServer")
-    public FilterRegistrationBean<AuthFilter> authFilterFilterRegistrationBean() {
+    public FilterRegistrationBean<AuthFilter> authFilterFilterRegistrationBean(RequestMappingHandlerMapping requestMappingHandlerMapping) {
         FilterRegistrationBean<AuthFilter> authFilterFilterRegistrationBean = new FilterRegistrationBean<>();
         authFilterFilterRegistrationBean.setOrder(Ordered.LOWEST_PRECEDENCE);
         authFilterFilterRegistrationBean.setUrlPatterns(authProperties.getBlockAddress());
         authFilterFilterRegistrationBean.setName("authFilterFilterRegistrationBean");
         authFilterFilterRegistrationBean.setAsyncSupported(true);
-        authFilterFilterRegistrationBean.setFilter(new AuthFilter(new WebRequest(authProperties)));
+        authFilterFilterRegistrationBean.setFilter(new AuthFilter(new WebRequest(authProperties), requestMappingHandlerMapping));
 
         return authFilterFilterRegistrationBean;
     }

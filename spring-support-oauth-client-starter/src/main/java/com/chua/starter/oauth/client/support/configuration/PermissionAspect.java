@@ -50,7 +50,7 @@ public class PermissionAspect {
 
         HttpServletRequest request = ((ServletRequestAttributes) requestAttributes).getRequest();
 
-        WebRequest webRequest = new WebRequest(authProperties, request);
+        WebRequest webRequest = new WebRequest(authProperties, request, null);
 
         AuthenticationInformation authentication = webRequest.authentication();
         UserResume userResume = authentication.getReturnResult();
