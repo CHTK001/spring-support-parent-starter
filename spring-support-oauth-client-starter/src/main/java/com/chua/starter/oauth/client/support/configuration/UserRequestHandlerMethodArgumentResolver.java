@@ -1,5 +1,6 @@
 package com.chua.starter.oauth.client.support.configuration;
 
+import com.chua.common.support.unit.name.NamingCase;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
@@ -79,7 +80,11 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
         Object o = cacheValue.get(paramName);
 
         if (null == o) {
-            o = MapUtils.getString(com.chua.common.support.bean.BeanMap.create(cacheValue.get("ext")), paramName);
+            Map beanMap = com.chua.common.support.bean.BeanMap.create(cacheValue.get("ext"));
+            o = MapUtils.getString(beanMap, paramName);
+            if (null == o) {
+                o = MapUtils.getString(beanMap, NamingCase.toCamelCase(paramName));
+            }
         }
 
 
@@ -146,6 +151,23 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
         AuthenticationInformation authentication = webRequest1.authentication();
         UserResume returnResult = authentication.getReturnResult();
         rs.putAll(returnResult);
+        rs.put("all", returnResult);
+        rs.remove("password");
+        rs.remove("beanType");
+        rs.remove("salt");
+        Object ext = rs.get("ext");
+        if (null != ext && ext instanceof Map) {
+            ((Map<?, ?>) ext).remove("password");
+            ((Map<?, ?>) ext).remove("salt");
+        }
+        returnResult.remove("password");
+        returnResult.remove("salt");
+        returnResult.remove("beanType");
+        Object ext1 = returnResult.get("ext");
+        if (null != ext1 && ext1 instanceof Map) {
+            ((Map<?, ?>) ext1).remove("password");
+            ((Map<?, ?>) ext1).remove("salt");
+        }
         return rs;
     }
 }

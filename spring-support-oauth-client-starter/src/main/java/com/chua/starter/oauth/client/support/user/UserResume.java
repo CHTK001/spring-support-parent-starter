@@ -52,6 +52,10 @@ public class UserResume extends HashMap<String, Object> {
      * 权限
      */
     private Set<String> permission;
+    /**
+     * 最后一次登录地址
+     */
+    private String lastIp;
 
     private static final String ANY = "*";
 

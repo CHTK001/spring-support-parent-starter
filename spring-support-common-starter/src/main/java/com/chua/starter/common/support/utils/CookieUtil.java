@@ -53,7 +53,7 @@ public class CookieUtil {
             return;
         }
         int age = ifRemember ? COOKIE_MAX_AGE : -1;
-        set(response, key, value, null, COOKIE_PATH, age, true);
+        set(response, key, value, null, COOKIE_PATH, age, false);
     }
 
     /**
@@ -118,7 +118,7 @@ public class CookieUtil {
     public static void remove(HttpServletRequest request, HttpServletResponse response, String key) {
         Cookie cookie = get(request, key);
         if (cookie != null) {
-            set(response, key, "", null, COOKIE_PATH, 0, true);
+            set(response, key, "", null, COOKIE_PATH, 0, false);
         }
     }
 
