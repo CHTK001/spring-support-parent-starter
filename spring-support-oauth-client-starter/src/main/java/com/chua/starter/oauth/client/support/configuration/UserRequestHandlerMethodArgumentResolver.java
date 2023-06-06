@@ -5,6 +5,7 @@ import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.oauth.client.support.annotation.UserValue;
+import com.chua.starter.oauth.client.support.exception.OauthException;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.chua.starter.oauth.client.support.web.WebRequest;
@@ -150,6 +151,9 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
         Map<String, Object> rs = new LinkedHashMap<>();
         AuthenticationInformation authentication = webRequest1.authentication();
         UserResume returnResult = authentication.getReturnResult();
+        if(null == returnResult) {
+            throw new OauthException();
+        }
         rs.putAll(returnResult);
         rs.put("all", returnResult);
         rs.remove("password");
