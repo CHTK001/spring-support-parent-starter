@@ -48,6 +48,10 @@ public class SysLog {
      */
     private String logContent;
     /**
+     * logWatch
+     */
+    private String logWatch;
+    /**
      * 耗时(s)
      */
     private Long logCost;
@@ -59,4 +63,8 @@ public class SysLog {
      * 动作
      */
     private String logAction;
+    /**
+     * 状态
+     */
+    private Integer logStatus;
 }

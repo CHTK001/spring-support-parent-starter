@@ -33,6 +33,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -172,9 +173,10 @@ public class AuthClientExecute {
      * @param username 账号
      * @param password 密码
      * @param authType 账号类型
+     * @param ext      额外参数
      * @return token
      */
-    public LoginAuthResult getAccessToken(String username, String password, AuthType authType) {
+    public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
         String accessKey = authClientProperties.getAccessKey();
         String secretKey = authClientProperties.getSecretKey();
         String serviceKey = authClientProperties.getServiceKey();
@@ -193,10 +195,12 @@ public class AuthClientExecute {
         String request = encode.encodeHex(asString, DigestUtils.md5Hex(key));
 
         String uid = UUID.randomUUID().toString();
-        Map<String, Object> item2 = new HashMap<>(3);
+        Map<String, Object> item2 = new LinkedHashMap<>();
+        item2.put("ext", ext);
         item2.put(AuthConstant.OAUTH_VALUE, request);
         item2.put(AuthConstant.OAUTH_KEY, key);
         item2.put("x-oauth-uid", uid);
+        item2.put("password", password);
         request = encode.encodeHex(Json.toJson(item2), serviceKey);
         Robin<String> robin1 = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
         Robin<String> balance = robin1.create();
@@ -217,7 +221,6 @@ public class AuthClientExecute {
                     .header("x-oauth-timestamp", System.nanoTime() + "")
                     .field("data", request)
                     .field("username", username)
-                    .field("passwd", password)
                     .field("type", authType.name())
                     .asString();
 

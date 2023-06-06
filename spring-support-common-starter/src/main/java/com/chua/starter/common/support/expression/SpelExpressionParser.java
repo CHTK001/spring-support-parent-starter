@@ -3,6 +3,7 @@ package com.chua.starter.common.support.expression;
 import com.chua.common.support.lang.expression.parser.ExpressionParser;
 import com.chua.common.support.value.Value;
 import org.springframework.expression.EvaluationContext;
+import org.springframework.expression.common.TemplateParserContext;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 
 /**
@@ -21,6 +22,6 @@ public class SpelExpressionParser implements ExpressionParser {
 
     @Override
     public Value<?> parseExpression(String express) {
-        return Value.of(expressionParser.parseExpression(express).getValue(evaluationContext));
+        return Value.of(expressionParser.parseExpression(express, new TemplateParserContext()).getValue(evaluationContext));
     }
 }

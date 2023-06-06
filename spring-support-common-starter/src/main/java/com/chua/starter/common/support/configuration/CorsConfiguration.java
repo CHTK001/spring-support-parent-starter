@@ -12,6 +12,7 @@ import com.chua.starter.common.support.properties.CorsProperties;
 import com.chua.starter.common.support.properties.LimitProperties;
 import com.chua.starter.common.support.result.ResponseAdvice;
 import com.chua.starter.common.support.version.ApiVersionRequestMappingHandlerMapping;
+import com.chua.starter.common.support.watch.WatchPointcutAdvisor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -93,6 +94,13 @@ public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAw
     @Lazy
     public LoggerPointcutAdvisor loggerPointcutAdvisor(@Autowired(required = false) LoggerService loggerService) {
         return new LoggerPointcutAdvisor(loggerService);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    @Lazy
+    public WatchPointcutAdvisor watchPointcutAdvisor() {
+        return new WatchPointcutAdvisor();
     }
 
     @Bean
