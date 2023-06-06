@@ -19,5 +19,22 @@ public class CoreProperties {
     /**
      * 是否开启版本控制
      */
-    public boolean openVersion;
+    private boolean openVersion;
+
+    /**
+     * geo
+     */
+    private Geo geo = new Geo();
+
+    @Data
+    public class Geo {
+        /**
+         * 系统资源目录
+         */
+        private String config = "/";
+        /**
+         * 实现方式
+         */
+        private String impl = "geo";
+    }
 }
