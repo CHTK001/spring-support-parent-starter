@@ -52,9 +52,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
     private KeyDecode decode;
     private KeyEncode encode;
 
-    private static final Cacheable CACHEABLE = new GuavaCacheable().configuration(CacheConfiguration.builder()
-                    .expireAfterWrite(120)
-            .build());
+    private static Cacheable CACHEABLE;
 
     @Override
     public AuthenticationInformation approve(Cookie[] cookie, String token) {
@@ -179,5 +177,8 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
     public void afterPropertiesSet() throws Exception {
         this.encode = ServiceProvider.of(KeyEncode.class).getExtension(authClientProperties.getEncryption());
         this.decode = ServiceProvider.of(KeyDecode.class).getExtension(authClientProperties.getEncryption());
+        CACHEABLE =  new GuavaCacheable().configuration(CacheConfiguration.builder()
+                .expireAfterWrite(authClientProperties.getCacheTimeout())
+                .build());
     }
 }

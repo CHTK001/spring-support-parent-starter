@@ -22,13 +22,10 @@ import org.springframework.data.redis.core.ValueOperations;
 import javax.annotation.Resource;
 import javax.servlet.http.Cookie;
 import java.time.Duration;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 
 import static com.chua.starter.oauth.client.support.contants.AuthConstant.PRE_KEY;
-import static com.chua.starter.oauth.client.support.contants.AuthConstant.TOKEN_PRE;
 
 /**
  * redis token管理器
@@ -60,11 +57,11 @@ public class RedisTokenResolver implements TokenResolver {
             registerSingle(generation);
         }
         ValueOperations<String, String> forValue = stringRedisTemplate.opsForValue();
-
+        long expire = userResult.getExpire() == null ? authServerProperties.getExpire() : userResult.getExpire();
+        userResult.setExpire(expire);
 //        forValue.set(serviceKey, Json.toJson(userResult));
         forValue.set(redisKey, Json.toJson(userResult));
 
-        long expire = userResult.getExpire() == null ? authServerProperties.getExpire() : userResult.getExpire();
 
         if (expire > 0) {
 //            stringRedisTemplate.expire(serviceKey, Duration.ofSeconds(expire));
@@ -132,6 +129,24 @@ public class RedisTokenResolver implements TokenResolver {
         if (null == s) {
             return ReturnResult.noAuth();
         }
-        return ReturnResult.ok(Json.fromJson(s, UserResult.class));
+        UserResult userResult = Json.fromJson(s, UserResult.class);
+        if (authServerProperties.isRenew()) {
+            resetExpire(userResult, token);
+        }
+        return ReturnResult.ok(userResult);
+    }
+
+    /**
+     * token续费
+     *
+     * @param userResult token信息
+     * @param token      token
+     */
+    private void resetExpire(UserResult userResult, String token) {
+        long expire = userResult.getExpire() == null ? authServerProperties.getExpire() : userResult.getExpire();
+        userResult.setExpire(expire);
+        if (expire > 0) {
+            stringRedisTemplate.expire(token, Duration.ofSeconds(expire));
+        }
     }
 }

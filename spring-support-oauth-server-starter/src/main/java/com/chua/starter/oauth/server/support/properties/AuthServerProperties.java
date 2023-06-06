@@ -37,6 +37,11 @@ public class AuthServerProperties {
      */
     private long expire = 86_400L * 3;
     /**
+     * token是否续费
+     * <p>即每次认证超时时间重置</p>
+     */
+    private boolean renew;
+    /**
      * 服务序列
      */
     private String serviceKey = "D518E462DF7B36828FA68CCD69FC6140";
