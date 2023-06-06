@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.configuration;
 
+import com.chua.starter.common.support.common.CommonService;
 import com.chua.starter.common.support.converter.FastJsonHttpMessageConverter;
 import com.chua.starter.common.support.converter.ResultDataHttpMessageConverter;
 import com.chua.starter.common.support.limit.LimitAspect;
@@ -94,6 +95,13 @@ public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAw
     @Lazy
     public LoggerPointcutAdvisor loggerPointcutAdvisor(@Autowired(required = false) LoggerService loggerService) {
         return new LoggerPointcutAdvisor(loggerService);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    @Lazy
+    public CommonService commonService(CoreProperties coreProperties) {
+        return new CommonService(coreProperties);
     }
 
     @Bean
