@@ -83,6 +83,10 @@ public class CookieUtil {
      * @return
      */
     public static String getValue(HttpServletRequest request, String key) {
+        if(request == null) {
+            return null;
+        }
+
         Cookie cookie = get(request, key);
         if (cookie != null) {
             return cookie.getValue();

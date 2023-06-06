@@ -4,6 +4,8 @@ import com.chua.common.support.unit.name.NamingCase;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.starter.common.support.utils.CookieUtil;
+import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.annotation.UserValue;
 import com.chua.starter.oauth.client.support.exception.OauthException;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
@@ -149,6 +151,11 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
                 webRequest.getNativeRequest(HttpServletRequest.class), null);
 
         Map<String, Object> rs = new LinkedHashMap<>();
+        rs.put("token", StringUtils.defaultString(
+                webRequest.getHeader(this.webRequest.getAuthProperties().getTokenName()),
+                        CookieUtil.getValue(RequestUtils.getRequest(), "x-oauth-cookie")
+                ));
+
         AuthenticationInformation authentication = webRequest1.authentication();
         UserResume returnResult = authentication.getReturnResult();
         if(null == returnResult) {

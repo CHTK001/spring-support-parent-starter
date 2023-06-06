@@ -10,7 +10,7 @@ public interface TokenGeneration {
      * 生成令牌
      *
      * @param key key
-     * @return 令牌
+     * @return 令牌(128位)
      */
     String generation(String key);
 }
