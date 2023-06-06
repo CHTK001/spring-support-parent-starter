@@ -12,6 +12,20 @@ import java.net.InetAddress;
  */
 public class RequestUtils {
 
+
+    /**
+     * 获取客户端IP地址
+     *
+     * @return 获取客户端IP地址S
+     */
+    public static String getIpAddress() {
+        HttpServletRequest request = getRequest();
+        if(request == null) {
+            return "::";
+        }
+
+        return getIpAddress(request);
+    }
     /**
      * 获取客户端IP地址
      *

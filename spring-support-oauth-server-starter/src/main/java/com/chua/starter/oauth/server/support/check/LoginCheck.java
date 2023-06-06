@@ -55,19 +55,6 @@ public class LoginCheck {
      * @param username 用户名
      * @param passwd   密码
      */
-    @Logger(value = "登陆模块", action = "登录", content =
-            "T(com.chua.common.support.lang.date.DateTime).now().toStandard() + " +
-                    "' 账号在( '" +
-                    "+ #args[0] + " +
-                    "' )' " +
-                    " + #args[1] + " +
-                    "'登录系统(状态: '" +
-                    " + #result['code'] + " +
-                    "'  ' " +
-                    "  #result['msg'] + " +
-                    "') 登录方式('" +
-                    " + #args[3] + " +
-                    "' ) '")
     public ReturnResult<LoginResult> doLogin(String address, String username, String passwd, String authType, Object ext) {
         UserResult userResult = null;
         Map<String, UserInfoService> beansOfType = applicationContext.getBeansOfType(UserInfoService.class);

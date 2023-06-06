@@ -1,5 +1,6 @@
 package com.chua.starter.oauth.client.support.user;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -19,6 +20,7 @@ import java.util.Set;
 @Accessors(chain = true)
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"beanType", "accessSecret", "expire", "password", "salt"})
 public class UserResult {
     private String id;
     /**

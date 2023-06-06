@@ -15,7 +15,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.awt.image.BufferedImage;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
+import java.util.Base64;
 import java.util.Random;
 
 /**
@@ -69,7 +71,7 @@ public class CaptchaProvider {
                 bi = producer.createImage(capStr);
             }
             session.setAttribute(Constants.KAPTCHA_SESSION_KEY, code);
-
+            response.setHeader("verifyCodeKey", Base64.getEncoder().encodeToString(code.getBytes(StandardCharsets.UTF_8)));
             out = response.getOutputStream();
             ImageIO.write(bi, "png", out);
             out.flush();

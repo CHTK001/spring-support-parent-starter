@@ -2,11 +2,14 @@ package com.chua.starter.oauth.server.support.provider;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
+import com.chua.common.support.bean.BeanMap;
 import com.chua.common.support.crypto.decode.KeyDecode;
 import com.chua.common.support.crypto.encode.KeyEncode;
 import com.chua.common.support.crypto.utils.DigestUtils;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.MapUtils;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.common.support.utils.RequestUtils;
@@ -36,6 +39,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -169,17 +173,31 @@ public class LoginProvider implements InitializingBean {
      */
     public ReturnResult<?> doLogin(String username, String passwd, String authType, String data, HttpServletRequest request, HttpServletResponse response) {
         String address = RequestUtils.getIpAddress(request);
+        AccessSecret accessSecret = getAkSk(data);
+        if (StringUtils.isEmpty(passwd)) {
+            passwd = accessSecret.getPassword();
+        }
 
-        ReturnResult result = loginCheck.doLogin(address, username, passwd, authType, null);
+        if(null != accessSecret.getExt()) {
+            address = MapUtils.getString(accessSecret.getExt(), "address", address);
+        }
+
+        ReturnResult result = loginCheck.doLogin(address, username, passwd, authType, accessSecret.getExt());
         if (!result.getCode().equals(200)) {
             loggerResolver.register("doLogin", 500, "认证服务器离线", address);
-            request.setAttribute(authServerProperties.getTokenName(), ((LoginResult) result.getData()).getToken());
+            Object data1 = result.getData();
+            if (null != data1) {
+                request.setAttribute(authServerProperties.getTokenName(), ((LoginResult) data1).getToken());
+            }
             logout(request, response);
             return ReturnResult.newBuilder().code(result.getCode()).data(result.getData()).msg(result.getMsg()).build();
         }
 
-        if (!checkAkSk(result, data)) {
-            request.setAttribute(authServerProperties.getTokenName(), ((LoginResult) result.getData()).getToken());
+        if (!checkAkSk(result, data, accessSecret)) {
+            Object data1 = result.getData();
+            if (null != data1) {
+                request.setAttribute(authServerProperties.getTokenName(), ((LoginResult) data1).getToken());
+            }
             logout(request, response);
             return ReturnResult.newBuilder().code(403).msg("ak/sk无效").build();
         }
@@ -189,14 +207,19 @@ public class LoginProvider implements InitializingBean {
 
     }
 
+    private AccessSecret getAkSk(String data) {
+        return createAccessSecret(data);
+    }
+
     /**
      * 检验ak/sk合法
      *
      * @param resultReturnResult 数据
      * @param data               请求数据
+     * @param accessSecret1      accessSecret1
      * @return 合法性
      */
-    private boolean checkAkSk(ReturnResult<Object> resultReturnResult, String data) {
+    private boolean checkAkSk(ReturnResult<Object> resultReturnResult, String data, AccessSecret accessSecret1) {
         if (!authServerProperties.isOpenCheckAkSk()) {
             return doEncode(true, resultReturnResult, null);
         }
@@ -209,7 +232,7 @@ public class LoginProvider implements InitializingBean {
         }
 
         try {
-            AccessSecret requestAccessSecret = createAccessSecret(data);
+            AccessSecret requestAccessSecret = accessSecret1;
             return doEncode(accessSecret.getAccessKey().equals(requestAccessSecret.getAccessKey())
                     && accessSecret.getSecretKey().equals(requestAccessSecret.getSecretKey()), resultReturnResult, requestAccessSecret.getUKey());
         } catch (Exception e) {
@@ -257,7 +280,12 @@ public class LoginProvider implements InitializingBean {
         String request = decode.decodeHex(value, DigestUtils.md5Hex(key));
         JSONObject jsonObject2 = JSON.parseObject(request);
 
-        return new AccessSecret(jsonObject2.getString(ACCESS_KEY), jsonObject2.getString(SECRET_KEY), authKey);
+        return new AccessSecret(jsonObject2.getString(ACCESS_KEY),
+                jsonObject2.getString(SECRET_KEY),
+                authKey,
+                jsonObject.getString("password"),
+                jsonObject.getObject("ext", Map.class)
+        );
     }
 
     /**
@@ -271,7 +299,7 @@ public class LoginProvider implements InitializingBean {
             HttpServletResponse response,
             RedirectAttributes redirectAttributes,
             @RequestParam(value = "username") String username,
-            @RequestParam(value = "passwd") String passwd,
+            @RequestParam(value = "passwd", required = false) String passwd,
             @RequestParam(value = "code", required = false) String code,
             @RequestParam(value = "type") String type,
             @RequestParam(value = "data") String data,

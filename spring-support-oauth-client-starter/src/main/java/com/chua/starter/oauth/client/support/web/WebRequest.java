@@ -1,6 +1,8 @@
 package com.chua.starter.oauth.client.support.web;
 
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.oauth.client.support.annotation.AuthIgnore;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.infomation.Information;
@@ -31,6 +33,7 @@ import java.util.Set;
 public class WebRequest {
     @Getter
     private final AuthClientProperties authProperties;
+    private String contextPath;
     private HttpServletRequest request;
     private RequestMappingHandlerMapping requestMappingHandlerMapping;
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
@@ -40,10 +43,11 @@ public class WebRequest {
         this.authProperties = authProperties;
         this.request = request;
         this.requestMappingHandlerMapping = requestMappingHandlerMapping;
+        this.contextPath = SpringBeanUtils.getEnvironment().resolvePlaceholders("${server.servlet.context-path:}");
     }
 
     public WebRequest(AuthClientProperties authProperties) {
-        this.authProperties = authProperties;
+        this(authProperties, null, null);
     }
 
     /**
@@ -78,6 +82,7 @@ public class WebRequest {
         }
 
         String uri = request.getRequestURI();
+        uri = StringUtils.isNotBlank(contextPath) ? StringUtils.removeStart(uri, contextPath) : uri;
 
         for (String s : whitelist) {
             if (PATH_MATCHER.match(s, uri)) {
