@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static com.chua.starter.oauth.client.support.contants.AuthConstant.PRE_KEY;
+import static com.chua.starter.oauth.client.support.contants.AuthConstant.TOKEN_PRE;
 
 /**
  * redis token管理器
@@ -50,7 +51,7 @@ public class RedisTokenResolver implements TokenResolver {
         String uid = userResult.getUid();
 
 //        String serviceKey = PRE_KEY + uid + ":" + generation;
-        String redisKey = AuthConstant.TOKEN_PRE + generation;
+        String redisKey = TOKEN_PRE + generation;
 
         AuthServerProperties.Online online = authServerProperties.getOnline();
         if (online == AuthServerProperties.Online.SINGLE) {
@@ -78,7 +79,17 @@ public class RedisTokenResolver implements TokenResolver {
      */
     private void registerSingle(String generation) {
         String uid = generation.substring(0, 128);
-        Set<String> keys = stringRedisTemplate.keys(PRE_KEY + uid + "0*");
+        registerUid(uid);
+    }
+
+    /**
+     * 单例模式
+     *
+     * @param uid 用户信息
+     */
+    private void registerUid(String uid) {
+        //
+        Set<String> keys = stringRedisTemplate.keys(TOKEN_PRE + uid + "*");
         try {
             stringRedisTemplate.delete(keys);
         } catch (Throwable ignored) {
@@ -87,23 +98,14 @@ public class RedisTokenResolver implements TokenResolver {
 
     @Override
     public void logout(String token) {
-        String newToken = AuthConstant.TOKEN_PRE + token;
-        String s = stringRedisTemplate.opsForValue().get(newToken);
-        if (Strings.isNullOrEmpty(s)) {
-            return;
-        }
-
-        String uid = MapUtils.getString(Json.fromJson(s, new TypeReference<Map<String, Object>>()), "uid");
-        if (!Strings.isNullOrEmpty(uid)) {
-            stringRedisTemplate.delete(PRE_KEY + uid + ":" + token);
-        }
-        stringRedisTemplate.delete(newToken);
+        stringRedisTemplate.delete(TOKEN_PRE + token);
     }
 
     @Override
     public void logout(String uid, LogoutType type) {
         if (type == LogoutType.UN_REGISTER || type == LogoutType.LOGOUT_ALL) {
-            registerSingle(uid);
+            TokenGeneration tokenGeneration = ServiceProvider.of(TokenGeneration.class).getExtension(authServerProperties.getTokenGeneration());
+            registerSingle(tokenGeneration.generation(uid));
             return;
         }
 
@@ -124,7 +126,7 @@ public class RedisTokenResolver implements TokenResolver {
         if (null == cv) {
             return ReturnResult.noAuth();
         }
-        cv = AuthConstant.TOKEN_PRE + cv;
+        cv = TOKEN_PRE + cv;
         String s = stringRedisTemplate.opsForValue().get(cv);
         if (null == s) {
             return ReturnResult.noAuth();
