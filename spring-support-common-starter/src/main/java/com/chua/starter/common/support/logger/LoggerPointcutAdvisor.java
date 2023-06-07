@@ -104,9 +104,10 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
                 String address = RequestUtils.getIpAddress(request);
                 DateTime now = DateTime.now();
                 Date date = now.toDate();
+                HttpSession session = request.getSession();
 
                 Logger logger = method.getDeclaredAnnotation(Logger.class);
-                String key = logger.value() + logger.action() + address + date;
+                String key = (String) session.getAttribute("userId") + logger.value() + logger.action() + address;
                 Boolean ifPresent = CACHE.getIfPresent(key);
                 if(null != ifPresent) {
                     return;
@@ -114,7 +115,6 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
 
                 CACHE.put(key, true);
                 SysLog sysLog = new SysLog();
-                HttpSession session = request.getSession();
                 StandardEvaluationContext standardEvaluationContext = new StandardEvaluationContext(applicationContext);
                 standardEvaluationContext.addPropertyAccessor(new BeanFactoryAccessor());
                 sysLog.setLogMapping(RequestUtils.getUrl(request));
