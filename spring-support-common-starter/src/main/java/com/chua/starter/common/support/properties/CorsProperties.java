@@ -18,7 +18,7 @@ public class CorsProperties {
     /**
      * 开启跨域
      */
-    private boolean enable;
+    private boolean enable = true;
     /**
      * 白名单
      */
