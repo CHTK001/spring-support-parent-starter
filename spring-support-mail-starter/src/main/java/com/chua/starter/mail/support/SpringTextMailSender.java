@@ -64,6 +64,8 @@ public class SpringTextMailSender extends AbstractMailSender {
                     }
                 });
             } catch (MessagingException ignored) {
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
         }
     }
