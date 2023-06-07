@@ -146,4 +146,8 @@ public class UserResult {
 
         return finalNewInstance;
     }
+
+    public boolean isRoot() {
+        return this.getRoles().contains("admin");
+    }
 }
