@@ -12,6 +12,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.application.Binder;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.result.ReturnResult;
+import com.chua.starter.common.support.watch.Watch;
 import com.chua.starter.oauth.client.support.advice.def.DefSecret;
 import com.chua.starter.oauth.client.support.contants.AuthConstant;
 import com.chua.starter.oauth.client.support.enums.AuthType;
@@ -176,6 +177,7 @@ public class AuthClientExecute {
      * @param ext      额外参数
      * @return token
      */
+    @Watch
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
         String accessKey = authClientProperties.getAccessKey();
         String secretKey = authClientProperties.getSecretKey();

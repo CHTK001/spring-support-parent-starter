@@ -99,9 +99,8 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
                 sysLog.setLogAddress(RequestUtils.getIpAddress(request));
 
                 Object proceed = null;
+                proceed = invocation.proceed();
                 try {
-                    proceed = invocation.proceed();
-                } finally {
                     standardEvaluationContext.setVariable("ip", RequestUtils.getIpAddress());
                     Object username = request.getSession().getAttribute("username");
                     standardEvaluationContext.setVariable("current_username", null == username ? "": username);
@@ -111,6 +110,7 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
                     standardEvaluationContext.setVariable("method", method);
                     standardEvaluationContext.setVariable("args", invocation.getArguments());
                     recordLog(sysLog, proceed, standardEvaluationContext, logger, invocation);
+                } catch (Exception ignored) {
                 }
 
                 return proceed;
