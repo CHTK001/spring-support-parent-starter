@@ -192,6 +192,10 @@ public class LoginProvider implements InitializingBean {
             logout(request, response);
             return ReturnResult.newBuilder().code(result.getCode()).data(result.getData()).msg(result.getMsg()).build();
         }
+        try {
+            CookieUtil.set(response, authServerProperties.getCookieName(), ((LoginResult) result.getData()).getToken(), true);
+        } catch (Exception ignored) {
+        }
 
         if (!checkAkSk(result, data, accessSecret)) {
             Object data1 = result.getData();
