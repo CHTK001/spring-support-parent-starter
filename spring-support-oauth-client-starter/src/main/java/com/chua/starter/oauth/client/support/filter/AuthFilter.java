@@ -3,12 +3,15 @@ package com.chua.starter.oauth.client.support.filter;
 
 import com.chua.common.support.log.Log;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
+import com.chua.starter.oauth.client.support.infomation.Information;
+import com.chua.starter.oauth.client.support.user.UserResume;
 import com.chua.starter.oauth.client.support.web.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.Objects;
 
@@ -56,7 +59,17 @@ public class AuthFilter implements Filter {
             webRequest.doFailureChain(chain, (HttpServletResponse) response, authentication.getInformation());
             return;
         }
-
+        render(authentication, (HttpServletRequest) request);
         webRequest.doChain(chain, (HttpServletResponse) response);
+    }
+
+    private void render(AuthenticationInformation authentication, HttpServletRequest request) {
+        if(authentication.getInformation() != Information.OK) {
+            return;
+        }
+        HttpSession session = request.getSession();
+        UserResume userResume = authentication.getReturnResult();
+        session.setAttribute("username", userResume.get("username"));
+        session.setAttribute("userId", userResume.get("id"));
     }
 }

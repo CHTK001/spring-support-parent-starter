@@ -40,6 +40,10 @@ public class SysLog {
      */
     private String createName;
     /**
+     * 操作人ID
+     */
+    private String createBy;
+    /**
      * 结果
      */
     private Object result;

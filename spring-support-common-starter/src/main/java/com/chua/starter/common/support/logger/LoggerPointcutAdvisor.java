@@ -30,6 +30,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
@@ -78,12 +79,18 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
             public Object invoke(@Nonnull MethodInvocation invocation) throws Throwable {
                 SysLog sysLog = new SysLog();
                 Method method = invocation.getMethod();
+                HttpSession session = request.getSession();
                 Logger logger = method.getDeclaredAnnotation(Logger.class);
                 StandardEvaluationContext standardEvaluationContext = new StandardEvaluationContext(applicationContext);
                 standardEvaluationContext.addPropertyAccessor(new BeanFactoryAccessor());
                 DateTime now = DateTime.now();
                 sysLog.setLogMapping(RequestUtils.getUrl(request));
                 sysLog.setCreateTime(now.toDate());
+                try {
+                    sysLog.setCreateName((String) session.getAttribute("username"));
+                    sysLog.setCreateBy((String) session.getAttribute("id"));
+                } catch (Exception ignored) {
+                }
                 sysLog.setMethodName(method.getName());
                 sysLog.setClassName(method.getDeclaringClass().getName());
                 sysLog.setLogName(logger.value());
