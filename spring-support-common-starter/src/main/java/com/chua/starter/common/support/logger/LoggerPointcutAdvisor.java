@@ -12,7 +12,8 @@ import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.common.support.watch.NewTrackManager;
 import com.chua.starter.common.support.watch.Span;
 import com.chua.starter.common.support.watch.WatchPointcutAdvisor;
-import groovy.lang.IntRange;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.aop.support.StaticMethodMatcherPointcutAdvisor;
@@ -33,10 +34,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Stack;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
@@ -70,6 +68,9 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
 
     }
 
+    private static final Cache<String, Boolean> CACHE = CacheBuilder.newBuilder().expireAfterWrite(3, TimeUnit.SECONDS)
+            .build();
+
     @Override
     public void afterPropertiesSet() throws Exception {
         PinyinFactory pinyinFactory = ServiceProvider.of(PinyinFactory.class).getNewExtension("pinyin");
@@ -77,15 +78,47 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
             @Nullable
             @Override
             public Object invoke(@Nonnull MethodInvocation invocation) throws Throwable {
-                SysLog sysLog = new SysLog();
+                Object proceed = null;
+                int status = 0;
+                Throwable e1 = null;
+                try {
+                    proceed = invocation.proceed();
+                } catch (Throwable e) {
+                    status = 1;
+                    e1 = e;
+                }
+                try {
+                    saveLog(proceed, invocation, status);
+                } catch (Exception ignored) {
+                }
+
+                if(status == 1) {
+                    throw new RuntimeException(e1);
+                }
+
+                return proceed;
+            }
+
+            private void saveLog(Object proceed, MethodInvocation invocation, int status) {
                 Method method = invocation.getMethod();
-                HttpSession session = request.getSession();
+                String address = RequestUtils.getIpAddress(request);
+                DateTime now = DateTime.now();
+                Date date = now.toDate();
+
                 Logger logger = method.getDeclaredAnnotation(Logger.class);
+                String key = logger.value() + logger.action() + address + date;
+                Boolean ifPresent = CACHE.getIfPresent(key);
+                if(null != ifPresent) {
+                    return;
+                }
+
+                CACHE.put(key, true);
+                SysLog sysLog = new SysLog();
+                HttpSession session = request.getSession();
                 StandardEvaluationContext standardEvaluationContext = new StandardEvaluationContext(applicationContext);
                 standardEvaluationContext.addPropertyAccessor(new BeanFactoryAccessor());
-                DateTime now = DateTime.now();
                 sysLog.setLogMapping(RequestUtils.getUrl(request));
-                sysLog.setCreateTime(now.toDate());
+                sysLog.setCreateTime(date);
                 try {
                     sysLog.setCreateName((String) session.getAttribute("username"));
                     sysLog.setCreateBy((String) session.getAttribute("userId"));
@@ -96,27 +129,20 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
                 sysLog.setLogName(logger.value());
                 sysLog.setLogAction(logger.action());
                 sysLog.setLogCode(getCode(logger));
-                sysLog.setLogAddress(RequestUtils.getIpAddress(request));
+                sysLog.setLogAddress(address);
 
-                Object proceed = null;
-                proceed = invocation.proceed();
-                try {
-                    standardEvaluationContext.setVariable("ip", RequestUtils.getIpAddress());
-                    Object username = request.getSession().getAttribute("username");
-                    standardEvaluationContext.setVariable("current_username", null == username ? "": username);
-                    standardEvaluationContext.setVariable("now", now.toStandard());
-                    standardEvaluationContext.setVariable("nowDate", now);
-                    standardEvaluationContext.setVariable("result", proceed);
-                    standardEvaluationContext.setVariable("method", method);
-                    standardEvaluationContext.setVariable("args", invocation.getArguments());
-                    recordLog(sysLog, proceed, standardEvaluationContext, logger, invocation);
-                } catch (Exception ignored) {
-                }
-
-                return proceed;
+                standardEvaluationContext.setVariable("ip", RequestUtils.getIpAddress());
+                Object username = request.getSession().getAttribute("username");
+                standardEvaluationContext.setVariable("current_username", null == username ? "": username);
+                standardEvaluationContext.setVariable("now", now.toStandard());
+                standardEvaluationContext.setVariable("nowDate", now);
+                standardEvaluationContext.setVariable("result", proceed);
+                standardEvaluationContext.setVariable("method", method);
+                standardEvaluationContext.setVariable("args", invocation.getArguments());
+                recordLog(sysLog, proceed, standardEvaluationContext, logger, invocation, status);
             }
 
-            private void recordLog(SysLog sysLog, Object proceed, StandardEvaluationContext standardEvaluationContext, Logger logger, MethodInvocation invocation) {
+            private void recordLog(SysLog sysLog, Object proceed, StandardEvaluationContext standardEvaluationContext, Logger logger, MethodInvocation invocation, int status) {
                 long startTime = sysLog.getCreateTime().getTime();
                 sysLog.setResult(proceed);
                 sysLog.setLogCost((System.currentTimeMillis() - startTime) / 1000);
