@@ -1,7 +1,10 @@
 package com.chua.starter.common.support.properties;
 
+import com.chua.starter.common.support.constant.CaptchaTypeEnum;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+
+import java.awt.*;
 
 /**
  * 校验码
@@ -14,96 +17,46 @@ public class CaptchaProperties {
 
     public static final String PRE = "plugin.captcha";
 
-    /**
-     * 是否开启
-     */
-    private boolean enable = true;
-    /**
-     * 命名空间
-     */
-    private String contextPath;
-    /**
-     * 是否有边框，默认为yes，可选yes、no
-     */
-    private String border = "";
 
     /**
-     * 边框颜色
+     * 验证码类型
      */
-    private String borderColor = "";
+    private CaptchaTypeEnum type = CaptchaTypeEnum.ARITHMETIC;
+
+
     /**
-     * 文本
+     * 验证码缓存过期时间(单位:秒)
      */
-    private TextProperties text = new TextProperties();
+    private long ttl = 120l;
+
     /**
-     * 干扰线
+     * 验证码内容长度
      */
-    private NoiseProperties noise = new NoiseProperties();
+    private int length = 4;
     /**
-     * 图片样式
+     * 验证码宽度
      */
-    private Obscurificator obscurificator = new Obscurificator();
-    @Data
-    public static class Obscurificator {
-
-        private String impl = "com.google.code.kaptcha.impl.WaterRipple";
-    }
-
-    @Data
-    public static class NoiseProperties {
-        /**
-         * 实现
-         */
-        private String impl = "com.google.code.kaptcha.impl.DefaultNoise";
-        /**
-         * 颜色
-         */
-        private String color = "black";
-    }
-
-    @Data
-    public static class TextProperties {
-        /**
-         * 字体
-         */
-        private FontProperties font = new FontProperties();
-        /**
-         * 字符
-         */
-        private CharProperties chars = new CharProperties();
-    }
+    private int width = 120;
+    /**
+     * 验证码高度
+     */
+    private int height = 36;
 
 
-    @Data
-    public static class CharProperties {
-        /**
-         * 长度
-         */
-        private int length = 5;
+    /**
+     * 验证码字体
+     */
+    private String fontName = "Verdana";
 
-        /**
-         * 字符集
-         */
-        private String string = "abcde2345678gfynmnpwxABCDEGFYNMNPWX";
-        /**
-         * 间距
-         */
-        private int space = 4;
-    }
+    /**
+     * 字体风格
+     */
+    private Integer fontStyle = Font.PLAIN;
 
-    @Data
-    public static class FontProperties {
-        /**
-         * 颜色
-         */
-        private String color = "";
-        /**
-         * 文本字符大小
-         */
-        private int size = 4;
-        /**
-         * 文本字体样式
-         */
-        private String names = "宋体,楷体,微软雅黑";
-    }
+    /**
+     * 字体大小
+     */
+    private int fontSize = 20;
+
+
 }
