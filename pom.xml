@@ -246,6 +246,12 @@
                 <artifactId>utils-support-email-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-geoip2-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 

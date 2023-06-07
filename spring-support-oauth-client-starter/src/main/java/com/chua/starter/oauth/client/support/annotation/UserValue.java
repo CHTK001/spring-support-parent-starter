@@ -48,5 +48,5 @@ public @interface UserValue {
      * <p>Supplying a default value implicitly sets {@link #required} to
      * {@code false}.
      */
-    String defaultValue() default ValueConstants.DEFAULT_NONE;
+    String defaultValue() default "";
 }
