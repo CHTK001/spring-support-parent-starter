@@ -20,7 +20,7 @@ import java.util.Set;
 @Accessors(chain = true)
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonIgnoreProperties({"beanType", "accessSecret", "expire", "password", "salt"})
+@JsonIgnoreProperties({"beanType", "accessSecret", "expire", "password", "salt", "password", "salt", "userEnable", "address", "lastArea", "lastLatitude", "lastIp", "lastLongitude"})
 public class UserResult {
     private String id;
     /**

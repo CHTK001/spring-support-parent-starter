@@ -2,6 +2,7 @@ package com.chua.starter.oauth.server.support.protocol;
 
 import com.chua.common.support.annotations.Extension;
 import com.chua.starter.common.support.result.ReturnResult;
+import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.contants.AuthConstant;
 import com.chua.starter.oauth.server.support.condition.OnBeanCondition;

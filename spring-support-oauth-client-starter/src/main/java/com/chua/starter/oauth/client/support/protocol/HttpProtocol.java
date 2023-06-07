@@ -143,7 +143,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
 
             if (code >= 200 && code < 300) {
                 body = decode.decodeHex(data.toString(), key);
-                CookieUtil.set(ResponseUtils.getResponse(), "x-oauth-cookie", cacheKey, false);
+                CookieUtil.set(ResponseUtils.getResponse(), "x-oauth-cookie", cacheKey, true);
 
                 return inCache(cacheKey, new AuthenticationInformation(OK, Json.fromJson(body, UserResume.class)));
             }
