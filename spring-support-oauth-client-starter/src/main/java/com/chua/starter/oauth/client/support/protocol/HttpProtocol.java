@@ -62,15 +62,15 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         jsonObject.put("x-oauth-cookie", cookies);
         jsonObject.put("x-oauth-token", token);
         String cacheKey = getCacheKey(cookies, token);
-        if(null != cacheKey) {
-            Value o = CACHEABLE.get(cacheKey);
-            if(null != o) {
-                AuthenticationInformation authenticationInformation = (AuthenticationInformation) o.getValue();
-                if (authenticationInformation.getInformation().getCode() != 403) {
-                    return authenticationInformation;
-                }
-            }
-        }
+//        if(null != cacheKey) {
+//            Value o = CACHEABLE.get(cacheKey);
+//            if(null != o) {
+//                AuthenticationInformation authenticationInformation = (AuthenticationInformation) o.getValue();
+//                if (authenticationInformation.getInformation().getCode() != 403) {
+//                    return authenticationInformation;
+//                }
+//            }
+//        }
 
         String accessKey = authClientProperties.getAccessKey();
         String secretKey = authClientProperties.getSecretKey();
@@ -143,7 +143,6 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
 
             if (code >= 200 && code < 300) {
                 body = decode.decodeHex(data.toString(), key);
-                CookieUtil.set(ResponseUtils.getResponse(), "x-oauth-cookie", cacheKey, true);
 
                 return inCache(cacheKey, new AuthenticationInformation(OK, Json.fromJson(body, UserResume.class)));
             }

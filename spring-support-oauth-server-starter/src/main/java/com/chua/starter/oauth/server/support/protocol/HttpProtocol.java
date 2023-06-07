@@ -74,7 +74,7 @@ public class HttpProtocol implements Protocol, InitializingBean {
         }
 
         ReturnResult<String> authentication = authorization.authentication();
-        if (authentication.getCode() != 200) {
+        if (authentication.getCode() == 403) {
             loginProvider.logout(request, response);
             loggerResolver.register(AuthConstant.OAUTH, 403, "ak,sk限制登录", address);
             return ReturnResult.noAuth();

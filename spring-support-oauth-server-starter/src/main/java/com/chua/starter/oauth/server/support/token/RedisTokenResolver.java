@@ -16,6 +16,7 @@ import com.chua.starter.oauth.server.support.generation.TokenGeneration;
 import com.chua.starter.oauth.server.support.properties.AuthServerProperties;
 import com.google.common.base.Strings;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.springframework.cglib.beans.BeanMap;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
@@ -61,7 +62,7 @@ public class RedisTokenResolver implements TokenResolver {
         long expire = userResult.getExpire() == null ? authServerProperties.getExpire() : userResult.getExpire();
         userResult.setExpire(expire);
 //        forValue.set(serviceKey, Json.toJson(userResult));
-        forValue.set(redisKey, Json.toJson(userResult));
+        forValue.set(redisKey, Json.toJson(BeanMap.create(userResult)));
 
 
         if (expire > 0) {
