@@ -88,7 +88,7 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
                 sysLog.setCreateTime(now.toDate());
                 try {
                     sysLog.setCreateName((String) session.getAttribute("username"));
-                    sysLog.setCreateBy((String) session.getAttribute("id"));
+                    sysLog.setCreateBy((String) session.getAttribute("userId"));
                 } catch (Exception ignored) {
                 }
                 sysLog.setMethodName(method.getName());
@@ -103,6 +103,8 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
                     proceed = invocation.proceed();
                 } finally {
                     standardEvaluationContext.setVariable("ip", RequestUtils.getIpAddress());
+                    Object username = request.getSession().getAttribute("username");
+                    standardEvaluationContext.setVariable("current_username", null == username ? "": username);
                     standardEvaluationContext.setVariable("now", now.toStandard());
                     standardEvaluationContext.setVariable("nowDate", now);
                     standardEvaluationContext.setVariable("result", proceed);

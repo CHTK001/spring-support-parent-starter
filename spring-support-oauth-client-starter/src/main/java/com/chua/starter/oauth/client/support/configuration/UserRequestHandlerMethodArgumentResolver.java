@@ -26,6 +26,7 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 
 import javax.servlet.http.HttpServletRequest;
 import java.lang.reflect.Parameter;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -159,7 +160,7 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
         AuthenticationInformation authentication = webRequest1.authentication();
         UserResume returnResult = authentication.getReturnResult();
         if(null == returnResult) {
-            throw new OauthException();
+            return Collections.emptyMap();
         }
         rs.putAll(returnResult);
         rs.put("all", returnResult);
