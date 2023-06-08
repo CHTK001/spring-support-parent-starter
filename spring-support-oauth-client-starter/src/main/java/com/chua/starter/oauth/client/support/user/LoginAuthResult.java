@@ -19,7 +19,7 @@ public class LoginAuthResult extends LoginResult {
      * code
      */
     @NonNull
-    private String code;
+    private Integer code;
     /**
      * 错误信息
      */

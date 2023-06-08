@@ -5,12 +5,17 @@ import com.chua.common.support.geo.IpPosition;
 import com.chua.starter.common.support.properties.CoreProperties;
 import lombok.Data;
 
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+
 @Data
 public class CommonService {
     private IpPosition ipPosition;
 
-    public CommonService(CoreProperties coreProperties) {
-        CoreProperties.Geo geo = coreProperties.getGeo();
-        this.ipPosition = IpBuilder.newBuilder().database(geo.getConfig()).build(geo.getImpl());
+    public CommonService(CoreProperties coreProperties, Executor executorService) {
+        executorService.execute(() -> {
+            CoreProperties.Geo geo = coreProperties.getGeo();
+            this.ipPosition = IpBuilder.newBuilder().database(geo.getConfig()).build(geo.getImpl());
+        });
     }
 }

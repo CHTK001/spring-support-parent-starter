@@ -28,7 +28,9 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.util.Optional;
+
+import static com.chua.starter.common.support.result.ReturnCode.OK;
+import static com.chua.starter.common.support.result.ReturnCode.SYSTEM_NO_OAUTH;
 
 /**
  * 三方地址
@@ -62,7 +64,7 @@ public class GiteeThirdPartyProvider implements InitializingBean {
         AuthUser data = authResponse.getData();
         ReturnResult<LoginResult> result = loginCheck.doLogin(data.getLocation(), data.getUsername(), null, "gitee", data);
         loggerResolver.register("gitee", result.getCode(), "认证服务器离线", null);
-        if (result.getCode().equals(403)) {
+        if (SYSTEM_NO_OAUTH.equals(result.getCode())) {
             try {
                 return new AdviceView<String>("redirect:" + contextPath + "/login?redirect_url=" +
                         URLEncoder.encode("", "UTF-8"));
@@ -72,7 +74,7 @@ public class GiteeThirdPartyProvider implements InitializingBean {
         }
 
         LoginResult loginResult = result.getData();
-        loggerResolver.register("gitee", 200, "登录成功", null);
+        loggerResolver.register("gitee", OK.getCode(), "登录成功", null);
         CookieUtil.set(response, authServerProperties.getCookieName(), loginResult.getToken(), true);
         return new AdviceView<String>("third-index");
     }

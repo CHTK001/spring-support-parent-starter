@@ -1,20 +1,25 @@
 package com.chua.starter.common.support.provider;
 
 import com.chua.common.support.discovery.Constants;
+import com.chua.common.support.utils.RandomUtils;
+import com.chua.starter.common.support.constant.CaptchaTypeEnum;
 import com.chua.starter.common.support.properties.CaptchaProperties;
+import com.wf.captcha.*;
 import com.wf.captcha.base.Captcha;
 import lombok.Builder;
 import lombok.Data;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.annotation.Resource;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+import java.awt.*;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
@@ -28,12 +33,61 @@ import java.util.Base64;
 @ConditionalOnProperty(prefix = CaptchaProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = true)
 public class CaptchaProvider {
 
-    private final Captcha producer;
+    @Resource
+    private CaptchaProperties captchaProperties;
 
-
-    public CaptchaProvider(@Autowired(required = false) Captcha producer) {
-        this.producer = producer;
+    public Captcha producer() {
+        return createCaptcha(captchaProperties.getType(), captchaProperties.getLength());
     }
+
+    public Captcha producer(CaptchaTypeEnum typeEnum) {
+        return createCaptcha(typeEnum, captchaProperties.getLength());
+    }
+
+    public Captcha producer(CaptchaTypeEnum typeEnum, int length) {
+        return createCaptcha(typeEnum, length);
+    }
+
+    private Captcha createCaptcha(CaptchaTypeEnum type, int length) {
+        Captcha captcha;
+        int width = captchaProperties.getWidth();
+        int height = captchaProperties.getHeight();
+        String fontName = captchaProperties.getFontName();
+
+        switch (type) {
+            case ARITHMETIC:
+                captcha = new ArithmeticCaptcha(width, height);
+                //固定设置为两位，图片为算数运算表达式
+                captcha.setLen(length);
+                break;
+            case CHINESE:
+                captcha = new ChineseCaptcha(width, height);
+                captcha.setLen(length);
+                break;
+            case CHINESE_GIF:
+                captcha = new ChineseGifCaptcha(width, height);
+                captcha.setLen(length);
+                break;
+            case GIF:
+                captcha = new GifCaptcha(width, height);
+                captcha.setLen(length);
+                break;
+            case SPEC:
+                captcha = new SpecCaptcha(width, height);
+                captcha.setCharType(Captcha.TYPE_DEFAULT);
+                captcha.setLen(length);
+                break;
+            default:
+                throw new RuntimeException("验证码配置信息错误！正确配置查看 CaptchaTypeEnum ");
+        }
+        try {
+            //captcha.setFont(Captcha.FONT_1, captchaProperties.getFontSize());
+        } catch (Exception ignored) {
+        }
+
+        return captcha;
+    }
+
 
     /**
      * 校验码
@@ -43,9 +97,17 @@ public class CaptchaProvider {
      */
     @GetMapping("captcha.jpg")
     public void captcha(HttpServletRequest request, HttpServletResponse response) {
-        String captchaText = producer.text();
-        String captchaBase64 = producer.toBase64("data:image/png;base64,");
+        int randomInt = RandomUtils.randomInt(2, 3);
+        CaptchaTypeEnum captchaTypeEnum = RandomUtils.randomEnum(CaptchaTypeEnum.class);
+        if (captchaTypeEnum == CaptchaTypeEnum.CHINESE || captchaTypeEnum == CaptchaTypeEnum.CHINESE_GIF) {
+            randomInt = RandomUtils.randomInt(4, 5);
+        } else if (captchaTypeEnum != CaptchaTypeEnum.ARITHMETIC) {
+            randomInt = RandomUtils.randomInt(6, 7);
+        }
+        Captcha captcha = producer(captchaTypeEnum, randomInt);
+        String captchaText = captcha.text();
         ServletOutputStream out = null;
+
         try {
             HttpSession session = request.getSession();
             response.setDateHeader("Expires", 0);
@@ -57,9 +119,7 @@ public class CaptchaProvider {
             session.setAttribute(Constants.CAPTCHA_SESSION_KEY, captchaText);
             response.setHeader("verifyCodeKey", Base64.getEncoder().encodeToString(captchaText.getBytes(StandardCharsets.UTF_8)));
             out = response.getOutputStream();
-            String substring = captchaBase64.substring("data:image/png;base64,".length());
-            byte[] decode = Base64.getDecoder().decode(substring);
-            out.write(decode);
+            captcha.out(out);
             out.flush();
 
         } catch (Exception e) {
@@ -74,13 +134,21 @@ public class CaptchaProvider {
      */
     @GetMapping("captcha")
     public CaptchaResult captchaBase64(HttpServletRequest request) {
-        String captchaText = producer.text();
-        String captchaBase64 = producer.toBase64("data:image/png;base64,");
+        int randomInt = RandomUtils.randomInt(2, 3);
+        CaptchaTypeEnum captchaTypeEnum = CaptchaTypeEnum.ARITHMETIC;//RandomUtils.randomEnum(CaptchaTypeEnum.class);
+        if (captchaTypeEnum == CaptchaTypeEnum.CHINESE || captchaTypeEnum == CaptchaTypeEnum.CHINESE_GIF) {
+            randomInt = RandomUtils.randomInt(4, 5);
+        } else if (captchaTypeEnum != CaptchaTypeEnum.ARITHMETIC) {
+            randomInt = RandomUtils.randomInt(6, 7);
+        }
+        Captcha captcha = producer(captchaTypeEnum, randomInt);
+        String captchaText = captcha.text();
+        String captchaBase64 = captcha.toBase64();
         try {
             HttpSession session = request.getSession();
             session.setAttribute(Constants.CAPTCHA_SESSION_KEY, captchaText);
             return CaptchaResult.builder()
-                    .verifyCodeKey(captchaText)
+                    .verifyCodeKey(Base64.getEncoder().encodeToString(captchaText.getBytes(StandardCharsets.UTF_8)))
                     .verifyCodeBase64(captchaBase64)
                     .build();
         } catch (Exception e) {

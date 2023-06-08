@@ -38,6 +38,8 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 import javax.annotation.Resource;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 
 /**
  * 跨域处理
@@ -100,8 +102,8 @@ public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAw
     @Bean
     @ConditionalOnMissingBean
     @Lazy
-    public CommonService commonService(CoreProperties coreProperties) {
-        return new CommonService(coreProperties);
+    public CommonService commonService(CoreProperties coreProperties, Executor executorService) {
+        return new CommonService(coreProperties, executorService);
     }
 
     @Bean

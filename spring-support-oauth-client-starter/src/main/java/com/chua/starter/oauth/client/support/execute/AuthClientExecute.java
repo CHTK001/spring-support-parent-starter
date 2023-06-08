@@ -97,7 +97,7 @@ public class AuthClientExecute {
      */
     public LoginAuthResult logout(String uid, LogoutType logoutType) {
         if (Strings.isNullOrEmpty(uid) && logoutType == LogoutType.UN_REGISTER) {
-            return new LoginAuthResult(PARAM_ERROR.getCode(), "uid不能为空");
+            return new LoginAuthResult(400, "uid不能为空");
         }
 
         UserResult userResult = getUserResult();
@@ -158,12 +158,12 @@ public class AuthClientExecute {
         int status = httpResponse.getStatus();
         if (status == 200) {
             LoginAuthResult loginAuthResult = new LoginAuthResult();
-            loginAuthResult.setCode(OK.getCode());
+            loginAuthResult.setCode(status);
 
             return loginAuthResult;
         }
         LoginAuthResult loginAuthResult = new LoginAuthResult();
-        loginAuthResult.setCode(SYSTEM_AUTH_NO_PASS.getCode());
+        loginAuthResult.setCode(status);
         loginAuthResult.setMessage("认证服务器异常");
         return loginAuthResult;
 
@@ -255,17 +255,17 @@ public class AuthClientExecute {
                     return null;
                 }
 
-                loginAuthResult.setCode(code);
+                loginAuthResult.setCode(status);
                 return loginAuthResult;
             }
             LoginAuthResult loginAuthResult = new LoginAuthResult();
-            loginAuthResult.setCode(code);
+            loginAuthResult.setCode(status);
             loginAuthResult.setMessage(returnResult.getMsg());
 
             return loginAuthResult;
         }
         LoginAuthResult loginAuthResult = new LoginAuthResult();
-        loginAuthResult.setCode(SYSTEM_AUTH_NO_PASS.getCode());
+        loginAuthResult.setCode(status);
         loginAuthResult.setMessage("认证服务器异常");
         return loginAuthResult;
 

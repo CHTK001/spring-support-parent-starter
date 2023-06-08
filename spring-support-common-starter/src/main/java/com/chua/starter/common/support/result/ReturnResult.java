@@ -126,6 +126,19 @@ public class ReturnResult<T> {
      * @param <T>  类型
      * @return 结果
      */
+    public static <T> ReturnResult<T> of(String code, T data, String msg) {
+        return new ReturnResult<>(code, data, msg);
+    }
+
+    /**
+     * 初始化
+     *
+     * @param data 数据
+     * @param code 错误码
+     * @param msg  消息
+     * @param <T>  类型
+     * @return 结果
+     */
     public static <T> ReturnResult<T> of(ResultCode code, T data, String msg) {
         return new ReturnResult<>(code.getCode(), data, msg);
     }

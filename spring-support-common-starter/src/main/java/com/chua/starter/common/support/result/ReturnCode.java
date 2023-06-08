@@ -37,7 +37,6 @@ public enum ReturnCode implements ResultCode {
     FILE_UPLOAD_FILE_SIZE_EXCEEDS("A0702", "用户上传文件太大"),
     FILE_UPLOAD_IMAGE_SIZE_EXCEEDS("A0703", "用户上传图片太大"),
 
-    RESULT_ACCESS_UNAUTHORIZED("A0403", "无权限访问"),
     SERVER_ERROR("A9999", "系统错误"),
 
     //*******************************Server*********************************************
@@ -76,7 +75,9 @@ public enum ReturnCode implements ResultCode {
     /**
      * 鉴权服务器异常
      **/
-    SYSTEM_AUTH_NO_PASS("B0403", "无权限访问"),
+    SYSTEM_NO_OAUTH("B0403", "无权限访问"),
+    RESULT_ACCESS_UNAUTHORIZED("B0403", "无权限访问"),
+
     /**
      * 鉴权服务器不存在
      **/
