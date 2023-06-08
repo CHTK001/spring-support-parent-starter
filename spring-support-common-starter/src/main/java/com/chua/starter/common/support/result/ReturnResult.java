@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.xml.bind.annotation.XmlElement;
+
 import static com.chua.starter.common.support.result.ReturnCode.*;
 
 /**
@@ -13,7 +15,6 @@ import static com.chua.starter.common.support.result.ReturnCode.*;
  */
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 public class ReturnResult<T> {
     /**
      * http状态码
@@ -28,7 +29,13 @@ public class ReturnResult<T> {
      * 信息
      */
     protected String msg;
+    private long timestamp = System.currentTimeMillis();
 
+    public ReturnResult(String code, T data, String msg) {
+        this.code = code;
+        this.data = data;
+        this.msg = msg;
+    }
 
     /**
      * 构造器
