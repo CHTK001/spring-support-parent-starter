@@ -1,5 +1,6 @@
 package com.chua.starter.oauth.client.support.configuration;
 
+import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.oauth.client.support.annotation.UserPermission;
 import com.chua.starter.oauth.client.support.exception.OauthException;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
@@ -58,19 +59,18 @@ public class PermissionAspect {
         String[] value = userPermission.value();
         String[] role = userPermission.role();
 
-        if (value.length == 0 && role.length == 0) {
+        if(isPass(value, role, userResume)) {
             return joinPoint.proceed();
         }
 
-        if (value.length > 0 && hasPermissions(value, userResume.getPermission())) {
-            return joinPoint.proceed();
-        }
+        return ReturnResult.noAuth();
+    }
 
-        if (role.length > 0 && hasPermissions(role, userResume.getRoles())) {
-            return joinPoint.proceed();
+    private boolean isPass(String[] value, String[] role, UserResume userResume) {
+        if(userResume.isAdmin()) {
+            return true;
         }
-
-        throw new OauthException();
+        return userResume.hasRole(role) && userResume.hasPermission(value);
     }
 
 

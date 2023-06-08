@@ -12,13 +12,20 @@ import java.util.List;
  */
 public class MybatisUtils {
 
-
-    public static <T> Page<T> copy(Page<?> dictItemPage, Class<T> dictPageVOClass) {
+    /**
+     * 分页数据拷贝
+     *
+     * @param result 数据
+     * @param type   类型
+     * @param <T>    类型
+     * @return 结果
+     */
+    public static <T> Page<T> copy(Page<?> result, Class<T> type) {
         Page<T> page = new Page<>();
-        BeanUtils.copyProperties(dictItemPage, page);
+        BeanUtils.copyProperties(result, page);
 
-        List<?> records = dictItemPage.getRecords();
-        List<T> ts = BeanUtils.copyPropertiesList(records, dictPageVOClass);
+        List<?> records = result.getRecords();
+        List<T> ts = BeanUtils.copyPropertiesList(records, type);
         page.setRecords(ts);
         return page;
     }

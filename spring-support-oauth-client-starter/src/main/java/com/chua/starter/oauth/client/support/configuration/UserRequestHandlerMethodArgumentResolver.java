@@ -162,24 +162,8 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
         if(null == returnResult) {
             return Collections.emptyMap();
         }
-        rs.putAll(returnResult);
+        rs.putAll(BeanMap.create(returnResult));
         rs.put("all", returnResult);
-        rs.remove("password");
-        rs.remove("beanType");
-        rs.remove("salt");
-        Object ext = rs.get("ext");
-        if (null != ext && ext instanceof Map) {
-            ((Map<?, ?>) ext).remove("password");
-            ((Map<?, ?>) ext).remove("salt");
-        }
-        returnResult.remove("password");
-        returnResult.remove("salt");
-        returnResult.remove("beanType");
-        Object ext1 = returnResult.get("ext");
-        if (null != ext1 && ext1 instanceof Map) {
-            ((Map<?, ?>) ext1).remove("password");
-            ((Map<?, ?>) ext1).remove("salt");
-        }
         return rs;
     }
 }
