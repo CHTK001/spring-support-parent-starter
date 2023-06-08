@@ -226,6 +226,9 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
             return o;
         }
 
+        if("vnd.spring-boot.actuator.v3+json".equals(mediaType.getSubtype())) {
+            return o;
+        }
         if (o instanceof ResponseBodyAdvice || o instanceof byte[] || o instanceof Callable) {
             return o;
         }
