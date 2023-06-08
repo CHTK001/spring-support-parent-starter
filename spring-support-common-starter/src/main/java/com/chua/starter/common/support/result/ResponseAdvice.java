@@ -234,7 +234,7 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
             return o;
         }
 
-        if (o instanceof ReturnResult) {
+        if (o instanceof ReturnResult || (o.getClass().getTypeName().endsWith("result.PageResult"))) {
             return o;
         }
 

@@ -2,6 +2,7 @@ package com.chua.starter.oauth.client.support.filter;
 
 
 import com.chua.common.support.log.Log;
+import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.infomation.Information;
 import com.chua.starter.oauth.client.support.user.UserResume;
@@ -69,7 +70,7 @@ public class AuthFilter implements Filter {
         }
         HttpSession session = request.getSession();
         UserResume userResume = authentication.getReturnResult();
-        session.setAttribute("username", userResume.get("username"));
-        session.setAttribute("userId", userResume.get("id"));
+        session.setAttribute("username", userResume.getUsername());
+        session.setAttribute("userId", MapUtils.getString(userResume.getExt(), "id"));
     }
 }

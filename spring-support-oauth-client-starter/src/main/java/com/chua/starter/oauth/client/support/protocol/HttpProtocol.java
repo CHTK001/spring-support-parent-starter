@@ -15,6 +15,7 @@ import com.chua.common.support.utils.Md5Utils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.guava.support.cache.GuavaCacheable;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.starter.common.support.result.ReturnCode;
 import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.common.support.utils.RequestUtils;
@@ -28,6 +29,7 @@ import com.google.common.base.Strings;
 import kong.unirest.HttpResponse;
 import kong.unirest.Unirest;
 import kong.unirest.UnirestException;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.InitializingBean;
 
 import javax.annotation.Resource;
@@ -141,10 +143,11 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
                 return inCache(cacheKey, new AuthenticationInformation(AUTHENTICATION_SERVER_EXCEPTION, null));
             }
 
-            if (OK.equals(code)) {
+            if (ReturnCode.OK.getCode().equals(code)) {
                 body = decode.decodeHex(data.toString(), key);
 
-                return inCache(cacheKey, new AuthenticationInformation(OK, Json.fromJson(body, UserResume.class)));
+                UserResume userResume = Json.fromJson(body, UserResume.class);
+                return inCache(cacheKey, new AuthenticationInformation(OK, userResume));
             }
 
 

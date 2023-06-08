@@ -4,8 +4,10 @@ import com.google.common.base.Strings;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.springframework.util.AntPathMatcher;
+import org.springframework.util.CollectionUtils;
 
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -15,9 +17,8 @@ import java.util.Set;
  * @author CH
  * @since 2022/7/23 8:48
  */
-@EqualsAndHashCode(callSuper = true)
 @Data
-public class UserResume extends HashMap<String, Object> {
+public class UserResume  {
     /**
      * 索引
      */
@@ -57,6 +58,8 @@ public class UserResume extends HashMap<String, Object> {
      */
     private String lastIp;
 
+    private Map<String, Object> ext;
+
     private static final String ANY = "*";
 
     /**
@@ -91,6 +94,29 @@ public class UserResume extends HashMap<String, Object> {
     /**
      * 是否具备某个角色
      *
+     * @param roles 角色
+     * @return 是否具备某个角色
+     */
+    public boolean hasRole(String[] roles) {
+        if(roles.length == 0) {
+            return true;
+        }
+
+        if(CollectionUtils.isEmpty(this.roles)) {
+            return false;
+        }
+
+        boolean hasRole = false;
+        for (String role : roles) {
+            hasRole |= hasRole(role);
+        }
+
+        return hasRole;
+    }
+
+    /**
+     * 是否具备某个角色
+     *
      * @param role 角色
      * @return 是否具备某个角色
      */
@@ -115,5 +141,26 @@ public class UserResume extends HashMap<String, Object> {
         }
 
         return false;
+    }
+
+    public boolean hasPermission(String[] value) {
+        if(value.length == 0) {
+            return true;
+        }
+
+        if(CollectionUtils.isEmpty(this.permission)) {
+            return false;
+        }
+        for (String s : value) {
+            if(this.permission.contains(s)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public boolean isAdmin() {
+        return this.roles.contains("ADMIN");
     }
 }

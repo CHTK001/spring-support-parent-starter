@@ -26,7 +26,7 @@ public class AuthClientProperties {
     /**
      * 客户端缓存鉴权信息(用于提高访问效率)(s)
      */
-    private long cacheTimeout = 120;
+    private long cacheTimeout = 300;
     /**
      * 鉴权地址
      */

@@ -85,7 +85,7 @@ public class AuthClientExecute {
         UserResult userResult = new UserResult();
         AuthenticationInformation authentication = webRequest1.authentication();
         UserResume returnResult = authentication.getReturnResult();
-        BeanUtils.copyProperties(returnResult, userResult);
+        com.chua.common.support.bean.BeanUtils.copyProperties(returnResult, userResult);
         return userResult;
     }
 
