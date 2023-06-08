@@ -210,18 +210,6 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
         }
         return group;
     }
-    /**
-     * 默认全局异常处理。
-     *
-     * @param e the e
-     * @return ResultData
-     */
-    @ExceptionHandler(Exception.class)
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public ResultData<String> exception(Exception e) {
-        log.error("全局异常信息 {}", e.getMessage(), e);
-        return ResultData.failure(SERVER_ERROR, e.getMessage());
-    }
 
     @Override
     public boolean supports(MethodParameter methodParameter, Class<? extends HttpMessageConverter<?>> aClass) {
@@ -240,9 +228,13 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
             return o;
         }
 
-        if (aClass == ResultDataHttpMessageConverter.class) {
-            return ResultData.success(o);
+        if (o instanceof Result) {
+            return o;
         }
-        return o;
+
+//        if (aClass == ResultDataHttpMessageConverter.class) {
+            return ResultData.success(o);
+//        }
+//        return o;
     }
 }

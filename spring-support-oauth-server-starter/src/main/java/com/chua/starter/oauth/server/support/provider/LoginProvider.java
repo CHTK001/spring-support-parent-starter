@@ -2,7 +2,6 @@ package com.chua.starter.oauth.server.support.provider;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
-import com.chua.common.support.bean.BeanMap;
 import com.chua.common.support.crypto.decode.KeyDecode;
 import com.chua.common.support.crypto.encode.KeyEncode;
 import com.chua.common.support.crypto.utils.DigestUtils;
@@ -10,6 +9,7 @@ import com.chua.common.support.json.Json;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.result.ReturnCode;
 import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.common.support.utils.RequestUtils;
@@ -43,6 +43,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import static com.chua.starter.common.support.result.ReturnCode.*;
 import static com.chua.starter.oauth.client.support.contants.AuthConstant.*;
 
 /**
@@ -130,7 +131,7 @@ public class LoginProvider implements InitializingBean {
             tokenResolver.logout(uid.toString(), (LogoutType) request.getAttribute("type"));
         }
 
-        loggerResolver.register("logout", 200, "登出成功", address);
+        loggerResolver.register("logout", OK.getCode(), "登出成功", address);
         if (!Strings.isNullOrEmpty(accept) && !accept.contains("text/html")) {
             return new AdviceView(logoutApi(data, type, request, response), request);
         }
@@ -183,8 +184,8 @@ public class LoginProvider implements InitializingBean {
         }
 
         ReturnResult result = loginCheck.doLogin(address, username, passwd, authType, accessSecret.getExt());
-        if (!result.getCode().equals(200)) {
-            loggerResolver.register("doLogin", 500, "认证服务器离线", address);
+        if (!result.getCode().equals(OK.getCode())) {
+            loggerResolver.register("doLogin", SYSTEM_AUTH_SERVER_NO_EXIST.getCode(), "认证服务器离线", address);
             Object data1 = result.getData();
             if (null != data1) {
                 request.setAttribute(authServerProperties.getTokenName(), ((LoginResult) data1).getToken());
@@ -199,10 +200,10 @@ public class LoginProvider implements InitializingBean {
                 request.setAttribute(authServerProperties.getTokenName(), ((LoginResult) data1).getToken());
             }
             logout(request, response);
-            return ReturnResult.newBuilder().code(403).msg("ak/sk无效").build();
+            return ReturnResult.newBuilder().code(ReturnCode.SYSTEM_NO_OAUTH.getCode()).msg("ak/sk无效").build();
         }
 
-        loggerResolver.register("doLogin", 200, "登录成功", address);
+        loggerResolver.register("doLogin", OK.getCode(), "登录成功", address);
         return result;
 
     }
@@ -325,7 +326,7 @@ public class LoginProvider implements InitializingBean {
         }
         String sessionKey = Optional.ofNullable(request.getSession().getAttribute("KAPTCHA_SESSION_KEY")).orElse("").toString();
         if (Strings.isNullOrEmpty(code) || !code.equalsIgnoreCase(sessionKey)) {
-            loggerResolver.register("doWebLogin", 400, "[" + sessionKey + "][" + code + "]校验码错误", address);
+            loggerResolver.register("doWebLogin", PARAM_ERROR.getCode(), "[" + sessionKey + "][" + code + "]校验码错误", address);
             modelMap.addFlashAttribute("msg", "校验码错误");
             try {
                 return new AdviceView("redirect:" + contextPath + "/login?redirect_url=" + URLEncoder.encode(url, "UTF-8"));
@@ -353,7 +354,7 @@ public class LoginProvider implements InitializingBean {
         }
 
         LoginResult loginResult = result.getData();
-        loggerResolver.register("doWebLogin", 200, "登录成功", address);
+        loggerResolver.register("doWebLogin", OK.getCode(), "登录成功", address);
         CookieUtil.set(response, authServerProperties.getCookieName(), loginResult.getToken(), ifRem);
         return new AdviceView("redirect:" + url);
     }
@@ -375,7 +376,7 @@ public class LoginProvider implements InitializingBean {
         }
 
         if (null == url) {
-            loggerResolver.register("login", 400, "redirect_url不能为空", address);
+            loggerResolver.register("login", SYSTEM_NO_OAUTH.getCode(), "redirect_url不能为空", address);
             return "oauth/login";
         }
 
@@ -392,7 +393,7 @@ public class LoginProvider implements InitializingBean {
                 return "redirect:" + url;
             }
         }
-        loggerResolver.register("login", 200, "登录成功", address);
+        loggerResolver.register("login", OK.getCode(), "登录成功", address);
         return "oauth/login";
     }
 

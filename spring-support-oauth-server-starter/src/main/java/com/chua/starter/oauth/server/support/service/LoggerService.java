@@ -15,5 +15,5 @@ public interface LoggerService {
      * @param message 消息
      * @param address 登录信息
      */
-    void register(String module, int code, String message, String address);
+    void register(String module, String code, String message, String address);
 }

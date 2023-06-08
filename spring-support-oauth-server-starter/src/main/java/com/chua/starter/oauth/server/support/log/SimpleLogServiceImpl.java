@@ -14,7 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 public class SimpleLogServiceImpl implements LoggerService {
 
     @Override
-    public void register(String module, int code, String message, String address) {
+    public void register(String module, String code, String message, String address) {
         log.info("==============={}==================", address);
         log.info("模块:{}, 状态码: {}", module, code);
         log.info("鉴权消息: {}", message);

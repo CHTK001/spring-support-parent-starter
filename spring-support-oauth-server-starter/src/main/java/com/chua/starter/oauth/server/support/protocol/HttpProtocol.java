@@ -2,7 +2,6 @@ package com.chua.starter.oauth.server.support.protocol;
 
 import com.chua.common.support.annotations.Extension;
 import com.chua.starter.common.support.result.ReturnResult;
-import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.contants.AuthConstant;
 import com.chua.starter.oauth.server.support.condition.OnBeanCondition;
@@ -23,6 +22,8 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import static com.chua.starter.common.support.result.ReturnCode.*;
 
 
 /**
@@ -63,20 +64,20 @@ public class HttpProtocol implements Protocol, InitializingBean {
 
         if (!authorization.hasKey()) {
             loginProvider.logout(request, response);
-            loggerResolver.register(AuthConstant.OAUTH, 403, "密钥不存在", address);
+            loggerResolver.register(AuthConstant.OAUTH, SYSTEM_NO_OAUTH.getCode(), "密钥不存在", address);
             return ReturnResult.noAuth();
         }
 
         if (!authorization.hasTokenOrCookie()) {
             loginProvider.logout(request, response);
-            loggerResolver.register(AuthConstant.OAUTH, 403, "无权限", address);
+            loggerResolver.register(AuthConstant.OAUTH, SYSTEM_NO_OAUTH.getCode(), "无权限", address);
             return ReturnResult.noAuth();
         }
 
         ReturnResult<String> authentication = authorization.authentication();
-        if (authentication.getCode() == 403) {
+        if (OK.getCode().equals(authentication.getCode())) {
             loginProvider.logout(request, response);
-            loggerResolver.register(AuthConstant.OAUTH, 403, "ak,sk限制登录", address);
+            loggerResolver.register(AuthConstant.OAUTH, SYSTEM_NO_OAUTH.getCode(), "ak,sk限制登录", address);
             return ReturnResult.noAuth();
         }
 

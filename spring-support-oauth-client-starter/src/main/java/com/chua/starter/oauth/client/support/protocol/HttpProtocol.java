@@ -35,7 +35,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import java.util.*;
 
-import static com.chua.starter.common.support.result.ReturnCode.SYSTEM_AUTH_NO_PASS;
+import static com.chua.starter.common.support.result.ReturnCode.SYSTEM_NO_OAUTH;
 import static com.chua.starter.oauth.client.support.infomation.Information.*;
 
 /**
@@ -127,7 +127,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         if (status == 200) {
             ReturnResult returnResult = Json.fromJson(body, ReturnResult.class);
             String code = returnResult.getCode();
-            if (SYSTEM_AUTH_NO_PASS.getCode().equals(code)) {
+            if (SYSTEM_NO_OAUTH.getCode().equals(code)) {
                 HttpServletRequest servletRequest = RequestUtils.getRequest();
                 if (null != servletRequest) {
                     CookieUtil.remove(servletRequest, ResponseUtils.getResponse(), "x-oauth-cookie");

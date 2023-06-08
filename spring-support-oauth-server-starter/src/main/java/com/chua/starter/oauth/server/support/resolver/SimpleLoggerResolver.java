@@ -32,7 +32,7 @@ public class SimpleLoggerResolver implements LoggerResolver, ApplicationContextA
     }
 
     @Override
-    public void register(String module, int code, String message, String address) {
+    public void register(String module, String code, String message, String address) {
         for (LoggerService loggerService : serviceMap.values()) {
             if (isMatch(loggerService, log)) {
                 try {

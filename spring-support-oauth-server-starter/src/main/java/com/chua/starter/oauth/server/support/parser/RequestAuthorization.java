@@ -13,6 +13,8 @@ import org.springframework.context.ApplicationContext;
 import javax.annotation.Resource;
 import javax.servlet.http.Cookie;
 
+import static com.chua.starter.common.support.result.ReturnCode.OK;
+
 /**
  * 鉴权信息
  *
@@ -65,7 +67,7 @@ public final class RequestAuthorization implements Authorization {
         }
         ReturnResult<UserResult> resolve = tokenResolver.resolve(cookie, token);
         ReturnResultBuilder<String> result = ReturnResult.<String>newBuilder().code(resolve.getCode()).msg(resolve.getMsg());
-        if (resolve.getCode() == 200) {
+        if (OK.getCode().equals(resolve.getCode())) {
             result.setData(authInformation.getEncode().encodeHex(Json.toJson(resolve.getData()), authInformation.getOauthKey()));
         }
         return result.build();

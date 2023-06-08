@@ -17,6 +17,8 @@ import org.springframework.util.ClassUtils;
 import javax.annotation.Resource;
 import java.util.Map;
 
+import static com.chua.starter.common.support.result.ReturnCode.OK;
+
 /**
  * 登录检测
  *
@@ -89,8 +91,8 @@ public class LoginCheck {
 
         TokenResolver tokenManagement = ServiceProvider.of(TokenResolver.class).getExtension(authServerProperties.getTokenManagement());
         ReturnResult<LoginResult> token = tokenManagement.createToken(address, userResult, authType);
-        Integer code = token.getCode();
-        if (null != code && code == 200) {
+        String code = token.getCode();
+        if (OK.getCode().equals(code)) {
             LoginResult loginResult = token.getData();
             loginResult.setUserResult(userResult);
         }
