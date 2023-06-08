@@ -17,9 +17,8 @@ public class ResultData<T> implements Serializable {
      * 结果状态 ,具体状态码参见ResultData.java
      */
     @XmlElement(name = "status")
-    private int status;
+    private String status;
     @XmlElement(name = "message")
-
     private String message;
     @XmlElement(name = "data")
     private T data;
@@ -34,13 +33,18 @@ public class ResultData<T> implements Serializable {
 
     public static <T> ResultData<T> success(T data) {
         ResultData<T> resultData = new ResultData<>();
-        resultData.setStatus(ReturnCode.RC0.getCode());
-        resultData.setMessage(ReturnCode.RC0.getMessage());
+        resultData.setStatus(ReturnCode.OK.getCode());
+        resultData.setMessage(ReturnCode.OK.getMsg());
         resultData.setData(data);
         return resultData;
     }
-
-    public static <T> ResultData<T> failure(int code, String message) {
+    public static <T> ResultData<T> failure(ResultCode code, String message) {
+        ResultData<T> resultData = new ResultData<>();
+        resultData.setStatus(code.getCode());
+        resultData.setMessage(message);
+        return resultData;
+    }
+    public static <T> ResultData<T> failure(String code, String message) {
         ResultData<T> resultData = new ResultData<>();
         resultData.setStatus(code);
         resultData.setMessage(message);
@@ -50,7 +54,7 @@ public class ResultData<T> implements Serializable {
     public static <T> ResultData<T> of(ReturnCode returnCode) {
         ResultData<T> resultData = new ResultData<>();
         resultData.setStatus(returnCode.getCode());
-        resultData.setMessage(returnCode.getMessage());
+        resultData.setMessage(returnCode.getMsg());
         return resultData;
     }
 }

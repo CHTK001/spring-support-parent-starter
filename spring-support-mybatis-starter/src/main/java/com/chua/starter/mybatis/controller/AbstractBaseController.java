@@ -15,6 +15,8 @@ import springfox.documentation.annotations.ApiIgnore;
 import javax.annotation.Resource;
 import javax.validation.Valid;
 
+import static com.chua.starter.common.support.result.ReturnCode.PARAM_ERROR;
+
 /**
  * 超类
  *
@@ -32,7 +34,7 @@ public abstract class AbstractBaseController<S extends IService<T>, T> {
     @GetMapping("page")
     public ResultData<Page<T>> page(DelegatePage<T> page, @Valid T entity, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ResultData.failure(1, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
         return ResultData.success(getService().page(page.createPage(), Wrappers.lambdaQuery(entity)));
     }
@@ -46,7 +48,7 @@ public abstract class AbstractBaseController<S extends IService<T>, T> {
     @GetMapping("delete/{id}")
     public ResultData<Boolean> delete(@PathVariable("id") String id) {
         if (null == id) {
-            return ResultData.failure(1, "主键不能为空");
+            return ResultData.failure(PARAM_ERROR, "主键不能为空");
         }
         return ResultData.success(getService().removeById(id));
     }
@@ -60,7 +62,7 @@ public abstract class AbstractBaseController<S extends IService<T>, T> {
     @PostMapping("update")
     public ResultData<Boolean> updateById(@Valid @RequestBody T t, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ResultData.failure(1, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
         return ResultData.success(getService().updateById(t));
     }
@@ -74,7 +76,7 @@ public abstract class AbstractBaseController<S extends IService<T>, T> {
     @PostMapping("save")
     public ResultData<Boolean> save(@Valid @RequestBody T t, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ResultData.failure(1, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
         return ResultData.success(getService().save(t));
     }

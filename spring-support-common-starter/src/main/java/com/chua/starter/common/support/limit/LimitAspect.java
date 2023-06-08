@@ -74,6 +74,6 @@ public class LimitAspect {
      * @return
      */
     private ResultData<Object> responseFail(String msg) {
-        return ResultData.failure(ReturnCode.BUSINESS.getCode(), msg);
+        return ResultData.failure(ReturnCode.SYSTEM_SERVER_BUSINESS.getCode(), msg);
     }
 }

@@ -1,6 +1,7 @@
 package com.chua.starter.oauth.client.support.advice;
 
 import com.chua.common.support.file.xml.XML;
+import com.chua.starter.common.support.result.ResultCode;
 import com.chua.starter.common.support.result.ReturnResult;
 import org.springframework.http.MediaType;
 
@@ -26,7 +27,7 @@ public class XmlAdviceResolver implements AdviceResolver {
 
         try {
             ServletOutputStream outputStream = response.getOutputStream();
-            outputStream.write(XML.toString(ReturnResult.newBuilder().code(status).msg(message).build()).getBytes(StandardCharsets.UTF_8));
+            outputStream.write(XML.toString(ReturnResult.newBuilder().code(ResultCode.transferHttpCode(status)).msg(message).build()).getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) {
             e.printStackTrace();
         }

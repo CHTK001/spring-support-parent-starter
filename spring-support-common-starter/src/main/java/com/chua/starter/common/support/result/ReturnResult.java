@@ -4,32 +4,35 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import static com.chua.starter.common.support.result.ReturnCode.*;
+
 /**
  * 返回结果
  *
  * @author CH
  */
 @Data
-@AllArgsConstructor(staticName = "of")
-@NoArgsConstructor(staticName = "of")
+@NoArgsConstructor
+@AllArgsConstructor
 public class ReturnResult<T> {
     /**
      * http状态码
      */
-    private Integer code;
+    protected String code;
 
     /**
      * 结果
      */
-    private T data;
+    protected T data;
     /**
      * 信息
      */
-    private String msg;
+    protected String msg;
 
 
     /**
      * 构造器
+     *
      * @param <T> 类型
      * @return 构造器
      */
@@ -40,12 +43,14 @@ public class ReturnResult<T> {
 
     /**
      * 构造器
+     *
      * @param <T> 类型
      * @return 构造器
      */
     public static <T> ReturnResultsBuilder<T> newsBuilder() {
         return new ReturnResultsBuilder<>();
     }
+
     /**
      * 初始化
      *
@@ -55,26 +60,28 @@ public class ReturnResult<T> {
      * @return 结果
      */
     public static <T> ReturnResult<T> ok(T data, String msg) {
-        return new ReturnResult<>(200, data, msg);
+        return new ReturnResult<>(SUCCESS.getCode(), data, msg);
     }
 
     /**
      * 初始化
      *
-     * @param <T>  类型
+     * @param <T> 类型
      * @return 结果
      */
     public static <T> ReturnResult<T> noAuth() {
-        return new ReturnResult<>(403, null, null);
+        return new ReturnResult<>(RESULT_ACCESS_UNAUTHORIZED.getCode(), null, RESULT_ACCESS_UNAUTHORIZED.getMsg());
     }
+
     /**
      * 初始化
-     *@param msg  消息
-     * @param <T>  类型
+     *
+     * @param msg 消息
+     * @param <T> 类型
      * @return 结果
      */
     public static <T> ReturnResult<T> noAuth(String msg) {
-        return new ReturnResult<>(403, null, msg);
+        return new ReturnResult<>(RESULT_ACCESS_UNAUTHORIZED.getCode(), null, msg);
     }
 
     /**
@@ -91,7 +98,7 @@ public class ReturnResult<T> {
     /**
      * 初始化
      *
-     * @param <T>  类型
+     * @param <T> 类型
      * @return 结果
      */
     public static <T> ReturnResult<T> ok() {
@@ -107,7 +114,32 @@ public class ReturnResult<T> {
      * @return 结果
      */
     public static <T> ReturnResult<T> error(T data, String msg) {
-        return new ReturnResult<>(500, null, msg);
+        return new ReturnResult<>(SYSTEM_SERVER_BUSINESS.getCode(), data, msg);
+    }
+
+    /**
+     * 初始化
+     *
+     * @param data 数据
+     * @param code 错误码
+     * @param msg  消息
+     * @param <T>  类型
+     * @return 结果
+     */
+    public static <T> ReturnResult<T> of(ResultCode code, T data, String msg) {
+        return new ReturnResult<>(code.getCode(), data, msg);
+    }
+
+    /**
+     * 初始化
+     *
+     * @param data 数据
+     * @param code 错误码
+     * @param <T>  类型
+     * @return 结果
+     */
+    public static <T> ReturnResult<T> of(ResultCode code, T data) {
+        return new ReturnResult<>(code.getCode(), data, code.getMsg());
     }
 
     /**
@@ -124,7 +156,7 @@ public class ReturnResult<T> {
     /**
      * 初始化
      *
-     * @param <T>  类型
+     * @param <T> 类型
      * @return 结果
      */
     public static <T> ReturnResult<T> error() {
@@ -140,7 +172,7 @@ public class ReturnResult<T> {
      * @return 结果
      */
     public static <T> ReturnResult<T> illegal(T data, String msg) {
-        return new ReturnResult<>(400, null, msg);
+        return new ReturnResult<>(PARAM_ERROR.getCode(), null, msg);
     }
 
     /**

@@ -24,7 +24,7 @@ public class ReturnResultBuilder<T> {
     /**
      * 编码
      */
-    private int code;
+    private String code;
     /**
      * 数据
      */
@@ -44,7 +44,7 @@ public class ReturnResultBuilder<T> {
      *
      * @param code 编码
      */
-    public ReturnResultBuilder<T> code(int code) {
+    public ReturnResultBuilder<T> code(String code) {
         this.code = code;
         return this;
     }
@@ -85,7 +85,7 @@ public class ReturnResultBuilder<T> {
      * @return 消息
      */
     public ReturnResult<T> build(Class<T> target) {
-        ReturnResult<T> rs = ReturnResult.of();
+        ReturnResult<T> rs = new ReturnResult();
         rs.setCode(code);
         rs.setMsg(msg);
         rs.setData(data);

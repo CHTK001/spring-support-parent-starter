@@ -70,5 +70,5 @@ public class SysLog {
     /**
      * 状态
      */
-    private Integer logStatus;
+    private String logStatus;
 }
