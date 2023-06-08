@@ -38,6 +38,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import static com.chua.starter.common.support.result.ReturnCode.*;
 import static com.chua.starter.oauth.client.support.contants.AuthConstant.ACCESS_KEY;
 import static com.chua.starter.oauth.client.support.contants.AuthConstant.SECRET_KEY;
 
@@ -96,7 +97,7 @@ public class AuthClientExecute {
      */
     public LoginAuthResult logout(String uid, LogoutType logoutType) {
         if (Strings.isNullOrEmpty(uid) && logoutType == LogoutType.UN_REGISTER) {
-            return new LoginAuthResult(400, "uid不能为空");
+            return new LoginAuthResult(PARAM_ERROR.getCode(), "uid不能为空");
         }
 
         UserResult userResult = getUserResult();
@@ -157,12 +158,12 @@ public class AuthClientExecute {
         int status = httpResponse.getStatus();
         if (status == 200) {
             LoginAuthResult loginAuthResult = new LoginAuthResult();
-            loginAuthResult.setCode(200);
+            loginAuthResult.setCode(OK.getCode());
 
             return loginAuthResult;
         }
         LoginAuthResult loginAuthResult = new LoginAuthResult();
-        loginAuthResult.setCode(500);
+        loginAuthResult.setCode(SYSTEM_AUTH_NO_PASS.getCode());
         loginAuthResult.setMessage("认证服务器异常");
         return loginAuthResult;
 
@@ -237,9 +238,9 @@ public class AuthClientExecute {
         String body = httpResponse.getBody();
         if (status == 200) {
             ReturnResult returnResult = Json.fromJson(body, ReturnResult.class);
-            int code = returnResult.getCode();
+            String code = returnResult.getCode();
             Object data = returnResult.getData();
-            if (code >= 200 && code < 300) {
+            if (code.equals(OK.getCode())) {
                 LoginAuthResult loginAuthResult = null;
                 try {
                     loginAuthResult = Json.fromJson(decode.decode(data.toString(), uid), LoginAuthResult.class);
@@ -264,7 +265,7 @@ public class AuthClientExecute {
             return loginAuthResult;
         }
         LoginAuthResult loginAuthResult = new LoginAuthResult();
-        loginAuthResult.setCode(500);
+        loginAuthResult.setCode(SYSTEM_AUTH_NO_PASS.getCode());
         loginAuthResult.setMessage("认证服务器异常");
         return loginAuthResult;
 

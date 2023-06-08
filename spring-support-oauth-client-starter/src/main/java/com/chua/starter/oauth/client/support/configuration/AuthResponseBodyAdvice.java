@@ -1,5 +1,6 @@
 package com.chua.starter.oauth.client.support.configuration;
 
+import com.chua.common.support.utils.NumberUtils;
 import com.chua.starter.common.support.converter.ResultDataHttpMessageConverter;
 import com.chua.starter.common.support.result.ResultData;
 import com.chua.starter.common.support.result.ReturnResult;
@@ -26,6 +27,8 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Map;
 
+import static com.chua.starter.common.support.result.ReturnCode.*;
+
 /**
  * auth 统一响应
  *
@@ -48,7 +51,7 @@ public class AuthResponseBodyAdvice implements ResponseBodyAdvice<Object> {
      */
     @ExceptionHandler(value = HttpRequestMethodNotSupportedException.class)
     public Object httpRequestMethodNotSupportedException(HttpServletRequest request, HttpServletResponse response, Throwable error) {
-        return ReturnResult.of(405, null, "请求类型不支持");
+        return ReturnResult.of(SYSTEM_REQUEST_METHOD_NO_MATCH, null);
     }
 
     /**
@@ -60,7 +63,7 @@ public class AuthResponseBodyAdvice implements ResponseBodyAdvice<Object> {
      */
     @ExceptionHandler(value = ServletException.class)
     public Object servletException(HttpServletRequest request, HttpServletResponse response, ServletException error) {
-        return ReturnResult.of(405, null, "请求方式不允许");
+        return ReturnResult.of(SYSTEM_REQUEST_METHOD_NO_MATCH, null);
     }
 
     /**
@@ -73,7 +76,7 @@ public class AuthResponseBodyAdvice implements ResponseBodyAdvice<Object> {
     @ExceptionHandler(value = MissingServletRequestParameterException.class)
     public Object missingServletRequestParameterException(HttpServletRequest request, HttpServletResponse response, MissingServletRequestParameterException error) {
         log.info("{} -> 参数缺失[{}({})]", request.getRequestURI(), error.getParameterName(), error.getParameterType());
-        return ReturnResult.of(400, null, "请联系管理员");
+        return ReturnResult.of(PARAM_ERROR, null);
     }
 
     /**
@@ -83,7 +86,7 @@ public class AuthResponseBodyAdvice implements ResponseBodyAdvice<Object> {
      */
     @ExceptionHandler(value = Exception.class)
     public Object exception(HttpServletRequest request, Exception error) {
-        return ReturnResult.of(500, null, "请联系管理员");
+        return ReturnResult.of(SERVER_ERROR, null, "请联系管理员");
     }
 
     /**
@@ -94,7 +97,7 @@ public class AuthResponseBodyAdvice implements ResponseBodyAdvice<Object> {
     @ExceptionHandler(value = IllegalArgumentException.class)
     public Object illegalArgumentException(HttpServletRequest request, IllegalArgumentException error) {
         log.info("{} -> 参数不一致[{}]", request.getRequestURI(), error.getMessage());
-        return ReturnResult.of(500, null, "请联系管理员");
+        return ReturnResult.of(SERVER_ERROR, null, "请联系管理员");
     }
 
     /**
@@ -159,7 +162,7 @@ public class AuthResponseBodyAdvice implements ResponseBodyAdvice<Object> {
         Advice advice = Advice.create();
         AdviceResolver resolve = advice.resolve(selectedContentType);
         try {
-            return resolve.resolve(null, Integer.valueOf(string), body.get("error").toString());
+            return resolve.resolve(null, NumberUtils.toInt(string), body.get("error").toString());
         } catch (IOException ignored) {
         }
         return null;

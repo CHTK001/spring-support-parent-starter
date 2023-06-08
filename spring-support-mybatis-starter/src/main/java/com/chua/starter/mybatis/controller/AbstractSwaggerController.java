@@ -8,10 +8,15 @@ import com.chua.starter.mybatis.entity.ResultPage;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import springfox.documentation.annotations.ApiIgnore;
 
 import javax.validation.Valid;
+
+import static com.chua.starter.common.support.result.ReturnCode.PARAM_ERROR;
 
 /**
  * 超类
@@ -30,7 +35,7 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> {
     @GetMapping("page")
     public ResultData<ResultPage<T>> page(RequestPage<T> page, @Valid T entity, @ApiIgnore BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
-            return ResultData.failure(1, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
         return ResultData.success(ResultPage.copy(getService().page(page.createPage(), Wrappers.lambdaQuery(entity))));
     }
@@ -45,7 +50,7 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> {
     @GetMapping("delete/{id}")
     public ResultData<Boolean> delete(@ApiParam("主键") @PathVariable("id") String id) {
         if(null == id) {
-            return ResultData.failure(1,  "主键不能为空");
+            return ResultData.failure(PARAM_ERROR,  "主键不能为空");
         }
 
         return ResultData.success(getService().removeById(id));
@@ -61,7 +66,7 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> {
     @PostMapping("update")
     public ResultData<Boolean> updateById(@Valid @RequestBody T t , @ApiIgnore BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
-            return ResultData.failure(1, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
         return ResultData.success(getService().updateById(t));
     }
@@ -76,7 +81,7 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> {
     @PostMapping("save")
     public ResultData<Boolean> save(@Valid @RequestBody T t, @ApiIgnore BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
-            return ResultData.failure(1, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
         return ResultData.success(getService().save(t));
     }

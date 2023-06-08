@@ -149,7 +149,7 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
 
                 Method method = invocation.getMethod();
 
-                sysLog.setLogStatus(0);
+                sysLog.setLogStatus("0");
                 if(proceed instanceof ResultData) {
                     sysLog.setLogStatus(((ResultData<?>) proceed).getStatus());
                 }

@@ -13,7 +13,6 @@ import com.chua.common.support.task.cache.CacheConfiguration;
 import com.chua.common.support.task.cache.Cacheable;
 import com.chua.common.support.utils.Md5Utils;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.common.support.value.Value;
 import com.chua.guava.support.cache.GuavaCacheable;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.result.ReturnResult;
@@ -36,6 +35,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import java.util.*;
 
+import static com.chua.starter.common.support.result.ReturnCode.SYSTEM_AUTH_NO_PASS;
 import static com.chua.starter.oauth.client.support.infomation.Information.*;
 
 /**
@@ -126,8 +126,8 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
 
         if (status == 200) {
             ReturnResult returnResult = Json.fromJson(body, ReturnResult.class);
-            Integer code = returnResult.getCode();
-            if (403 == code) {
+            String code = returnResult.getCode();
+            if (SYSTEM_AUTH_NO_PASS.getCode().equals(code)) {
                 HttpServletRequest servletRequest = RequestUtils.getRequest();
                 if (null != servletRequest) {
                     CookieUtil.remove(servletRequest, ResponseUtils.getResponse(), "x-oauth-cookie");
@@ -141,7 +141,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
                 return inCache(cacheKey, new AuthenticationInformation(AUTHENTICATION_SERVER_EXCEPTION, null));
             }
 
-            if (code >= 200 && code < 300) {
+            if (OK.equals(code)) {
                 body = decode.decodeHex(data.toString(), key);
 
                 return inCache(cacheKey, new AuthenticationInformation(OK, Json.fromJson(body, UserResume.class)));

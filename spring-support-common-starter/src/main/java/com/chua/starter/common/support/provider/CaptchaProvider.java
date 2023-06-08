@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -40,7 +41,7 @@ public class CaptchaProvider {
      * @param request  请求
      * @param response 响应
      */
-    @RequestMapping("captcha.jpg")
+    @GetMapping("captcha.jpg")
     public void captcha(HttpServletRequest request, HttpServletResponse response) {
         String captchaText = producer.text();
         String captchaBase64 = producer.toBase64("data:image/png;base64,");
@@ -71,7 +72,7 @@ public class CaptchaProvider {
      *
      * @param request 请求
      */
-    @RequestMapping("captcha")
+    @GetMapping("captcha")
     public CaptchaResult captchaBase64(HttpServletRequest request) {
         String captchaText = producer.text();
         String captchaBase64 = producer.toBase64("data:image/png;base64,");
