@@ -31,6 +31,11 @@ public interface AuthConstant {
     /**
      * 前缀
      */
+    String LOGIN_ERROR = "oauth:error:";
+
+    /**
+     * 前缀
+     */
     String TOKEN_PRE = "oauth:token:";
     /**
      * 令牌前缀
