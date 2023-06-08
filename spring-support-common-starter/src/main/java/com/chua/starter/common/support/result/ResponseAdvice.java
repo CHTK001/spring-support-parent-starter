@@ -19,6 +19,7 @@ import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -28,6 +29,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 import javax.servlet.ServletException;
 import javax.validation.ConstraintViolation;
 import java.sql.SQLSyntaxErrorException;
+import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -224,11 +226,15 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
             return o;
         }
 
+        if (o instanceof ResponseBodyAdvice || o instanceof byte[] || o instanceof Callable) {
+            return o;
+        }
+
         if (o instanceof ResultData) {
             return o;
         }
 
-        if (o instanceof Result) {
+        if (o instanceof ReturnResult) {
             return o;
         }
 
