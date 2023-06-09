@@ -33,7 +33,7 @@ public class MultiLevelCache extends AbstractValueAdaptingCache {
     @Override
     protected Object lookup(Object key) {
         String keyValue = getKey(key);
-        Value<Object> value = multiLevelCacheFactory.getValue(name, keyValue);
+        Value<Object> value = multiLevelCacheFactory.getValue(keyValue);
         return value.getValue();
     }
 
@@ -91,16 +91,16 @@ public class MultiLevelCache extends AbstractValueAdaptingCache {
             return;
         }
         String keyValue = getKey(key);
-        multiLevelCacheFactory.setValue(name, keyValue, value);
+        multiLevelCacheFactory.setValue(keyValue, value);
     }
 
     @Override
     public void evict(Object key) {
-        multiLevelCacheFactory.evict(name, getKey(key));
+        multiLevelCacheFactory.evict(getKey(key));
     }
 
     @Override
     public void clear() {
-        multiLevelCacheFactory.clear(name);
+        multiLevelCacheFactory.clear();
     }
 }
