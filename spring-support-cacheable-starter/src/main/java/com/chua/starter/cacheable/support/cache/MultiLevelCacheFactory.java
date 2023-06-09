@@ -4,11 +4,10 @@ import com.chua.common.support.collection.DoubleLinkedLinkedList;
 import com.chua.common.support.collection.DoubleLinkedList;
 import com.chua.common.support.collection.Node;
 import com.chua.common.support.function.Splitter;
-import com.chua.common.support.reflection.reflections.Configuration;
-import com.chua.common.support.reflection.reflections.Reflections;
-import com.chua.common.support.reflection.reflections.scanners.Scanners;
-import com.chua.common.support.reflection.reflections.util.ConfigurationBuilder;
+import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.value.Value;
+import com.chua.starter.cacheable.support.builder.CacheBuilder;
 import com.chua.starter.cacheable.support.properties.CacheProperties;
 import com.google.common.base.Strings;
 import org.springframework.beans.BeansException;
@@ -19,7 +18,6 @@ import org.springframework.context.ApplicationContextAware;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -29,13 +27,16 @@ import java.util.concurrent.ConcurrentHashMap;
  * @since 2022/8/10 13:39
  */
 public class MultiLevelCacheFactory implements ApplicationContextAware {
+    private final String name;
     private final CacheProperties cacheProperties;
     private ApplicationContext applicationContext;
 
-    private static final Map<String, Class<? extends Cache>> CACHE = new ConcurrentHashMap<>();
+    private static final Map<String, Class<CacheBuilder>> CACHE = new ConcurrentHashMap<>();
 
     private DoubleLinkedList<Cache> doubleLinkedList = new DoubleLinkedLinkedList<>();
-    public MultiLevelCacheFactory(CacheProperties cacheProperties, ApplicationContext applicationContext) {
+
+    public MultiLevelCacheFactory(String name, CacheProperties cacheProperties, ApplicationContext applicationContext) {
+        this.name = name;
         this.cacheProperties = cacheProperties;
         this.applicationContext = applicationContext;
         this.initial();
@@ -45,15 +46,17 @@ public class MultiLevelCacheFactory implements ApplicationContextAware {
      * 初始化
      */
     private void initial() {
-        Configuration configuration = new ConfigurationBuilder().addScanners(Scanners.SubTypes);
-        Reflections reflections = new Reflections(configuration);
-        Set<Class<? extends Cache>> subTypesOf = reflections.getSubTypesOf(Cache.class);
-        for (Class<? extends Cache> aClass : subTypesOf) {
-            CACHE.put(subTypesOf.getClass().getSimpleName().toLowerCase().replace("cache", ""), aClass);
-        }
+        CACHE.putAll(ServiceProvider.of(CacheBuilder.class).listType());
         String link = cacheProperties.getLink();
         List<String> strings = Splitter.on("->").trimResults().omitEmptyStrings().splitToList(link);
-        System.out.println();
+        for (String string : strings) {
+            Class<CacheBuilder> builderClass = CACHE.get(string);
+            CacheBuilder cacheBuilder = ClassUtils.forObject(builderClass);
+            if (null == cacheBuilder) {
+                continue;
+            }
+            doubleLinkedList.add(cacheBuilder.build(name, cacheProperties, null));
+        }
     }
 
     /**
