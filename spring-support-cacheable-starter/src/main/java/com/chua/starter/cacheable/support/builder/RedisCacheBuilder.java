@@ -9,6 +9,8 @@ import org.springframework.data.redis.cache.RedisCacheWriter;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 
 import javax.annotation.Resource;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 
 /**
  * 缓存构建器
@@ -24,7 +26,7 @@ public class RedisCacheBuilder implements CacheBuilder {
     @Override
     public Cache build(String name, CacheProperties cacheProperties, org.springframework.boot.autoconfigure.cache.CacheProperties cacheProperties1) {
         RedisCacheManager redisCacheManager = new RedisCacheManager(RedisCacheWriter
-                .lockingRedisCacheWriter(redisConnectionFactory), RedisCacheConfiguration.defaultCacheConfig(), cacheProperties.isCacheNullValues());
+                .lockingRedisCacheWriter(redisConnectionFactory), RedisCacheConfiguration.defaultCacheConfig().entryTtl(Duration.of(cacheProperties.getExpire(), ChronoUnit.SECONDS)), cacheProperties.isCacheNullValues());
         redisCacheManager.afterPropertiesSet();
         return redisCacheManager.getCache(name);
     }
