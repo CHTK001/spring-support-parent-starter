@@ -50,7 +50,7 @@ public class MultiLevelCacheFactory implements ApplicationContextAware {
         String link = cacheProperties.getLink();
         List<String> strings = Splitter.on("->").trimResults().omitEmptyStrings().splitToList(link);
         for (String string : strings) {
-            Class<CacheBuilder> builderClass = CACHE.get(string);
+            Class<CacheBuilder> builderClass = CACHE.get(string.toUpperCase());
             CacheBuilder cacheBuilder = ClassUtils.forObject(builderClass);
             if (null == cacheBuilder) {
                 continue;
