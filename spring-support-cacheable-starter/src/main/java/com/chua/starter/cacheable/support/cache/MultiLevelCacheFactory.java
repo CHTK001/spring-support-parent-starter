@@ -1,13 +1,14 @@
 package com.chua.starter.cacheable.support.cache;
 
+import com.chua.common.support.collection.DoubleLinkedLinkedList;
+import com.chua.common.support.collection.DoubleLinkedList;
+import com.chua.common.support.collection.Node;
+import com.chua.common.support.function.Splitter;
 import com.chua.common.support.reflection.reflections.Configuration;
 import com.chua.common.support.reflection.reflections.Reflections;
 import com.chua.common.support.reflection.reflections.scanners.Scanners;
 import com.chua.common.support.reflection.reflections.util.ConfigurationBuilder;
-import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.value.Value;
-import com.chua.starter.cacheable.support.handler.CacheManagerHandler;
-import com.chua.starter.cacheable.support.manager.GuavaCache;
 import com.chua.starter.cacheable.support.properties.CacheProperties;
 import com.google.common.base.Strings;
 import org.springframework.beans.BeansException;
@@ -15,7 +16,10 @@ import org.springframework.cache.Cache;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
-import java.util.*;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -30,8 +34,7 @@ public class MultiLevelCacheFactory implements ApplicationContextAware {
 
     private static final Map<String, Class<? extends Cache>> CACHE = new ConcurrentHashMap<>();
 
-    private static final List<CacheManagerHandler> REAL = new LinkedList<>();
-
+    private DoubleLinkedList<Cache> doubleLinkedList = new DoubleLinkedLinkedList<>();
     public MultiLevelCacheFactory(CacheProperties cacheProperties, ApplicationContext applicationContext) {
         this.cacheProperties = cacheProperties;
         this.applicationContext = applicationContext;
@@ -48,6 +51,9 @@ public class MultiLevelCacheFactory implements ApplicationContextAware {
         for (Class<? extends Cache> aClass : subTypesOf) {
             CACHE.put(subTypesOf.getClass().getSimpleName().toLowerCase().replace("cache", ""), aClass);
         }
+        String link = cacheProperties.getLink();
+        List<String> strings = Splitter.on("->").trimResults().omitEmptyStrings().splitToList(link);
+        System.out.println();
     }
 
     /**
@@ -71,63 +77,65 @@ public class MultiLevelCacheFactory implements ApplicationContextAware {
     /**
      * 获取值
      *
-     * @param cacheName 缓存名称
-     * @param keyValue  key
+     * @param keyValue key
      * @return 值
      */
-    public Value<Object> getValue(String cacheName, String keyValue) {
+    public Value<Object> getValue(String keyValue) {
         Value<Object> value = Value.of(null);
-        List<CacheManagerHandler> list = new ArrayList<>(REAL.size());
-        for (CacheManagerHandler handler : REAL) {
-            value = handler.getValue(cacheName, keyValue);
-            if (!value.isNull()) {
-                break;
-            }
-            list.add(handler);
-        }
-
-        if (!value.isNull() && !list.isEmpty()) {
-            for (CacheManagerHandler cacheManagerHandler : list) {
-                cacheManagerHandler.setValue(cacheName, keyValue, value);
+        Iterator<Node<Cache>> iterator = doubleLinkedList.iteratorNode();
+        while (iterator.hasNext()) {
+            Node<Cache> next = iterator.next();
+            Cache.ValueWrapper wrapper = next.getData().get(keyValue);
+            if (null != wrapper) {
+                Object o = wrapper.get();
+                preRender(next, keyValue, o);
+                return (Value<Object>) o;
             }
         }
-
         return value;
+    }
+
+    private void preRender(Node<Cache> next, String keyValue, Object o) {
+        Node<Cache> node;
+        while ((node = next.getPrev()) != null) {
+            node.getData().put(keyValue, o);
+        }
     }
 
     /**
      * 获取值
      *
-     * @param cacheName 缓存名称
-     * @param keyValue  key
-     * @param value     值
+     * @param keyValue key
+     * @param value    值
      */
-    public void setValue(String cacheName, String keyValue, Object value) {
-        for (CacheManagerHandler handler : REAL) {
-            handler.setValue(cacheName, keyValue, Value.of(value));
+    public void setValue(String keyValue, Object value) {
+        Iterator<Cache> iterator = doubleLinkedList.iterator();
+        while (iterator.hasNext()) {
+            iterator.next().put(keyValue, Value.of(value));
         }
+
     }
 
     /**
      * 删除值
      *
-     * @param cacheName 缓存名称
      * @param keyValue  key
      */
-    public void evict(String cacheName, String keyValue) {
-        for (CacheManagerHandler handler : REAL) {
-            handler.evict(cacheName, keyValue);
+    public void evict(String keyValue) {
+        Iterator<Cache> iterator = doubleLinkedList.iterator();
+        while (iterator.hasNext()) {
+            iterator.next().evictIfPresent(keyValue);
         }
     }
 
     /**
      * 清空
      *
-     * @param cacheName 缓存名称
      */
-    public void clear(String cacheName) {
-        for (CacheManagerHandler handler : REAL) {
-            handler.clear(cacheName);
+    public void clear() {
+        Iterator<Cache> iterator = doubleLinkedList.iterator();
+        while (iterator.hasNext()) {
+            iterator.next().clear();
         }
     }
 }

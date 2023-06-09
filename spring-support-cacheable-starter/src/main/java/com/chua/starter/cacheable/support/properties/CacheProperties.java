@@ -3,9 +3,6 @@ package com.chua.starter.cacheable.support.properties;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import java.util.LinkedList;
-import java.util.List;
-
 /**
  * @author CH
  * @since 2022/8/10 11:45
@@ -25,29 +22,18 @@ public class CacheProperties {
      */
     private String cachePrefix;
 
-    private
+    /**
+     * 过期时间
+     */
+    private long expire;
     /**
      * 缓存链路
      */
     private String link = "mem -> guava";
 
     /**
-     * 缓存工厂
+     * 配置文件路径
      */
-    @Data
-    public static class CachePoolProperties {
-        /**
-         * 缓存类型
-         */
-        private String type;
-        /**
-         * 过期时间
-         */
-        private long expire;
-        /**
-         * 配置文件路径
-         */
-        private String ehcache;
+    private String ehcache;
 
-    }
 }
