@@ -1,11 +1,17 @@
 package com.chua.starter.cacheable.support.cache;
 
+import com.chua.common.support.reflection.reflections.Configuration;
+import com.chua.common.support.reflection.reflections.Reflections;
+import com.chua.common.support.reflection.reflections.scanners.Scanners;
+import com.chua.common.support.reflection.reflections.util.ConfigurationBuilder;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.value.Value;
 import com.chua.starter.cacheable.support.handler.CacheManagerHandler;
+import com.chua.starter.cacheable.support.manager.GuavaCache;
 import com.chua.starter.cacheable.support.properties.CacheProperties;
 import com.google.common.base.Strings;
 import org.springframework.beans.BeansException;
+import org.springframework.cache.Cache;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
@@ -21,16 +27,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MultiLevelCacheFactory implements ApplicationContextAware {
     private final CacheProperties cacheProperties;
     private ApplicationContext applicationContext;
-    private static final Map<String, CacheManagerHandler> CACHE_MANAGER = new ConcurrentHashMap<>();
+
+    private static final Map<String, Class<? extends Cache>> CACHE = new ConcurrentHashMap<>();
 
     private static final List<CacheManagerHandler> REAL = new LinkedList<>();
-
-    static {
-        List<CacheManagerHandler> subOfObject = ServiceProvider.of(CacheManagerHandler.class).collect();
-        for (CacheManagerHandler cacheManagerHandler : subOfObject) {
-            CACHE_MANAGER.put(cacheManagerHandler.getBeanName(), cacheManagerHandler);
-        }
-    }
 
     public MultiLevelCacheFactory(CacheProperties cacheProperties, ApplicationContext applicationContext) {
         this.cacheProperties = cacheProperties;
@@ -42,18 +42,11 @@ public class MultiLevelCacheFactory implements ApplicationContextAware {
      * 初始化
      */
     private void initial() {
-        List<CacheProperties.CachePoolProperties> multiCache = cacheProperties.getMultiCache();
-        for (CacheProperties.CachePoolProperties cachePoolProperties : multiCache) {
-            String type = cachePoolProperties.getType();
-            CacheManagerHandler cacheManagerHandler = CACHE_MANAGER.get(type);
-            if (null == cacheManagerHandler) {
-                continue;
-            }
-
-            cacheManagerHandler.setApplicationContext(applicationContext);
-            cacheManagerHandler.setCacheProperties(cachePoolProperties);
-            cacheManagerHandler.isCacheNullValues(cacheProperties.isCacheNullValues());
-            REAL.add(cacheManagerHandler);
+        Configuration configuration = new ConfigurationBuilder().addScanners(Scanners.SubTypes);
+        Reflections reflections = new Reflections(configuration);
+        Set<Class<? extends Cache>> subTypesOf = reflections.getSubTypesOf(Cache.class);
+        for (Class<? extends Cache> aClass : subTypesOf) {
+            CACHE.put(subTypesOf.getClass().getSimpleName().toLowerCase().replace("cache", ""), aClass);
         }
     }
 

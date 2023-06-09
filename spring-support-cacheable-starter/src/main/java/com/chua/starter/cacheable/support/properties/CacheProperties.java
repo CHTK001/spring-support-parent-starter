@@ -24,10 +24,12 @@ public class CacheProperties {
      * 前缀
      */
     private String cachePrefix;
+
+    private
     /**
      * 缓存链路
      */
-    private List<CachePoolProperties> multiCache = new LinkedList<>();
+    private String link = "mem -> guava";
 
     /**
      * 缓存工厂
