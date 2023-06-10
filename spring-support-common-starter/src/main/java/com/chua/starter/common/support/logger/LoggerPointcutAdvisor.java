@@ -80,6 +80,7 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
             public Object invoke(@Nonnull MethodInvocation invocation) throws Throwable {
                 Object proceed = null;
                 int status = 0;
+                long startTime = System.currentTimeMillis();
                 Throwable e1 = null;
                 try {
                     proceed = invocation.proceed();
@@ -88,7 +89,7 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
                     e1 = e;
                 }
                 try {
-                    saveLog(proceed, invocation, status);
+                    saveLog(proceed, invocation, status, startTime);
                 } catch (Exception ignored) {
                 }
 
@@ -99,7 +100,7 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
                 return proceed;
             }
 
-            private void saveLog(Object proceed, MethodInvocation invocation, int status) {
+            private void saveLog(Object proceed, MethodInvocation invocation, int status, long startTime) {
                 Method method = invocation.getMethod();
                 String address = RequestUtils.getIpAddress(request);
                 DateTime now = DateTime.now();
@@ -109,7 +110,7 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
                 Logger logger = method.getDeclaredAnnotation(Logger.class);
                 String key = (String) session.getAttribute("userId") + logger.value() + logger.action() + address;
                 Boolean ifPresent = CACHE.getIfPresent(key);
-                if(null != ifPresent) {
+                if (null != ifPresent) {
                     return;
                 }
 
@@ -139,18 +140,17 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
                 standardEvaluationContext.setVariable("result", proceed);
                 standardEvaluationContext.setVariable("method", method);
                 standardEvaluationContext.setVariable("args", invocation.getArguments());
-                recordLog(sysLog, proceed, standardEvaluationContext, logger, invocation, status);
+                recordLog(sysLog, proceed, standardEvaluationContext, logger, invocation, status, startTime);
             }
 
-            private void recordLog(SysLog sysLog, Object proceed, StandardEvaluationContext standardEvaluationContext, Logger logger, MethodInvocation invocation, int status) {
-                long startTime = sysLog.getCreateTime().getTime();
+            private void recordLog(SysLog sysLog, Object proceed, StandardEvaluationContext standardEvaluationContext, Logger logger, MethodInvocation invocation, int status, long startTime) {
                 sysLog.setResult(proceed);
                 sysLog.setLogCost((System.currentTimeMillis() - startTime) / 1000);
 
                 Method method = invocation.getMethod();
 
                 sysLog.setLogStatus("0");
-                if(proceed instanceof ResultData) {
+                if (proceed instanceof ResultData) {
                     sysLog.setLogStatus(((ResultData<?>) proceed).getCode());
                 }
 
