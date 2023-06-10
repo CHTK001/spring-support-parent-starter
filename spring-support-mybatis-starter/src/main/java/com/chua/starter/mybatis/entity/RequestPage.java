@@ -3,9 +3,7 @@ package com.chua.starter.mybatis.entity;
 import com.chua.common.support.database.annotation.ColumnIgnore;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
-import io.swagger.annotations.ApiParam;
 import lombok.Data;
-import springfox.documentation.annotations.ApiIgnore;
 
 /**
  * page
@@ -26,9 +24,9 @@ public class RequestPage<T>{
      */
     @ColumnIgnore
     @ApiModelProperty("当前页")
-    protected long pageNo = 1;
+    protected long pageNum = 1;
 
     public com.baomidou.mybatisplus.extension.plugins.pagination.Page<T> createPage() {
-        return new com.baomidou.mybatisplus.extension.plugins.pagination.Page<T>(pageNo, pageSize);
+        return new com.baomidou.mybatisplus.extension.plugins.pagination.Page<T>(pageNum, pageSize);
     }
 }
