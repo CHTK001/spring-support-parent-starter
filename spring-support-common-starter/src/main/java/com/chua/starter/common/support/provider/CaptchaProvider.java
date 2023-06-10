@@ -133,7 +133,7 @@ public class CaptchaProvider {
     @GetMapping("captcha")
     public CaptchaResult captchaBase64(HttpServletRequest request) {
         int randomInt = RandomUtils.randomInt(2, 3);
-        CaptchaTypeEnum captchaTypeEnum = RandomUtils.randomEnum(CaptchaTypeEnum.class);
+        CaptchaTypeEnum captchaTypeEnum = CaptchaTypeEnum.ARITHMETIC;//RandomUtils.randomEnum(CaptchaTypeEnum.class);
         if (captchaTypeEnum == CaptchaTypeEnum.CHINESE || captchaTypeEnum == CaptchaTypeEnum.CHINESE_GIF) {
             randomInt = RandomUtils.randomInt(4, 5);
         } else if (captchaTypeEnum != CaptchaTypeEnum.ARITHMETIC) {
