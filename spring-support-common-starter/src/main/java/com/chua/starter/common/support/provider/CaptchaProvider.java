@@ -18,8 +18,6 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import java.awt.*;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
@@ -135,7 +133,7 @@ public class CaptchaProvider {
     @GetMapping("captcha")
     public CaptchaResult captchaBase64(HttpServletRequest request) {
         int randomInt = RandomUtils.randomInt(2, 3);
-        CaptchaTypeEnum captchaTypeEnum = CaptchaTypeEnum.ARITHMETIC;//RandomUtils.randomEnum(CaptchaTypeEnum.class);
+        CaptchaTypeEnum captchaTypeEnum = RandomUtils.randomEnum(CaptchaTypeEnum.class);
         if (captchaTypeEnum == CaptchaTypeEnum.CHINESE || captchaTypeEnum == CaptchaTypeEnum.CHINESE_GIF) {
             randomInt = RandomUtils.randomInt(4, 5);
         } else if (captchaTypeEnum != CaptchaTypeEnum.ARITHMETIC) {
