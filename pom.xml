@@ -35,6 +35,7 @@
         <module>spring-support-redis-starter</module>
         <module>spring-support-swagger-starter</module>
         <module>spring-support-mail-starter</module>
+        <module>spring-support-websql-starter</module>
     </modules>
 
     <properties>
