@@ -1,4 +1,4 @@
-<link href="/static/plugins/easyui/jquery-easyui-theme/blue/easyui.css" rel="stylesheet" type="text/css" />
+<link href="/static/plugins/easyui/jquery-easyui-theme/metro-standard/easyui.css" rel="stylesheet" type="text/css" />
 <link href="/static/plugins/easyui/jquery-easyui-theme/icon.css" rel="stylesheet" type="text/css" />
 <link href="/static/plugins/easyui/icons/icon-all.css" rel="stylesheet" type="text/css" />
 
@@ -50,5 +50,5 @@
 <link rel="stylesheet" href="/static/plugins/easyui/common/other.css"></link>
 
 <script>
-var baseUrl = '';
+var baseUrl = '${request.contextPath}';
 </script>

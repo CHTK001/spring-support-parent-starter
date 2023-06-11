@@ -594,6 +594,7 @@ public class PermissionController extends BaseController {
 
     @RequestMapping(value = {"i/addConfigForm"}, method = {RequestMethod.GET})
     public String addConfigForm(Model model) {
+        model.addAttribute("config", Collections.emptyMap());
         return "system/configForm";
     }
 

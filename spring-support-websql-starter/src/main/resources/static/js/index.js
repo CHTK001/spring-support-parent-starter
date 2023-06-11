@@ -56,7 +56,6 @@ function getDataBaseConfig() {
 function format() {
     editor.setValue(sqlFormatter.format(editor.getValue()));
 }
-
 function initDataBase() {
     databaseConfigId = $("#databaseSelect").val();
     dg = $("#pid").treegrid({
