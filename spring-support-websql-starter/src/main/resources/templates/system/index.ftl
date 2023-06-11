@@ -129,6 +129,10 @@
                                 <a href="javascript:void(0)" class="easyui-linkbutton" iconCls="icon-edit" plain="true"
                                      onclick="format()">美化</a>
                                 <span class="toolbar-item dialog-tool-separator"></span>
+                                <a  iconCls="icon-hamburg-config" plain="true" class="easyui-linkbutton" onclick="javascript:ShowConfigPage()"  title="数据库配置">
+                                    设置
+                                </a>
+                                <span class="toolbar-item dialog-tool-separator"></span>
                                 <span class="toolbar-item dialog-tool-separator"></span>
                                 <a href="javascript:void(0)" class="easyui-linkbutton" iconCls="icon-tip" plain="true"
                                    title="F8   执行SQL语句 &#13;F7   清空SQL语句 &#13;可选中部分SQL执行 &#13;注释请以;分号结束"></a>
