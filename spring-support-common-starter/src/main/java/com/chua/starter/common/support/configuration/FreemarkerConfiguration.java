@@ -22,7 +22,11 @@ public class FreemarkerConfiguration implements EnvironmentPostProcessor {
         properties.setProperty("spring.freemarker.charset", "UTF-8");
         properties.setProperty("spring.freemarker.request-context-attribute", "request");
         properties.setProperty("spring.freemarker.number_format", "0.##########");
-        properties.setProperty("spring.freemarker.cache", "false");
+        if("prod".equals(environment.getProperty("spring.profiles.active"))) {
+            properties.setProperty("spring.freemarker.cache", "true");
+        } else {
+            properties.setProperty("spring.freemarker.cache", "false");
+        }
         properties.setProperty("spring.mvc.pathmatch.matching-strategy", "ant_path_matcher");
         properties.setProperty("spring.resources.static-locations", "classpath:/static/,classpath:/webjar/");
         properties.setProperty("spring.mvc.static-path-pattern", "/static/**,/webjar/**");
