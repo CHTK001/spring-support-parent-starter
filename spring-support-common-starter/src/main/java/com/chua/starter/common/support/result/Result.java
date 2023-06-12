@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.result;
 
+import com.chua.common.support.utils.StringUtils;
 import lombok.Data;
 
 import static com.chua.starter.common.support.result.ReturnCode.SUCCESS;
@@ -44,6 +45,10 @@ public class Result<T> extends ReturnResult<T> {
 
     public static <T> Result<T> failed(ResultCode resultCode) {
         return result(resultCode.getCode(), resultCode.getMsg(), null);
+    }
+
+    public static <T> Result<T> failed(String msg, Object... args) {
+        return result(ReturnCode.PARAM_ERROR.getCode(), StringUtils.format(msg, args), null);
     }
 
     public static <T> Result<T> failed(ResultCode resultCode, String msg) {

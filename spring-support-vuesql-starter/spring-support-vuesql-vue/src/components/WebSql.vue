@@ -4,7 +4,7 @@
       <el-aside width="218px" class="aside">
         <div class="panel-header">
           <div class="panel-title panel-with-icon">数据库选择</div>
-          <div class="panel-icon icon-standard-map">
+          <div class="panel-icon ">
             <el-icon>
               <Link/>
             </el-icon>
@@ -31,7 +31,7 @@
 
         <div class="panel-header">
           <div class="panel-title panel-with-icon">数据库</div>
-          <div class="panel-icon icon-standard-map">
+          <div class="panel-icon ">
             <el-icon>
               <Histogram/>
             </el-icon>
@@ -72,7 +72,7 @@
         <el-header height="30px">
           <div class="page-tabs-index">
             <el-tabs v-model="activeRoute" type="card" @tab-remove='closeTab' :closable="closable" @tab-click="tabClick"
-                     @edit="handleTabsEdit">
+                     @edit="handleTabsEdit" height="30">
               <el-tab-pane
                   :key="item.id"
                   v-for="(item, index) in tabs"
@@ -291,20 +291,5 @@ el-container {
   color: #777;
   height: 16px;
   line-height: 16px;
-}
-
-.demo-tabs > .el-tabs__header {
-  height: 25px;
-}
-
-.demo-tabs > .el-tabs__content {
-  padding: 32px;
-  color: #6b778c;
-  font-size: 32px;
-  font-weight: 600;
-}
-.el-tabs--border-card>.el-tabs__content{
-  padding: 0;
-  margin: 0;
 }
 </style>
