@@ -4,12 +4,12 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-
-import java.util.Date;
-
 import com.chua.common.support.database.annotation.Column;
 import com.chua.common.support.database.annotation.Table;
+import com.chua.starter.vuesql.enums.DatabaseType;
 import lombok.Data;
+
+import java.util.Date;
 
 /**
  * @author CH
@@ -37,7 +37,7 @@ public class WebsqlConfig {
      */
     @TableField(value = "config_type")
     @Column(comment = "联系;mysql等")
-    private String configType;
+    private DatabaseType configType;
 
     /**
      * 版本
