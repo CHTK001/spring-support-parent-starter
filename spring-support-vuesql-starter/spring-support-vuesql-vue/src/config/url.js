@@ -1,6 +1,8 @@
+const HOST = '/api/vuesql';
 const URL = {
-    HOST: '',
-    KEYWORD: '/vuesql/table/{databaseName}/{configId}'
+    KEYWORD: HOST+ '/table/keyword/{configId}',
+    DATASOURCE: HOST + "/database/list",
+    GET_TABLE_INFO: HOST + "/table/{configId}"
 }
 
 export default URL;

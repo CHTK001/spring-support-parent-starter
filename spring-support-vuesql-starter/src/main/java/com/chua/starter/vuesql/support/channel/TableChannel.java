@@ -1,7 +1,8 @@
 package com.chua.starter.vuesql.support.channel;
 
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
-import com.chua.starter.vuesql.pojo.Table;
+import com.chua.starter.vuesql.pojo.Construct;
+import com.chua.starter.vuesql.pojo.Keyword;
 
 import java.util.List;
 
@@ -11,23 +12,25 @@ import java.util.List;
  * @author CH
  */
 public interface TableChannel {
-
     /**
-     * 获取所有表
+     * 创建url
+     * @param config 配置
+     * @return url
+     */
+    String createUrl(WebsqlConfig config);
+    /**
+     * 获取数据库结构
      *
-     * @param dbName 数据库
      * @param config 配置
      * @return 获取所有表
      */
-    List<Table> getAllTable(String dbName, WebsqlConfig config);
+    List<Construct> getDataBaseConstruct(WebsqlConfig config);
 
     /**
      * 获取所有表
      *
-     * @param dbName    数据库
-     * @param tableName 表名
-     * @param config    配置
+     * @param config 配置
      * @return 获取所有表
      */
-    List<Table> getTableInfo(String dbName, String tableName, WebsqlConfig config);
+    List<Keyword> getKeyword(WebsqlConfig config);
 }

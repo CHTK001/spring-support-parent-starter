@@ -1,102 +1,121 @@
 <template>
-  <div class="common-layout">
-    <el-container>
-      <el-aside width="218px" class="aside">
-        <div class="panel-header">
-          <div class="panel-title panel-with-icon">数据库选择</div>
-          <div class="panel-icon ">
-            <el-icon>
-              <Link/>
-            </el-icon>
-          </div>
-          <div class="panel-tool">
-            <a>
-              <el-icon>
-                <DArrowLeft/>
-              </el-icon>
-            </a>
-          </div>
-        </div>
-
-        <div class="common-layout-padding">
-          <el-select v-model="datasource" class="m-2" placeholder="Select">
-            <el-option
-                v-for="item in options"
-                :key="item.value"
-                :label="item.label"
-                :value="item.value"
-            />
-          </el-select>
-        </div>
-
-        <div class="panel-header">
-          <div class="panel-title panel-with-icon">数据库</div>
-          <div class="panel-icon ">
-            <el-icon>
-              <Histogram/>
-            </el-icon>
-          </div>
-          <div class="panel-tool">
-            <a>
-              <el-icon>
-                <RefreshRight/>
-              </el-icon>
-            </a>
-          </div>
-        </div>
-
-        <div class="common-layout-padding">
-          <el-table
-              :data="treeData"
-              style="width: 100%; margin-bottom: 20px"
-              row-key="id"
-              border
-              default-expand-all
-          >
-            <el-table-column prop="name" label="详情" style="font-size: 21px">
-              <template #default="scope">
-                <el-icon v-if="scope.row.type =='table'" style="margin-right: 5px">
-                  <Tickets/>
-                </el-icon>
-                <el-text style="cursor: pointer" v-if="scope.row.type=='sub'"
-                         @click="handleTabsEdit(scope.row, 'add')">{{ scope.row.name }}
-                </el-text>
-                <el-text v-else>{{ scope.row.name }}</el-text>
-              </template>
-            </el-table-column>
-          </el-table>
-        </div>
-      </el-aside>
-
+  <el-skeleton :loading="loading" animated :rows="10">
+    <div class="common-layout">
       <el-container>
-        <el-header height="30px">
-          <div class="page-tabs-index">
-            <el-tabs v-model="activeRoute" type="card" @tab-remove='closeTab' :closable="closable" @tab-click="tabClick"
-                     @edit="handleTabsEdit" height="30">
-              <el-tab-pane
-                  :key="item.id"
-                  v-for="(item, index) in tabs"
-                  :label="item.label"
-                  :name="item.id"
-                  :closable="item.close"
-              >
-                <router-view></router-view>
-              </el-tab-pane>
-            </el-tabs>
+        <el-aside width="218px" class="aside">
+          <div class="panel-header">
+            <div class="panel-title panel-with-icon">数据库选择</div>
+            <div class="panel-icon ">
+              <el-icon>
+                <Link/>
+              </el-icon>
+            </div>
+            <div class="panel-tool">
+              <a>
+                <el-icon>
+                  <DArrowLeft/>
+                </el-icon>
+              </a>
+            </div>
           </div>
-        </el-header>
+
+          <div class="common-layout-padding">
+            <el-select v-model="datasource" class="m-2" placeholder="请选择..."  @change="changeDatabase">
+              <el-option
+                  v-for="item in options"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
+
+              />
+            </el-select>
+          </div>
+
+          <div class="panel-header">
+            <div class="panel-title panel-with-icon">数据库</div>
+            <div class="panel-icon ">
+              <el-icon>
+                <Histogram/>
+              </el-icon>
+            </div>
+            <div class="panel-tool">
+              <a>
+                <el-icon @click="changeDatabase">
+                  <RefreshRight/>
+                </el-icon>
+              </a>
+            </div>
+          </div>
+
+          <el-skeleton :loading="tableLoading" animated>
+            <div class="common-layout-padding">
+              <el-table
+                  :data="treeData"
+                  style="width: 100%; margin-bottom: 20px; height: 700px; max-height: 700px;"
+                  row-key="id"
+                  border
+                  default-expand-all
+              >
+                <el-table-column prop="name" label="详情" show-overflow-tooltip style="font-size: 21px">
+                  <template #default="scope">
+                    <el-icon v-if="scope.row.type =='TABLE'" style="margin-right: 5px; color: orange">
+                      <Tickets/>
+                    </el-icon>
+                    <el-icon v-else-if="scope.row.type =='VIEW'" style="margin-right: 5px; color: green">
+                      <DocumentCopy/>
+                    </el-icon>
+                    <el-icon v-else style="; color: orange"><FolderOpened /></el-icon>
+                    <el-text style="cursor: pointer" v-if="scope.row.type=='TABLE' || scope.row.type=='VIEW'"
+                             @click="handleSql(scope.row)">{{ scope.row.name }}
+                    </el-text>
+                    <el-text v-else>{{ scope.row.name }}</el-text>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+          </el-skeleton>
+        </el-aside>
+
+        <el-container>
+          <el-header height="30px">
+            <div class="page-tabs-index">
+              <el-tabs v-model="activeRoute" type="card" @tab-remove='closeTab' :closable="closable"
+                       @tab-click="tabClick"
+                       @edit="handleTabsEdit" height="30">
+                <el-tab-pane
+                    :key="item.id"
+                    v-for="(item, index) in tabs"
+                    :label="item.label"
+                    :name="item.id"
+                    :closable="item.close"
+                >
+                  <router-view></router-view>
+                </el-tab-pane>
+              </el-tabs>
+            </div>
+          </el-header>
+        </el-container>
       </el-container>
-    </el-container>
-  </div>
+    </div>
+  </el-skeleton>
 </template>
 
 <script>
+import request from 'axios'
+import URL from "@/config/url"
+import {sformat} from '@/utils/Utils'
+import { Base64 } from 'js-base64';
+
 export default {
   data() {
     return {
+      loading: true,
+      tableLoading: true,
       datasource: '',
+      currentDatasource: undefined,
       closable: false,
       activeRoute: '0',
+      currentTable: undefined,
       tabs: [
         {
           id: '0',
@@ -106,56 +125,48 @@ export default {
           close: false
         }
       ],
-      treeData: [{
-        id: 1,
-        name: 'water',
-        children: [{
-          id: 2,
-          name: '表',
-          type: 'table',
-          children: [{
-            id: 21,
-            name: 'admin',
-            type: 'sub'
-          }]
-        }, {
-          id: 3,
-          name: '视图',
-        },
-        ],
-      }],
+      treeData: [],
       options: [
-        {
-          value: 'Option1',
-          label: 'Option1',
-        },
-        {
-          value: 'Option2',
-          label: 'Option2',
-        },
-        {
-          value: 'Option3',
-          label: 'Option3',
-        },
-        {
-          value: 'Option4',
-          label: 'Option4',
-        },
-        {
-          value: 'Option5',
-          label: 'Option5',
-        },
       ]
     }
   },
   mounted() {
     this.$router.push('/home');
+    request.get(URL.DATASOURCE)
+        .then(({data}) => {
+          this.options.length = 0;
+          if(data.code == '00000') {
+            data.data.forEach((item, index) => {
+              this.options.push({
+                value: item.configId,
+                configId: item.configId,
+                label: item.configName
+              })
+            })
+          }
+        }).finally(() => this.loading = false)
   },
   methods: {
+    changeDatabase: function () {
+      const item =  this.datasource;
+      this.tableLoading = true;
+      this.currentDatasource = this.options.filter(it => it.value == item)[0];
+      this.$router.push('/home/' + Base64.encode(JSON.stringify({db: this.currentDatasource, table:{}})));
+      request.get(sformat(URL.GET_TABLE_INFO, this.currentDatasource))
+          .then(({data}) => {
+            if(data.code == '00000') {
+              this.treeData.push(data.data);
+            }
+          }).finally(() => this.tableLoading = false)
+    },
+    handleSql(item, action) {
+      this.$router.push('/home/' + Base64.encode(JSON.stringify({db: this.currentDatasource, table:item})));
+      this.currentTable = item;
+    },
     // 增删tabs
     handleTabsEdit(item, action) {
       console.log('tab增删:', item, action);
-      if(action == 'remove') {
+      if (action == 'remove') {
         return false;
       }
       let tab = this.tabs.find(tab => Number(tab.id) == item.id);

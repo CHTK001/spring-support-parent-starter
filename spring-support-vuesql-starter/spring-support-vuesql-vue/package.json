@@ -8,12 +8,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "codemirror": "^5.65.13",
-    "codemirror-editor-vue3": "^2.3.0",
+    "@element-plus/icons-vue": "^2.1.0",
+    "axios": "^1.4.0",
     "element-plus": "^2.3.6",
     "jquery": "^3.7.0",
-    "sql-formatter": "^12.2.2",
+    "js-base64": "^3.7.5",
+    "sql-formatter": "^2.3.4",
     "vue": "^3.3.2",
+    "vue-codemirror": "^4.0.6",
     "vue-router": "^4.2.2"
   },
   "devDependencies": {

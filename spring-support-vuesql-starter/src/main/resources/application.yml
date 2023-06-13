@@ -7,3 +7,9 @@ spring:
     password: root
 server:
   port: 28081
+
+plugin:
+  auto:
+    table:
+      open: true
+      scan: com.chua.starter.vuesql.entity.system
