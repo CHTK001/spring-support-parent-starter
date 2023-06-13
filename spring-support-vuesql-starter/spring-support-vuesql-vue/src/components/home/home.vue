@@ -8,7 +8,7 @@
                style="height:auto; border-left: solid 1px #ddd; border-right: solid 1px #ddd">
             <div>
               <a href="javascript:void(0)" id="runButton" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
-                 iconcls="icon-run" plain="true" @click="Home.run()" title="运行选中SQL命令" group=""><span
+                 iconcls="icon-run" plain="true" @click="run()" title="运行选中SQL命令" group=""><span
                   class="l-btn-left l-btn-icon-left"><span class="l-btn-text">运行(F8)</span><span
                   class="l-btn-icon icon-run">&nbsp;</span></span></a>
               <span class="toolbar-item dialog-tool-separator"></span>
@@ -21,13 +21,13 @@
               <span class="toolbar-item dialog-tool-separator"></span>
 
               <a href="javascript:void(0)" id="clearSQLButton" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
-                 iconcls="icon-standard-bin-closed" plain="true" @click="Home.clearSQL()" title="清空编辑区SQL命令"
+                 iconcls="icon-standard-bin-closed" plain="true" @click="clearSQL()" title="清空编辑区SQL命令"
                  group=""><span class="l-btn-left l-btn-icon-left"><span class="l-btn-text">清空(F7)</span><span
                   class="l-btn-icon icon-standard-bin-closed">&nbsp;</span></span></a>
               <span class="toolbar-item dialog-tool-separator"></span>
 
               <a href="javascript:void(0)" id="formatSQLButton" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
-                 iconcls="icon-hamburg-sitemap" plain="true" @click="Home.formatSQL()" title="SQL格式美化" group=""><span
+                 iconcls="icon-hamburg-sitemap" plain="true" @click="formatSQL()" title="SQL格式美化" group=""><span
                   class="l-btn-left l-btn-icon-left"><span class="l-btn-text">美化</span><span
                   class="l-btn-icon icon-hamburg-sitemap">&nbsp;</span></span></a>
               <span class="toolbar-item dialog-tool-separator"></span>
@@ -44,26 +44,35 @@
                   class="l-btn-icon icon-standard-add">&nbsp;</span></span></a>
               <span class="toolbar-item dialog-tool-separator"></span>
 
+              <a href="javascript:void(0)" id="addConfig" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
+                 iconcls="icon-plus" plain="true" @click="addConfig()" title="新增数据库"
+              >
+                  <span class="l-btn-left l-btn-icon-left">
+                    <span class="l-btn-text">数据库</span>
+                    <span class="l-btn-icon panel-icon icon-hamburg-database">&nbsp;</span></span>
+              </a>
+
               <a href="javascript:void(0)" id="saveSearchButton" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
                  iconcls="icon-save" plain="true" onclick="saveSearchDialog()" title="SQL保存,可展开右侧工具栏查看"
-                 ><span class="l-btn-left l-btn-icon-left"><span class="l-btn-text">保存</span><span
+              ><span class="l-btn-left l-btn-icon-left"><span class="l-btn-text">保存</span><span
                   class="l-btn-icon icon-save">&nbsp;</span></span></a>
               <span class="toolbar-item dialog-tool-separator"></span>
-              &nbsp;当前数据库：<span id="currentDbTitle">{{ currentDatabase }}</span>
+              <span href="javascript:void(0)" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
+                    plain="true" title="新增数据库"
+              ><span>当前数据库：</span></span>
+              <span id="currentDbTitle"><el-tag>{{ currentDatabase }}</el-tag></span>
+
             </div>
           </div>
 
-          <el-skeleton :loading="sqlEditor" animated>
-            <div class="shadow"></div>
-          </el-skeleton>
-          <div class="content" :style="contentStyle">
+          <div class="content">
             <textarea ref="mycode" class="codesql public_text" v-model="code"></textarea>
           </div>
         </div>
       </div>
 
       <div class="panel layout-panel layout-panel-center layout-split-center"
-           style="z-index: 100000; top: -40px;  border-right: solid 1px #ddd">
+           style="border-right: solid 1px #ddd">
         <div class="panel-header">
           <div class="panel-title panel-with-icon">运行结果</div>
           <div class="panel-icon icon-standard-application-view-icons"></div>
@@ -71,18 +80,15 @@
         <div id="searchHistoryPanel"
              title="" class="panel-body panel-body-noborder layout-body panel-noscroll"
         >
-         <result-set :config-id="currentTableData"  ref="resultSet">
+          <result-set :config-id="currentTableData" ref="resultSet">
 
-         </result-set>
+          </result-set>
         </div>
       </div>
     </div>
   </div>
 </template>
 <script>
-</script>
-<script setup>
-import {onMounted, onUnmounted, ref, watch, getCurrentInstance, reactive} from "vue"
 import CodeMirror from 'codemirror/lib/codemirror'
 import 'codemirror/lib/codemirror.css'
 import "codemirror/theme/ambiance.css";
@@ -99,7 +105,6 @@ import "codemirror/theme/cobalt.css";
 import "codemirror/addon/selection/active-line.js";
 import 'codemirror/addon/display/autorefresh';
 import "codemirror/mode/javascript/javascript.js"
-
 // theme
 import '@/style/easy.css'
 import '@/assets/icons/icon-berlin.css'
@@ -107,76 +112,128 @@ import '@/assets/icons/icon-hamburg.css'
 import '@/assets/icons/icon-standard.css'
 
 import '@/assets/icons/icon.css'
-import Home from "@/components/home/index";
-import {useRouter, onBeforeRouteUpdate} from "vue-router"
-import { Base64 } from 'js-base64';
+import request from "axios";
+import {sformat} from "@/utils/Utils";
+import URL from "@/config/url";
+import {format} from "sql-formatter";
 import ResultSet from "@/components/home/resultset.vue";
 
-const currentAccept = ref('{}');
-const route = useRouter();
-const code = ref('2332')
-const currentDatabase = ref("Empty")
-const currentDatabaseData = ref()
-const currentTableData = ref()
-const props = ref();
-const sqlEditor = ref(true);
-const cmRef = ref()
-const contentStyle = ref({'z-index': -1})
-let editor;
-
-
-Home.setCode(code);
-const resultSet = ref(null)
-Home.setResultSet(resultSet);
-Home.initial(null, null, CodeMirror);
-
-onBeforeRouteUpdate((to) => {
-  let parse = JSON.parse(Base64.decode(to.params.data));
-  currentDatabaseData.value = parse.db;
-  currentDatabase.value = parse.db.label;
-  currentTableData.value = parse.table;
-  sqlEditor.value = !1;
-  contentStyle.value = {'z-index': 1}
-  Home.initial(currentDatabaseData, currentTableData)
-  if(!!currentTableData.value && !!parse.table.name) {
-    editor.setValue("SELECT * FROM " + parse.table.name + "\r\n");
-  }
-})
-const cmOptions = ref({
-  lineNumbers: !0,
-  matchBrackets: !0,
-  hintOptions: {
-    completeSingle: !1,
-    completeOnSingleClick: !0
-  },
-  autoRefresh: true,
-  indentUnit: 4,
-  mode: 'text/x-mysql',
-  lineWrapping: !0,
-  autofocus: !0,
-  extraKeys: {
-    ctrl: "autocomplete",
-    F7: function () {
-      Home.clearSQL()
-    }, F8: function () {
-      Home.run()
+export default {
+  name: "home",
+  components: {ResultSet},
+  props: {
+    currentDatabaseData: undefined,
+    currentTableData: undefined,
+    loading: {
+      type: Boolean,
+      default: true
+    },
+    event: {
+      type: Function
     }
+  },
+  computed: {
+    database: function () {
+      return this.currentDatabaseData;
+    },
+    table: function () {
+      return this.currentTableData;
+    }
+  },
+  watch: {
+    database: function (n, o) {
+      this.currentDatabase = n.label;
+    },
+    table: function (n, o) {
+      this.editor.setValue("SELECT * FROM " + n.name + "\r\n");
+    }
+  },
+  data() {
+    return {
+      code: '', //代码
+      currentDatabase: '',//当前数据库
+      cmRef: undefined,
+      contentStyle: {'z-index': -1},
+      editor: undefined,
+      cmOptions: {
+        lineNumbers: !0,
+        matchBrackets: !0,
+        hintOptions: {
+          completeSingle: !1,
+          completeOnSingleClick: !0
+        },
+        autoRefresh: true,
+        indentUnit: 4,
+        mode: 'text/x-mysql',
+        lineWrapping: !0,
+        autofocus: !0,
+        extraKeys: {
+          ctrl: "autocomplete",
+          F7: function () {
+            arguments[0].setValue('');
+          }, F8: function () {
+            this.run()
+          }
+        }
+      }
+    }
+  },
+  mounted() {
+    this.cmRef?.refresh()
+    this.editor = CodeMirror.fromTextArea(this.$refs.mycode, this.cmOptions);
+    this.editor.on("inputRead", this.codemirrorAutocompleteOnInputRead);
+    // 可选,挂载一下监听事项
+    this.editor.on('change', (cm) => {
+      this.code = cm.getValue(); // 这里要用多一个载体去获取值,不然会重复赋值卡顿
+    });
+    // this.editor.refresh();
+    // this.editor.focus();
+  },
+  methods: {
+    addConfig() {
+      this.$emit('event', 1)
+      debugger
+    },
+    onUpdate: (args) => {
+      // this.editor.setValue("SELECT * FROM " + args.name + "\r\n");
+    },
+    clearSQL() {
+      this.editor.setValue('');
+    },
+    run() {
+      let value = this.editor.getSelection() || this.editor.getValue();
+      this.$refs.resultSet.run(value);
+    },
+    formatSQL() {
+      let selection = this.editor.getSelection();
+      if (!!selection) {
+        this.editor.replaceSelection(format(selection));
+        return false;
+      }
+      let value = this.editor.getValue();
+      this.editor.setValue(format(value));
+    },
+    codemirrorAutocompleteOnInputRead: function (a) {
+      if (!a.options.hintOptions.tables) {
+        request.get(sformat(URL.KEYWORD, this.currentDatabaseData))
+            .then(({data}) => {
+              a.options.hintOptions.tables = data.data;
+            })
+      }
+      if (!a.state.completionActive) {
+        var b = a.getCursor();
+        b = a.getTokenAt(b);
+        var c = "";
+        b.string.match(/^[.`\w@]\w*$/) && (c = b.string);
+        0 < c.length && CodeMirror.commands.autocomplete(a)
+      }
+    },
   }
-})
-
-
-onMounted(() => {
-  cmRef.value?.refresh()
-  if(null == editor) {
-    editor = CodeMirror.fromTextArea(getCurrentInstance().ctx.$refs.mycode, cmOptions.value);
-    editor.on("inputRead", Home.codemirrorAutocompleteOnInputRead);
-    editor.refresh();
-    editor.focus();
-    Home.setEditor(editor);
-  }
-})
+}
 </script>
-
+<script setup>
+const run = () => this.run();
+</script>
 <style>
 .CodeMirror-scroll {
   min-height: 300px;
@@ -185,6 +242,7 @@ onMounted(() => {
 .el-tabs__header {
   margin: 0 !important;
 }
+
 .shadow {
   position: absolute;
   height: 300px;

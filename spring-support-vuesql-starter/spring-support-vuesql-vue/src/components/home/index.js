@@ -1,4 +1,3 @@
-import $ from 'jquery'
 import request from 'axios'
 import URL from '@/config/url'
 import {sformat} from '@/utils/Utils'
@@ -15,21 +14,27 @@ const Home = {
     code: undefined,
     resultSet: undefined,
     setEditor(editor) {
-      this.editor = editor;
+        this.editor = editor;
     },
     setResultSet(resultSet) {
-      this.resultSet = resultSet;
+        this.resultSet = resultSet;
     },
     setCode(code) {
-      this.code = code;
+        this.code = code;
+    },
+    /**
+     * 数据库页面
+     */
+    addConfig: () => {
+        debugger
     },
 
     initial: function (currentDatabaseData, currentTableData, CodeMirror) {
-        if(!!currentTableData && !!currentTableData.value) {
+        if (!!currentTableData && !!currentTableData.value) {
             this.currentTableData = currentTableData.value;
         }
 
-        if(currentDatabaseData && !!currentDatabaseData.value) {
+        if (currentDatabaseData && !!currentDatabaseData.value) {
             this.currentDatabaseData = currentDatabaseData.value;
         }
 

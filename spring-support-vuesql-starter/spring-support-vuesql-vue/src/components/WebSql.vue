@@ -64,11 +64,15 @@
                     <el-icon v-else-if="scope.row.type =='VIEW'" style="margin-right: 5px; color: green">
                       <DocumentCopy/>
                     </el-icon>
-                    <el-icon v-else style="; color: orange"><FolderOpened /></el-icon>
+                    <el-icon v-else style="; color: orange">
+                      <FolderOpened/>
+                    </el-icon>
                     <el-text style="cursor: pointer" v-if="scope.row.type=='TABLE' || scope.row.type=='VIEW'"
                              @click="handleSql(scope.row)">{{ scope.row.name }}
                     </el-text>
-                    <el-text v-else>{{ scope.row.name }}</el-text>
+                    <el-text v-else>
+                      {{ scope.row.name }}
+                    </el-text>
                   </template>
                 </el-table-column>
               </el-table>
@@ -89,7 +93,16 @@
                     :name="item.id"
                     :closable="item.close"
                 >
-                  <router-view></router-view>
+                  <home v-if="item.type == 'home'"
+                        ref="home"
+                        :current-database-data="currentDatasource"
+                        :loading="loading"
+                        :current-table-data="currentTable"
+                        @event="onEvent"
+                  >
+
+
+                  </home>
                 </el-tab-pane>
               </el-tabs>
             </div>
@@ -104,13 +117,12 @@
 import request from 'axios'
 import URL from "@/config/url"
 import {sformat} from '@/utils/Utils'
-import { Base64 } from 'js-base64';
 
 export default {
   data() {
     return {
       loading: true,
-      tableLoading: true,
+      tableLoading: false,
       datasource: '',
       currentDatasource: undefined,
       closable: false,
@@ -121,6 +133,7 @@ export default {
           id: '0',
           label: '运行及展示',
           path: "/home",
+          type: 'home',
           content: 'Tab 1 content',
           close: false
         }
@@ -131,11 +144,11 @@ export default {
     }
   },
   mounted() {
-    this.$router.push('/home');
+    this.loading = !0;
     request.get(URL.DATASOURCE)
         .then(({data}) => {
           this.options.length = 0;
-          if(data.code == '00000') {
+          if (data.code == '00000') {
             data.data.forEach((item, index) => {
               this.options.push({
                 value: item.configId,
@@ -147,21 +160,23 @@ export default {
         }).finally(() => this.loading = false)
   },
   methods: {
+    onEvent: function () {
+      debugger
+    },
     changeDatabase: function () {
-      const item =  this.datasource;
+      const item = this.datasource;
       this.tableLoading = true;
       this.currentDatasource = this.options.filter(it => it.value == item)[0];
-      this.$router.push('/home/' + Base64.encode(JSON.stringify({db: this.currentDatasource, table:{}})));
       request.get(sformat(URL.GET_TABLE_INFO, this.currentDatasource))
           .then(({data}) => {
-            if(data.code == '00000') {
+            if (data.code == '00000') {
               this.treeData.push(data.data);
             }
           }).finally(() => this.tableLoading = false)
     },
     handleSql(item, action) {
-      this.$router.push('/home/' + Base64.encode(JSON.stringify({db: this.currentDatasource, table:item})));
       this.currentTable = item;
+      this.$refs.home[0].onUpdate(item);
     },
     // 增删tabs
     handleTabsEdit(item, action) {
@@ -218,6 +233,7 @@ import {
 } from '@element-plus/icons-vue'
 
 import {ref} from "vue";
+import Home from "@/components/home/home.vue";
 
 
 </script>
@@ -302,5 +318,16 @@ el-container {
   color: #777;
   height: 16px;
   line-height: 16px;
+}
+
+.el-tabs__header {
+  height: 28px !important;
+  font-size: 10px;
+  line-height: 28px;
+}
+
+.el-tabs {
+  --el-tabs-header-height: 28px;
+  --el-font-size-base: 12px;
 }
 </style>
