@@ -12,9 +12,16 @@ const Home = {
     CodeMirror: undefined,
     currentDatabaseData: undefined,
     currentTableData: undefined,
-
+    code: undefined,
+    resultSet: undefined,
     setEditor(editor) {
       this.editor = editor;
+    },
+    setResultSet(resultSet) {
+      this.resultSet = resultSet;
+    },
+    setCode(code) {
+      this.code = code;
     },
 
     initial: function (currentDatabaseData, currentTableData, CodeMirror) {
@@ -56,12 +63,7 @@ const Home = {
     },
     run() {
         let value = this.editor.getSelection() || this.editor.getValue();
-        for (let string of value.split(";")) {
-            this.executeSql(string.trim());
-        }
-    },
-    executeSql(sql) {
-        debugger
+        this.resultSet.value.run(value);
     },
     formatSQL() {
         let selection = this.editor.getSelection();

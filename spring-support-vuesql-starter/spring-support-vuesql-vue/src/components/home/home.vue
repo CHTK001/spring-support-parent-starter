@@ -33,20 +33,20 @@
               <span class="toolbar-item dialog-tool-separator"></span>
 
               <a href="javascript:void(0)" id="explainSQLButton" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
-                 iconcls="icon-hamburg-category" plain="true" @click="explainSQL()" title="执行计划" group=""><span
+                 iconcls="icon-hamburg-category" plain="true" onclick="explainSQL()" title="执行计划" group=""><span
                   class="l-btn-left l-btn-icon-left"><span class="l-btn-text">计划</span><span
                   class="l-btn-icon icon-hamburg-category">&nbsp;</span></span></a>
               <span class="toolbar-item dialog-tool-separator"></span>
 
               <a href="javascript:void(0)" id="newQueryButton" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
-                 iconcls="icon-standard-add" plain="true" @click="newQuery();" title="新建查询" group=""><span
+                 iconcls="icon-standard-add" plain="true" onclick="newQuery();" title="新建查询" group=""><span
                   class="l-btn-left l-btn-icon-left"><span class="l-btn-text">新建</span><span
                   class="l-btn-icon icon-standard-add">&nbsp;</span></span></a>
               <span class="toolbar-item dialog-tool-separator"></span>
 
               <a href="javascript:void(0)" id="saveSearchButton" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
-                 iconcls="icon-save" plain="true" @click="saveSearchDialog()" title="SQL保存,可展开右侧工具栏查看"
-                 group=""><span class="l-btn-left l-btn-icon-left"><span class="l-btn-text">保存</span><span
+                 iconcls="icon-save" plain="true" onclick="saveSearchDialog()" title="SQL保存,可展开右侧工具栏查看"
+                 ><span class="l-btn-left l-btn-icon-left"><span class="l-btn-text">保存</span><span
                   class="l-btn-icon icon-save">&nbsp;</span></span></a>
               <span class="toolbar-item dialog-tool-separator"></span>
               &nbsp;当前数据库：<span id="currentDbTitle">{{ currentDatabase }}</span>
@@ -71,29 +71,9 @@
         <div id="searchHistoryPanel"
              title="" class="panel-body panel-body-noborder layout-body panel-noscroll"
         >
+         <result-set :config-id="currentTableData"  ref="resultSet">
 
-          <div id="searchTabs" class="easyui-tabs tabs-container">
-
-            <div class="tabs-header tabs-header-noborder">
-              <div class="tabs-wrap">
-                <ul class="tabs" style="height: 26px;">
-                  <li class="tabs-selected"><a href="javascript:void(0)" class="tabs-inner"
-                                               style="height: 25px; line-height: 25px;"><span
-                      class="tabs-title tabs-with-icon" style="padding-right: 9px;">消息</span><span
-                      class="tabs-icon icon-hamburg-issue"></span></a><span class="tabs-p-tool" style="right: 5px;"><a
-                      href="javascript:void(0)" class="icon-mini-refresh"></a></span></li>
-                </ul>
-              </div>
-            </div>
-            <div class="tabs-panels" style="padding-top: 2px; height: 269px">
-              <div class="panel">
-                <div id="searcHomePanel" title=""
-                     class="panel-body  panel-body-noborder"
-                     style="border-top-width: 1px; ">
-                </div>
-              </div>
-            </div>
-          </div>
+         </result-set>
         </div>
       </div>
     </div>
@@ -112,6 +92,7 @@ import 'codemirror/addon/edit/closebrackets.js'
 import 'codemirror/mode/sql/sql.js'
 import 'codemirror/addon/hint/show-hint.js'
 import 'codemirror/addon/hint/show-hint.css'
+
 // import '@/vendor/codemirror/addon/hint/sql-hint.js'
 import 'codemirror/addon/hint/sql-hint.js'
 import "codemirror/theme/cobalt.css";
@@ -129,6 +110,7 @@ import '@/assets/icons/icon.css'
 import Home from "@/components/home/index";
 import {useRouter, onBeforeRouteUpdate} from "vue-router"
 import { Base64 } from 'js-base64';
+import ResultSet from "@/components/home/resultset.vue";
 
 const currentAccept = ref('{}');
 const route = useRouter();
@@ -141,6 +123,11 @@ const sqlEditor = ref(true);
 const cmRef = ref()
 const contentStyle = ref({'z-index': -1})
 let editor;
+
+
+Home.setCode(code);
+const resultSet = ref(null)
+Home.setResultSet(resultSet);
 Home.initial(null, null, CodeMirror);
 
 onBeforeRouteUpdate((to) => {
