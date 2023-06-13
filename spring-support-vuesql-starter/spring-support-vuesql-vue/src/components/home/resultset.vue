@@ -17,8 +17,6 @@
 </template>
 
 <script>
-import {ref} from "vue";
-import request from "axios";
 
 export default {
   name: "resultSet",
@@ -95,5 +93,10 @@ export default {
   color: #6b778c;
   font-size: 32px;
   font-weight: 600;
+}
+
+.el-tabs {
+  --el-tabs-header-height: 28px;
+  --el-font-size-base: 12px;
 }
 </style>
