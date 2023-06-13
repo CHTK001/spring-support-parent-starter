@@ -1,5 +1,6 @@
 package com.chua.starter.vuesql.enums;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /**
@@ -8,9 +9,17 @@ import lombok.Getter;
  * @author CH
  */
 @Getter
+@AllArgsConstructor
 public enum DatabaseType {
     /**
      * mysql
      */
-    MYSQL
+    MYSQL5("com.mysql.jdbc.Driver"),
+    /**
+     * mysql
+     */
+    MYSQL8("com.mysql.jdbc.Driver");
+
+    private final String driver;
+
 }

@@ -6,7 +6,9 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.chua.common.support.database.annotation.Column;
 import com.chua.common.support.database.annotation.Table;
+import com.chua.starter.common.support.annotations.PrivacyEncrypt;
 import com.chua.starter.vuesql.enums.DatabaseType;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 
 import java.util.Date;
@@ -16,6 +18,7 @@ import java.util.Date;
  */
 @Table(comment = "websql_config")
 @Data
+@JsonIgnoreProperties("configPassword")
 @TableName(value = "websql_config")
 public class WebsqlConfig {
     /**
@@ -94,6 +97,12 @@ public class WebsqlConfig {
     @TableField(value = "config_database")
     @Column(comment = "数据库")
     private String configDatabase;
+    /**
+     * 数据库参数
+     */
+    @TableField(value = "config_param")
+    @Column(comment = "数据库参数")
+    private String configParam;
 
     /**
      * 创建时间

@@ -8,7 +8,7 @@
                style="height:auto; border-left: solid 1px #ddd; border-right: solid 1px #ddd">
             <div>
               <a href="javascript:void(0)" id="runButton" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
-                 iconcls="icon-run" plain="true" onclick="run()" title="运行选中SQL命令" group=""><span
+                 iconcls="icon-run" plain="true" @click="Home.run()" title="运行选中SQL命令" group=""><span
                   class="l-btn-left l-btn-icon-left"><span class="l-btn-text">运行(F8)</span><span
                   class="l-btn-icon icon-run">&nbsp;</span></span></a>
               <span class="toolbar-item dialog-tool-separator"></span>
@@ -21,49 +21,43 @@
               <span class="toolbar-item dialog-tool-separator"></span>
 
               <a href="javascript:void(0)" id="clearSQLButton" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
-                 iconcls="icon-standard-bin-closed" plain="true" onclick="clearSQL()" title="清空编辑区SQL命令"
+                 iconcls="icon-standard-bin-closed" plain="true" @click="Home.clearSQL()" title="清空编辑区SQL命令"
                  group=""><span class="l-btn-left l-btn-icon-left"><span class="l-btn-text">清空(F7)</span><span
                   class="l-btn-icon icon-standard-bin-closed">&nbsp;</span></span></a>
               <span class="toolbar-item dialog-tool-separator"></span>
 
               <a href="javascript:void(0)" id="formatSQLButton" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
-                 iconcls="icon-hamburg-sitemap" plain="true" onclick="formatSQL()" title="SQL格式美化" group=""><span
+                 iconcls="icon-hamburg-sitemap" plain="true" @click="Home.formatSQL()" title="SQL格式美化" group=""><span
                   class="l-btn-left l-btn-icon-left"><span class="l-btn-text">美化</span><span
                   class="l-btn-icon icon-hamburg-sitemap">&nbsp;</span></span></a>
               <span class="toolbar-item dialog-tool-separator"></span>
 
               <a href="javascript:void(0)" id="explainSQLButton" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
-                 iconcls="icon-hamburg-category" plain="true" onclick="explainSQL()" title="执行计划" group=""><span
+                 iconcls="icon-hamburg-category" plain="true" @click="explainSQL()" title="执行计划" group=""><span
                   class="l-btn-left l-btn-icon-left"><span class="l-btn-text">计划</span><span
                   class="l-btn-icon icon-hamburg-category">&nbsp;</span></span></a>
               <span class="toolbar-item dialog-tool-separator"></span>
 
               <a href="javascript:void(0)" id="newQueryButton" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
-                 iconcls="icon-standard-add" plain="true" onclick="newQuery();" title="新建查询" group=""><span
+                 iconcls="icon-standard-add" plain="true" @click="newQuery();" title="新建查询" group=""><span
                   class="l-btn-left l-btn-icon-left"><span class="l-btn-text">新建</span><span
                   class="l-btn-icon icon-standard-add">&nbsp;</span></span></a>
               <span class="toolbar-item dialog-tool-separator"></span>
 
               <a href="javascript:void(0)" id="saveSearchButton" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
-                 iconcls="icon-save" plain="true" onclick="saveSearchDialog()" title="SQL保存,可展开右侧工具栏查看"
+                 iconcls="icon-save" plain="true" @click="saveSearchDialog()" title="SQL保存,可展开右侧工具栏查看"
                  group=""><span class="l-btn-left l-btn-icon-left"><span class="l-btn-text">保存</span><span
                   class="l-btn-icon icon-save">&nbsp;</span></span></a>
               <span class="toolbar-item dialog-tool-separator"></span>
-              &nbsp;当前数据库：<span id="currentDbTitle">{{ curdatabase }}</span>
+              &nbsp;当前数据库：<span id="currentDbTitle">{{ currentDatabase }}</span>
             </div>
           </div>
-          <div class="content">
-            <Codemirror style="margin:0px; width:99%;" id="sqltextarea"
-                        v-model:value="code"
-                        :options="cmOptions"
-                        border
-                        ref="cmRef"
-                        height="200"
-                        @change="onChange"
-                        @input="onInput"
-                        @ready="onReady"
-            >
-            </Codemirror>
+
+          <el-skeleton :loading="sqlEditor" animated>
+            <div class="shadow"></div>
+          </el-skeleton>
+          <div class="content" :style="contentStyle">
+            <textarea ref="mycode" class="codesql public_text" v-model="code"></textarea>
           </div>
         </div>
       </div>
@@ -103,93 +97,96 @@
         </div>
       </div>
     </div>
-
   </div>
 </template>
 <script>
-import {onMounted, onUnmounted, ref} from "vue"
-import "codemirror/mode/javascript/javascript.js"
-import Codemirror from "codemirror-editor-vue3"
-
-export default {
-  components: {Codemirror},
-  setup() {
-    const code = ref('1232323')
-
-    const cmRef = ref()
-    const cmOptions = {
-      lineNumbers: !0,
-      matchBrackets: !0,
-      hintOptions: {
-        completeSingle: !1,
-        completeOnSingleClick: !0
-      },
-      indentUnit: 4,
-      mode: "text/x-mysql",
-      lineWrapping: !0,
-      theme: "eclipse",
-      autofocus: !0,
-      extraKeys: {
-        ctrl: "autocomplete",
-        F7: function () {
-          clearSQL()
-        }, F8: function () {
-          run()
-        }
-      }
-    }
-    const onChange = (val, cm) => {
-      console.log(val)
-      console.log(cm.getValue())
-    }
-
-    const onInput = (val) => {
-      console.log(val)
-    }
-
-    const onReady = (cm) => {
-      console.log(cm.focus())
-    }
-
-    onMounted(() => {
-      cmRef.value?.refresh()
-
-    })
-
-    onUnmounted(() => {
-      cmRef.value?.destroy()
-    })
-
-    return {
-      code,
-      cmRef,
-      cmOptions,
-      onChange,
-      onInput,
-      onReady
-    }
-  }
-}
 </script>
 <script setup>
-import {ref, onMounted, onUnmounted} from "vue"
-import '@/style/easy.css'
-import '@/assets/icons/icon-all.min.css'
-import '@/assets/icons/icon.css'
-
-import "codemirror/mode/sql/sql.js"
-import 'codemirror/addon/hint/show-hint.css'
+import {onMounted, onUnmounted, ref, watch, getCurrentInstance, reactive} from "vue"
+import CodeMirror from 'codemirror/lib/codemirror'
+import 'codemirror/lib/codemirror.css'
+import "codemirror/theme/ambiance.css";
+import 'codemirror/theme/solarized.css'
+import "codemirror/addon/edit/matchbrackets"
+import 'codemirror/addon/edit/closebrackets.js'
+import 'codemirror/mode/sql/sql.js'
 import 'codemirror/addon/hint/show-hint.js'
+import 'codemirror/addon/hint/show-hint.css'
+// import '@/vendor/codemirror/addon/hint/sql-hint.js'
 import 'codemirror/addon/hint/sql-hint.js'
-import Home from './index'
+import "codemirror/theme/cobalt.css";
+import "codemirror/addon/selection/active-line.js";
+import 'codemirror/addon/display/autorefresh';
+import "codemirror/mode/javascript/javascript.js"
 
-const code = ref('')
-const curdatabase = ref("Empty")
+// theme
+import '@/style/easy.css'
+import '@/assets/icons/icon-berlin.css'
+import '@/assets/icons/icon-hamburg.css'
+import '@/assets/icons/icon-standard.css'
 
+import '@/assets/icons/icon.css'
+import Home from "@/components/home/index";
+import {useRouter, onBeforeRouteUpdate} from "vue-router"
+import { Base64 } from 'js-base64';
+
+const currentAccept = ref('{}');
+const route = useRouter();
+const code = ref('2332')
+const currentDatabase = ref("Empty")
+const currentDatabaseData = ref()
+const currentTableData = ref()
+const props = ref();
+const sqlEditor = ref(true);
 const cmRef = ref()
+const contentStyle = ref({'z-index': -1})
+let editor;
+Home.initial(null, null, CodeMirror);
+
+onBeforeRouteUpdate((to) => {
+  let parse = JSON.parse(Base64.decode(to.params.data));
+  currentDatabaseData.value = parse.db;
+  currentDatabase.value = parse.db.label;
+  currentTableData.value = parse.table;
+  sqlEditor.value = !1;
+  contentStyle.value = {'z-index': 1}
+  Home.initial(currentDatabaseData, currentTableData)
+  if(!!currentTableData.value && !!parse.table.name) {
+    editor.setValue("SELECT * FROM " + parse.table.name + "\r\n");
+  }
+})
+const cmOptions = ref({
+  lineNumbers: !0,
+  matchBrackets: !0,
+  hintOptions: {
+    completeSingle: !1,
+    completeOnSingleClick: !0
+  },
+  autoRefresh: true,
+  indentUnit: 4,
+  mode: 'text/x-mysql',
+  lineWrapping: !0,
+  autofocus: !0,
+  extraKeys: {
+    ctrl: "autocomplete",
+    F7: function () {
+      Home.clearSQL()
+    }, F8: function () {
+      Home.run()
+    }
+  }
+})
+
 
 onMounted(() => {
-  Home.initial();
+  cmRef.value?.refresh()
+  if(null == editor) {
+    editor = CodeMirror.fromTextArea(getCurrentInstance().ctx.$refs.mycode, cmOptions.value);
+    editor.on("inputRead", Home.codemirrorAutocompleteOnInputRead);
+    editor.refresh();
+    editor.focus();
+    Home.setEditor(editor);
+  }
 })
 </script>
 
@@ -201,4 +198,31 @@ onMounted(() => {
 .el-tabs__header {
   margin: 0 !important;
 }
+.shadow {
+  position: absolute;
+  height: 300px;
+  z-index: 0;
+  display: none;
+  width: 100%;
+}
+.content{
+  position: absolute;
+  width: 100%;
+}
+.json-editor {
+  height: 100%;
+}
+
+.json-editor>>>.CodeMirror {
+  font-size: 14px;
+  /* overflow-y:auto; */
+  font-weight: normal
+}
+
+.json-editor>>>.CodeMirror-scroll {}
+
+.json-editor>>>.cm-s-rubyblue span.cm-string {
+  color: #F08047;
+}
+*{font-family:"微软雅黑";}
 </style>
