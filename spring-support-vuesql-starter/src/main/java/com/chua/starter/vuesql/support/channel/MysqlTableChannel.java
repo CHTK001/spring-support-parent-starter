@@ -1,10 +1,6 @@
 package com.chua.starter.vuesql.support.channel;
 
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.database.ResultSetUtils;
-import com.chua.common.support.database.factory.DelegateDataSource;
-import com.chua.common.support.extra.el.expression.token.KeyWord;
-import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
 import com.chua.starter.vuesql.enums.DatabaseType;
@@ -14,11 +10,6 @@ import com.chua.starter.vuesql.pojo.Keyword;
 import com.chua.starter.vuesql.pojo.Keyword.ColumnKeyword;
 import com.chua.starter.vuesql.pojo.SqlResult;
 import com.chua.starter.vuesql.utils.JdbcDriver;
-import org.apache.commons.dbutils.QueryRunner;
-import org.springframework.jdbc.core.ColumnMapRowMapper;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.support.rowset.SqlRowSet;
-import org.springframework.jdbc.support.rowset.SqlRowSetMetaData;
 import org.springframework.stereotype.Component;
 
 import java.sql.Connection;
@@ -39,7 +30,7 @@ public class MysqlTableChannel implements TableChannel {
     @Override
     public String createUrl(WebsqlConfig config) {
         return StringUtils.format("jdbc:mysql://{}:{}/{}?{}",
-                config.getConfigIp(), config.getConfigPort(), config.getConfigDatabase(), config.getConfigParam());
+                config.getConfigIp(), config.getConfigPort(), config.getConfigDatabase(), StringUtils.defaultString(config.getConfigParam(), ""));
     }
 
     @Override
@@ -97,10 +88,24 @@ public class MysqlTableChannel implements TableChannel {
         return rs;
     }
 
+
     @Override
-    public SqlResult execute(WebsqlConfig websqlConfig, String sql, Integer pageNum, Integer pageSize) {
+    public SqlResult execute(WebsqlConfig websqlConfig, String sql, Integer pageNum, Integer pageSize, String sortColumn, String sortType) {
         try (Connection connection = JdbcDriver.createConnection(DatabaseType.MYSQL8, websqlConfig)) {
-            return JdbcDriver.execute(connection, sql, pageNum, pageSize);
+            return JdbcDriver.execute(connection,
+                    sortColumn, sortType,
+                    sql,
+                    sql.toLowerCase().contains("limit") ? sql : sql + " limit " + (pageNum - 1) * pageSize + "," + pageSize);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public SqlResult explain(WebsqlConfig websqlConfig, String sql) {
+        try (Connection connection = JdbcDriver.createConnection(DatabaseType.MYSQL8, websqlConfig);
+        ) {
+            return JdbcDriver.execute(connection, null, null, "explain " + sql, null);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }

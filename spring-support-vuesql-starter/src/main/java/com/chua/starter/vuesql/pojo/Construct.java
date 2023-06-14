@@ -1,9 +1,9 @@
 package com.chua.starter.vuesql.pojo;
 
+import com.chua.starter.vuesql.enums.Action;
 import com.chua.starter.vuesql.enums.Type;
 import lombok.Builder;
 import lombok.Data;
-import lombok.experimental.Accessors;
 
 import java.util.List;
 
@@ -22,6 +22,9 @@ public class Construct {
     private String icon;
 
     private Integer pid;
+
+    @Builder.Default
+    private Action action = Action.NONE;
 
     private List<Construct> children;
 }

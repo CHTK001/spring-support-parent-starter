@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div @keyup.119.native="run">
     <div>
       <div class="panel layout-panel layout-panel-north layout-split-north">
         <div data-options="region: 'north',split: true, border: false" style="height: 278px;" title=""
@@ -33,8 +33,8 @@
               <span class="toolbar-item dialog-tool-separator"></span>
 
               <a href="javascript:void(0)" id="explainSQLButton" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
-                 iconcls="icon-hamburg-category" plain="true" onclick="explainSQL()" title="执行计划" group=""><span
-                  class="l-btn-left l-btn-icon-left"><span class="l-btn-text">计划</span><span
+                 iconcls="icon-hamburg-category" plain="true" @click="explainSQL()" title="解释" group=""><span
+                  class="l-btn-left l-btn-icon-left"><span class="l-btn-text">解释</span><span
                   class="l-btn-icon icon-hamburg-category">&nbsp;</span></span></a>
               <span class="toolbar-item dialog-tool-separator"></span>
 
@@ -119,14 +119,14 @@ import '@/assets/icons/icon-berlin.css'
 import '@/assets/icons/icon-hamburg.css'
 import '@/assets/icons/icon-standard.css'
 
-import {getCurrentInstance, ref} from "vue";
+import {getCurrentInstance} from "vue";
 import '@/assets/icons/icon.css'
 import request from "axios";
 import {sformat} from "@/utils/Utils";
 import URL from "@/config/url";
 import {format} from "sql-formatter";
 import ResultSet from "@/components/home/resultset.vue";
-import {ElMessage} from "element-plus";
+
 const  instance = getCurrentInstance();
 
 export default {
@@ -185,12 +185,6 @@ export default {
           F7: function () {
             arguments[0].setValue('');
           },
-          F8: function () {
-            ElMessage({
-              type:'error',
-              message: '暂不支持'
-            })
-          }
         }
       }
     }
@@ -212,6 +206,10 @@ export default {
     },
     onUpdate: (args) => {
       // this.editor.setValue("SELECT * FROM " + args.name + "\r\n");
+    },
+    explainSQL() {
+      let value = this.editor.getSelection() || this.editor.getValue();
+      this.$refs.resultSet.explainSQL(value);
     },
     clearSQL() {
       this.code = '';

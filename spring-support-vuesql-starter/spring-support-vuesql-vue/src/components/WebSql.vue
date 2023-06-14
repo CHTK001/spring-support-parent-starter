@@ -58,16 +58,11 @@
               >
                 <el-table-column prop="name" label="详情" show-overflow-tooltip style="font-size: 21px">
                   <template #default="scope">
-                    <el-icon v-if="scope.row.type =='TABLE'" style="margin-right: 5px; color: orange">
-                      <Tickets/>
-                    </el-icon>
-                    <el-icon v-else-if="scope.row.type =='VIEW'" style="margin-right: 5px; color: green">
-                      <DocumentCopy/>
-                    </el-icon>
-                    <el-icon v-else style="; color: orange">
-                      <FolderOpened/>
-                    </el-icon>
-                    <el-text style="cursor: pointer" v-if="scope.row.type=='TABLE' || scope.row.type=='VIEW'"
+                    <span class="l-btn-icon icon-berlin-calendar" v-if="scope.row.type =='TABLE'"></span>
+                    <span class="l-btn-icon icon-application-view-icons" v-else-if="scope.row.type =='VIEW'"></span>
+                    <span class="l-btn-icon icon-hamburg-database" v-else></span>
+                    <el-text style="cursor: pointer; margin-left: 18px"
+                             v-if="scope.row.type=='TABLE' || scope.row.type=='VIEW'"
                              @click="handleSql(scope.row)">{{ scope.row.name }}
                     </el-text>
                     <el-text v-else>
@@ -127,6 +122,7 @@ import URL from "@/config/url"
 import {sformat} from '@/utils/Utils'
 import {ElMessage} from "element-plus";
 import '@/style/easy.css'
+
 export default {
   data() {
     return {

@@ -1,13 +1,11 @@
 package com.chua.starter.vuesql.support.channel;
 
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
 import com.chua.starter.vuesql.pojo.Construct;
 import com.chua.starter.vuesql.pojo.Keyword;
 import com.chua.starter.vuesql.pojo.SqlResult;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 表
@@ -46,7 +44,24 @@ public interface TableChannel {
      * @param sql          sql
      * @param pageNum      页码
      * @param pageSize     每页数量
+     * @param sortColumn   排序字段
+     * @param sortType     排序方式
      * @return 结果
      */
-    SqlResult execute(WebsqlConfig websqlConfig, String sql, Integer pageNum, Integer pageSize);
+    SqlResult execute(WebsqlConfig websqlConfig,
+                      String sql,
+                      Integer pageNum,
+                      Integer pageSize,
+                      String sortColumn,
+                      String sortType
+    );
+
+    /**
+     * 解释sql
+     *
+     * @param websqlConfig 配置
+     * @param sql          sql
+     * @return 结果
+     */
+    SqlResult explain(WebsqlConfig websqlConfig, String sql);
 }

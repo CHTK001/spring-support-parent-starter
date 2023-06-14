@@ -12,8 +12,12 @@
         :name="item.id"
         :closable="item.close"
     >
-      <result v-if="item.id == '1'" :sql="item.sql" :search="false" ></result>
-      <result v-else :sql="item.sql" :search="true" :config="config"></result>
+      <result v-if="item.type == null" :type="item.type" :watch-data="watchData" :sql="item.sql"
+              :search="false"></result>
+      <result v-else-if="item.type == 'sql'" :type="item.type" :sql="item.sql" :watch-data="watchData" :search="true"
+              :config="config"></result>
+      <result v-else-if="item.type == 'explain'" :type="item.type" :sql="item.sql" :watch-data="watchData"
+              :search="true" :config="config"></result>
     </el-tab-pane>
   </el-tabs>
 </template>
@@ -28,9 +32,10 @@ export default {
     return {
       tabIndex: 1,
       editableTabsValue: '1',
-      editableTabs:[ {
+      watchData: [],
+      editableTabs: [{
         id: '1',
-        label: '结果',
+        label: '消息',
         content: 'Tab 1 content',
         close: false
       }]
@@ -43,12 +48,13 @@ export default {
   mounted() {
   },
   methods: {
-    addTab1: function(sql, config) {
+    addTab1: function (sql, type) {
       const newTabName = `${++this.tabIndex}`
       this.editableTabs.push({
         label: "结果" + newTabName,
         sql: sql,
-        id: this.editableTabs.length + 1 + '',
+        type: type,
+        id: newTabName,
         close: true
       })
       this.editableTabsValue = newTabName
@@ -71,30 +77,34 @@ export default {
       this.editableTabs = tabs.filter((tab) => tab.id !== targetName)
     },
     reset: function() {
-      let collectionOf = document.getElementsByClassName('is-icon-close');
-      if(!!collectionOf && !!collectionOf.length) {
-        for (let el of collectionOf) {
-          el.click();
-        }
-      }
+      this.editableTabs.length = 0;
+      this.editableTabs = [{
+        id: '1',
+        label: '消息',
+        content: 'Tab 1 content',
+        close: false
+      }]
       this.tabIndex = 1;
     },
     run: function () {
       this.reset();
       let index = 1;
-      for(let sql of this.sql.split(";")) {
-        if(!sql) {
+      for (let sql of this.sql.split(";")) {
+        if (!sql) {
           continue
         }
-        this.addTab1(sql, this.config);
+        this.addTab1(sql, "sql");
       }
+    },
+    explainSQL: function (sql) {
+      this.reset();
+      this.addTab1(sql, 'explain');
     }
   }
 }
 </script>
 <style>
 .demo-tabs > .el-tabs__content {
-  padding: 32px;
   color: #6b778c;
   font-size: 32px;
   font-weight: 600;
