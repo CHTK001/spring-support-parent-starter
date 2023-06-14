@@ -63,6 +63,7 @@
         <el-select v-model="form.configType" clearable placeholder="请选择数据源类型">
           <el-option label="MYSQL5" value="MYSQL5"></el-option>
           <el-option label="MYSQL8" value="MYSQL8"></el-option>
+          <el-option label="REDIS" value="REDIS"></el-option>
         </el-select>
       </el-form-item>
       <el-form-item>
@@ -78,7 +79,6 @@
 import request from "axios";
 import URL from "@/config/url"
 import {DeleteFilled, Setting} from "@element-plus/icons-vue";
-import {ref} from "vue";
 import {sformat} from "@/utils/Utils";
 import {ElMessage} from 'element-plus'
 
@@ -96,7 +96,6 @@ export default {
         configName: [{required: true, message: "配置名不能为空", trigger: 'blur'}],
         configIp: [{required: true, message: "配置地址不能为空", trigger: 'blur'}],
         configPort: [{required: true, message: "配置端口不能为空", trigger: 'blur'}],
-        configDatabase: [{required: true, message: "配置数据库不能为空", trigger: 'blur'}],
         configType: [{required: true, message: "数据源类型不能为空", trigger: 'blur'}]
       }
     }
