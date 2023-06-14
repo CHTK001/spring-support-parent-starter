@@ -12,14 +12,18 @@
         :name="item.id"
         :closable="item.close"
     >
+      <result v-if="item.id == '1'" :sql="item.sql" :search="false" ></result>
+      <result v-else :sql="item.sql" :search="true" :config="config"></result>
     </el-tab-pane>
   </el-tabs>
 </template>
 
 <script>
+import Result from "@/components/home/result.vue";
 
 export default {
   name: "resultSet",
+  components: {Result},
   data() {
     return {
       tabIndex: 1,
@@ -33,15 +37,17 @@ export default {
     }
   },
   props: {
-    configId: Object
+    config: Object,
+    sql: String
   },
   mounted() {
   },
   methods: {
-    addTab1: function(targetName) {
+    addTab1: function(sql, config) {
       const newTabName = `${++this.tabIndex}`
       this.editableTabs.push({
-        label: targetName,
+        label: "结果" + newTabName,
+        sql: sql,
         id: this.editableTabs.length + 1 + '',
         close: true
       })
@@ -65,23 +71,22 @@ export default {
       this.editableTabs = tabs.filter((tab) => tab.id !== targetName)
     },
     reset: function() {
-      this.editableTabs.length = 0;
-      this.editableTabs.push( {
-        id: '1',
-        label: '结果',
-        content: 'Tab 1 content',
-        close: false
-      });
-      this.editableTabsValue = '1';
-      this.tabIndex = 0;
-    },
-    run: function (sql) {
-      this.reset();
+      let collectionOf = document.getElementsByClassName('is-icon-close');
+      if(!!collectionOf && !!collectionOf.length) {
+        for (let el of collectionOf) {
+          el.click();
+        }
+      }
       this.tabIndex = 1;
-      this.editableTabsValue = '2';
-      let index = 0;
-      for(let item of sql.split(";")) {
-        this.addTab1("结果" + ++ index);
+    },
+    run: function () {
+      this.reset();
+      let index = 1;
+      for(let sql of this.sql.split(";")) {
+        if(!sql) {
+          continue
+        }
+        this.addTab1(this.sql, this.config);
       }
     }
   }

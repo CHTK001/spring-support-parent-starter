@@ -197,6 +197,10 @@ export default {
     },
     handleSql(item, action) {
       this.currentTable = item;
+      try {
+        this.$refs.home[0].setSql(item);
+      } catch (e) {
+      }
     },
     // 增删tabs
     handleTabsEdit(item, action) {

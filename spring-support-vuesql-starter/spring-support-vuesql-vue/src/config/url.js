@@ -1,6 +1,7 @@
 const HOST = '/api/vuesql';
 const URL = {
     KEYWORD: HOST+ '/table/keyword/{configId}',
+    EXECUTE: HOST+ '/table/execute/{configId}',
     LIST_DATASOURCE: HOST + "/database/list",
     UPDATE_DATABASE: HOST + "/database/save",
     DELETE_DATABASE: HOST + "/database/delete/{configId}",
