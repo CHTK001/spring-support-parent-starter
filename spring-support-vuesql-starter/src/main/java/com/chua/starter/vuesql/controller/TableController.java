@@ -42,7 +42,12 @@ public class TableController {
         if (null == tableChannel) {
             return Result.failed("数据库类型不支持", databaseType);
         }
-        List<Construct> constructs = tableChannel.getDataBaseConstruct(websqlConfig);
+        List<Construct> constructs = null;
+        try {
+            constructs = tableChannel.getDataBaseConstruct(websqlConfig);
+        } catch (Exception e) {
+            return Result.failed("请检查数据源配置");
+        }
         CustomTreeNode<Construct, Integer> treeNode = new CustomTreeNode<>(Construct::getId, Construct::getPid);
         treeNode.add(constructs);
 

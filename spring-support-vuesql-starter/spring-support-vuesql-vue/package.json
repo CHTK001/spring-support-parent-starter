@@ -10,6 +10,7 @@
   "dependencies": {
     "@element-plus/icons-vue": "^2.1.0",
     "axios": "^1.4.0",
+    "codemirror": "^5.0.1",
     "element-plus": "^2.3.6",
     "jquery": "^3.7.0",
     "sql-formatter": "^2.3.4",
