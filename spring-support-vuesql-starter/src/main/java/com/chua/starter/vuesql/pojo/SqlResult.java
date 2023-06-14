@@ -16,4 +16,6 @@ public class SqlResult {
     private Integer total;
 
     private List<Map<String, Object>> data;
+
+    private String rsType = "sql";
 }

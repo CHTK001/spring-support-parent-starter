@@ -1,19 +1,16 @@
 package com.chua.starter.vuesql.utils;
 
-import com.chua.common.support.database.factory.DelegateDataSource;
-import com.chua.common.support.utils.MapUtils;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
 import com.chua.starter.vuesql.enums.DatabaseType;
 import com.chua.starter.vuesql.pojo.SqlResult;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.jdbc.core.ColumnMapRowMapper;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.support.rowset.SqlRowSet;
-import org.springframework.jdbc.support.rowset.SqlRowSetMetaData;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.util.*;
+import java.sql.*;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 数据库驱动
@@ -32,54 +29,88 @@ public class JdbcDriver {
      */
     public static Connection createConnection(DatabaseType databaseType, WebsqlConfig config) {
         String driver = databaseType.getDriver();
-        try
-        {
+        try {
             Class.forName(driver);
             return DriverManager.getConnection(config.getConfigUrl(),
                     config.getConfigUsername(), config.getConfigPassword());
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
             log.error(e.getMessage(), e);
             return null;
         }
     }
 
-    public static SqlResult execute(Connection connection, String sql, Integer pageNum, Integer pageSize) {
+    public static SqlResult execute(Connection connection, String sortColumn, String sortType, String sql, String pageSql) {
         SqlResult page = new SqlResult();
-        DelegateDataSource delegateDataSource = new DelegateDataSource(() -> connection);
-        delegateDataSource.afterPropertiesSet();
-        JdbcTemplate jdbcTemplate = new JdbcTemplate(delegateDataSource);
-        jdbcTemplate.setFetchSize(1000);
-        if(sql.trim().toUpperCase().startsWith("SELECT")) {
-            Optional<Map<String, Object>> first = jdbcTemplate.queryForStream("SELECT COUNT(*) CNT FROM (" + sql + ") T", new ColumnMapRowMapper()).findFirst();
-            if(!first.isPresent()) {
-                return page;
-            }
+        List<Map<String, Object>> rs = new LinkedList<>();
+        List<String> columns = new LinkedList<>();
+        page.setColumns(columns);
+        page.setData(rs);
+        try (Statement statement = connection.createStatement()) {
+            statement.setFetchSize(1000);
+            String upperCase = sql.trim().toUpperCase();
+            if (upperCase.startsWith("SELECT")) {
+                page.setTotal(withCount(statement, sql));
+                if (0 == page.getTotal()) {
+                    return page;
+                }
+                pageSql = analysisSql(sql, pageSql, sortColumn, sortType);
+                doSearch(statement, columns, rs, pageSql);
 
-            List<String> columns = new LinkedList<>();
-            Integer integer = MapUtils.getInteger(first.get(), "CNT");
-            page.setTotal(integer);
-            SqlRowSet sqlRowSet = jdbcTemplate.queryForRowSet(sql);
-            SqlRowSetMetaData metaData = sqlRowSet.getMetaData();
+            } else if (upperCase.startsWith("EXPLAIN")) {
+                doSearch(statement, columns, rs, sql);
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return page;
+    }
+
+    private static String analysisSql(String sql, String pageSql, String sortColumn, String sortType) {
+        if (null != pageSql) {
+            String s = pageSql.toLowerCase();
+            pageSql = s.replace(" limit ", " LIMIT ");
+            if (StringUtils.isNotBlank(sortColumn) && !s.contains(" order")) {
+                String orderBy = " ORDER BY " + sortColumn + " " + sortType;
+                if (pageSql.contains(" LIMIT ")) {
+                    pageSql = pageSql.replace(" LIMIT ", orderBy + " LIMIT ");
+                } else {
+                    pageSql += orderBy;
+                }
+            }
+            return pageSql;
+        }
+        return sql;
+    }
+
+    private static Integer withCount(Statement statement, String sql) {
+        try (ResultSet resultSet = statement.executeQuery("SELECT COUNT(*) CNT FROM (" + sql + ") T")) {
+            if (!resultSet.next()) {
+                return 0;
+            }
+            return resultSet.getInt("CNT");
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void doSearch(Statement statement, List<String> columns, List<Map<String, Object>> rs, String pageSql) {
+        try (ResultSet executeQuery = statement.executeQuery(pageSql)) {
+            ResultSetMetaData metaData = executeQuery.getMetaData();
             int columnCount = metaData.getColumnCount();
             for (int i = 0; i < columnCount; i++) {
                 columns.add(metaData.getColumnLabel(i + 1));
             }
 
-            page.setColumns(columns);
-
-            List<Map<String, Object>> rs = new LinkedList<>();
-            while (sqlRowSet.next()) {
+            while (executeQuery.next()) {
                 Map<String, Object> item = new LinkedHashMap<>();
                 for (int i = 0; i < columnCount; i++) {
-                    item.put(columns.get(i ), sqlRowSet.getObject(i + 1));
+                    item.put(columns.get(i), executeQuery.getObject(i + 1));
                 }
 
                 rs.add(item);
             }
-            page.setData(rs);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
-        return page;
     }
 }
