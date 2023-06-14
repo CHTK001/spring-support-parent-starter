@@ -1,3 +1,6 @@
+.el-tabs__header{
+    margin: 0px !important;
+}
 .formTable {
     margin-top: 5px;
     margin-left: 5px;

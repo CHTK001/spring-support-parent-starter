@@ -62,8 +62,9 @@ public class JdbcDriver {
             page.setTotal(integer);
             SqlRowSet sqlRowSet = jdbcTemplate.queryForRowSet(sql);
             SqlRowSetMetaData metaData = sqlRowSet.getMetaData();
-            for (String columnName : metaData.getColumnNames()) {
-                columns.add(columnName);
+            int columnCount = metaData.getColumnCount();
+            for (int i = 0; i < columnCount; i++) {
+                columns.add(metaData.getColumnLabel(i + 1));
             }
 
             page.setColumns(columns);
@@ -71,8 +72,8 @@ public class JdbcDriver {
             List<Map<String, Object>> rs = new LinkedList<>();
             while (sqlRowSet.next()) {
                 Map<String, Object> item = new LinkedHashMap<>();
-                for (String column : columns) {
-                    item.put(column, sqlRowSet.getObject(column));
+                for (int i = 0; i < columnCount; i++) {
+                    item.put(columns.get(i ), sqlRowSet.getObject(i + 1));
                 }
 
                 rs.add(item);
