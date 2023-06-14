@@ -197,7 +197,8 @@ export default {
           label: item.name,
           type: item.type,
           path: item.path,
-          close: !0
+          close: !0,
+          action: item.action
         }, 'add')
         return;
       }
@@ -221,7 +222,8 @@ export default {
           label: item.label,
           type: item.type,
           path: item.path,
-          close: !0
+          close: !0,
+          action: item.action
         })
       }
       this.activeRoute = item.id + ""
