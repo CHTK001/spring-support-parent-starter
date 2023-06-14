@@ -66,7 +66,15 @@
           </div>
 
           <div class="content">
-            <textarea ref="mycode" class="codesql public_text" v-model="code"></textarea>
+            <Codemirror
+                v-model:value="code"
+                :options="cmOptions"
+                border
+                height="236"
+                ref="cmRef"
+                @F8="run"
+                @inputRead="codemirrorAutocompleteOnInputRead"
+            ></Codemirror>
           </div>
         </div>
       </div>
@@ -80,7 +88,7 @@
         <div id="searchHistoryPanel"
              title="" class="panel-body panel-body-noborder layout-body panel-noscroll"
         >
-          <result-set :config-id="currentTableData" ref="resultSet">
+          <result-set :config="currentDatabaseData" :sql="code" ref="resultSet">
 
           </result-set>
         </div>
@@ -89,9 +97,10 @@
   </div>
 </template>
 <script>
-import CodeMirror from 'codemirror/lib/codemirror'
-import 'codemirror/lib/codemirror.css'
+import "codemirror/mode/javascript/javascript.js"
+import Codemirror from "codemirror-editor-vue3"
 import "codemirror/theme/ambiance.css";
+import "codemirror/theme/eclipse.css";
 import 'codemirror/theme/solarized.css'
 import "codemirror/addon/edit/matchbrackets"
 import 'codemirror/addon/edit/closebrackets.js'
@@ -104,23 +113,25 @@ import 'codemirror/addon/hint/sql-hint.js'
 import "codemirror/theme/cobalt.css";
 import "codemirror/addon/selection/active-line.js";
 import 'codemirror/addon/display/autorefresh';
-import "codemirror/mode/javascript/javascript.js"
 // theme
 import '@/style/easy.css'
 import '@/assets/icons/icon-berlin.css'
 import '@/assets/icons/icon-hamburg.css'
 import '@/assets/icons/icon-standard.css'
 
+import {getCurrentInstance, ref} from "vue";
 import '@/assets/icons/icon.css'
 import request from "axios";
 import {sformat} from "@/utils/Utils";
 import URL from "@/config/url";
 import {format} from "sql-formatter";
 import ResultSet from "@/components/home/resultset.vue";
+import {ElMessage} from "element-plus";
+const  instance = getCurrentInstance();
 
 export default {
   name: "home",
-  components: {ResultSet},
+  components: {ResultSet, Codemirror},
   props: {
     currentDatabaseData: undefined,
     currentTableData: undefined,
@@ -138,6 +149,9 @@ export default {
     },
     table: function () {
       return this.currentTableData;
+    },
+    codemirror() {
+      return this.$refs.myCm.codemirror
     }
   },
   watch: {
@@ -162,7 +176,7 @@ export default {
           completeOnSingleClick: !0
         },
         indentUnit: 4,
-        mode: "text/x-mysql",
+        mode: "text/x-sql",
         lineWrapping: !0,
         theme: "eclipse",
         autofocus: !0,
@@ -170,8 +184,12 @@ export default {
           ctrl: "autocomplete",
           F7: function () {
             arguments[0].setValue('');
-          }, F8: function () {
-            this.run()
+          },
+          F8: function () {
+            ElMessage({
+              type:'error',
+              message: '暂不支持'
+            })
           }
         }
       }
@@ -179,14 +197,7 @@ export default {
   },
   mounted() {
     this.cmRef?.refresh()
-    this.editor = CodeMirror.fromTextArea(this.$refs.mycode, this.cmOptions);
-    this.editor.on("inputRead", this.codemirrorAutocompleteOnInputRead);
-    // 可选,挂载一下监听事项
-    // this.editor.on('change', (cm) => {
-    //   this.code = cm.getValue(); // 这里要用多一个载体去获取值,不然会重复赋值卡顿
-    // });
-    // this.editor.refresh();
-    // this.editor.focus();
+    this.editor = this.$refs.cmRef.cminstance;
   },
   methods: {
     addConfig() {
@@ -204,9 +215,9 @@ export default {
     },
     clearSQL() {
       this.code = '';
-      this.editor.setValue('');
-      this.editor.clearHistory();
-
+    },
+    setSql(n) {
+      this.code = "SELECT * FROM " + n.name;
     },
     run() {
       let value = this.editor.getSelection() || this.editor.getValue();
@@ -218,8 +229,7 @@ export default {
         this.editor.replaceSelection(format(selection));
         return false;
       }
-      let value = this.editor.getValue();
-      this.editor.setValue(format(value));
+      this.editor.setValue(format(this.code));
     },
     codemirrorAutocompleteOnInputRead: function (a) {
       if(this.currentDatabaseData) {
@@ -242,5 +252,8 @@ export default {
 }
 </script>
 <style>
+.content {
+  overflow-x: hidden;
+}
 *{font-family:"微软雅黑";}
 </style>
