@@ -18,8 +18,11 @@ public enum DatabaseType {
     /**
      * mysql
      */
-    MYSQL8("com.mysql.jdbc.Driver");
-
+    MYSQL8("com.mysql.jdbc.Driver"),
+    /**
+     * redis
+     */
+    REDIS("");
     private final String driver;
 
 }
