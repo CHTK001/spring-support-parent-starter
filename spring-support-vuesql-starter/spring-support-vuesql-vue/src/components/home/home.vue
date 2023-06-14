@@ -191,8 +191,14 @@ export default {
   },
   methods: {
     addConfig() {
-      this.$emit('event', 1)
-      debugger
+      this.$emit('event',  {
+        id: '1',
+        label: '数据库',
+        path: "/database",
+        type: 'database',
+        content: 'Tab 1 content',
+        close: false
+      })
     },
     onUpdate: (args) => {
       // this.editor.setValue("SELECT * FROM " + args.name + "\r\n");
