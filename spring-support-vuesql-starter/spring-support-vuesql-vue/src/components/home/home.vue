@@ -70,7 +70,7 @@
                 v-model:value="code"
                 :options="cmOptions"
                 border
-                height="236"
+                height="230"
                 ref="cmRef"
                 @F8="run"
                 @inputRead="codemirrorAutocompleteOnInputRead"
@@ -251,9 +251,10 @@ export default {
   }
 }
 </script>
-<style>
+<style scoped>
 .content {
   overflow-x: hidden;
 }
+
 *{font-family:"微软雅黑";}
 </style>

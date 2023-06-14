@@ -126,7 +126,7 @@ import request from 'axios'
 import URL from "@/config/url"
 import {sformat} from '@/utils/Utils'
 import {ElMessage} from "element-plus";
-
+import '@/style/easy.css'
 export default {
   data() {
     return {
@@ -363,6 +363,8 @@ el-container {
   height: 28px !important;
   font-size: 10px;
   line-height: 28px;
+  margin: 0!important;
+
 }
 .custom-tabs-label > span{
   margin-left: 6px;
