@@ -1,8 +1,8 @@
 <template>
   <el-text v-if="!search">
-    <el-text v-for="item in watchData">
-      {{ item }}
-    </el-text>
+    <ul class="infinite-list" style="overflow: auto">
+      <li v-for="(item, i) in watchData" :key="i" class="infinite-list-item">{{ item }}</li>
+    </ul>
   </el-text>
   <div v-else>
     <!--@sort-change="sortChange"-->
@@ -103,6 +103,7 @@ export default {
               label: item
             })
           })
+          this.watchData.push(this.sql + " " + data.msg);
           for (let item of rs.data) {
             this.tableData.push(item);
           }
