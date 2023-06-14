@@ -6,7 +6,7 @@
   </el-text>
   <div v-else>
     <el-table :data="tableData" style="width: 100%" border>
-      <el-table-column v-for="item in tableColumn" :prop="item.name" :label="item.label" />
+      <el-table-column v-for="item in tableColumn" show-overflow-tooltip :prop="item.name" :label="item.label" />
     </el-table>
   </div>
 </template>
