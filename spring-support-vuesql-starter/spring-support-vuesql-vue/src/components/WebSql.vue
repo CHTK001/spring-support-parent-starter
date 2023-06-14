@@ -125,6 +125,7 @@
 import request from 'axios'
 import URL from "@/config/url"
 import {sformat} from '@/utils/Utils'
+import {ElMessage} from "element-plus";
 
 export default {
   data() {
@@ -179,12 +180,23 @@ export default {
           .then(({data}) => {
             if (data.code == '00000') {
               this.treeData.push(data.data);
+            } else {
+              ElMessage({
+                type: 'error',
+                message: data.msg
+              });
+              this.treeData.length = 0;
             }
-          }).finally(() => this.tableLoading = false)
+          }).catch(xhr => {
+            ElMessage({
+              type: 'error',
+              message: '请求失败'
+            });
+            this.treeData.length = 0;
+      }).finally(() => this.tableLoading = false)
     },
     handleSql(item, action) {
       this.currentTable = item;
-      this.$refs.home[0].onUpdate(item);
     },
     // 增删tabs
     handleTabsEdit(item, action) {

@@ -145,7 +145,7 @@ export default {
       this.currentDatabase = n.label;
     },
     table: function (n, o) {
-      this.editor.setValue("SELECT * FROM " + n.name + "\r\n");
+      this.code = "SELECT * FROM " + n.name;
     }
   },
   data() {
@@ -153,7 +153,6 @@ export default {
       code: '', //代码
       currentDatabase: '',//当前数据库
       cmRef: undefined,
-      contentStyle: {'z-index': -1},
       editor: undefined,
       cmOptions: {
         lineNumbers: !0,
@@ -162,10 +161,10 @@ export default {
           completeSingle: !1,
           completeOnSingleClick: !0
         },
-        autoRefresh: true,
         indentUnit: 4,
-        mode: 'text/x-mysql',
+        mode: "text/x-mysql",
         lineWrapping: !0,
+        theme: "eclipse",
         autofocus: !0,
         extraKeys: {
           ctrl: "autocomplete",
@@ -183,9 +182,9 @@ export default {
     this.editor = CodeMirror.fromTextArea(this.$refs.mycode, this.cmOptions);
     this.editor.on("inputRead", this.codemirrorAutocompleteOnInputRead);
     // 可选,挂载一下监听事项
-    this.editor.on('change', (cm) => {
-      this.code = cm.getValue(); // 这里要用多一个载体去获取值,不然会重复赋值卡顿
-    });
+    // this.editor.on('change', (cm) => {
+    //   this.code = cm.getValue(); // 这里要用多一个载体去获取值,不然会重复赋值卡顿
+    // });
     // this.editor.refresh();
     // this.editor.focus();
   },
@@ -204,7 +203,10 @@ export default {
       // this.editor.setValue("SELECT * FROM " + args.name + "\r\n");
     },
     clearSQL() {
+      this.code = '';
       this.editor.setValue('');
+      this.editor.clearHistory();
+
     },
     run() {
       let value = this.editor.getSelection() || this.editor.getValue();
@@ -220,11 +222,13 @@ export default {
       this.editor.setValue(format(value));
     },
     codemirrorAutocompleteOnInputRead: function (a) {
-      if (!a.options.hintOptions.tables) {
-        request.get(sformat(URL.KEYWORD, this.currentDatabaseData))
-            .then(({data}) => {
-              a.options.hintOptions.tables = data.data;
-            })
+      if(this.currentDatabaseData) {
+        if (!a.options.hintOptions.tables) {
+          request.get(sformat(URL.KEYWORD, this.currentDatabaseData))
+              .then(({data}) => {
+                a.options.hintOptions.tables = data.data;
+              })
+        }
       }
       if (!a.state.completionActive) {
         var b = a.getCursor();
@@ -237,43 +241,6 @@ export default {
   }
 }
 </script>
-<script setup>
-const run = () => this.run();
-</script>
 <style>
-.CodeMirror-scroll {
-  min-height: 300px;
-}
-
-.el-tabs__header {
-  margin: 0 !important;
-}
-
-.shadow {
-  position: absolute;
-  height: 300px;
-  z-index: 0;
-  display: none;
-  width: 100%;
-}
-.content{
-  position: absolute;
-  width: 100%;
-}
-.json-editor {
-  height: 100%;
-}
-
-.json-editor>>>.CodeMirror {
-  font-size: 14px;
-  /* overflow-y:auto; */
-  font-weight: normal
-}
-
-.json-editor>>>.CodeMirror-scroll {}
-
-.json-editor>>>.cm-s-rubyblue span.cm-string {
-  color: #F08047;
-}
 *{font-family:"微软雅黑";}
 </style>
