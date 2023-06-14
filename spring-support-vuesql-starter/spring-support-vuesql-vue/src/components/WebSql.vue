@@ -60,12 +60,12 @@
                   <template #default="scope">
                     <span class="l-btn-icon icon-berlin-calendar" v-if="scope.row.type =='TABLE'"></span>
                     <span class="l-btn-icon icon-application-view-icons" v-else-if="scope.row.type =='VIEW'"></span>
-                    <span class="l-btn-icon icon-hamburg-database" v-else></span>
+                    <span class="l-btn-icon icon-hamburg-database " v-else></span>
                     <el-text style="cursor: pointer; margin-left: 18px"
                              v-if="scope.row.type=='TABLE' || scope.row.type=='VIEW'"
                              @click="handleSql(scope.row)">{{ scope.row.name }}
                     </el-text>
-                    <el-text v-else>
+                    <el-text class="margin-l-5" v-else>
                       {{ scope.row.name }}
                     </el-text>
                   </template>
@@ -370,7 +370,12 @@ el-container {
   --el-tabs-header-height: 28px;
   --el-font-size-base: 12px;
 }
+
 .margin-5 {
   margin-right: 5px;
+}
+
+.margin-l-5 {
+  margin-left: 20px;
 }
 </style>
