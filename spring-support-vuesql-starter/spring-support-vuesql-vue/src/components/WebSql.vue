@@ -85,24 +85,31 @@
                     :name="item.id"
                     :closable="item.close"
                 >
-                  <template #label  v-if="item.type == 'home'" >
+                  <template #label v-if="item.type == 'home'">
                     <span class="custom-tabs-label">
-                      <span><span class="margin-5 l-btn-icon panel-icon icon-berlin-home"></span>{{item.label}}</span>
+                      <span><span class="margin-5 l-btn-icon panel-icon icon-berlin-home"></span>{{ item.label }}</span>
                     </span>
                   </template>
-                  <template #label  v-if="item.type == 'database'" >
+                  <template #label v-if="item.type == 'database' || item.type == 'DATABASE'">
                     <span class="custom-tabs-label">
-                      <span> <span class="margin-5 l-btn-icon panel-icon icon-hamburg-database"></span>{{item.label}}</span>
+                      <span> <span class="margin-5 l-btn-icon panel-icon icon-hamburg-database"></span>{{ item.label }}</span>
                     </span>
                   </template>
-                    <home v-if="item.type == 'home'"
-                          ref="home"
-                          :current-database-data="currentDatasource"
-                          :loading="loading"
-                          :current-table-data="currentTable"
-                          @event="onEvent"
-                    ></home>
-                    <database v-if="item.type == 'database'"></database>
+
+                  <template #label v-if="item.type == 'table' || item.type == 'TABLE'">
+                    <span class="custom-tabs-label">
+                      <span> <span
+                          class="margin-5 l-btn-icon panel-icon icon-berlin-calendar"></span>{{ item.label }}</span>
+                    </span>
+                  </template>
+                  <home v-if="item.type == 'home'"
+                        ref="home"
+                        :current-database-data="currentDatasource"
+                        :loading="loading"
+                        :current-table-data="currentTable"
+                        @event="onEvent"
+                  ></home>
+                  <database v-if="item.type == 'database'"></database>
                 </el-tab-pane>
               </el-tabs>
             </div>
