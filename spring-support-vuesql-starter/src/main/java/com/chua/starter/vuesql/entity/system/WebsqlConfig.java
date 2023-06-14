@@ -18,7 +18,7 @@ import java.util.Date;
  */
 @Table(comment = "websql_config")
 @Data
-@JsonIgnoreProperties("configPassword")
+@JsonIgnoreProperties(value = "configPassword", allowSetters = true)
 @TableName(value = "websql_config")
 public class WebsqlConfig {
     /**

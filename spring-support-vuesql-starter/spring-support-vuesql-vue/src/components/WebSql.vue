@@ -93,16 +93,24 @@
                     :name="item.id"
                     :closable="item.close"
                 >
-                  <home v-if="item.type == 'home'"
-                        ref="home"
-                        :current-database-data="currentDatasource"
-                        :loading="loading"
-                        :current-table-data="currentTable"
-                        @event="onEvent"
-                  >
-
-
-                  </home>
+                  <template #label  v-if="item.type == 'home'" >
+                    <span class="custom-tabs-label">
+                      <span><span class="margin-5 l-btn-icon panel-icon icon-berlin-home"></span>{{item.label}}</span>
+                    </span>
+                  </template>
+                  <template #label  v-if="item.type == 'database'" >
+                    <span class="custom-tabs-label">
+                      <span> <span class="margin-5 l-btn-icon panel-icon icon-hamburg-database"></span>{{item.label}}</span>
+                    </span>
+                  </template>
+                    <home v-if="item.type == 'home'"
+                          ref="home"
+                          :current-database-data="currentDatasource"
+                          :loading="loading"
+                          :current-table-data="currentTable"
+                          @event="onEvent"
+                    ></home>
+                    <database v-if="item.type == 'database'"></database>
                 </el-tab-pane>
               </el-tabs>
             </div>
@@ -145,7 +153,7 @@ export default {
   },
   mounted() {
     this.loading = !0;
-    request.get(URL.DATASOURCE)
+    request.get(URL.LIST_DATASOURCE)
         .then(({data}) => {
           this.options.length = 0;
           if (data.code == '00000') {
@@ -160,8 +168,8 @@ export default {
         }).finally(() => this.loading = false)
   },
   methods: {
-    onEvent: function () {
-      debugger
+    onEvent: function (item) {
+      this.handleTabsEdit(item, "add");
     },
     changeDatabase: function () {
       const item = this.datasource;
@@ -189,9 +197,10 @@ export default {
         this.tabs.push({
           id: item.id + "",
           name: item.id,
-          label: item.name,
+          label: item.label,
+          type: item.type,
           path: item.path,
-          close: true
+          close: !0
         })
       }
       this.activeRoute = item.id + ""
@@ -234,6 +243,7 @@ import {
 
 import {ref} from "vue";
 import Home from "@/components/home/home.vue";
+import Database from "@/components/database/database.vue";
 
 
 </script>
@@ -298,6 +308,19 @@ el-container {
   background-color: #ffffff;
 }
 
+.tabStyle{
+  display: block;
+  height: 65px;
+}
+.el-icon-basic-home{
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  position: relative;
+  top: 4px;
+  background: url('@/assets/icons/icon-standard/16x16/application-home.png') no-repeat top;
+}
+
 .panel-header, .panel-body {
   border-color: #ddd;
 }
@@ -325,9 +348,15 @@ el-container {
   font-size: 10px;
   line-height: 28px;
 }
+.custom-tabs-label > span{
+  margin-left: 6px;
+}
 
 .el-tabs {
   --el-tabs-header-height: 28px;
   --el-font-size-base: 12px;
+}
+.margin-5 {
+  margin-right: 5px;
 }
 </style>

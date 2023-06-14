@@ -40,4 +40,13 @@ public class DatabaseController {
     public Result<Boolean> saveDatabase(@RequestBody WebsqlConfig websqlConfig) {
         return Result.success(websqlConfigService.saveOrUpdate(websqlConfig));
     }
+
+    /**
+     * 删除数据库
+     * @return 数据库
+     */
+    @DeleteMapping("/delete/{configId}")
+    public Result<Boolean> saveDatabase(@PathVariable String configId) {
+        return Result.success(websqlConfigService.removeById(configId));
+    }
 }
