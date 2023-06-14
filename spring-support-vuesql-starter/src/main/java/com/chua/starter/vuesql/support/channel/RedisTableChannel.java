@@ -35,7 +35,7 @@ public class RedisTableChannel implements TableChannel {
         List<Construct> rs = new LinkedList<>();
         rs.add(Construct.builder().type(Type.DATABASE).id(1).pid(0).name(config.getConfigDatabase()).build());
         rs.addAll(IntStream.range(2, 18).mapToObj(it -> {
-            return Construct.builder().id(it).pid(1).type(Type.TABLE).action(Action.OPEN).name(it + "").build();
+            return Construct.builder().id(it).pid(1).type(Type.DATABASE).action(Action.OPEN).name((it - 2) + "").build();
         }).collect(Collectors.toList()));
         return rs;
     }
