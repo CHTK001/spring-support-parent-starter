@@ -61,12 +61,9 @@
                     <span class="l-btn-icon icon-berlin-calendar" v-if="scope.row.type =='TABLE'"></span>
                     <span class="l-btn-icon icon-application-view-icons" v-else-if="scope.row.type =='VIEW'"></span>
                     <span class="l-btn-icon icon-hamburg-database " v-else></span>
-                    <el-text style="cursor: pointer; margin-left: 18px"
-                             v-if="scope.row.type=='TABLE' || scope.row.type=='VIEW'"
-                             @click="handleSql(scope.row)">{{ scope.row.name }}
-                    </el-text>
-                    <el-text class="margin-l-5" v-else>
-                      {{ scope.row.name }}
+                    <el-text style="cursor: pointer; margin-left: 18px" @click="handleSql(scope.row)">{{
+                        scope.row.name
+                      }}
                     </el-text>
                   </template>
                 </el-table-column>
@@ -171,6 +168,7 @@ export default {
     changeDatabase: function () {
       const item = this.datasource;
       this.tableLoading = true;
+      this.treeData.length = 0;
       this.currentDatasource = this.options.filter(it => it.value == item)[0];
       request.get(sformat(URL.GET_TABLE_INFO, this.currentDatasource))
           .then(({data}) => {
@@ -192,6 +190,17 @@ export default {
       }).finally(() => this.tableLoading = false)
     },
     handleSql(item, action) {
+      if (item.action == 'OPEN') {
+        this.handleTabsEdit({
+          id: item.id + "",
+          name: item.id,
+          label: item.name,
+          type: item.type,
+          path: item.path,
+          close: !0
+        }, 'add')
+        return;
+      }
       this.currentTable = item;
       try {
         this.$refs.home[0].setSql(item);
