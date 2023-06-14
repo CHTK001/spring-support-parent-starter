@@ -86,7 +86,7 @@ export default {
         if(!sql) {
           continue
         }
-        this.addTab1(this.sql, this.config);
+        this.addTab1(sql, this.config);
       }
     }
   }
