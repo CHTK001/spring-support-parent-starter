@@ -38,6 +38,12 @@
                   class="l-btn-icon icon-hamburg-category">&nbsp;</span></span></a>
               <span class="toolbar-item dialog-tool-separator"></span>
 
+              <a href="javascript:void(0)" id="explainSQLButton" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
+                 iconcls="icon-hamburg-category" plain="true" @click="commitFn()" title="解析Mybatis" group=""><span
+                  class="l-btn-left l-btn-icon-left"><span class="l-btn-text">解析Mybatis</span><span
+                  class="l-btn-icon icon-hamburg-category">&nbsp;</span></span></a>
+              <span class="toolbar-item dialog-tool-separator"></span>
+
               <a href="javascript:void(0)" id="newQueryButton" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
                  iconcls="icon-standard-add" plain="true" onclick="newQuery();" title="新建查询" group=""><span
                   class="l-btn-left l-btn-icon-left"><span class="l-btn-text">新建</span><span
@@ -94,7 +100,31 @@
         </div>
       </div>
     </div>
+
+
+    <el-dialog
+        v-model="dialogVisible"
+        title="解析Mybatis"
+        width="30%"
+        draggable
+    >
+      <div>
+        <textarea v-model="inMybatisSql"></textarea>
+      </div>
+      <div>
+        <textarea v-model="outMybatisSql"></textarea>
+      </div>
+      <template #footer>
+      <span class="dialog-footer">
+        <el-button @click="dialogVisible = false">关闭</el-button>
+        <el-button type="primary" @click="parse">
+          解析
+        </el-button>
+      </span>
+      </template>
+    </el-dialog>
   </div>
+
 </template>
 <script>
 import "codemirror/mode/javascript/javascript.js"
@@ -168,6 +198,9 @@ export default {
   },
   data() {
     return {
+      inMybatisSql: '',
+      outMybatisSql: '',
+      dialogVisible: false,
       code: '', //代码
       currentDatabase: '',//当前数据库
       cmRef: undefined,
@@ -217,11 +250,92 @@ export default {
     clearSQL() {
       this.code = '';
     },
+    commitFn: function () {
+      this.dialogVisible = !this.dialogVisible;
+    },
     setSql(n) {
-      if(n.action == 'OPEN') {
+      if (n.action == 'OPEN') {
         return !0;
       }
       this.code = "SELECT * FROM " + n.name;
+    },
+    parse() {
+      let inValue = this.inMybatisSql;
+      let split = inValue.split('\n')
+      let sb = ''
+      let list = []
+      if (split && split.length > 0) {
+        for (let i = 0; i < split.length; i++) {
+          let line = split[i]
+          if (!line || line.trim().length === 0) continue
+          if (line.indexOf(STR_PREPARING) > 0) {
+            let subLine = line.substring(line.indexOf(STR_PREPARING) + 15)
+            sb = subLine
+            console.log('1:', sb)
+            // 为这一行选择配对的行
+            let rightLine = this.selectRightLine(line, split, i)
+            if (rightLine.indexOf(STR_PARAMETERS) > 0) {
+              let rightStr = rightLine.substring(rightLine.indexOf(STR_PARAMETERS) + 15)
+              if (sb.length === 0) continue
+              console.log('2', rightStr)
+              let params = rightStr.split(',')
+              console.log(params)
+              for (let p of params) {
+                p = p.trim()
+                if (!p || p === '') continue
+                let value = p.substring(0, p.indexOf('('))
+                value = value || (p.includes('null') ? 'NULL' : '')
+                let type = p.substring(p.indexOf('(') + 1, p.indexOf(')'))
+                console.log(value, type)
+                if ((type.toLowerCase()) === 'string' || (type.toLowerCase()) === 'timestamp') {
+                  sb = sb.replace(/\?/, '\'' + value + '\'')
+                } else {
+                  sb = sb.replace(/\?/, value)
+                }
+              }
+              let res = sqlFormatter.format(sb.toString())
+              list.push(res)
+            }
+            sb = ''
+          }
+        }
+      }
+      this.outMybatisSql = list;
+      return list
+    },
+    selectRightLine(line, split, start) {
+      let map = new Map()
+      let frontArr = line.substring(0, line.indexOf(STR_PREPARING)).split('')
+      for (let i = start; i < split.length; i++) {
+        let rightLine = split[i]
+        if (rightLine.includes(STR_PARAMETERS)) {
+          let rigthArr = rightLine.substring(0, rightLine.indexOf(STR_PARAMETERS)).split('')
+          if (rigthArr.length !== frontArr.length) continue
+          let count = 0
+          for (let j = 0; j < frontArr.length; j++) {
+            if (frontArr[j] === rigthArr[j]) count++
+          }
+          // console.log(start, "...", rightLine)
+          map.set(i, count)
+        }
+      }
+      console.log(map)
+      let lineNo = this.getMaxLineNo(map)
+      console.log(start, '...', lineNo)
+      return split[lineNo]
+    },
+    getMaxLineNo(map) {
+      // eslint-disable-next-line one-var
+      let max = 0, lineNo = 0
+      for (let [key, value] of map.entries()) {
+        if (value > max) {
+          max = value
+          lineNo = key
+        } else if (value === max && lineNo > key) {
+          lineNo = key // 选行号小的
+        }
+      }
+      return lineNo
     },
     run() {
       let value = this.editor.getSelection() || this.editor.getValue();
