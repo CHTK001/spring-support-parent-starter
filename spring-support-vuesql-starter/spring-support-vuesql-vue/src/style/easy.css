@@ -1,6 +1,12 @@
 .el-tabs__header{
     margin: 0px !important;
 }
+.el-table__header tr,
+.el-table__header th {
+      padding: 0;
+      height: 30px;
+      font-size: 12px;
+  }
 .formTable {
     margin-top: 5px;
     margin-left: 5px;

@@ -12,7 +12,8 @@
           small="small"
           :total="total"
           ref="pageGroup"
-          layout="->,prev, next, ->,"
+          :page-sizes="[10, 20, 50, 100]"
+          layout="->,prev, next, sizes, ->,"
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
       />
@@ -49,33 +50,38 @@ export default {
     }
   },
   mounted() {
-    this.loading = !0;
-    request.get(sformat(URL.OPEN_TABLE, this.form, this.config, this.table), {
-      params: this.form
-    }).then(({data}) => {
-      if (data.code == '00000') {
-        let rs = data.data;
-        this.total = rs.total;
-        rs.columns.forEach((item) => {
-          this.tableColumn.push({
-            name: item,
-            label: item
-          })
-        })
-        this.watchData.push(this.sql + " " + data.msg);
-        for (let item of rs.data) {
-          this.tableData.push(item);
-        }
-        return false;
-      } else {
-        this.watchData.push(data.msg);
-      }
-    }).catch(({data}) => {
-      this.watchData.push(data.msg);
-
-    }).finally(() => this.loading = !1)
+    this.doSearch();
   },
   methods: {
+    doSearch: function () {
+      this.loading = !0;
+      this.tableData.length = 0;
+      this.tableColumn .length = 0;
+      request.get(sformat(URL.OPEN_TABLE, this.form, this.config, this.table), {
+        params: this.form
+      }).then(({data}) => {
+        if (data.code == '00000') {
+          let rs = data.data;
+          this.total = rs.total;
+          rs.columns.forEach((item) => {
+            this.tableColumn.push({
+              name: item,
+              label: item
+            })
+          })
+          this.watchData.push("打开" + this.table.name + " " + data.msg);
+          for (let item of rs.data) {
+            this.tableData.push(item);
+          }
+          return false;
+        } else {
+          this.watchData.push("打开" + this.table.name + " " + data.msg);
+        }
+      }).catch(({data}) => {
+        this.watchData.push("打开" + this.table.name + " " + data.msg);
+
+      }).finally(() => this.loading = !1)
+    },
     handleSizeChange: function (e) {
       this.pageSize = e;
       this.doSearch();

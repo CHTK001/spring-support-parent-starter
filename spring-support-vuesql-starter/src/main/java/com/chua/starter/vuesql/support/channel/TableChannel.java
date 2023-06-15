@@ -1,10 +1,12 @@
 package com.chua.starter.vuesql.support.channel;
 
+import com.chua.common.support.utils.FileUtils;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
 import com.chua.starter.vuesql.pojo.Construct;
 import com.chua.starter.vuesql.pojo.Keyword;
 import com.chua.starter.vuesql.pojo.OpenResult;
 import com.chua.starter.vuesql.pojo.SqlResult;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -14,6 +16,19 @@ import java.util.List;
  * @author CH
  */
 public interface TableChannel {
+    static final String PATH = System.getProperty("vuesql.home", "./vuesql");
+
+    /**
+     * 生成目录
+     * @param subPath 子目录
+     * @return 结果
+     */
+    static String create(String subPath) {
+        FileUtils.mkdir(PATH);
+        String s = PATH + subPath;
+        FileUtils.mkdir(s);
+        return s;
+    }
     /**
      * 创建url
      *
@@ -76,4 +91,15 @@ public interface TableChannel {
      * @return 结果
      */
     OpenResult openTable(WebsqlConfig websqlConfig, String tableName, Integer pageNum, Integer pageSize);
+
+    /**
+     * 检测参数
+     *
+     * @param websqlConfig 配置
+     * @param file         文件
+     * @return 结果
+     */
+    default String check(WebsqlConfig websqlConfig, MultipartFile file) {
+        return null;
+    }
 }

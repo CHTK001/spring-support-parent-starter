@@ -1,26 +1,33 @@
 <template>
-  <el-text v-if="!search">
-    <ul class="infinite-list" style="overflow: auto">
-      <li v-for="(item, i) in watchData" :key="i" class="infinite-list-item">{{ item }}</li>
-    </ul>
-  </el-text>
-  <div v-else>
-    <!--@sort-change="sortChange"-->
-    <el-table show-overflow-tooltip :data="tableData" style="width: 100%" border stripe>
-      <el-table-column v-for="item in tableColumn" show-overflow-tooltip :prop="item.name"
-                       :label="item.label"/>
-    </el-table>
+  <div style="min-height: 300px">
+    <div v-if="!search" style="position: relative; ">
+      <ul class="infinite-list" style="overflow: auto; font-size: 12px">
+        <li v-for="(item, i) in watchData" :key="i" class="infinite-list-item">{{ item }}</li>
+      </ul>
+      <el-button style="position: absolute; top: 5px; right: 18px;" @click="clearWatchData">
+        <el-icon>
+          <DeleteFilled/>
+        </el-icon>
+      </el-button>
+    </div>
+    <div v-else>
+      <!--@sort-change="sortChange"-->
+      <el-table show-overflow-tooltip :data="tableData" style="width: 100%" border stripe>
+        <el-table-column v-for="item in tableColumn" show-overflow-tooltip :prop="item.name"
+                         :label="item.label"/>
+      </el-table>
 
-    <div class="demo-pagination-block">
-      <el-pagination
-          v-model:current-page="pageNum"
-          v-model:page-size="pageSize"
-          small="small"
-          layout="->, prev, pager, next, jumper, ->, total"
-          :total="total"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-      />
+      <div class="demo-pagination-block">
+        <el-pagination
+            v-model:current-page="pageNum"
+            v-model:page-size="pageSize"
+            small="small"
+            layout="->, prev, pager, next, jumper, ->, total"
+            :total="total"
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -79,6 +86,9 @@ export default {
     this.doSearch();
   },
   methods: {
+    clearWatchData: function () {
+      this.watchData.length = 0;
+    },
     sortChange(column) {
       this.orderType = column.order.startsWith("asc") ? "asc" : "desc";
       this.orderColumn = column.prop;

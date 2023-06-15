@@ -2,6 +2,7 @@ package com.chua.starter.vuesql.controller;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.lang.treenode.CustomTreeNode;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.common.support.result.Result;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
 import com.chua.starter.vuesql.pojo.Construct;
@@ -27,8 +28,6 @@ public class TableController {
     @Resource
     private WebsqlConfigService websqlConfigService;
 
-    @Resource
-    private ApplicationContext applicationContext;
     /**
      * 解释sql
      *
@@ -40,7 +39,7 @@ public class TableController {
     ) {
         WebsqlConfig websqlConfig = websqlConfigService.getById(configId);
         String databaseType = websqlConfig.getConfigType().name().toLowerCase();
-        TableChannel tableChannel = applicationContext.getBean(databaseType, TableChannel.class);
+        TableChannel tableChannel =  ServiceProvider.of(TableChannel.class).getExtension(databaseType);
         if (null == tableChannel) {
             return Result.failed("数据库类型不支持", databaseType);
         }
@@ -67,7 +66,7 @@ public class TableController {
     ) {
         WebsqlConfig websqlConfig = websqlConfigService.getById(configId);
         String databaseType = websqlConfig.getConfigType().name().toLowerCase();
-        TableChannel tableChannel = applicationContext.getBean(databaseType, TableChannel.class);
+        TableChannel tableChannel =  ServiceProvider.of(TableChannel.class).getExtension(databaseType);
         if (null == tableChannel) {
             return Result.failed("数据库类型不支持", databaseType);
         }
@@ -101,7 +100,7 @@ public class TableController {
     ) {
         WebsqlConfig websqlConfig = websqlConfigService.getById(configId);
         String databaseType = websqlConfig.getConfigType().name().toLowerCase();
-        TableChannel tableChannel = applicationContext.getBean(databaseType, TableChannel.class);
+        TableChannel tableChannel =  ServiceProvider.of(TableChannel.class).getExtension(databaseType);
         if (null == tableChannel) {
             return Result.failed("数据库类型不支持", databaseType);
         }
@@ -117,7 +116,7 @@ public class TableController {
     public Result<Construct> getTableInfo(@PathVariable String configId) {
         WebsqlConfig websqlConfig = websqlConfigService.getById(configId);
         String databaseType = websqlConfig.getConfigType().name().toLowerCase();
-        TableChannel tableChannel = applicationContext.getBean(databaseType, TableChannel.class);
+        TableChannel tableChannel =  ServiceProvider.of(TableChannel.class).getExtension(databaseType);
         if (null == tableChannel) {
             return Result.failed("数据库类型不支持", databaseType);
         }
@@ -125,7 +124,7 @@ public class TableController {
         try {
             constructs = tableChannel.getDataBaseConstruct(websqlConfig);
         } catch (Exception e) {
-            return Result.failed("请检查数据源配置");
+            return Result.failed(e.getLocalizedMessage());
         }
         CustomTreeNode<Construct, Integer> treeNode = new CustomTreeNode<>(Construct::getId, Construct::getPid);
         treeNode.add(constructs);
@@ -141,7 +140,7 @@ public class TableController {
     public Result<List<Keyword>> keyword(@PathVariable String configId) {
         WebsqlConfig websqlConfig = websqlConfigService.getById(configId);
         String databaseType = websqlConfig.getConfigType().name().toLowerCase();
-        TableChannel tableChannel = applicationContext.getBean(databaseType, TableChannel.class);
+        TableChannel tableChannel =  ServiceProvider.of(TableChannel.class).getExtension(databaseType);
         if (null == tableChannel) {
             return Result.failed("数据库类型不支持", databaseType);
         }

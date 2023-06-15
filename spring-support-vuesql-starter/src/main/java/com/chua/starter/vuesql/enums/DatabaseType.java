@@ -20,6 +20,10 @@ public enum DatabaseType {
      */
     MYSQL8("com.mysql.jdbc.Driver"),
     /**
+     * sqlite
+     */
+    SQLITE("org.sqlite.JDBC"),
+    /**
      * redis
      */
     REDIS("");

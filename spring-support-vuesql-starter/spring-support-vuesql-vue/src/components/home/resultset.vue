@@ -80,6 +80,12 @@ export default {
       this.editableTabs = tabs.filter((tab) => tab.id !== targetName)
     },
     reset: function() {
+      for (const el of this.editableTabs) {
+        if(el.id == '1') {
+          continue
+        }
+        this.removeTab1(el.id);
+      }
       this.editableTabs.length = 0;
       this.editableTabs = [{
         id: '1',
@@ -96,7 +102,14 @@ export default {
         if (!sql) {
           continue
         }
-        this.addTab1(sql, "sql");
+
+        if(!sql.trim()) {
+          continue
+        }
+        this.$nextTick(() => {
+          this.addTab1(sql, "sql");
+        });
+
       }
     },
     explainSQL: function (sql) {

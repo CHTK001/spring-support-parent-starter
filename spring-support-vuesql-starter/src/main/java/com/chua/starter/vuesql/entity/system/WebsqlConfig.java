@@ -18,7 +18,7 @@ import java.util.Date;
  */
 @Table(comment = "websql_config")
 @Data
-@JsonIgnoreProperties(value = "configPassword", allowSetters = true)
+@JsonIgnoreProperties(value = {"configPassword", "configFile"}, allowSetters = true)
 @TableName(value = "websql_config")
 public class WebsqlConfig {
     /**
@@ -69,6 +69,12 @@ public class WebsqlConfig {
     @TableField(value = "config_url")
     @Column(comment = "url")
     private String configUrl;
+    /**
+     * url
+     */
+    @TableField(value = "config_file")
+    @Column(comment = "本地文件路径")
+    private String configFile;
 
     /**
      * 用户名
@@ -117,4 +123,23 @@ public class WebsqlConfig {
     @TableField(value = "update_time")
     @Column(comment = "更新时间")
     private Date updateTime;
+
+    @Override
+    public String toString() {
+        return "WebsqlConfig{" +
+                "configId=" + configId +
+                ", configName='" + configName + '\'' +
+                ", configType=" + configType +
+                ", configVersion=" + configVersion +
+                ", configIp='" + configIp + '\'' +
+                ", configPort=" + configPort +
+                ", configUrl='" + configUrl + '\'' +
+                ", configFile='" + configFile + '\'' +
+                ", configUsername='" + configUsername + '\'' +
+                ", configPassword='" + configPassword + '\'' +
+                ", configDriver='" + configDriver + '\'' +
+                ", configDatabase='" + configDatabase + '\'' +
+                ", configParam='" + configParam + '\'' +
+                '}';
+    }
 }

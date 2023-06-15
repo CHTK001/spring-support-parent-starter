@@ -1,17 +1,20 @@
 package com.chua.starter.vuesql.utils;
 
+import com.chua.common.support.database.ResultSetUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
 import com.chua.starter.vuesql.enums.DatabaseType;
+import com.chua.starter.vuesql.enums.Type;
+import com.chua.starter.vuesql.pojo.Construct;
+import com.chua.starter.vuesql.pojo.Keyword;
 import com.chua.starter.vuesql.pojo.OpenResult;
 import com.chua.starter.vuesql.pojo.SqlResult;
 import lombok.extern.slf4j.Slf4j;
 
 import java.sql.*;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * 数据库驱动
@@ -52,6 +55,7 @@ public class JdbcDriver {
             if (upperCase.startsWith("SELECT")) {
                 page.setTotal(withCount(statement, sql));
                 if (0 == page.getTotal()) {
+                    doColumn(statement, columns, pageSql);
                     return page;
                 }
                 pageSql = analysisSql(sql, pageSql, sortColumn, sortType);
@@ -59,6 +63,7 @@ public class JdbcDriver {
 
             } else if (upperCase.startsWith("EXPLAIN")) {
                 doSearch(statement, columns, rs, sql);
+                page.setTotal(rs.size());
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -94,6 +99,19 @@ public class JdbcDriver {
         }
     }
 
+    private static void doColumn(Statement statement, List<String> columns, String pageSql) {
+        try (ResultSet executeQuery = statement.executeQuery(pageSql)) {
+            ResultSetMetaData metaData = executeQuery.getMetaData();
+            int columnCount = metaData.getColumnCount();
+            for (int i = 0; i < columnCount; i++) {
+                columns.add(metaData.getColumnLabel(i + 1));
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private static void doSearch(Statement statement, List<String> columns, List<Map<String, Object>> rs, String pageSql) {
         try (ResultSet executeQuery = statement.executeQuery(pageSql)) {
             ResultSetMetaData metaData = executeQuery.getMetaData();
@@ -117,8 +135,9 @@ public class JdbcDriver {
 
     /**
      * 查询sql
+     *
      * @param connection 链接
-     * @param sql sql
+     * @param sql        sql
      * @return 结果
      */
     public static OpenResult query(Connection connection, String sql) {
@@ -135,5 +154,71 @@ public class JdbcDriver {
         result.setColumns(columns);
         result.setTotal(Integer.MAX_VALUE);
         return result;
+    }
+
+    /**
+     * 创建数据库结构
+     *
+     * @param connection 连接
+     * @param config     数据库配置
+     */
+    public static List<Construct> doConstruct(Connection connection, WebsqlConfig config) throws SQLException {
+        List<Construct> rs = new LinkedList<>();
+        rs.add(Construct.builder().icon("DATABASE").type(Type.DATABASE).id(1).pid(0).name(config.getConfigName()).build());
+        rs.add(Construct.builder().icon("TABLE").type(Type.TABLE).pid(1).id(2).name("表").build());
+        rs.add(Construct.builder().icon("VIEW").type(Type.VIEW).pid(1).id(3).name("视图").build());
+        AtomicInteger index = new AtomicInteger(4);
+        ResultSet resultSet = connection.getMetaData().getTables(config.getConfigDatabase(), null, null, new String[]{"TABLE"});
+        ResultSetUtils.doLine(resultSet, tables -> {
+            rs.add(Construct.builder().icon("TABLE").type(Type.TABLE).pid(2)
+                    .realName(tables.getString("TABLE_NAME"))
+                    .id(index.getAndIncrement())
+                    .name(tables.getString("TABLE_NAME")).build());
+        });
+
+        ResultSet resultSet1 = connection.getMetaData().getTables(config.getConfigDatabase(), null, null, new String[]{"VIEW"});
+        ResultSetUtils.doLine(resultSet1, tables -> {
+            rs.add(Construct.builder().icon("VIEW").type(Type.VIEW)
+                    .pid(3)
+                    .realName(tables.getString("TABLE_NAME"))
+                    .id(index.getAndIncrement())
+                    .name(tables.getString("TABLE_NAME"))
+                    .build());
+        });
+
+        return rs;
+    }
+
+    /**
+     * 關鍵詞
+     *
+     * @param connection 连接
+     * @param config     配置
+     * @return 结果
+     * @throws SQLException
+     */
+    public static List<Keyword> doKeyword(Connection connection, WebsqlConfig config) throws SQLException {
+        List<Keyword> rs = new LinkedList<>();
+        ResultSet resultSet = connection.getMetaData().getTables(config.getConfigDatabase(), null, null, new String[]{"TABLE"});
+        Map<String, Keyword> tpl = new LinkedHashMap<>();
+        ResultSetUtils.doLine(resultSet, tables -> {
+            Keyword keyword = Keyword.builder().text(tables.getString("TABLE_NAME")).build();
+            tpl.put(keyword.getText(), keyword);
+            rs.add(keyword);
+        });
+
+        Map<String, List<String>> columns = new HashMap<>();
+        ResultSet resultSet1 = connection.getMetaData().getColumns(config.getConfigDatabase(), null, null, null);
+        ResultSetUtils.doLine(resultSet1, tables1 -> {
+            columns.computeIfAbsent(tables1.getString("TABLE_NAME"), it -> new LinkedList<>()).add(tables1.getString("COLUMN_NAME"));
+        });
+
+        for (Map.Entry<String, Keyword> entry : tpl.entrySet()) {
+            List<String> strings = columns.get(entry.getKey());
+            entry.getValue().setColumns(strings.stream().map(it -> {
+                return Keyword.ColumnKeyword.builder().text(it).displayText(it).build();
+            }).collect(Collectors.toList()));
+        }
+        return rs;
     }
 }

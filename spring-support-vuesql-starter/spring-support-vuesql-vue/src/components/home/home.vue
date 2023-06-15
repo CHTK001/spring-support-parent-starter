@@ -218,6 +218,9 @@ export default {
       this.code = '';
     },
     setSql(n) {
+      if(n.action == 'OPEN') {
+        return !0;
+      }
       this.code = "SELECT * FROM " + n.name;
     },
     run() {
