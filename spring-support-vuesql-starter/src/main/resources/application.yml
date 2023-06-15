@@ -8,6 +8,10 @@ spring:
 server:
   port: 28081
 
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+
 plugin:
   auto:
     table:
