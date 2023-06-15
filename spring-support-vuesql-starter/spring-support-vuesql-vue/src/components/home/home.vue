@@ -154,11 +154,13 @@ import '@/assets/icons/icon.css'
 import request from "axios";
 import {sformat} from "@/utils/Utils";
 import URL from "@/config/url";
-import {format} from "sql-formatter";
+import sqlFormatter, {format} from "sql-formatter";
 import ResultSet from "@/components/home/resultset.vue";
 
-const  instance = getCurrentInstance();
+const instance = getCurrentInstance();
 
+const STR_PREPARING = '==>  Preparing:'
+const STR_PARAMETERS = '==> Parameters:'
 export default {
   name: "home",
   components: {ResultSet, Codemirror},
@@ -268,13 +270,13 @@ export default {
         for (let i = 0; i < split.length; i++) {
           let line = split[i]
           if (!line || line.trim().length === 0) continue
-          if (line.indexOf(STR_PREPARING) > 0) {
+          if (line.indexOf(STR_PREPARING) >= 0) {
             let subLine = line.substring(line.indexOf(STR_PREPARING) + 15)
             sb = subLine
             console.log('1:', sb)
             // 为这一行选择配对的行
             let rightLine = this.selectRightLine(line, split, i)
-            if (rightLine.indexOf(STR_PARAMETERS) > 0) {
+            if (rightLine.indexOf(STR_PARAMETERS) >= 0) {
               let rightStr = rightLine.substring(rightLine.indexOf(STR_PARAMETERS) + 15)
               if (sb.length === 0) continue
               console.log('2', rightStr)
