@@ -161,6 +161,16 @@ public class JdbcDriver {
      * @param config     数据库配置
      */
     public static List<Construct> doConstruct(Connection connection, WebsqlConfig config) throws SQLException {
+        return doConstruct(connection, config, true, true, true);
+    }
+
+    /**
+     * 创建数据库结构
+     *
+     * @param connection 连接
+     * @param config     数据库配置
+     */
+    public static List<Construct> doConstruct(Connection connection, WebsqlConfig config, boolean insertEnable, boolean updateEnable, boolean deleteEnable) throws SQLException {
         List<Construct> rs = new LinkedList<>();
         rs.add(Construct.builder().icon("DATABASE").type(Type.DATABASE).id(1).pid(0).name(config.getConfigName()).build());
         rs.add(Construct.builder().icon("TABLE").type(Type.TABLE).pid(1).id(2).name("表").build());
@@ -171,6 +181,7 @@ public class JdbcDriver {
             rs.add(Construct.builder().icon("TABLE").type(Type.TABLE).pid(2)
                     .realName(tables.getString("TABLE_NAME"))
                     .id(index.getAndIncrement())
+                    .updateEnable(updateEnable).insertEnable(insertEnable).deleteEnable(deleteEnable)
                     .name(tables.getString("TABLE_NAME")).build());
         });
 
