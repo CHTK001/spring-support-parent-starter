@@ -2,6 +2,7 @@ package com.chua.starter.vuesql.controller;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.bean.BeanUtils;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.FileUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.result.Result;
@@ -64,7 +65,7 @@ public class DatabaseController {
     public Result<Boolean> saveDatabase(HttpServletRequest request, @RequestParam(value = "file", required = false)MultipartFile file) {
         WebsqlConfig websqlConfig = BeanUtils.copyProperties(request.getParameterMap(), WebsqlConfig.class);
         String databaseType = websqlConfig.getConfigType().name().toLowerCase();
-        TableChannel tableChannel = applicationContext.getBean(databaseType, TableChannel.class);
+        TableChannel tableChannel = ServiceProvider.of(TableChannel.class).getExtension(databaseType);
         if (null == tableChannel) {
             return Result.failed("{}数据库类型不支持", databaseType);
         }

@@ -104,9 +104,14 @@ export default {
         orderColumn: this.orderColumn,
         orderType: this.orderType
       }).then(({data}) => {
-        if (data.code == '00000') {
+        if (data.code === '00000') {
           let rs = data.data;
           this.total = rs.total;
+          if (rs.data.length < this.pageSize) {
+            this.total = (this.pageNum - 1) * this.pageSize + rs.data.length;
+          } else if (rs.data.length === 0) {
+            this.total = (this.pageNum) * this.pageSize;
+          }
           this.tableColumn = rs.columns;
           this.watchData.push(this.sql + " " + data.msg);
           for (let item of rs.data) {
