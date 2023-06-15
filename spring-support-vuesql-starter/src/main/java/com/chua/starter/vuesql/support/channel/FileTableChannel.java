@@ -94,7 +94,7 @@ public class FileTableChannel implements TableChannel {
             Connection connection = channelFactory.getConnection(config, Connection.class, websqlConfig -> {
                 return createConnection(config.getConfigType(), websqlConfig);
             }, Connection::isClosed);
-            String sql = "SELECT * FROM " + tableName + " limit " + (pageNum - 1) * pageSize + "," + pageSize;
+            String sql = "SELECT * FROM " + tableName + " limit " + pageSize + " offset " + (pageNum - 1) * pageSize;
             return JdbcDriver.query(connection, sql);
         } catch (Exception e) {
             throw new RuntimeException(e);
