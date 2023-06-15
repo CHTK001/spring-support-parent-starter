@@ -21,15 +21,15 @@
     </div>
 
     <el-table v-loading="tableLoad" show-overflow-tooltip :data="tableData" style="width: 100%" border stripe>
-      <el-table-column v-for="item in tableColumn" show-overflow-tooltip :prop="item.name"
-                       :label="item.label">
+      <el-table-column v-for="item in tableColumn" show-overflow-tooltip :prop="item.columnName"
+                       :label="item.columnName">
         <template #default="scope">
           <el-input ref="gain"
                     style="width: 100%; height: 30px"
-                    v-if="rowStatus[scope.$index + item.name]"
+                    v-if="rowStatus[scope.$index + item.columnName]"
                     @keyup.native.enter="sendData(scope)"
-                    v-model="currentRow[item.name]"></el-input>
-          <div style="width: 100%; height: 30px" v-else @click="updateRow(scope)">{{ scope.row[item.name] }}</div>
+                    v-model="currentRow[item.columnName]"></el-input>
+          <div style="width: 100%; height: 30px" v-else @click="updateRow(scope)">{{ scope.row[item.columnName] }}</div>
         </template>
       </el-table-column>
     </el-table>
@@ -116,7 +116,7 @@ export default {
     checkNull: function (data) {
       const tpl = {};
       for(const item of Object.keys(data)) {
-        if(!!data[item]) {
+        if (data[item] !== '' && data[item] !== null && data[item] !== undefined) {
           tpl[item] = data[item];
         }
       }
@@ -125,7 +125,7 @@ export default {
     },
     sendData: function  () {
       this.currentRow = this.checkNull(this.currentRow);
-      this.oldDataRow = this.checkNull(this.oldDataRow);
+      this.oldDataRow = this.oldDataRow;
       //之前有行被编辑
       if(Object.keys(this.oldDataRow).length != 0 && this.checkSame(this.currentRow, this.oldDataRow)) {
         this.cancelChange();
@@ -140,8 +140,10 @@ export default {
               if(data.code == '00000') {
                 this.$message.success("修改成功");
                 this.cancelChange();
+                this.doSearch();
                 return !0;
               }
+          this.$message.error(data.msg);
             })
             .finally(() => this.tableLoad = !1)
       }
@@ -161,7 +163,7 @@ export default {
     addData: function () {
       const row = {};
       for (const item of this.tableColumn) {
-        row[item.name] = '';
+        row[item.columnName] = '';
       }
       this.tableData.push(row);
     },
@@ -175,12 +177,7 @@ export default {
         if (data.code == '00000') {
           let rs = data.data;
           this.total = rs.total;
-          rs.columns.forEach((item) => {
-            this.tableColumn.push({
-              name: item,
-              label: item
-            })
-          })
+          this.tableColumn = rs.columns;
           this.watchData.push("打开" + this.table.name + " " + data.msg);
           for (let item of rs.data) {
             this.tableData.push(item);

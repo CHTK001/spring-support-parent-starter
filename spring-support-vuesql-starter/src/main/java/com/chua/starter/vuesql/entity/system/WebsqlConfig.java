@@ -6,7 +6,6 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.chua.common.support.database.annotation.Column;
 import com.chua.common.support.database.annotation.Table;
-import com.chua.starter.common.support.annotations.PrivacyEncrypt;
 import com.chua.starter.vuesql.enums.DatabaseType;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
@@ -109,6 +108,14 @@ public class WebsqlConfig {
     @TableField(value = "config_param")
     @Column(comment = "数据库参数")
     private String configParam;
+
+    /**
+     * 数据库参数
+     */
+    @TableField(value = "config_mode")
+    @Column(comment = "数据模式", defaultValue = "'text/x-sql'")
+    private String configMode;
+
 
     /**
      * 创建时间

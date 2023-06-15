@@ -6,10 +6,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
 import com.chua.starter.vuesql.enums.DatabaseType;
 import com.chua.starter.vuesql.enums.Type;
-import com.chua.starter.vuesql.pojo.Construct;
-import com.chua.starter.vuesql.pojo.Keyword;
-import com.chua.starter.vuesql.pojo.OpenResult;
-import com.chua.starter.vuesql.pojo.SqlResult;
+import com.chua.starter.vuesql.pojo.*;
 import lombok.extern.slf4j.Slf4j;
 
 import java.sql.*;
@@ -47,7 +44,7 @@ public class JdbcDriver {
     public static SqlResult execute(Connection connection, String sortColumn, String sortType, String sql, String pageSql) {
         SqlResult page = new SqlResult();
         List<Map<String, Object>> rs = new LinkedList<>();
-        List<String> columns = new LinkedList<>();
+        List<Column> columns = new LinkedList<>();
         page.setColumns(columns);
         page.setData(rs);
         try (Statement statement = connection.createStatement()) {
@@ -100,12 +97,12 @@ public class JdbcDriver {
         }
     }
 
-    private static void doColumn(Statement statement, List<String> columns, String pageSql) {
+    private static void doColumn(Statement statement, List<Column> columns, String pageSql) {
         try (ResultSet executeQuery = statement.executeQuery(pageSql)) {
             ResultSetMetaData metaData = executeQuery.getMetaData();
             int columnCount = metaData.getColumnCount();
             for (int i = 0; i < columnCount; i++) {
-                columns.add(metaData.getColumnLabel(i + 1));
+                columns.add(Column.builder().columnName(metaData.getColumnLabel(i + 1)).columnType(metaData.getColumnTypeName(i + 1)).build());
             }
 
         } catch (SQLException e) {
@@ -113,18 +110,18 @@ public class JdbcDriver {
         }
     }
 
-    private static void doSearch(Statement statement, List<String> columns, List<Map<String, Object>> rs, String pageSql) {
+    private static void doSearch(Statement statement, List<Column> columns, List<Map<String, Object>> rs, String pageSql) {
         try (ResultSet executeQuery = statement.executeQuery(pageSql)) {
             ResultSetMetaData metaData = executeQuery.getMetaData();
             int columnCount = metaData.getColumnCount();
             for (int i = 0; i < columnCount; i++) {
-                columns.add(metaData.getColumnLabel(i + 1));
+                columns.add(Column.builder().columnName(metaData.getColumnLabel(i + 1)).columnType(metaData.getColumnTypeName(i + 1)).build());
             }
 
             while (executeQuery.next()) {
                 Map<String, Object> item = new LinkedHashMap<>();
                 for (int i = 0; i < columnCount; i++) {
-                    item.put(columns.get(i), executeQuery.getObject(i + 1));
+                    item.put(columns.get(i).getColumnName(), executeQuery.getObject(i + 1));
                 }
 
                 rs.add(item);
@@ -144,7 +141,7 @@ public class JdbcDriver {
     public static OpenResult query(Connection connection, String sql) {
         OpenResult result = new OpenResult();
         List<Map<String, Object>> rs = new LinkedList<>();
-        List<String> columns = new LinkedList<>();
+        List<Column> columns = new LinkedList<>();
         try (Statement statement = connection.createStatement()) {
             statement.setFetchSize(1000);
             doSearch(statement, columns, rs, sql);
@@ -259,17 +256,20 @@ public class JdbcDriver {
             sb.append(" WHERE 1 = 1 ");
             for (Map.Entry<String, Object> entry : newData.entrySet()) {
                 Object value = entry.getValue();
-                if(null == value) {
+                if (null == value) {
                     continue;
                 }
 
                 String key = entry.getKey();
 
-                sb.append(" AND `").append(key).append("` = ");
-                if(oldData.containsKey(key)) {
+                if (oldData.containsKey(key)) {
                     value = oldData.get(key);
                 }
-                if(value instanceof Number) {
+                if (null == value) {
+                    continue;
+                }
+                sb.append(" AND `").append(key).append("` = ");
+                if (value instanceof Number) {
                     sb.append(value);
                 } else {
                     sb.append("'").append(value).append("'");
