@@ -1,20 +1,24 @@
 <template>
   <el-skeleton :loading="loading" animated>
-    <div id="operator2" class="panel-header panel-header-noborder"
+    <div v-if="!!table.updateEnable || !!table.insertEnable || !!table.deleteEnable" id="operator2"
+         class="panel-header panel-header-noborder"
          style="height:auto; border-left: solid 1px #ddd; border-right: solid 1px #ddd">
       <div>
-        <a href="javascript:void(0)" id="newQueryButton" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
+        <a v-if="!!table.insertEnable" href="javascript:void(0)" id="newQueryButton"
+           class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
            iconcls="icon-standard-add" plain="true" @click="addData();" title="添加数据" group=""><span
             class="l-btn-left l-btn-icon-left"><span class="l-btn-text">添加数据</span><span
             class="l-btn-icon icon-standard-add">&nbsp;</span></span></a>
         <span class="toolbar-item dialog-tool-separator"></span>
 
-        <a href="javascript:void(0)" class="easyui-linkbutton l-btn l-btn-small l-btn-plain" iconcls="icon-ok"
+        <a v-if="!!table.updateEnable || !!table.insertEnable" href="javascript:void(0)"
+           class="easyui-linkbutton l-btn l-btn-small l-btn-plain" iconcls="icon-ok"
            plain="true" id="saveRowButton" @click="saveRow()" group=""><span class="l-btn-left l-btn-icon-left"><span
             class="l-btn-text">保存</span><span class="l-btn-icon icon-ok">&nbsp;</span></span></a>
 
 
-        <a href="javascript:void(0)" class="easyui-linkbutton l-btn l-btn-small l-btn-plain" iconcls="icon-cancel"
+        <a v-if="!!table.updateEnable || !!table.insertEnable" href="javascript:void(0)"
+           class="easyui-linkbutton l-btn l-btn-small l-btn-plain" iconcls="icon-cancel"
            plain="true" id="cancelButton" @click="cancelChange()" group=""><span
             class="l-btn-left l-btn-icon-left"><span class="l-btn-text">取消</span><span class="l-btn-icon icon-cancel">&nbsp;</span></span></a>
       </div>
