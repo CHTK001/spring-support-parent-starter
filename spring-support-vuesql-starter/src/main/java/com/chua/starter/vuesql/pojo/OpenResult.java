@@ -2,7 +2,6 @@ package com.chua.starter.vuesql.pojo;
 
 import lombok.Data;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -14,7 +13,7 @@ import java.util.Map;
 @Data
 public class OpenResult {
 
-    private List<String> columns = Collections.emptyList();
+    private List<Column> columns = Collections.emptyList();
     private Integer total;
     private List<Map<String, Object>> data = Collections.emptyList();
 

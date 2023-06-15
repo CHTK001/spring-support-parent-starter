@@ -12,7 +12,7 @@ import java.util.Map;
 @Data
 public class SqlResult {
 
-    private List<String> columns = Collections.emptyList();
+    private List<Column> columns = Collections.emptyList();
 
     private Integer total = Integer.MAX_VALUE;
 

@@ -13,8 +13,8 @@
     <div v-else>
       <!--@sort-change="sortChange"-->
       <el-table show-overflow-tooltip :data="tableData" style="width: 100%" border stripe>
-        <el-table-column v-for="item in tableColumn" show-overflow-tooltip :prop="item.name"
-                         :label="item.label"/>
+        <el-table-column v-for="item in tableColumn" show-overflow-tooltip :prop="item.columnName"
+                         :label="item.columnName"/>
       </el-table>
 
       <div class="demo-pagination-block">
@@ -107,12 +107,7 @@ export default {
         if (data.code == '00000') {
           let rs = data.data;
           this.total = rs.total;
-          rs.columns.forEach((item) => {
-            this.tableColumn.push({
-              name: item,
-              label: item
-            })
-          })
+          this.tableColumn = rs.columns;
           this.watchData.push(this.sql + " " + data.msg);
           for (let item of rs.data) {
             this.tableData.push(item);

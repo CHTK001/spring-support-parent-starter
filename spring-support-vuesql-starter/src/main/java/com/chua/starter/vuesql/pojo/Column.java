@@ -1,5 +1,6 @@
 package com.chua.starter.vuesql.pojo;
 
+import lombok.Builder;
 import lombok.Data;
 
 /**
@@ -8,6 +9,7 @@ import lombok.Data;
  * @author CH
  */
 @Data
+@Builder
 public class Column {
 
     private String columnName;

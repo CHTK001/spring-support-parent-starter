@@ -76,12 +76,15 @@
         <el-input v-model="form.configPassword" type="password" clearable placeholder="请输入密码"/>
       </el-form-item>
       <el-form-item label="数据库" prop="configDatabase">
-        <el-input v-model="form.configDatabase"  clearable placeholder="请输入数据库"/>
+        <el-input v-model="form.configDatabase" clearable placeholder="请输入数据库"/>
       </el-form-item>
       <el-form-item label="数据源类型" prop="configType">
-        <el-select v-model="form.configType"  clearable placeholder="请选择数据源类型">
+        <el-select v-model="form.configType" clearable placeholder="请选择数据源类型">
           <el-option v-for="item in databaseTypes" :label="item" :value="item"></el-option>
         </el-select>
+      </el-form-item>
+      <el-form-item label="数据模式" prop="configMode">
+        <el-input v-model="form.configMode" clearable placeholder="请输入数据模式"/>
       </el-form-item>
       <el-form-item>
         <el-button @click="dialogVisible = false">取消</el-button>
