@@ -87,6 +87,25 @@ public class TableController {
     }
 
     /**
+     * 跟新数据
+     *
+     * @return 数据库
+     */
+    @PutMapping("/update")
+    public Result<Boolean> update(@RequestBody JSONObject json) {
+        WebsqlConfig websqlConfig = websqlConfigService.getById(json.getJSONObject("config").getString("configId"));
+        String databaseType = websqlConfig.getConfigType().name().toLowerCase();
+        TableChannel tableChannel =  ServiceProvider.of(TableChannel.class).getExtension(databaseType);
+        if (null == tableChannel) {
+            return Result.failed("数据库类型不支持", databaseType);
+        }
+        return Result.success(tableChannel.update(websqlConfig,
+                json.getJSONObject("newData"),
+                json.getJSONObject("oldData"),
+                json.getJSONObject("table")));
+    }
+
+    /**
      * 根据配置获取数据库表,试图等信息
      *
      * @return 数据库
