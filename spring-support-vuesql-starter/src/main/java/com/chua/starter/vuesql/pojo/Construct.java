@@ -21,6 +21,13 @@ public class Construct {
     private Type type;
     private String icon;
 
+    @Builder.Default
+    private boolean insertEnable = true;
+    @Builder.Default
+    private boolean updateEnable = true;
+    @Builder.Default
+    private boolean deleteEnable = true;
+
     private String realName;
 
     private Integer pid;

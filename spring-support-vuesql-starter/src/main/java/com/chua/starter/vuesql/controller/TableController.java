@@ -11,7 +11,6 @@ import com.chua.starter.vuesql.pojo.OpenResult;
 import com.chua.starter.vuesql.pojo.SqlResult;
 import com.chua.starter.vuesql.service.WebsqlConfigService;
 import com.chua.starter.vuesql.support.channel.TableChannel;
-import org.springframework.context.ApplicationContext;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -95,14 +94,18 @@ public class TableController {
     public Result<Boolean> update(@RequestBody JSONObject json) {
         WebsqlConfig websqlConfig = websqlConfigService.getById(json.getJSONObject("config").getString("configId"));
         String databaseType = websqlConfig.getConfigType().name().toLowerCase();
-        TableChannel tableChannel =  ServiceProvider.of(TableChannel.class).getExtension(databaseType);
+        TableChannel tableChannel = ServiceProvider.of(TableChannel.class).getExtension(databaseType);
         if (null == tableChannel) {
             return Result.failed("数据库类型不支持", databaseType);
         }
-        return Result.success(tableChannel.update(websqlConfig,
-                json.getJSONObject("newData"),
-                json.getJSONObject("oldData"),
-                json.getJSONObject("table")));
+        try {
+            return Result.success(tableChannel.update(websqlConfig,
+                    json.getJSONObject("newData"),
+                    json.getJSONObject("oldData"),
+                    json.getJSONObject("table")));
+        } catch (Exception e) {
+            return Result.failed(e.getLocalizedMessage());
+        }
     }
 
     /**

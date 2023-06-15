@@ -50,7 +50,7 @@ public class FileTableChannel implements TableChannel {
             Connection connection = channelFactory.getConnection(config, Connection.class, websqlConfig -> {
                 return createConnection(config.getConfigType(), websqlConfig);
             }, Connection::isClosed);
-            return JdbcDriver.doConstruct(connection, config);
+            return JdbcDriver.doConstruct(connection, config, false, false, false);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -104,7 +104,7 @@ public class FileTableChannel implements TableChannel {
     @Override
     public String check(WebsqlConfig websqlConfig, MultipartFile file) {
         if (null == file) {
-            return websqlConfig.getConfigType() + "当前支支持文件上传,且文件不能为空";
+            return websqlConfig.getConfigType() + "当前支持文件上传,且文件不能为空";
         }
         File file1 = new File(SQLITE_PATH, websqlConfig.getConfigName() + "." + websqlConfig.getConfigType().name());
         try {
@@ -120,14 +120,7 @@ public class FileTableChannel implements TableChannel {
 
     @Override
     public Boolean update(WebsqlConfig config, JSONObject newData, JSONObject oldData, JSONObject table) {
-        try {
-            Connection connection = channelFactory.getConnection(config, Connection.class, websqlConfig -> {
-                return createConnection(config.getConfigType(), websqlConfig);
-            }, Connection::isClosed);
-            return JdbcDriver.update(connection, newData, oldData, table.getString("realName"));
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        throw new RuntimeException("不支持修改操作");
     }
 
     private Connection createConnection(DatabaseType configType, WebsqlConfig websqlConfig) {
