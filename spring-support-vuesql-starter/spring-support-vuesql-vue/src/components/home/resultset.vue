@@ -32,7 +32,6 @@ export default {
     return {
       tabIndex: 1,
       editableTabsValue: '1',
-      watchData: [],
       editableTabs: [{
         id: '1',
         label: '消息',
@@ -43,7 +42,11 @@ export default {
   },
   props: {
     config: Object,
-    sql: String
+    sql: String,
+    watchData: {
+      type: Array,
+      default: []
+    },
   },
   mounted() {
   },

@@ -85,6 +85,12 @@ import {ElMessage} from 'element-plus'
 export default {
   name: "database",
   components: {Setting, DeleteFilled},
+  props: {
+    watchData: {
+      type: Array,
+      default: []
+    },
+  },
   data() {
     return {
       loading: false,

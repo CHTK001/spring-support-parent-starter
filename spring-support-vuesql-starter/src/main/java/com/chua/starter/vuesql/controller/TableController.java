@@ -6,6 +6,7 @@ import com.chua.starter.common.support.result.Result;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
 import com.chua.starter.vuesql.pojo.Construct;
 import com.chua.starter.vuesql.pojo.Keyword;
+import com.chua.starter.vuesql.pojo.OpenResult;
 import com.chua.starter.vuesql.pojo.SqlResult;
 import com.chua.starter.vuesql.service.WebsqlConfigService;
 import com.chua.starter.vuesql.support.channel.TableChannel;
@@ -91,6 +92,27 @@ public class TableController {
      *
      * @return 数据库
      */
+    @GetMapping("/open/{configId}/{tableName}")
+    public Result<OpenResult> openTable(
+            @PathVariable String configId,
+            @PathVariable String tableName,
+            @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize
+    ) {
+        WebsqlConfig websqlConfig = websqlConfigService.getById(configId);
+        String databaseType = websqlConfig.getConfigType().name().toLowerCase();
+        TableChannel tableChannel = applicationContext.getBean(databaseType, TableChannel.class);
+        if (null == tableChannel) {
+            return Result.failed("数据库类型不支持", databaseType);
+        }
+        return Result.success(tableChannel.openTable(websqlConfig, tableName, pageNum, pageSize));
+    }
+
+    /**
+     * 根据配置获取数据库表,试图等信息
+     *
+     * @return 数据库
+     */
     @GetMapping("/{configId}")
     public Result<Construct> getTableInfo(@PathVariable String configId) {
         WebsqlConfig websqlConfig = websqlConfigService.getById(configId);
@@ -109,7 +131,6 @@ public class TableController {
         treeNode.add(constructs);
 
         return Result.success(treeNode.transfer());
-
     }
     /**
      * 根据配置,数据库获取数据库信息

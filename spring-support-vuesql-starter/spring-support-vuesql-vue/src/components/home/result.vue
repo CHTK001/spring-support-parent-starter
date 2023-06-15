@@ -111,6 +111,9 @@ export default {
         } else {
           this.watchData.push(data.msg);
         }
+      }).catch(({data}) => {
+        this.watchData.push(data.msg);
+
       });
     },
     handleSizeChange: function (e) {

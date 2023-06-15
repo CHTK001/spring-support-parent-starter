@@ -3,6 +3,7 @@ package com.chua.starter.vuesql.utils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
 import com.chua.starter.vuesql.enums.DatabaseType;
+import com.chua.starter.vuesql.pojo.OpenResult;
 import com.chua.starter.vuesql.pojo.SqlResult;
 import lombok.extern.slf4j.Slf4j;
 
@@ -112,5 +113,27 @@ public class JdbcDriver {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * 查询sql
+     * @param connection 链接
+     * @param sql sql
+     * @return 结果
+     */
+    public static OpenResult query(Connection connection, String sql) {
+        OpenResult result = new OpenResult();
+        List<Map<String, Object>> rs = new LinkedList<>();
+        List<String> columns = new LinkedList<>();
+        try (Statement statement = connection.createStatement()) {
+            statement.setFetchSize(1000);
+            doSearch(statement, columns, rs, sql);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        result.setData(rs);
+        result.setColumns(columns);
+        result.setTotal(Integer.MAX_VALUE);
+        return result;
     }
 }

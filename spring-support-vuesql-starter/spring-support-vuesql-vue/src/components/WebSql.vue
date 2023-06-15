@@ -55,19 +55,29 @@
                   row-key="id"
                   border
                   default-expand-all
+                  @row-contextmenu="rightclick"
               >
-                <el-table-column prop="name" label="详情" show-overflow-tooltip style="font-size: 21px">
+                <el-table-column prop="name" label="详情" show-overflow-tooltip style="font-size: 21px; cursor: none">
                   <template #default="scope">
-                    <span class="l-btn-icon icon-berlin-calendar" v-if="scope.row.type =='TABLE'"></span>
-                    <span class="l-btn-icon icon-application-view-icons" v-else-if="scope.row.type =='VIEW'"></span>
+                    <span class="l-btn-icon icon-berlin-calendar" v-if="scope.row.icon =='TABLE'"></span>
+                    <span class="l-btn-icon icon-application-view-icons" v-else-if="scope.row.icon =='VIEW'"></span>
                     <span class="l-btn-icon icon-hamburg-database " v-else></span>
-                    <el-text style="cursor: pointer; margin-left: 18px" @click="handleSql(scope.row)">{{
-                        scope.row.name
-                      }}
+
+                    <el-text v-if="scope.row.type =='TABLE' || scope.row.type =='VIEW'" style="cursor: pointer; margin-left: 18px" @click="handleSql(scope.row)">
+                      {{scope.row.name}}
+                    </el-text>
+                    <el-text style="margin-left: 18px" v-else>{{scope.row.name}}
                     </el-text>
                   </template>
                 </el-table-column>
               </el-table>
+
+              <!-- 右键菜单 -->
+              <right-menu
+                  :class-index="0"
+                  :rightclickInfo="rightclickInfo"
+                  @openTable="openTable"
+              ></right-menu>
             </div>
           </el-skeleton>
         </el-aside>
@@ -85,31 +95,33 @@
                     :name="item.id"
                     :closable="item.close"
                 >
-                  <template #label v-if="item.type == 'home'">
+                  <template #label v-if="item.type == 'HOME'">
                     <span class="custom-tabs-label">
                       <span><span class="margin-5 l-btn-icon panel-icon icon-berlin-home"></span>{{ item.label }}</span>
                     </span>
                   </template>
-                  <template #label v-if="item.type == 'database' || item.type == 'DATABASE'">
+                  <template #label v-if="item.type == 'DATABASE'">
                     <span class="custom-tabs-label">
                       <span> <span class="margin-5 l-btn-icon panel-icon icon-hamburg-database"></span>{{ item.label }}</span>
                     </span>
                   </template>
 
-                  <template #label v-if="item.type == 'table' || item.type == 'TABLE'">
+                  <template #label v-if=" item.type == 'TABLE'">
                     <span class="custom-tabs-label">
                       <span> <span
                           class="margin-5 l-btn-icon panel-icon icon-berlin-calendar"></span>{{ item.label }}</span>
                     </span>
                   </template>
-                  <home v-if="item.type == 'home'"
+                  <home v-if="item.type == 'HOME'"
                         ref="home"
                         :current-database-data="currentDatasource"
                         :loading="loading"
                         :current-table-data="currentTable"
+                        :watch-data="watchData"
                         @event="onEvent"
                   ></home>
-                  <database v-if="item.type == 'database'"></database>
+                  <database v-if="item.type == 'WEB-DATABASE'" :watch-data="watchData"></database>
+                  <open-table v-if="item.type == 'TABLE' && item.action == 'OPEN'" :watch-data="watchData" :config="currentDatasource" :table="currentTable"></open-table>
                 </el-tab-pane>
               </el-tabs>
             </div>
@@ -126,24 +138,34 @@ import URL from "@/config/url"
 import {sformat} from '@/utils/Utils'
 import {ElMessage} from "element-plus";
 import '@/style/easy.css'
-
+import Home from "@/components/home/home.vue";
+import Database from "@/components/database/database.vue";
+import OpenTable from "@/components/table/OpenTable.vue";
+import RightMenu from "@/components/menu/RightMenu.vue";
+// theme
+import '@/style/easy.css'
+import '@/assets/icons/icon-berlin.css'
+import '@/assets/icons/icon-hamburg.css'
+import '@/assets/icons/icon-standard.css'
 export default {
+  components: {Home, Database, OpenTable, RightMenu},
   data() {
     return {
       loading: true,
+      watchData: [],
       tableLoading: false,
       datasource: '',
       currentDatasource: undefined,
       closable: false,
-      activeRoute: '0',
+      activeRoute: 'HOME',
       currentTable: undefined,
+      rightclickInfo: {},
       tabs: [
         {
-          id: '0',
+          id: 'HOME',
           label: '运行及展示',
-          path: "/home",
-          type: 'home',
-          content: 'Tab 1 content',
+          icon: 'HOME',
+          type: 'HOME',
           close: false
         }
       ],
@@ -166,7 +188,7 @@ export default {
               })
             })
           }
-        }).finally(() => this.loading = false)
+        }).finally(() => this.loading = !1)
   },
   methods: {
     onEvent: function (item) {
@@ -221,14 +243,13 @@ export default {
       if (action == 'remove') {
         return false;
       }
-      let tab = this.tabs.find(tab => Number(tab.id) == item.id);
+      let tab = this.tabs.find(tab => tab.id == item.id);
       if (!tab) {
         this.tabs.push({
           id: item.id + "",
           name: item.id,
           label: item.label,
           type: item.type,
-          path: item.path,
           close: !0,
           action: item.action
         })
@@ -239,9 +260,9 @@ export default {
       console.log(targetname)
       let tabs = this.tabs;
       let activeitem = this.activeRoute
-      if (Number(activeitem) == targetname) {
+      if (activeitem == targetname) {
         tabs.forEach((tab, index) => {
-          if (Number(tab.id) == targetname) {
+          if (tab.id == targetname) {
             let nexttab = tabs[index - 1] || tabs[index + 1]
             if (nexttab) {
               console.log(nexttab)
@@ -258,24 +279,72 @@ export default {
       const item = this.tabs.filter(tab => tab.id !== tab.index)
       this.$router.push({path: item[0].path})
 
-    }
+    },
+    openTable(params) {
+      const item = params.row;
+      this.currentTable = item;
+      if(item) {
+        if(!item.children || item.children == 0) {
+          this.handleTabsEdit({
+            id: item.id + "",
+            name: item.id,
+            label: item.name,
+            type: item.type,
+            path: item.path,
+            close: !0,
+            action: 'OPEN'
+          }, 'add')
+          return !0;
+        }
+      }
+      ElMessage({
+        type: 'error',
+        message: '不支持打开'
+      })
+    },
+    rightclick(row, column, event) {
+      this.rightclickInfo = {
+        position: {
+          x: event.clientX,
+          y: event.clientY,
+        },
+        menulists: [
+          {
+            fnName: "openTable",
+            params: { row, column, event },
+            icoName: "menu-icon  icon-table-edit",
+            btnName: "打开表",
+          },
+          {
+            fnName: "look",
+            params: { row, column, event },
+            icoName: "el-icon-view",
+            btnName: "查看行数据",
+          },
+          {
+            fnName: "edit",
+            params: { row, column, event },
+            icoName: "el-icon-edit",
+            btnName: "编辑行数据",
+          },
+          {
+            fnName: "delete",
+            params: { row, column, event },
+            icoName: "el-icon-delete",
+            btnName: "删除行数据",
+          },
+          {
+            fnName: "refresh",
+            params: { row, column, event },
+            icoName: "el-icon-refresh",
+            btnName: "刷新页面",
+          },
+        ],
+      };
+      event.preventDefault(); // 阻止默认的鼠标右击事件
+    },
   }
 }
-</script>
-
-<script setup>
-import {
-  Document,
-  Menu as IconMenu,
-  Location,
-  Setting,
-} from '@element-plus/icons-vue'
-
-import {ref} from "vue";
-import Home from "@/components/home/home.vue";
-import Database from "@/components/database/database.vue";
-
-
 </script>
 
 <style scoped>
