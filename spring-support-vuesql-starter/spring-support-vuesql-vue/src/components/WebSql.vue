@@ -279,7 +279,6 @@ export default {
     tabClick(tab) {
       console.log(tab)
       const item = this.tabs.filter(tab => tab.id !== tab.index)
-      this.$router.push({path: item[0].path})
 
     },
     openTable(params) {

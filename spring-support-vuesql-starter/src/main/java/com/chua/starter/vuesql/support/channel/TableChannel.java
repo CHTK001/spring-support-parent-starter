@@ -1,5 +1,6 @@
 package com.chua.starter.vuesql.support.channel;
 
+import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.utils.FileUtils;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
 import com.chua.starter.vuesql.pojo.Construct;
@@ -20,6 +21,7 @@ public interface TableChannel {
 
     /**
      * 生成目录
+     *
      * @param subPath 子目录
      * @return 结果
      */
@@ -29,6 +31,7 @@ public interface TableChannel {
         FileUtils.mkdir(s);
         return s;
     }
+
     /**
      * 创建url
      *
@@ -102,4 +105,15 @@ public interface TableChannel {
     default String check(WebsqlConfig websqlConfig, MultipartFile file) {
         return null;
     }
+
+    /**
+     * 更新数据
+     *
+     * @param websqlConfig 配置
+     * @param newData
+     * @param oldData      数据
+     * @param table        表
+     * @return
+     */
+    Boolean update(WebsqlConfig websqlConfig, JSONObject newData, JSONObject oldData, JSONObject table);
 }

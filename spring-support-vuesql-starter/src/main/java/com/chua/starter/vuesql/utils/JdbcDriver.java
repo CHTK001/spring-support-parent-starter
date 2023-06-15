@@ -1,5 +1,6 @@
 package com.chua.starter.vuesql.utils;
 
+import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.database.ResultSetUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
@@ -220,5 +221,66 @@ public class JdbcDriver {
             }).collect(Collectors.toList()));
         }
         return rs;
+    }
+
+    /**
+     * 更新数据
+     * @param connection 连接
+     * @param newData 新数据
+     * @param oldData 老数据
+     * @param realName 表名
+     * @return 结果
+     */
+    public static Boolean update(Connection connection, JSONObject newData, JSONObject oldData, String realName) {
+        StringBuilder sb = new StringBuilder();
+        //新增
+        if(oldData.isEmpty()) {
+            sb.append(" INSERT INTO ").append(realName).append(" (");
+            for (String key : newData.keySet()) {
+                sb.append("`").append(key).append("`,");
+            }
+            sb.delete(sb.length() - 1, sb.length());
+            sb.append(")");
+            sb.append(" VALUES (");
+            for (Object o : newData.values()) {
+                sb.append("'").append(o).append("',");
+            }
+            sb.delete(sb.length() - 1, sb.length());
+            sb.append(")");
+        } else {
+            sb.append("UPDATE ").append(realName)
+                    .append(" SET ");
+            for (String s : oldData.keySet()) {
+                sb.append("`").append(s).append("` = '")
+                        .append(newData.get(s)).append("',");
+            }
+            sb.delete(sb.length() - 1, sb.length());
+
+            sb.append(" WHERE 1 = 1 ");
+            for (Map.Entry<String, Object> entry : newData.entrySet()) {
+                Object value = entry.getValue();
+                if(null == value) {
+                    continue;
+                }
+
+                String key = entry.getKey();
+
+                sb.append(" AND `").append(key).append("` = ");
+                if(oldData.containsKey(key)) {
+                    value = oldData.get(key);
+                }
+                if(value instanceof Number) {
+                    sb.append(value);
+                } else {
+                    sb.append("'").append(value).append("'");
+                }
+            }
+        }
+
+        try (Statement statement = connection.createStatement()) {
+            return statement.executeUpdate(sb.toString()) != 0;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

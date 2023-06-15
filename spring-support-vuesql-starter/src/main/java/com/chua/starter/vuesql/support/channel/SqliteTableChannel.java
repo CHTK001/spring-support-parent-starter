@@ -1,11 +1,9 @@
 package com.chua.starter.vuesql.support.channel;
 
-import com.chua.common.support.database.annotation.Column;
-import com.chua.common.support.function.SafePredicate;
+import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.utils.FileUtils;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
 import com.chua.starter.vuesql.enums.DatabaseType;
-import com.chua.starter.vuesql.enums.Type;
 import com.chua.starter.vuesql.pojo.Construct;
 import com.chua.starter.vuesql.pojo.Keyword;
 import com.chua.starter.vuesql.pojo.OpenResult;
@@ -18,12 +16,7 @@ import javax.annotation.Resource;
 import java.io.File;
 import java.io.IOException;
 import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
-import java.util.function.Predicate;
 
 /**
  * 表
@@ -117,6 +110,11 @@ public class SqliteTableChannel implements TableChannel{
             return "sqlite数据库上传失败请重试";
         }
 
+        return null;
+    }
+
+    @Override
+    public Boolean update(WebsqlConfig websqlConfig, JSONObject newData, JSONObject oldData, JSONObject table) {
         return null;
     }
 }

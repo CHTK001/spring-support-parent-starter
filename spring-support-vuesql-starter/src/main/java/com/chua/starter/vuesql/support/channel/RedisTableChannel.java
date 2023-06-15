@@ -1,27 +1,22 @@
 package com.chua.starter.vuesql.support.channel;
 
+import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.collection.ImmutableBuilder;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
 import com.chua.starter.vuesql.enums.Action;
-import com.chua.starter.vuesql.enums.DatabaseType;
 import com.chua.starter.vuesql.enums.Type;
 import com.chua.starter.vuesql.pojo.Construct;
 import com.chua.starter.vuesql.pojo.Keyword;
 import com.chua.starter.vuesql.pojo.OpenResult;
 import com.chua.starter.vuesql.pojo.SqlResult;
-import com.chua.starter.vuesql.utils.JdbcDriver;
 import org.springframework.stereotype.Component;
-import redis.clients.jedis.DefaultJedisClientConfig;
 import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisClientConfig;
-import redis.clients.jedis.JedisPool;
 
 import javax.annotation.Resource;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.sql.Connection;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -112,6 +107,11 @@ public class RedisTableChannel implements TableChannel {
         result.setData(rs);
 
         return result;
+    }
+
+    @Override
+    public Boolean update(WebsqlConfig websqlConfig, JSONObject newData, JSONObject oldData, JSONObject table) {
+        return null;
     }
 
     public Jedis getJedis(WebsqlConfig config) {
