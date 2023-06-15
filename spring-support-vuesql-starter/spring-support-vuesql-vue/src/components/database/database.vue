@@ -44,10 +44,29 @@
       <el-form-item label="配置名称" prop="configName">
         <el-input v-model="form.configName" clearable placeholder="请输入配置名称"/>
       </el-form-item>
-      <el-form-item label="配置地址" prop="configIp">
+
+      <el-form-item label="数据库类型">
+        <el-radio-group v-model="configTypeSwitch">
+          <el-radio label="file">文件</el-radio>
+          <el-radio label="link">连接</el-radio>
+        </el-radio-group>
+      </el-form-item>
+      <el-form-item label="文件" v-if="configTypeSwitch == 'file'">
+      <el-upload class="upload-demo" drag :auto-upload="false" :limit="1"
+                 ref="upload"
+                 action="#"
+                 :http-request="beforeUpload"
+                 :on-change="beforeUpload">
+        <el-icon class="el-icon--upload"><upload-filled /></el-icon>
+        <div class="el-upload__text">
+          拖动文件或者 <em>上传文件</em>
+        </div>
+      </el-upload>
+      </el-form-item>
+      <el-form-item label="配置地址" prop="configIp" v-if="configTypeSwitch == 'link'">
         <el-input v-model="form.configIp" clearable placeholder="请输入配置地址"/>
       </el-form-item>
-      <el-form-item label="配置端口" prop="configPort">
+      <el-form-item label="配置端口" prop="configPort" v-if="configTypeSwitch == 'link'">
         <el-input v-model="form.configPort" type="number" clearable placeholder="请输入配置端口"/>
       </el-form-item>
       <el-form-item label="账号" prop="configUsername">
@@ -60,10 +79,8 @@
         <el-input v-model="form.configDatabase"  clearable placeholder="请输入数据库"/>
       </el-form-item>
       <el-form-item label="数据源类型" prop="configType">
-        <el-select v-model="form.configType" clearable placeholder="请选择数据源类型">
-          <el-option label="MYSQL5" value="MYSQL5"></el-option>
-          <el-option label="MYSQL8" value="MYSQL8"></el-option>
-          <el-option label="REDIS" value="REDIS"></el-option>
+        <el-select v-model="form.configType"  clearable placeholder="请选择数据源类型">
+          <el-option v-for="item in databaseTypes" :label="item" :value="item"></el-option>
         </el-select>
       </el-form-item>
       <el-form-item>
@@ -93,6 +110,8 @@ export default {
   },
   data() {
     return {
+      configTypeSwitch: 'link',
+      databaseTypes: [],
       loading: false,
       dialogVisible: false,
       tableData: [],
@@ -102,14 +121,26 @@ export default {
         configName: [{required: true, message: "配置名不能为空", trigger: 'blur'}],
         configIp: [{required: true, message: "配置地址不能为空", trigger: 'blur'}],
         configPort: [{required: true, message: "配置端口不能为空", trigger: 'blur'}],
-        configType: [{required: true, message: "数据源类型不能为空", trigger: 'blur'}]
+        configType: [{required: true, message: "数据源类型不能为空", trigger: 'blur'}],
+        file: [{required: true, message: "文件不能为空", trigger: 'blur'}]
       }
     }
   },
   mounted() {
+    this.initialTypes();
     this.doSearch();
   },
   methods: {
+    beforeUpload(param) {
+      console.log()
+      this.form.file = param.file || param.raw;
+    },
+    initialTypes: function () {
+      request.get(URL.DATABASE_TYPES)
+          .then(({data}) => {
+            this.databaseTypes = data.data;
+          })
+    },
     updateDatabase: function (config) {
       this.dialogVisible = !this.dialogVisible;
       this.form = config;
@@ -130,14 +161,23 @@ export default {
       this.$refs.formRef.validate((v) => {
         if (v) {
           this.loading = true;
-          request.post(URL.UPDATE_DATABASE, this.form)
-              .then(({data}) => {
+          const formData = new FormData();
+          for(const item of Object.keys(this.form)) {
+            formData.append(item, this.form[item]);
+          }
+          formData.append("file", this.form.file);
+          request.post(URL.UPDATE_DATABASE, formData, {
+            headers: {
+              "Content-Type": "multipart/form-data"
+            }
+          }) .then(({data}) => {
                 ElMessage({
                   type: data.code == '00000' ? "success" : "error",
                   message: data.msg
                 });
                 if(data.code == '00000') {
                   this.doSearch();
+                  this.dialogVisible = !this.dialogVisible;
                 }
               }).catch(() => {
             ElMessage({
@@ -146,7 +186,6 @@ export default {
             })
           }).finally(() => {
             this.loading = false;
-            this.dialogVisible = !this.dialogVisible;
           });
         }
       })

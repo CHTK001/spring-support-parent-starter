@@ -17,6 +17,7 @@
     "sql-formatter": "^2.3.4",
     "vue": "^3.3.2",
     "vue-codemirror": "^4.0.6",
+    "vue-json-editor": "^1.4.3",
     "vue-router": "^4.2.2"
   },
   "devDependencies": {

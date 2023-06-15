@@ -1,25 +1,28 @@
 package com.chua.starter.vuesql.support.channel;
 
 import com.chua.common.support.bean.BeanUtils;
+import com.chua.common.support.collection.ImmutableBuilder;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
 import com.chua.starter.vuesql.enums.Action;
+import com.chua.starter.vuesql.enums.DatabaseType;
 import com.chua.starter.vuesql.enums.Type;
 import com.chua.starter.vuesql.pojo.Construct;
 import com.chua.starter.vuesql.pojo.Keyword;
 import com.chua.starter.vuesql.pojo.OpenResult;
 import com.chua.starter.vuesql.pojo.SqlResult;
-import org.redisson.Redisson;
-import org.redisson.api.RedissonClient;
-import org.redisson.config.Config;
-import org.redisson.config.SingleServerConfig;
+import com.chua.starter.vuesql.utils.JdbcDriver;
 import org.springframework.stereotype.Component;
+import redis.clients.jedis.DefaultJedisClientConfig;
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisClientConfig;
 import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.JedisPoolConfig;
 
-import java.util.LinkedList;
-import java.util.List;
+import javax.annotation.Resource;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.sql.Connection;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -30,10 +33,9 @@ import java.util.stream.IntStream;
  */
 @Component("redis")
 public class RedisTableChannel implements TableChannel {
+    @Resource
+    private ChannelFactory channelFactory;
 
-
-    private static final ThreadLocal<JedisPool> LOCAL = new InheritableThreadLocal<>();
-    @Override
     public String createUrl(WebsqlConfig config) {
         return null;
     }
@@ -41,8 +43,18 @@ public class RedisTableChannel implements TableChannel {
     @Override
     public List<Construct> getDataBaseConstruct(WebsqlConfig config) {
         List<Construct> rs = new LinkedList<>();
+        Jedis jedis = channelFactory.getConnection(config, Jedis.class, this::getJedis, it -> !it.isConnected());
         rs.add(Construct.builder().type(Type.DATABASE).icon("DATABASE").id(1).pid(0).name(config.getConfigDatabase()).build());
-        rs.addAll(IntStream.range(2, 18).mapToObj(it -> Construct.builder().icon("DATABASE").id(it).pid(1).type(Type.TABLE).action(Action.OPEN).name((it - 2) + "").build()).collect(Collectors.toList()));
+        rs.addAll(IntStream.range(2, 18).mapToObj(it -> {
+            jedis.select(it - 2);
+            return Construct.builder().icon("DATABASE")
+                    .id(it)
+                    .realName((it - 2) + "")
+                    .pid(1)
+                    .type(Type.TABLE)
+                    .action(Action.OPEN)
+                    .name((it - 2) + "(" + jedis.dbSize() + ")").build();
+        }).collect(Collectors.toList()));
         return rs;
     }
 
@@ -72,27 +84,53 @@ public class RedisTableChannel implements TableChannel {
     public OpenResult openTable(WebsqlConfig websqlConfig, String tableName, Integer pageNum, Integer pageSize) {
         WebsqlConfig websqlConfig1 = BeanUtils.copyProperties(websqlConfig, WebsqlConfig.class);
         websqlConfig1.setConfigDatabase(tableName);
-        RedissonClient redisson = getRedisson(websqlConfig1);
-        long count = redisson.getKeys().count();
-        return null;
+        OpenResult result;
+        List<Map<String, Object>> rs;
+        List<String> columns;
+        int start = (pageNum - 1) * pageSize;
+        int end = pageNum * pageSize;
+        try (Jedis jedis = getJedis(websqlConfig1)) {
+            Set<String> keys = jedis.keys("*");
+            result = new OpenResult();
+            rs = new LinkedList<>();
+            columns = ImmutableBuilder.<String>builder().add("键").add("值").newLinkedList();
+
+            int index = 0;
+            for (String key : keys) {
+                if(start <= index && index < end) {
+                    Map<String, Object> value = new LinkedHashMap<>();
+                    value.put("键", key);
+                    value.put("值", jedis.get(key));
+                    rs.add(value);
+                }
+                index ++;
+            }
+            result.setTotal(keys.size());
+        }
+
+        result.setColumns(columns);
+        result.setData(rs);
+
+        return result;
     }
 
-    public RedissonClient getRedisson(WebsqlConfig websqlConfig) {
-        Config config = new Config();
-        SingleServerConfig singleServerConfig = config.useSingleServer();
-        singleServerConfig.setAddress("redis://" + websqlConfig.getConfigIp() + ":" + websqlConfig.getConfigPort()).setPassword(websqlConfig.getConfigPassword());
-        if(StringUtils.isNotEmpty(websqlConfig.getConfigDatabase())) {
+    public Jedis getJedis(WebsqlConfig config) {
+        Jedis jedis = null;
+        if(StringUtils.isNotEmpty(config.getConfigPassword())) {
+            String userInfo = StringUtils.defaultString(config.getConfigUsername(), "") + ":" + config.getConfigPassword() + "@";
             try {
-                singleServerConfig.setDatabase(Integer.parseInt(websqlConfig.getConfigDatabase()));
-            } catch (NumberFormatException e) {
+                jedis  = new Jedis(new URI("redis://"+ userInfo +"" + config.getConfigIp() + ":" + config.getConfigPort()));
+            } catch (URISyntaxException e) {
                 throw new RuntimeException(e);
             }
+        } else {
+            jedis  = new Jedis(config.getConfigIp(), config.getConfigPort());
         }
-        return Redisson.create(config);
-    }
+        try {
+            jedis.select(Integer.parseInt(config.getConfigDatabase()));
+        } catch (NumberFormatException ignored) {
+        }
 
-    public Jedis jedis(WebsqlConfig config) {
-        Jedis jedis = new Jedis(config.getConfigIp(), config.getConfigPort());
         return jedis;
     }
 }

@@ -21,6 +21,8 @@ public class Construct {
     private Type type;
     private String icon;
 
+    private String realName;
+
     private Integer pid;
 
     @Builder.Default

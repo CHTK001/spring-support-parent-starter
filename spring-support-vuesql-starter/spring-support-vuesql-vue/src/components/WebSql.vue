@@ -219,11 +219,13 @@ export default {
       }).finally(() => this.tableLoading = false)
     },
     handleSql(item, action) {
+      this.currentTable = item;
       if (item.action == 'OPEN') {
         this.handleTabsEdit({
           id: item.id + "",
           name: item.id,
           label: item.name,
+          realName: item.realName,
           type: item.type,
           path: item.path,
           close: !0,
@@ -231,7 +233,7 @@ export default {
         }, 'add')
         return;
       }
-      this.currentTable = item;
+
       try {
         this.$refs.home[0].setSql(item);
       } catch (e) {
