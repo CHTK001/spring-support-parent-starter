@@ -3,6 +3,7 @@ package com.chua.starter.vuesql.support.channel;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
 import com.chua.starter.vuesql.pojo.Construct;
 import com.chua.starter.vuesql.pojo.Keyword;
+import com.chua.starter.vuesql.pojo.OpenResult;
 import com.chua.starter.vuesql.pojo.SqlResult;
 
 import java.util.List;
@@ -64,4 +65,15 @@ public interface TableChannel {
      * @return 结果
      */
     SqlResult explain(WebsqlConfig websqlConfig, String sql);
+
+    /**
+     * 打开表
+     *
+     * @param websqlConfig 配置
+     * @param tableName    表名
+     * @param pageNum      页码
+     * @param pageSize     每页数量
+     * @return 结果
+     */
+    OpenResult openTable(WebsqlConfig websqlConfig, String tableName, Integer pageNum, Integer pageSize);
 }

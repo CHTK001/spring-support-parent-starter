@@ -88,7 +88,7 @@
         <div id="searchHistoryPanel"
              title="" class="panel-body panel-body-noborder layout-body panel-noscroll"
         >
-          <result-set :config="currentDatabaseData" :sql="code" ref="resultSet">
+          <result-set :config="currentDatabaseData" :sql="code" ref="resultSet" :watch-data="watchData">
 
           </result-set>
         </div>
@@ -141,7 +141,11 @@ export default {
     },
     event: {
       type: Function
-    }
+    },
+    watchData: {
+      type: Array,
+      default: []
+    },
   },
   computed: {
     database: function () {
@@ -196,11 +200,10 @@ export default {
   methods: {
     addConfig() {
       this.$emit('event',  {
-        id: '1',
+        id: 'WEB-DATABASE',
         label: '数据库',
-        path: "/database",
-        type: 'database',
-        content: 'Tab 1 content',
+        type: 'WEB-DATABASE',
+        icon:'DATABASE',
         close: false
       })
     },

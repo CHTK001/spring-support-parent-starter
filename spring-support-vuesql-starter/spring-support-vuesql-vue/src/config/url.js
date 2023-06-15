@@ -1,5 +1,6 @@
 const HOST = '/api/vuesql';
 const URL = {
+    OPEN_TABLE: HOST + '/table/open/{configId}/{name}',
     KEYWORD: HOST + '/table/keyword/{configId}',
     EXECUTE: HOST + '/table/execute/{configId}',
     EXPLAIN: HOST + '/table/explain/{configId}',

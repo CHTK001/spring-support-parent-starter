@@ -8,6 +8,7 @@ import com.chua.starter.vuesql.enums.Type;
 import com.chua.starter.vuesql.pojo.Construct;
 import com.chua.starter.vuesql.pojo.Keyword;
 import com.chua.starter.vuesql.pojo.Keyword.ColumnKeyword;
+import com.chua.starter.vuesql.pojo.OpenResult;
 import com.chua.starter.vuesql.pojo.SqlResult;
 import com.chua.starter.vuesql.utils.JdbcDriver;
 import org.springframework.stereotype.Component;
@@ -36,20 +37,20 @@ public class MysqlTableChannel implements TableChannel {
     @Override
     public List<Construct> getDataBaseConstruct(WebsqlConfig config) {
         List<Construct> rs = new LinkedList<>();
-        rs.add(Construct.builder().type(Type.DATABASE).id(1).pid(0).name(config.getConfigDatabase()).build());
-        rs.add(Construct.builder().type(Type.TABLE).pid(1).id(2).name("表").build());
-        rs.add(Construct.builder().type(Type.VIEW).pid(1).id(3).name("视图").build());
+        rs.add(Construct.builder().icon("DATABASE").type(Type.DATABASE).id(1).pid(0).name(config.getConfigDatabase()).build());
+        rs.add(Construct.builder().icon("TABLE").type(Type.TABLE).pid(1).id(2).name("表").build());
+        rs.add(Construct.builder().icon("VIEW").type(Type.VIEW).pid(1).id(3).name("视图").build());
 
         AtomicInteger index = new AtomicInteger(4);
         try (Connection connection = JdbcDriver.createConnection(DatabaseType.MYSQL8, config)) {
             ResultSet resultSet = connection.getMetaData().getTables(config.getConfigDatabase(), null, null, new String[]{"TABLE"});
             ResultSetUtils.doLine(resultSet, tables -> {
-                rs.add(Construct.builder().type(Type.TABLE).pid(2).id(index.getAndIncrement()).name(tables.getString("TABLE_NAME")).build());
+                rs.add(Construct.builder().icon("TABLE").type(Type.TABLE).pid(2).id(index.getAndIncrement()).name(tables.getString("TABLE_NAME")).build());
             });
 
             ResultSet resultSet1 = connection.getMetaData().getTables(config.getConfigDatabase(), null, null, new String[]{"VIEW"});
             ResultSetUtils.doLine(resultSet1, tables -> {
-                rs.add(Construct.builder().type(Type.VIEW).pid(3).id(index.getAndIncrement()).name(tables.getString("TABLE_NAME")).build());
+                rs.add(Construct.builder().icon("VIEW").type(Type.VIEW).pid(3).id(index.getAndIncrement()).name(tables.getString("TABLE_NAME")).build());
             });
 
         } catch (SQLException e) {
@@ -106,6 +107,17 @@ public class MysqlTableChannel implements TableChannel {
         try (Connection connection = JdbcDriver.createConnection(DatabaseType.MYSQL8, websqlConfig);
         ) {
             return JdbcDriver.execute(connection, null, null, "explain " + sql, null);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public OpenResult openTable(WebsqlConfig websqlConfig, String tableName, Integer pageNum, Integer pageSize) {
+        try (Connection connection = JdbcDriver.createConnection(DatabaseType.MYSQL8, websqlConfig);
+        ) {
+            String sql = "SELECT * FROM " + tableName + " limit " + (pageNum - 1) * pageSize + "," + pageSize;
+            return JdbcDriver.query(connection, sql);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
