@@ -114,7 +114,14 @@ public class SqliteTableChannel implements TableChannel{
     }
 
     @Override
-    public Boolean update(WebsqlConfig websqlConfig, JSONObject newData, JSONObject oldData, JSONObject table) {
-        return null;
+    public Boolean update(WebsqlConfig config, JSONObject newData, JSONObject oldData, JSONObject table) {
+        try  {
+            Connection connection = channelFactory.getConnection(config, Connection.class, websqlConfig -> {
+                return JdbcDriver.createConnection(DatabaseType.SQLITE, websqlConfig);
+            }, Connection::isClosed);
+            return JdbcDriver.update(connection, newData, oldData, table.getString("realName"));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }
