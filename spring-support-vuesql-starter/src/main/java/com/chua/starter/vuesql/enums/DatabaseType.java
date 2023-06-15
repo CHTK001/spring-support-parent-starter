@@ -24,6 +24,26 @@ public enum DatabaseType {
      */
     SQLITE("org.sqlite.JDBC"),
     /**
+     * csv
+     */
+    CSV(""),
+    /**
+     * tsv
+     */
+    TSV(""),
+    /**
+     * XLS
+     */
+    XLS(""),
+    /**
+     * XLSX
+     */
+    XLSX(""),
+    /**
+     * DBF
+     */
+    DBF(""),
+    /**
      * redis
      */
     REDIS("");
