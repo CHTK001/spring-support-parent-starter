@@ -142,11 +142,10 @@ import Home from "@/components/home/home.vue";
 import Database from "@/components/database/database.vue";
 import OpenTable from "@/components/table/OpenTable.vue";
 import RightMenu from "@/components/menu/RightMenu.vue";
-// theme
-import '@/style/easy.css'
 import '@/assets/icons/icon-berlin.css'
 import '@/assets/icons/icon-hamburg.css'
 import '@/assets/icons/icon-standard.css'
+
 export default {
   components: {Home, Database, OpenTable, RightMenu},
   data() {
@@ -222,7 +221,7 @@ export default {
       this.currentTable = item;
       if (item.action == 'OPEN') {
         this.handleTabsEdit({
-          id: item.id + "",
+          id: item.id + item.name,
           name: item.id,
           label: item.name,
           realName: item.realName,
@@ -248,7 +247,7 @@ export default {
       let tab = this.tabs.find(tab => tab.id == item.id);
       if (!tab) {
         this.tabs.push({
-          id: item.id + "",
+          id: item.id + item.label,
           name: item.id,
           label: item.label,
           type: item.type,
@@ -256,7 +255,7 @@ export default {
           action: item.action
         })
       }
-      this.activeRoute = item.id + ""
+      this.activeRoute = item.id + item.label
     },
     closeTab(targetname) {
       console.log(targetname)
@@ -273,7 +272,7 @@ export default {
           }
         })
       }
-      this.activeRoute = activeitem + "";
+      this.activeRoute = activeitem;
       this.tabs = tabs.filter(tab => tab.id !== targetname.toString())
     },
     tabClick(tab) {
