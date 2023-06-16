@@ -1,8 +1,10 @@
 package com.chua.starter.vuesql.controller;
 
+import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.lang.treenode.CustomTreeNode;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.ObjectUtils;
 import com.chua.starter.common.support.result.Result;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
 import com.chua.starter.vuesql.pojo.Construct;
@@ -101,8 +103,10 @@ public class TableController {
         try {
             return Result.success(tableChannel.update(websqlConfig,
                     json.getJSONObject("newData"),
-                    json.getJSONObject("oldData"),
-                    json.getJSONObject("table")));
+                    ObjectUtils.defaultIfNull(json.getJSONObject("oldData"), json.getJSONArray("oldData")),
+                    json.getJSONObject("table"),
+                    json.getString("mode")));
+
         } catch (Exception e) {
             return Result.failed(e.getLocalizedMessage());
         }

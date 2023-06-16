@@ -1,3 +1,12 @@
+export function copy(obj) {
+    const rs = {};
+    for (const objElement of Object.keys(obj)) {
+        rs[objElement] = obj[objElement];
+    }
+
+    return rs;
+}
+
 export function sformat(url, ...param) {
     let newUrl = url;
     if(param.length == 1) {

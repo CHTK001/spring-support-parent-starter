@@ -112,8 +112,8 @@ public class RedisTableChannel implements TableChannel {
     }
 
     @Override
-    public Boolean update(WebsqlConfig config, JSONObject newData, JSONObject oldData, JSONObject table) {
-        long count = oldData.values().stream().map(String::valueOf).filter(StringUtils::isNotEmpty).count();
+    public Boolean update(WebsqlConfig config, JSONObject newData, Object oldData, JSONObject table, String mode) {
+        long count = ((JSONObject)oldData).values().stream().map(String::valueOf).filter(StringUtils::isNotEmpty).count();
         Jedis jedis = channelFactory.getConnection(config, Jedis.class, this::getJedis, it -> !it.isConnected());
         if (count == 0) {
             jedis.set(newData.getString("键"), newData.getString("值"));

@@ -119,7 +119,7 @@ public class FileTableChannel implements TableChannel {
     }
 
     @Override
-    public Boolean update(WebsqlConfig config, JSONObject newData, JSONObject oldData, JSONObject table) {
+    public Boolean update(WebsqlConfig config, JSONObject newData, Object oldData, JSONObject table, String mode) {
         throw new RuntimeException("不支持修改操作");
     }
 
