@@ -58,9 +58,32 @@
         <template #default="scope">
           <el-input ref="gain"
                     style="width: 100%; height: 30px"
-                    v-if="status.rowStatus[scope.$index + item.columnName]"
+                    v-if="status.rowStatus[scope.$index + item.columnName]  && item.columnType !== 'DATETIME'"
                     @keyup.native.enter="sendData(scope)"
                     v-model="updateRecordData[scope.$index]['newData'][item.columnName]"></el-input>
+          <el-date-picker
+              clearable
+              @keyup.native.enter="sendData(scope)"
+              v-model="updateRecordData[scope.$index]['newData'][item.columnName]"
+              size="small"
+              style="width: 130px;margin-left: -10px;"
+              v-else-if="status.rowStatus[scope.$index + item.columnName] && item.columnType === 'DATETIME'"
+              type="datetime"
+              format="YYYY-MM-DD HH:mm:ss"
+              value-format="YYYY-MM-DD HH:mm:ss"
+          />
+
+          <el-date-picker
+              clearable
+              @keyup.native.enter="sendData(scope)"
+              v-model="updateRecordData[scope.$index]['newData'][item.columnName]"
+              size="small"
+              v-else-if="status.rowStatus[scope.$index + item.columnName] && item.columnType === 'YEAR'"
+              type="year"
+              format="YYYY"
+              value-format="YYYY"
+          />
+
           <div style="width: 100%; height: 30px" v-else @click="updateRow(scope)">{{ scope.row[item.columnName] }}</div>
         </template>
       </el-table-column>
@@ -121,7 +144,7 @@
 <script>
 import request from "axios";
 import URL from '@/config/url'
-import {sformat, copy, isNewSame} from "@/utils/Utils";
+import {copy, sformat} from "@/utils/Utils";
 import '@/plugins/layx/layx.min.css'
 
 export default {
