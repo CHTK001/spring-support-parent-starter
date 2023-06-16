@@ -1,29 +1,27 @@
 package com.chua.starter.vuesql.support.channel;
 
 import com.alibaba.fastjson2.JSONArray;
-import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.collection.ImmutableBuilder;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
 import com.chua.starter.vuesql.enums.Action;
 import com.chua.starter.vuesql.enums.Type;
 import com.chua.starter.vuesql.pojo.*;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.compress.utils.Lists;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.imps.CuratorFrameworkState;
 import org.apache.curator.retry.RetryNTimes;
 import org.springframework.stereotype.Component;
-import redis.clients.jedis.Jedis;
 
 import javax.annotation.Resource;
-import java.util.*;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
  * redis
@@ -115,7 +113,7 @@ public class ZookeeperTableChannel implements TableChannel {
                 Map<String, Object> item = new HashMap<>(1);
                 item.put("name", childNode);
                 rs.add(item);
-                getNode(curatorFramework, childNode, rs, andIncrement, index);
+                doNode(curatorFramework, childNode, rs, andIncrement, index);
             }
         } catch (Exception e) {
             try {

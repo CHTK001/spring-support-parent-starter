@@ -5,7 +5,8 @@
 .el-table__header tr,
 .el-table__header th {
     padding: 0;
-    height: 30px;
+    height: 30px !important;
+    max-height: 30px !important;
     line-height: 30px;
     font-size: 12px;
 }

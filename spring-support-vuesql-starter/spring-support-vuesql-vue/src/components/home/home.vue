@@ -40,12 +40,12 @@
 
               <a href="javascript:void(0)" id="explainSQLButton" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
                  iconcls="icon-hamburg-category" plain="true" @click="commitFn()" title="解析Mybatis" group=""><span
-                  class="l-btn-left l-btn-icon-left"><span class="l-btn-text">解析Mybatis</span><span
-                  class="l-btn-icon icon-hamburg-category">&nbsp;</span></span></a>
+                  class="l-btn-left l-btn-icon-left"><span class="l-btn-text">Mybatis</span><span
+                  class="l-btn-icon icon-hamburg-docs">&nbsp;</span></span></a>
               <span class="toolbar-item dialog-tool-separator"></span>
 
               <a href="javascript:void(0)" id="newQueryButton" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
-                 iconcls="icon-standard-add" plain="true" onclick="newQuery();" title="新建查询" group=""><span
+                 iconcls="icon-standard-add" plain="true" @click="newQuery();" title="新建查询" group=""><span
                   class="l-btn-left l-btn-icon-left"><span class="l-btn-text">新建</span><span
                   class="l-btn-icon icon-standard-add">&nbsp;</span></span></a>
               <span class="toolbar-item dialog-tool-separator"></span>
@@ -105,14 +105,18 @@
     <el-dialog
         v-model="dialogVisible"
         title="解析Mybatis"
-        width="30%"
+        width="70%"
         draggable
     >
       <div>
-        <textarea v-model="inMybatisSql"></textarea>
+        <el-input type="textarea" v-model="inMybatisSql" :rows="12"></el-input>
       </div>
-      <div>
-        <textarea v-model="outMybatisSql"></textarea>
+      <div style="max-height: 300px; overflow-x: hidden">
+        <el-row :gutter="12">
+          <el-col>
+            <el-card shadow="always" style="margin-top: 12px; " v-for="item in outMybatisSql"> {{ item }}</el-card>
+          </el-col>
+        </el-row>
       </div>
       <template #footer>
       <span class="dialog-footer">
@@ -152,9 +156,9 @@ import '@/assets/icons/icon-standard.css'
 import {getCurrentInstance} from "vue";
 import '@/assets/icons/icon.css'
 import request from "axios";
-import {sformat} from "@/utils/Utils";
+import {guid, sformat} from "@/utils/Utils";
 import URL from "@/config/url";
-import sqlFormatter, {format} from "sql-formatter";
+import {format} from "sql-formatter";
 import ResultSet from "@/components/home/resultset.vue";
 
 const instance = getCurrentInstance();
@@ -192,7 +196,7 @@ export default {
   },
   watch: {
     database: function (n, o) {
-      this.currentDatabase = n.label;
+      this.currentDatabase = n.configName;
     },
     table: function (n, o) {
       this.code = "SELECT * FROM " + n.name;
@@ -201,7 +205,7 @@ export default {
   data() {
     return {
       inMybatisSql: '',
-      outMybatisSql: '',
+      outMybatisSql: [],
       dialogVisible: false,
       code: '', //代码
       currentDatabase: '',//当前数据库
@@ -234,11 +238,20 @@ export default {
   },
   methods: {
     addConfig() {
-      this.$emit('event',  {
+      this.$emit('event', {
         id: 'WEB-DATABASE',
         label: '数据库',
         type: 'WEB-DATABASE',
-        icon:'DATABASE',
+        icon: 'DATABASE',
+        close: false
+      })
+    },
+    newQuery() {
+      this.$emit('event', {
+        id: guid(),
+        label: '数据库',
+        type: 'HOME',
+        icon: 'DATABASE',
         close: false
       })
     },
@@ -254,6 +267,8 @@ export default {
     },
     commitFn: function () {
       this.dialogVisible = !this.dialogVisible;
+      this.inMybatisSql = '';
+      this.outMybatisSql.length = 0;
     },
     setSql(n) {
       if (n.action == 'OPEN') {
@@ -262,82 +277,60 @@ export default {
       this.code = "SELECT * FROM " + n.name;
     },
     parse() {
-      let inValue = this.inMybatisSql;
-      let split = inValue.split('\n')
-      let sb = ''
-      let list = []
-      if (split && split.length > 0) {
-        for (let i = 0; i < split.length; i++) {
-          let line = split[i]
-          if (!line || line.trim().length === 0) continue
-          if (line.indexOf(STR_PREPARING) >= 0) {
-            let subLine = line.substring(line.indexOf(STR_PREPARING) + 15)
-            sb = subLine
-            console.log('1:', sb)
-            // 为这一行选择配对的行
-            let rightLine = this.selectRightLine(line, split, i)
-            if (rightLine.indexOf(STR_PARAMETERS) >= 0) {
-              let rightStr = rightLine.substring(rightLine.indexOf(STR_PARAMETERS) + 15)
-              if (sb.length === 0) continue
-              console.log('2', rightStr)
-              let params = rightStr.split(',')
-              console.log(params)
-              for (let p of params) {
-                p = p.trim()
-                if (!p || p === '') continue
-                let value = p.substring(0, p.indexOf('('))
-                value = value || (p.includes('null') ? 'NULL' : '')
-                let type = p.substring(p.indexOf('(') + 1, p.indexOf(')'))
-                console.log(value, type)
-                if ((type.toLowerCase()) === 'string' || (type.toLowerCase()) === 'timestamp') {
-                  sb = sb.replace(/\?/, '\'' + value + '\'')
-                } else {
-                  sb = sb.replace(/\?/, value)
-                }
-              }
-              let res = sqlFormatter.format(sb.toString())
-              list.push(res)
-            }
-            sb = ''
-          }
-        }
+      let mybatisSQLTexts = [], inputText = this.inMybatisSql;
+      while (inputText.lastIndexOf('Preparing: ') > -1) {
+        // 因为是从尾部截取，所以需要从数组的头部添加
+        mybatisSQLTexts.unshift(inputText.substring(inputText.lastIndexOf('Preparing: ')));
+        inputText = inputText.substring(0, inputText.lastIndexOf('Preparing: '));
       }
-      this.outMybatisSql = list;
-      return list
+      console.log(mybatisSQLTexts);
+
+      // 将数组中的字符串挨个处理，以数组形式返回
+      for (let i = 0; i < mybatisSQLTexts.length; i++) {
+        this.outMybatisSql.push(this.parseSql(mybatisSQLTexts[i]));
+      }
+
     },
-    selectRightLine(line, split, start) {
-      let map = new Map()
-      let frontArr = line.substring(0, line.indexOf(STR_PREPARING)).split('')
-      for (let i = start; i < split.length; i++) {
-        let rightLine = split[i]
-        if (rightLine.includes(STR_PARAMETERS)) {
-          let rigthArr = rightLine.substring(0, rightLine.indexOf(STR_PARAMETERS)).split('')
-          if (rigthArr.length !== frontArr.length) continue
-          let count = 0
-          for (let j = 0; j < frontArr.length; j++) {
-            if (frontArr[j] === rigthArr[j]) count++
-          }
-          // console.log(start, "...", rightLine)
-          map.set(i, count)
+    parseSql: function (textVa) {
+      // 获取带问号的SQL语句
+      const statementStartIndex = textVa.indexOf('Preparing: ');
+      let statementEndIndex = textVa.length - 1;
+      for (let i = statementStartIndex; i < textVa.length; i++) {
+        if (textVa[i] === "\n") {
+          statementEndIndex = i;
+          break;
         }
       }
-      console.log(map)
-      let lineNo = this.getMaxLineNo(map)
-      console.log(start, '...', lineNo)
-      return split[lineNo]
-    },
-    getMaxLineNo(map) {
-      // eslint-disable-next-line one-var
-      let max = 0, lineNo = 0
-      for (let [key, value] of map.entries()) {
-        if (value > max) {
-          max = value
-          lineNo = key
-        } else if (value === max && lineNo > key) {
-          lineNo = key // 选行号小的
+      let statementStr = textVa.substring(statementStartIndex + "Preparing: ".length, statementEndIndex);
+      // console.log(statementStr);
+      //获取参数
+      const parametersStartIndex = textVa.indexOf('Parameters: ');
+      let parametersEndIndex = textVa.length - 1;
+      for (let i = parametersStartIndex; i < textVa.length; i++) {
+        if (textVa[i] === "\n") {
+          parametersEndIndex = i;
+          break;
+        } else {
+          // console.log(textVa[i]);
         }
       }
-      return lineNo
+      let parametersStr = textVa.substring(parametersStartIndex + "Parameters: ".length, parametersEndIndex);
+      parametersStr = parametersStr.split(",");
+      // console.log(parametersStr);
+      for (var i = 0; i < parametersStr.length; i++) {
+        // 如果数据中带括号将使用其他逻辑
+        const tempStr = parametersStr[i].substring(0, parametersStr[i].indexOf("("));
+        // 获取括号中内容
+        const typeStr = parametersStr[i].substring(parametersStr[i].indexOf("(") + 1, parametersStr[i].indexOf(")"));
+        // 如果为字符类型
+        if (typeStr === "String" || typeStr === "Timestamp" || typeStr === "Date") {
+          statementStr = statementStr.replace("?", "'" + tempStr.trim() + "'");
+        } else {
+          // 数值类型
+          statementStr = statementStr.replace("?", tempStr.trim());
+        }
+      }
+      return statementStr;
     },
     run() {
       let value = this.editor.getSelection() || this.editor.getValue();

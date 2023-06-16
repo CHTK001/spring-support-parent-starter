@@ -1,10 +1,18 @@
+export function guid() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        var r = Math.random() * 16 | 0,
+            v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
 export function isNewSame(obj, arr) {
-    for(let item of arr) {
+    for (let item of arr) {
         let isSame = !0;
         item = item.newData;
-        if(item.action === 'add') {
+        if (item.action === 'add') {
             p: for (const objElement of Object.keys(item)) {
-                if(obj[objElement] !== item[objElement]) {
+                if (obj[objElement] !== item[objElement]) {
                     isSame = !1;
                     break p;
                 }

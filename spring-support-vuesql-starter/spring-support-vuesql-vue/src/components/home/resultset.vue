@@ -95,15 +95,15 @@ export default {
       }]
       this.tabIndex = 1;
     },
-    run: function () {
+    run: function (item) {
       this.reset();
       let index = 1;
-      for (let sql of this.sql.split(";")) {
+      for (let sql of item.split(";")) {
         if (!sql) {
           continue
         }
 
-        if(!sql.trim()) {
+        if (!sql.trim()) {
           continue
         }
         this.$nextTick(() => {

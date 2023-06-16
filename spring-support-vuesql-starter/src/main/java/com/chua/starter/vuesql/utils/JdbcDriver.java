@@ -1,7 +1,6 @@
 package com.chua.starter.vuesql.utils;
 
 import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.database.ResultSetUtils;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
@@ -331,7 +330,7 @@ public class JdbcDriver {
             if (value instanceof Number) {
                 sb.append(value);
             } else {
-                sb.append("'").append(value).append("'");
+                sb.append("'").append(value.toString().replace("'", "")).append("'");
             }
         }
         return sb;
@@ -376,7 +375,7 @@ public class JdbcDriver {
             if (value instanceof Number) {
                 sb.append(value);
             } else {
-                sb.append("'").append(value).append("'");
+                sb.append("'").append(value.toString().replace("'", "")).append("'");
             }
         }
         return sb;
