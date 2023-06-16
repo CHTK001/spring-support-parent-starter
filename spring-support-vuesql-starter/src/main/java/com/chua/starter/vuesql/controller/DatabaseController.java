@@ -10,6 +10,8 @@ import com.chua.starter.vuesql.entity.system.WebsqlConfig;
 import com.chua.starter.vuesql.enums.DatabaseType;
 import com.chua.starter.vuesql.service.WebsqlConfigService;
 import com.chua.starter.vuesql.support.channel.TableChannel;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -41,6 +43,7 @@ public class DatabaseController {
      */
     @ResponseBody
     @GetMapping("/type")
+    @Cacheable(cacheNames = "websql", key = "'type'")
     public Result<DatabaseType[]> getDatabaseType() {
         return Result.success(DatabaseType.values());
     }
@@ -52,6 +55,7 @@ public class DatabaseController {
      */
     @ResponseBody
     @GetMapping("/list")
+    @Cacheable(cacheNames = "websql", key = "'database'")
     public Result<List<WebsqlConfig>> getDatabase() {
         return Result.success(websqlConfigService.list());
     }
@@ -62,6 +66,7 @@ public class DatabaseController {
      */
     @ResponseBody
     @PostMapping("/save")
+    @CacheEvict(cacheNames = "websql", key = "'database'")
     public Result<Boolean> saveDatabase(HttpServletRequest request, @RequestParam(value = "file", required = false)MultipartFile file) {
         WebsqlConfig websqlConfig = BeanUtils.copyProperties(request.getParameterMap(), WebsqlConfig.class);
         String databaseType = websqlConfig.getConfigType().name().toLowerCase();
@@ -97,6 +102,7 @@ public class DatabaseController {
      * @return 数据库
      */
     @DeleteMapping("/delete/{configId}")
+    @CacheEvict(cacheNames = "websql", key = "'database'")
     public Result<Boolean> saveDatabase(@PathVariable String configId) {
         WebsqlConfig websqlConfig = websqlConfigService.getById(configId);
         if(null ==websqlConfig) {

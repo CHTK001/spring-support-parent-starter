@@ -44,6 +44,10 @@ public enum DatabaseType {
      */
     DBF(""),
     /**
+     * ZOOKEEPER
+     */
+    ZOOKEEPER(""),
+    /**
      * redis
      */
     REDIS("");
