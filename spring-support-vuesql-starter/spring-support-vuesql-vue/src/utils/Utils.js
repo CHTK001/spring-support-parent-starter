@@ -1,3 +1,25 @@
+export function isNewSame(obj, arr) {
+    for(let item of arr) {
+        let isSame = !0;
+        item = item.newData;
+        if(item.action === 'add') {
+            p: for (const objElement of Object.keys(item)) {
+                if(obj[objElement] !== item[objElement]) {
+                    isSame = !1;
+                    break p;
+                }
+            }
+        }
+
+
+        if(isSame) {
+            return !0;
+        }
+    }
+
+    return !1;
+}
+
 export function copy(obj) {
     const rs = {};
     for (const objElement of Object.keys(obj)) {

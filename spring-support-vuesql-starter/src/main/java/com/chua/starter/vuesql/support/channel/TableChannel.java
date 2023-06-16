@@ -1,5 +1,6 @@
 package com.chua.starter.vuesql.support.channel;
 
+import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.utils.FileUtils;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
@@ -110,11 +111,9 @@ public interface TableChannel {
      * 更新数据
      *
      * @param websqlConfig 配置
-     * @param newData      新数据
-     * @param oldData      数据
      * @param table        表
-     * @param mode         模式
+     * @param data         数据
      * @return
      */
-    Boolean update(WebsqlConfig websqlConfig, JSONObject newData, Object oldData, JSONObject table, String mode);
+    Boolean update(WebsqlConfig websqlConfig, String table, JSONArray data);
 }

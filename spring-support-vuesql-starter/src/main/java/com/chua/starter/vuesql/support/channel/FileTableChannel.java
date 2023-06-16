@@ -1,5 +1,6 @@
 package com.chua.starter.vuesql.support.channel;
 
+import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.database.factory.DelegateDataSource;
@@ -119,9 +120,10 @@ public class FileTableChannel implements TableChannel {
     }
 
     @Override
-    public Boolean update(WebsqlConfig config, JSONObject newData, Object oldData, JSONObject table, String mode) {
+    public Boolean update(WebsqlConfig websqlConfig, String table, JSONArray data) {
         throw new RuntimeException("不支持修改操作");
     }
+
 
     private Connection createConnection(DatabaseType configType, WebsqlConfig websqlConfig) {
         ConnectorFactory connectorFactory = new CalciteConnectorFactory();

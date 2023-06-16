@@ -237,32 +237,32 @@ public class JdbcDriver {
      * 更新数据
      *
      * @param connection 连接
-     * @param newData1   新数据
-     * @param oldData    老数据
-     * @param realName   表名
-     * @param mode       模式
+     * @param table      表名
+     * @param data       数据
      * @return 结果
      */
-    public static Boolean update(Connection connection, JSONObject newData, Object oldData, String realName, String mode) throws SQLException {
-        if(oldData instanceof JSONObject) {
-            return JdbcDriver.update(connection, newData, (JSONObject) oldData, realName, mode);
-        } else {
-            if(null != oldData && oldData instanceof JSONArray) {
-                try {
-                    connection.setAutoCommit(false);
-                    ((JSONArray) oldData).forEach(item -> {
-                        JdbcDriver.update(connection, newData, new JSONObject((Map) item), realName, mode);
-                    });
-                    return true;
-                } catch (SQLException e) {
-                    connection.rollback();
-                } finally {
-                    connection.commit();
-                    connection.setAutoCommit(true);
-                }
+    @SuppressWarnings("ALL")
+    public static Boolean update(Connection connection, String table, JSONArray data) throws Exception {
+        for (Object datum : data) {
+            Map<String, Object> item = (Map<String, Object>) datum;
+            Map newData = MapUtils.getType(item, "newData", Map.class);
+            Map oldData = MapUtils.getType(item, "oldData", Map.class);
+            String action = MapUtils.getString(item, "action");
+            if(MapUtils.isEmpty(newData) && MapUtils.isEmpty(oldData)) {
+                continue;
             }
-            throw new RuntimeException("数据不支持该操作");
-        }
+            try {
+                connection.setAutoCommit(false);
+                JdbcDriver.update(connection, newData, oldData, table, action);
+            } catch (SQLException e) {
+                connection.rollback();
+            } finally {
+                connection.commit();
+                connection.setAutoCommit(true);
+            }
+        };
+
+        return true;
     }
 
     /**
@@ -275,11 +275,19 @@ public class JdbcDriver {
      * @param mode       模式
      * @return 结果
      */
-    public static Boolean update(Connection connection, JSONObject newData1, JSONObject oldData, String realName, String mode) {
+    public static Boolean update(Connection connection, Map<String, Object> newData1, Map<String, Object> oldData, String realName, String mode) {
         StringBuilder sb = new StringBuilder();
         //去重新数据中和老数据一致的数据
-        if("delete".equalsIgnoreCase(mode)) {
+        if ("delete".equalsIgnoreCase(mode)) {
             sb = makeDeleteSql(oldData, realName);
+        } else if ("add".equalsIgnoreCase(mode)) {
+            sb = makeInsertSql(newData1, realName);
+        } else if ("update".equalsIgnoreCase(mode)) {
+            Map<String, Object> newData = MapUtils.removeSameData(newData1, oldData);
+            if(newData.isEmpty()) {
+                return true;
+            }
+            sb = makeUpdateSql(newData, oldData, realName);
         } else {
             Map<String, Object> newData = MapUtils.removeSameData(newData1, oldData);
             //新增
@@ -296,6 +304,7 @@ public class JdbcDriver {
             throw new RuntimeException(e);
         }
     }
+
     /**
      * delte sql
      *
@@ -303,7 +312,7 @@ public class JdbcDriver {
      * @param realName 表名
      * @return sql
      */
-    private static StringBuilder makeDeleteSql(JSONObject oldData, String realName) {
+    private static StringBuilder makeDeleteSql(Map<String, Object> oldData, String realName) {
         StringBuilder sb = new StringBuilder();
         sb.append("DELETE FROM ").append(realName)
                 .append(" WHERE 1 = 1 ");
@@ -336,7 +345,7 @@ public class JdbcDriver {
      * @param realName 表名
      * @return sql
      */
-    private static StringBuilder makeUpdateSql(Map<String, Object> newData, JSONObject oldData, String realName) {
+    private static StringBuilder makeUpdateSql(Map<String, Object> newData, Map<String, Object> oldData, String realName) {
         StringBuilder sb = new StringBuilder();
 
         sb.append("UPDATE ").append(realName)
@@ -390,6 +399,11 @@ public class JdbcDriver {
         sb.append(")");
         sb.append(" VALUES (");
         for (Object o : newData.values()) {
+            if(null == o || o instanceof Number) {
+                sb.append(o).append(",");
+                continue;
+            }
+
             sb.append("'").append(o).append("',");
         }
         sb.delete(sb.length() - 1, sb.length());
