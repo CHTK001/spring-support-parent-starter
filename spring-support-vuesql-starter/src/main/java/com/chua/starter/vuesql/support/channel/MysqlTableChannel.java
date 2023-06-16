@@ -106,7 +106,7 @@ public class MysqlTableChannel implements TableChannel {
 
     @Override
     public OperatorResult doExecute(WebsqlConfig config, String tableName, String action) {
-        OperatorResult rs = new OperatorResult();
+
         try {
             Connection connection = channelFactory.getConnection(config, Connection.class, websqlConfig -> {
                 return JdbcDriver.createConnection(DatabaseType.MYSQL8, websqlConfig);

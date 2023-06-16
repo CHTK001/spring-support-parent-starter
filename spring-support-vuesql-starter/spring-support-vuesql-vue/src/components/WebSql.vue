@@ -306,7 +306,7 @@ export default {
             type: 'warning',
           }
       ).then(() => {
-        request.get(sformat(URL.CLEAR_TABLE, this.currentTable, this.currentDatasource))
+        request.get(sformat(URL.CLEAR_TABLE, params.row, this.currentDatasource))
             .then(({data}) => {
               let type = 'success';
               if (data.code !== '00000') {
@@ -389,27 +389,10 @@ export default {
           }, {
             fnName: "onClearTable",
             params: {row, column, event},
-            icoName: "menu-icon  icon-table-edit",
+            icoName: "menu-icon  icon-table-row-delete",
             btnName: "清空表",
           },
-          {
-            fnName: "edit",
-            params: {row, column, event},
-            icoName: "el-icon-edit",
-            btnName: "编辑行数据",
-          },
-          {
-            fnName: "delete",
-            params: {row, column, event},
-            icoName: "el-icon-delete",
-            btnName: "删除行数据",
-          },
-          {
-            fnName: "refresh",
-            params: {row, column, event},
-            icoName: "el-icon-refresh",
-            btnName: "刷新页面",
-          },
+
         ],
       };
       event.preventDefault(); // 阻止默认的鼠标右击事件
