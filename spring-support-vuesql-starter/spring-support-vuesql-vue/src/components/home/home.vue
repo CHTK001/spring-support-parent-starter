@@ -50,6 +50,12 @@
                   class="l-btn-icon icon-standard-add">&nbsp;</span></span></a>
               <span class="toolbar-item dialog-tool-separator"></span>
 
+              <a href="javascript:void(0)" id="newQueryButton" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
+                 iconcls="icon-standard-add" plain="true" @click="formatSQLWeb();" title="格式化" group=""><span
+                  class="l-btn-left l-btn-icon-left"><span class="l-btn-text">格式化</span><span
+                  class="l-btn-icon icon-standard-application-tile-horizontal">&nbsp;</span></span></a>
+              <span class="toolbar-item dialog-tool-separator"></span>
+
               <a href="javascript:void(0)" id="addConfig" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
                  iconcls="icon-plus" plain="true" @click="addConfig()" title="新增数据库"
               >
@@ -105,7 +111,7 @@
     <el-dialog
         v-model="dialogVisible"
         title="解析Mybatis"
-        width="70%"
+        width="90%"
         draggable
     >
       <div>
@@ -122,6 +128,31 @@
       <span class="dialog-footer">
         <el-button @click="dialogVisible = false">关闭</el-button>
         <el-button type="primary" @click="parse">
+          解析
+        </el-button>
+      </span>
+      </template>
+    </el-dialog>
+
+    <el-dialog
+        v-model="sqlFormatWeb"
+        title="格式化SQL"
+        width="95%"
+        height="90%"
+        draggable
+    >
+      <el-row :rows="12">
+        <el-col :span="12">
+          <el-input style="font-size: 18px" type="textarea" v-model="inFormatSql" :rows="18"></el-input>
+        </el-col>
+        <el-col :span="12">
+          <el-input style="font-size: 18px" type="textarea" v-model="outFormatSql" :rows="18"></el-input>
+        </el-col>
+      </el-row>
+      <template #footer>
+      <span class="dialog-footer">
+        <el-button @click="sqlFormatWeb = false">关闭</el-button>
+        <el-button type="primary" @click="parseSqlClick">
           解析
         </el-button>
       </span>
@@ -204,6 +235,9 @@ export default {
   },
   data() {
     return {
+      sqlFormatWeb: !1,
+      inFormatSql: '',
+      outFormatSql: '',
       inMybatisSql: '',
       outMybatisSql: [],
       dialogVisible: false,
@@ -237,6 +271,12 @@ export default {
     this.editor = this.$refs.cmRef.cminstance;
   },
   methods: {
+    formatSQLWeb: function () {
+      this.sqlFormatWeb = !this.sqlFormatWeb;
+    },
+    parseSqlClick: function () {
+      this.outFormatSql = format(this.inFormatSql);
+    },
     addConfig() {
       this.$emit('event', {
         id: 'WEB-DATABASE',
