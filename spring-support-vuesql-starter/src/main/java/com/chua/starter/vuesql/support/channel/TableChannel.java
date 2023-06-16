@@ -1,13 +1,9 @@
 package com.chua.starter.vuesql.support.channel;
 
 import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.utils.FileUtils;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
-import com.chua.starter.vuesql.pojo.Construct;
-import com.chua.starter.vuesql.pojo.Keyword;
-import com.chua.starter.vuesql.pojo.OpenResult;
-import com.chua.starter.vuesql.pojo.SqlResult;
+import com.chua.starter.vuesql.pojo.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -116,4 +112,14 @@ public interface TableChannel {
      * @return
      */
     Boolean update(WebsqlConfig websqlConfig, String table, JSONArray data);
+
+    /**
+     * 操作表
+     *
+     * @param websqlConfig 配置
+     * @param tableName    表
+     * @param action       action
+     * @return OpenResult
+     */
+    OperatorResult doExecute(WebsqlConfig websqlConfig, String tableName, String action);
 }

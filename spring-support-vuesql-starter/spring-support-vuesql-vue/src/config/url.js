@@ -9,7 +9,8 @@ const URL = {
     DELETE_DATABASE: HOST + "/database/delete/{configId}",
     DATABASE_TYPES: HOST + "/database/type",
     GET_TABLE_INFO: HOST + "/table/{configId}",
-    UPDATE_TABLE: HOST + "/table/update"
+    UPDATE_TABLE: HOST + "/table/update",
+    CLEAR_TABLE: HOST + "/table/clear/{configId}/{realName}"
 }
 
 export default URL;

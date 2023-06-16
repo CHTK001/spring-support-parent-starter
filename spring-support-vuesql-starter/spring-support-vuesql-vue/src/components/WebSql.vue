@@ -20,7 +20,7 @@
           </div>
 
           <div class="common-layout-padding">
-            <el-select v-model="datasource" class="m-2" placeholder="请选择..."  @change="changeDatabase">
+            <el-select v-model="datasource" class="m-2" placeholder="请选择..." @change="changeDatabase">
               <el-option
                   v-for="item in options"
                   :key="item.configId"
@@ -63,10 +63,11 @@
                     <span class="l-btn-icon icon-application-view-icons" v-else-if="scope.row.icon =='VIEW'"></span>
                     <span class="l-btn-icon icon-hamburg-database " v-else></span>
 
-                    <el-text v-if="scope.row.type =='TABLE' || scope.row.type =='VIEW'" style="cursor: pointer; margin-left: 18px" @click="handleSql(scope.row)">
-                      {{scope.row.name}}
+                    <el-text v-if="scope.row.type =='TABLE' || scope.row.type =='VIEW'"
+                             style="cursor: pointer; margin-left: 18px" @click="handleSql(scope.row)">
+                      {{ scope.row.name }}
                     </el-text>
-                    <el-text style="margin-left: 18px" v-else>{{scope.row.name}}
+                    <el-text style="margin-left: 18px" v-else>{{ scope.row.name }}
                     </el-text>
                   </template>
                 </el-table-column>
@@ -76,7 +77,9 @@
               <right-menu
                   :class-index="0"
                   :rightclickInfo="rightclickInfo"
-                  @openTable="openTable"
+                  @onOpenTable="openTable"
+                  @onClearTable="clearTable"
+                  @onCopy="onCopy"
               ></right-menu>
             </div>
           </el-skeleton>
@@ -123,9 +126,9 @@
                   <database v-if="item.type == 'WEB-DATABASE'" :watch-data="watchData"></database>
                   <div v-if="item.type == 'TABLE' && item.action == 'OPEN'">
                     <open-table v-if="currentDatasource.configType !== 'ZOOKEEPER'"
-                        :watch-data="watchData"
-                        :config="currentDatasource"
-                        :table="currentTable"></open-table>
+                                :watch-data="watchData"
+                                :config="currentDatasource"
+                                :table="currentTable"></open-table>
 
                     <zookeeper v-if="currentDatasource.configType === 'ZOOKEEPER'" :watch-data="watchData"
                                :config="currentDatasource"
@@ -148,7 +151,7 @@
 import request from 'axios'
 import URL from "@/config/url"
 import {sformat} from '@/utils/Utils'
-import {ElMessage} from "element-plus";
+import {ElMessage, ElMessageBox} from "element-plus";
 import '@/style/easy.css'
 import Home from "@/components/home/home.vue";
 import Database from "@/components/database/database.vue";
@@ -182,8 +185,7 @@ export default {
         }
       ],
       treeData: [],
-      options: [
-      ]
+      options: []
     }
   },
   mounted() {
@@ -208,7 +210,7 @@ export default {
       this.treeData.length = 0;
       this.currentDatasource = this.options.filter(it => it.configId === item)[0];
       this.tabs.forEach(item => {
-        if(item.id === 'HOME') {
+        if (item.id === 'HOME') {
           return !1;
         }
         this.closeTab(item.id);
@@ -225,11 +227,11 @@ export default {
               this.treeData.length = 0;
             }
           }).catch(xhr => {
-            ElMessage({
-              type: 'error',
-              message: '请求失败'
-            });
-            this.treeData.length = 0;
+        ElMessage({
+          type: 'error',
+          message: '请求失败'
+        });
+        this.treeData.length = 0;
       }).finally(() => this.tableLoading = false)
     },
     handleSql(item, action) {
@@ -295,11 +297,57 @@ export default {
       const item = this.tabs.filter(tab => tab.id !== tab.index)
 
     },
+    clearTable(params) {
+      ElMessageBox.confirm(
+          '您确定要清空表【' + params.row.name + '】吗？e?',
+          'Warning', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning',
+          }
+      ).then(() => {
+        request.get(sformat(URL.CLEAR_TABLE, this.currentTable, this.currentDatasource))
+            .then(({data}) => {
+              let type = 'success';
+              if (data.code !== '00000') {
+                type = 'error';
+              }
+              layx.notice({
+                title: '消息提示',
+                type: type,
+                message: data.msg
+              });
+            })
+      }).catch(() => {
+        layx.notice({
+          title: '消息提示',
+          type: 'error',
+          message: '操作失败'
+        });
+      })
+    },
+    onCopy(params) {
+      this.$copyText(params.row.name).then(
+          e => {
+            layx.notice({
+              title: '消息提示',
+              message: params.row.name + '复制成功'
+            });
+          },
+          e => {
+            layx.notice({
+              title: '消息提示',
+              type: 'warn',
+              message: '复制失败'
+            });
+          }
+      )
+    },
     openTable(params) {
       const item = params.row;
       this.currentTable = item;
-      if(item) {
-        if(!item.children || item.children == 0) {
+      if (item) {
+        if (!item.children || item.children == 0) {
           this.handleTabsEdit({
             id: item.id + "",
             name: item.id,
@@ -318,7 +366,7 @@ export default {
       })
     },
     rightclick(row, column, event) {
-      if((!!row.children && row.children.length > 0) || row.action == 'OPEN') {
+      if ((!!row.children && row.children.length > 0) || row.action == 'OPEN') {
         this.rightclickInfo = {};
         return !0;
       }
@@ -329,32 +377,36 @@ export default {
         },
         menulists: [
           {
-            fnName: "openTable",
-            params: { row, column, event },
+            fnName: "onCopy",
+            params: {row, column, event},
+            icoName: "menu-icon icon-table-multiple",
+            btnName: "复 制",
+          }, {
+            fnName: "onOpenTable",
+            params: {row, column, event},
             icoName: "menu-icon  icon-table-edit",
             btnName: "打开表",
-          },
-          {
-            fnName: "look",
-            params: { row, column, event },
-            icoName: "el-icon-view",
-            btnName: "查看行数据",
+          }, {
+            fnName: "onClearTable",
+            params: {row, column, event},
+            icoName: "menu-icon  icon-table-edit",
+            btnName: "清空表",
           },
           {
             fnName: "edit",
-            params: { row, column, event },
+            params: {row, column, event},
             icoName: "el-icon-edit",
             btnName: "编辑行数据",
           },
           {
             fnName: "delete",
-            params: { row, column, event },
+            params: {row, column, event},
             icoName: "el-icon-delete",
             btnName: "删除行数据",
           },
           {
             fnName: "refresh",
-            params: { row, column, event },
+            params: {row, column, event},
             icoName: "el-icon-refresh",
             btnName: "刷新页面",
           },
@@ -426,11 +478,12 @@ el-container {
   background-color: #ffffff;
 }
 
-.tabStyle{
+.tabStyle {
   display: block;
   height: 65px;
 }
-.el-icon-basic-home{
+
+.el-icon-basic-home {
   display: inline-block;
   width: 16px;
   height: 16px;
@@ -465,10 +518,11 @@ el-container {
   height: 28px !important;
   font-size: 10px;
   line-height: 28px;
-  margin: 0!important;
+  margin: 0 !important;
 
 }
-.custom-tabs-label > span{
+
+.custom-tabs-label > span {
   margin-left: 6px;
 }
 

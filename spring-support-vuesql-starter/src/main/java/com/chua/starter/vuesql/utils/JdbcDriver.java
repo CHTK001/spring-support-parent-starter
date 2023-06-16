@@ -417,4 +417,28 @@ public class JdbcDriver {
 
         return sb;
     }
+
+    /**
+     * 操作表
+     *
+     * @param connection connection
+     * @param tableName  表
+     * @param action     action
+     * @return OpenResult
+     */
+    @SuppressWarnings("ALL")
+    public static OperatorResult doExecute(Connection connection, String tableName, String action) {
+        OperatorResult result = new OperatorResult();
+        if ("clear".equalsIgnoreCase(action)) {
+            try (Statement statement = connection.createStatement()) {
+                boolean execute = statement.execute("truncate table `" + tableName + "`");
+                result.setStatus(execute);
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+
+        return result;
+    }
 }

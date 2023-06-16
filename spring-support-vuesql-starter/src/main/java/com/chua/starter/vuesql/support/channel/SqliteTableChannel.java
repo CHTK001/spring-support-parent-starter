@@ -1,14 +1,10 @@
 package com.chua.starter.vuesql.support.channel;
 
 import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.utils.FileUtils;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
 import com.chua.starter.vuesql.enums.DatabaseType;
-import com.chua.starter.vuesql.pojo.Construct;
-import com.chua.starter.vuesql.pojo.Keyword;
-import com.chua.starter.vuesql.pojo.OpenResult;
-import com.chua.starter.vuesql.pojo.SqlResult;
+import com.chua.starter.vuesql.pojo.*;
 import com.chua.starter.vuesql.utils.JdbcDriver;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
@@ -116,11 +112,24 @@ public class SqliteTableChannel implements TableChannel{
 
     @Override
     public Boolean update(WebsqlConfig config, String table, JSONArray data) {
-        try  {
+        try {
             Connection connection = channelFactory.getConnection(config, Connection.class, websqlConfig -> {
                 return JdbcDriver.createConnection(DatabaseType.SQLITE, websqlConfig);
             }, Connection::isClosed);
-            return JdbcDriver.update(connection,table, data);
+            return JdbcDriver.update(connection, table, data);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public OperatorResult doExecute(WebsqlConfig config, String tableName, String action) {
+        OperatorResult rs = new OperatorResult();
+        try {
+            Connection connection = channelFactory.getConnection(config, Connection.class, websqlConfig -> {
+                return JdbcDriver.createConnection(DatabaseType.MYSQL8, websqlConfig);
+            }, Connection::isClosed);
+            return JdbcDriver.doExecute(connection, tableName, action);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
