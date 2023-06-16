@@ -6,36 +6,41 @@
       <div>
         <a v-if="!!table.insertEnable" href="javascript:void(0)" id="newQueryButton"
            class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
-           iconcls="icon-standard-add" plain="true" @click="addData();" title="添加数据" group=""><span
+           iconcls="icon-standard-add" @click="addData();" title="添加数据" ><span
             class="l-btn-left l-btn-icon-left"><span class="l-btn-text">添加数据</span><span
             class="l-btn-icon icon-standard-add">&nbsp;</span></span></a>
         <span class="toolbar-item dialog-tool-separator"></span>
 
         <a v-if="(!!table.updateEnable || !!table.insertEnable) && status.openCancel" href="javascript:void(0)"
            class="easyui-linkbutton l-btn l-btn-small l-btn-plain" iconcls="icon-ok"
-           plain="true" id="saveRowButton" @click="saveRow()" group=""><span class="l-btn-left l-btn-icon-left"><span
+           id="saveRowButton" @click="saveRow()" ><span class="l-btn-left l-btn-icon-left"><span
             class="l-btn-text">保存</span><span class="l-btn-icon icon-ok">&nbsp;</span></span></a>
 
 
         <a v-if="(!!table.deleteEnable) && status.openDelete" href="javascript:void(0)"
            class="easyui-linkbutton l-btn l-btn-small l-btn-plain" iconcls="icon-cancel"
-           plain="true" @click="deleteRow()" group=""><span
+           @click="deleteRow()" ><span
             class="l-btn-left l-btn-icon-left"><span class="l-btn-text">刪除</span><span class="l-btn-icon icon-cancel">&nbsp;</span></span></a>
 
         <a v-if="(!!table.updateEnable || !!table.insertEnable) && status.openCancel" href="javascript:void(0)"
            class="easyui-linkbutton l-btn l-btn-small l-btn-plain" iconcls="icon-cancel"
-           plain="true" id="cancelButton" @click="cancelChange()" group=""><span
+           id="cancelButton" @click="cancelChange()" ><span
             class="l-btn-left l-btn-icon-left"><span class="l-btn-text">取消</span><span class="l-btn-icon icon-cancel">&nbsp;</span></span></a>
 
         <a href="javascript:void(0)" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
-           iconcls="icon-standard-arrow-refresh" id="refreshButton" plain="true" @click="doSearch()" group=""><span
+           iconcls="icon-standard-arrow-refresh" id="refreshButton" @click="doSearch()" ><span
             class="l-btn-left l-btn-icon-left"><span class="l-btn-text">刷新</span><span
             class="l-btn-icon icon-standard-arrow-refresh">&nbsp;</span></span></a>
 
         <a v-if="(!!table.updateEnable || !!table.insertEnable)" href="javascript:void(0)" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
-           iconcls="icon-table-multiple" plain="true" id="copyRowButton" @click="copyRow()" group=""><span
+           iconcls="icon-table-multiple" id="copyRowButton" @click="copyRow()" ><span
             class="l-btn-left l-btn-icon-left"><span class="l-btn-text">复制</span><span
             class="l-btn-icon icon-table-multiple">&nbsp;</span></span></a>
+
+
+        <a  class="easyui-linkbutton l-btn l-btn-small l-btn-plain"><span><span class="l-btn-text">耗时: {{cost}}</span></span></a>
+
+
       </div>
     </div>
 
@@ -158,6 +163,7 @@ export default {
         pageNum: 1,
         pageSize: 10
       },
+      cost: 0,
       recordData: [],
       updateRecordData: []
     }
@@ -256,6 +262,7 @@ export default {
     sendData: function () {
       //之前有行被编辑
       this.status.tableLoad = !0;
+      const startTime = new Date().getTime();
       request.put(URL.UPDATE_TABLE, {
         record: this.recordData,
         config: this.config,
@@ -278,7 +285,10 @@ export default {
         this.$messageBox.alert(data.msg, '消息', {
           confirmButtonText: 'OK'
         });
-      }).finally(() => this.status.tableLoad = !1)
+      }).finally(() => {
+        this.status.tableLoad = !1;
+        this.cost = (new Date().getTime() - startTime) + ' ms'
+      })
     },
     reset: function () {
       this.data.redis = {};
@@ -293,6 +303,7 @@ export default {
     },
     doSearch: function () {
       this.reset();
+      const startTime = new Date().getTime();
       request.get(sformat(URL.OPEN_TABLE, this.form, this.config, this.table), {
         params: this.form
       }).then(({data}) => {
@@ -319,7 +330,10 @@ export default {
       }).catch(({data}) => {
         this.watchData.push("打开" + this.table.name + " " + data.msg);
 
-      }).finally(() => this.status.loading = !1)
+      }).finally(() => {
+        this.status.loading = !1;
+        this.cost = (new Date().getTime() - startTime) + ' ms'
+      })
     },
     handleSizeChange: function (e) {
       this.form.pageSize = e;
