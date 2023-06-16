@@ -99,14 +99,14 @@ public class ZookeeperTableChannel implements TableChannel {
     public OpenResult openTable(WebsqlConfig config, String tableName, Integer pageNum, Integer pageSize) {
         List<Map<String, Object>> rs = new LinkedList<>();
         CuratorFramework curatorFramework = channelFactory.getConnection(config, CuratorFramework.class, this::getCuratorFramework, it -> it.getState() == CuratorFrameworkState.STARTED);
-        getNode(curatorFramework, tableName, rs, 1, new AtomicInteger(2));
+        doNode(curatorFramework, tableName, rs, 1, new AtomicInteger(2));
         OpenResult result = new OpenResult();
         result.setColumns(ImmutableBuilder.builder(Column.class).add(Column.builder().columnName("name").build()).newLinkedList());
         result.setData(rs);
         result.setTotal(rs.size());
         return result;
     }
-    public void getNode(CuratorFramework curatorFramework, String parentNode,  List<Map<String, Object>> rs, int pid, AtomicInteger index) {
+    public void doNode(CuratorFramework curatorFramework, String parentNode,  List<Map<String, Object>> rs, int pid, AtomicInteger index) {
         try {
             List<String> tmpList = curatorFramework.getChildren().forPath(parentNode);
             for (String tmp : tmpList) {
