@@ -13,6 +13,7 @@ import com.chua.starter.vuesql.pojo.OpenResult;
 import com.chua.starter.vuesql.pojo.SqlResult;
 import com.chua.starter.vuesql.service.WebsqlConfigService;
 import com.chua.starter.vuesql.support.channel.TableChannel;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -165,6 +166,7 @@ public class TableController {
      * @return 数据库
      */
     @GetMapping("/keyword/{configId}")
+    @Cacheable(cacheNames = "configId", key = "#configId")
     public Result<List<Keyword>> keyword(@PathVariable String configId) {
         WebsqlConfig websqlConfig = websqlConfigService.getById(configId);
         String databaseType = websqlConfig.getConfigType().name().toLowerCase();
