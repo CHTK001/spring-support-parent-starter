@@ -1,6 +1,7 @@
 package com.chua.starter.vuesql.utils;
 
 import com.alibaba.fastjson2.JSONArray;
+import com.chua.common.support.collection.ImmutableBuilder;
 import com.chua.common.support.database.ResultSetUtils;
 import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.utils.MapUtils;
@@ -64,6 +65,8 @@ public class JdbcDriver {
             } else if (upperCase.startsWith("EXPLAIN")) {
                 doSearch(statement, columns, rs, sql);
                 page.setTotal(rs.size());
+            } else {
+                page.setData(Collections.singletonList(ImmutableBuilder.builderOfStringMap(Object.class).put("rs", statement.execute(sql)).build()));
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
