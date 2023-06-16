@@ -8,6 +8,7 @@ import com.chua.starter.vuesql.enums.Action;
 import com.chua.starter.vuesql.enums.Type;
 import com.chua.starter.vuesql.pojo.*;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.compress.utils.Lists;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.imps.CuratorFrameworkState;
@@ -61,7 +62,7 @@ public class ZookeeperTableChannel implements TableChannel {
                 int andIncrement = index.getAndIncrement();
                 rs.add(Construct.builder().icon("DATABASE")
                                 .id(andIncrement)
-                                .realName(tmp)
+                                .realName(childNode)
                                 .name(tmp)
                                 .type(Type.TABLE)
                                 .action(Action.OPEN)
@@ -95,10 +96,35 @@ public class ZookeeperTableChannel implements TableChannel {
     }
 
     @Override
-    public OpenResult openTable(WebsqlConfig websqlConfig, String tableName, Integer pageNum, Integer pageSize) {
-        return new OpenResult();
+    public OpenResult openTable(WebsqlConfig config, String tableName, Integer pageNum, Integer pageSize) {
+        List<Map<String, Object>> rs = new LinkedList<>();
+        CuratorFramework curatorFramework = channelFactory.getConnection(config, CuratorFramework.class, this::getCuratorFramework, it -> it.getState() == CuratorFrameworkState.STARTED);
+        getNode(curatorFramework, tableName, rs, 1, new AtomicInteger(2));
+        OpenResult result = new OpenResult();
+        result.setColumns(ImmutableBuilder.builder(Column.class).add(Column.builder().columnName("name").build()).newLinkedList());
+        result.setData(rs);
+        result.setTotal(rs.size());
+        return result;
     }
-
+    public void getNode(CuratorFramework curatorFramework, String parentNode,  List<Map<String, Object>> rs, int pid, AtomicInteger index) {
+        try {
+            List<String> tmpList = curatorFramework.getChildren().forPath(parentNode);
+            for (String tmp : tmpList) {
+                String childNode = parentNode.equals("/") ? parentNode + tmp : parentNode + "/" + tmp;
+                int andIncrement = index.getAndIncrement();
+                Map<String, Object> item = new HashMap<>(1);
+                item.put("name", childNode);
+                rs.add(item);
+                getNode(curatorFramework, childNode, rs, andIncrement, index);
+            }
+        } catch (Exception e) {
+            try {
+                throw e;
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+        }
+    }
     @Override
     @SuppressWarnings("ALL")
     public Boolean update(WebsqlConfig config, String table, JSONArray data) {
