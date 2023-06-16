@@ -3,6 +3,7 @@ package com.chua.starter.vuesql.support.channel;
 import com.alibaba.fastjson2.JSONArray;
 import com.chua.common.support.collection.ImmutableBuilder;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
+import com.chua.starter.vuesql.enums.Action;
 import com.chua.starter.vuesql.enums.Type;
 import com.chua.starter.vuesql.pojo.*;
 import lombok.extern.slf4j.Slf4j;
@@ -13,10 +14,7 @@ import org.apache.curator.retry.RetryNTimes;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -45,8 +43,9 @@ public class ZookeeperTableChannel implements TableChannel {
     @Override
     public List<Construct> getDataBaseConstruct(WebsqlConfig config) {
         List<Construct> rs = new LinkedList<>();
-        rs.add(Construct.builder().type(Type.DATABASE).icon("DATABASE").id(1).pid(0)
-                .realName("/")
+        rs.add(Construct.builder().type(Type.TABLE).icon("DATABASE").id(1).pid(0)
+                .realName("/root")
+                .action(Action.OPEN)
                 .name("/").build());
         return rs;
     }
@@ -69,16 +68,45 @@ public class ZookeeperTableChannel implements TableChannel {
 
     @Override
     public OpenResult openTable(WebsqlConfig config, String tableName, Integer pageNum, Integer pageSize) {
-        List<Map<String, Object>> rs = new LinkedList<>();
+        if ("root".equalsIgnoreCase(tableName)) {
+            tableName = "/";
+        }
+        List<Construct> rs = new LinkedList<>();
         CuratorFramework curatorFramework = channelFactory.getConnection(config, CuratorFramework.class, this::getCuratorFramework, it -> it.getState() == CuratorFrameworkState.STARTED);
-        doNode(curatorFramework, tableName, rs, 1, new AtomicInteger(2));
+        getNode(curatorFramework, tableName, rs, 1, new AtomicInteger(2));
         OpenResult result = new OpenResult();
         result.setColumns(ImmutableBuilder.builder(Column.class).add(Column.builder().columnName("name").build()).newLinkedList());
-        result.setData(rs);
+        result.setData(Collections.singletonList(ImmutableBuilder.builderOfStringMap(Object.class).put("rs", rs).build()));
         result.setTotal(rs.size());
         return result;
     }
-    public void doNode(CuratorFramework curatorFramework, String parentNode,  List<Map<String, Object>> rs, int pid, AtomicInteger index) {
+
+    public void getNode(CuratorFramework curatorFramework, String parentNode, List<Construct> rs, int pid, AtomicInteger index) {
+        try {
+            List<String> tmpList = curatorFramework.getChildren().forPath(parentNode);
+            for (String tmp : tmpList) {
+                String childNode = parentNode.equals("/") ? parentNode + tmp : parentNode + "/" + tmp;
+                int andIncrement = index.getAndIncrement();
+                rs.add(Construct.builder().icon("DATABASE")
+                        .id(andIncrement)
+                        .realName(childNode)
+                        .name(tmp)
+                        .type(Type.TABLE)
+                        .action(Action.OPEN)
+                        .pid(pid)
+                        .build());
+                getNode(curatorFramework, childNode, rs, andIncrement, index);
+            }
+        } catch (Exception e) {
+            try {
+                throw e;
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+        }
+    }
+
+    public void doNode(CuratorFramework curatorFramework, String parentNode, List<Map<String, Object>> rs, int pid, AtomicInteger index) {
         try {
             List<String> tmpList = curatorFramework.getChildren().forPath(parentNode);
             for (String tmp : tmpList) {
