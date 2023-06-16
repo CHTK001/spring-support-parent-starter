@@ -3,7 +3,6 @@ package com.chua.starter.vuesql.support.channel;
 import com.alibaba.fastjson2.JSONArray;
 import com.chua.common.support.collection.ImmutableBuilder;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
-import com.chua.starter.vuesql.enums.Action;
 import com.chua.starter.vuesql.enums.Type;
 import com.chua.starter.vuesql.pojo.*;
 import lombok.extern.slf4j.Slf4j;
@@ -46,35 +45,10 @@ public class ZookeeperTableChannel implements TableChannel {
     @Override
     public List<Construct> getDataBaseConstruct(WebsqlConfig config) {
         List<Construct> rs = new LinkedList<>();
-        CuratorFramework curatorFramework = channelFactory.getConnection(config, CuratorFramework.class, this::getCuratorFramework, it -> it.getState() == CuratorFrameworkState.STARTED);
-        rs.add(Construct.builder().type(Type.DATABASE).icon("DATABASE").id(1).pid(0).name(config.getConfigDatabase()).build());
-        getNode(curatorFramework, "/", rs, 1, new AtomicInteger(2));
+        rs.add(Construct.builder().type(Type.DATABASE).icon("DATABASE").id(1).pid(0)
+                .realName("/")
+                .name("/").build());
         return rs;
-    }
-
-    public void getNode(CuratorFramework curatorFramework, String parentNode, List<Construct> rs, int pid, AtomicInteger index) {
-        try {
-            List<String> tmpList = curatorFramework.getChildren().forPath(parentNode);
-            for (String tmp : tmpList) {
-                String childNode = parentNode.equals("/") ? parentNode + tmp : parentNode + "/" + tmp;
-                int andIncrement = index.getAndIncrement();
-                rs.add(Construct.builder().icon("DATABASE")
-                                .id(andIncrement)
-                                .realName(childNode)
-                                .name(tmp)
-                                .type(Type.TABLE)
-                                .action(Action.OPEN)
-                                .pid(pid)
-                        .build());
-                getNode(curatorFramework, childNode, rs, andIncrement, index);
-            }
-        } catch (Exception e) {
-            try {
-                throw e;
-            } catch (Exception ex) {
-                throw new RuntimeException(ex);
-            }
-        }
     }
 
     @Override
