@@ -24,12 +24,14 @@
             overflowToDisk="false">
     </defaultCache>
 
-    <!--
-        xx业务缓存
-        在有效的 120 秒内，如果连续 60 秒未访问缓存，则缓存失效。
-        就算有访问，也只会存活 120 秒。
-    -->
     <cache name="websql"
+           maxElementsInMemory="1000"
+           eternal="true"
+           timeToIdleSeconds="120"
+           timeToLiveSeconds="0"
+           overflowToDisk="false">
+    </cache>
+    <cache name="configId"
            maxElementsInMemory="1000"
            eternal="true"
            timeToIdleSeconds="120"

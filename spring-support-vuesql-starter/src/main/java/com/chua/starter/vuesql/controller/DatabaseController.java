@@ -12,6 +12,7 @@ import com.chua.starter.vuesql.service.WebsqlConfigService;
 import com.chua.starter.vuesql.support.channel.TableChannel;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -66,7 +67,12 @@ public class DatabaseController {
      */
     @ResponseBody
     @PostMapping("/save")
-    @CacheEvict(cacheNames = "websql", key = "'database'")
+    @Caching(
+            evict =  {
+                    @CacheEvict(cacheNames = "websql", key = "'database'"),
+                    @CacheEvict(cacheNames = "configId", allEntries = true)
+            }
+    )
     public Result<Boolean> saveDatabase(HttpServletRequest request, @RequestParam(value = "file", required = false)MultipartFile file) {
         WebsqlConfig websqlConfig = BeanUtils.copyProperties(request.getParameterMap(), WebsqlConfig.class);
         String databaseType = websqlConfig.getConfigType().name().toLowerCase();
@@ -102,7 +108,12 @@ public class DatabaseController {
      * @return 数据库
      */
     @DeleteMapping("/delete/{configId}")
-    @CacheEvict(cacheNames = "websql", key = "'database'")
+    @Caching(
+        evict =  {
+                @CacheEvict(cacheNames = "websql", key = "'database'"),
+                @CacheEvict(cacheNames = "configId", allEntries = true)
+        }
+    )
     public Result<Boolean> saveDatabase(@PathVariable String configId) {
         WebsqlConfig websqlConfig = websqlConfigService.getById(configId);
         if(null ==websqlConfig) {
