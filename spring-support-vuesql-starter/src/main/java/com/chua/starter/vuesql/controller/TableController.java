@@ -102,13 +102,15 @@ public class TableController {
         }
         try {
             return Result.success(tableChannel.update(websqlConfig,
-                    json.getJSONObject("newData"),
-                    ObjectUtils.defaultIfNull(json.getJSONObject("oldData"), json.getJSONArray("oldData")),
-                    json.getJSONObject("table"),
-                    json.getString("mode")));
+                    json.getJSONObject("table").getString("realName"),
+                    json.getJSONArray("record")));
 
         } catch (Exception e) {
-            return Result.failed(e.getLocalizedMessage());
+            String localizedMessage = e.getLocalizedMessage().replace("java.sql.SQLException:", "");
+            if(!localizedMessage.contains(":")) {
+                return Result.failed(localizedMessage);
+            }
+            return Result.failed(localizedMessage.substring(localizedMessage.indexOf(":") + 1));
         }
     }
 

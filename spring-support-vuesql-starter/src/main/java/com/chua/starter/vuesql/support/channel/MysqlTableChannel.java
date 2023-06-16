@@ -99,12 +99,12 @@ public class MysqlTableChannel implements TableChannel {
     }
 
     @Override
-    public Boolean update(WebsqlConfig config, JSONObject newData, Object oldData, JSONObject table, String mode) {
+    public Boolean update(WebsqlConfig config, String table, JSONArray data) {
         try  {
             Connection connection = channelFactory.getConnection(config, Connection.class, websqlConfig -> {
                 return JdbcDriver.createConnection(DatabaseType.MYSQL8, websqlConfig);
             }, Connection::isClosed);
-            return JdbcDriver.update(connection, newData, oldData, table.getString("realName"), mode);
+            return JdbcDriver.update(connection, table, data);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

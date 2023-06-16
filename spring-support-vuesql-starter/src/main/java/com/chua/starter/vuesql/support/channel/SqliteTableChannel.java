@@ -1,5 +1,6 @@
 package com.chua.starter.vuesql.support.channel;
 
+import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.utils.FileUtils;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
@@ -114,12 +115,12 @@ public class SqliteTableChannel implements TableChannel{
     }
 
     @Override
-    public Boolean update(WebsqlConfig config, JSONObject newData, Object oldData, JSONObject table, String mode) {
+    public Boolean update(WebsqlConfig config, String table, JSONArray data) {
         try  {
             Connection connection = channelFactory.getConnection(config, Connection.class, websqlConfig -> {
                 return JdbcDriver.createConnection(DatabaseType.SQLITE, websqlConfig);
             }, Connection::isClosed);
-            return JdbcDriver.update(connection, newData, oldData, table.getString("realName"), mode);
+            return JdbcDriver.update(connection,table, data);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

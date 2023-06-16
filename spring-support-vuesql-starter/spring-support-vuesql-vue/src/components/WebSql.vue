@@ -121,7 +121,11 @@
                         @event="onEvent"
                   ></home>
                   <database v-if="item.type == 'WEB-DATABASE'" :watch-data="watchData"></database>
-                  <open-table v-if="item.type == 'TABLE' && item.action == 'OPEN'" :watch-data="watchData" :config="currentDatasource" :table="currentTable"></open-table>
+                  <open-table v-if="item.type == 'TABLE' && item.action == 'OPEN' "
+                              :watch-data="watchData"
+                              :config="currentDatasource"
+                              :table="currentTable"></open-table>
+
                 </el-tab-pane>
               </el-tabs>
             </div>
@@ -178,7 +182,7 @@ export default {
     request.get(URL.LIST_DATASOURCE)
         .then(({data}) => {
           this.options.length = 0;
-          if (data.code == '00000') {
+          if (data.code === '00000') {
             data.data.forEach((item, index) => {
               this.options.push(item)
             })
@@ -194,9 +198,15 @@ export default {
       this.tableLoading = true;
       this.treeData.length = 0;
       this.currentDatasource = this.options.filter(it => it.configId === item)[0];
+      this.tabs.forEach(item => {
+        if(item.id === 'HOME') {
+          return !1;
+        }
+        this.closeTab(item.id);
+      })
       request.get(sformat(URL.GET_TABLE_INFO, this.currentDatasource))
           .then(({data}) => {
-            if (data.code == '00000') {
+            if (data.code === '00000') {
               this.treeData.push(data.data);
             } else {
               ElMessage({
@@ -237,10 +247,10 @@ export default {
     // 增删tabs
     handleTabsEdit(item, action) {
       console.log('tab增删:', item, action);
-      if (action == 'remove') {
+      if (action === 'remove') {
         return false;
       }
-      let tab = this.tabs.find(tab => tab.id == item.id);
+      let tab = this.tabs.find(tab => tab.id === (item.id + item.label));
       if (!tab) {
         this.tabs.push({
           id: item.id + item.label,
