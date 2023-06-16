@@ -2,6 +2,7 @@ package com.chua.starter.vuesql.utils;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.chua.common.support.database.ResultSetUtils;
+import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
@@ -122,7 +123,13 @@ public class JdbcDriver {
             while (executeQuery.next()) {
                 Map<String, Object> item = new LinkedHashMap<>();
                 for (int i = 0; i < columnCount; i++) {
-                    item.put(columns.get(i).getColumnName(), executeQuery.getObject(i + 1));
+                    Column column = columns.get(i);
+                    if (column.getColumnType().equalsIgnoreCase("DATETIME")) {
+                        DateTime dateTime = DateTime.of(executeQuery.getObject(i + 1));
+                        item.put(column.getColumnName(), dateTime == null ? null : dateTime.toStandard());
+                        continue;
+                    }
+                    item.put(column.getColumnName(), executeQuery.getObject(i + 1));
                 }
 
                 rs.add(item);

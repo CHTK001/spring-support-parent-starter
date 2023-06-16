@@ -19,8 +19,9 @@
 
         <a v-if="(!!table.deleteEnable) && status.openDelete" href="javascript:void(0)"
            class="easyui-linkbutton l-btn l-btn-small l-btn-plain" iconcls="icon-cancel"
-           @click="deleteRow()" ><span
-            class="l-btn-left l-btn-icon-left"><span class="l-btn-text">刪除</span><span class="l-btn-icon icon-cancel">&nbsp;</span></span></a>
+           @click="deleteRow()"><span
+            class="l-btn-left l-btn-icon-left"><span class="l-btn-text">刪除</span><span
+            class="l-btn-icon icon-table-row-delete">&nbsp;</span></span></a>
 
         <a v-if="(!!table.updateEnable || !!table.insertEnable) && status.openCancel" href="javascript:void(0)"
            class="easyui-linkbutton l-btn l-btn-small l-btn-plain" iconcls="icon-cancel"
@@ -144,7 +145,7 @@
 <script>
 import request from "axios";
 import URL from '@/config/url'
-import {copy, sformat} from "@/utils/Utils";
+import {copy, isNewSame, sformat} from "@/utils/Utils";
 import '@/plugins/layx/layx.min.css'
 
 export default {
@@ -274,13 +275,26 @@ export default {
 
     saveRow: function () {
       for(const item of this.updateRecordData) {
-        if(Object.keys(item).length == 0) {
+        if (Object.keys(item).length == 0) {
+          continue
+        }
+        if (this.inAdd(item)) {
           continue
         }
         item['action'] = 'update';
         this.recordData.push(item)
       }
       this.sendData();
+    },
+    inAdd: function (item) {
+      for (const itemElement of this.recordData) {
+        if (itemElement.action === 'add') {
+          if (isNewSame(item.newData, itemElement.newData)) {
+            return true;
+          }
+        }
+      }
+      return false;
     },
     sendData: function () {
       //之前有行被编辑
