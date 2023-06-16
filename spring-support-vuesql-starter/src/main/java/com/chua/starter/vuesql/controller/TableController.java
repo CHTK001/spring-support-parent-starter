@@ -1,16 +1,11 @@
 package com.chua.starter.vuesql.controller;
 
-import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.lang.treenode.CustomTreeNode;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.utils.ObjectUtils;
 import com.chua.starter.common.support.result.Result;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
-import com.chua.starter.vuesql.pojo.Construct;
-import com.chua.starter.vuesql.pojo.Keyword;
-import com.chua.starter.vuesql.pojo.OpenResult;
-import com.chua.starter.vuesql.pojo.SqlResult;
+import com.chua.starter.vuesql.pojo.*;
 import com.chua.starter.vuesql.service.WebsqlConfigService;
 import com.chua.starter.vuesql.support.channel.TableChannel;
 import org.springframework.cache.annotation.Cacheable;
@@ -129,11 +124,27 @@ public class TableController {
     ) {
         WebsqlConfig websqlConfig = websqlConfigService.forById(configId);
         String databaseType = websqlConfig.getConfigType().name().toLowerCase();
-        TableChannel tableChannel =  ServiceProvider.of(TableChannel.class).getExtension(databaseType);
+        TableChannel tableChannel = ServiceProvider.of(TableChannel.class).getExtension(databaseType);
         if (null == tableChannel) {
             return Result.failed("数据库类型不支持", databaseType);
         }
         return Result.success(tableChannel.openTable(websqlConfig, tableName, pageNum, pageSize));
+    }
+
+    /**
+     * 清空表
+     *
+     * @return 数据库
+     */
+    @GetMapping("/clear/{configId}/{tableName}")
+    public Result<OperatorResult> clearTable(@PathVariable String configId, @PathVariable String tableName) {
+        WebsqlConfig websqlConfig = websqlConfigService.forById(configId);
+        String databaseType = websqlConfig.getConfigType().name().toLowerCase();
+        TableChannel tableChannel = ServiceProvider.of(TableChannel.class).getExtension(databaseType);
+        if (null == tableChannel) {
+            return Result.failed("数据库类型不支持", databaseType);
+        }
+        return Result.success(tableChannel.doExecute(websqlConfig, tableName, "clear"));
     }
 
     /**

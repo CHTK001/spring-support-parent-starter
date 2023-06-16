@@ -1,7 +1,6 @@
 package com.chua.starter.vuesql.support.channel;
 
 import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.database.factory.DelegateDataSource;
 import com.chua.common.support.table.ConnectorFactory;
@@ -9,10 +8,7 @@ import com.chua.common.support.utils.FileUtils;
 import com.chua.datasource.support.table.CalciteConnectorFactory;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
 import com.chua.starter.vuesql.enums.DatabaseType;
-import com.chua.starter.vuesql.pojo.Construct;
-import com.chua.starter.vuesql.pojo.Keyword;
-import com.chua.starter.vuesql.pojo.OpenResult;
-import com.chua.starter.vuesql.pojo.SqlResult;
+import com.chua.starter.vuesql.pojo.*;
 import com.chua.starter.vuesql.utils.JdbcDriver;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -55,6 +51,11 @@ public class FileTableChannel implements TableChannel {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public OperatorResult doExecute(WebsqlConfig websqlConfig, String tableName, String action) {
+        return new OperatorResult();
     }
 
     @Override

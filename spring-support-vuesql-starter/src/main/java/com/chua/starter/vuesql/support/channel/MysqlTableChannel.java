@@ -1,21 +1,15 @@
 package com.chua.starter.vuesql.support.channel;
 
 import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.annotations.Spi;
-import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
 import com.chua.starter.vuesql.enums.DatabaseType;
-import com.chua.starter.vuesql.pojo.Construct;
-import com.chua.starter.vuesql.pojo.Keyword;
-import com.chua.starter.vuesql.pojo.OpenResult;
-import com.chua.starter.vuesql.pojo.SqlResult;
+import com.chua.starter.vuesql.pojo.*;
 import com.chua.starter.vuesql.utils.JdbcDriver;
 
 import javax.annotation.Resource;
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.List;
 
 /**
@@ -100,11 +94,24 @@ public class MysqlTableChannel implements TableChannel {
 
     @Override
     public Boolean update(WebsqlConfig config, String table, JSONArray data) {
-        try  {
+        try {
             Connection connection = channelFactory.getConnection(config, Connection.class, websqlConfig -> {
                 return JdbcDriver.createConnection(DatabaseType.MYSQL8, websqlConfig);
             }, Connection::isClosed);
             return JdbcDriver.update(connection, table, data);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public OperatorResult doExecute(WebsqlConfig config, String tableName, String action) {
+        OperatorResult rs = new OperatorResult();
+        try {
+            Connection connection = channelFactory.getConnection(config, Connection.class, websqlConfig -> {
+                return JdbcDriver.createConnection(DatabaseType.MYSQL8, websqlConfig);
+            }, Connection::isClosed);
+            return JdbcDriver.doExecute(connection, tableName, action);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

@@ -123,6 +123,12 @@ public class ZookeeperTableChannel implements TableChannel {
             }
         }
     }
+
+    @Override
+    public OperatorResult doExecute(WebsqlConfig websqlConfig, String tableName, String action) {
+        return new OperatorResult();
+    }
+
     @Override
     @SuppressWarnings("ALL")
     public Boolean update(WebsqlConfig config, String table, JSONArray data) {

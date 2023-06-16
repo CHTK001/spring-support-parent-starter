@@ -1,7 +1,6 @@
 package com.chua.starter.vuesql.support.channel;
 
 import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.collection.ImmutableBuilder;
 import com.chua.common.support.converter.Converter;
@@ -17,7 +16,6 @@ import redis.clients.jedis.Jedis;
 import javax.annotation.Resource;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.sql.SQLException;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -165,21 +163,28 @@ public class RedisTableChannel implements TableChannel {
                     break;
             }
 
-            if(expire > 0) {
+            if (expire > 0) {
                 jedis.expire(MapUtils.getString(newData, "key"), expire);
             }
-        };
+        }
+        ;
 
 
         return true;
     }
 
+
+    @Override
+    public OperatorResult doExecute(WebsqlConfig websqlConfig, String tableName, String action) {
+        return new OperatorResult();
+    }
+
     public Jedis getJedis(WebsqlConfig config) {
         Jedis jedis = null;
-        if(StringUtils.isNotEmpty(config.getConfigPassword())) {
+        if (StringUtils.isNotEmpty(config.getConfigPassword())) {
             String userInfo = StringUtils.defaultString(config.getConfigUsername(), "") + ":" + config.getConfigPassword() + "@";
             try {
-                jedis  = new Jedis(new URI("redis://"+ userInfo +"" + config.getConfigIp() + ":" + config.getConfigPort()));
+                jedis = new Jedis(new URI("redis://" + userInfo + "" + config.getConfigIp() + ":" + config.getConfigPort()));
             } catch (URISyntaxException e) {
                 throw new RuntimeException(e);
             }
