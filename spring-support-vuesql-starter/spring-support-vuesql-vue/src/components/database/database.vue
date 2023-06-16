@@ -181,6 +181,7 @@ export default {
                 if(data.code == '00000') {
                   this.doSearch();
                   this.dialogVisible = !this.dialogVisible;
+                  this.form = {};
                 }
               }).catch(() => {
             ElMessage({

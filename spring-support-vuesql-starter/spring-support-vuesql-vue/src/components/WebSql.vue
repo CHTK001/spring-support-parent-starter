@@ -121,10 +121,18 @@
                         @event="onEvent"
                   ></home>
                   <database v-if="item.type == 'WEB-DATABASE'" :watch-data="watchData"></database>
-                  <open-table v-if="item.type == 'TABLE' && item.action == 'OPEN' "
-                              :watch-data="watchData"
-                              :config="currentDatasource"
-                              :table="currentTable"></open-table>
+                  <div v-if="item.type == 'TABLE' && item.action == 'OPEN'">
+                    <open-table v-if="currentDatasource.configType !== 'ZOOKEEPER'"
+                        :watch-data="watchData"
+                        :config="currentDatasource"
+                        :table="currentTable"></open-table>
+
+                    <zookeeper v-if="currentDatasource.configType !== 'ZOOKEEPER'" :watch-data="watchData"
+                               :config="currentDatasource"
+                               :table="currentTable">
+
+                    </zookeeper>
+                  </div>
 
                 </el-tab-pane>
               </el-tabs>
@@ -144,6 +152,7 @@ import {ElMessage} from "element-plus";
 import '@/style/easy.css'
 import Home from "@/components/home/home.vue";
 import Database from "@/components/database/database.vue";
+import Zookeeper from "@/components/zookeeper/Zookeeper.vue";
 import OpenTable from "@/components/table/OpenTable.vue";
 import RightMenu from "@/components/menu/RightMenu.vue";
 import '@/assets/icons/icon-berlin.css'
@@ -151,7 +160,7 @@ import '@/assets/icons/icon-hamburg.css'
 import '@/assets/icons/icon-standard.css'
 
 export default {
-  components: {Home, Database, OpenTable, RightMenu},
+  components: {Home, Database, OpenTable, RightMenu, Zookeeper},
   data() {
     return {
       loading: true,
