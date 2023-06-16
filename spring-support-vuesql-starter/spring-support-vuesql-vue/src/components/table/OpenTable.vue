@@ -1,6 +1,6 @@
 <template>
   <el-skeleton :loading="status.loading" animated>
-    <div v-if="!!table.updateEnable || !!table.insertEnable || !!table.deleteEnable" id="operator2"
+    <div  id="operator2"
          class="panel-header panel-header-noborder"
          style="height:auto; border-left: solid 1px #ddd; border-right: solid 1px #ddd">
       <div>
@@ -32,7 +32,7 @@
             class="l-btn-left l-btn-icon-left"><span class="l-btn-text">刷新</span><span
             class="l-btn-icon icon-standard-arrow-refresh">&nbsp;</span></span></a>
 
-        <a href="javascript:void(0)" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
+        <a v-if="(!!table.updateEnable || !!table.insertEnable)" href="javascript:void(0)" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
            iconcls="icon-table-multiple" plain="true" id="copyRowButton" @click="copyRow()" group=""><span
             class="l-btn-left l-btn-icon-left"><span class="l-btn-text">复制</span><span
             class="l-btn-icon icon-table-multiple">&nbsp;</span></span></a>
@@ -167,9 +167,12 @@ export default {
   },
   methods: {
     submitForm: function () {
-      this.rowAction = 'add';
+      this.recordData.push({
+        newData: this.data.redis,
+        action: 'add'
+      })
       this.sendData();
-      this.dialogVisible = !this.dialogVisible;
+      this.status.dialogVisible = !this.status.dialogVisible;
     },
     copyRow: function () {
       if (!this.data.multipleSelection || this.data.multipleSelection.length === 0) {
@@ -278,6 +281,7 @@ export default {
       }).finally(() => this.status.tableLoad = !1)
     },
     reset: function () {
+      this.data.redis = {};
       this.status.loading = !0;
       this.data.tableData.length = 0;
       this.data.tableColumn.length = 0;
