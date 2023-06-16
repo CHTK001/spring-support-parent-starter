@@ -15,4 +15,9 @@ import com.chua.starter.vuesql.service.WebsqlConfigService;
 @Service
 public class WebsqlConfigServiceImpl extends ServiceImpl<WebsqlConfigMapper, WebsqlConfig> implements WebsqlConfigService{
 
+    @Override
+    @Cacheable(cacheNames = "configId", key = "#configId")
+    public WebsqlConfig forById(String configId) {
+        return baseMapper.selectById(configId);
+    }
 }

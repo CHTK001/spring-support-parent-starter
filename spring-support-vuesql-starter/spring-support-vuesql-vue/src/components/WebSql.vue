@@ -127,7 +127,7 @@
                         :config="currentDatasource"
                         :table="currentTable"></open-table>
 
-                    <zookeeper v-if="currentDatasource.configType !== 'ZOOKEEPER'" :watch-data="watchData"
+                    <zookeeper v-if="currentDatasource.configType === 'ZOOKEEPER'" :watch-data="watchData"
                                :config="currentDatasource"
                                :table="currentTable">
 

@@ -39,7 +39,7 @@ public class TableController {
     public Result<SqlResult> getExplainTableInfo(@PathVariable String configId,
                                                  @RequestBody JSONObject jsonObject
     ) {
-        WebsqlConfig websqlConfig = websqlConfigService.getById(configId);
+        WebsqlConfig websqlConfig = websqlConfigService.forById(configId);
         String databaseType = websqlConfig.getConfigType().name().toLowerCase();
         TableChannel tableChannel =  ServiceProvider.of(TableChannel.class).getExtension(databaseType);
         if (null == tableChannel) {
@@ -66,7 +66,7 @@ public class TableController {
     public Result<SqlResult> getTableInfo(@PathVariable String configId,
                                           @RequestBody JSONObject jsonObject
     ) {
-        WebsqlConfig websqlConfig = websqlConfigService.getById(configId);
+        WebsqlConfig websqlConfig = websqlConfigService.forById(configId);
         String databaseType = websqlConfig.getConfigType().name().toLowerCase();
         TableChannel tableChannel =  ServiceProvider.of(TableChannel.class).getExtension(databaseType);
         if (null == tableChannel) {
@@ -95,7 +95,7 @@ public class TableController {
      */
     @PutMapping("/update")
     public Result<Boolean> update(@RequestBody JSONObject json) {
-        WebsqlConfig websqlConfig = websqlConfigService.getById(json.getJSONObject("config").getString("configId"));
+        WebsqlConfig websqlConfig = websqlConfigService.forById(json.getJSONObject("config").getString("configId"));
         String databaseType = websqlConfig.getConfigType().name().toLowerCase();
         TableChannel tableChannel = ServiceProvider.of(TableChannel.class).getExtension(databaseType);
         if (null == tableChannel) {
@@ -127,7 +127,7 @@ public class TableController {
             @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize
     ) {
-        WebsqlConfig websqlConfig = websqlConfigService.getById(configId);
+        WebsqlConfig websqlConfig = websqlConfigService.forById(configId);
         String databaseType = websqlConfig.getConfigType().name().toLowerCase();
         TableChannel tableChannel =  ServiceProvider.of(TableChannel.class).getExtension(databaseType);
         if (null == tableChannel) {
@@ -143,7 +143,7 @@ public class TableController {
      */
     @GetMapping("/{configId}")
     public Result<Construct> getTableInfo(@PathVariable String configId) {
-        WebsqlConfig websqlConfig = websqlConfigService.getById(configId);
+        WebsqlConfig websqlConfig = websqlConfigService.forById(configId);
         String databaseType = websqlConfig.getConfigType().name().toLowerCase();
         TableChannel tableChannel =  ServiceProvider.of(TableChannel.class).getExtension(databaseType);
         if (null == tableChannel) {
@@ -168,7 +168,7 @@ public class TableController {
     @GetMapping("/keyword/{configId}")
     @Cacheable(cacheNames = "configId", key = "#configId")
     public Result<List<Keyword>> keyword(@PathVariable String configId) {
-        WebsqlConfig websqlConfig = websqlConfigService.getById(configId);
+        WebsqlConfig websqlConfig = websqlConfigService.forById(configId);
         String databaseType = websqlConfig.getConfigType().name().toLowerCase();
         TableChannel tableChannel =  ServiceProvider.of(TableChannel.class).getExtension(databaseType);
         if (null == tableChannel) {
