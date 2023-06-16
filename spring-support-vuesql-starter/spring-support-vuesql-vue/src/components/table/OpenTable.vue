@@ -11,20 +11,32 @@
             class="l-btn-icon icon-standard-add">&nbsp;</span></span></a>
         <span class="toolbar-item dialog-tool-separator"></span>
 
-        <a v-if="!!table.updateEnable || !!table.insertEnable" href="javascript:void(0)"
+        <a v-if="(!!table.updateEnable || !!table.insertEnable) && openCancel" href="javascript:void(0)"
            class="easyui-linkbutton l-btn l-btn-small l-btn-plain" iconcls="icon-ok"
            plain="true" id="saveRowButton" @click="saveRow()" group=""><span class="l-btn-left l-btn-icon-left"><span
             class="l-btn-text">保存</span><span class="l-btn-icon icon-ok">&nbsp;</span></span></a>
 
 
-        <a v-if="!!table.updateEnable || !!table.insertEnable" href="javascript:void(0)"
+        <a v-if="(!!table.deleteEnable) && openDelete" href="javascript:void(0)"
+           class="easyui-linkbutton l-btn l-btn-small l-btn-plain" iconcls="icon-cancel"
+           plain="true"  @click="deleteRow()" group=""><span
+            class="l-btn-left l-btn-icon-left"><span class="l-btn-text">刪除</span><span class="l-btn-icon icon-cancel">&nbsp;</span></span></a>
+
+        <a v-if="(!!table.updateEnable || !!table.insertEnable) && openCancel" href="javascript:void(0)"
            class="easyui-linkbutton l-btn l-btn-small l-btn-plain" iconcls="icon-cancel"
            plain="true" id="cancelButton" @click="cancelChange()" group=""><span
             class="l-btn-left l-btn-icon-left"><span class="l-btn-text">取消</span><span class="l-btn-icon icon-cancel">&nbsp;</span></span></a>
       </div>
     </div>
 
-    <el-table v-loading="tableLoad" show-overflow-tooltip :data="tableData" style="width: 100%" border stripe>
+    <el-table v-loading="tableLoad" show-overflow-tooltip :data="tableData" style="width: 100%" border stripe
+              @selection-change="handleSelectionChange">
+      <el-table-column prop="index" width="45">
+        <template #default="scope">
+          <span>{{scope.$index+1}}</span>
+        </template>
+      </el-table-column>
+      <el-table-column type="selection" width="55"/>
       <el-table-column v-for="item in tableColumn" show-overflow-tooltip :prop="item.columnName"
                        :label="item.columnName">
         <template #default="scope">
@@ -57,7 +69,7 @@
 <script>
 import request from "axios";
 import URL from '@/config/url'
-import {sformat} from "@/utils/Utils";
+import {sformat, copy} from "@/utils/Utils";
 
 export default {
   name: "OpenTable",
@@ -72,20 +84,24 @@ export default {
   },
   data() {
     return {
+      openCancel: false,
+      openDelete: false,
       tableLoad: false,
       rowStatus: {},
       currentRowIndex: -1,
       currentRow: {},
-      oldDataRow: {},
+      oldRowData: {},//历史行数据
       dialogVisible: !1,
       total: 0,
       loading: false,
       tableColumn: [],
       tableData: [],
+      addNewDataStatus: !1,
       form: {
         pageNum: 1,
         pageSize: 10
-      }
+      },
+      multipleSelection: undefined
 
     }
   },
@@ -93,20 +109,47 @@ export default {
     this.doSearch();
   },
   methods: {
+    handleSelectionChange: function (val) {
+      this.multipleSelection = val;
+      if(val.length === 0) {
+        this.openDelete = !1;
+        return !1;
+      }
+      this.openDelete = !0;
+    },
+    deleteRow: function(row){
+      this.tableLoad = !0;
+      request.put(URL.UPDATE_TABLE, {
+        oldData: this.multipleSelection,
+        config: this.config,
+        table: this.table,
+        mode: 'delete'
+      }).then(({data}) => {
+        if (data.code == '00000') {
+          this.$message.success("修改成功");
+          this.cancelChange();
+          this.doSearch();
+          this.openCancel = !1;
+          return !0;
+        }
+        this.$message.error(data.msg);
+      }).finally(() => this.tableLoad = !1)
+    },
     saveRow: function () {
       this.sendData();
     },
     cancelChange: function () {
-      for(const item in this.rowStatus) {
+      for (const item in this.rowStatus) {
         this.rowStatus[item] = !1;
       }
       this.currentRowIndex = -1;
       this.currentRow = {};
-      this.oldDataRow = {};
+      this.oldRowData = {};
     },
-    checkSame(currentRow, oldDataRow) {
-      for(const item of Object.keys(oldDataRow)) {
-        if(oldDataRow[item] != currentRow[item]) {
+    checkWithHistorySame() {
+      for (const item of Object.keys(this.currentRow)) {
+        //数据被修改
+        if (this.oldRowData[item] != this.currentRow[item]) {
           return false;
         }
       }
@@ -119,7 +162,7 @@ export default {
      */
     checkNull: function (data) {
       const tpl = {};
-      for(const item of Object.keys(data)) {
+      for (const item of Object.keys(data)) {
         if (data[item] !== '' && data[item] !== null && data[item] !== undefined) {
           tpl[item] = data[item];
         }
@@ -127,42 +170,38 @@ export default {
 
       return tpl;
     },
-    sendData: function  () {
-      this.currentRow = this.checkNull(this.currentRow);
-      this.oldDataRow = this.oldDataRow;
+    sendData: function () {
       //之前有行被编辑
-      if(Object.keys(this.oldDataRow).length != 0 && this.checkSame(this.currentRow, this.oldDataRow)) {
+      if (this.checkWithHistorySame()) {
         this.cancelChange();
       } else {
         this.tableLoad = !0;
         request.put(URL.UPDATE_TABLE, {
           newData: this.currentRow,
-          oldData: this.oldDataRow,
+          oldData: this.oldRowData,
           config: this.config,
           table: this.table
         }).then(({data}) => {
-              if(data.code == '00000') {
-                this.$message.success("修改成功");
-                this.cancelChange();
-                this.doSearch();
-                return !0;
-              }
+          if (data.code == '00000') {
+            this.$message.success("修改成功");
+            this.cancelChange();
+            this.doSearch();
+            this.openCancel = !1;
+            return !0;
+          }
           this.$message.error(data.msg);
-            })
-            .finally(() => this.tableLoad = !1)
+        }).finally(() => this.tableLoad = !1)
       }
     },
     updateRow: function ({row, column, $index}) {
-      if(-1 != this.currentRowIndex && this.currentRowIndex != $index) {
+      this.openCancel = !0;
+      if (-1 != this.currentRowIndex && this.currentRowIndex != $index) {
         this.sendData(row, column, $index);
       }
       this.currentRowIndex = $index;
       this.currentRow = row;
+      this.oldRowData = copy(row);
       this.rowStatus[$index + column.label] = !0;
-      this.oldDataRow[column.label] = row[column.label];
-    },
-    blurClick: function (scope) {
-      debugger
     },
     addData: function () {
       const row = {};

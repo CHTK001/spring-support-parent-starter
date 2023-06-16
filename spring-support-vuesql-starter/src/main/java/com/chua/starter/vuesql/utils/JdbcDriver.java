@@ -1,7 +1,9 @@
 package com.chua.starter.vuesql.utils;
 
+import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.database.ResultSetUtils;
+import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
 import com.chua.starter.vuesql.enums.DatabaseType;
@@ -233,58 +235,58 @@ public class JdbcDriver {
 
     /**
      * 更新数据
+     *
      * @param connection 连接
-     * @param newData 新数据
-     * @param oldData 老数据
-     * @param realName 表名
+     * @param newData1   新数据
+     * @param oldData    老数据
+     * @param realName   表名
+     * @param mode       模式
      * @return 结果
      */
-    public static Boolean update(Connection connection, JSONObject newData, JSONObject oldData, String realName) {
-        StringBuilder sb = new StringBuilder();
-        //新增
-        if(oldData.isEmpty()) {
-            sb.append(" INSERT INTO ").append(realName).append(" (");
-            for (String key : newData.keySet()) {
-                sb.append("`").append(key).append("`,");
-            }
-            sb.delete(sb.length() - 1, sb.length());
-            sb.append(")");
-            sb.append(" VALUES (");
-            for (Object o : newData.values()) {
-                sb.append("'").append(o).append("',");
-            }
-            sb.delete(sb.length() - 1, sb.length());
-            sb.append(")");
+    public static Boolean update(Connection connection, JSONObject newData, Object oldData, String realName, String mode) throws SQLException {
+        if(oldData instanceof JSONObject) {
+            return JdbcDriver.update(connection, newData, (JSONObject) oldData, realName, mode);
         } else {
-            sb.append("UPDATE ").append(realName)
-                    .append(" SET ");
-            for (String s : oldData.keySet()) {
-                sb.append("`").append(s).append("` = '")
-                        .append(newData.get(s)).append("',");
+            if(null != oldData && oldData instanceof JSONArray) {
+                try {
+                    connection.setAutoCommit(false);
+                    ((JSONArray) oldData).forEach(item -> {
+                        JdbcDriver.update(connection, newData, new JSONObject((Map) item), realName, mode);
+                    });
+                    return true;
+                } catch (SQLException e) {
+                    connection.rollback();
+                } finally {
+                    connection.commit();
+                    connection.setAutoCommit(true);
+                }
             }
-            sb.delete(sb.length() - 1, sb.length());
+            throw new RuntimeException("数据不支持该操作");
+        }
+    }
 
-            sb.append(" WHERE 1 = 1 ");
-            for (Map.Entry<String, Object> entry : newData.entrySet()) {
-                Object value = entry.getValue();
-                if (null == value) {
-                    continue;
-                }
-
-                String key = entry.getKey();
-
-                if (oldData.containsKey(key)) {
-                    value = oldData.get(key);
-                }
-                if (null == value) {
-                    continue;
-                }
-                sb.append(" AND `").append(key).append("` = ");
-                if (value instanceof Number) {
-                    sb.append(value);
-                } else {
-                    sb.append("'").append(value).append("'");
-                }
+    /**
+     * 更新数据
+     *
+     * @param connection 连接
+     * @param newData1   新数据
+     * @param oldData    老数据
+     * @param realName   表名
+     * @param mode       模式
+     * @return 结果
+     */
+    public static Boolean update(Connection connection, JSONObject newData1, JSONObject oldData, String realName, String mode) {
+        StringBuilder sb = new StringBuilder();
+        //去重新数据中和老数据一致的数据
+        if("delete".equalsIgnoreCase(mode)) {
+            sb = makeDeleteSql(oldData, realName);
+        } else {
+            Map<String, Object> newData = MapUtils.removeSameData(newData1, oldData);
+            //新增
+            if (oldData.values().stream().map(String::valueOf).filter(StringUtils::isNotEmpty).count() == 0L) {
+                sb = makeInsertSql(newData, realName);
+            } else {
+                sb = makeUpdateSql(newData, oldData, realName);
             }
         }
 
@@ -293,5 +295,106 @@ public class JdbcDriver {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
+    }
+    /**
+     * delte sql
+     *
+     * @param oldData  老数据
+     * @param realName 表名
+     * @return sql
+     */
+    private static StringBuilder makeDeleteSql(JSONObject oldData, String realName) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("DELETE FROM ").append(realName)
+                .append(" WHERE 1 = 1 ");
+        for (Map.Entry<String, Object> entry : oldData.entrySet()) {
+            Object value = entry.getValue();
+            if (null == value) {
+                continue;
+            }
+
+            String key = entry.getKey();
+
+            if (null == value || (value instanceof String && StringUtils.isEmpty(value.toString()))) {
+                continue;
+            }
+            sb.append(" AND `").append(key).append("` = ");
+            if (value instanceof Number) {
+                sb.append(value);
+            } else {
+                sb.append("'").append(value).append("'");
+            }
+        }
+        return sb;
+    }
+
+    /**
+     * update sql
+     *
+     * @param newData  新數據
+     * @param oldData  老数据
+     * @param realName 表名
+     * @return sql
+     */
+    private static StringBuilder makeUpdateSql(Map<String, Object> newData, JSONObject oldData, String realName) {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("UPDATE ").append(realName)
+                .append(" SET ");
+        for (String s : newData.keySet()) {
+            sb.append("`").append(s).append("` = '")
+                    .append(newData.get(s)).append("',");
+        }
+        sb.delete(sb.length() - 1, sb.length());
+
+        sb.append(" WHERE 1 = 1 ");
+        for (Map.Entry<String, Object> entry : oldData.entrySet()) {
+            Object value = entry.getValue();
+            if (null == value) {
+                continue;
+            }
+
+            String key = entry.getKey();
+
+            if (newData.containsKey(key)) {
+                continue;
+            }
+
+            if (null == value || (value instanceof String && StringUtils.isEmpty(value.toString()))) {
+                continue;
+            }
+            sb.append(" AND `").append(key).append("` = ");
+            if (value instanceof Number) {
+                sb.append(value);
+            } else {
+                sb.append("'").append(value).append("'");
+            }
+        }
+        return sb;
+    }
+
+    /**
+     * insert sql
+     *
+     * @param newData  新數據
+     * @param realName 表名
+     * @return sql
+     */
+    private static StringBuilder makeInsertSql(Map<String, Object> newData, String realName) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(" INSERT INTO ").append(realName).append(" (");
+        for (String key : newData.keySet()) {
+            sb.append("`").append(key).append("`,");
+        }
+        sb.delete(sb.length() - 1, sb.length());
+        sb.append(")");
+        sb.append(" VALUES (");
+        for (Object o : newData.values()) {
+            sb.append("'").append(o).append("',");
+        }
+        sb.delete(sb.length() - 1, sb.length());
+        sb.append(")");
+
+        return sb;
     }
 }

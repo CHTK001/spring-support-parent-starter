@@ -110,10 +110,11 @@ public interface TableChannel {
      * 更新数据
      *
      * @param websqlConfig 配置
-     * @param newData
+     * @param newData      新数据
      * @param oldData      数据
      * @param table        表
+     * @param mode         模式
      * @return
      */
-    Boolean update(WebsqlConfig websqlConfig, JSONObject newData, JSONObject oldData, JSONObject table);
+    Boolean update(WebsqlConfig websqlConfig, JSONObject newData, Object oldData, JSONObject table, String mode);
 }

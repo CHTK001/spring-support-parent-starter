@@ -23,9 +23,9 @@
             <el-select v-model="datasource" class="m-2" placeholder="请选择..."  @change="changeDatabase">
               <el-option
                   v-for="item in options"
-                  :key="item.value"
-                  :label="item.label"
-                  :value="item.value"
+                  :key="item.configId"
+                  :label="item.configName"
+                  :value="item.configId"
 
               />
             </el-select>
@@ -180,11 +180,7 @@ export default {
           this.options.length = 0;
           if (data.code == '00000') {
             data.data.forEach((item, index) => {
-              this.options.push({
-                value: item.configId,
-                configId: item.configId,
-                label: item.configName
-              })
+              this.options.push(item)
             })
           }
         }).finally(() => this.loading = !1)
@@ -197,7 +193,7 @@ export default {
       const item = this.datasource;
       this.tableLoading = true;
       this.treeData.length = 0;
-      this.currentDatasource = this.options.filter(it => it.value == item)[0];
+      this.currentDatasource = this.options.filter(it => it.configId === item)[0];
       request.get(sformat(URL.GET_TABLE_INFO, this.currentDatasource))
           .then(({data}) => {
             if (data.code == '00000') {
@@ -303,6 +299,10 @@ export default {
       })
     },
     rightclick(row, column, event) {
+      if((!!row.children && row.children.length > 0) || row.action == 'OPEN') {
+        this.rightclickInfo = {};
+        return !0;
+      }
       this.rightclickInfo = {
         position: {
           x: event.clientX,
