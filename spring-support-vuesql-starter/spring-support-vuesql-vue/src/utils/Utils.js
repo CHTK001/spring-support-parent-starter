@@ -6,26 +6,13 @@ export function guid() {
     });
 }
 
-export function isNewSame(obj, arr) {
-    for (let item of arr) {
-        let isSame = !0;
-        item = item.newData;
-        if (item.action === 'add') {
-            p: for (const objElement of Object.keys(item)) {
-                if (obj[objElement] !== item[objElement]) {
-                    isSame = !1;
-                    break p;
-                }
-            }
-        }
-
-
-        if(isSame) {
-            return !0;
+export function isNewSame(item, arr) {
+    for (const objElement of Object.keys(item)) {
+        if (arr[objElement] !== item[objElement]) {
+            return !1;
         }
     }
-
-    return !1;
+    return !0;
 }
 
 export function copy(obj) {
