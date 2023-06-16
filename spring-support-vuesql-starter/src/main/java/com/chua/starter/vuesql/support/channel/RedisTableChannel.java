@@ -116,6 +116,7 @@ public class RedisTableChannel implements TableChannel {
     }
 
     @Override
+    @SuppressWarnings("ALL")
     public Boolean update(WebsqlConfig config, String table, JSONArray data) {
         Jedis jedis = channelFactory.getConnection(config, Jedis.class, this::getJedis, it -> !it.isConnected());
         for (Object datum : data) {
@@ -123,53 +124,53 @@ public class RedisTableChannel implements TableChannel {
             Map newData = MapUtils.getType(item, "newData", Map.class);
             Map oldData = MapUtils.getType(item, "oldData", Map.class);
             String action = MapUtils.getString(item, "action");
+            try {
+                jedis.select(Integer.parseInt(table));
+            } catch (NumberFormatException ignored) {
+            }
+            if("delete".equalsIgnoreCase(action)) {
+                jedis.del(MapUtils.getString(oldData, "key"));
+                return true;
+            }
+
+            if("update".equalsIgnoreCase(action)) {
+                jedis.del(MapUtils.getString(oldData, "key"));
+            }
+
+            long expire = Long.parseLong(StringUtils.defaultString(MapUtils.getString(newData, "ttl"), "0"));
+            String type = StringUtils.defaultString(MapUtils.getString(newData, "type"), "string").toUpperCase();
+            switch (type) {
+                case "SET":
+                    jedis.sadd(MapUtils.getString(newData, "key"), StringUtils.defaultString(MapUtils.getString(newData, "value"), ""));
+                    break;
+                case "LIST":
+                    jedis.lpush(MapUtils.getString(newData, "key"), StringUtils.defaultString(MapUtils.getString(newData, "value"), ""));
+                    break;
+                case "ZSET":
+                    jedis.zadd(MapUtils.getString(newData, "key"), 0.0, StringUtils.defaultString(MapUtils.getString(newData, "value"), ""));
+                    break;
+                case "HASH":
+                    String value = StringUtils.defaultString(MapUtils.getString(newData, "value"), "");
+                    if(value.contains(":")) {
+                        Map map = Converter.convertIfNecessary(value, Map.class);
+                        if(null != map) {
+                            map.forEach((k, v) -> {
+                                jedis.hset(MapUtils.getString(newData, "key"), k + "", v + "");
+                            });
+                        }
+                    }
+                    break;
+                default:
+                    jedis.set(MapUtils.getString(newData, "key"), StringUtils.defaultString(MapUtils.getString(newData, "value"), ""));
+                    break;
+            }
+
+            if(expire > 0) {
+                jedis.expire(MapUtils.getString(newData, "key"), expire);
+            }
         };
 
-//        try {
-//            jedis.select(Integer.parseInt(table.getString("realName")));
-//        } catch (NumberFormatException ignored) {
-//        }
-//        if("delete".equalsIgnoreCase(data)) {
-//            if(oldData instanceof JSONObject) {
-//                jedis.del(((JSONObject) oldData).getString("key"));
-//            } else if(oldData instanceof JSONArray){
-//                ((JSONArray) oldData).forEach((item) -> {
-//                    jedis.del(MapUtils.getString(item, "key"));
-//                });
-//            }
-//            return true;
-//        }
-//        long expire = Long.parseLong(StringUtils.defaultString(newData.getString("ttl"), "0"));
-//        String type = StringUtils.defaultString(newData.getString("type"), "string").toUpperCase();
-//        switch (type) {
-//            case "SET":
-//                jedis.sadd(newData.getString("key"), StringUtils.defaultString(newData.getString("value"), ""));
-//                break;
-//            case "LIST":
-//                jedis.lpush(newData.getString("key"), StringUtils.defaultString(newData.getString("value"), ""));
-//                break;
-//            case "ZSET":
-//                jedis.zadd(newData.getString("key"), 0.0, StringUtils.defaultString(newData.getString("value"), ""));
-//                break;
-//            case "HASH":
-//                String value = StringUtils.defaultString(newData.getString("value"), "");
-//                if(value.contains(":")) {
-//                    Map map = Converter.convertIfNecessary(value, Map.class);
-//                    if(null != map) {
-//                        map.forEach((k, v) -> {
-//                            jedis.hset(newData.getString("key"), k + "", v + "");
-//                        });
-//                    }
-//                }
-//                break;
-//            default:
-//                jedis.set(newData.getString("key"), StringUtils.defaultString(newData.getString("value"), ""));
-//                break;
-//        }
-//
-//        if(expire > 0) {
-//            jedis.expire(newData.getString("key"), expire);
-//        }
+
         return true;
     }
 
