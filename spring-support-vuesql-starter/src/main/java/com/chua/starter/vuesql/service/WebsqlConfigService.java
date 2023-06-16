@@ -9,4 +9,5 @@ import org.springframework.cache.annotation.Cacheable;
  */
 public interface WebsqlConfigService extends IService<WebsqlConfig> {
 
+    WebsqlConfig forById(String configId);
 }
