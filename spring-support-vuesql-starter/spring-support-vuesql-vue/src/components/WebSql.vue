@@ -454,12 +454,12 @@ export default {
           }, {
             fnName: "onDesignTable",
             params: {row, column, event},
-            icoName: "menu-icon icon-table-row-delete",
+            icoName: "menu-icon icon-table-gear",
             btnName: "设计表",
           }, {
             fnName: "onCreateTable",
             params: {row, column, event},
-            icoName: "menu-icon icon-table-row-delete",
+            icoName: "menu-icon icon-table-add",
             btnName: "新建表",
           },
         ],
