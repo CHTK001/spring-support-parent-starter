@@ -499,7 +499,7 @@ export default {
           }, {
             fnName: "onCopyTable",
             params: {row, column, event},
-            icoName: "menu-icon icon-table-lighting",
+            icoName: "menu-icon icon-table-lightning",
             btnName: "复制表",
           }, {
             fnName: "onRenameTable",
