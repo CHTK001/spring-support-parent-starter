@@ -16,5 +16,17 @@ public enum Action {
     /**
      * open
      */
-    OPEN
+    OPEN,
+    /**
+     * add
+     */
+    ADD,
+    /**
+     * update
+     */
+    UPDATE,
+    /**
+     * DELETE
+     */
+    DELETE,
 }

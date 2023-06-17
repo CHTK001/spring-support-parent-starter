@@ -16,7 +16,7 @@ import java.util.List;
 @Builder
 public class Construct {
 
-    private Integer id;
+    private String id;
     private String name;
     private Type type;
     private String icon;
@@ -30,10 +30,11 @@ public class Construct {
 
     private String realName;
 
-    private Integer pid;
+    private String pid;
 
     @Builder.Default
     private Action action = Action.NONE;
 
     private List<Construct> children;
+    private Boolean hasChildren;
 }

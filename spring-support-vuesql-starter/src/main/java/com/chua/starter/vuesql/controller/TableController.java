@@ -166,7 +166,7 @@ public class TableController {
         } catch (Exception e) {
             return Result.failed(e.getLocalizedMessage());
         }
-        CustomTreeNode<Construct, Integer> treeNode = new CustomTreeNode<>(Construct::getId, Construct::getPid);
+        CustomTreeNode<Construct, String> treeNode = new CustomTreeNode<>(Construct::getId, Construct::getPid, "0");
         treeNode.add(constructs);
 
         return Result.success(treeNode.transfer());
