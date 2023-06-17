@@ -84,6 +84,9 @@
                   @onDesignTable="onDesignTable"
                   @onDeleteTable="onDeleteTable"
                   @onInfoTable="onInfoTable"
+                  @onBackupTable="onBackupTable"
+                  @onCopyTable="onCopyTable"
+                  @onRenameTable="onRenameTable"
               ></right-menu>
             </div>
           </el-skeleton>
@@ -395,6 +398,24 @@ export default {
         message: '未实现表信息'
       })
     },
+    onBackupTable(params) {
+      ElMessage({
+        type: 'error',
+        message: '未实现表备份'
+      })
+    },
+    onCopyTable(params) {
+      ElMessage({
+        type: 'error',
+        message: '未实现表拷贝'
+      })
+    },
+    onRenameTable(params) {
+      ElMessage({
+        type: 'error',
+        message: '未实现重命名'
+      })
+    },
     onDesignTable(params) {
       const item = params.row;
       this.currentTable = item;
@@ -470,6 +491,21 @@ export default {
             params: {row, column, event},
             icoName: "menu-icon icon-table-add",
             btnName: "新建表",
+          }, {
+            fnName: "onBackupTable",
+            params: {row, column, event},
+            icoName: "menu-icon icon-table-go",
+            btnName: "备份表",
+          }, {
+            fnName: "onCopyTable",
+            params: {row, column, event},
+            icoName: "menu-icon icon-table-lighting",
+            btnName: "复制表",
+          }, {
+            fnName: "onRenameTable",
+            params: {row, column, event},
+            icoName: "menu-icon icon-table-relationship",
+            btnName: "重命名",
           }, {
             fnName: "onDeleteTable",
             params: {row, column, event},
