@@ -80,6 +80,7 @@
                   @onOpenTable="openTable"
                   @onClearTable="clearTable"
                   @onCopy="onCopy"
+                  @onDesignTable="onDesignTable"
               ></right-menu>
             </div>
           </el-skeleton>
@@ -137,6 +138,12 @@
                     </zookeeper>
                   </div>
 
+                  <div v-if="item.type == 'DesignTable' && item.action == 'OPEN'">
+                    <design-table
+                        :watch-data="watchData"
+                        :config="currentDatasource"
+                        :table="currentTable"></design-table>
+                  </div>
                 </el-tab-pane>
               </el-tabs>
             </div>
@@ -161,9 +168,10 @@ import RightMenu from "@/components/menu/RightMenu.vue";
 import '@/assets/icons/icon-berlin.css'
 import '@/assets/icons/icon-hamburg.css'
 import '@/assets/icons/icon-standard.css'
+import DesignTable from "@/components/table/DesignTable.vue";
 
 export default {
-  components: {Home, Database, OpenTable, RightMenu, Zookeeper},
+  components: {DesignTable, Home, Database, OpenTable, RightMenu, Zookeeper},
   data() {
     return {
       loading: true,
@@ -365,6 +373,28 @@ export default {
         message: '不支持打开'
       })
     },
+    onDesignTable(params) {
+      const item = params.row;
+      this.currentTable = item;
+      if (item) {
+        if (!item.children || item.children == 0) {
+          this.handleTabsEdit({
+            id: item.id + "DesignTable",
+            name: item.id,
+            label: item.name,
+            type: 'DesignTable',
+            path: item.path,
+            close: !0,
+            action: 'OPEN'
+          }, 'add')
+          return !0;
+        }
+      }
+      ElMessage({
+        type: 'error',
+        message: '不支持打开'
+      })
+    },
     rightclick(row, column, event) {
       if ((!!row.children && row.children.length > 0) || row.action == 'OPEN') {
         this.rightclickInfo = {};
@@ -391,8 +421,12 @@ export default {
             params: {row, column, event},
             icoName: "menu-icon  icon-table-row-delete",
             btnName: "清空表",
+          }, {
+            fnName: "onDesignTable",
+            params: {row, column, event},
+            icoName: "menu-icon icon-table-row-delete",
+            btnName: "设计表",
           },
-
         ],
       };
       event.preventDefault(); // 阻止默认的鼠标右击事件
