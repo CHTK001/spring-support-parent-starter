@@ -37,6 +37,7 @@
         <module>spring-support-mail-starter</module>
         <module>spring-support-websql-starter</module>
         <module>spring-support-vuesql-starter</module>
+        <module>spring-support-oss-starter</module>
     </modules>
 
     <properties>
