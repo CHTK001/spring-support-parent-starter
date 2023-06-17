@@ -80,6 +80,7 @@
                   @onOpenTable="openTable"
                   @onClearTable="clearTable"
                   @onCopy="onCopy"
+                  @onCreateTable="onCreateTable"
                   @onDesignTable="onDesignTable"
               ></right-menu>
             </div>
@@ -144,6 +145,12 @@
                         :config="currentDatasource"
                         :table="currentTable"></design-table>
                   </div>
+                  <div v-if="item.type == 'CreateTable' && item.action == 'OPEN'">
+                    <create-table
+                        :watch-data="watchData"
+                        :config="currentDatasource"
+                        :table="currentTable"></create-table>
+                  </div>
                 </el-tab-pane>
               </el-tabs>
             </div>
@@ -165,13 +172,14 @@ import Database from "@/components/database/database.vue";
 import Zookeeper from "@/components/zookeeper/Zookeeper.vue";
 import OpenTable from "@/components/table/OpenTable.vue";
 import RightMenu from "@/components/menu/RightMenu.vue";
+import DesignTable from "@/components/table/DesignTable.vue";
+import CreateTable from "@/components/table/CreateTable.vue";
 import '@/assets/icons/icon-berlin.css'
 import '@/assets/icons/icon-hamburg.css'
 import '@/assets/icons/icon-standard.css'
-import DesignTable from "@/components/table/DesignTable.vue";
 
 export default {
-  components: {DesignTable, Home, Database, OpenTable, RightMenu, Zookeeper},
+  components: {Home, Database, OpenTable, RightMenu, Zookeeper, CreateTable, DesignTable},
   data() {
     return {
       loading: true,
@@ -395,6 +403,28 @@ export default {
         message: '不支持打开'
       })
     },
+    onCreateTable(params) {
+      const item = params.row;
+      this.currentTable = item;
+      if (item) {
+        if (!item.children || item.children == 0) {
+          this.handleTabsEdit({
+            id: item.id + "CreateTable",
+            name: item.id,
+            label: item.name,
+            type: 'CreateTable',
+            path: item.path,
+            close: !0,
+            action: 'OPEN'
+          }, 'add')
+          return !0;
+        }
+      }
+      ElMessage({
+        type: 'error',
+        message: '不支持打开'
+      })
+    },
     rightclick(row, column, event) {
       if ((!!row.children && row.children.length > 0) || row.action == 'OPEN') {
         this.rightclickInfo = {};
@@ -426,6 +456,11 @@ export default {
             params: {row, column, event},
             icoName: "menu-icon icon-table-row-delete",
             btnName: "设计表",
+          }, {
+            fnName: "onCreateTable",
+            params: {row, column, event},
+            icoName: "menu-icon icon-table-row-delete",
+            btnName: "新建表",
           },
         ],
       };
