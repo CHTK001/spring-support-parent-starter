@@ -82,6 +82,8 @@
                   @onCopy="onCopy"
                   @onCreateTable="onCreateTable"
                   @onDesignTable="onDesignTable"
+                  @onDeleteTable="onDeleteTable"
+                  @onInfoTable="onInfoTable"
               ></right-menu>
             </div>
           </el-skeleton>
@@ -381,6 +383,18 @@ export default {
         message: '不支持打开'
       })
     },
+    onDeleteTable(params) {
+      ElMessage({
+        type: 'error',
+        message: '未实现表删除'
+      })
+    },
+    onInfoTable(params) {
+      ElMessage({
+        type: 'error',
+        message: '未实现表信息'
+      })
+    },
     onDesignTable(params) {
       const item = params.row;
       this.currentTable = item;
@@ -447,11 +461,6 @@ export default {
             icoName: "menu-icon  icon-table-edit",
             btnName: "打开表",
           }, {
-            fnName: "onClearTable",
-            params: {row, column, event},
-            icoName: "menu-icon  icon-table-row-delete",
-            btnName: "清空表",
-          }, {
             fnName: "onDesignTable",
             params: {row, column, event},
             icoName: "menu-icon icon-table-gear",
@@ -461,7 +470,23 @@ export default {
             params: {row, column, event},
             icoName: "menu-icon icon-table-add",
             btnName: "新建表",
-          },
+          }, {
+            fnName: "onDeleteTable",
+            params: {row, column, event},
+            icoName: "menu-icon  icon-table-delete",
+            btnName: "删除表",
+            group: true
+          }, {
+            fnName: "onClearTable",
+            params: {row, column, event},
+            icoName: "menu-icon  icon-table-row-delete",
+            btnName: "清空表",
+          }, {
+            fnName: "onInfoTable",
+            params: {row, column, event},
+            icoName: "menu-icon  icon-table-gear",
+            btnName: "表信息",
+          }
         ],
       };
       event.preventDefault(); // 阻止默认的鼠标右击事件
