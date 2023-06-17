@@ -8,6 +8,7 @@
         @click.stop="fnHandler(item)"
     >
       <div class="table-right-menu-item-btn">
+        <div v-if="item.group" style="width: 100%;margin-left: 0px;" class="menu-sep"></div>
         <!-- 图标和按钮名 -->
         <span class="table-right-menu-item-display">
           <div :class="item.icoName"></div>
@@ -38,6 +39,7 @@ export default {
               params: {}, // 点击的参数
               icoName: "", // 图标名
               btnName: "", // 按钮名
+              group: false
             },
           ],
         };
