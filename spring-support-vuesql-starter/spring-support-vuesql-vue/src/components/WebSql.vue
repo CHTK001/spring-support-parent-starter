@@ -485,32 +485,32 @@ export default {
             fnName: "onDesignTable",
             params: {row, column, event},
             icoName: "menu-icon icon-table-gear",
-            btnName: "设计表",
+            btnName: "设计表(建筑)",
           }, {
             fnName: "onCreateTable",
             params: {row, column, event},
             icoName: "menu-icon icon-table-add",
-            btnName: "新建表",
+            btnName: "新建表(建筑)",
           }, {
             fnName: "onBackupTable",
             params: {row, column, event},
             icoName: "menu-icon icon-table-go",
-            btnName: "备份表",
+            btnName: "备份表(建筑)",
           }, {
             fnName: "onCopyTable",
             params: {row, column, event},
             icoName: "menu-icon icon-table-lightning",
-            btnName: "复制表",
+            btnName: "复制表(建筑)",
           }, {
             fnName: "onRenameTable",
             params: {row, column, event},
             icoName: "menu-icon icon-table-relationship",
-            btnName: "重命名",
+            btnName: "重命名(建筑)",
           }, {
             fnName: "onDeleteTable",
             params: {row, column, event},
             icoName: "menu-icon  icon-table-delete",
-            btnName: "删除表",
+            btnName: "删除表(建筑)",
             group: true
           }, {
             fnName: "onClearTable",
@@ -521,7 +521,7 @@ export default {
             fnName: "onInfoTable",
             params: {row, column, event},
             icoName: "menu-icon  icon-table-gear",
-            btnName: "表信息",
+            btnName: "表信息(建筑)",
           }
         ],
       };
