@@ -136,7 +136,7 @@
       </el-form-item>
       <el-form-item>
         <el-button @click="status.dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitForm()" :loading="loading">提交</el-button>
+        <el-button type="primary" @click="submitForm()" :loading="status.loading">提交</el-button>
       </el-form-item>
     </el-form>
   </el-dialog>

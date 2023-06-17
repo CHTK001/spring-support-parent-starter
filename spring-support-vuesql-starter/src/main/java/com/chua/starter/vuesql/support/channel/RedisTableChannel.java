@@ -38,13 +38,13 @@ public class RedisTableChannel implements TableChannel {
     public List<Construct> getDataBaseConstruct(WebsqlConfig config) {
         List<Construct> rs = new LinkedList<>();
         Jedis jedis = channelFactory.getConnection(config, Jedis.class, this::getJedis, it -> !it.isConnected());
-        rs.add(Construct.builder().type(Type.DATABASE).icon("DATABASE").id(1).pid(0).name(config.getConfigDatabase()).build());
+        rs.add(Construct.builder().type(Type.DATABASE).icon("DATABASE").id(String.valueOf(1)).pid(String.valueOf(0)).name(config.getConfigDatabase()).build());
         rs.addAll(IntStream.range(2, 18).mapToObj(it -> {
             jedis.select(it - 2);
             return Construct.builder().icon("DATABASE")
-                    .id(it)
+                    .id(String.valueOf(it))
                     .realName((it - 2) + "")
-                    .pid(1)
+                    .pid(String.valueOf(1))
                     .type(Type.TABLE)
                     .action(Action.OPEN)
                     .name((it - 2) + "(" + jedis.dbSize() + ")").build();

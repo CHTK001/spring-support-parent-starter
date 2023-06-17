@@ -8,7 +8,7 @@
                style="height:auto; border-left: solid 1px #ddd; border-right: solid 1px #ddd">
             <div>
               <a href="javascript:void(0)" id="runButton" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
-                 iconcls="icon-run" plain="true" @click="run()" title="运行选中SQL命令" group=""><span
+                 iconcls="icon-run" @click="run()" title="运行选中SQL命令" group=""><span
                   class="l-btn-left l-btn-icon-left"><span class="l-btn-text">运行(F8)</span><span
                   class="l-btn-icon icon-run">&nbsp;</span></span></a>
               <span class="toolbar-item dialog-tool-separator"></span>
@@ -21,43 +21,43 @@
               <span class="toolbar-item dialog-tool-separator"></span>
 
               <a href="javascript:void(0)" id="clearSQLButton" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
-                 iconcls="icon-standard-bin-closed" plain="true" @click="clearSQL()" title="清空编辑区SQL命令"
+                 iconcls="icon-standard-bin-closed" @click="clearSQL()" title="清空编辑区SQL命令"
                  group=""><span class="l-btn-left l-btn-icon-left"><span class="l-btn-text">清空(F7)</span><span
                   class="l-btn-icon icon-standard-bin-closed">&nbsp;</span></span></a>
               <span class="toolbar-item dialog-tool-separator"></span>
 
               <a href="javascript:void(0)" id="formatSQLButton" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
-                 iconcls="icon-hamburg-sitemap" plain="true" @click="formatSQL()" title="SQL格式美化" group=""><span
+                 iconcls="icon-hamburg-sitemap" @click="formatSQL()" title="SQL格式美化" group=""><span
                   class="l-btn-left l-btn-icon-left"><span class="l-btn-text">美化</span><span
                   class="l-btn-icon icon-hamburg-sitemap">&nbsp;</span></span></a>
               <span class="toolbar-item dialog-tool-separator"></span>
 
               <a href="javascript:void(0)" id="explainSQLButton" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
-                 iconcls="icon-hamburg-category" plain="true" @click="explainSQL()" title="解释" group=""><span
+                 iconcls="icon-hamburg-category" @click="explainSQL()" title="解释" group=""><span
                   class="l-btn-left l-btn-icon-left"><span class="l-btn-text">解释</span><span
                   class="l-btn-icon icon-hamburg-category">&nbsp;</span></span></a>
               <span class="toolbar-item dialog-tool-separator"></span>
 
               <a href="javascript:void(0)" id="explainSQLButton" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
-                 iconcls="icon-hamburg-category" plain="true" @click="commitFn()" title="解析Mybatis" group=""><span
+                 iconcls="icon-hamburg-category" @click="commitFn()" title="解析Mybatis" group=""><span
                   class="l-btn-left l-btn-icon-left"><span class="l-btn-text">Mybatis</span><span
                   class="l-btn-icon icon-hamburg-docs">&nbsp;</span></span></a>
               <span class="toolbar-item dialog-tool-separator"></span>
 
               <a href="javascript:void(0)" id="newQueryButton" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
-                 iconcls="icon-standard-add" plain="true" @click="newQuery();" title="新建查询" group=""><span
+                 iconcls="icon-standard-add" @click="newQuery();" title="新建查询" group=""><span
                   class="l-btn-left l-btn-icon-left"><span class="l-btn-text">新建</span><span
                   class="l-btn-icon icon-standard-add">&nbsp;</span></span></a>
               <span class="toolbar-item dialog-tool-separator"></span>
 
               <a href="javascript:void(0)" id="newQueryButton" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
-                 iconcls="icon-standard-add" plain="true" @click="formatSQLWeb();" title="格式化" group=""><span
+                 iconcls="icon-standard-add" @click="formatSQLWeb();" title="格式化" group=""><span
                   class="l-btn-left l-btn-icon-left"><span class="l-btn-text">格式化</span><span
                   class="l-btn-icon icon-standard-application-tile-horizontal">&nbsp;</span></span></a>
               <span class="toolbar-item dialog-tool-separator"></span>
 
               <a href="javascript:void(0)" id="addConfig" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
-                 iconcls="icon-plus" plain="true" @click="addConfig()" title="新增数据库"
+                 iconcls="icon-plus" @click="addConfig()" title="新增数据库"
               >
                   <span class="l-btn-left l-btn-icon-left">
                     <span class="l-btn-text">数据库</span>
@@ -65,12 +65,12 @@
               </a>
 
               <a href="javascript:void(0)" id="saveSearchButton" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
-                 iconcls="icon-save" plain="true" onclick="saveSearchDialog()" title="SQL保存,可展开右侧工具栏查看"
+                 onclick="saveSearchDialog()" title="SQL保存,可展开右侧工具栏查看"
               ><span class="l-btn-left l-btn-icon-left"><span class="l-btn-text">保存</span><span
                   class="l-btn-icon icon-save">&nbsp;</span></span></a>
               <span class="toolbar-item dialog-tool-separator"></span>
               <span href="javascript:void(0)" class="easyui-linkbutton l-btn l-btn-small l-btn-plain"
-                    plain="true" title="新增数据库"
+                    title="新增数据库"
               ><span>当前数据库：</span></span>
               <span id="currentDbTitle"><el-tag>{{ currentDatabase }}</el-tag></span>
 

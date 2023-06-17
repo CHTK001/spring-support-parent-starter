@@ -7,6 +7,7 @@ import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
+import com.chua.starter.vuesql.enums.Action;
 import com.chua.starter.vuesql.enums.DatabaseType;
 import com.chua.starter.vuesql.enums.Type;
 import com.chua.starter.vuesql.pojo.*;
@@ -183,15 +184,15 @@ public class JdbcDriver {
      */
     public static List<Construct> doConstruct(Connection connection, WebsqlConfig config, boolean insertEnable, boolean updateEnable, boolean deleteEnable) throws SQLException {
         List<Construct> rs = new LinkedList<>();
-        rs.add(Construct.builder().icon("DATABASE").type(Type.DATABASE).id(1).pid(0).name(config.getConfigName()).build());
-        rs.add(Construct.builder().icon("TABLE").type(Type.TABLE).pid(1).id(2).name("表").build());
-        rs.add(Construct.builder().icon("VIEW").type(Type.VIEW).pid(1).id(3).name("视图").build());
+        rs.add(Construct.builder().icon("DATABASE").type(Type.DATABASE).id(String.valueOf(1)).pid(String.valueOf(0)).name(config.getConfigName()).build());
+        rs.add(Construct.builder().icon("TABLE").type(Type.TABLE).pid(String.valueOf(1)).id(String.valueOf(2)).name("表").build());
+        rs.add(Construct.builder().icon("VIEW").type(Type.VIEW).pid(String.valueOf(1)).id(String.valueOf(3)).name("视图").build());
         AtomicInteger index = new AtomicInteger(4);
         ResultSet resultSet = connection.getMetaData().getTables(config.getConfigDatabase(), null, null, new String[]{"TABLE"});
         ResultSetUtils.doLine(resultSet, tables -> {
-            rs.add(Construct.builder().icon("TABLE").type(Type.TABLE).pid(2)
+            rs.add(Construct.builder().icon("TABLE").type(Type.TABLE).pid(String.valueOf(2))
                     .realName(tables.getString("TABLE_NAME"))
-                    .id(index.getAndIncrement())
+                    .id(String.valueOf(index.getAndIncrement()))
                     .updateEnable(updateEnable).insertEnable(insertEnable).deleteEnable(deleteEnable)
                     .name(tables.getString("TABLE_NAME")).build());
         });
@@ -199,9 +200,9 @@ public class JdbcDriver {
         ResultSet resultSet1 = connection.getMetaData().getTables(config.getConfigDatabase(), null, null, new String[]{"VIEW"});
         ResultSetUtils.doLine(resultSet1, tables -> {
             rs.add(Construct.builder().icon("VIEW").type(Type.VIEW)
-                    .pid(3)
+                    .pid(String.valueOf(3))
                     .realName(tables.getString("TABLE_NAME"))
-                    .id(index.getAndIncrement())
+                    .id(String.valueOf(index.getAndIncrement()))
                     .name(tables.getString("TABLE_NAME"))
                     .build());
         });
@@ -286,14 +287,19 @@ public class JdbcDriver {
      */
     public static Boolean update(Connection connection, Map<String, Object> newData1, Map<String, Object> oldData, String realName, String mode) {
         StringBuilder sb = new StringBuilder();
+        Action action = null;
+        try {
+            action = Action.valueOf(mode.toUpperCase());
+        } catch (IllegalArgumentException ignored) {
+        }
         //去重新数据中和老数据一致的数据
-        if ("delete".equalsIgnoreCase(mode)) {
+        if (action == Action.DELETE) {
             sb = makeDeleteSql(oldData, realName);
-        } else if ("add".equalsIgnoreCase(mode)) {
+        } else if (action == Action.ADD) {
             sb = makeInsertSql(newData1, realName);
-        } else if ("update".equalsIgnoreCase(mode)) {
+        } else if (action == Action.UPDATE) {
             Map<String, Object> newData = MapUtils.removeSameData(newData1, oldData);
-            if(newData.isEmpty()) {
+            if (newData.isEmpty()) {
                 return true;
             }
             sb = makeUpdateSql(newData, oldData, realName);
