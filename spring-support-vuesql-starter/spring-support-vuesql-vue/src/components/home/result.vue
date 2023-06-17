@@ -11,22 +11,31 @@
       </el-button>
     </div>
     <div v-else>
-      <!--@sort-change="sortChange"-->
-      <el-table show-overflow-tooltip :data="tableData" style="width: 100%" border stripe>
-        <el-table-column v-for="item in tableColumn" show-overflow-tooltip :prop="item.columnName"
-                         :label="item.columnName"/>
-      </el-table>
+      <div id="operator2"
+           class="panel-header panel-header-noborder"
+           style="height:24px; border-left: solid 1px #ddd; border-right: solid 1px #ddd">
+        <div>
+          <a class="easyui-linkbutton l-btn l-btn-small l-btn-plain"><span><span
+              class="l-btn-text">耗时: {{ cost }}</span></span></a>
+        </div>
 
-      <div class="demo-pagination-block">
-        <el-pagination
-            v-model:current-page="pageNum"
-            v-model:page-size="pageSize"
-            small="small"
-            layout="->, prev, pager, next, jumper, ->, total"
-            :total="total"
-            @size-change="handleSizeChange"
-            @current-change="handleCurrentChange"
-        />
+        <!--@sort-change="sortChange"-->
+        <el-table show-overflow-tooltip :data="tableData" style="width: 100%" border stripe>
+          <el-table-column v-for="item in tableColumn" show-overflow-tooltip :prop="item.columnName"
+                           :label="item.columnName"/>
+        </el-table>
+
+        <div class="demo-pagination-block">
+          <el-pagination
+              v-model:current-page="pageNum"
+              v-model:page-size="pageSize"
+              small="small"
+              layout="->, prev, pager, next, jumper, ->, total"
+              :total="total"
+              @size-change="handleSizeChange"
+              @current-change="handleCurrentChange"
+          />
+        </div>
       </div>
     </div>
   </div>
@@ -76,7 +85,8 @@ export default {
       pageNum: 1,
       pageSize: 10,
       orderColumn: undefined,
-      orderType: 'asc'
+      orderType: 'asc',
+      cost: 0
     }
   },
   mounted() {
@@ -97,6 +107,7 @@ export default {
     doSearch: function () {
       this.tableData.length = 0;
       this.tableColumn.length = 0;
+      const startTime = new Date().getTime();
       request.post(this.getUrl, {
         pageNum: this.pageNum,
         pageSize: this.pageSize,
@@ -117,13 +128,14 @@ export default {
           for (let item of rs.data) {
             this.tableData.push(item);
           }
-          return false;
+          return !0;
         } else {
           this.watchData.push(data.msg);
         }
       }).catch(({data}) => {
         this.watchData.push(data.msg);
-
+      }).finally(() => {
+        this.cost = (new Date().getTime() - startTime) + " ms"
       });
     },
     handleSizeChange: function (e) {
