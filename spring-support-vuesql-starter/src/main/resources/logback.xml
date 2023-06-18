@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<configuration scan="false" scanPeriod="60000" debug="false">
+    <statusListener class="ch.qos.logback.core.status.NopStatusListener"/>
+    <property name="MONITOR_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS}|%thread|%X{serverId}|%msg%n"/>
+    <contextName>${project.artifactId}</contextName>
+    <springProperty scope="context" name="projectArtifactId" source="spring.application.name"/>
+    <springProperty scope="context" name="rootLogLevel" source="logging.level.root"/>
+
+    <!-- 彩色日志 -->
+    <!-- 彩色日志依赖的渲染类 -->
+    <conversionRule conversionWord="clr" converterClass="org.springframework.boot.logging.logback.ColorConverter"/>
+    <conversionRule conversionWord="wex"
+                    converterClass="org.springframework.boot.logging.logback.WhitespaceThrowableProxyConverter"/>
+    <conversionRule conversionWord="wEx"
+                    converterClass="org.springframework.boot.logging.logback.ExtendedWhitespaceThrowableProxyConverter"/>
+    <property name="log_file_location" value="./logs"/>
+
+    <!-- 彩色日志格式 -->
+    <property name="console_log_pattern_color"
+              value="%red([%date{yyyy-MM-dd HH:mm:ss}]) %highlight([%-5level]) %blue([%X{traceId}]) %red([%thread]) %boldMagenta([%logger:%L]) - %msg%n"/>
+    <property name="console_log_pattern"
+              value="[%date{yyyy-MM-dd HH:mm:ss}] [%-5level] [%X{traceId}] [%thread] %logger:%L - %msg%n"/>
+    <!-- Console 输出设置 -->
+    <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+        <!-- encoder class为空时, 默认也为 ch.qos.logback.classic.encoder.PatternLayoutEncoder -->
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>${console_log_pattern_color}</pattern>
+        </encoder>
+    </appender>
+    <logger name="*.mapper.*" level="DEBUG" additivity="false"/>
+
+    <!-- 按照每天生成日志文件 -->
+    <appender name="file" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${log_file_location}/${projectArtifactId:-/}/logs.log</file>
+        <encoder>
+            <pattern>${console_log_pattern}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${log_file_location}/${projectArtifactId:-}/%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxHistory>10</maxHistory>
+            <maxFileSize>200MB</maxFileSize>
+            <totalSizeCap>2GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+
+    <!-- 把日志异步输出到磁盘文件中，避免每次都进行磁盘IO操作 -->
+    <appender name="async" class="ch.qos.logback.classic.AsyncAppender">
+        <discardingThreshold>0</discardingThreshold>
+        <queueSize>10000</queueSize>
+        <appender-ref ref="file"/>
+    </appender>
+
+    <!-- 至多只能配置一个root -->
+    <root>
+        <level value="INFO"/>
+        <appender-ref ref="console"/>
+        <appender-ref ref="async"/>
+    </root>
+
+</configuration>

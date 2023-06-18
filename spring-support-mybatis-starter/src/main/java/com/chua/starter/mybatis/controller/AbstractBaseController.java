@@ -6,13 +6,8 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.starter.common.support.result.ResultData;
 import com.chua.starter.mybatis.entity.DelegatePage;
 import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import springfox.documentation.annotations.ApiIgnore;
+import org.springframework.web.bind.annotation.*;
 
-import javax.annotation.Resource;
 import javax.validation.Valid;
 
 import static com.chua.starter.common.support.result.ReturnCode.PARAM_ERROR;
@@ -32,6 +27,7 @@ public abstract class AbstractBaseController<S extends IService<T>, T> {
      * @return 分页结果
      */
     @GetMapping("page")
+    @ResponseBody
     public ResultData<Page<T>> page(DelegatePage<T> page, @Valid T entity, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
@@ -45,6 +41,7 @@ public abstract class AbstractBaseController<S extends IService<T>, T> {
      * @param id 页码
      * @return 分页结果
      */
+    @ResponseBody
     @GetMapping("delete/{id}")
     public ResultData<Boolean> delete(@PathVariable("id") String id) {
         if (null == id) {
@@ -60,6 +57,7 @@ public abstract class AbstractBaseController<S extends IService<T>, T> {
      * @return 分页结果
      */
     @PostMapping("update")
+    @ResponseBody
     public ResultData<Boolean> updateById(@Valid @RequestBody T t, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
@@ -74,6 +72,7 @@ public abstract class AbstractBaseController<S extends IService<T>, T> {
      * @return 分页结果
      */
     @PostMapping("save")
+    @ResponseBody
     public ResultData<Boolean> save(@Valid @RequestBody T t, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
