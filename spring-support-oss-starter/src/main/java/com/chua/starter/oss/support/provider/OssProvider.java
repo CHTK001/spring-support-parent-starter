@@ -5,10 +5,12 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.function.strategy.name.OssNamedStrategy;
 import com.chua.common.support.function.strategy.name.RejectStrategy;
+import com.chua.common.support.image.filter.ImageFilter;
 import com.chua.common.support.oss.adaptor.OssResolver;
 import com.chua.common.support.pojo.Mode;
 import com.chua.common.support.spi.Option;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.IoUtils;
 import com.chua.starter.common.support.result.Result;
 import com.chua.starter.common.support.result.ResultData;
 import com.chua.starter.common.support.view.ResponseHandler;
@@ -22,12 +24,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -47,6 +51,41 @@ public class OssProvider {
     @Resource
     private OssSystemService ossSystemService;
     private static final String DOWNLOAD = "download";
+
+    /**
+     * 文件上传
+     *
+     * @param ossBucket bucket
+     * @param files     文件
+     * @return -1: bucket不存在
+     */
+    @ResponseBody
+    @PostMapping("/upload")
+    public Result<Boolean> saveOss(String ossBucket, MultipartFile[] files) {
+        if (null == ossBucket) {
+            return Result.failed("bucket不存在");
+        }
+        OssSystem ossSystem = ossSystemService.getSystemByBucket(ossBucket);
+        if (null == ossSystem) {
+            return Result.failed("bucket不存在");
+        }
+        OssResolver ossResolver = ServiceProvider.of(OssResolver.class).getNewExtension(ossSystem.getOssType());
+        if (null == ossResolver) {
+            return Result.failed("bucket不存在");
+        }
+        try {
+            for (MultipartFile file : files) {
+                try (InputStream inputStream = file.getInputStream()) {
+                    ossResolver.storage(inputStream,
+                            BeanUtils.copyProperties(ossSystem, com.chua.common.support.pojo.OssSystem.class),
+                            file.getOriginalFilename());
+                }
+            }
+            return Result.success();
+        } catch (Exception e) {
+            return Result.failed(e.getLocalizedMessage());
+        }
+    }
 
     /**
      * 文件预览
@@ -86,6 +125,15 @@ public class OssProvider {
         }
 
         OssSystem ossSystem = ossSystemService.getSystemByBucket(bucket);
+        if (null == ossSystem) {
+            try {
+                return ResponseEntity.ok()
+                        .contentType(new MediaType("image", "webp"))
+                        .body(IoUtils.toByteArray(OssProvider.class.getResource("/404.webp")));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
         OssResolver ossResolver = ServiceProvider.of(OssResolver.class).getNewExtension(ossSystem.getOssType());
         if (null == ossResolver) {
             return ResponseEntity.notFound().build();
@@ -127,6 +175,11 @@ public class OssProvider {
         if (2 == type) {
             //拒绝策略
             return Result.success(ServiceProvider.of(RejectStrategy.class).options());
+        }
+
+        if (3 == type) {
+            //插件
+            return Result.success(ServiceProvider.of(ImageFilter.class).options());
         }
 
         return Result.failed();

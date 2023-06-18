@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.chua.common.support.database.annotation.Column;
 import com.chua.common.support.database.annotation.Id;
 import com.chua.common.support.database.annotation.Table;
+import com.chua.starter.common.support.deserialize.JsonArrayConverter;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import lombok.Data;
 
 @Data
@@ -34,5 +36,6 @@ public class OssSystem {
     @Column(comment = "额外参数")
     private String ossProperties;
     @Column(comment = "插件,分隔")
+    @JsonDeserialize(converter = JsonArrayConverter.class)
     private String ossPlugins;
 }
