@@ -6,10 +6,12 @@ import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.function.strategy.name.OssNamedStrategy;
 import com.chua.common.support.function.strategy.name.RejectStrategy;
 import com.chua.common.support.image.filter.ImageFilter;
+import com.chua.common.support.oss.adaptor.AbstractOssResolver;
 import com.chua.common.support.oss.adaptor.OssResolver;
 import com.chua.common.support.pojo.Mode;
 import com.chua.common.support.spi.Option;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.FileUtils;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.starter.common.support.result.Result;
 import com.chua.starter.common.support.result.ResultData;
@@ -76,9 +78,11 @@ public class OssProvider {
         try {
             for (MultipartFile file : files) {
                 try (InputStream inputStream = file.getInputStream()) {
-                    ossResolver.storage(parentPath, inputStream,
-                            BeanUtils.copyProperties(ossSystem, com.chua.common.support.pojo.OssSystem.class),
-                            file.getOriginalFilename());
+                    byte[] bytes = IoUtils.toByteArray(inputStream);
+                    com.chua.common.support.pojo.OssSystem ossSystem1 = BeanUtils.copyProperties(ossSystem, com.chua.common.support.pojo.OssSystem.class);
+                    String suffix = FileUtils.getExtension(file.getOriginalFilename());
+                    String name = AbstractOssResolver.getNamedStrategy(ossSystem1, file.getOriginalFilename(), bytes) + "." + suffix;
+                    ossResolver.storage(parentPath, bytes, ossSystem1, name);
                 }
             }
             return Result.success();
