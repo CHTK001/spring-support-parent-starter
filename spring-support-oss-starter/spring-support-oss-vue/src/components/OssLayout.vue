@@ -134,6 +134,9 @@
   </el-dialog>
   <el-dialog draggable status-icon v-model="status.uploadDialogVisible" title="OSS配置" width="30%">
     <el-form ref="formRef" :model="query.form" :rules="rules.oss" label-width="120px">
+      <el-form-item label="父目录" prop="ossProperties">
+        <el-input v-model="query.form.parentPath" clearable placeholder="父目录"/>
+      </el-form-item>
       <el-form-item label="运行效果：" :rules="[ { required: true, message: '请上传运行效果', trigger: 'blur', }, ]">
         <el-upload
             ref="uploadRef"
