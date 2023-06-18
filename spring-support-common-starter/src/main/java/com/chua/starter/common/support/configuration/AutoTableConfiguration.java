@@ -7,6 +7,7 @@ import com.chua.common.support.log.Log;
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.hibernate.support.database.resolver.HibernateMetadataResolver;
 import com.chua.starter.common.support.annotations.DS;
+import com.chua.starter.common.support.annotations.EnableAutoTable;
 import com.chua.starter.common.support.properties.AutoTableProperties;
 import org.springframework.beans.BeansException;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
@@ -25,9 +26,7 @@ import org.springframework.util.MultiValueMap;
 
 import javax.sql.DataSource;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * 自动建表
@@ -43,9 +42,13 @@ public class AutoTableConfiguration implements ApplicationContextAware {
     AutoTableProperties autoTableProperties;
 
     private Map<String, DataSource> beansOfType;
+    private ApplicationContext applicationContext;
+    private Collection<Object> values;
 
     private void refresh() {
-        String[] scann = autoTableProperties.getScan();
+        Map<String, Object> beansWithAnnotation = applicationContext.getBeansWithAnnotation(EnableAutoTable.class);
+        this.values = beansWithAnnotation.values();
+        String[] scann = getScan(values);
         if (null == scann) {
             return;
         }
@@ -53,8 +56,28 @@ public class AutoTableConfiguration implements ApplicationContextAware {
         for (String s : scann) {
             refresh(s);
         }
+
+        for (Object value : values) {
+            EnableAutoTable enableAutoTable = value.getClass().getDeclaredAnnotation(EnableAutoTable.class);
+            refresh(Arrays.asList(enableAutoTable.packageType()));
+        }
+
         log.info(">>>>>>>> 自动建表完成");
 
+    }
+
+    private String[] getScan(Collection<Object> values) {
+        List<String> rs = new LinkedList<>();
+        String[] scan = autoTableProperties.getScan();
+        if (null != scan) {
+            rs.addAll(Arrays.asList(scan));
+        }
+        for (Object value : values) {
+            EnableAutoTable enableAutoTable = value.getClass().getDeclaredAnnotation(EnableAutoTable.class);
+            rs.addAll(Arrays.asList(enableAutoTable.value()));
+        }
+
+        return rs.toArray(new String[0]);
     }
 
     private void refresh(String s) {
@@ -80,10 +103,11 @@ public class AutoTableConfiguration implements ApplicationContextAware {
             Class<?> clazz = ClassUtils.forName(className, loader);
             classList.add(clazz);
         }
+
         refresh(classList);
     }
 
-    private void refresh(List<Class<?>> classList) {
+    private void refresh(Collection<Class<?>> classList) {
         AutoMetadata autoMetadata = AutoMetadata.builder()
                 .metadataResolver(new HibernateMetadataResolver())
                 .prefix(autoTableProperties.getPrefix())
@@ -141,6 +165,7 @@ public class AutoTableConfiguration implements ApplicationContextAware {
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.applicationContext = applicationContext;
         autoTableProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(AutoTableProperties.PRE, AutoTableProperties.class);
         this.beansOfType = applicationContext.getBeansOfType(DataSource.class);
         if (autoTableProperties.isOpen()) {

@@ -8,10 +8,7 @@ import com.chua.starter.mybatis.entity.ResultPage;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.*;
 import springfox.documentation.annotations.ApiIgnore;
 
 import javax.validation.Valid;
@@ -31,6 +28,7 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> {
      * @param entity 结果
      * @return 分页结果
      */
+    @ResponseBody
     @ApiOperation("分页查询基础数据")
     @GetMapping("page")
     public ResultData<ResultPage<T>> page(RequestPage<T> page, @Valid T entity, @ApiIgnore BindingResult bindingResult) {
@@ -46,6 +44,7 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> {
      * @param id 页码
      * @return 分页结果
      */
+    @ResponseBody
     @ApiOperation("根据主键删除数据")
     @GetMapping("delete/{id}")
     public ResultData<Boolean> delete(@ApiParam("主键") @PathVariable("id") String id) {
@@ -62,6 +61,7 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> {
      * @param t 实体
      * @return 分页结果
      */
+    @ResponseBody
     @ApiOperation("根据主键更新数据")
     @PostMapping("update")
     public ResultData<Boolean> updateById(@Valid @RequestBody T t , @ApiIgnore BindingResult bindingResult) {
@@ -77,6 +77,7 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> {
      * @param t 实体
      * @return 分页结果
      */
+    @ResponseBody
     @ApiOperation("上报数据")
     @PostMapping("save")
     public ResultData<Boolean> save(@Valid @RequestBody T t, @ApiIgnore BindingResult bindingResult) {
