@@ -30,8 +30,8 @@
         <module>spring-support-config-client-starter</module>
         <module>spring-support-config-server-starter</module>
         <module>spring-support-cacheable-starter</module>
-        <!--        <module>spring-support-webjar-extension-starter</module>-->
-        <!--        <module>spring-support-webjar-starter</module>-->
+<!--        <module>spring-support-webjar-extension-starter</module>-->
+<!--        <module>spring-support-webjar-starter</module>-->
         <module>spring-support-redis-starter</module>
         <module>spring-support-swagger-starter</module>
         <module>spring-support-mail-starter</module>
@@ -174,7 +174,7 @@
 
             <dependency>
                 <groupId>com.chua</groupId>
-                <artifactId>s-support-datasource-starter</artifactId>
+                <artifactId>spring-support-datasource-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
 
@@ -208,11 +208,11 @@
                 <version>${module.version}</version>
             </dependency>
 
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-webjar-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
+<!--            <dependency>-->
+<!--                <groupId>com.chua</groupId>-->
+<!--                <artifactId>spring-support-webjar-starter</artifactId>-->
+<!--                <version>${module.version}</version>-->
+<!--            </dependency>-->
 
             <dependency>
                 <groupId>com.chua</groupId>
