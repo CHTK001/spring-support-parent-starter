@@ -61,7 +61,7 @@ public class OssProvider {
      */
     @ResponseBody
     @PostMapping("/upload")
-    public Result<Boolean> saveOss(String ossBucket, MultipartFile[] files) {
+    public Result<Boolean> saveOss(String ossBucket, @RequestParam(value = "parentPath", defaultValue = "") String parentPath, MultipartFile[] files) {
         if (null == ossBucket) {
             return Result.failed("bucket不存在");
         }
@@ -76,7 +76,7 @@ public class OssProvider {
         try {
             for (MultipartFile file : files) {
                 try (InputStream inputStream = file.getInputStream()) {
-                    ossResolver.storage(inputStream,
+                    ossResolver.storage(parentPath, inputStream,
                             BeanUtils.copyProperties(ossSystem, com.chua.common.support.pojo.OssSystem.class),
                             file.getOriginalFilename());
                 }
