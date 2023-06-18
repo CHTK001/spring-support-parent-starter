@@ -1,0 +1,15 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+  com.chua.starter.common.support.configuration.AutoTableConfiguration,\
+  com.chua.starter.common.support.configuration.CorsConfiguration,\
+  com.chua.starter.common.support.configuration.ConverterConfiguration,\
+  com.chua.starter.common.support.configuration.CaptchaConfiguration,\
+  com.chua.starter.common.support.configuration.ResourceConfiguration,\
+  com.chua.starter.common.support.configuration.ViewConfiguration,\
+  com.chua.starter.common.support.configuration.EventBusConfiguration,\
+  com.chua.starter.common.support.configuration.EventBusConfiguration.EventBussProcessor,\
+  com.chua.starter.common.support.configuration.HttpProxyServletContextInitializer,\
+  com.chua.starter.common.support.configuration.ProxyAutoConfiguration
+org.springframework.boot.env.EnvironmentPostProcessor=\
+  com.chua.starter.common.support.configuration.FreemarkerConfiguration
+org.springframework.context.ApplicationContextInitializer=\
+  com.chua.starter.common.support.configuration.ApplicationAwareApplicationContextInitializer

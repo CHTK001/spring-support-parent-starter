@@ -1,0 +1,192 @@
+{
+  "groups": [
+    {
+      "name": "plugin.auto.table",
+      "type": "com.chua.starter.common.support.properties.AutoTableProperties",
+      "sourceType": "com.chua.starter.common.support.properties.AutoTableProperties"
+    },
+    {
+      "name": "plugin.captcha",
+      "type": "com.chua.starter.common.support.properties.CaptchaProperties",
+      "sourceType": "com.chua.starter.common.support.properties.CaptchaProperties"
+    },
+    {
+      "name": "plugin.core",
+      "type": "com.chua.starter.common.support.properties.CoreProperties",
+      "sourceType": "com.chua.starter.common.support.properties.CoreProperties"
+    },
+    {
+      "name": "plugin.core.geo",
+      "type": "com.chua.starter.common.support.properties.CoreProperties$Geo",
+      "sourceType": "com.chua.starter.common.support.properties.CoreProperties",
+      "sourceMethod": "getGeo()"
+    },
+    {
+      "name": "plugin.cors",
+      "type": "com.chua.starter.common.support.properties.CorsProperties",
+      "sourceType": "com.chua.starter.common.support.properties.CorsProperties"
+    },
+    {
+      "name": "plugin.limit",
+      "type": "com.chua.starter.common.support.properties.LimitProperties",
+      "sourceType": "com.chua.starter.common.support.properties.LimitProperties"
+    },
+    {
+      "name": "plugin.proxy",
+      "type": "com.chua.starter.common.support.properties.ProxyProperties",
+      "sourceType": "com.chua.starter.common.support.properties.ProxyProperties"
+    },
+    {
+      "name": "plugin.proxy.config",
+      "type": "java.util.List",
+      "sourceType": "com.chua.starter.common.support.properties.ProxyProperties",
+      "sourceMethod": "getConfig()"
+    },
+    {
+      "name": "plugin.view",
+      "type": "com.chua.starter.common.support.properties.ViewProperties",
+      "sourceType": "com.chua.starter.common.support.properties.ViewProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "plugin.auto.table.auto",
+      "type": "java.lang.String",
+      "description": "auto",
+      "sourceType": "com.chua.starter.common.support.properties.AutoTableProperties"
+    },
+    {
+      "name": "plugin.auto.table.open",
+      "type": "java.lang.Boolean",
+      "description": "开启",
+      "sourceType": "com.chua.starter.common.support.properties.AutoTableProperties"
+    },
+    {
+      "name": "plugin.auto.table.prefix",
+      "type": "java.lang.String",
+      "description": "前缀",
+      "sourceType": "com.chua.starter.common.support.properties.AutoTableProperties"
+    },
+    {
+      "name": "plugin.auto.table.scan",
+      "type": "java.lang.String[]",
+      "description": "扫描包",
+      "sourceType": "com.chua.starter.common.support.properties.AutoTableProperties"
+    },
+    {
+      "name": "plugin.auto.table.suffix",
+      "type": "java.lang.String",
+      "description": "后缀",
+      "sourceType": "com.chua.starter.common.support.properties.AutoTableProperties"
+    },
+    {
+      "name": "plugin.captcha.font-name",
+      "type": "java.lang.String",
+      "description": "验证码字体",
+      "sourceType": "com.chua.starter.common.support.properties.CaptchaProperties"
+    },
+    {
+      "name": "plugin.captcha.font-size",
+      "type": "java.lang.Integer",
+      "description": "字体大小",
+      "sourceType": "com.chua.starter.common.support.properties.CaptchaProperties"
+    },
+    {
+      "name": "plugin.captcha.font-style",
+      "type": "java.lang.Integer",
+      "description": "字体风格",
+      "sourceType": "com.chua.starter.common.support.properties.CaptchaProperties"
+    },
+    {
+      "name": "plugin.captcha.height",
+      "type": "java.lang.Integer",
+      "description": "验证码高度",
+      "sourceType": "com.chua.starter.common.support.properties.CaptchaProperties"
+    },
+    {
+      "name": "plugin.captcha.length",
+      "type": "java.lang.Integer",
+      "description": "验证码内容长度",
+      "sourceType": "com.chua.starter.common.support.properties.CaptchaProperties"
+    },
+    {
+      "name": "plugin.captcha.ttl",
+      "type": "java.lang.Long",
+      "description": "验证码缓存过期时间(单位:秒)",
+      "sourceType": "com.chua.starter.common.support.properties.CaptchaProperties"
+    },
+    {
+      "name": "plugin.captcha.type",
+      "type": "com.chua.starter.common.support.constant.CaptchaTypeEnum",
+      "description": "验证码类型",
+      "sourceType": "com.chua.starter.common.support.properties.CaptchaProperties"
+    },
+    {
+      "name": "plugin.captcha.width",
+      "type": "java.lang.Integer",
+      "description": "验证码宽度",
+      "sourceType": "com.chua.starter.common.support.properties.CaptchaProperties"
+    },
+    {
+      "name": "plugin.core.geo.config",
+      "type": "java.lang.String",
+      "description": "系统资源目录",
+      "sourceType": "com.chua.starter.common.support.properties.CoreProperties$Geo"
+    },
+    {
+      "name": "plugin.core.geo.impl",
+      "type": "java.lang.String",
+      "description": "实现方式",
+      "sourceType": "com.chua.starter.common.support.properties.CoreProperties$Geo"
+    },
+    {
+      "name": "plugin.core.open-version",
+      "type": "java.lang.Boolean",
+      "description": "是否开启版本控制",
+      "sourceType": "com.chua.starter.common.support.properties.CoreProperties"
+    },
+    {
+      "name": "plugin.core.uniform-parameter",
+      "type": "java.lang.Boolean",
+      "description": "是否开启统一响应(返回值自动包裹对象)",
+      "sourceType": "com.chua.starter.common.support.properties.CoreProperties"
+    },
+    {
+      "name": "plugin.cors.enable",
+      "type": "java.lang.Boolean",
+      "description": "开启跨域",
+      "sourceType": "com.chua.starter.common.support.properties.CorsProperties"
+    },
+    {
+      "name": "plugin.cors.pattern",
+      "type": "java.util.Set<java.lang.String>",
+      "description": "白名单",
+      "sourceType": "com.chua.starter.common.support.properties.CorsProperties"
+    },
+    {
+      "name": "plugin.limit.open-limit",
+      "type": "java.lang.Boolean",
+      "description": "开启限流",
+      "sourceType": "com.chua.starter.common.support.properties.LimitProperties"
+    },
+    {
+      "name": "plugin.proxy.open-proxy",
+      "type": "java.lang.Boolean",
+      "description": "开启代理",
+      "sourceType": "com.chua.starter.common.support.properties.ProxyProperties"
+    },
+    {
+      "name": "plugin.view.config",
+      "type": "java.util.Map<java.lang.String,com.chua.common.support.view.ViewConfig>",
+      "description": "基础配置",
+      "sourceType": "com.chua.starter.common.support.properties.ViewProperties"
+    },
+    {
+      "name": "plugin.view.open-view",
+      "type": "java.lang.Boolean",
+      "description": "开启文件预览",
+      "sourceType": "com.chua.starter.common.support.properties.ViewProperties"
+    }
+  ],
+  "hints": []
+}
