@@ -27,9 +27,10 @@ public abstract class AbstractTaskCreator<I, O> implements TaskCreator<I, O> {
      * @param systemTask 任务更新
      */
     protected void update(SystemTask systemTask) {
-        if (systemTask.getTaskStatus() == 1 || systemTask.getTaskCurrent() >= systemTask.getTaskTotal()) {
+        if (systemTask.isFinish()) {
             try {
-                systemTaskService.updateById(systemTask);
+                systemTask.setTaskStatus(1);
+                systemTaskService.updateWithId(systemTask);
             } catch (Exception e) {
                 doFailure(systemTask, e);
                 return;
@@ -42,12 +43,15 @@ public abstract class AbstractTaskCreator<I, O> implements TaskCreator<I, O> {
         executor.execute(() -> {
             try {
                 systemTaskService.updateById(systemTask);
-                log.info("{}当前进度{}/{}", systemTask.getTaskId(), systemTask.getTaskCurrent(), systemTask.getTaskTotal());
-                execute(systemTask);
             } catch (Exception e) {
                 doFailure(systemTask, e);
                 return;
             }
+            log.info("{}当前进度{}/{}", systemTask.getTaskId(), systemTask.getTaskCurrent(), systemTask.getTaskTotal());
+            if (systemTask.getTaskStatus() == 2) {
+                return;
+            }
+            execute(systemTask);
         });
 
     }

@@ -15,6 +15,6 @@ public class ExampleTaskCreator extends AbstractSimpleTaskCreator<String> {
 
     @Override
     public void execute(SystemTask task) {
-
+        update(task);
     }
 }

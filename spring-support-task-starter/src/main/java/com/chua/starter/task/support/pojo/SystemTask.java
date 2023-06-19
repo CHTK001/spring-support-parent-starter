@@ -7,10 +7,11 @@ import lombok.Data;
 
 /**
  * 系统任务
+ *
  * @author CH
  */
 @Data
-public class SystemTask {
+public class SystemTask implements Comparable<SystemTask> {
 
     @Column(comment = "表ID")
     @TableId
@@ -59,7 +60,7 @@ public class SystemTask {
     /**
      * 是否完成
      */
-    @Column(comment = "是否完成; 0: 未完成")
+    @Column(comment = "是否完成; 0: 未完成; 1:完成;2: 暂停; 3: 进行中")
     private Integer taskStatus;
     /**
      * 版本
@@ -67,4 +68,18 @@ public class SystemTask {
     @Version
     @Column(comment = "版本")
     private Integer taskVersion;
+
+    /**
+     * 是否完成
+     *
+     * @return 是否完成
+     */
+    public boolean isFinish() {
+        return getTaskStatus() == 1 || getTaskCurrent() >= getTaskTotal();
+    }
+
+    @Override
+    public int compareTo(SystemTask o) {
+        return (taskType + taskTid + taskBusiness + taskCid).compareTo(o.taskType + o.taskTid + o.taskBusiness + o.taskCid);
+    }
 }

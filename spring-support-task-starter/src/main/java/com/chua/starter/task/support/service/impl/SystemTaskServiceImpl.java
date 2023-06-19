@@ -4,12 +4,15 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.chua.starter.task.support.execute.TaskExecutor;
 import com.chua.starter.task.support.mapper.SystemTaskMapper;
 import com.chua.starter.task.support.pojo.SystemTask;
 import com.chua.starter.task.support.service.SystemTaskService;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+
+import javax.annotation.Resource;
 
 import static com.chua.starter.common.support.configuration.CacheConfiguration.DEFAULT_CACHE_MANAGER;
 
@@ -19,10 +22,18 @@ import static com.chua.starter.common.support.configuration.CacheConfiguration.D
 @Service
 public class SystemTaskServiceImpl extends ServiceImpl<SystemTaskMapper, SystemTask> implements SystemTaskService {
 
+
+    @Resource
+    private TaskExecutor taskExecutor;
+
     @Override
     @CacheEvict(cacheManager = DEFAULT_CACHE_MANAGER, cacheNames = "'task'")
     public int deleteWithId(SystemTask task) {
-        return baseMapper.deleteById(task);
+        int i = baseMapper.deleteById(task);
+        if (i != 0) {
+            taskExecutor.unregister(task);
+        }
+        return i;
     }
 
     @Override
@@ -34,7 +45,11 @@ public class SystemTaskServiceImpl extends ServiceImpl<SystemTaskMapper, SystemT
     @Override
     @CacheEvict(cacheManager = DEFAULT_CACHE_MANAGER, cacheNames = "'task'")
     public boolean save(SystemTask task) {
-        return 1 == baseMapper.insert(task);
+        boolean b = 1 == baseMapper.insert(task);
+        if (b) {
+            taskExecutor.register(task);
+        }
+        return b;
     }
 
     @Override

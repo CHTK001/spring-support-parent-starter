@@ -5,7 +5,9 @@ import com.chua.common.support.annotations.SpiOption;
 import com.chua.common.support.log.Log;
 import com.chua.common.support.spi.Option;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.task.support.creator.TaskCreator;
+import com.chua.starter.task.support.execute.TaskExecutor;
 import com.chua.starter.task.support.pojo.SystemTask;
 import com.chua.starter.task.support.service.SystemTaskService;
 import org.springframework.beans.BeansException;
@@ -19,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 
 /**
  * 任务管理器
@@ -33,7 +36,9 @@ public class TaskTemplate implements ApplicationContextAware, InitializingBean {
     private static final Map<String, TaskCreator> CACHE = new ConcurrentHashMap<>();
     private static final Map<String, Option<String>> LABEL = new ConcurrentHashMap<>();
     private ApplicationContext applicationContext;
-
+    @Resource
+    private TaskExecutor taskExecutor;
+    private final ExecutorService singleExecutorService = ThreadUtils.newSingleThreadExecutor("暂停任务检测器");
     @Resource
     private SystemTaskService systemTaskService;
 
@@ -100,21 +105,39 @@ public class TaskTemplate implements ApplicationContextAware, InitializingBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        List<SystemTask> systemTasks = systemTaskService.list(Wrappers.<SystemTask>lambdaQuery()
-                .ne(SystemTask::getTaskStatus, 1));
+        taskExecutor.register(this);
+        List<SystemTask> systemTasks = systemTaskService.list(Wrappers.<SystemTask>lambdaQuery().in(SystemTask::getTaskStatus, 0));
         for (SystemTask systemTask : systemTasks) {
-            String taskType = systemTask.getTaskType();
-            TaskCreator taskCreator = getTaskCreator(taskType);
-            if (null == taskCreator) {
-                log.warn("{}任务处理器不存在", taskType);
-                continue;
-            }
-
-            doExecute(taskCreator, systemTask);
+            taskExecutor.register(systemTask);
         }
     }
 
     private void doExecute(TaskCreator taskCreator, SystemTask systemTask) {
         taskCreator.execute(systemTask);
+    }
+
+    /**
+     * 注册任务
+     *
+     * @param task 任务
+     */
+    public void register(SystemTask task) {
+        String taskType = task.getTaskType();
+        TaskCreator taskCreator = getTaskCreator(taskType);
+        if (null == taskCreator) {
+            log.warn("{}任务处理器不存在", taskType);
+            return;
+        }
+        this.doExecute(taskCreator, task);
+    }
+
+    public void update(SystemTask task) {
+        String taskType = task.getTaskType();
+        TaskCreator taskCreator = getTaskCreator(taskType);
+        if (null == taskCreator) {
+            log.warn("{}任务处理器不存在", taskType);
+            return;
+        }
+//        this.doExecute(taskCreator, task);
     }
 }
