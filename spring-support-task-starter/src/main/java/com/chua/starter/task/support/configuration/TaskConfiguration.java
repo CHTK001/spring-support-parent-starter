@@ -12,4 +12,6 @@ import org.springframework.context.annotation.ComponentScan;
 @MapperScan("com.chua.starter.task.support.mapper")
 @EnableAutoTable(packageType = SystemTask.class)
 public class TaskConfiguration {
+
+
 }
