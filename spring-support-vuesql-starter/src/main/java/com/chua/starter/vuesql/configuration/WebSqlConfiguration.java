@@ -14,9 +14,5 @@ import org.springframework.context.annotation.ComponentScan;
 public class WebSqlConfiguration {
 
 
-    @Bean
-    @ConditionalOnMissingBean
-    public CacheManager getCacheManager() {
-        return new EhCacheCacheManager();
-    }
+
 }

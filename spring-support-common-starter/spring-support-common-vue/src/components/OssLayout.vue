@@ -274,7 +274,7 @@ export default {
   methods: {
     treeTableClick: function (row) {
       if(row.file) {
-        this.$copyText(row.ossBucket + "/" + row.id);
+        this.$copyText("/release/preview/" + row.ossBucket + "/" + row.id);
         layx.notice({
           title: '消息提示',
           message: "复制成功",

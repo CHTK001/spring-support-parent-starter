@@ -57,10 +57,6 @@
             <version>3.1.0</version>
         </dependency>
 
-        <dependency>
-            <groupId>net.sf.ehcache</groupId>
-            <artifactId>ehcache</artifactId>
-        </dependency>
 
         <dependency>
             <groupId>com.chua</groupId>
