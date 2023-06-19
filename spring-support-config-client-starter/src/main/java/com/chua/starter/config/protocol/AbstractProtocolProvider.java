@@ -12,8 +12,8 @@ import com.chua.starter.config.annotation.ConfigValueAnnotationBeanPostProcessor
 import com.chua.starter.config.properties.ConfigProperties;
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
-import com.mashape.unirest.http.HttpResponse;
-import com.mashape.unirest.http.Unirest;
+import kong.unirest.HttpResponse;
+import kong.unirest.Unirest;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.springframework.boot.context.properties.bind.Binder;

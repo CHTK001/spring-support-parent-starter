@@ -30,13 +30,15 @@
       "name": "plugin.mybatis.print-sql",
       "type": "java.lang.Boolean",
       "description": "打印sql",
-      "sourceType": "com.chua.starter.mybatis.properties.MybatisProperties"
+      "sourceType": "com.chua.starter.mybatis.properties.MybatisProperties",
+      "defaultValue": false
     },
     {
       "name": "plugin.mybatis.reload-time",
       "type": "java.lang.Integer",
       "description": "自动热加载时间",
-      "sourceType": "com.chua.starter.mybatis.properties.MybatisProperties"
+      "sourceType": "com.chua.starter.mybatis.properties.MybatisProperties",
+      "defaultValue": 3000
     },
     {
       "name": "plugin.mybatis.reload-type",
@@ -60,7 +62,8 @@
       "name": "plugin.mybatis.xml-reload",
       "type": "java.lang.Boolean",
       "description": "xml是否可热加载",
-      "sourceType": "com.chua.starter.mybatis.properties.MybatisProperties"
+      "sourceType": "com.chua.starter.mybatis.properties.MybatisProperties",
+      "defaultValue": false
     }
   ],
   "hints": []
