@@ -49,7 +49,7 @@ import static com.chua.starter.common.support.result.ReturnCode.PARAM_ERROR;
  * @author CH
  */
 @Controller
-@RequestMapping("/oss")
+@RequestMapping("/release")
 public class OssProvider {
 
     @Resource

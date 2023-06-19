@@ -134,7 +134,7 @@
   </el-dialog>
   <el-dialog draggable status-icon v-model="status.uploadDialogVisible" title="OSS配置" width="30%">
     <el-form ref="formRef" :model="query.form" :rules="rules.oss" label-width="120px">
-      <el-form-item label="父目录" prop="ossProperties"  >
+      <el-form-item label="父目录" prop="ossProperties"  v-if="false">
         <el-input v-model="query.form.parentPath" clearable placeholder="父目录"/>
       </el-form-item>
       <el-form-item label="运行效果：" :rules="[ { required: true, message: '请上传运行效果', trigger: 'blur', }, ]">
@@ -176,6 +176,7 @@
         :data="data.treeTableData"
         style="width: 100%; "
         row-key="id"
+        @cell-click="treeTableClick"
         border
         lazy
         :load="loadTree"
@@ -183,12 +184,12 @@
         @cell-mouse-leave="status.show = false"
         :tree-props="{ children: 'children', hasChildren: 'hasChildren' }"
     >
-      <el-table-column prop="name" label="节点" show-overflow-tooltip width="500">
+      <el-table-column prop="name" label="节点" show-overflow-tooltip width="500" >
         <template #default="scope">
-            <span v-if="!!scope.row.hasChildren || !scope.row.file" class="l-btn-icon1 icon-standard-folder-explore"></span>
+          <span v-if="!!scope.row.hasChildren || !scope.row.file" class="l-btn-icon1 icon-standard-folder-explore"></span>
           <span v-else class="l-btn-icon1 icon-standard-application"></span>
 
-          <span class="l-btn-text" >{{ scope.row.name || scope.row.ossPath }}</span>
+          <span style="cursor:pointer" class="l-btn-text" >{{ scope.row.name || scope.row.ossPath }}</span>
 
           <span @click.prevent="deleteTreeNode(scope.row)" v-if="status.show"
                   style="left: inherit !important; right: 0; cursor: pointer"
@@ -271,6 +272,16 @@ export default {
     this.initial();
   },
   methods: {
+    treeTableClick: function (row) {
+      if(row.file) {
+        this.$copyText(row.ossBucket + "/" + row.id);
+        layx.notice({
+          title: '消息提示',
+          message: "复制成功",
+        });
+        return !0;
+      }
+    },
     tableClick: function (row) {
       if(row.ossType === 'LOCAL') {
         this.data.drawerTitle = row.ossBucket;
@@ -293,7 +304,7 @@ export default {
     },
     loadTree: function (row, treeNode, resolve){
       this.maps.set(row.id, {row, treeNode, resolve});
-      request.get(host + "/oss/listObjects", {
+      request.get(host + "/release/listObjects", {
         params: {
           id: row.id,
           name : row.parent,
@@ -314,7 +325,7 @@ export default {
     },
     deleteTreeNode: function (row) {
       const data1 = row;
-      request.get(host + "/oss/deleteObject", {
+      request.get(host + "/release/deleteObject", {
         params: {
           id: row.id,
           name : row.parent,
@@ -356,7 +367,7 @@ export default {
       if(!formData.get("parentPath")) {
         formData.set("parentPath", this.currentRow.parent);
       }
-      request.post(host + "/oss/upload", formData, {
+      request.post(host + "/release/upload", formData, {
         headers: {
           "Content-Type": "multipart/form-data"
         },
@@ -427,7 +438,7 @@ export default {
             type: 'warning',
           }
       ).then(() => {
-        request.get(host + "/oss/delete", {
+        request.get(host + "/release/delete", {
           params: {ossId: row.ossId}
         }).then(({data}) => {
           if (data.code === '00000') {
@@ -442,28 +453,28 @@ export default {
       })
     },
     initial: function () {
-      request.get(host + "/oss/options", {
+      request.get(host + "/release/options", {
         params: {type: 0}
       }).then(({data}) => {
         if (data.code === '00000') {
           this.data.impl = data.data;
         }
       });
-      request.get(host + "/oss/options", {
+      request.get(host + "/release/options", {
         params: {type: 1}
       }).then(({data}) => {
         if (data.code === '00000') {
           this.data.names = data.data;
         }
       })
-      request.get(host + "/oss/options", {
+      request.get(host + "/release/options", {
         params: {type: 2}
       }).then(({data}) => {
         if (data.code === '00000') {
           this.data.reject = data.data;
         }
       })
-      request.get(host + "/oss/options", {
+      request.get(host + "/release/options", {
         params: {type: 3}
       }).then(({data}) => {
         if (data.code === '00000') {
@@ -474,7 +485,7 @@ export default {
     submitForm: function () {
       this.$refs.formRef.validate(v => {
         if (v) {
-          request.post(host + "/oss/save", this.query.form).then(({data}) => {
+          request.post(host + "/release/save", this.query.form).then(({data}) => {
             if (data.code === '00000') {
               this.addData();
               this.doSearch();
@@ -501,7 +512,7 @@ export default {
       this.status.loading = true;
       this.data.tableData.length = 0;
       this.data.total = 0;
-      request.get(host + "/oss/page", this.query.form)
+      request.get(host + "/release/page", this.query.form)
           .then(({data}) => {
             if (data.code === '00000') {
               this.data.tableData = data.data.records;
