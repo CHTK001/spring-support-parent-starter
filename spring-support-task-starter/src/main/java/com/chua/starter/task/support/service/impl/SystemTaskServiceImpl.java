@@ -39,7 +39,11 @@ public class SystemTaskServiceImpl extends ServiceImpl<SystemTaskMapper, SystemT
     @Override
     @CacheEvict(cacheManager = DEFAULT_CACHE_MANAGER, cacheNames = "'task'")
     public int updateWithId(SystemTask task) {
-        return baseMapper.updateById(task);
+        int i = baseMapper.updateById(task);
+        if (i != 0) {
+            taskExecutor.update(task);
+        }
+        return i;
     }
 
     @Override
