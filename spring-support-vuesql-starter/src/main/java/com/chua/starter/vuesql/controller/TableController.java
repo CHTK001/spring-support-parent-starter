@@ -3,6 +3,7 @@ package com.chua.starter.vuesql.controller;
 import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.lang.treenode.CustomTreeNode;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.starter.common.support.configuration.CacheConfiguration;
 import com.chua.starter.common.support.result.Result;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
 import com.chua.starter.vuesql.pojo.*;
@@ -177,7 +178,7 @@ public class TableController {
      * @return 数据库
      */
     @GetMapping("/keyword/{configId}")
-    @Cacheable(cacheNames = "configId", key = "#configId")
+    @Cacheable(cacheManager = CacheConfiguration.DEFAULT_CACHE_MANAGER,cacheNames = "configId", key = "#configId")
     public Result<List<Keyword>> keyword(@PathVariable String configId) {
         WebsqlConfig websqlConfig = websqlConfigService.forById(configId);
         String databaseType = websqlConfig.getConfigType().name().toLowerCase();

@@ -1,5 +1,6 @@
 package com.chua.starter.vuesql.service.impl;
 
+import com.chua.starter.common.support.configuration.CacheConfiguration;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import javax.annotation.Resource;
@@ -16,7 +17,7 @@ import com.chua.starter.vuesql.service.WebsqlConfigService;
 public class WebsqlConfigServiceImpl extends ServiceImpl<WebsqlConfigMapper, WebsqlConfig> implements WebsqlConfigService{
 
     @Override
-    @Cacheable(cacheNames = "configId", key = "#configId")
+    @Cacheable(cacheManager = CacheConfiguration.DEFAULT_CACHE_MANAGER, cacheNames = "configId", key = "#configId")
     public WebsqlConfig forById(String configId) {
         return baseMapper.selectById(configId);
     }
