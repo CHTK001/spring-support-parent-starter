@@ -20,6 +20,11 @@ public class SystemTask {
     @Column(comment = "任务ID")
     private String taskTid;
     /**
+     * 任务类型
+     */
+    @Column(comment = "任务类型")
+    private String taskType;
+    /**
      * 任务分片ID
      */
     @Column(comment = "任务分片ID")
