@@ -9,7 +9,7 @@
         <version>3.1.0</version>
     </parent>
 
-    <artifactId>spring-support-oss-starter</artifactId>
+    <artifactId>spring-support-minio-starter</artifactId>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -20,12 +20,18 @@
     <dependencies>
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-support-mybatis-starter</artifactId>
+            <artifactId>utils-support-minio-starter</artifactId>
+            <version>3.1.0</version>
         </dependency>
 
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-support-minio-starter</artifactId>
+            <artifactId>spring-support-common-starter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-task-starter</artifactId>
         </dependency>
     </dependencies>
 
