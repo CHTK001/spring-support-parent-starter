@@ -57,7 +57,7 @@ public class DatabaseController {
      */
     @ResponseBody
     @GetMapping("/list")
-    @Cacheable(cacheManager = CacheConfiguration.DEFAULT_CACHE_MANAGER,cacheNames = "websql", key = "'database'")
+    @Cacheable(cacheManager = CacheConfiguration.DEFAULT_CACHE_MANAGER, cacheNames = "websql", key = "'database'")
     public Result<List<WebsqlConfig>> getDatabase() {
         return Result.success(websqlConfigService.list());
     }
