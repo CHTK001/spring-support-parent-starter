@@ -1,5 +1,6 @@
 package com.chua.starter.task.support.creator;
 
+import com.chua.common.support.log.Log;
 import com.chua.starter.task.support.pojo.SystemTask;
 import com.chua.starter.task.support.service.SystemTaskService;
 
@@ -13,6 +14,7 @@ import java.util.concurrent.Executor;
  */
 public abstract class AbstractTaskCreator<I, O> implements TaskCreator<I, O> {
 
+    private static final Log log = Log.getLogger(TaskCreator.class);
     @Resource
     private SystemTaskService systemTaskService;
 
@@ -33,12 +35,15 @@ public abstract class AbstractTaskCreator<I, O> implements TaskCreator<I, O> {
                 return;
             }
             doFinish(systemTask);
+            log.info("{}已完成{}/{}", systemTask.getTaskId(), systemTask.getTaskCurrent(), systemTask.getTaskTotal());
             return;
         }
 
         executor.execute(() -> {
             try {
                 systemTaskService.updateById(systemTask);
+                log.info("{}当前进度{}/{}", systemTask.getTaskId(), systemTask.getTaskCurrent(), systemTask.getTaskTotal());
+                execute(systemTask);
             } catch (Exception e) {
                 doFailure(systemTask, e);
                 return;
