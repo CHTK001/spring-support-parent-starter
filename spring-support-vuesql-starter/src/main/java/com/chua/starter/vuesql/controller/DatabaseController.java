@@ -5,6 +5,7 @@ import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.FileUtils;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.configuration.CacheConfiguration;
 import com.chua.starter.common.support.result.Result;
 import com.chua.starter.vuesql.entity.system.WebsqlConfig;
 import com.chua.starter.vuesql.enums.DatabaseType;
@@ -44,7 +45,7 @@ public class DatabaseController {
      */
     @ResponseBody
     @GetMapping("/type")
-    @Cacheable(cacheNames = "websql", key = "'type'")
+    @Cacheable(cacheManager = CacheConfiguration.DEFAULT_CACHE_MANAGER,cacheNames = "websql", key = "'type'")
     public Result<DatabaseType[]> getDatabaseType() {
         return Result.success(DatabaseType.values());
     }
@@ -56,7 +57,7 @@ public class DatabaseController {
      */
     @ResponseBody
     @GetMapping("/list")
-    @Cacheable(cacheNames = "websql", key = "'database'")
+    @Cacheable(cacheManager = CacheConfiguration.DEFAULT_CACHE_MANAGER,cacheNames = "websql", key = "'database'")
     public Result<List<WebsqlConfig>> getDatabase() {
         return Result.success(websqlConfigService.list());
     }
@@ -69,8 +70,8 @@ public class DatabaseController {
     @PostMapping("/save")
     @Caching(
             evict =  {
-                    @CacheEvict(cacheNames = "websql", key = "'database'"),
-                    @CacheEvict(cacheNames = "configId", allEntries = true)
+                    @CacheEvict(cacheManager = CacheConfiguration.DEFAULT_CACHE_MANAGER,cacheNames = "websql", key = "'database'"),
+                    @CacheEvict(cacheManager = CacheConfiguration.DEFAULT_CACHE_MANAGER,cacheNames = "configId", allEntries = true)
             }
     )
     public Result<Boolean> saveDatabase(HttpServletRequest request, @RequestParam(value = "file", required = false)MultipartFile file) {
@@ -110,8 +111,8 @@ public class DatabaseController {
     @DeleteMapping("/delete/{configId}")
     @Caching(
         evict =  {
-                @CacheEvict(cacheNames = "websql", key = "'database'"),
-                @CacheEvict(cacheNames = "configId", allEntries = true)
+                @CacheEvict(cacheManager = CacheConfiguration.DEFAULT_CACHE_MANAGER,cacheNames = "websql", key = "'database'"),
+                @CacheEvict(cacheManager = CacheConfiguration.DEFAULT_CACHE_MANAGER,cacheNames = "configId", allEntries = true)
         }
     )
     public Result<Boolean> saveDatabase(@PathVariable String configId) {
