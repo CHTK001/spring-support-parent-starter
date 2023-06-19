@@ -24,6 +24,10 @@ public class RedisMessageReceiver {
      */
     public void receiveMessage(String message) {
         System.out.println("通知的key是：" + message);
+        if (!message.endsWith("$000000000000000000")) {
+            return;
+        }
+        message = message.replace("$000000000000000000", "");
         SystemTask systemTask = systemTaskService.getById(message);
         if (null != systemTask) {
             if (systemTask.isFinish()) {

@@ -140,4 +140,13 @@ public class TaskTemplate implements ApplicationContextAware, InitializingBean {
         }
 //        this.doExecute(taskCreator, task);
     }
+
+    public void refresh() {
+        List<SystemTask> systemTasks = systemTaskService.list(Wrappers.<SystemTask>lambdaQuery().in(SystemTask::getTaskStatus, 0));
+        for (SystemTask systemTask : systemTasks) {
+            taskExecutor.register(systemTask);
+        }
+    }
+
+
 }

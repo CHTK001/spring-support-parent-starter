@@ -2,7 +2,9 @@ package com.chua.starter.task.support.configuration;
 
 import com.chua.starter.common.support.annotations.EnableAutoTable;
 import com.chua.starter.task.support.pojo.SystemTask;
+import com.chua.starter.task.support.properties.TaskProperties;
 import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -18,6 +20,7 @@ import javax.annotation.Resource;
 @ComponentScan("com.chua.starter.task.support")
 @MapperScan("com.chua.starter.task.support.mapper")
 @EnableAutoTable(packageType = SystemTask.class)
+@EnableConfigurationProperties(TaskProperties.class)
 public class TaskConfiguration {
 
     @Resource

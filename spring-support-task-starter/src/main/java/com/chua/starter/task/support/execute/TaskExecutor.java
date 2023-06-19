@@ -1,20 +1,27 @@
 package com.chua.starter.task.support.execute;
 
+import com.chua.common.support.json.Json;
 import com.chua.common.support.log.Log;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.task.support.creator.TaskCreator;
 import com.chua.starter.task.support.factory.TaskTemplate;
 import com.chua.starter.task.support.pojo.SystemTask;
+import com.chua.starter.task.support.properties.TaskProperties;
 import com.chua.starter.task.support.service.SystemTaskService;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
+import java.time.Duration;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -32,8 +39,15 @@ public class TaskExecutor implements InitializingBean, DisposableBean {
     private SystemTaskService systemTaskService;
 
     private static final AtomicBoolean status = new AtomicBoolean(true);
-    private ExecutorService executorService = ThreadUtils.newSingleThreadExecutor("任务执行器");
+    private final ExecutorService executorService = ThreadUtils.newSingleThreadExecutor("任务执行器");
+    private final ScheduledExecutorService updateExecutorService = ThreadUtils.newScheduledThreadPoolExecutor("任务更新执行器");
     private TaskTemplate taskTemplate;
+
+    @Resource
+    private TaskProperties taskProperties;
+
+    @Resource
+    private StringRedisTemplate stringRedisTemplate;
 
     @Override
     public void afterPropertiesSet() throws Exception {
@@ -46,11 +60,20 @@ public class TaskExecutor implements InitializingBean, DisposableBean {
                 }
             }
         });
+
+        updateExecutorService.scheduleAtFixedRate(() -> {
+            synchronized (CACHE) {
+                CACHE.clear();
+                taskTemplate.refresh();
+            }
+        }, 0, taskProperties.getCheckTime(), TimeUnit.MINUTES);
     }
+
 
     private void doExecute() {
         List<SystemTask> less = new LinkedList<>();
         for (SystemTask systemTask : CACHE) {
+
             String taskType = systemTask.getTaskType();
             TaskCreator taskCreator = taskTemplate.getTaskCreator(taskType);
             if (null == taskCreator) {
@@ -67,6 +90,8 @@ public class TaskExecutor implements InitializingBean, DisposableBean {
                 continue;
             }
 
+            stringRedisTemplate.opsForValue()
+                    .set(systemTask.getTaskId() + "$000000000000000000", Json.toJson(systemTask), Duration.ofMinutes(1));
             doExecute(taskCreator, systemTask);
         }
         check(less);
@@ -110,5 +135,27 @@ public class TaskExecutor implements InitializingBean, DisposableBean {
             }
         }
         check(less);
+    }
+
+    /**
+     * 更新任务
+     *
+     * @param task 更新任务
+     */
+    public void update(SystemTask task) {
+        if (task.getTaskStatus() == 1) {
+            return;
+        }
+
+        List<SystemTask> less = new LinkedList<>();
+        for (SystemTask systemTask : CACHE) {
+            if (systemTask.compareTo(task) == 0) {
+                less.add(systemTask);
+                break;
+            }
+        }
+        for (SystemTask systemTask : less) {
+            BeanUtils.copyProperties(task, systemTask);
+        }
     }
 }
