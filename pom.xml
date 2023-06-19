@@ -39,6 +39,8 @@
         <module>spring-support-vuesql-starter</module>
         <module>spring-support-oss-starter</module>
         <module>spring-support-mqtt-starter</module>
+        <module>spring-support-minio-starter</module>
+        <module>spring-support-task-starter</module>
     </modules>
 
     <properties>
@@ -254,6 +256,18 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-geoip2-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-minio-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-task-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
         </dependencies>
