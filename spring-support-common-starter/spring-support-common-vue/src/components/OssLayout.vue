@@ -189,7 +189,15 @@
           <span v-if="!!scope.row.hasChildren || !scope.row.file" class="l-btn-icon1 icon-standard-folder-explore"></span>
           <span v-else class="l-btn-icon1 icon-standard-application"></span>
 
-          <span style="cursor:pointer" class="l-btn-text" >{{ scope.row.name || scope.row.ossPath }}</span>
+          <span v-if="!scope.row.lastModified" style="cursor:pointer" class="l-btn-text" >
+              {{ scope.row.name || scope.row.ossPath }}
+            </span>
+
+          <el-tooltip v-else :content="scope.row.lastModified.replace('T', ' ')">
+            <span style="cursor:pointer" class="l-btn-text" >
+              {{ scope.row.name || scope.row.ossPath }}
+            </span>
+          </el-tooltip>
 
           <span @click.prevent="deleteTreeNode(scope.row)" v-if="status.show"
                   style="left: inherit !important; right: 0; cursor: pointer"
@@ -283,7 +291,7 @@ export default {
       }
     },
     tableClick: function (row) {
-      if(row.ossType === 'LOCAL') {
+      if(row.ossType === 'LOCAL' || row.ossType === 'MINIO') {
         this.data.drawerTitle = row.ossBucket;
         this.status.drawer = !this.status.drawer
         this.data.treeTableData.length = 0;
