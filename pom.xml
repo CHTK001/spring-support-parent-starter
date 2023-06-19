@@ -38,6 +38,7 @@
         <module>spring-support-websql-starter</module>
         <module>spring-support-vuesql-starter</module>
         <module>spring-support-oss-starter</module>
+        <module>spring-support-mqtt-starter</module>
     </modules>
 
     <properties>
