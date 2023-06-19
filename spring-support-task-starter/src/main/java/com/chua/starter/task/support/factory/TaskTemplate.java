@@ -1,0 +1,120 @@
+package com.chua.starter.task.support.factory;
+
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.chua.common.support.annotations.SpiOption;
+import com.chua.common.support.log.Log;
+import com.chua.common.support.spi.Option;
+import com.chua.common.support.spi.ServiceProvider;
+import com.chua.starter.task.support.creator.TaskCreator;
+import com.chua.starter.task.support.pojo.SystemTask;
+import com.chua.starter.task.support.service.SystemTaskService;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.stereotype.Component;
+
+import javax.annotation.Resource;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * 任务管理器
+ *
+ * @author CH
+ */
+@Component
+@SuppressWarnings("ALL")
+public class TaskTemplate implements ApplicationContextAware, InitializingBean {
+
+    private static final Log log = Log.getLogger(TaskCreator.class);
+    private static final Map<String, TaskCreator> CACHE = new ConcurrentHashMap<>();
+    private static final Map<String, Option<String>> LABEL = new ConcurrentHashMap<>();
+    private ApplicationContext applicationContext;
+
+    @Resource
+    private SystemTaskService systemTaskService;
+
+    public Set<String> type() {
+        return CACHE.keySet();
+    }
+
+
+    public TaskCreator getTaskCreator(String name) {
+        return CACHE.get(name);
+    }
+
+    public void removeTaskCreator(String name) {
+        TaskCreator taskCreator1 = getTaskCreator(name);
+        if (null != taskCreator1 && taskCreator1 instanceof AutoCloseable) {
+            try {
+                ((AutoCloseable) taskCreator1).close();
+            } catch (Exception ignored) {
+            }
+        }
+
+        CACHE.remove(name);
+        LABEL.remove(name);
+
+    }
+
+    public void addTaskCreator(String name, TaskCreator taskCreator) {
+        TaskCreator taskCreator1 = getTaskCreator(name);
+        if (null != taskCreator1 && taskCreator1 instanceof AutoCloseable) {
+            try {
+                ((AutoCloseable) taskCreator1).close();
+            } catch (Exception ignored) {
+            }
+        }
+
+        CACHE.put(name, taskCreator);
+        SpiOption spiOption = taskCreator.getClass().getDeclaredAnnotation(SpiOption.class);
+        LABEL.put(name, new Option<>(name, null == spiOption ? name : spiOption.value()));
+
+    }
+
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.applicationContext = applicationContext;
+        ServiceProvider<TaskCreator> serviceProvider = ServiceProvider.of(TaskCreator.class);
+        Map<String, TaskCreator> list = serviceProvider.list();
+        for (Map.Entry<String, TaskCreator> entry : list.entrySet()) {
+            TaskCreator value = entry.getValue();
+            SpiOption spiOption = value.getClass().getDeclaredAnnotation(SpiOption.class);
+            String key = entry.getKey();
+            CACHE.put(key, value);
+            LABEL.put(key, new Option<>(key, null == spiOption ? key : spiOption.value()));
+        }
+        Map<String, TaskCreator> beansOfType = applicationContext.getBeansOfType(TaskCreator.class);
+        for (Map.Entry<String, TaskCreator> entry : beansOfType.entrySet()) {
+            TaskCreator value = entry.getValue();
+            SpiOption spiOption = value.getClass().getDeclaredAnnotation(SpiOption.class);
+            String key = entry.getKey();
+            CACHE.put(key, value);
+            LABEL.put(key, new Option<>(key, null == spiOption ? key : spiOption.value()));
+        }
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        List<SystemTask> systemTasks = systemTaskService.list(Wrappers.<SystemTask>lambdaQuery()
+                .ne(SystemTask::getTaskStatus, 1));
+        for (SystemTask systemTask : systemTasks) {
+            String taskType = systemTask.getTaskType();
+            TaskCreator taskCreator = getTaskCreator(taskType);
+            if (null == taskCreator) {
+                log.warn("{}任务处理器不存在", taskType);
+                continue;
+            }
+
+            doExecute(taskCreator, systemTask);
+        }
+    }
+
+    private void doExecute(TaskCreator taskCreator, SystemTask systemTask) {
+        taskCreator.execute(systemTask);
+    }
+}

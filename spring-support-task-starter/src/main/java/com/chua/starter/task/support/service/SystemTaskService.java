@@ -1,17 +1,44 @@
 package com.chua.starter.task.support.service;
 
-import com.chua.starter.task.support.pojo.SystemTask;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.chua.starter.task.support.pojo.SystemTask;
 
 /**
  * @author CH
  */
 public interface SystemTaskService extends IService<SystemTask> {
+
     /**
-     * 创建系统任务
+     * 更新数据集
      *
-     * @param type 创建方式
-     * @return 系统任务
+     * @param task 任务
+     * @return 结果
      */
-    String createSystemTask(String type);
+    int deleteWithId(SystemTask task);
+
+    /**
+     * 更新数据集
+     *
+     * @param task 任务
+     * @return 结果
+     */
+    int updateWithId(SystemTask task);
+
+    /**
+     * 更新数据集
+     *
+     * @param task 任务
+     * @return 结果
+     */
+    boolean save(SystemTask task);
+
+    /**
+     * 查询
+     *
+     * @param page 分页
+     * @return 结果
+     */
+    IPage<SystemTask> withPage(Page<SystemTask> page);
 }
