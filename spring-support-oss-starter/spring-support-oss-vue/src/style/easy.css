@@ -9,6 +9,11 @@
 .icon-standard-add {
     background: url('@/assets/add.png') no-repeat center center;
 }
+.icon-standard-delete{background:url('@/assets/delete.png') no-repeat center center;}
+.icon-standard-folder-explore{background:url('@/assets/folder-explore.png') no-repeat center center;}
+
+.icon-standard-application{background:url('@/assets/application.png') no-repeat center center;}
+.icon-standard-application-double{background:url('@/assets/icon-standard-application-double.png') no-repeat center center;}
 
 html,
 body,
