@@ -35,7 +35,7 @@ public class FreemarkerConfiguration implements EnvironmentPostProcessor {
         properties.setProperty("knife4j.basic.enable", "true");
         properties.setProperty("knife4j.basic.username", "root");
         properties.setProperty("knife4j.basic.password", "123321");
-        PropertiesPropertySource propertiesPropertySource = new PropertiesPropertySource("core", properties);
+        PropertiesPropertySource propertiesPropertySource = new PropertiesPropertySource("freemarker,knife4j", properties);
         MutablePropertySources propertySources = environment.getPropertySources();
         propertySources.addLast(propertiesPropertySource);
     }

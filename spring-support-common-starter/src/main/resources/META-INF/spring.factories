@@ -10,6 +10,7 @@ org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
   com.chua.starter.common.support.configuration.HttpProxyServletContextInitializer,\
   com.chua.starter.common.support.configuration.ProxyAutoConfiguration
 org.springframework.boot.env.EnvironmentPostProcessor=\
-  com.chua.starter.common.support.configuration.FreemarkerConfiguration
+  com.chua.starter.common.support.configuration.FreemarkerConfiguration,\
+  com.chua.starter.common.support.configuration.CommonConfigurationConfiguration
 org.springframework.context.ApplicationContextInitializer=\
   com.chua.starter.common.support.configuration.ApplicationAwareApplicationContextInitializer

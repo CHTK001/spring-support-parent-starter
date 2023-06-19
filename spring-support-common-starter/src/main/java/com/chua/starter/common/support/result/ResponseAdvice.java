@@ -1,6 +1,7 @@
 package com.chua.starter.common.support.result;
 
 import com.chua.common.support.log.Log;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.converter.ResultDataHttpMessageConverter;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -23,12 +24,14 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
 import javax.servlet.ServletException;
 import javax.validation.ConstraintViolation;
 import java.sql.SQLSyntaxErrorException;
+import java.text.DecimalFormat;
 import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -185,6 +188,17 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
         return Result.failed(e.getMessage());
     }
 
+    static final DecimalFormat DECIMAL_FORMAT = new DecimalFormat("0.##");
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public <T> Result<T> maxUploadSizeExceededException(MaxUploadSizeExceededException e) {
+        log.error("文件过大", e.getCause());
+        if(e.getMaxUploadSize() > 0) {
+            return Result.failed("文件过大, 当前服务器支支持{}大小文件", StringUtils.getNetFileSizeDescription(e.getMaxUploadSize(), DECIMAL_FORMAT));
+        }
+        return Result.failed("文件过大");
+    }
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> handleException(Exception e) {
