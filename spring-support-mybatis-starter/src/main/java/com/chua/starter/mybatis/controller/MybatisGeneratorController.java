@@ -65,7 +65,7 @@ public class MybatisGeneratorController implements InitializingBean {
      */
     @GetMapping("generator")
     public String index() {
-        return "index";
+        return "generator";
     }
 
     /**
