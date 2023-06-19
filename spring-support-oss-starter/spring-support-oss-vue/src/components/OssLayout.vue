@@ -25,7 +25,7 @@
   </div>
   <div style="width: 100%; height: 100%">
     <div>
-      <el-table :load="status.loading" ref="tableRef" :data="data.tableData" style="width: 100%" border stripe>
+      <el-table @cell-click="tableClick" :loading="status.loading" ref="tableRef" :data="data.tableData" style="width: 100%" border stripe>
         <el-table-column prop="ossBucket" label="Bucket"/>
         <el-table-column prop="ossType" label="类型"/>
         <el-table-column prop="ossPath" label="oss路径"/>
@@ -42,11 +42,11 @@
         <el-table-column prop="ossAppSecret" label="appSecret" width="120"/>
         <el-table-column prop="ossProperties" label="额外参数"/>
         <el-table-column prop="ossPlugins" label="插件" show-overflow-tooltip/>
-        <el-table-column label="操作" width="200">
+        <el-table-column label="操作" width="200" style="z-index: 10000">
           <template #default="scope">
-            <el-button type="info" :icon="Edit" @click="onUpdate(scope.row)" size="small"/>
-            <el-button type="danger" :icon="Delete" @click="onDelete(scope.row)" size="small"/>
-            <el-button type="danger" :icon="Upload" @click="onUpload(scope.row)" size="small"/>
+            <el-button type="info" :icon="Edit" @click.stop="onUpdate(scope.row)" size="small"/>
+            <el-button type="danger" :icon="Delete" @click.stop="onDelete(scope.row)" size="small"/>
+            <el-button type="danger" :icon="Upload" @click.stop="onUpload(scope.row)" size="small"/>
           </template>
         </el-table-column>
       </el-table>
@@ -134,7 +134,7 @@
   </el-dialog>
   <el-dialog draggable status-icon v-model="status.uploadDialogVisible" title="OSS配置" width="30%">
     <el-form ref="formRef" :model="query.form" :rules="rules.oss" label-width="120px">
-      <el-form-item label="父目录" prop="ossProperties">
+      <el-form-item label="父目录" prop="ossProperties"  >
         <el-input v-model="query.form.parentPath" clearable placeholder="父目录"/>
       </el-form-item>
       <el-form-item label="运行效果：" :rules="[ { required: true, message: '请上传运行效果', trigger: 'blur', }, ]">
@@ -165,6 +165,42 @@
   <el-dialog class="preview" v-model="dialogVisible" width="500" draggable>
     <img width="500" :src="dialogImageUrl" alt="Preview Image"/>
   </el-dialog>
+
+  <el-drawer
+      v-model="status.drawer"
+      :title="data.drawerTitle"
+      direction="rtl"
+      :before-close="handleDrawerClose"
+  >
+    <el-table
+        :data="data.treeTableData"
+        style="width: 100%; "
+        row-key="id"
+        border
+        lazy
+        :load="loadTree"
+        @cell-mouse-enter="status.show = true"
+        @cell-mouse-leave="status.show = false"
+        :tree-props="{ children: 'children', hasChildren: 'hasChildren' }"
+    >
+      <el-table-column prop="name" label="节点" show-overflow-tooltip width="500">
+        <template #default="scope">
+            <span v-if="!!scope.row.hasChildren || !scope.row.file" class="l-btn-icon1 icon-standard-folder-explore"></span>
+          <span v-else class="l-btn-icon1 icon-standard-application"></span>
+
+          <span class="l-btn-text" >{{ scope.row.name || scope.row.ossPath }}</span>
+
+          <span @click.prevent="deleteTreeNode(scope.row)" v-if="status.show"
+                  style="left: inherit !important; right: 0; cursor: pointer"
+                  class="l-btn-icon icon-standard-delete"></span>
+            <span @click.prevent="addTreeNode(scope.row)" v-if="status.show && !scope.row.file"
+                  style="left: inherit !important; right: 16px; cursor: pointer"
+                  class="l-btn-icon icon-standard-add"></span>
+            <span style="clear: both"></span>
+        </template>
+      </el-table-column>
+    </el-table>
+  </el-drawer>
 </template>
 
 <script>
@@ -191,7 +227,10 @@ export default {
   data() {
     return {
       status: {
+        show: !1,
+        drawer: !1,
         uploadDialogVisible: !1,
+        parentPathStatus: !1,
         btnloading: !1,
         dialogVisible: !1,
         loading: !1,
@@ -202,7 +241,9 @@ export default {
       },
       data: {
         tableData: [],
-        total: 0
+        total: 0,
+        drawerTitle: '',
+        treeTableData: [],
       },
       rules: {
         oss: {
@@ -220,7 +261,9 @@ export default {
       fileObjList: [],
       currentRow: undefined,
       dialogVisible: false,
-      dialogImageUrl: ''
+      dialogImageUrl: '',
+      maps: new Map(),
+
     }
   },
   mounted() {
@@ -228,6 +271,79 @@ export default {
     this.initial();
   },
   methods: {
+    tableClick: function (row) {
+      if(row.ossType === 'LOCAL') {
+        this.data.drawerTitle = row.ossBucket;
+        this.status.drawer = !this.status.drawer
+        this.data.treeTableData.length = 0;
+        this.data.treeTableData.push(Object.assign({
+          id: 1,
+          name: "",
+          file: false,
+          parent: "",
+          ossId: row.ossId,
+          parentPath: '',
+          hasChildren: !0
+        }, row));
+      }
+    },
+    handleDrawerClose: function () {
+      this.status.drawer = !this.status.drawer
+      this.data.treeTableData.length = 0;
+    },
+    loadTree: function (row, treeNode, resolve){
+      this.maps.set(row.id, {row, treeNode, resolve});
+      request.get(host + "/oss/listObjects", {
+        params: {
+          id: row.id,
+          name : row.parent,
+          ossId: row.ossId,
+          ossBucket: row.ossBucket,
+        }
+      }).then(({data}) => {
+        if (data.code === '00000') {
+          const rs = [];
+          for(const item of data.data) {
+            rs.push(Object.assign({}, Object.assign({}, row), item));
+          }
+          resolve(rs);
+        } else {
+          resolve([]);
+        }
+      })
+    },
+    deleteTreeNode: function (row) {
+      const data1 = row;
+      request.get(host + "/oss/deleteObject", {
+        params: {
+          id: row.id,
+          name : row.parent,
+          ossId: row.ossId,
+          ossBucket: row.ossBucket,
+        }
+      }).then(({data}) => {
+        if (data.code === '00000') {
+          layx.notice({
+            title: '消息提示',
+            message: "修改成功",
+          });
+          let split = data1.parent.split('/');
+          split.splice(split.length - 1, 1);
+
+          const {row, treeNode, resolve} = this.maps.get(split.join('/'));
+          this.loadTree(row, treeNode, resolve);
+          return !0;
+        }
+        layx.notice({
+          title: '消息提示',
+          type: 'error',
+          message: data.msg,
+        });
+      });
+    },
+    addTreeNode: function (row){
+      this.onUpload(row);
+    },
     submitUpload: function () {
       const formData = new FormData();
       for (const item of Object.keys(this.currentRow)) {
@@ -236,6 +352,9 @@ export default {
 
       for (const fileObjListElement of this.fileObjList) {
         formData.append("files", fileObjListElement.raw);
+      }
+      if(!formData.get("parentPath")) {
+        formData.set("parentPath", this.currentRow.parent);
       }
       request.post(host + "/oss/upload", formData, {
         headers: {
@@ -293,6 +412,10 @@ export default {
       try {
         this.$refs.uploadRef.clearFiles()
       } catch (e) {
+      }
+      this.query.form.parentPath = null;
+      if(row.parent !== undefined) {
+        this.query.form.parentPath = row.parent;
       }
     },
     onDelete: function (row) {
@@ -405,5 +528,14 @@ export default {
 .preview .el-dialog__body {
   padding-left: 0;
   margin: 0;
+}
+.l-btn-icon1 {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  line-height: 16px;
+  margin-top: 6px;
+  margin-right: -4px;
+  font-size: 1px;
 }
 </style>

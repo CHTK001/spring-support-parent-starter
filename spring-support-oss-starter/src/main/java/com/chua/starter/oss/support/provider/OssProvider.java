@@ -8,6 +8,7 @@ import com.chua.common.support.function.strategy.name.RejectStrategy;
 import com.chua.common.support.image.filter.ImageFilter;
 import com.chua.common.support.oss.adaptor.AbstractOssResolver;
 import com.chua.common.support.oss.adaptor.OssResolver;
+import com.chua.common.support.oss.node.OssNode;
 import com.chua.common.support.pojo.Mode;
 import com.chua.common.support.spi.Option;
 import com.chua.common.support.spi.ServiceProvider;
@@ -38,6 +39,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.List;
+import java.util.Map;
 
 import static com.chua.starter.common.support.result.ReturnCode.PARAM_ERROR;
 
@@ -53,7 +55,45 @@ public class OssProvider {
     @Resource
     private OssSystemService ossSystemService;
     private static final String DOWNLOAD = "download";
+    @ResponseBody
+    @GetMapping("/deleteObject")
+    public Result<Boolean> deleteObject(String id, String name, String ossBucket) {
+        if (null == ossBucket) {
+            return Result.failed("bucket不存在");
+        }
+        OssSystem ossSystem = ossSystemService.getSystemByBucket(ossBucket);
+        if (null == ossSystem) {
+            return Result.failed("bucket不存在");
+        }
+        OssResolver ossResolver = ServiceProvider.of(OssResolver.class).getNewExtension(ossSystem.getOssType());
+        if (null == ossResolver) {
+            return Result.failed("bucket不存在");
+        }
 
+        return Result.success(ossResolver.deleteObject(BeanUtils.copyProperties(ossSystem, com.chua.common.support.pojo.OssSystem.class),
+                id,
+                name));
+    }
+
+    @ResponseBody
+    @GetMapping("/listObjects")
+    public Result<List<OssNode>> listObjects(String id, String name, String ossBucket) {
+        if (null == ossBucket) {
+            return Result.failed("bucket不存在");
+        }
+        OssSystem ossSystem = ossSystemService.getSystemByBucket(ossBucket);
+        if (null == ossSystem) {
+            return Result.failed("bucket不存在");
+        }
+        OssResolver ossResolver = ServiceProvider.of(OssResolver.class).getNewExtension(ossSystem.getOssType());
+        if (null == ossResolver) {
+            return Result.failed("bucket不存在");
+        }
+
+        return Result.success(ossResolver.getChildren(BeanUtils.copyProperties(ossSystem, com.chua.common.support.pojo.OssSystem.class),
+                id,
+                name));
+    }
     /**
      * 文件上传
      *
@@ -81,7 +121,7 @@ public class OssProvider {
                     byte[] bytes = IoUtils.toByteArray(inputStream);
                     com.chua.common.support.pojo.OssSystem ossSystem1 = BeanUtils.copyProperties(ossSystem, com.chua.common.support.pojo.OssSystem.class);
                     String suffix = FileUtils.getExtension(file.getOriginalFilename());
-                    String name = AbstractOssResolver.getNamedStrategy(ossSystem1, file.getOriginalFilename(), bytes) + "." + suffix;
+                    String name = AbstractOssResolver.getNamedStrategy(ossSystem1, FileUtils.getBaseName(file.getOriginalFilename()), bytes) + "." + suffix;
                     ossResolver.storage(parentPath, bytes, ossSystem1, name);
                 }
             }
