@@ -63,8 +63,18 @@ public class TaskExecutor implements InitializingBean, DisposableBean {
 
         updateExecutorService.scheduleAtFixedRate(() -> {
             synchronized (CACHE) {
-                CACHE.clear();
-                taskTemplate.refresh();
+                CACHE.forEach(it -> {
+                    it.setTaskStatus(0);
+                });
+                try {
+                    systemTaskService.updateBatchById(CACHE);
+                    CACHE.clear();
+                    taskTemplate.refresh();
+                } catch (Exception ignored) {
+                    CACHE.forEach(it -> {
+                        it.setTaskStatus(3);
+                    });
+                }
             }
         }, 0, taskProperties.getCheckTime(), TimeUnit.MINUTES);
     }
