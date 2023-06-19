@@ -63,7 +63,7 @@ public class MybatisGeneratorController implements InitializingBean {
      *
      * @return 页面
      */
-    @GetMapping("index")
+    @GetMapping("generator")
     public String index() {
         return "index";
     }
