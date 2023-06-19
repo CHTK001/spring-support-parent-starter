@@ -1,15 +1,10 @@
 <template>
-  <oss-layout></oss-layout>
+  <router-view />
+
 </template>
 
 <script>
 
-import {defineComponent} from "vue";
-import OssLayout from "@/components/OssLayout.vue";
-
-export default defineComponent({
-  components: {OssLayout}
-})
 </script>
 <style scoped>
 html,
