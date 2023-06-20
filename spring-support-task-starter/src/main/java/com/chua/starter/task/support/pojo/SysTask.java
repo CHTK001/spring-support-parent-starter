@@ -11,7 +11,7 @@ import lombok.Data;
  * @author CH
  */
 @Data
-public class SystemTask implements Comparable<SystemTask> {
+public class SysTask implements Comparable<SysTask> {
 
     @Column(comment = "表ID")
     @TableId
@@ -79,7 +79,7 @@ public class SystemTask implements Comparable<SystemTask> {
     }
 
     @Override
-    public int compareTo(SystemTask o) {
+    public int compareTo(SysTask o) {
         return (taskType + taskTid + taskBusiness + taskCid).compareTo(o.taskType + o.taskTid + o.taskBusiness + o.taskCid);
     }
 }

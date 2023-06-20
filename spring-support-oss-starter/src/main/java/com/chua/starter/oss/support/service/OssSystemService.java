@@ -1,9 +1,9 @@
 package com.chua.starter.oss.support.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.chua.starter.oss.support.pojo.OssSystem;
+import com.chua.starter.oss.support.pojo.SysOss;
 
-public interface OssSystemService extends IService<OssSystem> {
+public interface OssSystemService extends IService<SysOss> {
 
     /**
      * 获取数据
@@ -11,5 +11,5 @@ public interface OssSystemService extends IService<OssSystem> {
      * @param bucket bucket
      * @return 结果
      */
-    OssSystem getSystemByBucket(String bucket);
+    SysOss getSystemByBucket(String bucket);
 }

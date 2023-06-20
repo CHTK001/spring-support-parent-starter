@@ -2,7 +2,7 @@ package com.chua.starter.task.support.creator;
 
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.annotations.SpiOption;
-import com.chua.starter.task.support.pojo.SystemTask;
+import com.chua.starter.task.support.pojo.SysTask;
 
 /**
  * 例子
@@ -14,7 +14,7 @@ import com.chua.starter.task.support.pojo.SystemTask;
 public class ExampleTaskCreator extends AbstractSimpleTaskCreator<String> {
 
     @Override
-    public void execute(SystemTask task) {
+    public void execute(SysTask task) {
         update(task);
     }
 }

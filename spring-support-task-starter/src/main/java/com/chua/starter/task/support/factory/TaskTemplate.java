@@ -7,13 +7,14 @@ import com.chua.common.support.spi.Option;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.task.support.creator.TaskCreator;
-import com.chua.starter.task.support.execute.TaskExecutor;
-import com.chua.starter.task.support.pojo.SystemTask;
+import com.chua.starter.task.support.execute.SystemTaskExecutor;
+import com.chua.starter.task.support.pojo.SysTask;
 import com.chua.starter.task.support.service.SystemTaskService;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -29,6 +30,7 @@ import java.util.concurrent.ExecutorService;
  * @author CH
  */
 @Component
+@Lazy
 @SuppressWarnings("ALL")
 public class TaskTemplate implements ApplicationContextAware, InitializingBean {
 
@@ -37,7 +39,7 @@ public class TaskTemplate implements ApplicationContextAware, InitializingBean {
     private static final Map<String, Option<String>> LABEL = new ConcurrentHashMap<>();
     private ApplicationContext applicationContext;
     @Resource
-    private TaskExecutor taskExecutor;
+    private SystemTaskExecutor systemTaskExecutor;
     private final ExecutorService singleExecutorService = ThreadUtils.newSingleThreadExecutor("暂停任务检测器");
     @Resource
     private SystemTaskService systemTaskService;
@@ -105,14 +107,14 @@ public class TaskTemplate implements ApplicationContextAware, InitializingBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        taskExecutor.register(this);
-        List<SystemTask> systemTasks = systemTaskService.list(Wrappers.<SystemTask>lambdaQuery().in(SystemTask::getTaskStatus, 0));
-        for (SystemTask systemTask : systemTasks) {
-            taskExecutor.register(systemTask);
+        systemTaskExecutor.register(this);
+        List<SysTask> systemTasks = systemTaskService.list(Wrappers.<SysTask>lambdaQuery().in(SysTask::getTaskStatus, 0));
+        for (SysTask systemTask : systemTasks) {
+            systemTaskExecutor.register(systemTask);
         }
     }
 
-    private void doExecute(TaskCreator taskCreator, SystemTask systemTask) {
+    private void doExecute(TaskCreator taskCreator, SysTask systemTask) {
         taskCreator.execute(systemTask);
     }
 
@@ -121,7 +123,7 @@ public class TaskTemplate implements ApplicationContextAware, InitializingBean {
      *
      * @param task 任务
      */
-    public void register(SystemTask task) {
+    public void register(SysTask task) {
         String taskType = task.getTaskType();
         TaskCreator taskCreator = getTaskCreator(taskType);
         if (null == taskCreator) {
@@ -131,7 +133,7 @@ public class TaskTemplate implements ApplicationContextAware, InitializingBean {
         this.doExecute(taskCreator, task);
     }
 
-    public void update(SystemTask task) {
+    public void update(SysTask task) {
         String taskType = task.getTaskType();
         TaskCreator taskCreator = getTaskCreator(taskType);
         if (null == taskCreator) {
@@ -142,9 +144,9 @@ public class TaskTemplate implements ApplicationContextAware, InitializingBean {
     }
 
     public void refresh() {
-        List<SystemTask> systemTasks = systemTaskService.list(Wrappers.<SystemTask>lambdaQuery().in(SystemTask::getTaskStatus, 0));
-        for (SystemTask systemTask : systemTasks) {
-            taskExecutor.register(systemTask);
+        List<SysTask> systemTasks = systemTaskService.list(Wrappers.<SysTask>lambdaQuery().in(SysTask::getTaskStatus, 0));
+        for (SysTask systemTask : systemTasks) {
+            systemTaskExecutor.register(systemTask);
         }
     }
 
