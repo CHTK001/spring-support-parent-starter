@@ -18,7 +18,7 @@ import com.chua.starter.common.support.result.Result;
 import com.chua.starter.common.support.result.ResultData;
 import com.chua.starter.common.support.view.ResponseHandler;
 import com.chua.starter.mybatis.entity.DelegatePage;
-import com.chua.starter.oss.support.pojo.OssSystem;
+import com.chua.starter.oss.support.pojo.SysOss;
 import com.chua.starter.oss.support.service.OssSystemService;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.http.MediaType;
@@ -39,7 +39,6 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.List;
-import java.util.Map;
 
 import static com.chua.starter.common.support.result.ReturnCode.PARAM_ERROR;
 
@@ -61,7 +60,7 @@ public class OssProvider {
         if (null == ossBucket) {
             return Result.failed("bucket不存在");
         }
-        OssSystem ossSystem = ossSystemService.getSystemByBucket(ossBucket);
+        SysOss ossSystem = ossSystemService.getSystemByBucket(ossBucket);
         if (null == ossSystem) {
             return Result.failed("bucket不存在");
         }
@@ -81,7 +80,7 @@ public class OssProvider {
         if (null == ossBucket) {
             return Result.failed("bucket不存在");
         }
-        OssSystem ossSystem = ossSystemService.getSystemByBucket(ossBucket);
+        SysOss ossSystem = ossSystemService.getSystemByBucket(ossBucket);
         if (null == ossSystem) {
             return Result.failed("bucket不存在");
         }
@@ -107,7 +106,7 @@ public class OssProvider {
         if (null == ossBucket) {
             return Result.failed("bucket不存在");
         }
-        OssSystem ossSystem = ossSystemService.getSystemByBucket(ossBucket);
+        SysOss ossSystem = ossSystemService.getSystemByBucket(ossBucket);
         if (null == ossSystem) {
             return Result.failed("bucket不存在");
         }
@@ -168,7 +167,7 @@ public class OssProvider {
             throw new RuntimeException(e);
         }
 
-        OssSystem ossSystem = ossSystemService.getSystemByBucket(bucket);
+        SysOss ossSystem = ossSystemService.getSystemByBucket(bucket);
         if (null == ossSystem) {
             try {
                 return ResponseEntity.ok()
@@ -238,7 +237,7 @@ public class OssProvider {
      */
     @GetMapping("page")
     @ResponseBody
-    public ResultData<Page<OssSystem>> page(DelegatePage<OssSystem> page, @Valid OssSystem entity, BindingResult bindingResult) {
+    public ResultData<Page<SysOss>> page(DelegatePage<SysOss> page, @Valid SysOss entity, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
@@ -270,13 +269,13 @@ public class OssProvider {
     @PostMapping("update")
     @ResponseBody
     @CacheEvict(cacheNames = "oss", allEntries = true)
-    public ResultData<Boolean> updateById(@Valid @RequestBody OssSystem t, BindingResult bindingResult) {
+    public ResultData<Boolean> updateById(@Valid @RequestBody SysOss t, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
-        if (ossSystemService.count(Wrappers.<OssSystem>lambdaQuery()
-                .eq(OssSystem::getOssBucket, t.getOssBucket())
-                .ne(OssSystem::getOssId, t.getOssId())
+        if (ossSystemService.count(Wrappers.<SysOss>lambdaQuery()
+                .eq(SysOss::getOssBucket, t.getOssBucket())
+                .ne(SysOss::getOssId, t.getOssId())
         ) > 0L) {
             return ResultData.failure(PARAM_ERROR, "bucket已存在");
         }
@@ -292,20 +291,20 @@ public class OssProvider {
     @PostMapping("save")
     @ResponseBody
     @CacheEvict(cacheNames = "oss", allEntries = true)
-    public ResultData<Boolean> save(@Valid @RequestBody OssSystem t, BindingResult bindingResult) {
+    public ResultData<Boolean> save(@Valid @RequestBody SysOss t, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
 
         if (t.getOssId() != null) {
-            if (ossSystemService.count(Wrappers.<OssSystem>lambdaQuery()
-                    .eq(OssSystem::getOssBucket, t.getOssBucket())
-                    .ne(OssSystem::getOssId, t.getOssId())
+            if (ossSystemService.count(Wrappers.<SysOss>lambdaQuery()
+                    .eq(SysOss::getOssBucket, t.getOssBucket())
+                    .ne(SysOss::getOssId, t.getOssId())
             ) > 0L) {
                 return ResultData.failure(PARAM_ERROR, "bucket已存在");
             }
         } else {
-            if (ossSystemService.count(Wrappers.<OssSystem>lambdaQuery().eq(OssSystem::getOssBucket, t.getOssBucket())) > 0L) {
+            if (ossSystemService.count(Wrappers.<SysOss>lambdaQuery().eq(SysOss::getOssBucket, t.getOssBucket())) > 0L) {
                 return ResultData.failure(PARAM_ERROR, "bucket已存在");
             }
         }

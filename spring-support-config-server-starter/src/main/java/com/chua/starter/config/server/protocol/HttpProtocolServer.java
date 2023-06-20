@@ -10,8 +10,8 @@ import com.chua.starter.config.server.pojo.ConfigurationCenterInfoRepository;
 import com.chua.starter.config.server.pojo.ConfigurationDistributeInfoRepository;
 import com.chua.starter.config.server.pojo.TConfigurationCenterInfo;
 import com.chua.starter.config.server.properties.ConfigServerProperties;
-import com.mashape.unirest.http.Unirest;
-import com.mashape.unirest.http.exceptions.UnirestException;
+import kong.unirest.Unirest;
+import kong.unirest.UnirestException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.CookieStore;
 import org.apache.http.impl.cookie.BasicClientCookie;
@@ -145,7 +145,7 @@ public class HttpProtocolServer implements ProtocolServer, ProtocolResolver{
             for (Cookie cookie : cookies) {
                 cookieStore.addCookie(new BasicClientCookie(cookie.getName(), cookie.getValue()));
             }
-            Unirest.setHttpClient(org.apache.http.impl.client.HttpClients.custom().setDefaultCookieStore(cookieStore).build());
+            Unirest.config().httpClient(org.apache.http.impl.client.HttpClients.custom().setDefaultCookieStore(cookieStore).build());
         }
 
         try {

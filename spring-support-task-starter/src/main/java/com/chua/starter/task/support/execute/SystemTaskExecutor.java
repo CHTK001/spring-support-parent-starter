@@ -5,7 +5,7 @@ import com.chua.common.support.log.Log;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.task.support.creator.TaskCreator;
 import com.chua.starter.task.support.factory.TaskTemplate;
-import com.chua.starter.task.support.pojo.SystemTask;
+import com.chua.starter.task.support.pojo.SysTask;
 import com.chua.starter.task.support.properties.TaskProperties;
 import com.chua.starter.task.support.service.SystemTaskService;
 import org.springframework.beans.BeanUtils;
@@ -29,18 +29,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  * @author CH
  */
-@Component
-public class TaskExecutor implements InitializingBean, DisposableBean {
+@Component("SystemTaskExecutor")
+public class SystemTaskExecutor implements InitializingBean, DisposableBean {
 
     private static final Log log = Log.getLogger(TaskCreator.class);
-    private static final List<SystemTask> CACHE = new CopyOnWriteArrayList<>();
+    private static final List<SysTask> CACHE = new CopyOnWriteArrayList<>();
 
     @Resource
     private SystemTaskService systemTaskService;
 
     private static final AtomicBoolean status = new AtomicBoolean(true);
-    private final ExecutorService executorService = ThreadUtils.newSingleThreadExecutor("任务执行器");
-    private final ScheduledExecutorService updateExecutorService = ThreadUtils.newScheduledThreadPoolExecutor("任务更新执行器");
+    private static final ExecutorService executorService = ThreadUtils.newSingleThreadExecutor("任务执行器");
+    private static final ScheduledExecutorService updateExecutorService = ThreadUtils.newScheduledThreadPoolExecutor("任务更新执行器");
     private TaskTemplate taskTemplate;
 
     @Resource
@@ -81,8 +81,8 @@ public class TaskExecutor implements InitializingBean, DisposableBean {
 
 
     private void doExecute() {
-        List<SystemTask> less = new LinkedList<>();
-        for (SystemTask systemTask : CACHE) {
+        List<SysTask> less = new LinkedList<>();
+        for (SysTask systemTask : CACHE) {
 
             String taskType = systemTask.getTaskType();
             TaskCreator taskCreator = taskTemplate.getTaskCreator(taskType);
@@ -107,11 +107,11 @@ public class TaskExecutor implements InitializingBean, DisposableBean {
         check(less);
     }
 
-    private void doExecute(TaskCreator taskCreator, SystemTask systemTask) {
+    private void doExecute(TaskCreator taskCreator, SysTask systemTask) {
         taskCreator.execute(systemTask);
     }
 
-    private void check(List<SystemTask> less) {
+    private void check(List<SysTask> less) {
         CACHE.removeAll(less);
     }
 
@@ -120,7 +120,7 @@ public class TaskExecutor implements InitializingBean, DisposableBean {
         status.set(false);
     }
 
-    public void register(SystemTask systemTask) {
+    public void register(SysTask systemTask) {
         systemTask.setTaskStatus(3);
         systemTaskService.updateById(systemTask);
         String taskType = systemTask.getTaskType();
@@ -137,9 +137,9 @@ public class TaskExecutor implements InitializingBean, DisposableBean {
         this.taskTemplate = taskTemplate;
     }
 
-    public void unregister(SystemTask task) {
-        List<SystemTask> less = new LinkedList<>();
-        for (SystemTask systemTask : CACHE) {
+    public void unregister(SysTask task) {
+        List<SysTask> less = new LinkedList<>();
+        for (SysTask systemTask : CACHE) {
             if (systemTask.compareTo(task) == 0) {
                 less.add(systemTask);
             }
@@ -152,19 +152,19 @@ public class TaskExecutor implements InitializingBean, DisposableBean {
      *
      * @param task 更新任务
      */
-    public void update(SystemTask task) {
+    public void update(SysTask task) {
         if (task.getTaskStatus() == 1) {
             return;
         }
 
-        List<SystemTask> less = new LinkedList<>();
-        for (SystemTask systemTask : CACHE) {
+        List<SysTask> less = new LinkedList<>();
+        for (SysTask systemTask : CACHE) {
             if (systemTask.compareTo(task) == 0) {
                 less.add(systemTask);
                 break;
             }
         }
-        for (SystemTask systemTask : less) {
+        for (SysTask systemTask : less) {
             BeanUtils.copyProperties(task, systemTask);
         }
     }

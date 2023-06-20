@@ -24,6 +24,8 @@ public class CommonConfigurationConfiguration implements EnvironmentPostProcesso
         properties.setProperty("spring.datasource.h2.console.enabled", "true");
         properties.setProperty("spring.datasource.h2.console.path", "/h2-console");
 
+        properties.setProperty("spring.main.allow-circular-references", "true");
+
         properties.setProperty("spring.servlet.multipart.enabled", "true");
         properties.setProperty("spring.servlet.multipart.max-file-size", "200MB");
         properties.setProperty("spring.servlet.multipart.max-request-size", "2000MB");

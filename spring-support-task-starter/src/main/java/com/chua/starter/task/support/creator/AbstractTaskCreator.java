@@ -1,7 +1,7 @@
 package com.chua.starter.task.support.creator;
 
 import com.chua.common.support.log.Log;
-import com.chua.starter.task.support.pojo.SystemTask;
+import com.chua.starter.task.support.pojo.SysTask;
 import com.chua.starter.task.support.service.SystemTaskService;
 
 import javax.annotation.Resource;
@@ -26,7 +26,7 @@ public abstract class AbstractTaskCreator<I, O> implements TaskCreator<I, O> {
      *
      * @param systemTask 任务更新
      */
-    protected void update(SystemTask systemTask) {
+    protected void update(SysTask systemTask) {
         if (systemTask.isFinish()) {
             try {
                 systemTask.setTaskStatus(1);

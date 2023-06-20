@@ -9,8 +9,8 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import lombok.Data;
 
 @Data
-@Table(value = "oss_system")
-public class OssSystem {
+@Table(value = "sys_oss")
+public class SysOss {
     @Column(comment = "ossID")
     @Id
     @TableId

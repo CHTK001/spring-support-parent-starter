@@ -1,6 +1,6 @@
 package com.chua.starter.task.support.configuration;
 
-import com.chua.starter.task.support.pojo.SystemTask;
+import com.chua.starter.task.support.pojo.SysTask;
 import com.chua.starter.task.support.service.SystemTaskService;
 import org.springframework.stereotype.Component;
 
@@ -28,7 +28,7 @@ public class RedisMessageReceiver {
             return;
         }
         message = message.replace("$000000000000000000", "");
-        SystemTask systemTask = systemTaskService.getById(message);
+        SysTask systemTask = systemTaskService.getById(message);
         if (null != systemTask) {
             if (systemTask.isFinish()) {
                 systemTask.setTaskStatus(1);

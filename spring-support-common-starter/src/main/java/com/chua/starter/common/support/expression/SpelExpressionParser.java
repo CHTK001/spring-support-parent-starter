@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.expression;
 
+import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.lang.expression.parser.ExpressionParser;
 import com.chua.common.support.value.Value;
 import org.springframework.expression.EvaluationContext;
@@ -9,6 +10,7 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
 /**
  * @author CH
  */
+@Spi("spring")
 public class SpelExpressionParser implements ExpressionParser {
 
     final EvaluationContext evaluationContext = new StandardEvaluationContext();

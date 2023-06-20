@@ -1,6 +1,6 @@
 package com.chua.starter.task.support.creator;
 
-import com.chua.starter.task.support.pojo.SystemTask;
+import com.chua.starter.task.support.pojo.SysTask;
 
 /**
  * 任务创建器
@@ -21,14 +21,14 @@ public interface TaskCreator<I, O> {
      *
      * @param task 任务
      */
-    void execute(SystemTask task);
+    void execute(SysTask task);
 
     /**
      * 完成
      *
      * @param task 任务
      */
-    void doFinish(SystemTask task);
+    void doFinish(SysTask task);
 
     /**
      * 失败
@@ -36,5 +36,5 @@ public interface TaskCreator<I, O> {
      * @param task 任务
      * @param e    e
      */
-    void doFailure(SystemTask task, Exception e);
+    void doFailure(SysTask task, Exception e);
 }
