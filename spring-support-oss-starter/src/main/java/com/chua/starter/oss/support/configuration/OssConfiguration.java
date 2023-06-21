@@ -1,8 +1,8 @@
 package com.chua.starter.oss.support.configuration;
 
 import com.chua.common.support.log.Log;
-import com.chua.common.support.pojo.OssSystem;
 import com.chua.starter.common.support.annotations.EnableAutoTable;
+import com.chua.starter.oss.support.pojo.SysOss;
 import com.chua.starter.oss.support.properties.OssProperties;
 import com.chua.starter.oss.support.provider.OssProvider;
 import org.mybatis.spring.annotation.MapperScan;
@@ -29,7 +29,7 @@ import org.springframework.context.annotation.ComponentScan;
  */
 @AutoConfigureAfter(DataSourceAutoConfiguration.class)
 @EnableConfigurationProperties(OssProperties.class)
-@EnableAutoTable(packageType = OssSystem.class)
+@EnableAutoTable(packageType = SysOss.class)
 @MapperScan("com.chua.starter.oss.support.mapper")
 @ComponentScan("com.chua.starter.oss.support.service")
 public class OssConfiguration implements ApplicationContextAware, BeanDefinitionRegistryPostProcessor {
