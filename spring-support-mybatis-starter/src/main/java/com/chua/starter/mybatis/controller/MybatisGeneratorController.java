@@ -75,24 +75,6 @@ public class MybatisGeneratorController implements InitializingBean {
         }).collect(Collectors.toList()));
     }
 
-    /**
-     * 生成代码
-     *
-     * @param dataSource 条件
-     * @return 生成代码
-     */
-    @ResponseBody
-    @GetMapping("find")
-    public ResultData<List<SqlTable>> pageForTable(String dataSource) throws Exception {
-        DataSource dataSource1 = dataSourceMap.get(dataSource);
-        if (null == dataSource1) {
-            return ResultData.success(Collections.emptyList());
-        }
-        DataSourceConfig dataSourceConfig = builderDataSourceConfig(dataSource1);
-        NetAddress netAddress = NetAddress.of(dataSourceConfig.getUrl());
-        SqlDialect sqlDialect = ServiceProvider.of(SqlDialect.class).getNewExtension(netAddress.getProtocol(), dataSource1);
-        return ResultData.success(sqlDialect.getSqlTable(netAddress.getPath()));
-    }
 
     /**
      * 生成代码
