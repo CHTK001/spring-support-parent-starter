@@ -10,10 +10,13 @@
   "dependencies": {
     "@element-plus/icons-vue": "^2.1.0",
     "axios": "^1.4.0",
+    "butterfly-dag": "^4.3.25",
     "element-plus": "^2.3.6",
     "js-base64": "^3.7.5",
+    "lodash": "^4.17.21",
     "vue": "^3.3.2",
-    "vue-clipboard2": "^0.3.3"
+    "vue-clipboard2": "^0.3.3",
+    "vue-router": "^4.0.13"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.2.3",
