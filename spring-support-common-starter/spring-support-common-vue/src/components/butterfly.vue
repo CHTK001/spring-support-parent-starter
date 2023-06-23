@@ -60,7 +60,16 @@ export default {
             shapeType: 'AdvancedBezier',
             arrow: true
           }
-        }
+        };
+        this.canvasConf.layout = {
+          type: 'dagreLayout',
+          options: {
+            rankdir: 'LR',
+            nodesep: 80,
+            ranksep: 80,
+            controlPoints: false,
+          },
+        };
         this.canvas = new this.baseCanvas(this.canvasConf);
       }
     },
