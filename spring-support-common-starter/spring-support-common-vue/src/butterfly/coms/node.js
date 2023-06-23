@@ -1,28 +1,36 @@
 import {Node} from 'butterfly-dag';
+import $ from 'jquery';
+import '@/assets/node.less';
 
-const getNodeStyle = (left, top) => {
-    return {
-        left: left + 'px',
-        top: top + 'px',
-        position: 'absolute'
-    };
-};
-
-class DefaultNode extends Node {
-
-    draw = (obj) => {
-        const div = document.createElement('div');
-        const style = getNodeStyle(obj.left, obj.top);
-        Reflect.ownKeys(style).forEach(key => {
-            div.style[key] = style[key];
-        });
-
-        div.className = 'butterfly-node';
-        div.id = 'bf_node_' + obj.id;
-
-        return div;
+class BaseNode extends Node {
+    constructor(opts) {
+        super(opts);
+        this.options = opts;
     }
 
+    draw = (opts) => {
+        let container = $('<div class="policy-base-node"></div>')
+            .attr('id', opts.id)
+            .css('top', opts.top + 'px')
+            .css('left', opts.left + 'px');
+
+        this._createTypeIcon(container);
+        this._createText(container);
+
+        return container[0];
+    }
+
+    _createTypeIcon(dom = this.dom) {
+        const iconContainer = $(`<span class="icon-box ${this.options.className}"></span>`)[0];
+        const icon = $(`<i class="iconfont ${this.options.iconType}"></i>`)[0];
+
+        iconContainer.append(icon);
+        $(dom).append(iconContainer);
+    }
+
+    _createText(dom = this.dom) {
+        $('<span class="text-box"></span>').text(this.options.label).appendTo(dom);
+    }
 }
 
-export default DefaultNode;
+export default BaseNode;

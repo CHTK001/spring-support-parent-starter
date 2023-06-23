@@ -1,13 +1,12 @@
 import {TreeCanvas} from 'butterfly-dag';
-import Node from '../coms/node';
-import TreeNode from '../coms/tree-node';
+import Node from '../coms/Node';
 import Edge from '../coms/edge';
+import TreeNode from '../coms/tree-node';
 import Group from '../coms/group';
 import diff from './diff';
 import relayout from './re-layout';
 import {addEdgesCom, addGroupsCom, addNodesCom} from './add-com';
 
-// treeNode还没有使用起来。待解决
 const process = ({nodes = [], edges = [], groups = [], canvas = {}}) => {
   let BaseNode = Node;
   if (canvas.constructor === TreeCanvas) {

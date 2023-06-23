@@ -5,6 +5,8 @@
 </template>
 
 <script>
+import '@/assets/index.less';
+import '@/assets/iconfont.less';
 import 'butterfly-dag/dist/index.css';
 import {Canvas} from 'butterfly-dag';
 import {defaultOptions} from '@/butterfly/util/default-data.js';
@@ -47,13 +49,18 @@ export default {
   methods: {
     // 初始化
     initCanvas() {
-      debugger;
       const root = this.$refs["canvas-dag"];
       if (!root) {
         console.warn("当前canvas没有绑定dom节点，无法渲染");
         return;
       } else {
         this.canvasConf.root = root;
+        this.canvasConf.theme = {
+          edge: {
+            shapeType: 'AdvancedBezier',
+            arrow: true
+          }
+        }
         this.canvas = new this.baseCanvas(this.canvasConf);
       }
     },
@@ -231,7 +238,6 @@ export default {
     this.re();
 
     this.$emit("onLoaded", this);
-    debugger;
 
     this.canvas.on("events", (data) => {
       console.log(data.type)

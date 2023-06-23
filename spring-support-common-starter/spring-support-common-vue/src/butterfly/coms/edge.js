@@ -1,23 +1,30 @@
-import {Edge} from 'butterfly-dag'
+import {Edge} from 'butterfly-dag';
+import $ from 'jquery';
 
-class DefaultEdge extends Edge {
+class BaseEdge extends Edge {
+    draw(obj) {
+        let path = super.draw(obj);
+        if (this.options.color) {
+            $(path).addClass(this.options.color);
+        }
+        return path;
+    }
+
     drawArrow(isShow) {
         let dom = super.drawArrow(isShow);
+        if (this.options.color) {
+            $(dom).addClass(this.options.color);
+        }
         return dom;
     }
 
-    drawLabel() {
-        const div = document.createElement('div');
-
-        if (!this.id) {
-            this.id = String(Number(new Date()));
+    drawLabel(text) {
+        let dom = null;
+        if (text) {
+            dom = $(`<span class="label">${text}</span>`)[0];
         }
-
-        div.id = `edge_label_${this.id}`;
-        div.className = 'butterflies-label';
-
-        return div;
+        return dom;
     }
 }
 
-export default DefaultEdge;
+export default BaseEdge;
