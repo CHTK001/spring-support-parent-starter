@@ -3,13 +3,13 @@ import Edge from '@/butterfly/coms/edge';
 
 const endpoints = [
   {
-    id: 'right',
-    orientation: [1, 0],
+    id: 'left',
+    orientation: [-1, 0],
     pos: [0, 0.5]
   },
   {
-    id: 'left',
-    orientation: [-1, 0],
+    id: 'right',
+    orientation: [1, 0],
     pos: [0, 0.5]
   }
 ];
@@ -33,8 +33,20 @@ export default {
       label: '默认通过',
       className: 'icon-background-color',
       iconType: 'icon-rds',
-      top: 150,
-      left: 50,
+      endpoints: endpoints,
+      Class: Node
+    }, {
+      id: '3',
+      label: '默认通过3',
+      className: 'icon-background-color',
+      iconType: 'icon-rds',
+      endpoints: endpoints,
+      Class: Node
+    }, {
+      id: '4',
+      label: '結束',
+      className: 'icon-background-color',
+      iconType: 'icon-rds',
       endpoints: endpoints,
       Class: Node
     },
@@ -89,10 +101,40 @@ export default {
     // },
     {
       id: '1-2',
-      source: '1',
-      target: '2',
-      sourceNode: 'left',
-      targetNode: 'right',
+      source: 'right',
+      target: 'left',
+      sourceNode: '1',
+      targetNode: '2',
+      arrow: true,
+      arrowPosition: 0.5,
+      Class: Edge
+    },
+    {
+      id: '1-3',
+      source: 'right',
+      target: 'left',
+      sourceNode: '1',
+      targetNode: '3',
+      arrow: true,
+      arrowPosition: 0.5,
+      Class: Edge
+    },
+    {
+      id: '3-4',
+      source: 'right',
+      target: 'left',
+      sourceNode: '3',
+      targetNode: '4',
+      arrow: true,
+      arrowPosition: 0.5,
+      Class: Edge
+    },
+    {
+      id: '2-4',
+      source: 'right',
+      target: 'left',
+      sourceNode: '2',
+      targetNode: '4',
       arrow: true,
       arrowPosition: 0.5,
       Class: Edge
