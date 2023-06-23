@@ -71,6 +71,7 @@ export default {
           },
         };
         this.canvas = new this.baseCanvas(this.canvasConf);
+        this.canvas.setMinimap(true)
       }
     },
 
