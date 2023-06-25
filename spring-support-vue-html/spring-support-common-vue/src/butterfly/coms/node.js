@@ -1,4 +1,4 @@
-import {Node} from 'butterfly-dag';
+import {Node, Tips} from 'butterfly-dag';
 import $ from 'jquery';
 import '@/assets/node.less';
 
@@ -16,7 +16,9 @@ class BaseNode extends Node {
 
         this._createTypeIcon(container);
         this._createText(container);
-
+        container.on('contextmenu', (e) => {
+            debugger
+        })
         return container[0];
     }
 

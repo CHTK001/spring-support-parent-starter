@@ -1,16 +1,8 @@
 <template>
   <div class="drag-node">
-    <div class="drag-header">
-      {{ itemData.userData.title }}
-    </div>
-    <div class="drag-content">
-      <div class="info">
-        <el-input v-model="itemData.userData.input" placeholder="请输入内容" size="small"/>
-      </div>
-      <div class="drag-history">
-        修改: {{ itemData.userData.modify }} 阅读: {{ itemData.userData.reader }}
-      </div>
-    </div>
+    <div class="policy-base-node" :id="itemData.value"><span
+        class="icon-box icon-background-color"><i class="iconfont icon-rds"></i></span><span
+        class="text-box">{{ itemData.label }}</span></div>
   </div>
 </template>
 
