@@ -36,7 +36,6 @@ import emergencyMockData from "@/page/emergency/emergency-mockData";
 import dragNode from "@/page/drag/node/drag-node.vue";
 import request from "axios";
 import Node from "@/butterfly/coms/node";
-import $ from "jquery"
 
 const host = config.host;
 export default {
@@ -102,14 +101,31 @@ export default {
       let {clientX, clientY} = e;
       let coordinates = this.canvansRef.terminal2canvas([clientX, clientY]);
       let data = JSON.parse(e.dataTransfer.getData('data'));
-      this.data.dagData.nodes.push({
+      let canvansRef = this.canvansRef;
+      const $this = this;
+      let nodes = this.data.dagData.nodes;
+      nodes.push({
         id: data.value,
         left: coordinates[0],
         top: coordinates[1],
         render: dragNode,
         userData: data,
         label: data.label,
-        menus: !0,
+        menus: {
+          foo: {
+            name: "删除节点", callback: function (key, opt) {
+              let id = this.attr('id');
+              let node = canvansRef.getNode(id);
+              canvansRef.removeNode(node);
+              $this.data.dagData.nodes = nodes.filter(it => it.id !== node.id)
+            }
+          },
+          bar: {
+            name: "Bar", callback: function (key, opt) {
+              alert("Bar!")
+            }
+          }
+        },
         closeIcon: true,
         className: 'icon-background-color',
         iconType: "icon-bofang",
@@ -215,5 +231,13 @@ export default {
   height: 14px;
   display: block;
   z-index: 1000000;
+}
+
+.context-menu-list {
+  min-width: 10em;
+}
+
+.context-menu-item {
+  padding: .2em 1.2em;
 }
 </style>
