@@ -218,8 +218,9 @@ import '@/style/easy.css'
 import {Delete, Edit, Upload} from "@element-plus/icons-vue";
 import {ElMessageBox} from "element-plus";
 import '@/plugins/layx/layx.min.css'
+import config from "@/config/common"
 
-const host = '/api';
+const host = config.host;
 export default {
   name: 'OssLayout',
   computed: {

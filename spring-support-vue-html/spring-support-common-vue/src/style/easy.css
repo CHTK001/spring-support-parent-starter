@@ -5,6 +5,9 @@
 .icon-standard-arrow-refresh {
     background: url('@/assets/arrow-refresh.png') no-repeat center center;
 }
+.icon-ok {
+    background: url('@/assets/ok.png') no-repeat center center;
+}
 
 .icon-standard-add {
     background: url('@/assets/add.png') no-repeat center center;

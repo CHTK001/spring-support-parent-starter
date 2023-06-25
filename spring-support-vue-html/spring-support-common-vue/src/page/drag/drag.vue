@@ -13,7 +13,7 @@
     </el-aside>
     <el-main>
       <div @dragover.prevent="dragover" @drop.prevent="addNode">
-        <butterfly-vue
+        <butterfly
             className="drag"
             :canvasData="mockData"
             @onLoaded="finishLoaded"
@@ -29,12 +29,12 @@
 
 import dragNode from './node/drag-node.vue';
 
-import {ButterflyVue} from '../../../../index.js';
+import Butterfly from "@/components/butterfly.vue";
 
 export default {
   name: 'Drag',
   components: {
-    ButterflyVue,
+    Butterfly,
     dragNode
   },
   data() {

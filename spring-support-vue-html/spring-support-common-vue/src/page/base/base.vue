@@ -7,6 +7,8 @@
       <el-button @click="redraw">重绘</el-button>
       <el-button @click="logData">log数据</el-button>
       <el-button @click="addEdge" :disabled="addEdgeEnable">添加连线1-4</el-button>
+      <el-button ref="you-target-dom" >233</el-button>
+
     </div>
     <el-divider></el-divider>
     <butterfly
@@ -30,6 +32,8 @@ import mockData from "./base-mockData.js";
 
 import emergencyMockData from '../emergency/emergency-mockData.js';
 import Butterfly from "@/components/butterfly.vue";
+import {Tips} from "butterfly-dag";
+import $ from "jquery";
 
 export default {
   name: 'Base',
@@ -45,6 +49,7 @@ export default {
       groupIndex: 0,
       update: 0,
       canvasConfig: {
+        layoutOptions: {rankdir: 'LR'},
         disLinkable: true, // 可删除连线
         linkable: true,    // 可连线
         draggable: true,   // 可拖动
@@ -52,7 +57,9 @@ export default {
         moveable: true,    // 可平移
         theme: {
           edge: {
-            shapeType: 'Flow'
+            shapeType: 'Flow',
+            defaultAnimate: !0,//默认开启线条动画
+            isExpandWidth: !0,//默认开启线条动画
           }
         }
       },
@@ -158,7 +165,7 @@ export default {
       console.log("finish");
       console.log(VueCom);
     },
-  }
+  },
 }
 </script>
 

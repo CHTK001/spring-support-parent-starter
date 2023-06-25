@@ -8,13 +8,17 @@
 import '@/assets/index.less';
 import '@/assets/iconfont.less';
 import 'butterfly-dag/dist/index.css';
-import {Canvas} from 'butterfly-dag';
+import {Canvas, Tips} from 'butterfly-dag';
 import {defaultOptions} from '@/butterfly/util/default-data.js';
 import {processEdge, processGroups, processNodes,} from '@/butterfly/util/process.js';
 
+import $ from "jquery";
 import recalc from '@/butterfly/util/re-calc.js';
 import relayout from '@/butterfly/util/re-layout.js';
 
+document.body.onselectstart = document.body.oncontextmenu = function () {
+  return false;
+}
 export default {
   name: "Butterfly",
   emits: ['onCreateEdge', 'onDeleteEdge', 'onChangeEdges', 'onOtherEvent', 'onLoaded'],
@@ -26,6 +30,9 @@ export default {
     baseCanvas: {
       type: Function,
       default: Canvas,
+    },
+    menu: {
+      type: Function
     },
     canvasConf: {
       type: Object,
@@ -40,6 +47,7 @@ export default {
   },
   data() {
     return {
+      onEvent: {},
       canvas: null,
       nodes: this.canvasData ? this.canvasData.nodes : [],
       groups: this.canvasData ? this.canvasData.groups : {},
@@ -47,12 +55,12 @@ export default {
     };
   },
   methods: {
-    // 初始化
+// 初始化
     initCanvas() {
       const root = this.$refs["canvas-dag"];
       if (!root) {
         console.warn("当前canvas没有绑定dom节点，无法渲染");
-        return;
+        return !1;
       } else {
         this.canvasConf.root = root;
         this.canvasConf.theme = {
@@ -62,20 +70,19 @@ export default {
           }
         };
         this.canvasConf.layout = {
-          type: 'dagreLayout',
+          // type: 'dagreLayout',
           options: {
             rankdir: 'LR',
-            nodesep: 80,
-            ranksep: 80,
-            controlPoints: false,
           },
         };
         this.canvas = new this.baseCanvas(this.canvasConf);
-        this.canvas.setMinimap(true)
+        this.canvas.setLinkable(!0);
+        this.canvas.setDisLinkable(!0);
+        this.canvas.setMinimap(true);
       }
     },
 
-    // 更新画布信息
+// 更新画布信息
     updateCavans() {
       if (!this.canvas) {
         console.warn("当前canvas为null，初始化存在问题");
@@ -91,7 +98,7 @@ export default {
       processEdge(this.canvas, this.edges, oldEdges, this);
     },
 
-    // 重新计算节点和边的位置
+// 重新计算节点和边的位置
     re() {
       if (!this.canvas) {
         console.warn("当前canvas为null，初始化存在问题");
@@ -102,7 +109,7 @@ export default {
       relayout(this.canvas);
     },
 
-    // 重绘所有节点
+// 重绘所有节点
     redraw() {
       const oldNodes = this.canvas.nodes;
       const oldEdges = this.canvas.edges;
@@ -159,6 +166,9 @@ export default {
       }
     },
 
+    on(name, func) {
+      this.onEvent[name] = func;
+    },
     onChangeEdges(data) {
       let addLinkData = data.addLinks[0];
       let delLinkData = data.delLinks[0];
@@ -235,7 +245,7 @@ export default {
       deep: true
     }
   },
-  mounted() {
+  mounted: function () {
     this.initCanvas();
 
     if (!this.canvas) {
@@ -287,7 +297,7 @@ export default {
         this.onOtherEvent(data);
       }
     });
-    // window.canvas = this.canvas;
+// window.canvas = this.canvas;
   },
 };
 </script>

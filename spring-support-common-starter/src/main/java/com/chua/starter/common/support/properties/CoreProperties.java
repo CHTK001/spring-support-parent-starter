@@ -3,15 +3,18 @@ package com.chua.starter.common.support.properties;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import static com.chua.starter.common.support.properties.CoreProperties.PRE;
+
 /**
  * 跨域
  *
  * @author CH
  */
 @Data
-@ConfigurationProperties(prefix = "plugin.core", ignoreInvalidFields = true)
+@ConfigurationProperties(prefix = PRE, ignoreInvalidFields = true)
 public class CoreProperties {
 
+    public static final String PRE = "plugin.core";
     /**
      * 是否开启统一响应(返回值自动包裹对象)
      */
@@ -20,6 +23,10 @@ public class CoreProperties {
      * 是否开启版本控制
      */
     private boolean openVersion;
+    /**
+     * 开启编排接口
+     */
+    private boolean openArrange = true;
 
     /**
      * geo

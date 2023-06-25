@@ -11,13 +11,21 @@ const routes = [{
     name: "oss",
     component: () => import('@/view/oss.vue')
 }, {
-    path: "/test",
-    name: "test",
-    component: () => import('@/view/test.vue')
-}, {
+    path: "/arrange",
+    name: "arrange",
+    component: () => import('@/view/arrange.vue')
+},  {
+    path: "/arrange-dag",
+    name: "arrange-dag",
+    component: () => import('@/view/arrange-dag.vue')
+},{
     path: "/test2",
     name: "test2",
     component: () => import('@/page/base/base.vue')
+},{
+    path: "/drag",
+    name: "drag",
+    component: () => import('@/page/drag/drag.vue')
 }];
 
 
