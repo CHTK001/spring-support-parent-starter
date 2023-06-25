@@ -88,9 +88,6 @@ export default {
     dragstart(e, data) {
       e.dataTransfer.setData('data', JSON.stringify(data));
     },
-    nodeClose(e) {
-debugger
-    },
     addNode(e) {
       const endpointLeft = {
         id: 'left',
@@ -112,6 +109,7 @@ debugger
         render: dragNode,
         userData: data,
         label: data.label,
+        menus: !0,
         closeIcon: true,
         className: 'icon-background-color',
         iconType: "icon-bofang",
