@@ -1,7 +1,8 @@
-import {Node, Tips} from 'butterfly-dag';
+import {Node} from 'butterfly-dag';
 import $ from 'jquery';
 import '@/assets/node.less';
 import 'jquery-contextmenu'
+import 'jquery-contextmenu/dist/jquery.contextMenu.min.css'
 
 class BaseNode extends Node {
     constructor(opts) {
@@ -10,7 +11,7 @@ class BaseNode extends Node {
     }
 
     draw = (opts) => {
-        let container = $(`<div class="policy-base-node policy-base-node-${this.options.label}"></div>`)
+        let container = $(`<div class="policy-base-node policy-base-node-${this.options.userData ? this.options.userData.value || this.options.value : this.options.value}"></div>`)
             .attr('id', opts.id)
             .css('top', opts.top + 'px')
             .css('left', opts.left + 'px');
@@ -19,11 +20,8 @@ class BaseNode extends Node {
         this._createText(container);
         if(this.options.menus) {
             $.contextMenu({
-                selector: `.policy-base-node-${this.options.value}`,
-                items: {
-                    foo: {name: "Foo", callback: function(key, opt){ alert("Foo!"); }},
-                    bar: {name: "Bar", callback: function(key, opt){ alert("Bar!") }}
-                }
+                selector: `.policy-base-node-${this.options.userData ? this.options.userData.value || this.options.value : this.options.value}`,
+                items: this.options.menus
             });
         }
         return container[0];
