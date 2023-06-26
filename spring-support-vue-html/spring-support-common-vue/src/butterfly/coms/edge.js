@@ -7,6 +7,9 @@ class BaseEdge extends Edge {
         if (this.options.color) {
             $(path).addClass(this.options.color);
         }
+        $(path)
+            .attr("edge-id", this.options.id)
+            .addClass(`policy-base-edge-${this.options.id.replaceAll(".", "_")}`)
         return path;
     }
 
