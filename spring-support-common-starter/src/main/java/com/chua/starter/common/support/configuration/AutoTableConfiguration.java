@@ -59,6 +59,9 @@ public class AutoTableConfiguration implements ApplicationContextAware {
 
         for (Object value : values) {
             EnableAutoTable enableAutoTable = value.getClass().getDeclaredAnnotation(EnableAutoTable.class);
+            if(null == enableAutoTable) {
+                continue;
+            }
             refresh(Arrays.asList(enableAutoTable.packageType()));
         }
 
@@ -74,6 +77,9 @@ public class AutoTableConfiguration implements ApplicationContextAware {
         }
         for (Object value : values) {
             EnableAutoTable enableAutoTable = value.getClass().getDeclaredAnnotation(EnableAutoTable.class);
+            if(null == enableAutoTable) {
+                continue;
+            }
             rs.addAll(Arrays.asList(enableAutoTable.value()));
         }
 
