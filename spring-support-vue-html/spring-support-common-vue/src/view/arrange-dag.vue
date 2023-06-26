@@ -94,13 +94,60 @@ export default {
       });
     },
     doSave: function (arrangeId) {
+      const nodes = [], edges = [];
+      this.canvansRef.getDataMap().nodes.forEach(item => {
+        const l = {};
+        const a = ['left', 'top', 'id', 'className', 'iconType', 'label', 'menus', 'userData'];
+        for (const aElement of a) {
+          l[aElement] = item[aElement];
+          if (_.isObject(l[aElement])) {
+            l[aElement] = JSON.stringify(l[aElement]);
+          }
+        }
+        for (const aElement of a) {
+          l[aElement] = item['options'][aElement];
+          if (_.isObject(l[aElement])) {
+            l[aElement] = JSON.stringify(l[aElement]);
+          }
+        }
+        nodes.push(l);
+      })
+
+      this.canvansRef.getDataMap().edges.forEach(item => {
+        const l = {};
+        const a = ['left', 'top', 'id', 'source', 'target', 'targetNode', 'sourceNode', 'menus', 'userData'];
+        for (const aElement of a) {
+          l[aElement] = item[aElement];
+          if (aElement === 'targetNode') {
+            l['targetNode'] = l[aElement]['id']
+          }
+
+          if (aElement === 'sourceNode') {
+            l['sourceNode'] = l[aElement]['id']
+          }
+          if (_.isObject(l[aElement])) {
+            l[aElement] = JSON.stringify(l[aElement]);
+          }
+        }
+        for (const aElement of a) {
+          l[aElement] = item['options'][aElement];
+          if (_.isObject(l[aElement])) {
+            l[aElement] = JSON.stringify(l[aElement]);
+          }
+        }
+        edges.push(l);
+      })
       const param = {
         arrangeId: this.configId,
-        arrangeContent: JSON.stringify(this.canvansRef.getDataMap().map(it => {
-          debugger
-        }))
+        nodes: nodes,
+        edges: edges
       }
-      alert(JSON.stringify(param))
+      console.log(param);
+      request.post(host + "/arrange/saveOrUpdateNode", param).then(({data}) => {
+        if (data.code === '00000') {
+          this.data.options = data.data;
+        }
+      });
     },
     dragover(e) {
       e.preventDefault();

@@ -9,7 +9,6 @@ import com.chua.common.support.lang.arrange.ArrangeHandler;
 import com.chua.common.support.lang.page.Page;
 import com.chua.common.support.spi.Option;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.starter.common.support.annotations.EnableAutoTable;
 import com.chua.starter.common.support.pojo.SysArrange;
 import com.chua.starter.common.support.pojo.SysArrangeEdge;
 import com.chua.starter.common.support.pojo.SysArrangeNode;
@@ -29,7 +28,6 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("${plugin.arrange.context-path:/arrange}")
-@EnableAutoTable(packageType = {SysArrange.class, SysArrangeEdge.class, SysArrangeNode.class})
 public class ArrangeProvider implements ApplicationContextAware {
 
     private Repository<SysArrange> repository;

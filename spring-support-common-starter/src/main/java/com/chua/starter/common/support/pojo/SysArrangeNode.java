@@ -39,28 +39,36 @@ public class SysArrangeNode {
      */
     @com.chua.common.support.database.annotation.Column(comment = "节点菜单")
     private String menus;
-    /**
-     * 来源
-     */
-    @com.chua.common.support.database.annotation.Column(comment = "来源")
-    private String sourceNode;
-    /**
-     * 目标
-     */
-    @com.chua.common.support.database.annotation.Column(comment = "目标")
-    private String targetNode;
-    /**
-     * 铆点来源
-     */
-    @Column
-    @com.chua.common.support.database.annotation.Column(comment = "铆点来源", defaultValue = "'right'")
-    private String source;
-    /**
-     * 铆点目标
-     */
-    @Column
-    @com.chua.common.support.database.annotation.Column(comment = "铆点目标", defaultValue = "'left'")
-    private String target;
 
+
+    /**
+     * 位置
+     */
+    @Column
+    @com.chua.common.support.database.annotation.Column(comment = "上方")
+    private String top;
+
+    /**
+     * 位置
+     */
+    @Column
+    @com.chua.common.support.database.annotation.Column(value = "`left`", comment = "左侧")
+    private String left;
+    /**
+     * 节点样式
+     */
+    @com.chua.common.support.database.annotation.Column(comment = "节点样式", defaultValue = "'icon-background-color'")
+    private String className;
+    /**
+     * 节点图标类型
+     */
+    @com.chua.common.support.database.annotation.Column(comment = "节点图标类型", defaultValue = "'icon-bofang'")
+    private String iconType;
+    /**
+     * 配置名称
+     */
+    @Column
+    @com.chua.common.support.database.annotation.Column(comment = "节点名称")
+    private String label;
 
 }

@@ -11,12 +11,12 @@ import java.util.Map;
 /**
  * @author CH
  */
-@Spi("demo2")
+@Spi("end")
 @Component
-@SpiOption("测试例子2")
-public class Demo2ArrangeHandler implements ArrangeHandler {
+@SpiOption("结束")
+public class EndArrangeHandler implements ArrangeHandler {
     @Override
     public ArrangeResult execute(Map<String, Object> args) {
-        return null;
+        return ArrangeResult.INSTANCE;
     }
 }
