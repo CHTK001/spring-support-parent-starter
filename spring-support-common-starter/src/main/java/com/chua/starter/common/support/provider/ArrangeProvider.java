@@ -52,6 +52,7 @@ public class ArrangeProvider implements ApplicationContextAware {
      * @return 结果
      */
     @GetMapping("/page")
+    @Cacheable(cacheManager = DEFAULT_CACHE_MANAGER, cacheNames = "'arrange'")
     public Result<Page<SysArrange>> page(Page<SysArrange> page) {
         return Result.success(repository.page(page));
     }
@@ -101,6 +102,7 @@ public class ArrangeProvider implements ApplicationContextAware {
      * @param sysArrange 保存
      * @return 结果
      */
+    @CacheEvict(cacheManager = DEFAULT_CACHE_MANAGER, cacheNames = "'arrange'")
     @PostMapping("/saveOrUpdate")
     public Result<Integer> saveOrUpdate(@RequestBody SysArrange sysArrange) {
         if (repository.exist(Wrappers.<SysArrange>lambdaQuery()
@@ -118,8 +120,14 @@ public class ArrangeProvider implements ApplicationContextAware {
      * @return 结果
      */
     @GetMapping("/delete")
+    @Transactional
+    @CacheEvict(cacheManager = DEFAULT_CACHE_MANAGER, cacheNames = "'arrange'")
     public Result<Boolean> delete(@RequestParam("id") String id) {
-        return Result.success(repository.deleteById(id) > 0);
+        if (repository.deleteById(id) > 0) {
+            edgeRepository.delete(Wrappers.<SysArrangeEdge>lambdaQuery().eq(SysArrangeEdge::getArrangeId, id));
+            nodeRepository.delete(Wrappers.<SysArrangeNode>lambdaQuery().eq(SysArrangeNode::getArrangeId, id));
+        }
+        return Result.success(true);
     }
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
