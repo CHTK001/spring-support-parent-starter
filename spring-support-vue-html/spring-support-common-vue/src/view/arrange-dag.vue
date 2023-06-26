@@ -1,4 +1,6 @@
 <template>
+  <el-button type="primary" size="large" @click="doSave()" :icon="Edit" circle class="full-button"/>
+
   <el-container style="height: 100%">
     <el-aside width="200px">
       <div v-for="item in data.options" draggable="true" class="node-container" @dragstart="(e)=>{dragstart(e, item)}"
@@ -27,7 +29,6 @@
 </template>
 
 <script>
-import mockData from "@/page/base/base-mockData.js";
 import config from "@/config/common"
 import '@/style/easy.css'
 import Butterfly from "@/components/butterfly.vue";
@@ -36,17 +37,30 @@ import emergencyMockData from "@/page/emergency/emergency-mockData";
 import dragNode from "@/page/drag/node/drag-node.vue";
 import request from "axios";
 import Node from "@/butterfly/coms/node";
+import {Edit} from "@element-plus/icons-vue";
 
 const host = config.host;
 export default {
   name: "arrange-dag",
+  computed: {
+    Edit() {
+      return Edit
+    }
+  },
   components: {Butterfly, dragNode},
   data() {
     return {
       configId: undefined,
       data: {
         options: [],
-        dagData: [],
+        dagData: {
+          nodes: [],
+          edges: []
+        },
+      },
+      mockData: {
+        nodes: [],
+        edges: []
       },
       canvansRef: {},
       butterflyVue: {},
@@ -79,7 +93,13 @@ export default {
       });
     },
     doSave: function (arrangeId) {
-      alert(arrangeId)
+      const param = {
+        arrangeId: this.configId,
+        arrangeContent: JSON.stringify(this.canvansRef.getDataMap().map(it => {
+          debugger
+        }))
+      }
+      alert(JSON.stringify(param))
     },
     dragover(e) {
       e.preventDefault();
@@ -112,7 +132,7 @@ export default {
         userData: data,
         label: data.label,
         menus: {
-          foo: {
+          del: {
             name: "删除节点", callback: function (key, opt) {
               let id = this.attr('id');
               let node = canvansRef.getNode(id);
@@ -120,11 +140,6 @@ export default {
               $this.data.dagData.nodes = nodes.filter(it => it.id !== node.id)
             }
           },
-          bar: {
-            name: "Bar", callback: function (key, opt) {
-              alert("Bar!")
-            }
-          }
         },
         closeIcon: true,
         className: 'icon-background-color',
@@ -173,10 +188,21 @@ export default {
     },
     logCreateEdge(e) {
       console.log('---------CreateEdge---------');
-      console.log(e);
-      console.log(mockData);
       console.log(this.canvansRef.getDataMap());
+      const canvansRef = this.canvansRef;
+      const $this = this;
       console.log('----------------');
+      let edges = this.data.dagData.edges;
+      e['menus'] = {
+        del: {
+          name: "删除关系", callback: function (key, opt) {
+            let id = this.attr("edge-id");
+            let edge = canvansRef.getEdge(id);
+            canvansRef.removeEdge(edge);
+            $this.data.dagData.edges = edges.filter(it => it.id !== edges.id)
+          }
+        },
+      }
     },
     logDeleteEdge(e) {
       console.log('---------DeleteEdge---------');
@@ -201,20 +227,11 @@ export default {
       window.butterflyVue = VueCom;
       console.log("finish");
       console.log(VueCom);
-      this.canvansRef.on('system.node.click', (data, e) => {
-        let event = window.event;
-        if (event.button !== 2) {
-          return !1;
-        }
-        //
-        debugger
-      })
-
     },
   },
   mounted() {
     this.configId = this.$route.query.id
-    this.data.dagData = mockData;
+    this.data.dagData = this.mockData;
     this.initial();
 
   }
@@ -239,5 +256,20 @@ export default {
 
 .context-menu-item {
   padding: .2em 1.2em;
+}
+.policy-base-node {
+  cursor: default;
+}
+.node-container {
+  width: 200px;
+  height: 45px;
+}
+.full-button {
+  display: block;
+  position: fixed;
+  right: 0;
+  top: 50%;
+  cursor: pointer;
+  z-index: 20230626;
 }
 </style>

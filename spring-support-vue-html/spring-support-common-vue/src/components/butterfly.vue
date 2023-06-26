@@ -66,18 +66,20 @@ export default {
         this.canvasConf.theme = {
           edge: {
             shapeType: 'AdvancedBezier',
+            isExpandWidth: false,
             arrow: true
           }
         };
         this.canvasConf.layout = {
-          // type: 'dagreLayout',
+          type: 'dagreLayout',
           options: {
             rankdir: 'LR',
+            nodesep: 30,
+            ranksep: 80,
+            controlPoints: false
           },
         };
         this.canvas = new this.baseCanvas(this.canvasConf);
-        this.canvas.setLinkable(!0);
-        this.canvas.setDisLinkable(!0);
         this.canvas.setMinimap(true);
       }
     },
@@ -144,6 +146,12 @@ export default {
           target: edgeInfo.targetEndpointId,
         });
         this.$emit("onCreateEdge", edgeInfo);
+        if(edgeInfo.menus) {
+          $.contextMenu({
+            selector: `.policy-base-edge-${edgeInfo.id.replaceAll(".", "_")}`,
+            items: edgeInfo.menus
+          });
+        }
       }
     },
 
