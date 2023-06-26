@@ -14,6 +14,8 @@ import com.chua.starter.common.support.pojo.SysArrangeEdge;
 import com.chua.starter.common.support.pojo.SysArrangeNode;
 import com.chua.starter.common.support.result.Result;
 import org.springframework.beans.BeansException;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +23,8 @@ import org.springframework.web.bind.annotation.*;
 import javax.sql.DataSource;
 import javax.transaction.Transactional;
 import java.util.List;
+
+import static com.chua.starter.common.support.configuration.CacheConfiguration.DEFAULT_CACHE_MANAGER;
 
 /**
  * 编排接口
@@ -58,6 +62,7 @@ public class ArrangeProvider implements ApplicationContextAware {
      */
     @PostMapping("/saveOrUpdateNode")
     @Transactional
+    @CacheEvict(cacheManager = DEFAULT_CACHE_MANAGER, cacheNames = "#arrangeId")
     public Result<Integer> saveOrUpdateNode(@RequestBody JSONObject json) {
         String arrangeId = json.getString("arrangeId");
         if(!repository.exist(Wrappers.<SysArrange>lambdaQuery().eq(SysArrange::getArrangeId, arrangeId))) {
@@ -82,6 +87,7 @@ public class ArrangeProvider implements ApplicationContextAware {
      */
     @GetMapping("/nodeAndEdge")
     @Transactional
+    @Cacheable(cacheManager = DEFAULT_CACHE_MANAGER, cacheNames = "#arrangeId")
     public Result<JSONObject> nodeAndEdge(@RequestParam("arrangeId") String arrangeId) {
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("nodes", nodeRepository.list(Wrappers.<SysArrangeNode>lambdaQuery().eq(SysArrangeNode::getArrangeId, arrangeId)));
