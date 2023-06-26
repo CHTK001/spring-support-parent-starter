@@ -104,10 +104,27 @@ export default {
             type: 'success',
             message: '初始化成功'
           })
+
+          const endpointLeft = {
+            id: 'left',
+            orientation: [-1, 0],
+            pos: [0, 0.5]
+          };
+          const endpointRight = {
+            id: 'right',
+            orientation: [1, 0],
+            pos: [0, 0.5]
+          };
           this.data.dagData.nodes.length = 0
           data.data.nodes.forEach(item => {
             item['userData'] = JSON.parse(item['userData'] || '{}');
             item['menus'] = JSON.parse(item['menus'] || '{}');
+            item['Class'] = Node;
+            item['render'] = dragNode;
+            item['endpoints'] = [
+              endpointLeft,
+              endpointRight
+            ]
             this.data.dagData.nodes.push(item);
           })
           this.data.dagData.edges.length = 0
@@ -294,6 +311,7 @@ export default {
       const $this = this;
       console.log('----------------');
       let edges = this.data.dagData.edges;
+      debugger
       e['menus'] = {
         del: {
           name: "删除关系", callback: function (key, opt) {
