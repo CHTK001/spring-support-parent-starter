@@ -63,7 +63,6 @@ public class ArrangeProvider implements ApplicationContextAware {
      */
     @PostMapping("/saveOrUpdateNode")
     @Transactional
-    @CacheEvict(cacheManager = DEFAULT_CACHE_MANAGER, cacheNames = "#arrangeId")
     public Result<Integer> saveOrUpdateNode(@RequestBody JSONObject json) {
         String arrangeId = json.getString("arrangeId");
         if(!repository.exist(Wrappers.<SysArrange>lambdaQuery().eq(SysArrange::getArrangeId, arrangeId))) {
@@ -88,7 +87,6 @@ public class ArrangeProvider implements ApplicationContextAware {
      */
     @GetMapping("/nodeAndEdge")
     @Transactional
-    @Cacheable(cacheManager = DEFAULT_CACHE_MANAGER, cacheNames = "#arrangeId")
     public Result<JSONObject> nodeAndEdge(@RequestParam("arrangeId") String arrangeId) {
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("nodes", nodeRepository.list(Wrappers.<SysArrangeNode>lambdaQuery().eq(SysArrangeNode::getArrangeId, arrangeId)));

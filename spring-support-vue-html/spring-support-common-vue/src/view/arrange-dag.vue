@@ -29,6 +29,7 @@
 </template>
 
 <script>
+import '@/plugins/layx/layx.min.css'
 import config from "@/config/common"
 import '@/style/easy.css'
 import Butterfly from "@/components/butterfly.vue";
@@ -101,18 +102,18 @@ export default {
         if (data.code === '00000') {
           layx.notice({
             type: 'success',
-            messsage: '初始化成功'
+            message: '初始化成功'
           })
           return !1;
         }
         layx.notice({
           type: 'error',
-          messsage: data.msg
+          message: data.msg
         })
       }).catch(({data}) => {
         layx.notice({
           type: 'error',
-          messsage: data.message
+          message: '系统错误'
         })
       });
     },
@@ -133,6 +134,7 @@ export default {
             l[aElement] = JSON.stringify(l[aElement]);
           }
         }
+        l['arrangeId'] = this.configId;
         nodes.push(l);
       })
 
@@ -158,6 +160,7 @@ export default {
             l[aElement] = JSON.stringify(l[aElement]);
           }
         }
+        l['arrangeId'] = this.configId;
         edges.push(l);
       })
       const param = {
@@ -169,19 +172,21 @@ export default {
       request.post(host + "/arrange/saveOrUpdateNode", param).then(({data}) => {
         if (data.code === '00000') {
           layx.notice({
+            title: '消息提示',
             type: 'success',
-            messsage: '保存成功'
+            message: '保存成功'
           })
           return !1;
         }
         layx.notice({
+          title: '消息提示',
           type: 'error',
-          messsage: data.msg
+          message: data.msg
         })
-      }).catch(({data}) => {
+      }).catch(data => {
         layx.notice({
           type: 'error',
-          messsage: data.message
+          message: '操作异常'
         })
       });
     },

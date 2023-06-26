@@ -72,12 +72,12 @@
 </template>
 
 <script>
+import '@/plugins/layx/layx.min.css'
 
 import request from "axios";
 import '@/style/easy.css'
-import {Coin, Delete, Edit, Upload} from "@element-plus/icons-vue";
+import {Coin, Delete, Edit} from "@element-plus/icons-vue";
 import {ElMessageBox} from "element-plus";
-import '@/plugins/layx/layx.min.css'
 import Butterfly from "@/components/butterfly.vue";
 import config from "@/config/common"
 
@@ -179,7 +179,7 @@ export default {
       }).catch(() => {
         layx.notice({
           type: 'warn',
-          messsage: '删除失败'
+          message: '删除失败'
         })
       })
     },
