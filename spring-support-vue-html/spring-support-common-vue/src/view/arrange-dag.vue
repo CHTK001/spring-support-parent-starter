@@ -92,6 +92,29 @@ export default {
           this.data.options = data.data;
         }
       });
+
+      request.get(host + "/arrange/nodeAndEdge", {
+        params: {
+          arrangeId: this.configId
+        }
+      }).then(({data}) => {
+        if (data.code === '00000') {
+          layx.notice({
+            type: 'success',
+            messsage: '初始化成功'
+          })
+          return !1;
+        }
+        layx.notice({
+          type: 'error',
+          messsage: data.msg
+        })
+      }).catch(({data}) => {
+        layx.notice({
+          type: 'error',
+          messsage: data.message
+        })
+      });
     },
     doSave: function (arrangeId) {
       const nodes = [], edges = [];
@@ -145,8 +168,21 @@ export default {
       console.log(param);
       request.post(host + "/arrange/saveOrUpdateNode", param).then(({data}) => {
         if (data.code === '00000') {
-          this.data.options = data.data;
+          layx.notice({
+            type: 'success',
+            messsage: '保存成功'
+          })
+          return !1;
         }
+        layx.notice({
+          type: 'error',
+          messsage: data.msg
+        })
+      }).catch(({data}) => {
+        layx.notice({
+          type: 'error',
+          messsage: data.message
+        })
       });
     },
     dragover(e) {
