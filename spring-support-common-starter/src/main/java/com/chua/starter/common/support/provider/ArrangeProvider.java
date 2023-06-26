@@ -73,14 +73,31 @@ public class ArrangeProvider implements ApplicationContextAware {
 
         return Result.success();
     }
+
     /**
      * 保存/更新
+     *
+     * @param arrangeId arrangeId
+     * @return 结果
+     */
+    @GetMapping("/nodeAndEdge")
+    @Transactional
+    public Result<JSONObject> nodeAndEdge(@RequestParam("arrangeId") String arrangeId) {
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("nodes", nodeRepository.list(Wrappers.<SysArrangeNode>lambdaQuery().eq(SysArrangeNode::getArrangeId, arrangeId)));
+        jsonObject.put("edges", edgeRepository.list(Wrappers.<SysArrangeEdge>lambdaQuery().eq(SysArrangeEdge::getArrangeId, arrangeId)));
+        return Result.success(jsonObject);
+    }
+
+    /**
+     * 保存/更新
+     *
      * @param sysArrange 保存
      * @return 结果
      */
     @PostMapping("/saveOrUpdate")
     public Result<Integer> saveOrUpdate(@RequestBody SysArrange sysArrange) {
-        if(repository.exist(Wrappers.<SysArrange>lambdaQuery()
+        if (repository.exist(Wrappers.<SysArrange>lambdaQuery()
                 .eq(SysArrange::getArrangeName, sysArrange.getArrangeName())
                 .ne(null != sysArrange.getArrangeId(), SysArrange::getArrangeId, sysArrange.getArrangeId()))
         ) {
