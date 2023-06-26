@@ -35,26 +35,27 @@ public class SysArrangeEdge {
     @com.chua.common.support.database.annotation.Column(comment = "节点用户数据")
     private String userData;
     /**
-     * 节点菜单
+     * 来源
      */
-    @com.chua.common.support.database.annotation.Column(comment = "节点菜单")
-    private String menus;
+    @com.chua.common.support.database.annotation.Column(comment = "来源")
+    private String sourceNode;
     /**
-     * 节点样式
+     * 目标
      */
-    @com.chua.common.support.database.annotation.Column(comment = "节点样式", defaultValue = "'icon-background-color'")
-    private String className;
+    @com.chua.common.support.database.annotation.Column(comment = "目标")
+    private String targetNode;
     /**
-     * 节点图标类型
-     */
-    @com.chua.common.support.database.annotation.Column(comment = "节点图标类型", defaultValue = "'icon-bofang'")
-    private String iconType;
-    /**
-     * 配置名称
+     * 铆点来源
      */
     @Column
-    @com.chua.common.support.database.annotation.Column(comment = "节点名称")
-    private String label;
+    @com.chua.common.support.database.annotation.Column(comment = "铆点来源", defaultValue = "'right'")
+    private String source;
+    /**
+     * 铆点目标
+     */
+    @Column
+    @com.chua.common.support.database.annotation.Column(comment = "铆点目标", defaultValue = "'left'")
+    private String target;
 
 
 }
