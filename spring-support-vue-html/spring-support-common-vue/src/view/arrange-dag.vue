@@ -104,6 +104,18 @@ export default {
             type: 'success',
             message: '初始化成功'
           })
+          this.data.dagData.nodes.length = 0
+          data.data.nodes.forEach(item => {
+            item['userData'] = JSON.parse(item['userData'] || '{}');
+            item['menus'] = JSON.parse(item['menus'] || '{}');
+            this.data.dagData.nodes.push(item);
+          })
+          this.data.dagData.edges.length = 0
+          data.data.edges.forEach(item => {
+            item['userData'] = JSON.parse(item['userData'] || '{}');
+            item['menus'] = JSON.parse(item['menus'] || '{}');
+            this.data.dagData.edges.push(item);
+          })
           return !1;
         }
         layx.notice({
