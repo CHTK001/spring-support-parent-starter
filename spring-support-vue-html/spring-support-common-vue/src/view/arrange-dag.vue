@@ -79,6 +79,7 @@ export default {
             defaultAnimate: !0,//默认开启线条动画
             isExpandWidth: !0,//默认开启线条动画
           }
+
         }
       },
       addEdgeEnable: false
