@@ -1,5 +1,19 @@
 <template>
-  <el-button type="primary" size="large" @click="doSave()" :icon="Edit" circle class="full-button"/>
+  <div class="full-button">
+    <el-select v-model="layout" size="small" clearable >
+      <el-option :key="item.value" :value="item" :label="item.label" v-for="item in data.filter">
+        <span style="float: left">{{ item.value }}</span>
+        <span style=" float: right; color: var(--el-text-color-secondary); font-size: 13px;">{{ item.label }}</span>
+      </el-option>
+    </el-select>
+    <el-tooltip content="提交">
+      <el-button type="primary" size="small" @click="doSave()" :icon="Coin" circle />
+    </el-tooltip>
+    <el-tooltip content="运行">
+      <el-button type="primary" size="small" @click="doRun()" :icon="CaretRight" circle />
+    </el-tooltip>
+
+  </div>
 
   <el-container style="height: 100%">
     <el-aside width="200px">
@@ -13,6 +27,7 @@
       <div @dragover.prevent="dragover" @drop.prevent="addNode">
         <butterfly
             id="butterfly"
+            :layout="layout"
             :canvas-data="data.dagData"
             :canvas-conf="canvasConfig"
             @onCreateEdge="logCreateEdge"
@@ -26,6 +41,8 @@
       </div>
     </el-main>
   </el-container>
+
+
 </template>
 
 <script>
@@ -38,12 +55,18 @@ import emergencyMockData from "@/page/emergency/emergency-mockData";
 import dragNode from "@/page/drag/node/drag-node.vue";
 import request from "axios";
 import Node from "@/butterfly/coms/node";
-import {Edit} from "@element-plus/icons-vue";
-
+import {CaretRight, Coin, Edit, Operation} from "@element-plus/icons-vue";
+import layoutData from '@/api/Layout'
 const host = config.host;
 export default {
   name: "arrange-dag",
   computed: {
+    CaretRight() {
+      return CaretRight
+    },
+    Coin() {
+      return Coin
+    },
     Edit() {
       return Edit
     }
@@ -51,8 +74,11 @@ export default {
   components: {Butterfly, dragNode},
   data() {
     return {
+      layout: undefined,
+      dialogVisible: !1,
       configId: undefined,
       data: {
+        filter: layoutData,
         options: [],
         dagData: {
           nodes: [],
@@ -65,6 +91,7 @@ export default {
       },
       canvansRef: {},
       butterflyVue: {},
+      cnt: {},
       nodeIndex: 0,
       groupIndex: 0,
       update: 0,
@@ -87,6 +114,30 @@ export default {
     }
   },
   methods: {
+    doRun: function () {
+      request.get(host + "/arrange/run", {
+        params: {
+          arrangeId: this.configId
+        }
+      }).then(({data}) => {
+        if (data.code === '00000') {
+          layx.notice({
+            type: 'success',
+            message: '运行'
+          })
+          return !1;
+        }
+        layx.notice({
+          type: 'error',
+          message: data.msg
+        })
+      }).catch((data) => {
+        layx.notice({
+          type: 'error',
+          message: data.response.data ? data.response.data.msg : '系统错误'
+        })
+      });
+    },
     initial: function () {
       request.get(host + "/arrange/option").then(({data}) => {
         if (data.code === '00000') {
@@ -150,7 +201,7 @@ export default {
       const nodes = [], edges = [];
       this.canvansRef.getDataMap().nodes.forEach(item => {
         const l = {};
-        const a = ['left', 'top', 'id', 'className', 'iconType', 'label', 'menus', 'userData'];
+        const a = ['left', 'top', 'id', 'className', 'iconType', 'label', 'menus', 'userData', "realId"];
         for (const aElement of a) {
           l[aElement] = item[aElement];
           if (_.isObject(l[aElement])) {
@@ -243,11 +294,12 @@ export default {
       const $this = this;
       let nodes = this.data.dagData.nodes;
       nodes.push({
-        id: data.value,
+        id: data.value + (this.cnt[data.value] === undefined ? this.cnt[data.value] = 0: this.cnt[data.value] = ++ this.cnt[data.value]),
         left: coordinates[0],
         top: coordinates[1],
         render: dragNode,
         userData: data,
+        realId: data.value,
         label: data.label,
         menus: {
           del: {
@@ -311,7 +363,7 @@ export default {
       const $this = this;
       console.log('----------------');
       let edges = this.data.dagData.edges;
-      debugger
+
       e['menus'] = {
         del: {
           name: "删除关系", callback: function (key, opt) {
@@ -357,7 +409,7 @@ export default {
 }
 </script>
 
-<style>
+<style lang="less">
 .node-close {
   cursor: pointer;
   position: relative;
@@ -368,7 +420,10 @@ export default {
   display: block;
   z-index: 1000000;
 }
-
+.butterfly-vue-container{
+  //width: inherit !important;
+  //height: inherit !important;
+}
 .context-menu-list {
   min-width: 10em;
 }
@@ -383,11 +438,13 @@ export default {
   width: 200px;
   height: 45px;
 }
+.full-button1:extend(.full-button all) {
+}
 .full-button {
   display: block;
   position: fixed;
   right: 0;
-  top: 50%;
+  top: 0;
   cursor: pointer;
   z-index: 20230626;
 }

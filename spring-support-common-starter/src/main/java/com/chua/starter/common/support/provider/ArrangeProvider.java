@@ -5,7 +5,11 @@ import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.database.AutoMetadata;
 import com.chua.common.support.database.orm.conditions.Wrappers;
 import com.chua.common.support.database.repository.Repository;
+import com.chua.common.support.function.Joiner;
+import com.chua.common.support.lang.arrange.Arrange;
+import com.chua.common.support.lang.arrange.ArrangeFactory;
 import com.chua.common.support.lang.arrange.ArrangeHandler;
+import com.chua.common.support.lang.arrange.DelegateArrangeFactory;
 import com.chua.common.support.lang.page.Page;
 import com.chua.common.support.spi.Option;
 import com.chua.common.support.spi.ServiceProvider;
@@ -22,7 +26,8 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.sql.DataSource;
 import javax.transaction.Transactional;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.chua.starter.common.support.configuration.CacheConfiguration.DEFAULT_CACHE_MANAGER;
 
@@ -77,6 +82,42 @@ public class ArrangeProvider implements ApplicationContextAware {
         edgeRepository.saveBatch(edges);
 
         return Result.success();
+    }
+
+    /**
+     * 运行
+     *
+     * @param arrangeId arrangeId
+     * @return 结果
+     */
+    @GetMapping("/run")
+    @Transactional
+    public Result<String> run(@RequestParam("arrangeId") String arrangeId) {
+        DelegateArrangeFactory arrangeFactory = DelegateArrangeFactory.create();
+        List<SysArrangeNode> nodes = nodeRepository.list(Wrappers.<SysArrangeNode>lambdaQuery().eq(SysArrangeNode::getArrangeId, arrangeId));
+        List<SysArrangeEdge> edges = edgeRepository.list(Wrappers.<SysArrangeEdge>lambdaQuery().eq(SysArrangeEdge::getArrangeId, arrangeId));
+        doRegister(arrangeFactory, edges, nodes);
+        return Result.success();
+    }
+
+    private void doRegister(DelegateArrangeFactory arrangeFactory, List<SysArrangeEdge> edges, List<SysArrangeNode> nodes) {
+        Map<String, List<String>> depends = new LinkedHashMap<>();
+        for (SysArrangeEdge arrangeEdge : edges) {
+            depends.computeIfAbsent(arrangeEdge.getTargetNode(), it -> new LinkedList<>()).add(arrangeEdge.getSourceNode());
+        }
+        List<Arrange> aDefault = nodes.stream().map(it -> {
+            Arrange arrange = new Arrange();
+            arrange.setArrangeName(it.getId());
+            arrange.setArrangeType("default");
+            arrange.setArrangeDepends(Joiner.on(",").withPrefix("default:").join(depends.get(it.getId())));
+            arrange.setHandler(ServiceProvider.of(ArrangeHandler.class).getNewExtension(it.getRealId()));
+            return arrange;
+        }).collect(Collectors.toList());
+        for (Arrange arrange : aDefault) {
+            arrangeFactory.register(arrange);
+        }
+
+        arrangeFactory.run(Collections.emptyMap());
     }
 
     /**

@@ -23,6 +23,18 @@ export default {
   name: "Butterfly",
   emits: ['onCreateEdge', 'onDeleteEdge', 'onChangeEdges', 'onOtherEvent', 'onLoaded'],
   props: {
+    layout: {
+      type: Object,
+      default: {
+        type: 'dagreLayout',
+        options: {
+          rankdir: 'LR',
+          nodesep: 70,
+          ranksep: 80,
+          controlPoints: false,
+        }
+      }
+    },
     className: {
       type: String,
       default: 'butterfly',
@@ -70,15 +82,7 @@ export default {
             arrow: true
           }
         };
-        this.canvasConf.layout = {
-          type: 'dagreLayout',
-          options: {
-            rankdir: 'LR',
-            nodesep: 30,
-            ranksep: 80,
-            controlPoints: false
-          },
-        };
+        this.canvasConf.layout = this.layout;
         this.canvas = new this.baseCanvas(this.canvasConf);
         this.canvas.setMinimap(true);
       }
@@ -223,6 +227,9 @@ export default {
   },
 
   watch: {
+    layout(val) {
+      this.canvas.autoLayout(val.type, val.options);
+    },
     groups: {
       handler() {
         this.updateCavans();
