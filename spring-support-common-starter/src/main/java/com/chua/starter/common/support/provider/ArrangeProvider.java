@@ -13,9 +13,7 @@ import com.chua.common.support.lang.arrange.DelegateArrangeFactory;
 import com.chua.common.support.lang.page.Page;
 import com.chua.common.support.spi.Option;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.starter.common.support.pojo.SysArrange;
-import com.chua.starter.common.support.pojo.SysArrangeEdge;
-import com.chua.starter.common.support.pojo.SysArrangeNode;
+import com.chua.starter.common.support.pojo.*;
 import com.chua.starter.common.support.result.Result;
 import org.springframework.beans.BeansException;
 import org.springframework.cache.annotation.CacheEvict;
@@ -42,6 +40,7 @@ public class ArrangeProvider implements ApplicationContextAware {
     private Repository<SysArrange> repository;
     private Repository<SysArrangeNode> nodeRepository;
     private Repository<SysArrangeEdge> edgeRepository;
+    private Repository<SysArrangeLogger> loggerRepository;
 
     /**
      * 所有任务
@@ -93,7 +92,7 @@ public class ArrangeProvider implements ApplicationContextAware {
     @GetMapping("/run")
     @Transactional
     public Result<String> run(@RequestParam("arrangeId") String arrangeId) {
-        DelegateArrangeFactory arrangeFactory = DelegateArrangeFactory.create();
+        DelegateArrangeFactory arrangeFactory = DelegateArrangeFactory.create(new SysArrangeListener(arrangeId, loggerRepository));
         List<SysArrangeNode> nodes = nodeRepository.list(Wrappers.<SysArrangeNode>lambdaQuery().eq(SysArrangeNode::getArrangeId, arrangeId));
         List<SysArrangeEdge> edges = edgeRepository.list(Wrappers.<SysArrangeEdge>lambdaQuery().eq(SysArrangeEdge::getArrangeId, arrangeId));
         doRegister(arrangeFactory, edges, nodes);
@@ -174,5 +173,6 @@ public class ArrangeProvider implements ApplicationContextAware {
         this.repository = autoMetadata.createRepository(applicationContext.getBeansOfType(DataSource.class), SysArrange.class);
         this.nodeRepository = autoMetadata.createRepository(applicationContext.getBeansOfType(DataSource.class), SysArrangeNode.class);
         this.edgeRepository = autoMetadata.createRepository(applicationContext.getBeansOfType(DataSource.class), SysArrangeEdge.class);
+        this.loggerRepository = autoMetadata.createRepository(applicationContext.getBeansOfType(DataSource.class), SysArrangeLogger.class);
     }
 }
