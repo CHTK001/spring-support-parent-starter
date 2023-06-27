@@ -34,6 +34,12 @@ public class SysArrangeLogger {
     private String arrangeId;
 
     /**
+     * 编排任务执行ID
+     */
+    @Column
+    @com.chua.common.support.database.annotation.Column(comment = "编排任务执行ID")
+    private String arrangeLoggerCode;
+    /**
      * 日志内容
      */
     @Column

@@ -13,6 +13,7 @@ import com.chua.common.support.lang.arrange.DelegateArrangeFactory;
 import com.chua.common.support.lang.page.Page;
 import com.chua.common.support.spi.Option;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.IdUtils;
 import com.chua.starter.common.support.pojo.*;
 import com.chua.starter.common.support.result.Result;
 import org.springframework.beans.BeansException;
@@ -20,14 +21,19 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.annotation.Bean;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 
+import javax.annotation.Resource;
 import javax.sql.DataSource;
 import javax.transaction.Transactional;
 import java.util.*;
+import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
 import static com.chua.starter.common.support.configuration.CacheConfiguration.DEFAULT_CACHE_MANAGER;
+import static com.chua.starter.common.support.constant.Constant.DEFAULT_EXECUTOR;
 
 /**
  * 编排接口
@@ -42,6 +48,8 @@ public class ArrangeProvider implements ApplicationContextAware {
     private Repository<SysArrangeEdge> edgeRepository;
     private Repository<SysArrangeLogger> loggerRepository;
 
+    @Resource(name = DEFAULT_EXECUTOR)
+    private Executor executor;
     /**
      * 所有任务
      * @return 所有任务
@@ -92,7 +100,8 @@ public class ArrangeProvider implements ApplicationContextAware {
     @GetMapping("/run")
     @Transactional
     public Result<String> run(@RequestParam("arrangeId") String arrangeId) {
-        DelegateArrangeFactory arrangeFactory = DelegateArrangeFactory.create(new SysArrangeListener(arrangeId, loggerRepository));
+        String tid = IdUtils.createTid();
+        DelegateArrangeFactory arrangeFactory = DelegateArrangeFactory.create(new SysArrangeListener(tid, arrangeId, loggerRepository));
         List<SysArrangeNode> nodes = nodeRepository.list(Wrappers.<SysArrangeNode>lambdaQuery().eq(SysArrangeNode::getArrangeId, arrangeId));
         List<SysArrangeEdge> edges = edgeRepository.list(Wrappers.<SysArrangeEdge>lambdaQuery().eq(SysArrangeEdge::getArrangeId, arrangeId));
         doRegister(arrangeFactory, edges, nodes);
@@ -116,7 +125,9 @@ public class ArrangeProvider implements ApplicationContextAware {
             arrangeFactory.register(arrange);
         }
 
-        arrangeFactory.run(Collections.emptyMap());
+        executor.execute(() -> {
+            arrangeFactory.run(Collections.emptyMap());
+        });
     }
 
     /**

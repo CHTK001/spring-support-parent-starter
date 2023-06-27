@@ -1,8 +1,10 @@
 package com.chua.starter.common.support.configuration;
 
+import com.chua.starter.common.support.constant.Constant;
 import com.chua.starter.common.support.eventbus.EventbusTemplate;
 import com.chua.starter.common.support.profile.EnvironmentProfile;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -19,7 +21,7 @@ public class EventBusConfiguration  {
 
     @Bean
     @ConditionalOnMissingBean
-    public EventbusTemplate EventbusTemplate(Environment environment, Executor executor) {
+    public EventbusTemplate EventbusTemplate(Environment environment, @Qualifier(Constant.DEFAULT_EXECUTOR2) Executor executor) {
         return new EventbusTemplate(new EnvironmentProfile(environment), executor);
     }
 

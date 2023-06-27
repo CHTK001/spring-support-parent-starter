@@ -6,6 +6,9 @@ package com.chua.starter.common.support.constant;
  * @author CH
  */
 public interface Constant {
+
+    String DEFAULT_EXECUTOR = "default-executor";
+    String DEFAULT_EXECUTOR2 = "default-executor-2";
     public final String DEFAULT_SER = "123456";
 
     String PARAM = "param";
