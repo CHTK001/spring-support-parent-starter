@@ -166,10 +166,22 @@ export default {
             orientation: [1, 0],
             pos: [0, 0.5]
           };
+          const canvansRef = this.canvansRef;
+          const $this = this;
           this.data.dagData.nodes.length = 0
+          const nodes = this.data.dagData.nodes;
           data.data.nodes.forEach(item => {
             item['userData'] = JSON.parse(item['userData'] || '{}');
-            item['menus'] = JSON.parse(item['menus'] || '{}');
+            item['menus'] = {
+              del: {
+                name: "删除节点", callback: function (key, opt) {
+                  let id = this.attr('id');
+                  let node = canvansRef.getNode(id);
+                  canvansRef.removeNode(node);
+                  $this.data.dagData.nodes = nodes.filter(it => it.id !== node.id)
+                }
+              },
+            };
             item['Class'] = Node;
             item['render'] = dragNode;
             item['endpoints'] = [
