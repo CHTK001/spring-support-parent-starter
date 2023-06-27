@@ -2,7 +2,7 @@ package com.chua.starter.server.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.boren.biz.entity.dict.EleDict;
-import com.chua.starter.datasource.DS;
+import com.chua.starter.common.support.annotations.DS;
 import com.chua.starter.server.pojo.Dept;
 
 import java.util.List;

@@ -30,6 +30,11 @@ public class SysArrangeNode {
     @com.chua.common.support.database.annotation.Column(comment = "节点ID")
     private String id;
     /**
+     * 真实ID
+     */
+    @com.chua.common.support.database.annotation.Column(comment = "真实ID")
+    private String realId;
+    /**
      * 节点用户数据
      */
     @com.chua.common.support.database.annotation.Column(comment = "节点用户数据")
