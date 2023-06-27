@@ -41,7 +41,6 @@
         <module>spring-support-mqtt-starter</module>
         <module>spring-support-minio-starter</module>
         <module>spring-support-task-starter</module>
-        <module>spring-support-vue-html</module>
     </modules>
 
     <properties>
