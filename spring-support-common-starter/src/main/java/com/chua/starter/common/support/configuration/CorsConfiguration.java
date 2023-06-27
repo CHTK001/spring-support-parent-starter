@@ -1,6 +1,7 @@
 package com.chua.starter.common.support.configuration;
 
 import com.chua.starter.common.support.common.CommonService;
+import com.chua.starter.common.support.constant.Constant;
 import com.chua.starter.common.support.converter.FastJsonHttpMessageConverter;
 import com.chua.starter.common.support.converter.ResultDataHttpMessageConverter;
 import com.chua.starter.common.support.limit.LimitAspect;
@@ -17,6 +18,7 @@ import com.chua.starter.common.support.watch.WatchPointcutAdvisor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.web.servlet.WebMvcRegistrations;
@@ -102,7 +104,7 @@ public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAw
     @Bean
     @ConditionalOnMissingBean
     @Lazy
-    public CommonService commonService(CoreProperties coreProperties, Executor executorService) {
+    public CommonService commonService(CoreProperties coreProperties, @Qualifier(Constant.DEFAULT_EXECUTOR2) Executor executorService) {
         return new CommonService(coreProperties, executorService);
     }
 
