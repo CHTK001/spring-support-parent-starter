@@ -27,13 +27,12 @@
       <div>
         <el-table  :loading="status.loading" ref="tableRef" :data="data.tableData" style="width: 100%" border stripe>
           <el-table-column prop="arrangeName" label="任务名称"/>
-          <el-table-column label="操作" width="200" style="z-index: 10000">
+          <el-table-column label="操作" width="300" style="z-index: 10000">
             <template #default="scope">
               <el-button type="info" :icon="Edit" @click.stop="onUpdate(scope.row)" size="small"/>
-              <el-button type="info" :icon="Coin" @click.stop="onDag(scope.row)" size="small">
-                配置
-              </el-button>
+              <el-button type="success" :icon="Coin" @click.stop="onDag(scope.row)" size="small" />
               <el-button type="danger" :icon="Delete" @click.stop="onDelete(scope.row)" size="small"/>
+              <el-button type="success" :icon="CaretRight" @click.stop="onRun(scope.row)" size="small" />
             </template>
           </el-table-column>
         </el-table>
@@ -76,7 +75,7 @@ import '@/plugins/layx/layx.min.css'
 
 import request from "axios";
 import '@/style/easy.css'
-import {Coin, Delete, Edit} from "@element-plus/icons-vue";
+import {CaretRight, Coin, Delete, Edit} from "@element-plus/icons-vue";
 import {ElMessageBox} from "element-plus";
 import Butterfly from "@/components/butterfly.vue";
 import config from "@/config/common"
@@ -86,6 +85,9 @@ export default {
   name: "arrange",
   components: {Butterfly},
   computed: {
+    CaretRight() {
+      return CaretRight
+    },
     Coin() {
       return Coin
     },
@@ -155,6 +157,24 @@ export default {
         width: 800,
         height: 800
       })
+    },
+    onRun: function (row) {
+      request.get(host + "/arrange/run", {
+        params: {
+          arrangeId: row.arrangeId
+        }
+      }).then(({data}) => {
+          layx.notice({
+            type: data.code === '00000' ? 'success': 'error',
+            message: data.msg
+          })
+          return !1;
+      }).catch((data) => {
+        layx.notice({
+          type: 'error',
+          message: data.response.data ? data.response.data.msg : '系统错误'
+        })
+      });
     },
     onUpdate: function (row) {
       this.status.dialogVisible = !this.status.dialogVisible;
