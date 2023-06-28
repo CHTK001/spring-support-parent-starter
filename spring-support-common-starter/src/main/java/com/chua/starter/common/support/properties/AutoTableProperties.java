@@ -18,7 +18,7 @@ public class AutoTableProperties {
     /**
      * 开启
      */
-    private boolean open = true;
+    private boolean open ;
     /**
      * 扫描包
      */
