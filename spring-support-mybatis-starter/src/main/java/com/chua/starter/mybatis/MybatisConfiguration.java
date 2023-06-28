@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
-import com.chua.starter.mybatis.controller.MybatisGeneratorController;
 import com.chua.starter.mybatis.endpoint.MybatisEndpoint;
 import com.chua.starter.mybatis.interceptor.SqlInterceptor;
 import com.chua.starter.mybatis.method.SupportInjector;
