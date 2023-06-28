@@ -26,6 +26,14 @@ public class Result<T> extends ReturnResult<T> {
         result.setData(data);
         return result;
     }
+    public static <T> Result<T> failed(Exception e) {
+        String localizedMessage = e.getLocalizedMessage();
+        int i = localizedMessage.indexOf(":");
+        if(i > -1) {
+            localizedMessage = localizedMessage.substring(i + 1);
+        }
+        return result(SYSTEM_EXECUTION_ERROR.getCode(), localizedMessage, null);
+    }
 
     public static <T> Result<T> failed() {
         return result(SYSTEM_EXECUTION_ERROR.getCode(), SYSTEM_EXECUTION_ERROR.getMsg(), null);
