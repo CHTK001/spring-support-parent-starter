@@ -59,7 +59,7 @@ public class AuthClientExecute {
         return INSTANCE;
     }
 
-    private AuthClientExecute() {
+    public AuthClientExecute() {
         this.authClientProperties = Binder.binder(AuthClientProperties.PRE, AuthClientProperties.class);
         this.encode = ServiceProvider.of(KeyEncode.class).getExtension(authClientProperties.getEncryption());
         this.decode = ServiceProvider.of(KeyDecode.class).getExtension(authClientProperties.getEncryption());

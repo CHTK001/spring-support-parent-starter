@@ -203,7 +203,7 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> handleException(Exception e) {
         log.error("unknown exception: {}", e.getMessage());
-        return Result.failed(e.getLocalizedMessage());
+        return Result.failed(e);
     }
 
     /**

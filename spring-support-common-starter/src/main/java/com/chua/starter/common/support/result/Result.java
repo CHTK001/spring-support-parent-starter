@@ -1,8 +1,10 @@
 package com.chua.starter.common.support.result;
 
+import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.utils.StringUtils;
 import lombok.Data;
 
+import static com.chua.common.support.constant.CommonConstant.SYMBOL_EXCEPTION;
 import static com.chua.starter.common.support.result.ReturnCode.SUCCESS;
 import static com.chua.starter.common.support.result.ReturnCode.SYSTEM_EXECUTION_ERROR;
 
@@ -28,9 +30,10 @@ public class Result<T> extends ReturnResult<T> {
     }
     public static <T> Result<T> failed(Exception e) {
         String localizedMessage = e.getLocalizedMessage();
-        int i = localizedMessage.indexOf(":");
-        if(i > -1) {
-            localizedMessage = localizedMessage.substring(i + 1);
+        int i = localizedMessage.indexOf(SYMBOL_EXCEPTION);
+        while (i > -1) {
+            localizedMessage = localizedMessage.substring(SYMBOL_EXCEPTION.length() + i + 1);
+            i = localizedMessage.indexOf(SYMBOL_EXCEPTION);
         }
         return result(SYSTEM_EXECUTION_ERROR.getCode(), localizedMessage, null);
     }
