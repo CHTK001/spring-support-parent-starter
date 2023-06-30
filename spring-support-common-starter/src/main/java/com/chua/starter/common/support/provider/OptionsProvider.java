@@ -7,8 +7,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * 配置服务
@@ -24,7 +26,7 @@ public class OptionsProvider {
     }
 
     private void initial(OptionProperties optionProperties, Environment environment) {
-        Map<String, Object> options = optionProperties.getOptions();
+        Map<String, Object> options = Optional.ofNullable(optionProperties.getOptions()).orElse(Collections.emptyMap());
         for (Map.Entry<String, Object> entry : options.entrySet()) {
             config.put(entry.getKey(), environment.resolvePlaceholders(entry.getValue() + ""));
         }
