@@ -106,4 +106,10 @@ public class RequestUtils {
 
         return request.getRequestURI();
     }
+
+    public static boolean isLocal(String hostAddress) {
+        return "127.0.0.1".equals(hostAddress) ||
+                "0:0:0:0:0:0:0:1".equals(hostAddress) ||
+                "localhost".equals(hostAddress);
+    }
 }

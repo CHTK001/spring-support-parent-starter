@@ -17,6 +17,10 @@ public class SocketIoProperties {
 
     public static final String PRE = "plugin.socket";
     /**
+     * 是否开启
+     */
+    private boolean open;
+    /**
      * 本地IP
      */
     private String host = "0.0.0.0";
