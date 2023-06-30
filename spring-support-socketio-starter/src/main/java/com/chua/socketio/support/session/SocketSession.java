@@ -49,4 +49,14 @@ public class SocketSession {
             log.error("", e);
         }
     }
+
+    /**
+     * 下发命令
+     *
+     * @param event 时间
+     * @param msg   消息
+     */
+    public void send(String event, String msg) {
+        client.sendEvent(event, msg);
+    }
 }
