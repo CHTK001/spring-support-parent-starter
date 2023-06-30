@@ -12,6 +12,8 @@ import com.chua.starter.common.support.processor.ResponseModelViewMethodProcesso
 import com.chua.starter.common.support.properties.CoreProperties;
 import com.chua.starter.common.support.properties.CorsProperties;
 import com.chua.starter.common.support.properties.LimitProperties;
+import com.chua.starter.common.support.properties.OptionProperties;
+import com.chua.starter.common.support.provider.OptionsProvider;
 import com.chua.starter.common.support.result.ResponseAdvice;
 import com.chua.starter.common.support.version.ApiVersionRequestMappingHandlerMapping;
 import com.chua.starter.common.support.watch.WatchPointcutAdvisor;
@@ -27,6 +29,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.core.env.Environment;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -49,7 +52,7 @@ import java.util.concurrent.ExecutorService;
  * @author CH
  */
 @Slf4j
-@EnableConfigurationProperties({CorsProperties.class, CoreProperties.class, LimitProperties.class})
+@EnableConfigurationProperties({OptionProperties.class, CorsProperties.class, CoreProperties.class, LimitProperties.class})
 public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAware, WebMvcRegistrations {
 
     @Resource
@@ -78,6 +81,12 @@ public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAw
             return new ApiVersionRequestMappingHandlerMapping();
         }
         return new RequestMappingHandlerMapping();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public OptionsProvider optionsProvider(OptionProperties optionProperties, Environment environment) {
+        return new OptionsProvider(optionProperties, environment);
     }
 
     @Bean

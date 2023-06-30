@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.configuration;
 
+import com.chua.common.support.utils.NetUtils;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.env.EnvironmentPostProcessor;
 import org.springframework.core.env.ConfigurableEnvironment;
@@ -31,6 +32,8 @@ public class CommonConfigurationConfiguration implements EnvironmentPostProcesso
         properties.setProperty("spring.servlet.multipart.enabled", "true");
         properties.setProperty("spring.servlet.multipart.max-file-size", "200MB");
         properties.setProperty("spring.servlet.multipart.max-request-size", "2000MB");
+
+        properties.setProperty("localhost.address", NetUtils.getLocalIpv4());
         PropertiesPropertySource propertiesPropertySource = new PropertiesPropertySource("common", properties);
         MutablePropertySources propertySources = environment.getPropertySources();
         propertySources.addLast(propertiesPropertySource);
