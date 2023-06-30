@@ -24,8 +24,18 @@ public interface SocketSessionTemplate {
 
     /**
      * 获取session
+     *
      * @param sessionId session
      * @return 结果
      */
     SocketSession getSession(String sessionId);
+
+    /**
+     * 下發命令
+     *
+     * @param event     事件
+     * @param sessionId 会话ID
+     * @param msg       消息
+     */
+    void send(String sessionId, String event, String msg);
 }

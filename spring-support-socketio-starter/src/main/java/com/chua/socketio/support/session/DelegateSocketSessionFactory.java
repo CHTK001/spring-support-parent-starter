@@ -38,4 +38,10 @@ public class DelegateSocketSessionFactory implements SocketSessionTemplate {
     public SocketSession getSession(String sessionId) {
         return cache.stream().filter(it -> it.isMatch(sessionId)).findFirst().get();
     }
+
+    @Override
+    public void send(String sessionId, String event, String msg) {
+        SocketSession session = getSession(sessionId);
+        session.send(event, msg);
+    }
 }
