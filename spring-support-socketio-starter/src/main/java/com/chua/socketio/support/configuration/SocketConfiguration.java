@@ -3,12 +3,16 @@ package com.chua.socketio.support.configuration;
 import com.chua.socketio.support.SocketIOListener;
 import com.chua.socketio.support.properties.SocketIoProperties;
 import com.chua.socketio.support.server.DelegateSocketIOServer;
+import com.chua.socketio.support.session.DelegateSocketSessionFactory;
+import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.corundumstudio.socketio.Configuration;
 import com.corundumstudio.socketio.SocketConfig;
 import com.corundumstudio.socketio.listener.ConnectListener;
 import com.corundumstudio.socketio.listener.DisconnectListener;
 import com.corundumstudio.socketio.protocol.JacksonJsonSupport;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
@@ -19,12 +23,20 @@ import java.util.List;
  *
  * @author CH
  */
+@Slf4j
 @EnableConfigurationProperties(SocketIoProperties.class)
 public class SocketConfiguration {
 
 
     @Bean
     @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = SocketIoProperties.PRE, name = "open", havingValue = "true", matchIfMissing = false)
+    public SocketSessionTemplate socketSessionFactory() {
+        return new DelegateSocketSessionFactory();
+    }
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = SocketIoProperties.PRE, name = "open", havingValue = "true", matchIfMissing = false)
     public DelegateSocketIOServer socketIOServer(Configuration configuration, List<SocketIOListener> listenerList) {
         DelegateSocketIOServer socketIOServer = new DelegateSocketIOServer(configuration);
         //添加事件监听器
@@ -44,6 +56,7 @@ public class SocketConfiguration {
     }
     @Bean
     @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = SocketIoProperties.PRE, name = "open", havingValue = "true", matchIfMissing = false)
     public Configuration configuration(SocketIoProperties properties) {
         SocketConfig socketConfig = new SocketConfig();
         socketConfig.setReuseAddress(true);
@@ -54,6 +67,7 @@ public class SocketConfiguration {
         configuration.setSocketConfig(socketConfig);
         configuration.setAddVersionHeader(true);
         configuration.setWebsocketCompression(true);
+        configuration.setHttpCompression(true);
         configuration.setJsonSupport(new JacksonJsonSupport());
         // host在本地测试可以设置为localhost或者本机IP，在Linux服务器跑可换成服务器IP
         configuration.setHostname(properties.getHost());
