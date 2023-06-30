@@ -57,7 +57,6 @@ public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAw
 
     @Resource
     private CorsProperties corsProperties;
-
     @Resource
     private CoreProperties coreProperties;
     private List<HttpMessageConverter<?>> messageConverters;
@@ -167,8 +166,6 @@ public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAw
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        this.messageConverters = new LinkedList<>();
-
         this.messageConverters = new LinkedList<>();
         messageConverters.add(new MappingJackson2HttpMessageConverter());
         messageConverters.add(new FastJsonHttpMessageConverter());
