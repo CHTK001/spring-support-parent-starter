@@ -1,11 +1,11 @@
 package com.chua.starter.oss.support.provider;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.function.strategy.name.OssNamedStrategy;
 import com.chua.common.support.function.strategy.name.RejectStrategy;
 import com.chua.common.support.image.filter.ImageFilter;
+import com.chua.common.support.lang.page.Page;
 import com.chua.common.support.oss.adaptor.AbstractOssResolver;
 import com.chua.common.support.oss.adaptor.OssResolver;
 import com.chua.common.support.oss.node.OssNode;
@@ -48,7 +48,7 @@ import static com.chua.starter.common.support.result.ReturnCode.PARAM_ERROR;
  * @author CH
  */
 @Controller
-@RequestMapping("/release")
+@RequestMapping("/oss/release")
 public class OssProvider {
 
     @Resource
@@ -76,11 +76,11 @@ public class OssProvider {
 
     @ResponseBody
     @GetMapping("/listObjects")
-    public Result<List<OssNode>> listObjects(String id, String name, String ossBucket) {
-        if (null == ossBucket) {
-            return Result.failed("bucket不存在");
-        }
-        SysOss ossSystem = ossSystemService.getSystemByBucket(ossBucket);
+    public Result<Page<OssNode>> listObjects(String ossId,
+                                             String name,
+                                             @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
+                                             @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
+        SysOss ossSystem = ossSystemService.getById(ossId);
         if (null == ossSystem) {
             return Result.failed("bucket不存在");
         }
@@ -89,9 +89,8 @@ public class OssProvider {
             return Result.failed("bucket不存在");
         }
 
-        return Result.success(ossResolver.getChildren(BeanUtils.copyProperties(ossSystem, com.chua.common.support.pojo.OssSystem.class),
-                id,
-                name));
+        return Result.success(ossResolver.getChildren(
+                BeanUtils.copyProperties(ossSystem, com.chua.common.support.pojo.OssSystem.class), ossId, name, pageNum, pageSize));
     }
     /**
      * 文件上传
@@ -237,7 +236,7 @@ public class OssProvider {
      */
     @GetMapping("page")
     @ResponseBody
-    public ResultData<Page<SysOss>> page(DelegatePage<SysOss> page, @Valid SysOss entity, BindingResult bindingResult) {
+    public ResultData<com.baomidou.mybatisplus.extension.plugins.pagination.Page<SysOss>> page(DelegatePage<SysOss> page, @Valid SysOss entity, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }

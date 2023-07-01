@@ -17,6 +17,9 @@ public class SysOss {
     private Integer ossId;
     @Column(comment = "oss路径")
     private String ossPath;
+
+    @Column(comment = "oss是否禁用; 0:禁用; 1:开启", defaultValue = "1")
+    private Integer ossStatus;
     @Column(comment = "bucket")
     private String ossBucket;
     @Column(comment = "oss类型", defaultValue = "'local'")
