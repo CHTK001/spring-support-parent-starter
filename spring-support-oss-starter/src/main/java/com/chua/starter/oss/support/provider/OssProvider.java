@@ -6,6 +6,7 @@ import com.chua.common.support.function.strategy.name.OssNamedStrategy;
 import com.chua.common.support.function.strategy.name.RejectStrategy;
 import com.chua.common.support.image.filter.ImageFilter;
 import com.chua.common.support.lang.page.Page;
+import com.chua.common.support.media.MediaTypeFactory;
 import com.chua.common.support.oss.adaptor.AbstractOssResolver;
 import com.chua.common.support.oss.adaptor.OssResolver;
 import com.chua.common.support.oss.node.OssNode;
@@ -14,15 +15,16 @@ import com.chua.common.support.spi.Option;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.FileUtils;
 import com.chua.common.support.utils.IoUtils;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.result.Result;
 import com.chua.starter.common.support.result.ResultData;
 import com.chua.starter.common.support.view.ResponseHandler;
 import com.chua.starter.mybatis.entity.DelegatePage;
+import com.chua.starter.oss.support.pojo.OssQuery;
 import com.chua.starter.oss.support.pojo.SysOss;
 import com.chua.starter.oss.support.service.OssSystemService;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.http.MediaType;
-import org.springframework.http.MediaTypeFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
@@ -39,6 +41,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.List;
+import java.util.Optional;
 
 import static com.chua.starter.common.support.result.ReturnCode.PARAM_ERROR;
 
@@ -90,7 +93,7 @@ public class OssProvider {
         }
 
         return Result.success(ossResolver.getChildren(
-                BeanUtils.copyProperties(ossSystem, com.chua.common.support.pojo.OssSystem.class), ossId, name, pageNum, pageSize));
+                BeanUtils.copyProperties(ossSystem, com.chua.common.support.pojo.OssSystem.class), ossId, StringUtils.defaultString(name, ""), pageNum, pageSize));
     }
     /**
      * 文件上传
@@ -139,11 +142,21 @@ public class OssProvider {
     @GetMapping(value = "/preview")
     public ResponseEntity<byte[]> preview(@RequestParam("bucket") String bucket,
                                           @RequestParam("path") String path,
-                                          @RequestParam(value = "mode", required = false) String mode,
+                                          @RequestParam(value = "mode", required = false) Mode mode,
                                           HttpServletRequest request) throws IOException {
-        return preview(bucket, path, mode, request);
+        return preview(bucket, path, mode, false, request);
     }
-
+    /**
+     * 文件预览
+     *
+     * @param query    查询条件
+     * @param request 响应
+     */
+    @PostMapping(value = "/preview")
+    public ResponseEntity<byte[]> preview(@RequestBody OssQuery query,
+                                          HttpServletRequest request) throws IOException {
+        return preview(query.getBucket(), query.getPath(), query.getMode(), true, request);
+    }
     /**
      * 预览
      *
@@ -153,15 +166,18 @@ public class OssProvider {
     public ResponseEntity<byte[]> preview(@PathVariable("bucket") String bucket,
                                           @PathVariable("path") String path,
                                           @RequestParam(value = "mode", required = false, defaultValue = "PREVIEW") Mode mode,
+                                          @RequestParam(value = "reanalysis", required = false, defaultValue = "false") Boolean reanalysis,
                                           HttpServletRequest request) {
         if (null == mode && DOWNLOAD.equalsIgnoreCase(request.getQueryString())) {
             mode = Mode.DOWNLOAD;
         }
 
         String uri = request.getRequestURI();
-        path = uri.substring(uri.indexOf(bucket) + bucket.length());
+        if(!reanalysis) {
+            path = uri.substring(uri.indexOf(bucket) + bucket.length());
+        }
         try {
-            path = URLDecoder.decode(path, "UTF-8");
+            path = URLDecoder.decode(URLDecoder.decode(path, "UTF-8"), "UTF-8");
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException(e);
         }
@@ -194,8 +210,16 @@ public class OssProvider {
                 }
             }
 
+            MediaType mt = null;
+            Optional<MediaType> first = org.springframework.http.MediaTypeFactory.getMediaTypes(path).stream().findFirst();
+            if(!first.isPresent()) {
+                com.chua.common.support.media.MediaType mediaType = MediaTypeFactory.getMediaType(path).orElse(com.chua.common.support.media.MediaType.ANY_TYPE);
+                mt = new MediaType(mediaType.type(), mediaType.subtype());
+            } else {
+                mt = first.get();
+            }
             return ResponseEntity.ok()
-                    .contentType(MediaTypeFactory.getMediaType(path).orElse(MediaType.ALL))
+                    .contentType(mt)
                     .body(outputStream.toByteArray());
         } catch (IOException e) {
             throw new RuntimeException(e);
