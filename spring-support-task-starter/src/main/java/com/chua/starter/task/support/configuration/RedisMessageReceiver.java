@@ -1,7 +1,9 @@
 package com.chua.starter.task.support.configuration;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.starter.task.support.pojo.SysTask;
 import com.chua.starter.task.support.service.SystemTaskService;
+import com.chua.starter.task.support.task.Task;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -24,18 +26,13 @@ public class RedisMessageReceiver {
      */
     public void receiveMessage(String message) {
         System.out.println("通知的key是：" + message);
-        if (!message.endsWith("$000000000000000000")) {
+        if (!message.startsWith(Task.PRE)) {
             return;
         }
-        message = message.replace("$000000000000000000", "");
-        SysTask systemTask = systemTaskService.getById(message);
+        message = message.replace(Task.PRE, "");
+        SysTask systemTask = systemTaskService.getOne(Wrappers.<SysTask>lambdaQuery().eq(SysTask::getTaskTid, message).last("limit 1"));
         if (null != systemTask) {
-            if (systemTask.isFinish()) {
-                systemTask.setTaskStatus(1);
-            } else {
-                systemTask.setTaskStatus(0);
-            }
-            systemTaskService.updateById(systemTask);
+            systemTaskService.forUpdate(message, systemTask.isFinish() ? 1 : 0);
         }
     }
 }
