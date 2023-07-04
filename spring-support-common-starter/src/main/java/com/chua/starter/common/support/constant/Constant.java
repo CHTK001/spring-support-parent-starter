@@ -9,6 +9,7 @@ public interface Constant {
 
     String DEFAULT_EXECUTOR = "default-executor";
     String DEFAULT_EXECUTOR2 = "default-executor-2";
+    String DEFAULT_TASK_EXECUTOR = "default-task-executor";
     public final String DEFAULT_SER = "123456";
 
     String PARAM = "param";

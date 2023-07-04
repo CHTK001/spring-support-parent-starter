@@ -41,4 +41,27 @@ public interface SystemTaskService extends IService<SysTask> {
      * @return 结果
      */
     IPage<SysTask> withPage(Page<SysTask> page);
+
+    /**
+     * 更新數據状态
+     *
+     * @param taskId 任務ID
+     * @param status 狀態
+     */
+    void forUpdate(String taskId, int status);
+
+    /**
+     * 更新数据步长
+     *
+     * @param taskId 任务ID
+     * @param size   当前数据长度
+     */
+    void forUpdateCurrent(Integer taskId, int size);
+
+    /**
+     * 任务ID
+     *
+     * @param taskTid 任务ID
+     */
+    SysTask getTaskByTaskTid(String taskTid);
 }

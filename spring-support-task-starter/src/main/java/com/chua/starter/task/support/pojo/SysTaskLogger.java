@@ -1,35 +1,28 @@
 package com.chua.starter.task.support.pojo;
 
 import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.Version;
 import com.chua.common.support.database.annotation.Column;
-import com.chua.common.support.database.entity.JdbcType;
 import com.chua.starter.mybatis.pojo.SysBase;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * 系统任务
+ * 系统日志
  *
  * @author CH
  */
 @EqualsAndHashCode(callSuper = true)
 @Data
-public class SysTask extends SysBase implements Comparable<SysTask> {
+public class SysTaskLogger extends SysBase {
 
     @Column(comment = "表ID")
     @TableId
-    private Integer taskId;
+    private Integer taskLoggerId;
     /**
      * 任务ID
      */
-    @Column(comment = "任务ID(系统生成的唯一标识)")
-    private String taskTid;
-    /**
-     * 任务执行的超时时间(s)
-     */
-    @Column(comment = "任务执行的超时时间(s)", defaultValue = "60")
-    private Integer taskExpire;
+    @Column(comment = "任务ID")
+    private String taskId;
     /**
      * 任务类型
      */
@@ -38,7 +31,7 @@ public class SysTask extends SysBase implements Comparable<SysTask> {
     /**
      * 任务分片ID
      */
-    @Column(comment = "任务分片ID(任务自定义唯一表示)")
+    @Column(comment = "任务分片ID")
     private String taskCid;
     /**
      * 任务名称
@@ -71,28 +64,6 @@ public class SysTask extends SysBase implements Comparable<SysTask> {
      */
     @Column(comment = "是否完成; 0: 未完成; 1:完成;2: 暂停; 3: 进行中")
     private Integer taskStatus;
-    /**
-     * 版本
-     */
-    @Version
-    @Column(comment = "版本")
-    private Integer taskVersion;
 
 
-    @Column(comment = "任务参数", jdbcType = JdbcType.LONGTEXT)
-    private String taskParams;
-
-    /**
-     * 是否完成
-     *
-     * @return 是否完成
-     */
-    public boolean isFinish() {
-        return getTaskStatus() == 1 || getTaskCurrent() >= getTaskTotal();
-    }
-
-    @Override
-    public int compareTo(SysTask o) {
-        return (taskType + taskTid + taskBusiness + taskCid).compareTo(o.taskType + o.taskTid + o.taskBusiness + o.taskCid);
-    }
 }
