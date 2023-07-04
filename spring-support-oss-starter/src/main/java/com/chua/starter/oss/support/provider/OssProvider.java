@@ -9,6 +9,7 @@ import com.chua.common.support.lang.page.Page;
 import com.chua.common.support.media.MediaTypeFactory;
 import com.chua.common.support.oss.adaptor.AbstractOssResolver;
 import com.chua.common.support.oss.adaptor.OssResolver;
+import com.chua.common.support.oss.deep.OssAnalysis;
 import com.chua.common.support.oss.node.OssNode;
 import com.chua.common.support.pojo.Mode;
 import com.chua.common.support.spi.Option;
@@ -20,6 +21,7 @@ import com.chua.starter.common.support.result.Result;
 import com.chua.starter.common.support.result.ResultData;
 import com.chua.starter.common.support.view.ResponseHandler;
 import com.chua.starter.mybatis.entity.DelegatePage;
+import com.chua.starter.oss.support.pojo.DeepQuery;
 import com.chua.starter.oss.support.pojo.OssQuery;
 import com.chua.starter.oss.support.pojo.SysOss;
 import com.chua.starter.oss.support.service.OssSystemService;
@@ -76,7 +78,33 @@ public class OssProvider {
                 id,
                 name));
     }
+    @ResponseBody
+    @PostMapping("/listObjects")
+    public Result<Page<OssNode>> listDeepObjects(@RequestBody DeepQuery query) {
+        SysOss ossSystem = ossSystemService.getById(query.getOssId());
+        if (null == ossSystem) {
+            return Result.failed("bucket不存在");
+        }
+        OssResolver ossResolver = ServiceProvider.of(OssResolver.class).getNewExtension(ossSystem.getOssType());
+        if (null == ossResolver) {
+            return Result.failed("bucket不存在");
+        }
 
+        if (StringUtils.isBlank(query.getPath())) {
+            return listObjects(query.getOssId(), query.getOssBucket(), query.getPageNum(), query.getPageSize());
+        }
+        OssAnalysis ossAnalysis = ServiceProvider.of(OssAnalysis.class).getDeepNewExtension(ossSystem.getOssType());
+
+        return Result.success(ossAnalysis.analysis(
+                BeanUtils.copyProperties(ossSystem, com.chua.common.support.pojo.OssSystem.class),
+                query.getOssBucket(),
+                query.getPath(),
+                query.getName(),
+                query.getPageNum(),
+                query.getPageSize()
+        ));
+
+    }
     @ResponseBody
     @GetMapping("/listObjects")
     public Result<Page<OssNode>> listObjects(String ossId,
@@ -143,8 +171,9 @@ public class OssProvider {
     public ResponseEntity<byte[]> preview(@RequestParam("bucket") String bucket,
                                           @RequestParam("path") String path,
                                           @RequestParam(value = "mode", required = false) Mode mode,
+                                          @RequestParam(value = "fromPath", required = false) String fromPath,
                                           HttpServletRequest request) throws IOException {
-        return preview(bucket, path, mode, false, request);
+        return preview(bucket, path, mode,fromPath, false, request);
     }
     /**
      * 文件预览
@@ -155,7 +184,7 @@ public class OssProvider {
     @PostMapping(value = "/preview")
     public ResponseEntity<byte[]> preview(@RequestBody OssQuery query,
                                           HttpServletRequest request) throws IOException {
-        return preview(query.getBucket(), query.getPath(), query.getMode(), true, request);
+        return preview(query.getBucket(), query.getPath(), query.getMode(), query.getFromPath(), true, request);
     }
     /**
      * 预览
@@ -166,6 +195,7 @@ public class OssProvider {
     public ResponseEntity<byte[]> preview(@PathVariable("bucket") String bucket,
                                           @PathVariable("path") String path,
                                           @RequestParam(value = "mode", required = false, defaultValue = "PREVIEW") Mode mode,
+                                          @RequestParam(value = "fromPath", required = false ) String fromPath,
                                           @RequestParam(value = "reanalysis", required = false, defaultValue = "false") Boolean reanalysis,
                                           HttpServletRequest request) {
         if (null == mode && DOWNLOAD.equalsIgnoreCase(request.getQueryString())) {
@@ -199,7 +229,11 @@ public class OssProvider {
 
         ResponseHandler<byte[]> handler;
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-            ossResolver.preview(BeanUtils.copyProperties(ossSystem, com.chua.common.support.pojo.OssSystem.class), path, mode, null, outputStream);
+            ossResolver.preview(BeanUtils.copyProperties(ossSystem, com.chua.common.support.pojo.OssSystem.class),
+                    path,
+                    mode,
+                    null,
+                    outputStream, fromPath);
 
             handler = ResponseHandler.ok();
             if (mode == Mode.DOWNLOAD) {
