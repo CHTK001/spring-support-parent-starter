@@ -30,7 +30,7 @@ public class RedisMessageReceiver {
             return;
         }
         message = message.replace(Task.PRE, "");
-        SysTask systemTask = systemTaskService.getOne(Wrappers.<SysTask>lambdaQuery().eq(SysTask::getTaskTid, message).last("limit 1"));
+        SysTask systemTask = systemTaskService.getTaskByTaskTid(message);
         if (null != systemTask) {
             systemTaskService.forUpdate(message, systemTask.isFinish() ? 1 : 0);
         }

@@ -13,6 +13,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
@@ -34,36 +35,15 @@ public class TaskConfiguration {
     RedisConnectionFactory factory;
 
     /**
-     * redis 订阅频道
-     * <p>
-     * //RedisConnectionFactory connectionFactory
-     *
-     * @param listenerAdapter
-     * @return
-     */
-    @Bean
-    public RedisMessageListenerContainer container(MessageListenerAdapter listenerAdapter) {
-
-        RedisMessageListenerContainer container = new RedisMessageListenerContainer();
-        container.setConnectionFactory(factory);
-        // 订阅通道，key过期时通知
-        container.addMessageListener(listenerAdapter, new PatternTopic("__keyevent@0__:expired"));
-        container.addMessageListener(listenerAdapter, new PatternTopic("__keyevent@1__:expired"));
-        // 可以订阅多个通道
-
-        return container;
-    }
-
-    /**
      * TaskManager
      * <p>
      *
-     * @param stringRedisTemplate TaskManager
+     * @param redisTemplate TaskManager
      * @return
      */
     @Bean
-    public TaskManager taskManager(StringRedisTemplate stringRedisTemplate) {
-        return new TaskManager(stringRedisTemplate);
+    public TaskManager taskManager(@Qualifier(com.chua.common.support.protocol.server.Constant.STRING_REDIS) StringRedisTemplate redisTemplate) {
+        return new TaskManager(redisTemplate);
     }
 
     @Bean

@@ -26,7 +26,7 @@ public abstract class Task implements AutoCloseable {
 
     private final AtomicBoolean status = new AtomicBoolean(true);
     public static final String PRE = "task:";
-    private static final Log log = Log.getLogger(Task.class);
+    protected static final Log log = Log.getLogger(Task.class);
     private final TaskParam taskParam;
     private final ListOperations<String, String> opsForList;
     private final String taskTid;
@@ -43,6 +43,7 @@ public abstract class Task implements AutoCloseable {
 
     private final TaskManager taskManager;
     String newKey;
+
 
     public Task(SysTask sysTask, TaskManager taskManager) {
         this.newKey = PRE + sysTask.getTaskTid();
