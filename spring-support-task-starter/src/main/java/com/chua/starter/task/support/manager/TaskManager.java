@@ -58,6 +58,7 @@ public class TaskManager implements InitializingBean, DisposableBean {
         }
 
         ThreadUtils.shutdownNow(scheduledExecutorService);
+        ThreadUtils.shutdownNow(scheduledExecutorUpdateService);
     }
 
     @Override

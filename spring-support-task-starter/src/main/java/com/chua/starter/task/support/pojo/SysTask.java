@@ -71,7 +71,7 @@ public class SysTask extends SysBase implements Comparable<SysTask> {
     /**
      * 是否完成
      */
-    @Column(comment = "是否完成; 0: 未完成; 1:完成;2: 暂停; 3: 进行中")
+    @Column(comment = "是否完成; 0: 未完成; 1:完成;2: 暂停; 3: 进行中", defaultValue = "0")
     private Integer taskStatus;
     /**
      * 版本
