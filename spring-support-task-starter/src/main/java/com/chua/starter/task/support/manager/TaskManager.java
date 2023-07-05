@@ -7,6 +7,7 @@ import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.common.support.constant.Constant;
 import com.chua.starter.task.support.pojo.SysTask;
 import com.chua.starter.task.support.service.SystemTaskService;
+import com.chua.starter.task.support.sse.SseEmitterService;
 import com.chua.starter.task.support.task.Task;
 import com.google.common.eventbus.Subscribe;
 import lombok.AllArgsConstructor;
@@ -41,6 +42,7 @@ public class TaskManager implements InitializingBean, DisposableBean {
     private Executor executor;
     @Resource
     private SystemTaskService systemTaskService;
+
 
     private Map<String, Integer> taskStepQueue = new ConcurrentHashMap<>(100000);
 
@@ -120,7 +122,11 @@ public class TaskManager implements InitializingBean, DisposableBean {
      */
     private void doTaskWorker() {
         for (TaskInfo value : taskMap.values()) {
-            value.getTask().worker();
+            Task task = value.getTask();
+            if(null == task) {
+                continue;
+            }
+            executor.execute(task::worker);
         }
     }
 
