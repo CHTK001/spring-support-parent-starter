@@ -1,6 +1,7 @@
 package com.chua.starter.task.support.manager;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.chua.common.support.log.Log;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.common.support.constant.Constant;
@@ -12,6 +13,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 import javax.annotation.Resource;
@@ -29,8 +31,9 @@ import java.util.concurrent.TimeUnit;
  * @author CH
  */
 public class TaskManager implements InitializingBean, DisposableBean {
-    private final StringRedisTemplate stringRedisTemplate;
+    private final StringRedisTemplate redisTemplate;
 
+    private static final Log log = Log.getLogger(Task.class);
     private final Map<String, TaskInfo> taskMap = new ConcurrentHashMap<>();
     private final ScheduledExecutorService scheduledExecutorService = ThreadUtils.newScheduledThreadPoolExecutor("check-heart");
     private final ScheduledExecutorService scheduledExecutorUpdateService = ThreadUtils.newScheduledThreadPoolExecutor("update-heart");
@@ -41,8 +44,8 @@ public class TaskManager implements InitializingBean, DisposableBean {
 
     private Map<String, Integer> taskStepQueue = new ConcurrentHashMap<>(100000);
 
-    public TaskManager(StringRedisTemplate stringRedisTemplate) {
-        this.stringRedisTemplate = stringRedisTemplate;
+    public TaskManager(StringRedisTemplate redisTemplate) {
+        this.redisTemplate = redisTemplate;
     }
 
     @Override
@@ -59,6 +62,7 @@ public class TaskManager implements InitializingBean, DisposableBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
+        log.info("开始装载任务");
         List<SysTask> sysTasks = systemTaskService.list(Wrappers.<SysTask>lambdaQuery()
                 .in(SysTask::getTaskStatus, 0, 2));
         for (SysTask sysTask : sysTasks) {
@@ -69,8 +73,10 @@ public class TaskManager implements InitializingBean, DisposableBean {
             ));
 
         }
-
+        log.info("装载完成");
+        log.info("开始设置心跳检测机制");
         doInitialHeart();
+        log.info("心跳检测机制初始化完成");
         doTaskWorker();
     }
 
@@ -87,7 +93,7 @@ public class TaskManager implements InitializingBean, DisposableBean {
                     try {
                         SysTask taskByTaskTid = systemTaskService.getTaskByTaskTid(entry.getKey());
                         taskByTaskTid.setTaskCurrent(entry.getValue());
-                        systemTaskService.updateById(taskByTaskTid);
+                        systemTaskService.updateWithId(taskByTaskTid);
                     } catch (Exception ignored) {
                     }
                 }

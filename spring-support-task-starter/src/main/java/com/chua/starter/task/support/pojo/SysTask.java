@@ -1,10 +1,12 @@
 package com.chua.starter.task.support.pojo;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.Version;
 import com.chua.common.support.database.annotation.Column;
 import com.chua.common.support.database.entity.JdbcType;
 import com.chua.starter.mybatis.pojo.SysBase;
+import com.chua.starter.task.support.task.Task;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -18,7 +20,7 @@ import lombok.EqualsAndHashCode;
 public class SysTask extends SysBase implements Comparable<SysTask> {
 
     @Column(comment = "表ID")
-    @TableId
+    @TableId(type = IdType.AUTO)
     private Integer taskId;
     /**
      * 任务ID
@@ -38,7 +40,7 @@ public class SysTask extends SysBase implements Comparable<SysTask> {
     /**
      * 任务分片ID
      */
-    @Column(comment = "任务分片ID(任务自定义唯一表示)")
+    @Column(comment = "任务的实现Bean")
     private String taskCid;
     /**
      * 任务名称
@@ -94,5 +96,9 @@ public class SysTask extends SysBase implements Comparable<SysTask> {
     @Override
     public int compareTo(SysTask o) {
         return (taskType + taskTid + taskBusiness + taskCid).compareTo(o.taskType + o.taskTid + o.taskBusiness + o.taskCid);
+    }
+
+    public String getKey() {
+        return Task.PRE + taskId;
     }
 }
