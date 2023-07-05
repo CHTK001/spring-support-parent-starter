@@ -21,6 +21,15 @@ public class Result<T> extends ReturnResult<T> {
         return success(null);
     }
 
+
+    public static <T> Result<T> successWith(String message) {
+        Result<T> result = new Result<>();
+        result.setCode(SUCCESS.getCode());
+        result.setMsg(message);
+        return result;
+    }
+
+
     public static <T> Result<T> success(T data) {
         Result<T> result = new Result<>();
         result.setCode(SUCCESS.getCode());

@@ -60,13 +60,13 @@ public class SysTask extends SysBase implements Comparable<SysTask> {
     /**
      * 总量
      */
-    @Column(comment = "总量")
+    @Column(comment = "总量", defaultValue = "0")
     private Integer taskTotal;
 
     /**
      * 总量
      */
-    @Column(comment = "处理量")
+    @Column(comment = "处理量", defaultValue = "0")
     private Integer taskCurrent;
     /**
      * 是否完成
@@ -99,6 +99,6 @@ public class SysTask extends SysBase implements Comparable<SysTask> {
     }
 
     public String getKey() {
-        return Task.PRE + taskId;
+        return taskTid;
     }
 }

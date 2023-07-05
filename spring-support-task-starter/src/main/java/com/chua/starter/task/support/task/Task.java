@@ -9,7 +9,9 @@ import com.chua.starter.task.support.manager.TaskManager;
 import com.chua.starter.task.support.pojo.SysTask;
 import com.chua.starter.task.support.pojo.TaskParam;
 import com.chua.starter.task.support.service.SystemTaskService;
+import com.chua.starter.task.support.sse.SseEmitterService;
 import org.springframework.data.redis.core.ListOperations;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 import javax.annotation.Resource;
@@ -25,12 +27,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public abstract class Task implements AutoCloseable {
 
     private final AtomicBoolean status = new AtomicBoolean(true);
-    public static final String PRE = "task:";
+    public static final String PRE = "";
     protected static final Log log = Log.getLogger(Task.class);
     private final TaskParam taskParam;
-    private final ListOperations<String, String> opsForList;
+    private ListOperations<String, String> opsForList;
     private final String taskTid;
-    @Resource
+    @Resource(name = com.chua.common.support.protocol.server.Constant.STRING_REDIS)
     private StringRedisTemplate redisTemplate;
 
     @Resource(name = Constant.DEFAULT_TASK_EXECUTOR)
@@ -43,14 +45,14 @@ public abstract class Task implements AutoCloseable {
 
     private final TaskManager taskManager;
     String newKey;
-
+    @Resource
+    private SseEmitterService sseEmitterService;
 
     public Task(SysTask sysTask, TaskManager taskManager) {
-        this.newKey = PRE + sysTask.getTaskTid();
+        this.newKey = sysTask.getKey();
         this.taskManager = taskManager;
         this.taskTid = sysTask.getTaskTid();
         String taskParams = sysTask.getTaskParams();
-        this.opsForList = redisTemplate.opsForList();
         this.taskParam = new TaskParam(Json.toMapStringObject(taskParams));
     }
 
@@ -72,17 +74,15 @@ public abstract class Task implements AutoCloseable {
     }
 
     private void doWork(Integer taskCurrent, TaskParam taskParam) {
-        executor.execute(() -> {
-            if (!status.get()) {
-                return;
-            }
-            try {
-                execute(taskCurrent, taskParam);
-                doAnalysis();
-            } catch (Exception e) {
-                log.error("运行失败: {}", e.getMessage());
-            }
-        });
+        if (!status.get()) {
+            return;
+        }
+        try {
+            execute(taskCurrent, taskParam);
+            doAnalysis();
+        } catch (Exception e) {
+            log.error("运行失败: {}", e.getMessage());
+        }
     }
 
     /**
@@ -95,7 +95,9 @@ public abstract class Task implements AutoCloseable {
     }
 
     private synchronized void doAnalysis() {
+        check();
         int exact = Math.toIntExact(opsForList.size(newKey));
+        sseEmitterService.emit(taskTid, exact);
         SysTask sysTask = taskManager.getTask(taskTid);
         if (exact >= sysTask.getTaskTotal()) {
             log.info("任务已完成");
@@ -108,6 +110,16 @@ public abstract class Task implements AutoCloseable {
         doUpdateStep(exact);
         doWork(exact, taskParam);
         ThreadUtils.sleepSecondsQuietly(0);
+    }
+
+    protected void check() {
+        if(null == opsForList) {
+            synchronized (this) {
+                if(null == opsForList) {
+                    this.opsForList = redisTemplate.opsForList();
+                }
+            }
+        }
     }
 
     /**
@@ -131,6 +143,7 @@ public abstract class Task implements AutoCloseable {
      */
     protected synchronized void step(String... code) {
         try {
+            check();
             opsForList.leftPushAll(newKey, code);
             redisTemplate.expire(newKey, taskManager.getTask(taskTid).getTaskExpire(), TimeUnit.SECONDS);
             doAnalysis();

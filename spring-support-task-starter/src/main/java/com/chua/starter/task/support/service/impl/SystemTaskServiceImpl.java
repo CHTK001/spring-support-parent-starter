@@ -13,9 +13,11 @@ import com.chua.starter.task.support.mapper.SystemTaskMapper;
 import com.chua.starter.task.support.pojo.SysTask;
 import com.chua.starter.task.support.pojo.TaskStatus;
 import com.chua.starter.task.support.service.SystemTaskService;
+import com.chua.starter.task.support.task.Task;
 import com.google.common.eventbus.AsyncEventBus;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.core.ListOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -36,11 +38,11 @@ public class SystemTaskServiceImpl implements SystemTaskService {
     @Resource
     private SystemTaskMapper baseMapper;
 
-    @Resource
-    private RedisTemplate redisTemplate;
+    @Resource(name = com.chua.common.support.protocol.server.Constant.STRING_REDIS)
+    private StringRedisTemplate redisTemplate;
 
     @Override
-    @CacheEvict(cacheManager = CacheConfiguration.DEFAULT_CACHE_MANAGER, cacheNames = "task", key = "#task.taskTid")
+    @CacheEvict(cacheManager = CacheConfiguration.DEFAULT_CACHE_MANAGER, cacheNames = "task", key = "#task.taskId")
     public int deleteWithId(String taskTid) {
         int i = baseMapper.delete(Wrappers.<SysTask>lambdaQuery().eq(SysTask::getTaskTid, taskTid));
         if (i > 0) {
@@ -50,10 +52,12 @@ public class SystemTaskServiceImpl implements SystemTaskService {
     }
 
     @Override
-    @CacheEvict(cacheManager = CacheConfiguration.DEFAULT_CACHE_MANAGER, cacheNames = "task", key = "#task.taskTid")
+    @CacheEvict(cacheManager = CacheConfiguration.DEFAULT_CACHE_MANAGER, cacheNames = "task", key = "#task.taskId")
     public int updateWithId(SysTask task) {
         task.setTaskTid(null);
         task.setTaskTotal(null);
+        task.setTaskCurrent(null);
+        task.setTaskStatus(null);
         int i = baseMapper.updateById(task);
         if (i > 0) {
             eventBus.post(task);
@@ -98,7 +102,16 @@ public class SystemTaskServiceImpl implements SystemTaskService {
 
     @Override
     public Page<SysTask> withPage(Page<SysTask> page) {
-        return baseMapper.selectPage(page, Wrappers.lambdaQuery());
+        Page<SysTask> sysTaskPage = baseMapper.selectPage(page, Wrappers.lambdaQuery());
+        List<SysTask> records = sysTaskPage.getRecords();
+        ListOperations listOperations = redisTemplate.opsForList();
+        for (SysTask record : records) {
+            Long size = listOperations.size(record.getKey());
+            if(null != size) {
+                record.setTaskCurrent(Math.toIntExact(size));
+            }
+        }
+        return sysTaskPage;
     }
 
     @Override
@@ -141,6 +154,7 @@ public class SystemTaskServiceImpl implements SystemTaskService {
         systemTask.setTaskCurrent(size);
         if (size >= systemTask.getTaskTotal()) {
             systemTask.setTaskStatus(1);
+            systemTask.setTaskCurrent(systemTask.getTaskTotal());
         }
 
         try {
