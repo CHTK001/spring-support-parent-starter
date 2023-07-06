@@ -6,7 +6,6 @@ import com.baomidou.mybatisplus.annotation.Version;
 import com.chua.common.support.database.annotation.Column;
 import com.chua.common.support.database.entity.JdbcType;
 import com.chua.starter.mybatis.pojo.SysBase;
-import com.chua.starter.task.support.task.Task;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -90,7 +89,7 @@ public class SysTask extends SysBase implements Comparable<SysTask> {
      * @return 是否完成
      */
     public boolean isFinish() {
-        return getTaskStatus() == 1 || getTaskCurrent() >= getTaskTotal();
+        return null != getTaskStatus() && (getTaskStatus() == 1 || getTaskCurrent() >= getTaskTotal());
     }
 
     @Override
