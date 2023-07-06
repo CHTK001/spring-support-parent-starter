@@ -6,6 +6,7 @@ import com.chua.starter.common.support.converter.ResultDataHttpMessageConverter;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
@@ -43,9 +44,8 @@ import static com.chua.starter.common.support.result.ReturnCode.*;
  * @author CH
  */
 @RestControllerAdvice
+@Slf4j
 public class ResponseAdvice implements ResponseBodyAdvice<Object> {
-
-    final Log log = Log.getLogger(ResponseAdvice.class);
 
     @ExceptionHandler(BindException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
@@ -58,8 +58,8 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
     /**
      * RequestParam参数的校验
      *
-     * @param e
-     * @param <T>
+     * @param e ConstraintViolationException
+     * @param <T> Result
      * @return
      */
     @ExceptionHandler(ConstraintViolationException.class)
@@ -174,7 +174,7 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public <T> Result<T> processSQLSyntaxErrorException(SQLSyntaxErrorException e) {
         log.error(e.getMessage(), e);
-        return Result.failed(e.getMessage());
+        return Result.failed("无权限操作");
     }
 
 
@@ -185,7 +185,7 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
         if (e.getResultCode() != null) {
             return Result.failed(e.getResultCode());
         }
-        return Result.failed(e.getMessage());
+        return Result.failed("系统繁忙");
     }
 
     static final DecimalFormat DECIMAL_FORMAT = new DecimalFormat("0.##");
@@ -203,7 +203,7 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> handleException(Exception e) {
         log.error("unknown exception: {}", e.getMessage());
-        return Result.failed(e);
+        return Result.failed("请求失败,请稍后重试");
     }
 
     /**
@@ -256,8 +256,8 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
         }
 
 //        if (aClass == ResultDataHttpMessageConverter.class) {
-            return ResultData.success(o);
+//            return ResultData.success(o);
 //        }
-//        return o;
+        return Result.success(o);
     }
 }

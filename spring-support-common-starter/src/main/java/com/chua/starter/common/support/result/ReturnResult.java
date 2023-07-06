@@ -192,9 +192,18 @@ public class ReturnResult<T> {
      * @return 结果
      */
     public static <T> ReturnResult<T> illegal(T data, String msg) {
+        return new ReturnResult<>(PARAM_ERROR.getCode(), data, msg);
+    }
+    /**
+     * 初始化
+     *
+     * @param msg  消息
+     * @param <T>  类型
+     * @return 结果
+     */
+    public static <T> ReturnResult<T> illegal(String msg) {
         return new ReturnResult<>(PARAM_ERROR.getCode(), null, msg);
     }
-
     /**
      * 初始化
      *
@@ -202,7 +211,7 @@ public class ReturnResult<T> {
      * @param <T>  类型
      * @return 结果
      */
-    public static <T> ReturnResult<T> illegal(T data) {
+    public static <T> ReturnResult<T> illegalWith(T data) {
         return illegal(data, "");
     }
 
@@ -224,7 +233,7 @@ public class ReturnResult<T> {
      * @return 结果
      */
     public static <T> ReturnResult<T> illegal() {
-        return illegal(null);
+        return illegal(null, "操作失败");
     }
 
     @Override
