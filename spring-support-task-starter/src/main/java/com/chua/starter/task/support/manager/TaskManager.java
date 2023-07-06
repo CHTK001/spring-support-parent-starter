@@ -1,14 +1,14 @@
 package com.chua.starter.task.support.manager;
 
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.chua.common.support.eventbus.EventbusType;
+import com.chua.common.support.eventbus.Subscribe;
 import com.chua.common.support.log.Log;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.common.support.constant.Constant;
+import com.chua.starter.common.support.eventbus.EventbusTemplate;
 import com.chua.starter.task.support.pojo.SysTask;
-import com.chua.starter.task.support.service.SystemTaskService;
 import com.chua.starter.task.support.task.Task;
-import com.google.common.eventbus.Subscribe;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.springframework.beans.BeansException;
@@ -20,7 +20,6 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 
 import javax.annotation.Resource;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
@@ -41,14 +40,15 @@ public class TaskManager implements ApplicationContextAware, DisposableBean, Com
     private final ScheduledExecutorService scheduledExecutorUpdateService = ThreadUtils.newScheduledThreadPoolExecutor("update-heart");
     @Resource(name = Constant.DEFAULT_TASK_EXECUTOR)
     private Executor executor;
-    private SystemTaskService systemTaskService;
+
+    @Resource
+    private EventbusTemplate eventbusTemplate;
 
 
     private Map<String, Integer> taskStepQueue = new ConcurrentHashMap<>(100000);
 
-    public TaskManager(StringRedisTemplate redisTemplate, SystemTaskService systemTaskService) {
+    public TaskManager(StringRedisTemplate redisTemplate) {
         this.redisTemplate = redisTemplate;
-        this.systemTaskService = systemTaskService;
     }
 
     @Override
@@ -66,18 +66,6 @@ public class TaskManager implements ApplicationContextAware, DisposableBean, Com
 
 
     public void afterPropertiesSet() {
-        log.info("开始装载任务");
-        List<SysTask> sysTasks = systemTaskService.list(Wrappers.<SysTask>lambdaQuery()
-                .in(SysTask::getTaskStatus, 0, 2));
-        for (SysTask sysTask : sysTasks) {
-            taskMap.put(sysTask.getTaskTid(), new TaskInfo(ServiceProvider.of(Task.class)
-                    .getNewExtension(sysTask.getTaskType() + ":" + sysTask.getTaskCid(),
-                            sysTask, this),
-                    sysTask
-            ));
-
-        }
-        log.info("装载完成");
         log.info("开始设置心跳检测机制");
         doInitialHeart();
         log.info("心跳检测机制初始化完成");
@@ -94,12 +82,7 @@ public class TaskManager implements ApplicationContextAware, DisposableBean, Com
                 Map<String, Integer> tpl = new HashMap<>(taskStepQueue);
                 taskStepQueue.clear();
                 for (Map.Entry<String, Integer> entry : tpl.entrySet()) {
-                    try {
-                        SysTask taskByTaskTid = systemTaskService.getTaskByTaskTid(entry.getKey());
-                        taskByTaskTid.setTaskCurrent(entry.getValue());
-                        systemTaskService.updateWithId(taskByTaskTid);
-                    } catch (Exception ignored) {
-                    }
+                    eventbusTemplate.post("update", entry);
                 }
             } catch (Exception ignored) {
             }
@@ -147,7 +130,7 @@ public class TaskManager implements ApplicationContextAware, DisposableBean, Com
      * @param taskTid
      */
     public void reset(String taskTid) {
-        systemTaskService.reset(taskTid);
+        eventbusTemplate.post("reset", taskTid);
     }
 
     @Override
@@ -171,7 +154,7 @@ public class TaskManager implements ApplicationContextAware, DisposableBean, Com
     }
 
 
-    @Subscribe
+    @Subscribe(type = EventbusType.GUAVA, name = "task")
     public void listener(SysTask sysTask) {
         taskMap.put(sysTask.getTaskTid(), new TaskInfo(ServiceProvider.of(Task.class)
                 .getNewExtension(sysTask.getTaskType() + ":" + sysTask.getTaskCid(),
@@ -180,7 +163,7 @@ public class TaskManager implements ApplicationContextAware, DisposableBean, Com
         ));
     }
 
-    @Subscribe
+    @Subscribe(type = EventbusType.GUAVA, name = "task")
     public void listener(String taskTid) {
         taskStepQueue.remove(taskTid);
         taskMap.remove(taskTid);
