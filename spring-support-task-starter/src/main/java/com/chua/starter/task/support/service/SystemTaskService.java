@@ -82,4 +82,10 @@ public interface SystemTaskService  {
      * @return 结果
      */
     List<SysTask> list(LambdaQueryWrapper<SysTask> wrapper);
+
+    /**
+     * 重置
+     * @param taskTid ID
+     */
+    void reset(String taskTid);
 }

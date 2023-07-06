@@ -23,4 +23,9 @@ public class EmptyTask extends Task{
         ThreadUtils.sleepSecondsQuietly(5);
         step("1");
     }
+
+    @Override
+    protected void finish(SysTask sysTask) {
+        reset();
+    }
 }

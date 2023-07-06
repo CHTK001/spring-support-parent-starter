@@ -40,14 +40,14 @@ public class TaskManager implements InitializingBean, DisposableBean {
     private final ScheduledExecutorService scheduledExecutorUpdateService = ThreadUtils.newScheduledThreadPoolExecutor("update-heart");
     @Resource(name = Constant.DEFAULT_TASK_EXECUTOR)
     private Executor executor;
-    @Resource
     private SystemTaskService systemTaskService;
 
 
     private Map<String, Integer> taskStepQueue = new ConcurrentHashMap<>(100000);
 
-    public TaskManager(StringRedisTemplate redisTemplate) {
+    public TaskManager(StringRedisTemplate redisTemplate, SystemTaskService systemTaskService) {
         this.redisTemplate = redisTemplate;
+        this.systemTaskService = systemTaskService;
     }
 
     @Override
@@ -138,6 +138,14 @@ public class TaskManager implements InitializingBean, DisposableBean {
      */
     public void doUpdateStep(String taskTid, int size) {
         taskStepQueue.put(taskTid, size);
+    }
+
+    /**
+     * 重置
+     * @param taskTid
+     */
+    public void reset(String taskTid) {
+        systemTaskService.reset(taskTid);
     }
 
 
