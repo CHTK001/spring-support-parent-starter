@@ -3,14 +3,19 @@ package com.chua.starter.task.support.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.chua.common.support.eventbus.EventbusType;
+import com.chua.common.support.eventbus.Subscribe;
+import com.chua.common.support.log.Log;
 import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.configuration.CacheConfiguration;
+import com.chua.starter.common.support.eventbus.EventbusTemplate;
 import com.chua.starter.task.support.mapper.SystemTaskMapper;
 import com.chua.starter.task.support.pojo.SysTask;
 import com.chua.starter.task.support.pojo.TaskStatus;
 import com.chua.starter.task.support.service.SystemTaskService;
-import com.google.common.eventbus.AsyncEventBus;
+import com.chua.starter.task.support.task.Task;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.ListOperations;
@@ -19,15 +24,17 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author CH
  */
-public class SystemTaskServiceImpl implements SystemTaskService {
+@Service
+public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunner {
 
-
+    private static final Log log = Log.getLogger(Task.class);
     @Resource
-    private AsyncEventBus asyncEventBus;
+    private EventbusTemplate eventbusTemplate;
 
     private SystemTaskMapper baseMapper;
 
@@ -43,7 +50,7 @@ public class SystemTaskServiceImpl implements SystemTaskService {
     public int deleteWithId(String taskTid) {
         int i = baseMapper.delete(Wrappers.<SysTask>lambdaQuery().eq(SysTask::getTaskTid, taskTid));
         if (i > 0) {
-            asyncEventBus.post(taskTid);
+            eventbusTemplate.post("task", taskTid);
         }
         return i;
     }
@@ -57,7 +64,7 @@ public class SystemTaskServiceImpl implements SystemTaskService {
         task.setTaskStatus(null);
         int i = baseMapper.updateById(task);
         if (i > 0) {
-            asyncEventBus.post(task);
+            eventbusTemplate.post("task", task);
         }
         return i;
     }
@@ -92,7 +99,7 @@ public class SystemTaskServiceImpl implements SystemTaskService {
 
         boolean b = 1 == baseMapper.insert(task);
         if (b) {
-            asyncEventBus.post(task);
+            eventbusTemplate.post("task", task);
         }
         return b;
     }
@@ -190,6 +197,36 @@ public class SystemTaskServiceImpl implements SystemTaskService {
         } catch (Exception e) {
             e.printStackTrace();
             doUpdate(taskId, status, count--);
+        }
+    }
+
+    @Override
+    public void run(String... args) throws Exception {
+        log.info("开始装载任务");
+        List<SysTask> sysTasks = list(Wrappers.<SysTask>lambdaQuery()
+                .in(SysTask::getTaskStatus, 0, 2));
+        for (SysTask sysTask : sysTasks) {
+            eventbusTemplate.post("task", sysTask);
+        }
+        log.info("装载完成");
+    }
+
+
+    @Subscribe(type = EventbusType.GUAVA, name = "reset")
+    public void forReset(String taskTid) {
+        try {
+            reset(taskTid);
+        } catch (Exception ignored) {
+        }
+    }
+
+    @Subscribe(type = EventbusType.GUAVA, name = "update")
+    public void update(Map.Entry<String, Integer> entry) {
+        try {
+            SysTask taskByTaskTid = getTaskByTaskTid(entry.getKey());
+            taskByTaskTid.setTaskCurrent(entry.getValue());
+            updateWithId(taskByTaskTid);
+        } catch (Exception ignored) {
         }
     }
 }
