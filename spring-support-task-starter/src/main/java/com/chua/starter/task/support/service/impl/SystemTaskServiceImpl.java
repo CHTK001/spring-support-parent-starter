@@ -99,7 +99,7 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
 
         boolean b = 1 == baseMapper.insert(task);
         if (b) {
-            eventbusTemplate.post("task", task);
+            eventbusTemplate.post(EventbusType.GUAVA, "task", task);
         }
         return b;
     }
