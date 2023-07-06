@@ -29,7 +29,10 @@ public class SseEmitterService implements DisposableBean, InitializingBean {
      * sse
      * @param taskTid 任务ID
      */
-    public void emit(String taskTid) {
+    public void subscribe(String taskTid) {
+        if(sseCache.containsKey(taskTid)) {
+            return;
+        }
         SseEmitter sseEmitter = new SseEmitter(3600_000L);
         sseCache.put(taskTid, new Sse(taskTid, sseEmitter, System.currentTimeMillis()));
         sseEmitter.onTimeout(() -> sseCache.remove(taskTid));
@@ -56,7 +59,7 @@ public class SseEmitterService implements DisposableBean, InitializingBean {
      * 通知
      * @param taskTid 任务
      */
-    public void unEmit(String taskTid) {
+    public void unSubscribe(String taskTid) {
         Sse sse = sseCache.get(taskTid);
         if(null == sse) {
             return;
@@ -77,7 +80,7 @@ public class SseEmitterService implements DisposableBean, InitializingBean {
         scheduledExecutorUpdateService.scheduleAtFixedRate(() -> {
             for (Sse sse : sseCache.values()) {
                 if(System.currentTimeMillis() - sse.getCreateTime() < toMillis ) {
-                    unEmit(sse.taskTid);
+                    unSubscribe(sse.taskTid);
                 }
             }
         }, 0, 30, TimeUnit.SECONDS);
