@@ -11,7 +11,6 @@ import com.chua.starter.task.support.pojo.TaskParam;
 import com.chua.starter.task.support.service.SystemTaskService;
 import com.chua.starter.task.support.sse.SseEmitterService;
 import org.springframework.data.redis.core.ListOperations;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 import javax.annotation.Resource;
@@ -70,12 +69,21 @@ public abstract class Task implements AutoCloseable {
      * 开始任务
      */
     public void worker() {
-        Integer taskCurrent = taskManager.getTask(taskTid).getTaskCurrent();
+        SysTask task = taskManager.getTask(taskTid);
+        if (null == task) {
+            return;
+        }
+        check();
+        Integer taskCurrent = Math.toIntExact(opsForList.size(taskTid));
         doWork(taskCurrent, taskParam);
     }
 
     private void doWork(Integer taskCurrent, TaskParam taskParam) {
         if (!status.get()) {
+            return;
+        }
+        SysTask task = taskManager.getTask(taskTid);
+        if (null == task) {
             return;
         }
         try {
@@ -105,6 +113,7 @@ public abstract class Task implements AutoCloseable {
 
     private synchronized void doAnalysis() {
         check();
+        ThreadUtils.sleepSecondsQuietly(0);
         int exact = Math.toIntExact(opsForList.size(newKey));
         sseEmitterService.emit(taskTid, exact);
         SysTask sysTask = taskManager.getTask(taskTid);
@@ -116,9 +125,10 @@ public abstract class Task implements AutoCloseable {
             return;
         }
 
+        ThreadUtils.sleepSecondsQuietly(0);
+
         doUpdateStep(exact);
         doWork(exact, taskParam);
-        ThreadUtils.sleepSecondsQuietly(0);
     }
 
     protected void check() {

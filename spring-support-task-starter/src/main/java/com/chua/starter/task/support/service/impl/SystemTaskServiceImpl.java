@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 import javax.annotation.Resource;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * @author CH
@@ -64,7 +65,7 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
         task.setTaskStatus(null);
         int i = baseMapper.updateById(task);
         if (i > 0) {
-            eventbusTemplate.post("task", task);
+            eventbusTemplate.post("task", baseMapper.selectById(task.getTaskId()));
         }
         return i;
     }
@@ -205,8 +206,17 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
         log.info("开始装载任务");
         List<SysTask> sysTasks = list(Wrappers.<SysTask>lambdaQuery()
                 .in(SysTask::getTaskStatus, 0, 2));
+        ListOperations<String, String> list = redisTemplate.opsForList();
         for (SysTask sysTask : sysTasks) {
-            eventbusTemplate.post("task", sysTask);
+            Integer size = Math.toIntExact(Optional.ofNullable(list.size(sysTask.getKey())).orElse(1L));
+            if (sysTask.getTaskCurrent().equals(size)) {
+                sysTask.setTaskCurrent(size);
+            }
+            try {
+                updateWithId(sysTask);
+            } catch (Exception ignored) {
+                eventbusTemplate.post("task", sysTask);
+            }
         }
         log.info("装载完成");
     }

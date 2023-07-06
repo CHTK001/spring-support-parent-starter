@@ -19,12 +19,15 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 import javax.annotation.Resource;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 任務管理器
@@ -34,8 +37,10 @@ import java.util.concurrent.TimeUnit;
 public class TaskManager implements ApplicationContextAware, DisposableBean, CommandLineRunner {
     private final StringRedisTemplate redisTemplate;
 
+    private final AtomicBoolean status = new AtomicBoolean(true);
     private static final Log log = Log.getLogger(Task.class);
     private final Map<String, TaskInfo> taskMap = new ConcurrentHashMap<>();
+    private final Map<String, TaskInfo> copyTaskMap = new ConcurrentHashMap<>();
     private final ScheduledExecutorService scheduledExecutorService = ThreadUtils.newScheduledThreadPoolExecutor("check-heart");
     private final ScheduledExecutorService scheduledExecutorUpdateService = ThreadUtils.newScheduledThreadPoolExecutor("update-heart");
     @Resource(name = Constant.DEFAULT_TASK_EXECUTOR)
@@ -53,6 +58,7 @@ public class TaskManager implements ApplicationContextAware, DisposableBean, Com
 
     @Override
     public void destroy() throws Exception {
+        status.set(false);
         for (TaskInfo it : taskMap.values()) {
             try {
                 it.getTask().close();
@@ -97,7 +103,7 @@ public class TaskManager implements ApplicationContextAware, DisposableBean, Com
      * @return 任务
      */
     public SysTask getTask(String taskId) {
-        TaskInfo taskInfo = taskMap.get(taskId);
+        TaskInfo taskInfo = copyTaskMap.get(taskId);
         return null == taskInfo ? null : taskInfo.getSysTask();
     }
 
@@ -105,13 +111,23 @@ public class TaskManager implements ApplicationContextAware, DisposableBean, Com
      * 开启任务
      */
     private void doTaskWorker() {
-        for (TaskInfo value : taskMap.values()) {
-            Task task = value.getTask();
-            if(null == task) {
-                continue;
+        executor.execute(() -> {
+            while (status.get()) {
+                List<TaskInfo> vs = new ArrayList<>(taskMap.values());
+                taskMap.clear();
+                if (vs.isEmpty()) {
+                    ThreadUtils.sleepSecondsQuietly(2);
+                }
+                for (TaskInfo value : vs) {
+                    Task task = value.getTask();
+                    if (null == task) {
+                        continue;
+                    }
+                    executor.execute(task::worker);
+                }
             }
-            executor.execute(task::worker);
-        }
+        });
+
     }
 
     /**
@@ -156,16 +172,23 @@ public class TaskManager implements ApplicationContextAware, DisposableBean, Com
 
     @Subscribe(type = EventbusType.GUAVA, name = "task")
     public void listener(SysTask sysTask) {
-        taskMap.put(sysTask.getTaskTid(), new TaskInfo(ServiceProvider.of(Task.class)
-                .getNewExtension(sysTask.getTaskType() + ":" + sysTask.getTaskCid(),
-                        sysTask, this),
-                sysTask
-        ));
+        if (null == sysTask.getTaskTid()) {
+            return;
+        }
+        if (!copyTaskMap.containsKey(sysTask.getTaskTid())) {
+            taskMap.put(sysTask.getTaskTid(), new TaskInfo(ServiceProvider.of(Task.class)
+                    .getNewExtension(sysTask.getTaskType() + ":" + sysTask.getTaskCid(),
+                            sysTask, this),
+                    sysTask
+            ));
+        }
+        copyTaskMap.put(sysTask.getTaskTid(), taskMap.get(sysTask.getTaskTid()));
     }
 
     @Subscribe(type = EventbusType.GUAVA, name = "task")
     public void listener(String taskTid) {
         taskStepQueue.remove(taskTid);
         taskMap.remove(taskTid);
+        copyTaskMap.remove(taskTid);
     }
 }
