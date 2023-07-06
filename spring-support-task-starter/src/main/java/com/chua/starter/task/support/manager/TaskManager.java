@@ -175,14 +175,15 @@ public class TaskManager implements ApplicationContextAware, DisposableBean, Com
         if (null == sysTask.getTaskTid()) {
             return;
         }
+        TaskInfo taskInfo = new TaskInfo(ServiceProvider.of(Task.class)
+                .getNewExtension(sysTask.getTaskType() + ":" + sysTask.getTaskCid(),
+                        sysTask, this),
+                sysTask
+        );
         if (!copyTaskMap.containsKey(sysTask.getTaskTid())) {
-            taskMap.put(sysTask.getTaskTid(), new TaskInfo(ServiceProvider.of(Task.class)
-                    .getNewExtension(sysTask.getTaskType() + ":" + sysTask.getTaskCid(),
-                            sysTask, this),
-                    sysTask
-            ));
+            taskMap.put(sysTask.getTaskTid(), taskInfo);
         }
-        copyTaskMap.put(sysTask.getTaskTid(), taskMap.get(sysTask.getTaskTid()));
+        copyTaskMap.put(sysTask.getTaskTid(), taskInfo);
     }
 
     @Subscribe(type = EventbusType.GUAVA, name = "task")
@@ -190,5 +191,6 @@ public class TaskManager implements ApplicationContextAware, DisposableBean, Com
         taskStepQueue.remove(taskTid);
         taskMap.remove(taskTid);
         copyTaskMap.remove(taskTid);
+        redisTemplate.delete(taskTid);
     }
 }

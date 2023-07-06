@@ -85,14 +85,14 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
         if(StringUtils.isEmpty(task.getTaskCid())) {
             throw new RuntimeException("任务实现不能为空");
         }
-
+        task.setTaskExpire(86400);
         task.setTaskTid(
                 DigestUtils.md5Hex(
                         task.getTaskTotal() +
-                        task.getTaskType() +
-                        task.getTaskBusiness() +
-                        task.getTaskCid() +
-                        task.getTaskParams()));
+                                task.getTaskType() +
+                                task.getTaskBusiness() +
+                                task.getTaskCid() +
+                                task.getTaskParams()));
         SysTask byTaskTid = getTaskByTaskTid(task.getTaskTid());
         if(null != byTaskTid) {
             throw new RuntimeException("有相同任务: " + task.getTaskTid());
