@@ -7,14 +7,15 @@ import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.common.support.constant.Constant;
 import com.chua.starter.task.support.pojo.SysTask;
 import com.chua.starter.task.support.service.SystemTaskService;
-import com.chua.starter.task.support.sse.SseEmitterService;
 import com.chua.starter.task.support.task.Task;
 import com.google.common.eventbus.Subscribe;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.DisposableBean;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 import javax.annotation.Resource;
@@ -31,7 +32,7 @@ import java.util.concurrent.TimeUnit;
  *
  * @author CH
  */
-public class TaskManager implements InitializingBean, DisposableBean {
+public class TaskManager implements ApplicationContextAware, DisposableBean, CommandLineRunner {
     private final StringRedisTemplate redisTemplate;
 
     private static final Log log = Log.getLogger(Task.class);
@@ -63,8 +64,8 @@ public class TaskManager implements InitializingBean, DisposableBean {
         ThreadUtils.shutdownNow(scheduledExecutorUpdateService);
     }
 
-    @Override
-    public void afterPropertiesSet() throws Exception {
+
+    public void afterPropertiesSet() {
         log.info("开始装载任务");
         List<SysTask> sysTasks = systemTaskService.list(Wrappers.<SysTask>lambdaQuery()
                 .in(SysTask::getTaskStatus, 0, 2));
@@ -142,10 +143,21 @@ public class TaskManager implements InitializingBean, DisposableBean {
 
     /**
      * 重置
+     *
      * @param taskTid
      */
     public void reset(String taskTid) {
         systemTaskService.reset(taskTid);
+    }
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+
+    }
+
+    @Override
+    public void run(String... args) throws Exception {
+        afterPropertiesSet();
     }
 
 

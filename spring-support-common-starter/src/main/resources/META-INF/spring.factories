@@ -1,6 +1,6 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
   com.chua.starter.common.support.script.ScriptFactory,\
-  com.chua.starter.common.support.configuration.AutoTableConfiguration,\
+  com.chua.starter.common.support.configuration.ZzeroAutoTableConfiguration,\
   com.chua.starter.common.support.configuration.CorsConfiguration,\
   com.chua.starter.common.support.configuration.AsyncConfiguration,\
   com.chua.starter.common.support.configuration.ConverterConfiguration,\

@@ -9,19 +9,21 @@ import com.chua.hibernate.support.database.resolver.HibernateMetadataResolver;
 import com.chua.starter.common.support.annotations.DS;
 import com.chua.starter.common.support.annotations.EnableAutoTable;
 import com.chua.starter.common.support.properties.AutoTableProperties;
-import org.springframework.beans.BeansException;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
+import org.springframework.core.Ordered;
+import org.springframework.core.PriorityOrdered;
 import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.core.annotation.Order;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.type.classreading.CachingMetadataReaderFactory;
 import org.springframework.core.type.classreading.MetadataReader;
 import org.springframework.core.type.classreading.MetadataReaderFactory;
+import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
 import javax.sql.DataSource;
@@ -34,24 +36,30 @@ import java.util.*;
  * @author CH
  * @since 2022/8/1 17:07
  */
+@Order(Ordered.HIGHEST_PRECEDENCE + 1)
 @AutoConfigureAfter(DataSourceAutoConfiguration.class)
 @EnableConfigurationProperties(AutoTableProperties.class)
-public class AutoTableConfiguration implements ApplicationContextAware {
+public class ZzeroAutoTableConfiguration implements PriorityOrdered {
 
     private static final Log log = Log.getLogger(AutoTableProperties.class);
     AutoTableProperties autoTableProperties;
 
-    private Map<String, DataSource> beansOfType;
-    private ApplicationContext applicationContext;
-    private Collection<Object> values;
+    private final Map<String, DataSource> beansOfType;
+    private final ApplicationContext applicationContext;
+
+    public ZzeroAutoTableConfiguration(ApplicationContext applicationContext) {
+        this.applicationContext = applicationContext;
+        autoTableProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(AutoTableProperties.PRE, AutoTableProperties.class);
+        this.beansOfType = applicationContext.getBeansOfType(DataSource.class);
+        if (autoTableProperties.isOpen()) {
+            refresh();
+        }
+    }
 
     private void refresh() {
         Map<String, Object> beansWithAnnotation = applicationContext.getBeansWithAnnotation(EnableAutoTable.class);
-        this.values = beansWithAnnotation.values();
+        Collection<Object> values = beansWithAnnotation.values();
         String[] scann = getScan(values);
-        if (null == scann) {
-            return;
-        }
         log.info(">>>>>>>>>> 开始自动建表");
         for (String s : scann) {
             refresh(s);
@@ -88,7 +96,7 @@ public class AutoTableConfiguration implements ApplicationContextAware {
 
     private void refresh(String s) {
         PathMatchingResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver();
-        Resource[] resources = new Resource[0];
+        Resource[] resources;
         MetadataReaderFactory metaReader = new CachingMetadataReaderFactory();
         try {
             resources = resourcePatternResolver.getResources(s.replace(".", "/") + "/**/*.class");
@@ -99,7 +107,7 @@ public class AutoTableConfiguration implements ApplicationContextAware {
         ClassLoader loader = ClassLoader.getSystemClassLoader();
         List<Class<?>> classList = new ArrayList<>();
         for (Resource resource : resources) {
-            MetadataReader reader = null;
+            MetadataReader reader;
             try {
                 reader = metaReader.getMetadataReader(resource);
             } catch (IOException ignored) {
@@ -160,7 +168,7 @@ public class AutoTableConfiguration implements ApplicationContextAware {
             return null;
         }
 
-        MultiValueMap<String, Object> annotationAttributes = AnnotatedElementUtils.getAllAnnotationAttributes(aClass, DS.class.getTypeName());
+        MultiValueMap annotationAttributes = Optional.ofNullable(AnnotatedElementUtils.getAllAnnotationAttributes(aClass, DS.class.getTypeName())).orElse(new LinkedMultiValueMap<>());
         Object value = annotationAttributes.getFirst("value");
         log.debug("建表数据源 :{}", value);
         if (null == value) {
@@ -169,13 +177,9 @@ public class AutoTableConfiguration implements ApplicationContextAware {
         return beansOfType.get(value.toString());
     }
 
+
     @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        this.applicationContext = applicationContext;
-        autoTableProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(AutoTableProperties.PRE, AutoTableProperties.class);
-        this.beansOfType = applicationContext.getBeansOfType(DataSource.class);
-        if (autoTableProperties.isOpen()) {
-            refresh();
-        }
+    public int getOrder() {
+        return Ordered.HIGHEST_PRECEDENCE + 1;
     }
 }
