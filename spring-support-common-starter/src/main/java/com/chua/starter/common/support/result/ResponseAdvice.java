@@ -243,6 +243,11 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
         if(mediaType.getSubtype().contains("spring-boot.actuator")) {
             return o;
         }
+
+        if(mediaType.getSubtype().contains("event-stream")) {
+            return o;
+        }
+
         if (o instanceof ResponseBodyAdvice || o instanceof byte[] || o instanceof Callable) {
             return o;
         }
@@ -251,7 +256,7 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
             return o;
         }
 
-        if (o instanceof ReturnResult || (o.getClass().getTypeName().endsWith("result.PageResult"))) {
+        if (o instanceof ReturnResult || (null != o &&(o.getClass().getTypeName().endsWith("result.PageResult")))) {
             return o;
         }
 

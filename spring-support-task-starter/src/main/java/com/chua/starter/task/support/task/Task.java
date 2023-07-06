@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public abstract class Task implements AutoCloseable {
 
+    public static final String SUBSCRIBE = "Task:Subscribe";
     private final AtomicBoolean status = new AtomicBoolean(true);
     public static final String PRE = "";
     protected static final Log log = Log.getLogger(Task.class);
@@ -92,6 +93,14 @@ public abstract class Task implements AutoCloseable {
      */
     protected void finish(SysTask sysTask) {
 
+    }
+
+    /**
+     * 重置
+     */
+    protected void reset() {
+        redisTemplate.delete(newKey);
+        taskManager.reset(taskTid);
     }
 
     private synchronized void doAnalysis() {

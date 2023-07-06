@@ -9,6 +9,7 @@ import org.springframework.http.converter.AbstractHttpMessageConverter;
 import org.springframework.http.converter.GenericHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.converter.HttpMessageNotWritableException;
+import org.springframework.lang.Nullable;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -34,7 +35,7 @@ public class ResultDataHttpMessageConverter
      * Can serialize/deserialize all types.
      */
     public ResultDataHttpMessageConverter() {
-        super(MediaType.ALL);
+        super(MediaType.APPLICATION_JSON);
     }
 
     @Override
@@ -49,9 +50,10 @@ public class ResultDataHttpMessageConverter
 
     @Override
     public boolean canWrite(Type type, Class<?> clazz, MediaType mediaType) {
-        if (null == mediaType) {
-            return false;
-        }
+        return false;
+    }
+
+    protected boolean canWrite(@Nullable MediaType mediaType) {
         return false;
     }
 

@@ -1,24 +1,19 @@
 package com.chua.starter.task.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.common.support.utils.DigestUtils;
-import com.chua.common.support.utils.IdUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.configuration.CacheConfiguration;
 import com.chua.starter.task.support.mapper.SystemTaskMapper;
 import com.chua.starter.task.support.pojo.SysTask;
 import com.chua.starter.task.support.pojo.TaskStatus;
 import com.chua.starter.task.support.service.SystemTaskService;
-import com.chua.starter.task.support.task.Task;
 import com.google.common.eventbus.AsyncEventBus;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.ListOperations;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -28,25 +23,27 @@ import java.util.List;
 /**
  * @author CH
  */
-@Service
 public class SystemTaskServiceImpl implements SystemTaskService {
 
 
     @Resource
-    private AsyncEventBus eventBus;
+    private AsyncEventBus asyncEventBus;
 
-    @Resource
     private SystemTaskMapper baseMapper;
 
     @Resource(name = com.chua.common.support.protocol.server.Constant.STRING_REDIS)
     private StringRedisTemplate redisTemplate;
+
+    public SystemTaskServiceImpl(SystemTaskMapper systemTaskMapper) {
+        this.baseMapper = systemTaskMapper;
+    }
 
     @Override
     @CacheEvict(cacheManager = CacheConfiguration.DEFAULT_CACHE_MANAGER, cacheNames = "task", key = "#task.taskId")
     public int deleteWithId(String taskTid) {
         int i = baseMapper.delete(Wrappers.<SysTask>lambdaQuery().eq(SysTask::getTaskTid, taskTid));
         if (i > 0) {
-            eventBus.post(taskTid);
+            asyncEventBus.post(taskTid);
         }
         return i;
     }
@@ -60,7 +57,7 @@ public class SystemTaskServiceImpl implements SystemTaskService {
         task.setTaskStatus(null);
         int i = baseMapper.updateById(task);
         if (i > 0) {
-            eventBus.post(task);
+            asyncEventBus.post(task);
         }
         return i;
     }
@@ -95,7 +92,7 @@ public class SystemTaskServiceImpl implements SystemTaskService {
 
         boolean b = 1 == baseMapper.insert(task);
         if (b) {
-            eventBus.post(task);
+            asyncEventBus.post(task);
         }
         return b;
     }
@@ -139,6 +136,18 @@ public class SystemTaskServiceImpl implements SystemTaskService {
     @Override
     public List<SysTask> list(LambdaQueryWrapper<SysTask> wrapper) {
         return baseMapper.selectList(wrapper);
+    }
+
+    @Override
+    public void reset(String taskTid) {
+        SysTask systemTask = getTaskByTaskTid(taskTid);
+        if (null == systemTask) {
+            return;
+        }
+
+        systemTask.setTaskStatus(0);
+        systemTask.setTaskCurrent(0);
+        baseMapper.updateById(systemTask);
     }
 
     private synchronized void doUpdateForSize(Integer taskId, int size, int count) {
