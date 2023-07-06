@@ -29,7 +29,7 @@ public class SysTask extends SysBase implements Comparable<SysTask> {
     /**
      * 任务执行的超时时间(s)
      */
-    @Column(comment = "任务执行的超时时间(s)", defaultValue = "300")
+    @Column(comment = "任务执行的超时时间(s)", defaultValue = "86400")
     private Integer taskExpire;
     /**
      * 任务类型

@@ -117,6 +117,9 @@ public abstract class Task implements AutoCloseable {
         int exact = Math.toIntExact(opsForList.size(newKey));
         sseEmitterService.emit(taskTid, exact);
         SysTask sysTask = taskManager.getTask(taskTid);
+        if (null == sysTask) {
+            return;
+        }
         if (exact >= sysTask.getTaskTotal()) {
             log.info("任务已完成");
             sysTask.setTaskStatus(1);
