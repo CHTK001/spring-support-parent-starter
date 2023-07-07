@@ -60,13 +60,13 @@ public class SysTask extends SysBase implements Comparable<SysTask> {
      * 总量
      */
     @Column(comment = "总量", defaultValue = "0")
-    private Integer taskTotal;
+    private Long taskTotal;
 
     /**
      * 总量
      */
     @Column(comment = "处理量", defaultValue = "0")
-    private Integer taskCurrent;
+    private Long taskCurrent;
     /**
      * 是否完成
      */

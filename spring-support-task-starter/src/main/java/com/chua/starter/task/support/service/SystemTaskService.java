@@ -67,7 +67,7 @@ public interface SystemTaskService  {
      * @param taskId 任务ID
      * @param size   当前数据长度
      */
-    void forUpdateCurrent(Integer taskId, int size);
+    void forUpdateCurrent(Integer taskId, long size);
 
     /**
      * 任务ID
