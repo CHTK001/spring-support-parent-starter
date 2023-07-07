@@ -29,6 +29,7 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -103,7 +104,7 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
         if(StringUtils.isEmpty(task.getTaskCid())) {
             throw new RuntimeException("任务实现不能为空");
         }
-        task.setCreateTime(LocalDateTime.now());
+        task.setCreateTime(new Date());
         task.setTaskExpire(taskProperties.getTaskExpire());
         task.setTaskTid(
                 (taskProperties.isCanSame() ? (DigestUtils.md5Hex(IdUtils.createTid()) + "_") : "") +
