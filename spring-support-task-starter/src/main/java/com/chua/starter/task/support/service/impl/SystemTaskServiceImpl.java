@@ -28,6 +28,7 @@ import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -103,6 +104,7 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
         if(StringUtils.isEmpty(task.getTaskCid())) {
             throw new RuntimeException("任务实现不能为空");
         }
+        task.setCreateTime(LocalDateTime.now());
         task.setTaskExpire(taskProperties.getTaskExpire());
         task.setTaskTid(
                 (taskProperties.isCanSame() ? (DigestUtils.md5Hex(IdUtils.createTid()) + "_") : "") +
@@ -187,7 +189,10 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
 
         systemTask.setTaskCurrent(size);
         if (size >= systemTask.getTaskTotal()) {
-            systemTask.setTaskCost(System.currentTimeMillis() - DateUtils.toEpochMilli(systemTask.getCreateTime()));
+            try {
+                systemTask.setTaskCost(System.currentTimeMillis() - DateUtils.toEpochMilli(systemTask.getCreateTime()));
+            } catch (Exception ignored) {
+            }
             systemTask.setTaskStatus(1);
             systemTask.setTaskCurrent(systemTask.getTaskTotal());
         }
@@ -223,15 +228,16 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
     public void run(String... args) throws Exception {
         log.info("开始装载任务");
         List<SysTask> sysTasks = list(Wrappers.<SysTask>lambdaQuery()
-                .in(SysTask::getTaskStatus, 0, 2));
+                .in(SysTask::getTaskStatus, 0, 3));
         ValueOperations<String, String> forValue = redisTemplate.opsForValue();
         for (SysTask sysTask : sysTasks) {
             Integer size = NumberUtils.toInt(forValue.get(sysTask.getKey()));
             if (sysTask.getTaskCurrent().equals(size)) {
                 sysTask.setTaskCurrent(size);
             }
+            sysTask.setTaskStatus(3);
             try {
-                updateWithId(sysTask);
+                forceUpdateWithId(sysTask);
             } catch (Exception ignored) {
                 eventbusTemplate.post("task", sysTask);
             }

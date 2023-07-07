@@ -159,7 +159,6 @@ public class TaskManager implements ApplicationContextAware, DisposableBean, Com
         afterPropertiesSet();
     }
 
-
     @Data
     @AllArgsConstructor
     static
@@ -175,6 +174,12 @@ public class TaskManager implements ApplicationContextAware, DisposableBean, Com
         if (null == sysTask.getTaskTid()) {
             return;
         }
+
+        Integer taskStatus = sysTask.getTaskStatus();
+        if(2 == taskStatus) {
+            return;
+        }
+
         Task task = ServiceProvider.of(Task.class)
                 .getNewExtension(sysTask.getTaskType() + ":" + sysTask.getTaskCid(),
                         sysTask, this);
@@ -190,7 +195,10 @@ public class TaskManager implements ApplicationContextAware, DisposableBean, Com
         }
         copyTaskMap.put(sysTask.getTaskTid(), taskInfo);
     }
-
+    public void remove(String taskTid) {
+        taskMap.remove(taskTid);
+        copyTaskMap.remove(taskTid);
+    }
     @Subscribe(type = EventbusType.GUAVA, name = "task")
     public void listener(String taskTid) {
         taskStepQueue.remove(taskTid);

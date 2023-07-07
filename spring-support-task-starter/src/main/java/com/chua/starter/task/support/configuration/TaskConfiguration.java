@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
 
 /**
@@ -36,8 +37,8 @@ public class TaskConfiguration {
     }
 
     @Bean
-    public MessageListenerAdapter listenerAdapter(RedisMessageReceiver receiver) {
-        return new MessageListenerAdapter(receiver, "receiveMessage");
+    public RedisKeyExpirationListener listenerAdapter(RedisMessageListenerContainer listenerContainer) {
+        return new RedisKeyExpirationListener(listenerContainer);
     }
 
 

@@ -17,6 +17,7 @@ import org.springframework.core.Ordered;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
@@ -55,6 +56,14 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
 //        redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
 //        return redisTemplate;
 //    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    RedisMessageListenerContainer container(RedisConnectionFactory connectionFactory) {
+        RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+        container.setConnectionFactory(connectionFactory);
+        return container;
+    }
 
     @Bean(Constant.STRING_REDIS)
     public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory factory) {
