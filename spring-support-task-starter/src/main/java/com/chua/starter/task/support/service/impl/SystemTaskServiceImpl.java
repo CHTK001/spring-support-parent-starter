@@ -5,14 +5,18 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.eventbus.EventbusType;
 import com.chua.common.support.eventbus.Subscribe;
+import com.chua.common.support.lang.date.DateUtils;
 import com.chua.common.support.log.Log;
 import com.chua.common.support.utils.DigestUtils;
+import com.chua.common.support.utils.IdUtils;
+import com.chua.common.support.utils.NumberUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.configuration.CacheConfiguration;
 import com.chua.starter.common.support.eventbus.EventbusTemplate;
 import com.chua.starter.task.support.mapper.SystemTaskMapper;
 import com.chua.starter.task.support.pojo.SysTask;
 import com.chua.starter.task.support.pojo.TaskStatus;
+import com.chua.starter.task.support.properties.TaskProperties;
 import com.chua.starter.task.support.service.SystemTaskService;
 import com.chua.starter.task.support.task.Task;
 import org.springframework.boot.CommandLineRunner;
@@ -20,6 +24,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.ListOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -38,6 +43,8 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
     private EventbusTemplate eventbusTemplate;
 
     private SystemTaskMapper baseMapper;
+    @Resource
+    private TaskProperties taskProperties;
 
     @Resource(name = com.chua.common.support.protocol.server.Constant.STRING_REDIS)
     private StringRedisTemplate redisTemplate;
@@ -69,6 +76,17 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
         }
         return i;
     }
+    @Override
+    @CacheEvict(cacheManager = CacheConfiguration.DEFAULT_CACHE_MANAGER, cacheNames = "task", key = "#task.taskId")
+    public int forceUpdateWithId(SysTask task) {
+        task.setTaskTid(null);
+        task.setTaskTotal(null);
+        int i = baseMapper.updateById(task);
+        if (i > 0) {
+            eventbusTemplate.post("task", baseMapper.selectById(task.getTaskId()));
+        }
+        return i;
+    }
 
     @Override
     @CacheEvict(cacheManager = CacheConfiguration.DEFAULT_CACHE_MANAGER, cacheNames = "task", key = "#task.taskTid")
@@ -85,8 +103,9 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
         if(StringUtils.isEmpty(task.getTaskCid())) {
             throw new RuntimeException("任务实现不能为空");
         }
-        task.setTaskExpire(86400);
+        task.setTaskExpire(taskProperties.getTaskExpire());
         task.setTaskTid(
+                (taskProperties.isCanSame() ? (DigestUtils.md5Hex(IdUtils.createTid()) + "_") : "") +
                 DigestUtils.md5Hex(
                         task.getTaskTotal() +
                                 task.getTaskType() +
@@ -109,12 +128,10 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
     public Page<SysTask> withPage(Page<SysTask> page) {
         Page<SysTask> sysTaskPage = baseMapper.selectPage(page, Wrappers.lambdaQuery());
         List<SysTask> records = sysTaskPage.getRecords();
-        ListOperations listOperations = redisTemplate.opsForList();
+        ValueOperations<String, String> opsForValue = redisTemplate.opsForValue();
         for (SysTask record : records) {
-            Long size = listOperations.size(record.getKey());
-            if(null != size) {
-                record.setTaskCurrent(Math.toIntExact(size));
-            }
+            int toInt = NumberUtils.toInt(opsForValue.get(record.getKey()));
+            record.setTaskCurrent(toInt);
         }
         return sysTaskPage;
     }
@@ -138,7 +155,7 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
     @Override
     public TaskStatus getTaskByTaskStatus(String taskTid) {
         SysTask taskByTaskTid = getTaskByTaskTid(taskTid);
-        return new TaskStatus(taskTid, Math.toIntExact(redisTemplate.opsForList().size(taskByTaskTid.getKey())), taskByTaskTid.getTaskTotal());
+        return new TaskStatus(taskTid, NumberUtils.toInt(redisTemplate.opsForValue().get(taskByTaskTid.getKey())), taskByTaskTid.getTaskTotal());
     }
 
     @Override
@@ -170,12 +187,13 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
 
         systemTask.setTaskCurrent(size);
         if (size >= systemTask.getTaskTotal()) {
+            systemTask.setTaskCost(System.currentTimeMillis() - DateUtils.toEpochMilli(systemTask.getCreateTime()));
             systemTask.setTaskStatus(1);
             systemTask.setTaskCurrent(systemTask.getTaskTotal());
         }
 
         try {
-            updateWithId(systemTask);
+            baseMapper.updateById(systemTask);
         } catch (Exception e) {
             e.printStackTrace();
             doUpdateForSize(taskId, size, count--);
@@ -206,9 +224,9 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
         log.info("开始装载任务");
         List<SysTask> sysTasks = list(Wrappers.<SysTask>lambdaQuery()
                 .in(SysTask::getTaskStatus, 0, 2));
-        ListOperations<String, String> list = redisTemplate.opsForList();
+        ValueOperations<String, String> forValue = redisTemplate.opsForValue();
         for (SysTask sysTask : sysTasks) {
-            Integer size = Math.toIntExact(Optional.ofNullable(list.size(sysTask.getKey())).orElse(1L));
+            Integer size = NumberUtils.toInt(forValue.get(sysTask.getKey()));
             if (sysTask.getTaskCurrent().equals(size)) {
                 sysTask.setTaskCurrent(size);
             }
@@ -234,6 +252,9 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
     public void update(Map.Entry<String, Integer> entry) {
         try {
             SysTask taskByTaskTid = getTaskByTaskTid(entry.getKey());
+            if(1 == taskByTaskTid.getTaskStatus()) {
+                return;
+            }
             taskByTaskTid.setTaskCurrent(entry.getValue());
             updateWithId(taskByTaskTid);
         } catch (Exception ignored) {

@@ -205,6 +205,12 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
         log.error("unknown exception: {}", e.getMessage());
         return Result.failed("请求失败,请稍后重试");
     }
+    @ExceptionHandler(RuntimeException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public <T> Result<T> handleRuntimeException(RuntimeException e) {
+        log.error("unknown exception: {}", e.getMessage());
+        return Result.failed(e);
+    }
 
     /**
      * 传参类型错误时，用于消息转换

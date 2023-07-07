@@ -29,6 +29,13 @@ public interface SystemTaskService  {
      * @return 结果
      */
     int updateWithId(SysTask task);
+    /**
+     * 更新数据集
+     *
+     * @param task 任务
+     * @return 结果
+     */
+    int forceUpdateWithId(SysTask task);
 
     /**
      * 更新数据集

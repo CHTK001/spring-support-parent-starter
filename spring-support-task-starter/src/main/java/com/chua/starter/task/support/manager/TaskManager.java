@@ -175,11 +175,16 @@ public class TaskManager implements ApplicationContextAware, DisposableBean, Com
         if (null == sysTask.getTaskTid()) {
             return;
         }
-        TaskInfo taskInfo = new TaskInfo(ServiceProvider.of(Task.class)
+        Task task = ServiceProvider.of(Task.class)
                 .getNewExtension(sysTask.getTaskType() + ":" + sysTask.getTaskCid(),
-                        sysTask, this),
-                sysTask
-        );
+                        sysTask, this);
+
+        if(null != task) {
+            task.setSysTask(sysTask);
+        }
+
+
+        TaskInfo taskInfo = new TaskInfo(task,  sysTask);
         if (!copyTaskMap.containsKey(sysTask.getTaskTid())) {
             taskMap.put(sysTask.getTaskTid(), taskInfo);
         }

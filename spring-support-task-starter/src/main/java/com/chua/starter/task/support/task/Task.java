@@ -3,20 +3,26 @@ package com.chua.starter.task.support.task;
 
 import com.chua.common.support.json.Json;
 import com.chua.common.support.log.Log;
+import com.chua.common.support.utils.NumberUtils;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.common.support.constant.Constant;
+import com.chua.starter.sse.support.SseMessage;
+import com.chua.starter.sse.support.SseMessageType;
 import com.chua.starter.task.support.manager.TaskManager;
 import com.chua.starter.task.support.pojo.SysTask;
 import com.chua.starter.task.support.pojo.TaskParam;
 import com.chua.starter.task.support.service.SystemTaskService;
-import com.chua.starter.task.support.sse.SseEmitterService;
-import org.springframework.data.redis.core.ListOperations;
+import com.chua.starter.sse.support.SseTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 
 import javax.annotation.Resource;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import static com.chua.starter.sse.support.SseMessageType.NOTIFY;
+import static com.chua.starter.sse.support.SseMessageType.PROCESS;
 
 /**
  * 任务
@@ -29,9 +35,10 @@ public abstract class Task implements AutoCloseable {
     private final AtomicBoolean status = new AtomicBoolean(true);
     public static final String PRE = "";
     protected static final Log log = Log.getLogger(Task.class);
-    private final TaskParam taskParam;
-    private ListOperations<String, String> opsForList;
-    private final String taskTid;
+    protected TaskParam taskParam;
+    private String taskTid;
+    private ValueOperations<String, String> opsForList;
+    private String key;
     @Resource(name = com.chua.common.support.protocol.server.Constant.STRING_REDIS)
     private StringRedisTemplate redisTemplate;
 
@@ -43,17 +50,25 @@ public abstract class Task implements AutoCloseable {
     @Resource
     private SystemTaskService systemTaskService;
 
-    private final TaskManager taskManager;
     String newKey;
     @Resource
-    private SseEmitterService sseEmitterService;
+    private SseTemplate sseTemplate;
 
-    public Task(SysTask sysTask, TaskManager taskManager) {
+    @Resource
+    private TaskManager taskManager;
+
+    private SysTask sysTask;
+
+    public void setSysTask(SysTask sysTask) {
         this.newKey = sysTask.getKey();
-        this.taskManager = taskManager;
+        this.key = sysTask.getKey();
         this.taskTid = sysTask.getTaskTid();
         String taskParams = sysTask.getTaskParams();
         this.taskParam = new TaskParam(Json.toMapStringObject(taskParams));
+    }
+
+    public Task() {
+
     }
 
     /**
@@ -62,27 +77,26 @@ public abstract class Task implements AutoCloseable {
      * @param offset    当前位置
      * @param taskParam 任务参数
      */
-    abstract void execute(long offset, TaskParam taskParam);
+    protected abstract void execute(long offset, TaskParam taskParam);
 
 
     /**
      * 开始任务
      */
     public void worker() {
-        SysTask task = taskManager.getTask(taskTid);
+        SysTask task = taskManager.getTask(key);
         if (null == task) {
             return;
         }
-        check();
-        Integer taskCurrent = Math.toIntExact(opsForList.size(taskTid));
-        doWork(taskCurrent, taskParam);
+
+        doAnalysis();
     }
 
     private void doWork(Integer taskCurrent, TaskParam taskParam) {
         if (!status.get()) {
             return;
         }
-        SysTask task = taskManager.getTask(taskTid);
+        SysTask task = taskManager.getTask(key);
         if (null == task) {
             return;
         }
@@ -108,23 +122,20 @@ public abstract class Task implements AutoCloseable {
      */
     protected void reset() {
         redisTemplate.delete(newKey);
-        taskManager.reset(taskTid);
+        taskManager.reset(key);
     }
 
     private synchronized void doAnalysis() {
         check();
         ThreadUtils.sleepSecondsQuietly(0);
-        int exact = Math.toIntExact(opsForList.size(newKey));
-        sseEmitterService.emit(taskTid, exact);
-        SysTask sysTask = taskManager.getTask(taskTid);
+        int exact = NumberUtils.toInt(opsForList.get(newKey));
+        notifyMessage(PROCESS, exact + "");
+        SysTask sysTask = taskManager.getTask(key);
         if (null == sysTask) {
             return;
         }
-        if (exact >= sysTask.getTaskTotal()) {
-            log.info("任务已完成");
-            sysTask.setTaskStatus(1);
-            sysTask.setTaskCurrent(exact);
-            doFinish(sysTask);
+
+        if (isFinish(exact, sysTask)) {
             return;
         }
 
@@ -134,11 +145,23 @@ public abstract class Task implements AutoCloseable {
         doWork(exact, taskParam);
     }
 
+    private boolean isFinish(int exact, SysTask sysTask) {
+        if(exact >= sysTask.getTaskTotal()) {
+            log.info("任务已完成");
+            sysTask.setTaskStatus(1);
+            sysTask.setTaskCurrent(exact);
+            doFinish(sysTask);
+            return true;
+        }
+
+        return false;
+    }
+
     protected void check() {
         if(null == opsForList) {
             synchronized (this) {
                 if(null == opsForList) {
-                    this.opsForList = redisTemplate.opsForList();
+                    this.opsForList = redisTemplate.opsForValue();
                 }
             }
         }
@@ -161,13 +184,13 @@ public abstract class Task implements AutoCloseable {
     /**
      * 记录业务唯一编码
      *
-     * @param code 业务唯一编码
+     * @param currentOffset 当前数量
      */
-    protected synchronized void step(String... code) {
+    protected synchronized void step(int currentOffset) {
         try {
             check();
-            opsForList.leftPushAll(newKey, code);
-            redisTemplate.expire(newKey, taskManager.getTask(taskTid).getTaskExpire(), TimeUnit.SECONDS);
+            opsForList.set(newKey, NumberUtils.toInt(opsForList.get(newKey)) + currentOffset + "");
+            redisTemplate.expire(newKey, taskManager.getTask(key).getTaskExpire(), TimeUnit.SECONDS);
             doAnalysis();
         } catch (Exception e) {
             log.info("任务处理异常");
@@ -180,7 +203,7 @@ public abstract class Task implements AutoCloseable {
     private void doUpdateStep(int size) {
         executor2.execute(() -> {
             try {
-                taskManager.doUpdateStep(taskTid, size);
+                taskManager.doUpdateStep(key, size);
             } catch (Exception ignored) {
             }
         });
@@ -189,5 +212,20 @@ public abstract class Task implements AutoCloseable {
     @Override
     public void close() throws Exception {
         status.set(false);
+    }
+
+
+    protected void notifyMessage(SseMessageType type, String message) {
+        if(type == NOTIFY) {
+            String s = opsForList.get(message);
+            if(null != s) {
+                return;
+            }
+            opsForList.set(message, message, 4, TimeUnit.SECONDS);
+        }
+        try {
+            sseTemplate.emit(SseMessage.builder().message(message).type(type).tid(taskTid).build());
+        } catch (Exception ignored) {
+        }
     }
 }

@@ -24,7 +24,7 @@ public class SysTask extends SysBase implements Comparable<SysTask> {
     /**
      * 任务ID
      */
-    @Column(comment = "任务ID(系统生成的唯一标识)")
+    @Column(comment = "任务ID(系统生成的唯一标识)", jdbcType = JdbcType.LONGTEXT)
     private String taskTid;
     /**
      * 任务执行的超时时间(s)
@@ -82,6 +82,9 @@ public class SysTask extends SysBase implements Comparable<SysTask> {
 
     @Column(comment = "任务参数", jdbcType = JdbcType.LONGTEXT)
     private String taskParams;
+
+    @Column(comment = "任务耗时", defaultValue = "0")
+    private Long taskCost;
 
     /**
      * 是否完成
