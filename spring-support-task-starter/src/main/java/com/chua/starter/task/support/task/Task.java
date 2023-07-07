@@ -179,10 +179,13 @@ public abstract class Task implements AutoCloseable {
     private void doFinish(SysTask sysTask) {
         try {
             systemTaskService.forUpdateCurrent(sysTask);
-            sseTemplate.emit(SseMessage.builder().message(sysTask.getTaskCost() + "").type(FINISH).tid(taskTid).build(), Task.SUBSCRIBE);
         } catch (Exception ignored) {
         }
         finish(sysTask);
+        try {
+            sseTemplate.emit(SseMessage.builder().message(sysTask.getTaskCost() + "").type(FINISH).tid(taskTid).build(), Task.SUBSCRIBE);
+        } catch (Exception e) {
+        }
         ThreadUtils.sleepSecondsQuietly(0);
     }
 
