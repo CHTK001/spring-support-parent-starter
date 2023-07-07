@@ -137,6 +137,12 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
             if(toInt != 0L) {
                 record.setTaskCurrent(toInt);
             }
+            if(record.getTaskCurrent() >= record.getTaskTotal() && record.getTaskStatus() != 1) {
+                record.setTaskCurrent(record.getTaskTotal());
+                record.setTaskStatus(1);
+                baseMapper.updateById(record);
+            }
+
         }
         return sysTaskPage;
     }
@@ -154,7 +160,13 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
     @Override
     @Cacheable(cacheManager = CacheConfiguration.DEFAULT_CACHE_MANAGER, cacheNames = "task", key = "#taskTid")
     public SysTask getTaskByTaskTid(String taskTid) {
-        return baseMapper.selectOne(Wrappers.<SysTask>lambdaQuery().eq(SysTask::getTaskTid, taskTid));
+        SysTask sysTask = baseMapper.selectOne(Wrappers.<SysTask>lambdaQuery().eq(SysTask::getTaskTid, taskTid));
+        if(null != sysTask && sysTask.getTaskCurrent() >= sysTask.getTaskTotal() && sysTask.getTaskStatus() != 1) {
+            sysTask.setTaskCurrent(sysTask.getTaskTotal());
+            sysTask.setTaskStatus(1);
+            baseMapper.updateById(sysTask);
+        }
+        return sysTask;
     }
 
     @Override
