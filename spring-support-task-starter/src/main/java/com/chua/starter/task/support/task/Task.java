@@ -129,11 +129,15 @@ public abstract class Task implements AutoCloseable {
         check();
         ThreadUtils.sleepSecondsQuietly(0);
         int exact = NumberUtils.toInt(opsForList.get(newKey));
-        notifyMessage(PROCESS, exact + "");
         SysTask sysTask = taskManager.getTask(key);
         if (null == sysTask) {
             return;
         }
+
+        if(sysTask.getTaskStatus() == 1) {
+            return;
+        }
+        notifyMessage(PROCESS, exact + "");
 
         if (isFinish(exact, sysTask)) {
             return;
