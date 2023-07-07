@@ -132,8 +132,8 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
         List<SysTask> records = sysTaskPage.getRecords();
         ValueOperations<String, String> opsForValue = redisTemplate.opsForValue();
         for (SysTask record : records) {
-            int toInt = NumberUtils.toInt(opsForValue.get(record.getKey()));
-            if(toInt != 0) {
+            long toInt = NumberUtils.toLong(opsForValue.get(record.getKey()));
+            if(toInt != 0L) {
                 record.setTaskCurrent(toInt);
             }
         }
@@ -146,7 +146,7 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
     }
 
     @Override
-    public void forUpdateCurrent(Integer taskId, int size) {
+    public void forUpdateCurrent(Integer taskId, long size) {
         doUpdateForSize(taskId, size, 3);
     }
 
@@ -159,7 +159,7 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
     @Override
     public TaskStatus getTaskByTaskStatus(String taskTid) {
         SysTask taskByTaskTid = getTaskByTaskTid(taskTid);
-        return new TaskStatus(taskTid, NumberUtils.toInt(redisTemplate.opsForValue().get(taskByTaskTid.getKey())), taskByTaskTid.getTaskTotal());
+        return new TaskStatus(taskTid, NumberUtils.toLong(redisTemplate.opsForValue().get(taskByTaskTid.getKey())), taskByTaskTid.getTaskTotal());
     }
 
     @Override
@@ -175,11 +175,11 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
         }
 
         systemTask.setTaskStatus(0);
-        systemTask.setTaskCurrent(0);
+        systemTask.setTaskCurrent(0L);
         baseMapper.updateById(systemTask);
     }
 
-    private synchronized void doUpdateForSize(Integer taskId, int size, int count) {
+    private synchronized void doUpdateForSize(Integer taskId, long size, int count) {
         if (count <= 0) {
             return;
         }
@@ -233,7 +233,7 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
                 .in(SysTask::getTaskStatus, 0, 3));
         ValueOperations<String, String> forValue = redisTemplate.opsForValue();
         for (SysTask sysTask : sysTasks) {
-            Integer size = NumberUtils.toInt(forValue.get(sysTask.getKey()));
+            Long size = NumberUtils.toLong(forValue.get(sysTask.getKey()));
             if (sysTask.getTaskCurrent().equals(size)) {
                 sysTask.setTaskCurrent(size);
             }
@@ -257,7 +257,7 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
     }
 
     @Subscribe(type = EventbusType.GUAVA, name = "update")
-    public void update(Map.Entry<String, Integer> entry) {
+    public void update(Map.Entry<String, Long> entry) {
         try {
             SysTask taskByTaskTid = getTaskByTaskTid(entry.getKey());
             if(1 == taskByTaskTid.getTaskStatus()) {

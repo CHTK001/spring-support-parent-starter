@@ -149,7 +149,7 @@ public abstract class Task implements AutoCloseable {
         doWork(exact, taskParam);
     }
 
-    private boolean isFinish(int exact, SysTask sysTask) {
+    private boolean isFinish(long exact, SysTask sysTask) {
         if(exact >= sysTask.getTaskTotal()) {
             log.info("任务已完成");
             sysTask.setTaskStatus(1);

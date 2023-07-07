@@ -19,10 +19,10 @@ public class TaskStatus {
     /**
      * 当前进度
      */
-    private int offset;
+    private long offset;
 
     /**
      * 总进度
      */
-    private int total;
+    private long total;
 }

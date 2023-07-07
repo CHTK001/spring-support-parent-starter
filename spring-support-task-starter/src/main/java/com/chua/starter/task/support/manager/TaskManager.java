@@ -50,7 +50,7 @@ public class TaskManager implements ApplicationContextAware, DisposableBean, Com
     private EventbusTemplate eventbusTemplate;
 
 
-    private Map<String, Integer> taskStepQueue = new ConcurrentHashMap<>(100000);
+    private final Map<String, Long> taskStepQueue = new ConcurrentHashMap<>(100000);
 
     public TaskManager(StringRedisTemplate redisTemplate) {
         this.redisTemplate = redisTemplate;
@@ -85,9 +85,9 @@ public class TaskManager implements ApplicationContextAware, DisposableBean, Com
 
         scheduledExecutorUpdateService.scheduleAtFixedRate(() -> {
             try {
-                Map<String, Integer> tpl = new HashMap<>(taskStepQueue);
+                Map<String, Long> tpl = new HashMap<>(taskStepQueue);
                 taskStepQueue.clear();
-                for (Map.Entry<String, Integer> entry : tpl.entrySet()) {
+                for (Map.Entry<String, Long> entry : tpl.entrySet()) {
                     eventbusTemplate.post("update", entry);
                 }
             } catch (Exception ignored) {
@@ -136,14 +136,14 @@ public class TaskManager implements ApplicationContextAware, DisposableBean, Com
      * @param taskTid 任务ID
      * @param size    当前任务位置
      */
-    public void doUpdateStep(String taskTid, int size) {
+    public void doUpdateStep(String taskTid, long size) {
         taskStepQueue.put(taskTid, size);
     }
 
     /**
      * 重置
      *
-     * @param taskTid
+     * @param taskTid taskTid
      */
     public void reset(String taskTid) {
         eventbusTemplate.post("reset", taskTid);
