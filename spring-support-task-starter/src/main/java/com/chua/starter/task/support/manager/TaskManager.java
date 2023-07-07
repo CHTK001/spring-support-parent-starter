@@ -197,12 +197,26 @@ public class TaskManager implements ApplicationContextAware, DisposableBean, Com
     }
     public void remove(String taskTid) {
         taskMap.remove(taskTid);
+        TaskInfo taskInfo = copyTaskMap.get(taskTid);
+        if(null != taskInfo) {
+            try {
+                taskInfo.getTask().close();
+            } catch (Exception ignored) {
+            }
+        }
         copyTaskMap.remove(taskTid);
     }
     @Subscribe(type = EventbusType.GUAVA, name = "task")
     public void listener(String taskTid) {
         taskStepQueue.remove(taskTid);
         taskMap.remove(taskTid);
+        TaskInfo taskInfo = copyTaskMap.get(taskTid);
+        if(null != taskInfo) {
+            try {
+                taskInfo.getTask().close();
+            } catch (Exception ignored) {
+            }
+        }
         copyTaskMap.remove(taskTid);
         redisTemplate.delete(taskTid);
     }
