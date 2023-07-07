@@ -21,8 +21,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.chua.starter.sse.support.SseMessageType.NOTIFY;
-import static com.chua.starter.sse.support.SseMessageType.PROCESS;
+import static com.chua.starter.sse.support.SseMessageType.*;
 
 /**
  * 任务
@@ -179,7 +178,8 @@ public abstract class Task implements AutoCloseable {
      */
     private void doFinish(SysTask sysTask) {
         try {
-            systemTaskService.forUpdateCurrent(sysTask.getTaskId(), sysTask.getTaskTotal());
+            systemTaskService.forUpdateCurrent(sysTask);
+            sseTemplate.emit(SseMessage.builder().message(sysTask.getTaskCost() + "").type(FINISH).tid(taskTid).build(), Task.SUBSCRIBE);
         } catch (Exception ignored) {
         }
         finish(sysTask);

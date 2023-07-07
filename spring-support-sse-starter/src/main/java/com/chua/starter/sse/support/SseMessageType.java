@@ -18,5 +18,9 @@ public enum SseMessageType {
     /**
      * 进度
      */
-    PROCESS
+    PROCESS,
+    /**
+     * 完成
+     */
+    FINISH
 }

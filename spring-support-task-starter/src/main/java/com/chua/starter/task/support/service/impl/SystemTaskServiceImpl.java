@@ -78,9 +78,8 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
         return i;
     }
     @Override
-    @CacheEvict(cacheManager = CacheConfiguration.DEFAULT_CACHE_MANAGER, cacheNames = "task", key = "#task.taskId")
+    @CacheEvict(cacheManager = CacheConfiguration.DEFAULT_CACHE_MANAGER, cacheNames = "task", key = "#task.taskTid")
     public int forceUpdateWithId(SysTask task) {
-        task.setTaskTid(null);
         task.setTaskTotal(null);
         int i = baseMapper.updateById(task);
         if (i > 0) {
@@ -153,8 +152,8 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
     }
 
     @Override
-    public void forUpdateCurrent(Integer taskId, long size) {
-        doUpdateForSize(taskId, size, 3);
+    public void forUpdateCurrent(SysTask task) {
+        doUpdateForSize(task, 3);
     }
 
     @Override
@@ -192,18 +191,18 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
         baseMapper.updateById(systemTask);
     }
 
-    private synchronized void doUpdateForSize(Integer taskId, long size, int count) {
+    private synchronized void doUpdateForSize(SysTask task, int count) {
         if (count <= 0) {
             return;
         }
 
-        SysTask systemTask = baseMapper.selectById(taskId);
+        SysTask systemTask = baseMapper.selectById(task.getTaskTid());
         if (null == systemTask) {
             return;
         }
 
-        systemTask.setTaskCurrent(size);
-        if (size >= systemTask.getTaskTotal()) {
+        systemTask.setTaskCurrent(task.getTaskCurrent());
+        if (task.getTaskCurrent() >= systemTask.getTaskTotal()) {
             try {
                 systemTask.setTaskCost(System.currentTimeMillis() - DateUtils.toEpochMilli(systemTask.getCreateTime()));
             } catch (Exception ignored) {
@@ -214,9 +213,10 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
 
         try {
             baseMapper.updateById(systemTask);
+            task.setTaskCost(systemTask.getTaskCost());
         } catch (Exception e) {
             e.printStackTrace();
-            doUpdateForSize(taskId, size, count--);
+            doUpdateForSize(task, count--);
         }
     }
 
