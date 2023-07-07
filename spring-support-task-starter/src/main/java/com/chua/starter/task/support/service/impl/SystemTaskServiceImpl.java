@@ -55,7 +55,6 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
     }
 
     @Override
-    @CacheEvict(cacheManager = CacheConfiguration.DEFAULT_CACHE_MANAGER, cacheNames = "task", key = "#task.taskId")
     public int deleteWithId(String taskTid) {
         int i = baseMapper.delete(Wrappers.<SysTask>lambdaQuery().eq(SysTask::getTaskTid, taskTid));
         if (i > 0) {
