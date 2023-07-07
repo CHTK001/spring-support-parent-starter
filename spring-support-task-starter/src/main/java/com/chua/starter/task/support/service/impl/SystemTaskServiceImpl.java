@@ -133,7 +133,9 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
         ValueOperations<String, String> opsForValue = redisTemplate.opsForValue();
         for (SysTask record : records) {
             int toInt = NumberUtils.toInt(opsForValue.get(record.getKey()));
-            record.setTaskCurrent(toInt);
+            if(toInt != 0) {
+                record.setTaskCurrent(toInt);
+            }
         }
         return sysTaskPage;
     }
