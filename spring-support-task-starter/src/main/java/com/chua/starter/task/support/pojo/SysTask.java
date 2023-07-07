@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.Version;
 import com.chua.common.support.database.annotation.Column;
 import com.chua.common.support.database.entity.JdbcType;
 import com.chua.starter.mybatis.pojo.SysBase;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -16,6 +17,7 @@ import lombok.EqualsAndHashCode;
  */
 @EqualsAndHashCode(callSuper = true)
 @Data
+@JsonIgnoreProperties("key")
 public class SysTask extends SysBase implements Comparable<SysTask> {
 
     @Column(comment = "表ID")
