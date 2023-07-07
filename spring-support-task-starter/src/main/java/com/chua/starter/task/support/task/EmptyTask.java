@@ -22,6 +22,6 @@ public class EmptyTask extends Task{
 
     @Override
     protected void finish(SysTask sysTask) {
-        reset();
+
     }
 }
