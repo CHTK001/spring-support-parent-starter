@@ -19,4 +19,13 @@ public class TaskProperties {
      * 定时任务检测器（min）
      */
     private long checkTime = 5L;
+    /**
+     * 任务超时时间
+     * redis key存在时间, 时间过短会导致任务重新开始
+     */
+    private int taskExpire = 86400;
+    /**
+     * 任务可以重复
+     */
+    private boolean canSame;
 }

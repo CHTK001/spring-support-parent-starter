@@ -26,13 +26,12 @@ public class RedisMessageReceiver {
      */
     public void receiveMessage(String message) {
         System.out.println("通知的key是：" + message);
-        if (!message.startsWith(Task.PRE)) {
-            return;
-        }
         message = message.replace(Task.PRE, "");
         SysTask systemTask = systemTaskService.getTaskByTaskTid(message);
         if (null != systemTask) {
-            systemTaskService.forUpdate(message, systemTask.isFinish() ? 1 : 0);
+            systemTask.setTaskCurrent(0);
+            systemTask.setTaskStatus(0);
+            systemTaskService.forceUpdateWithId(systemTask);
         }
     }
 }

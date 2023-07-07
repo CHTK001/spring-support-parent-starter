@@ -39,6 +39,9 @@ public class Result<T> extends ReturnResult<T> {
     }
     public static <T> Result<T> failed(Exception e) {
         String localizedMessage = e.getLocalizedMessage();
+        if(null == localizedMessage) {
+            return result(SYSTEM_EXECUTION_ERROR.getCode(), "请联系管理员, 或者稍后重试", null);
+        }
         int i = localizedMessage.indexOf(SYMBOL_EXCEPTION);
         while (i > -1) {
             localizedMessage = localizedMessage.substring(SYMBOL_EXCEPTION.length() + i + 1);

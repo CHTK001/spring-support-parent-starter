@@ -13,15 +13,11 @@ import com.chua.starter.task.support.pojo.TaskParam;
 @Spi("task")
 @SpiOption(value = "测试任务", type = "empty")
 public class EmptyTask extends Task{
-    public EmptyTask(SysTask sysTask, TaskManager taskManager) {
-        super(sysTask, taskManager);
-    }
-
     @Override
-    void execute(long offset, TaskParam taskParam) {
+    protected void execute(long offset, TaskParam taskParam) {
         log.info("空任务: {}", offset);
         ThreadUtils.sleepSecondsQuietly(5);
-        step("1");
+        step(1);
     }
 
     @Override

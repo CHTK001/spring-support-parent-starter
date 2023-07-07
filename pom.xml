@@ -41,6 +41,7 @@
         <module>spring-support-minio-starter</module>
         <module>spring-support-task-starter</module>
         <module>spring-support-socketio-starter</module>
+        <module>spring-support-sse-starter</module>
     </modules>
 
     <properties>
@@ -268,6 +269,18 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-task-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-sse-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-common-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
         </dependencies>
