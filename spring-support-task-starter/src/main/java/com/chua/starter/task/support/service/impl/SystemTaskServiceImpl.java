@@ -196,7 +196,7 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
             return;
         }
 
-        SysTask systemTask = baseMapper.selectById(task.getTaskTid());
+        SysTask systemTask = baseMapper.selectById(task.getTaskId());
         if (null == systemTask) {
             return;
         }
