@@ -176,7 +176,7 @@ public class TaskManager implements ApplicationContextAware, DisposableBean, Com
         }
 
         Integer taskStatus = sysTask.getTaskStatus();
-        if(2 == taskStatus) {
+        if(null != taskStatus && 2 == taskStatus) {
             return;
         }
 
