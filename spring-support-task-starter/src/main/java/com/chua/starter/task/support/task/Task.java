@@ -151,6 +151,7 @@ public abstract class Task implements AutoCloseable {
             sysTask.setTaskStatus(1);
             sysTask.setTaskCurrent(exact);
             doFinish(sysTask);
+            taskManager.listener(sysTask.getTaskTid());
             return true;
         }
 
@@ -224,7 +225,7 @@ public abstract class Task implements AutoCloseable {
             opsForList.set(message, message, 4, TimeUnit.SECONDS);
         }
         try {
-            sseTemplate.emit(SseMessage.builder().message(message).type(type).tid(taskTid).build());
+            sseTemplate.emit(SseMessage.builder().message(message).type(type).tid(taskTid).build(), Task.SUBSCRIBE);
         } catch (Exception ignored) {
         }
     }
