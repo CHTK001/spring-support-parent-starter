@@ -18,6 +18,7 @@ import com.chua.common.support.utils.ArrayUtils;
 import com.chua.common.support.utils.FileUtils;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.configuration.CacheConfiguration;
 import com.chua.starter.common.support.result.Result;
 import com.chua.starter.common.support.result.ResultData;
 import com.chua.starter.common.support.view.ResponseHandler;
@@ -326,7 +327,7 @@ public class OssProvider {
      */
     @ResponseBody
     @GetMapping("delete/{id}")
-    @CacheEvict(cacheNames = "oss", allEntries = true)
+    @CacheEvict(cacheManager = CacheConfiguration.DEFAULT_CACHE_MANAGER, cacheNames = "oss", allEntries = true)
     public ResultData<Boolean> delete(@PathVariable("id") String id) {
         if (null == id) {
             return ResultData.failure(PARAM_ERROR, "主键不能为空");
@@ -342,7 +343,7 @@ public class OssProvider {
      */
     @PostMapping("update")
     @ResponseBody
-    @CacheEvict(cacheNames = "oss", allEntries = true)
+    @CacheEvict(cacheManager = CacheConfiguration.DEFAULT_CACHE_MANAGER, cacheNames = "oss", allEntries = true)
     public ResultData<Boolean> updateById(@Valid @RequestBody SysOss t, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
@@ -364,7 +365,7 @@ public class OssProvider {
      */
     @PostMapping("save")
     @ResponseBody
-    @CacheEvict(cacheNames = "oss", allEntries = true)
+    @CacheEvict(cacheManager = CacheConfiguration.DEFAULT_CACHE_MANAGER, cacheNames = "oss", allEntries = true)
     public ResultData<Boolean> save(@Valid @RequestBody SysOss t, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
