@@ -16,6 +16,10 @@ public enum SseMessageType {
      */
     NOTIFY,
     /**
+     * 通知
+     */
+    NOTIFY_HTML,
+    /**
      * 进度
      */
     PROCESS,
