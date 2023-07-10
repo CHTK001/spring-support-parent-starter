@@ -46,6 +46,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import static com.chua.starter.common.support.result.ReturnCode.PARAM_ERROR;
@@ -230,13 +231,20 @@ public class OssProvider {
         SysOss ossSystem = ossSystemService.getSystemByBucket(bucket);
         if (null == ossSystem) {
             try {
-                return ResponseEntity.ok()
-                        .contentType(new MediaType("image", "webp"))
-                        .body(IoUtils.toByteArray(OssProvider.class.getResource("/404.webp")));
+                return noAuth();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
+
+        if(ossSystem.getOssStatus() == 0) {
+            try {
+                return noAuth();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
         OssResolver ossResolver = ServiceProvider.of(OssResolver.class).getNewExtension(ossSystem.getOssType());
         if (null == ossResolver) {
             return ResponseEntity.notFound().build();
@@ -264,7 +272,7 @@ public class OssProvider {
             if (mode == Mode.DOWNLOAD) {
                 mt = MediaType.APPLICATION_OCTET_STREAM;
                 try {
-                    headers.add("Content-Disposition", "attachment;filename=" + URLEncoder.encode(path, "UTF-8"));
+                    headers.add("Content-Disposition", "attachment;filename=" + URLEncoder.encode(StringUtils.removePrefix(path, "/"), "UTF-8"));
                 } catch (UnsupportedEncodingException e) {
                     throw new RuntimeException(e);
                 }
@@ -277,6 +285,12 @@ public class OssProvider {
             throw new RuntimeException(e);
         }
 
+    }
+
+    private ResponseEntity<byte[]> noAuth() throws IOException {
+        return ResponseEntity.ok()
+                .contentType(new MediaType("image", "webp"))
+                .body(IoUtils.toByteArray(Objects.requireNonNull(OssProvider.class.getResource("/404.webp"))));
     }
 
     @ResponseBody
