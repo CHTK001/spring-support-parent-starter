@@ -64,7 +64,7 @@ public abstract class Task implements AutoCloseable {
         this.taskTid = sysTask.getTaskTid();
         String taskParams = sysTask.getTaskParams();
         this.taskParam = new TaskParam(Json.toMapStringObject(taskParams));
-        this.taskParam.getString("taskName", sysTask.getTaskName());
+        this.taskParam.addProfile("taskName", sysTask.getTaskName());
     }
 
     public Task() {
