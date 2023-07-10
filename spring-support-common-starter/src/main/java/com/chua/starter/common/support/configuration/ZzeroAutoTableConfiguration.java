@@ -51,6 +51,9 @@ public class ZzeroAutoTableConfiguration implements PriorityOrdered {
         this.applicationContext = applicationContext;
         autoTableProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(AutoTableProperties.PRE, AutoTableProperties.class);
         this.beansOfType = applicationContext.getBeansOfType(DataSource.class);
+        if(null == beansOfType) {
+            return;
+        }
         if (autoTableProperties.isOpen()) {
             refresh();
         }
