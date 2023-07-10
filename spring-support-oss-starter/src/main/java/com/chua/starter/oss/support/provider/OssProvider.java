@@ -14,6 +14,7 @@ import com.chua.common.support.oss.node.OssNode;
 import com.chua.common.support.pojo.Mode;
 import com.chua.common.support.spi.Option;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.ArrayUtils;
 import com.chua.common.support.utils.FileUtils;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;
@@ -26,6 +27,7 @@ import com.chua.starter.oss.support.pojo.OssQuery;
 import com.chua.starter.oss.support.pojo.SysOss;
 import com.chua.starter.oss.support.service.OssSystemService;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -91,7 +93,7 @@ public class OssProvider {
         }
 
         if (StringUtils.isBlank(query.getPath())) {
-            return listObjects(query.getOssId(), query.getOssBucket(), query.getPageNum(), query.getPageSize());
+            return listObjects(query.getOssId(), query.getName(), query.getOssBucket(), query.getPageNum(), query.getPageSize());
         }
         OssAnalysis ossAnalysis = ServiceProvider.of(OssAnalysis.class).getDeepNewExtension(ossSystem.getOssType());
 
@@ -109,9 +111,16 @@ public class OssProvider {
     @GetMapping("/listObjects")
     public Result<Page<OssNode>> listObjects(String ossId,
                                              String name,
+                                             String ossBucket,
                                              @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
                                              @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
-        SysOss ossSystem = ossSystemService.getById(ossId);
+
+        SysOss ossSystem = null;
+        if(StringUtils.isNotEmpty(ossId)) {
+            ossSystem = ossSystemService.getById(ossId);
+        } else {
+            ossSystem = ossSystemService.getSystemByBucket(ossBucket);
+        }
         if (null == ossSystem) {
             return Result.failed("bucket不存在");
         }
@@ -133,9 +142,14 @@ public class OssProvider {
     @ResponseBody
     @PostMapping("/upload")
     public Result<Boolean> saveOss(String ossBucket, @RequestParam(value = "parentPath", defaultValue = "") String parentPath, MultipartFile[] files) {
+        if(ArrayUtils.isEmpty(files)) {
+            return Result.failed("上传文件不能为空");
+        }
+
         if (null == ossBucket) {
             return Result.failed("bucket不存在");
         }
+
         SysOss ossSystem = ossSystemService.getSystemByBucket(ossBucket);
         if (null == ossSystem) {
             return Result.failed("bucket不存在");
@@ -235,14 +249,6 @@ public class OssProvider {
                     null,
                     outputStream, fromPath);
 
-            handler = ResponseHandler.ok();
-            if (mode == Mode.DOWNLOAD) {
-                try {
-                    handler.header("Content-Disposition", "attachment;filename=" + URLEncoder.encode(path, "UTF-8"));
-                } catch (UnsupportedEncodingException e) {
-                    throw new RuntimeException(e);
-                }
-            }
 
             MediaType mt = null;
             Optional<MediaType> first = org.springframework.http.MediaTypeFactory.getMediaTypes(path).stream().findFirst();
@@ -252,8 +258,19 @@ public class OssProvider {
             } else {
                 mt = first.get();
             }
+
+            HttpHeaders headers = new HttpHeaders();
+            if (mode == Mode.DOWNLOAD) {
+                mt = MediaType.APPLICATION_OCTET_STREAM;
+                try {
+                    headers.add("Content-Disposition", "attachment;filename=" + URLEncoder.encode(path, "UTF-8"));
+                } catch (UnsupportedEncodingException e) {
+                    throw new RuntimeException(e);
+                }
+            }
             return ResponseEntity.ok()
                     .contentType(mt)
+                    .headers(headers)
                     .body(outputStream.toByteArray());
         } catch (IOException e) {
             throw new RuntimeException(e);
