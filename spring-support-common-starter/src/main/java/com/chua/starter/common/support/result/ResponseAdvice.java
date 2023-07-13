@@ -1,8 +1,6 @@
 package com.chua.starter.common.support.result;
 
-import com.chua.common.support.log.Log;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.common.support.converter.ResultDataHttpMessageConverter;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.SneakyThrows;
@@ -21,7 +19,6 @@ import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -50,7 +47,7 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
     @ExceptionHandler(BindException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> processException(BindException e) {
-        log.error("BindException:{}", e.getMessage());
+        log.error("BindException:{}", e);
         String msg = e.getAllErrors().stream().map(DefaultMessageSourceResolvable::getDefaultMessage).collect(Collectors.joining("；"));
         return Result.failed(PARAM_ERROR, msg);
     }
@@ -65,7 +62,7 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
     @ExceptionHandler(ConstraintViolationException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> processException(javax.validation.ConstraintViolationException e) {
-        log.error("ConstraintViolationException:{}", e.getMessage());
+        log.error("ConstraintViolationException:{}", e);
         String msg = e.getConstraintViolations().stream().map(ConstraintViolation::getMessage).collect(Collectors.joining("；"));
         return Result.failed(PARAM_ERROR, msg);
     }
@@ -80,7 +77,7 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> processException(MethodArgumentNotValidException e) {
-        log.error("MethodArgumentNotValidException:{}", e.getMessage());
+        log.error("MethodArgumentNotValidException:{}", e);
         String msg = e.getBindingResult().getAllErrors().stream().map(DefaultMessageSourceResolvable::getDefaultMessage).collect(Collectors.joining("；"));
         return Result.failed(PARAM_ERROR, msg);
     }
@@ -181,7 +178,7 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
     @ExceptionHandler(BusinessException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> handleBizException(BusinessException e) {
-        log.error("biz exception: {}", e.getMessage());
+        log.error("biz exception: {}", e);
         if (e.getResultCode() != null) {
             return Result.failed(e.getResultCode());
         }
@@ -193,7 +190,7 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> maxUploadSizeExceededException(MaxUploadSizeExceededException e) {
-        log.error("文件过大", e.getCause());
+        log.error("文件过大", e);
         if(e.getMaxUploadSize() > 0) {
             return Result.failed("文件过大, 当前服务器支支持{}大小文件", StringUtils.getNetFileSizeDescription(e.getMaxUploadSize(), DECIMAL_FORMAT));
         }
@@ -202,13 +199,13 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> handleException(Exception e) {
-        log.error("unknown exception: {}", e.getMessage());
+        log.error("unknown exception: {}", e);
         return Result.failed("请求失败,请稍后重试");
     }
     @ExceptionHandler(RuntimeException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> handleRuntimeException(RuntimeException e) {
-        log.error("unknown exception: {}", e.getMessage());
+        log.error("unknown exception: {}", e);
         return Result.failed(e);
     }
 
