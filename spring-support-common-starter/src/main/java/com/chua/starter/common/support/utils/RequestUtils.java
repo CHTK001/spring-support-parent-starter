@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.utils;
 
+import com.chua.common.support.utils.StringUtils;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -45,7 +46,7 @@ public class RequestUtils {
         }
         if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
             ip = request.getRemoteAddr();
-            if ("127.0.0.1".equals(ip)) {
+            if ("127.0.0.1".equals(ip) || "0:0:0:0:0:0:0:1".equals(ip)) {
                 //根据网卡取本机配置的IP
                 InetAddress inet = null;
                 try {
@@ -62,7 +63,7 @@ public class RequestUtils {
                 ip = ip.substring(0, ip.indexOf(","));
             }
         }
-        return ip;
+        return StringUtils.defaultString(ip, request.getRemoteAddr());
 
 
     }
