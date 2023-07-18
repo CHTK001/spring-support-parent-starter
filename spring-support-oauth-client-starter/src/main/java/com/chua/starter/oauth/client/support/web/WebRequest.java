@@ -132,7 +132,10 @@ public class WebRequest {
      */
     private String getToken() {
         String header = request.getHeader(authProperties.getTokenName());
-        return Strings.isNullOrEmpty(header) ? request.getParameter(authProperties.getTokenName()) : header;
+        return Strings.isNullOrEmpty(header) ? StringUtils.defaultString(
+                request.getParameter(authProperties.getTokenName()),
+                request.getAttribute(authProperties.getTokenName()) + ""
+        ) : header;
     }
 
     /**
