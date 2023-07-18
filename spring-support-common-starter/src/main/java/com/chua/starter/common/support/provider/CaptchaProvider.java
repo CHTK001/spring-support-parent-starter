@@ -27,7 +27,7 @@ import java.util.Base64;
  * @author CH
  */
 @RestController
-@RequestMapping("${plugin.captcha.context-path:}")
+@RequestMapping("${plugin.captcha.context-path:/v1/}")
 @ConditionalOnProperty(prefix = CaptchaProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = true)
 public class CaptchaProvider {
 
