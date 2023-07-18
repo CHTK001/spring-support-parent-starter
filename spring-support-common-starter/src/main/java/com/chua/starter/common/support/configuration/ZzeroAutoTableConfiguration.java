@@ -9,11 +9,14 @@ import com.chua.hibernate.support.database.resolver.HibernateMetadataResolver;
 import com.chua.starter.common.support.annotations.DS;
 import com.chua.starter.common.support.annotations.EnableAutoTable;
 import com.chua.starter.common.support.properties.AutoTableProperties;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.Ordered;
 import org.springframework.core.PriorityOrdered;
 import org.springframework.core.annotation.AnnotatedElementUtils;
@@ -29,6 +32,8 @@ import org.springframework.util.MultiValueMap;
 import javax.sql.DataSource;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * 自动建表
@@ -39,42 +44,52 @@ import java.util.*;
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)
 @AutoConfigureAfter(DataSourceAutoConfiguration.class)
 @EnableConfigurationProperties(AutoTableProperties.class)
-public class ZzeroAutoTableConfiguration implements PriorityOrdered {
+public class ZzeroAutoTableConfiguration implements PriorityOrdered, ApplicationContextAware, SmartInstantiationAwareBeanPostProcessor {
 
     private static final Log log = Log.getLogger(AutoTableProperties.class);
     AutoTableProperties autoTableProperties;
 
-    private final Map<String, DataSource> beansOfType;
-    private final ApplicationContext applicationContext;
+    private Map<String, DataSource> beansOfType = new ConcurrentHashMap<>();
+    private ApplicationContext applicationContext;
 
-    public ZzeroAutoTableConfiguration(ApplicationContext applicationContext) {
-        this.applicationContext = applicationContext;
-        autoTableProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(AutoTableProperties.PRE, AutoTableProperties.class);
-        this.beansOfType = applicationContext.getBeansOfType(DataSource.class);
-        if(null == beansOfType) {
-            return;
-        }
+    private static final List<Object> DEAL = new CopyOnWriteArrayList<>();
+
+//    public ZzeroAutoTableConfiguration(ApplicationContext applicationContext) {
+//        this.applicationContext = applicationContext;
+//        autoTableProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(AutoTableProperties.PRE, AutoTableProperties.class);
+//        this.beansOfType = applicationContext.getBeansOfType(DataSource.class);
+//        if(null == beansOfType) {
+//            return;
+//        }
+//        if (autoTableProperties.isOpen()) {
+//            refresh();
+//        }
+//    }
+
+    @Override
+    public boolean postProcessAfterInstantiation(Object bean, String beanName) throws BeansException {
         if (autoTableProperties.isOpen()) {
-            refresh();
+            refresh(bean, beanName);
         }
+        if(DataSource.class.isAssignableFrom(bean.getClass())) {
+            this.beansOfType.put(beanName, (DataSource) bean);
+        }
+        return SmartInstantiationAwareBeanPostProcessor.super.postProcessAfterInstantiation(bean, beanName);
     }
 
-    private void refresh() {
-        Map<String, Object> beansWithAnnotation = applicationContext.getBeansWithAnnotation(EnableAutoTable.class);
-        Collection<Object> values = beansWithAnnotation.values();
-        String[] scann = getScan(values);
-        log.info(">>>>>>>>>> 开始自动建表");
+    private void refresh(Object bean, String beanName) {
+        Class<?> aClass = bean.getClass();
+        EnableAutoTable enableAutoTable = aClass.getDeclaredAnnotation(EnableAutoTable.class);
+        if(null == enableAutoTable) {
+            return;
+        }
+        String[] scann = getScan(Collections.singletonList(bean));
+        log.info(">>>>>>>>>> 开始自动建表: {}", beanName);
         for (String s : scann) {
             refresh(s);
         }
 
-        for (Object value : values) {
-            EnableAutoTable enableAutoTable = value.getClass().getDeclaredAnnotation(EnableAutoTable.class);
-            if(null == enableAutoTable) {
-                continue;
-            }
-            refresh(Arrays.asList(enableAutoTable.packageType()));
-        }
+        refresh(Arrays.asList(enableAutoTable.packageType()));
 
         log.info(">>>>>>>> 自动建表完成");
 
@@ -98,6 +113,10 @@ public class ZzeroAutoTableConfiguration implements PriorityOrdered {
     }
 
     private void refresh(String s) {
+        if(DEAL.contains(s)) {
+            return;
+        }
+        DEAL.add(s);
         PathMatchingResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver();
         Resource[] resources;
         MetadataReaderFactory metaReader = new CachingMetadataReaderFactory();
@@ -125,6 +144,9 @@ public class ZzeroAutoTableConfiguration implements PriorityOrdered {
     }
 
     private void refresh(Collection<Class<?>> classList) {
+        if(classList.isEmpty()) {
+            return;
+        }
         AutoMetadata autoMetadata = AutoMetadata.builder()
                 .metadataResolver(new HibernateMetadataResolver())
                 .prefix(autoTableProperties.getPrefix())
@@ -132,6 +154,10 @@ public class ZzeroAutoTableConfiguration implements PriorityOrdered {
 
 
         for (Class<?> aClass : classList) {
+            if(DEAL.contains(aClass)) {
+                return;
+            }
+            DEAL.add(aClass);
             DataSource dataSource = getDataSource(aClass);
             if (null == dataSource) {
                 log.warn("数据源不存在");
@@ -184,5 +210,11 @@ public class ZzeroAutoTableConfiguration implements PriorityOrdered {
     @Override
     public int getOrder() {
         return Ordered.HIGHEST_PRECEDENCE + 1;
+    }
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.applicationContext = applicationContext;
+        autoTableProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(AutoTableProperties.PRE, AutoTableProperties.class);
     }
 }
