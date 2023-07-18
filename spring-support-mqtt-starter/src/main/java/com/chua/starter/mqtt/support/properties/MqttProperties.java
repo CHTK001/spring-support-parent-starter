@@ -2,9 +2,6 @@ package com.chua.starter.mqtt.support.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-
-import java.util.List;
 
 import static com.chua.starter.mqtt.support.properties.MqttProperties.PRE;
 
@@ -30,10 +27,6 @@ public class MqttProperties {
      */
     private String password;
     /**
-     * 默认qos为0，非持久化
-     */
-    private int qos = 0;
-    /**
      * 唯一ID
      */
     private String clientId;
@@ -46,8 +39,4 @@ public class MqttProperties {
      * 保活时间
      */
     private int keepalive = 20;
-    /**
-     * 主题
-     */
-    private List<String> topic;
 }
