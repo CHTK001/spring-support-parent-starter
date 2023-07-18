@@ -44,6 +44,7 @@ import static com.chua.starter.common.support.result.ReturnCode.*;
 @Slf4j
 public class ResponseAdvice implements ResponseBodyAdvice<Object> {
 
+
     @ExceptionHandler(BindException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> processException(BindException e) {
