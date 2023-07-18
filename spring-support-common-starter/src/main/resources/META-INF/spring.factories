@@ -5,7 +5,6 @@ org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
   com.chua.starter.common.support.configuration.AsyncConfiguration,\
   com.chua.starter.common.support.configuration.ConverterConfiguration,\
   com.chua.starter.common.support.configuration.CaptchaConfiguration,\
-  com.chua.starter.common.support.configuration.ProviderConfiguration,\
   com.chua.starter.common.support.configuration.ResourceConfiguration,\
   com.chua.starter.common.support.configuration.ViewConfiguration,\
   com.chua.starter.common.support.configuration.CacheConfiguration,\
