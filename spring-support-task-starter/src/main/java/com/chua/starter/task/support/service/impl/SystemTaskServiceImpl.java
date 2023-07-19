@@ -22,17 +22,14 @@ import com.chua.starter.task.support.task.Task;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.redis.core.ListOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * @author CH
@@ -103,7 +100,7 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
         if(StringUtils.isEmpty(task.getTaskCid())) {
             throw new RuntimeException("任务实现不能为空");
         }
-        task.setCreateTime(new Date());
+        task.setCreateTime(LocalDateTime.now());
         task.setTaskExpire(taskProperties.getTaskExpire());
         task.setTaskTid(
                 (taskProperties.isCanSame() ? (DigestUtils.md5Hex(IdUtils.createTid()) + "_") : "") +
