@@ -256,11 +256,14 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
             return o;
         }
 
+        if (o instanceof ReturnPageResult) {
+            return o;
+        }
         if (o instanceof ResultData) {
             return o;
         }
 
-        if (o instanceof ReturnResult || (null != o &&(o.getClass().getTypeName().endsWith("result.PageResult")))) {
+        if (o instanceof ReturnResult || (null != o && (o.getClass().getTypeName().endsWith("result.PageResult")))) {
             return o;
         }
 
