@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import static com.chua.starter.common.support.result.ReturnCode.*;
+
 /**
  * 返回结果
  *
@@ -16,7 +18,7 @@ public class ReturnPageResult<T> {
     /**
      * http状态码
      */
-    private Integer code;
+    protected String code;
 
     /**
      * 结果
@@ -36,7 +38,7 @@ public class ReturnPageResult<T> {
      * @return 结果
      */
     public static <T> ReturnPageResult<T> ok(PageResult<T> data, String msg) {
-        return new ReturnPageResult<>(200, data, msg);
+        return new ReturnPageResult<>(SUCCESS.getCode(), data, msg);
     }
 
     /**
@@ -46,7 +48,7 @@ public class ReturnPageResult<T> {
      * @return 结果
      */
     public static <T> ReturnPageResult<T> noAuth() {
-        return new ReturnPageResult<>(403, null, null);
+        return new ReturnPageResult<>(RESULT_ACCESS_UNAUTHORIZED.getCode(), null, null);
     }
     /**
      * 初始化
@@ -55,7 +57,7 @@ public class ReturnPageResult<T> {
      * @return 结果
      */
     public static <T> ReturnPageResult<T> noAuth(String msg) {
-        return new ReturnPageResult<>(403, null, msg);
+        return new ReturnPageResult<>(RESULT_ACCESS_UNAUTHORIZED.getCode(), null, msg);
     }
 
     /**
@@ -88,7 +90,7 @@ public class ReturnPageResult<T> {
      * @return 结果
      */
     public static <T> ReturnPageResult<T> error(PageResult<T> data, String msg) {
-        return new ReturnPageResult<>(500, null, msg);
+        return new ReturnPageResult<>(SYSTEM_SERVER_BUSINESS.getCode(), null, msg);
     }
 
     /**
@@ -121,7 +123,7 @@ public class ReturnPageResult<T> {
      * @return 结果
      */
     public static <T> ReturnPageResult<T> illegal(PageResult<T> data, String msg) {
-        return new ReturnPageResult<>(400, null, msg);
+        return new ReturnPageResult<>(PARAM_ERROR.getCode(), null, msg);
     }
 
     /**
