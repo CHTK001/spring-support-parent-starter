@@ -30,7 +30,6 @@ import com.google.common.base.Strings;
 import kong.unirest.HttpResponse;
 import kong.unirest.Unirest;
 import kong.unirest.UnirestException;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.InitializingBean;
 
 import javax.annotation.Resource;
@@ -166,7 +165,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
     }
 
     private String getCacheKey(Cookie[] cookies, String token) {
-        if(null != token) {
+        if(StringUtils.isNotEmpty(StringUtils.ifValid(token, ""))) {
             return token;
         }
 

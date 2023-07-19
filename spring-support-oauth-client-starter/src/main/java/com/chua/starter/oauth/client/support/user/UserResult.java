@@ -1,5 +1,6 @@
 package com.chua.starter.oauth.client.support.user;
 
+import com.chua.common.support.utils.MapUtils;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -149,5 +150,9 @@ public class UserResult {
 
     public boolean isRoot() {
         return this.getRoles().contains("admin");
+    }
+
+    public String getExtValue(String key) {
+        return MapUtils.getString(ext, key);
     }
 }

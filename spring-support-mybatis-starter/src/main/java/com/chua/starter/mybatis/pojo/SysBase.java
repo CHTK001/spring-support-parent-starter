@@ -13,7 +13,6 @@ import lombok.Data;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.Date;
 
 @Data
 public class SysBase implements Serializable {
@@ -27,7 +26,7 @@ public class SysBase implements Serializable {
     @ApiModelProperty("创建时间")
     @JsonInclude(value = JsonInclude.Include.NON_NULL)
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private Date createTime;
+    private LocalDateTime createTime;
 
     @TableField(fill = FieldFill.INSERT_UPDATE)
     @JsonInclude(value = JsonInclude.Include.NON_NULL)
@@ -35,7 +34,7 @@ public class SysBase implements Serializable {
     @JsonSerialize(using = LocalDateTimeSerializer.class)
     @ApiModelProperty("更新时间")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private Date updateTime;
+    private LocalDateTime updateTime;
 
     @TableField(fill = FieldFill.INSERT_UPDATE)
     @JsonInclude(value = JsonInclude.Include.NON_NULL)

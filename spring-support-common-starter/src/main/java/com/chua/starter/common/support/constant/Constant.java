@@ -10,8 +10,10 @@ public interface Constant {
     String DEFAULT_EXECUTOR = "default-executor";
     String DEFAULT_EXECUTOR2 = "default-executor-2";
     String DEFAULT_TASK_EXECUTOR = "default-task-executor";
-    public final String DEFAULT_SER = "123456";
+    String DEFAULT_SER = "123456";
 
+    String ADMIN = "ADMIN";
+    String SYSTEM = "system";
     String PARAM = "param";
     String CONNECT = "connect";
     String DISCONNECT = "disconnect";
@@ -24,5 +26,4 @@ public interface Constant {
     String VERSION = "version";
     String METHOD = "method";
     String ACTION = "action";
-    String ADMIN = "ADMIN";
 }

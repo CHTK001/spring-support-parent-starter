@@ -2,19 +2,16 @@ package com.chua.starter.oauth.server.support.token;
 
 import com.chua.common.support.annotations.Extension;
 import com.chua.common.support.json.Json;
-import com.chua.common.support.json.TypeReference;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.IdUtils;
-import com.chua.common.support.utils.MapUtils;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.common.support.utils.CookieUtil;
-import com.chua.starter.oauth.client.support.contants.AuthConstant;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.user.LoginResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.server.support.generation.TokenGeneration;
 import com.chua.starter.oauth.server.support.properties.AuthServerProperties;
-import com.google.common.base.Strings;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.cglib.beans.BeanMap;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -23,10 +20,8 @@ import org.springframework.data.redis.core.ValueOperations;
 import javax.annotation.Resource;
 import javax.servlet.http.Cookie;
 import java.time.Duration;
-import java.util.Map;
 import java.util.Set;
 
-import static com.chua.starter.oauth.client.support.contants.AuthConstant.PRE_KEY;
 import static com.chua.starter.oauth.client.support.contants.AuthConstant.TOKEN_PRE;
 
 /**
@@ -120,7 +115,7 @@ public class RedisTokenResolver implements TokenResolver {
     public ReturnResult<UserResult> resolve(Cookie[] cookies, String token) {
         Cookie cookie = CookieUtil.getCookie(cookies, authServerProperties.getCookieName());
         String cv = token;
-        if (null == cv) {
+        if (StringUtils.isEmpty(StringUtils.ifValid(cv, ""))) {
             cv = null == cookie ? null : cookie.getValue();
         }
 
