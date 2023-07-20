@@ -2,7 +2,6 @@ package com.chua.starter.common.support.watch;
 
 import com.chua.common.support.span.TrackContext;
 
-import java.util.Date;
 import java.util.Stack;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -53,7 +52,7 @@ public class NewTrackManager {
     public static Span createEntrySpan() {
         Span span = createSpan();
         Stack<Span> stack = TRACK_CACHE.get();
-        span.setEnterTime(new Date());
+        span.setEnterTime(System.nanoTime());
         if (stack.isEmpty()) {
             span.setId(span.getLinkId());
         } else {
@@ -112,6 +111,6 @@ public class NewTrackManager {
             return;
         }
 
-        span.setCostTime(System.currentTimeMillis() - span.getEnterTime().getTime());
+        span.setCostTime(System.nanoTime() - span.getEnterTime());
     }
 }

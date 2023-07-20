@@ -58,7 +58,7 @@ public class SysLog {
     /**
      * 耗时(s)
      */
-    private Long logCost;
+    private Double logCost;
     /**
      * 請求地址
      */

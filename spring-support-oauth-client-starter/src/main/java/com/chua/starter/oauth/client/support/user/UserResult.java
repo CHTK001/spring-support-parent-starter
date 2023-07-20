@@ -47,7 +47,11 @@ public class UserResult {
     /**
      * 数据权限
      */
-    private Set<String> dataPermission;
+    private String dataPermission;
+    /**
+     * 数据权限规则
+     */
+    private String dataPermissionRule;
 
     /**
      * 额外信息

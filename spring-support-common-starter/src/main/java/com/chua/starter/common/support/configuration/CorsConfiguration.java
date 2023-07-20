@@ -1,13 +1,12 @@
 package com.chua.starter.common.support.configuration;
 
-import com.chua.starter.common.support.common.CommonService;
-import com.chua.starter.common.support.constant.Constant;
 import com.chua.starter.common.support.converter.FastJsonHttpMessageConverter;
 import com.chua.starter.common.support.converter.ResultDataHttpMessageConverter;
 import com.chua.starter.common.support.limit.LimitAspect;
 import com.chua.starter.common.support.logger.LogGuidAspect;
 import com.chua.starter.common.support.logger.LoggerPointcutAdvisor;
 import com.chua.starter.common.support.logger.LoggerService;
+import com.chua.starter.common.support.logger.WatchGuidAspect;
 import com.chua.starter.common.support.processor.ResponseModelViewMethodProcessor;
 import com.chua.starter.common.support.properties.CoreProperties;
 import com.chua.starter.common.support.properties.CorsProperties;
@@ -17,15 +16,9 @@ import com.chua.starter.common.support.provider.OptionsProvider;
 import com.chua.starter.common.support.result.ResponseAdvice;
 import com.chua.starter.common.support.version.ApiVersionRequestMappingHandlerMapping;
 import com.chua.starter.common.support.watch.WatchPointcutAdvisor;
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.PropertyAccessor;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.web.servlet.WebMvcRegistrations;
@@ -48,8 +41,6 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 import javax.annotation.Resource;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 
 /**
  * 跨域处理
@@ -121,12 +112,12 @@ public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAw
         return new LoggerPointcutAdvisor(loggerService);
     }
 
-    @Bean
-    @ConditionalOnMissingBean
-    @Lazy
-    public CommonService commonService(CoreProperties coreProperties, @Qualifier(Constant.DEFAULT_EXECUTOR2) Executor executorService) {
-        return new CommonService(coreProperties, executorService);
-    }
+//    @Bean
+//    @ConditionalOnMissingBean
+//    @Lazy
+//    public CommonService commonService(CoreProperties coreProperties, @Qualifier(Constant.DEFAULT_EXECUTOR2) Executor executorService) {
+//        return new CommonService(coreProperties, executorService);
+//    }
 
     @Bean
     @ConditionalOnMissingBean
@@ -139,6 +130,11 @@ public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAw
     @ConditionalOnMissingBean
     public LogGuidAspect logGuidAspect() {
         return new LogGuidAspect();
+    }
+    @Bean
+    @ConditionalOnMissingBean
+    public WatchGuidAspect watchGuidAspect() {
+        return new WatchGuidAspect();
     }
 
     /**
