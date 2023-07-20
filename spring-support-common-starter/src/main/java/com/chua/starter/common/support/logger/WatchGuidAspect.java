@@ -27,7 +27,7 @@ public class WatchGuidAspect {
 
     }
 
-    @Pointcut("execution(* com.fasterxml.jackson..*(..)) ")
+    @Pointcut("execution(* com.fasterxml.jackson..*(..)) || execution(* com..*mybatis*..*(..))")
     public void excludePointcut() {
     }
 
