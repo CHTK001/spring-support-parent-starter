@@ -21,11 +21,14 @@ public class WatchGuidAspect {
     /*** * 切入规则，拦截*Controller.java下所有方法 */
     @Pointcut("execution(* com..*Controller.*(..)) || " +
             "execution(* com..*Service.*(..))|| " +
-            "execution(* org..*Executor.*(..))|| " +
             "execution(* com..*ServiceImpl.*(..)) || " +
             "execution(* com..*Mapper.*(..))")
     public void beanAspect() {
 
+    }
+
+    @Pointcut("execution(* com.fasterxml.jackson..*(..)) ")
+    public void excludePointcut() {
     }
 
     /**
@@ -34,7 +37,7 @@ public class WatchGuidAspect {
      * @param joinPoint 切点
      * @throws InterruptedException InterruptedException
      */
-    @Before("beanAspect()")
+    @Before("beanAspect() && !excludePointcut()")
     public void doBefore(JoinPoint joinPoint) throws InterruptedException {
         Span entrySpan = NewTrackManager.createEntrySpan();
         Signature signature = joinPoint.getSignature();
@@ -53,7 +56,7 @@ public class WatchGuidAspect {
      *
      * @param res 响应内容
      */
-    @AfterReturning(returning = "res", pointcut = "beanAspect()")
+    @AfterReturning(returning = "res", pointcut = "beanAspect() && !excludePointcut()")
     public void doAfterReturning(Object res) throws Throwable {
         Span currentSpan = NewTrackManager.getCurrentSpan();
         currentSpan.setEndTime(System.nanoTime());
