@@ -14,6 +14,19 @@ import java.net.InetAddress;
 public class RequestUtils {
 
 
+    static String LOCAL = null;
+
+    static {
+        //根据网卡取本机配置的IP
+        InetAddress inet = null;
+        try {
+            inet = InetAddress.getLocalHost();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        LOCAL = inet.getHostAddress();
+    }
+
     /**
      * 获取客户端IP地址
      *
@@ -21,12 +34,13 @@ public class RequestUtils {
      */
     public static String getIpAddress() {
         HttpServletRequest request = getRequest();
-        if(request == null) {
+        if (request == null) {
             return "::";
         }
 
         return getIpAddress(request);
     }
+
     /**
      * 获取客户端IP地址
      *
@@ -47,14 +61,7 @@ public class RequestUtils {
         if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
             ip = request.getRemoteAddr();
             if ("127.0.0.1".equals(ip) || "0:0:0:0:0:0:0:1".equals(ip)) {
-                //根据网卡取本机配置的IP
-                InetAddress inet = null;
-                try {
-                    inet = InetAddress.getLocalHost();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                ip = inet.getHostAddress();
+                return LOCAL;
             }
         }
         // 多个代理的情况，第一个IP为客户端真实IP,多个IP按照','分割
