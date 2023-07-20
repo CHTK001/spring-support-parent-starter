@@ -1,6 +1,7 @@
 package com.chua.starter.common.support.logger;
 
 import com.chua.common.support.lang.date.DateTime;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.view.view.TreeView;
 import com.chua.common.support.view.view.TreeViewNode;
 import com.chua.starter.common.support.result.ResultData;
@@ -105,6 +106,14 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
     }
 
     protected void saveLog(Object proceed, MethodInvocation invocation, int status, long startTime) {
+        String key = GuidhreadLocal.get();
+        Boolean ifPresent = CACHE.getIfPresent(key);
+        if (null != ifPresent) {
+            return;
+        }
+
+        CACHE.put(key, true);
+
         Method method = invocation.getMethod();
         String address = RequestUtils.getIpAddress(request);
         DateTime now = DateTime.now();
@@ -112,13 +121,6 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
         HttpSession session = request.getSession();
 
         Logger logger = method.getDeclaredAnnotation(Logger.class);
-        String key = session.getAttribute("userId") + logger.value() + logger.action() + address;
-        Boolean ifPresent = CACHE.getIfPresent(key);
-        if (null != ifPresent) {
-            return;
-        }
-
-        CACHE.put(key, true);
         SysLog sysLog = new SysLog();
         StandardEvaluationContext standardEvaluationContext = new StandardEvaluationContext(applicationContext);
         standardEvaluationContext.addPropertyAccessor(new BeanFactoryAccessor());
@@ -135,10 +137,13 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
         sysLog.setLogAction(logger.action());
         sysLog.setLogCode(GuidhreadLocal.get());
         sysLog.setLogAddress(address);
+        if (StringUtils.isEmpty(sysLog.getLogName()) || StringUtils.isEmpty(sysLog.getLogAction())) {
+            return;
+        }
 
         standardEvaluationContext.setVariable("ip", RequestUtils.getIpAddress());
         Object username = request.getSession().getAttribute("username");
-        standardEvaluationContext.setVariable("current_username", null == username ? "": username);
+        standardEvaluationContext.setVariable("current_username", null == username ? "" : username);
         standardEvaluationContext.setVariable("now", now.toStandard());
         standardEvaluationContext.setVariable("nowDate", now);
         standardEvaluationContext.setVariable("result", proceed);
