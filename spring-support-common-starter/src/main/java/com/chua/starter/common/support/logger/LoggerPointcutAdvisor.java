@@ -172,7 +172,7 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
         Map<String, TreeViewNode> pid = new HashMap<>(spans.size());
         long endTime = spans.get(spans.size() - 1).getEnterTime();
         for (int i = 0; i < spans.size(); i++) {
-            if (i > 15) {
+            if (i > 10) {
                 break;
             }
             Span item = spans.get(i);
