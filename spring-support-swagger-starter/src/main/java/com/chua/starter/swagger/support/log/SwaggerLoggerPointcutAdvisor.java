@@ -1,6 +1,7 @@
 package com.chua.starter.swagger.support.log;
 
 import com.chua.common.support.lang.date.DateTime;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.logger.*;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.google.common.cache.Cache;
@@ -64,6 +65,14 @@ public class SwaggerLoggerPointcutAdvisor extends LoggerPointcutAdvisor {
 
     @Override
     public void saveLog(Object proceed, MethodInvocation invocation, int status, long startTime) {
+        String key = GuidhreadLocal.get();
+        Boolean ifPresent = CACHE.getIfPresent(key);
+        if (null != ifPresent) {
+            return;
+        }
+
+
+        CACHE.put(key, true);
         Method method = invocation.getMethod();
         String address = RequestUtils.getIpAddress(request);
         DateTime now = DateTime.now();
@@ -90,13 +99,7 @@ public class SwaggerLoggerPointcutAdvisor extends LoggerPointcutAdvisor {
             action = "查询";
         }
 
-        String key = session.getAttribute("userId") + logName + action + address;
-        Boolean ifPresent = CACHE.getIfPresent(key);
-        if (null != ifPresent) {
-            return;
-        }
 
-        CACHE.put(key, true);
         SysLog sysLog = new SysLog();
         sysLog.setLogMapping(RequestUtils.getUrl(request));
         sysLog.setCreateTime(date);
@@ -111,7 +114,9 @@ public class SwaggerLoggerPointcutAdvisor extends LoggerPointcutAdvisor {
         sysLog.setLogAction(action);
         sysLog.setLogCode(GuidhreadLocal.get());
         sysLog.setLogAddress(address);
-
+        if (StringUtils.isEmpty(sysLog.getLogName()) || StringUtils.isEmpty(sysLog.getLogAction())) {
+            return;
+        }
         Object username = request.getSession().getAttribute("username");
         recordLog(sysLog, proceed, null, null
                 , status, startTime, expressionParser, DateTime.now().toStandard() + " " + username + action + "了模块" + logName);
