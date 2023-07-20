@@ -76,7 +76,7 @@ public class SwaggerLoggerPointcutAdvisor extends LoggerPointcutAdvisor {
             logName = apiOperation.value();
         } else {
             Operation operation = method.getDeclaredAnnotation(Operation.class);
-            logName = operation.description();
+            logName = operation.summary();
         }
 
         String name = method.getName().toUpperCase();
