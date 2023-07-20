@@ -172,16 +172,19 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
         Map<String, TreeViewNode> pid = new HashMap<>(spans.size());
         long endTime = spans.get(spans.size() - 1).getEnterTime();
         for (int i = 0; i < spans.size(); i++) {
+            if (i > 15) {
+                break;
+            }
             Span item = spans.get(i);
-            TreeViewNode treeViewNode1  = null;
-            if(i == 0) {
+            TreeViewNode treeViewNode1 = null;
+            if (i == 0) {
                 treeViewNode1 = TreeViewNode.newBuilder(item.getTypeMethod());
             } else {
                 treeViewNode1 = new TreeViewNode(pid.get(item.getPid()), item.getTypeMethod());
             }
             treeViewNode1.totalCost = item.getCostTime();
             treeViewNode1.beginTimestamp = item.getEnterTime();
-            if(endTime > 0L) {
+            if (endTime > 0L) {
                 treeViewNode1.endTimestamp = endTime;
             }
             pid.put(item.getId(), treeViewNode1);
