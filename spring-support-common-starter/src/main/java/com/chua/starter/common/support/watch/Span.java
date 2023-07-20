@@ -1,20 +1,26 @@
 package com.chua.starter.common.support.watch;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.io.Serializable;
-import java.util.*;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Set;
 
 /**
  * @author Administrator
  */
-@Data
-public class Span implements Serializable {
+@Getter
+@Setter
+public class Span  implements Serializable {
 
     private String linkId;  //链路ID
     private String id;  //链路ID
     private String pid;  //链路ID
-    private Date enterTime; //方法进入时间
+    private long enterTime = System.nanoTime(); //方法进入时间
+    private long endTime;
     private long costTime;//耗时
     private String message;
     private List<String> stack;
@@ -22,6 +28,8 @@ public class Span implements Serializable {
     private String method;
     private String typeMethod;
     private String type;
+
+    private Object[] args;
     private boolean title;
     private String ex;
     private String error;
@@ -31,15 +39,22 @@ public class Span implements Serializable {
     private String from;
     private transient volatile Set<String> parents = new LinkedHashSet<>();
 
+    public void setPid(String pid) {
+        this.pid = pid;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
 
     public Span() {
-        this.enterTime = new Date();
+        this.enterTime = System.nanoTime();
         this.threadName = Thread.currentThread().getName();
     }
 
     public Span(String linkId) {
         this.linkId = linkId;
-        this.enterTime = new Date();
+        this.enterTime = System.nanoTime();
         setStack(Thread.currentThread().getStackTrace());
         this.threadName = Thread.currentThread().getName();
     }

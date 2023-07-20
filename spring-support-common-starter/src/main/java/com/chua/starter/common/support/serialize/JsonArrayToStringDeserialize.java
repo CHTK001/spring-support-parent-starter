@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.serialize;
 
+import com.chua.common.support.converter.Converter;
 import com.chua.common.support.json.Json;
 import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.core.JsonParser;
@@ -28,7 +29,8 @@ public class JsonArrayToStringDeserialize extends JsonDeserializer<String> {
             }
             return Json.toJson(rs);
         }
-        return null;
+
+        return Converter.convertIfNecessary(analysisValue(treeNode), String.class);
     }
 
     private Object analysisValue(TreeNode treeNode1) {

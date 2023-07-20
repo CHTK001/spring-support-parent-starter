@@ -1,9 +1,15 @@
 package com.chua.starter.swagger.support;
 
+import com.chua.starter.common.support.logger.LoggerService;
+import com.chua.starter.swagger.support.log.SwaggerLoggerPointcutAdvisor;
 import com.google.common.base.Strings;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.env.Environment;
 
 import javax.annotation.Resource;
@@ -16,6 +22,12 @@ public class Knife4jRunner implements CommandLineRunner {
     @Resource
     private Environment environment;
 
+    @Bean
+    @ConditionalOnMissingBean
+    @Lazy
+    public SwaggerLoggerPointcutAdvisor swaggerLoggerPointcutAdvisor(@Autowired(required = false) LoggerService loggerService) {
+        return new SwaggerLoggerPointcutAdvisor(loggerService);
+    }
 
     @Override
     public void run(String... args) throws Exception {
