@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.configuration;
 
+import com.chua.common.support.function.Joiner;
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.utils.NetUtils;
 import org.springframework.boot.SpringApplication;
@@ -8,6 +9,9 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MutablePropertySources;
 import org.springframework.core.env.PropertiesPropertySource;
 
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Properties;
 
 /**
@@ -37,6 +41,13 @@ public class CommonConfigurationConfiguration implements EnvironmentPostProcesso
         properties.setProperty("spring.servlet.multipart.max-request-size", "2000MB");
 
         properties.setProperty("localhost.address", NetUtils.getLocalIpv4());
+        String[] property = environment.getProperty("plugin.auto.table.scan", String[].class);
+        if(null != property) {
+            List<String> oss = new LinkedList<>(Arrays.asList(property));
+            oss.add("com.chua.starter.oss.support.pojo");
+            oss.add("com.chua.starter.task.support.pojo");
+            properties.setProperty("plugin.auto.table.scan", Joiner.on(',').join(oss));
+        }
         PropertiesPropertySource propertiesPropertySource = new PropertiesPropertySource("common", properties);
         MutablePropertySources propertySources = environment.getPropertySources();
         propertySources.addLast(propertiesPropertySource);

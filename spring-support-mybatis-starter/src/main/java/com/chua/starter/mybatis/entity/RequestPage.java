@@ -24,9 +24,9 @@ public class RequestPage<T>{
      */
     @ColumnIgnore
     @ApiModelProperty("当前页")
-    protected long pageNum = 1;
+    protected long page = 1;
 
     public com.baomidou.mybatisplus.extension.plugins.pagination.Page<T> createPage() {
-        return new com.baomidou.mybatisplus.extension.plugins.pagination.Page<T>(pageNum, pageSize);
+        return new com.baomidou.mybatisplus.extension.plugins.pagination.Page<T>(page, pageSize);
     }
 }

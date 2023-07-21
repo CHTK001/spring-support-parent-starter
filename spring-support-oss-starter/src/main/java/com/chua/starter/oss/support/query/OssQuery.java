@@ -1,4 +1,4 @@
-package com.chua.starter.oss.support.pojo;
+package com.chua.starter.oss.support.query;
 
 import com.chua.common.support.pojo.Mode;
 import lombok.Data;

@@ -1,4 +1,4 @@
-package com.chua.starter.task.support.pojo;
+package com.chua.starter.task.support.params;
 
 import com.chua.common.support.collection.TypeHashMap;
 import lombok.Data;

@@ -5,6 +5,7 @@ import com.chua.common.support.database.AutoMetadata;
 import com.chua.common.support.database.executor.MetadataExecutor;
 import com.chua.common.support.log.Log;
 import com.chua.common.support.utils.ClassUtils;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.hibernate.support.database.resolver.HibernateMetadataResolver;
 import com.chua.starter.common.support.annotations.DS;
 import com.chua.starter.common.support.annotations.EnableAutoTable;
@@ -32,7 +33,6 @@ import org.springframework.util.MultiValueMap;
 import javax.sql.DataSource;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -44,47 +44,54 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)
 @AutoConfigureAfter(DataSourceAutoConfiguration.class)
 @EnableConfigurationProperties(AutoTableProperties.class)
-public class ZzeroAutoTableConfiguration implements PriorityOrdered, ApplicationContextAware, SmartInstantiationAwareBeanPostProcessor {
+public class ZzeroAutoTableConfiguration implements PriorityOrdered, ApplicationContextAware , SmartInstantiationAwareBeanPostProcessor{
 
     private static final Log log = Log.getLogger(AutoTableProperties.class);
     AutoTableProperties autoTableProperties;
-
-    private Map<String, DataSource> beansOfType = new ConcurrentHashMap<>();
     private ApplicationContext applicationContext;
 
     private static final List<Object> DEAL = new CopyOnWriteArrayList<>();
-
-//    public ZzeroAutoTableConfiguration(ApplicationContext applicationContext) {
-//        this.applicationContext = applicationContext;
-//        autoTableProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(AutoTableProperties.PRE, AutoTableProperties.class);
-//        this.beansOfType = applicationContext.getBeansOfType(DataSource.class);
-//        if(null == beansOfType) {
-//            return;
-//        }
-//        if (autoTableProperties.isOpen()) {
-//            refresh();
-//        }
-//    }
+    PathMatchingResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver();
+    MetadataReaderFactory metaReader = new CachingMetadataReaderFactory();
 
     @Override
     public boolean postProcessAfterInstantiation(Object bean, String beanName) throws BeansException {
-        if (autoTableProperties.isOpen()) {
-            refresh(bean, beanName);
-        }
-        if(DataSource.class.isAssignableFrom(bean.getClass())) {
-            this.beansOfType.put(beanName, (DataSource) bean);
-        }
         return SmartInstantiationAwareBeanPostProcessor.super.postProcessAfterInstantiation(bean, beanName);
     }
 
-    private void refresh(Object bean, String beanName) {
-        Class<?> aClass = bean.getClass();
+    private void refresh() {
+        if(!autoTableProperties.isOpen()) {
+            return;
+        }
+        Resource[] resources = new Resource[0];
+        try {
+            resources = resourcePatternResolver.getResources("classpath*:com/**/*.class");
+        } catch (IOException ignored) {
+        }
+        for (Resource resource : resources) {
+            try {
+                MetadataReader reader = metaReader.getMetadataReader(resource);
+                String className = reader.getClassMetadata().getClassName();
+                Class<?> clazz = ClassUtils.forName(className, ClassUtils.getDefaultClassLoader());
+                refresh(clazz, "");
+            } catch (Throwable ignored) {
+            }
+        }
+
+    }
+
+
+    private void refresh(Class<?> aClass, String beanName) {
+        if(null == aClass) {
+            return;
+        }
+
         EnableAutoTable enableAutoTable = aClass.getDeclaredAnnotation(EnableAutoTable.class);
         if(null == enableAutoTable) {
             return;
         }
-        String[] scann = getScan(Collections.singletonList(bean));
-        log.info(">>>>>>>>>> 开始自动建表: {}", beanName);
+        String[] scann = getScan(Collections.singletonList(aClass));
+        log.info(">>>>>>>>>> 开始自动建表: {}", scann);
         for (String s : scann) {
             refresh(s);
         }
@@ -95,14 +102,14 @@ public class ZzeroAutoTableConfiguration implements PriorityOrdered, Application
 
     }
 
-    private String[] getScan(Collection<Object> values) {
+    private String[] getScan(Collection<Class<?>> values) {
         List<String> rs = new LinkedList<>();
         String[] scan = autoTableProperties.getScan();
         if (null != scan) {
             rs.addAll(Arrays.asList(scan));
         }
-        for (Object value : values) {
-            EnableAutoTable enableAutoTable = value.getClass().getDeclaredAnnotation(EnableAutoTable.class);
+        for (Class<?> value : values) {
+            EnableAutoTable enableAutoTable = value.getDeclaredAnnotation(EnableAutoTable.class);
             if(null == enableAutoTable) {
                 continue;
             }
@@ -117,9 +124,7 @@ public class ZzeroAutoTableConfiguration implements PriorityOrdered, Application
             return;
         }
         DEAL.add(s);
-        PathMatchingResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver();
         Resource[] resources;
-        MetadataReaderFactory metaReader = new CachingMetadataReaderFactory();
         try {
             resources = resourcePatternResolver.getResources(s.replace(".", "/") + "/**/*.class");
         } catch (IOException e) {
@@ -160,7 +165,7 @@ public class ZzeroAutoTableConfiguration implements PriorityOrdered, Application
             DEAL.add(aClass);
             DataSource dataSource = getDataSource(aClass);
             if (null == dataSource) {
-                log.warn("数据源不存在");
+//                log.warn("数据源不存在");
                 continue;
             }
             MetadataExecutor metadataExecutor = autoMetadata.doExecute(aClass);
@@ -173,27 +178,18 @@ public class ZzeroAutoTableConfiguration implements PriorityOrdered, Application
     }
 
     private DataSource getDataSource(Class<?> aClass) {
-        if (beansOfType.size() == 1) {
-            return beansOfType.values().iterator().next();
+
+        if(StringUtils.isNotEmpty(autoTableProperties.getGlobal())) {
+            return applicationContext.getBean(autoTableProperties.getGlobal(), DataSource.class);
         }
 
+
         if (!AnnotatedElementUtils.hasAnnotation(aClass, DS.class)) {
-            if (beansOfType.containsKey("master")) {
-                log.debug("建表数据源 :{}", "master");
-                return beansOfType.get("master");
-            } else {
-                for (Map.Entry<String, DataSource> entry : beansOfType.entrySet()) {
-                    DataSource source = entry.getValue();
-                    if (
-                            ClassUtils.isPresent("org.springframework.jdbc.datasource.lookup.AbstractRoutingDataSource") &&
-                                    ClassUtils.isAssignableFrom(source, ClassUtils.forName("org.springframework.jdbc.datasource.lookup.AbstractRoutingDataSource"))
-                    ) {
-                        continue;
-                    }
-                    log.debug("建表数据源 :{}", entry.getKey());
-                    return source;
-                }
+            try {
+                return applicationContext.getBean("master", DataSource.class);
+            } catch (BeansException ignored) {
             }
+
             return null;
         }
 
@@ -203,7 +199,7 @@ public class ZzeroAutoTableConfiguration implements PriorityOrdered, Application
         if (null == value) {
             return null;
         }
-        return beansOfType.get(value.toString());
+        return applicationContext.getBean(value.toString(), DataSource.class);
     }
 
 
@@ -216,5 +212,6 @@ public class ZzeroAutoTableConfiguration implements PriorityOrdered, Application
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
         autoTableProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(AutoTableProperties.PRE, AutoTableProperties.class);
+//        refresh();
     }
 }

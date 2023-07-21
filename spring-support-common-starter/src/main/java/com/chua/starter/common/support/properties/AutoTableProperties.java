@@ -23,7 +23,10 @@ public class AutoTableProperties {
      * 扫描包
      */
     private String[] scan;
-
+    /**
+     * 全局配置
+     */
+    private String global = "master";
     /**
      * 前缀
      */

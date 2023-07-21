@@ -7,9 +7,6 @@ import com.chua.starter.oss.support.properties.OssProperties;
 import com.chua.starter.oss.support.provider.OssProvider;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.beans.factory.support.BeanDefinitionRegistry;
-import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -20,6 +17,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * 自动建表
@@ -32,7 +30,8 @@ import org.springframework.context.annotation.ComponentScan;
 @EnableAutoTable(packageType = SysOss.class)
 @MapperScan("com.chua.starter.oss.support.mapper")
 @ComponentScan("com.chua.starter.oss.support.service")
-public class OssConfiguration implements ApplicationContextAware, BeanDefinitionRegistryPostProcessor {
+@Lazy
+public class OssConfiguration implements ApplicationContextAware{
 
     private static final Log log = Log.getLogger(OssConfiguration.class);
     OssProperties ossProperties;
@@ -52,13 +51,5 @@ public class OssConfiguration implements ApplicationContextAware, BeanDefinition
 
     }
 
-    @Override
-    public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
-    }
-
-    @Override
-    public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
-
-    }
 
 }

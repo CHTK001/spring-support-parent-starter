@@ -8,11 +8,11 @@ import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.common.support.constant.Constant;
 import com.chua.starter.sse.support.SseMessage;
 import com.chua.starter.sse.support.SseMessageType;
-import com.chua.starter.task.support.manager.TaskManager;
-import com.chua.starter.task.support.pojo.SysTask;
-import com.chua.starter.task.support.pojo.TaskParam;
-import com.chua.starter.task.support.service.SystemTaskService;
 import com.chua.starter.sse.support.SseTemplate;
+import com.chua.starter.task.support.manager.TaskManager;
+import com.chua.starter.task.support.params.TaskParam;
+import com.chua.starter.task.support.pojo.SysTask;
+import com.chua.starter.task.support.service.SystemTaskService;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
