@@ -36,6 +36,10 @@ public class SysLog {
      */
     private String logCode;
     /**
+     * 查询参数
+     */
+    private String logParam;
+    /**
      * 操作人
      */
     private String createName;

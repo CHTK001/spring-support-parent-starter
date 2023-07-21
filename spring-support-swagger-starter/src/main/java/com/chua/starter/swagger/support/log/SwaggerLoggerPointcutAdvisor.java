@@ -1,30 +1,21 @@
 package com.chua.starter.swagger.support.log;
 
 import com.chua.common.support.lang.date.DateTime;
-import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.common.support.logger.*;
-import com.chua.starter.common.support.utils.RequestUtils;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
+import com.chua.starter.common.support.logger.Logger;
+import com.chua.starter.common.support.logger.LoggerIgnore;
+import com.chua.starter.common.support.logger.LoggerPointcutAdvisor;
+import com.chua.starter.common.support.logger.LoggerService;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.v3.oas.annotations.Operation;
-import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.annotation.AnnotatedElementUtils;
-import org.springframework.expression.ExpressionParser;
+import org.springframework.expression.spel.support.StandardEvaluationContext;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.Date;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
-
-import static com.chua.starter.common.support.logger.LogGuidAspect.GuidhreadLocal;
 
 /**
  * 切面
@@ -38,14 +29,9 @@ public class SwaggerLoggerPointcutAdvisor extends LoggerPointcutAdvisor {
     HttpServletRequest request;
     @Autowired(required = false)
     HttpServletResponse response;
-    private LoggerService loggerService;
-    private ApplicationContext applicationContext;
-
-    ExpressionParser expressionParser = new org.springframework.expression.spel.standard.SpelExpressionParser();
 
     public SwaggerLoggerPointcutAdvisor(LoggerService loggerService) {
         super(loggerService);
-        this.loggerService = Optional.ofNullable(loggerService).orElse(DefaultLoggerService.getInstance());
     }
 
     @Override
@@ -59,67 +45,35 @@ public class SwaggerLoggerPointcutAdvisor extends LoggerPointcutAdvisor {
 
     }
 
-    private static final Cache<String, Boolean> CACHE = CacheBuilder.newBuilder().expireAfterWrite(3, TimeUnit.SECONDS)
-            .build();
-
-
     @Override
-    public void saveLog(Object proceed, MethodInvocation invocation, int status, long startTime) {
-        String key = GuidhreadLocal.get();
-        Boolean ifPresent = CACHE.getIfPresent(key);
-        if (null != ifPresent) {
-            return;
-        }
-
-
-        CACHE.put(key, true);
-        Method method = invocation.getMethod();
-        String address = RequestUtils.getIpAddress(request);
-        DateTime now = DateTime.now();
-        Date date = now.toDate();
-        HttpSession session = request.getSession();
-
-        String logName = "", action = "";
-        ApiOperation apiOperation = method.getDeclaredAnnotation(ApiOperation.class);
-        if (null != apiOperation) {
-            logName = apiOperation.value();
-        } else {
-            Operation operation = method.getDeclaredAnnotation(Operation.class);
-            logName = operation.summary();
-        }
-
+    protected String getAction(Method method) {
         String name = method.getName().toUpperCase();
         if (name.contains("SAVE") || name.contains("INSERT") || name.contains("ADD")) {
-            action = "添加";
-        } else if (name.contains("UPDATE") || name.contains("MODIFY")) {
-            action = "修改";
-        } else if (name.contains("DELETE") || name.contains("DROP") || name.contains("REMOVE")) {
-            action = "删除";
-        } else if (name.contains("LIST") || name.contains("PAGE") || name.contains("QUERY") || name.contains("SELECT")) {
-            action = "查询";
+            return "添加";
         }
+        if (name.contains("UPDATE") || name.contains("MODIFY")) {
+            return "修改";
+        }
+        if (name.contains("DELETE") || name.contains("DROP") || name.contains("REMOVE")) {
+            return "删除";
+        }
+        return "查询";
+    }
 
+    @Override
+    protected String getName(Method method) {
+        ApiOperation apiOperation = method.getDeclaredAnnotation(ApiOperation.class);
+        if (null != apiOperation) {
+            return apiOperation.value();
+        }
+        Operation operation = method.getDeclaredAnnotation(Operation.class);
+        return operation.summary();
+    }
 
-        SysLog sysLog = new SysLog();
-        sysLog.setLogMapping(RequestUtils.getUrl(request));
-        sysLog.setCreateTime(date);
-        try {
-            sysLog.setCreateName((String) session.getAttribute("username"));
-            sysLog.setCreateBy((String) session.getAttribute("userId"));
-        } catch (Exception ignored) {
-        }
-        sysLog.setMethodName(method.getName());
-        sysLog.setClassName(method.getDeclaringClass().getName());
-        sysLog.setLogName(logName);
-        sysLog.setLogAction(action);
-        sysLog.setLogCode(GuidhreadLocal.get());
-        sysLog.setLogAddress(address);
-        if (StringUtils.isEmpty(sysLog.getLogName()) || StringUtils.isEmpty(sysLog.getLogAction())) {
-            return;
-        }
+    @Override
+    protected String getContent(StandardEvaluationContext standardEvaluationContext, Method method) {
         Object username = request.getSession().getAttribute("username");
-        recordLog(sysLog, proceed, null, null
-                , status, startTime, expressionParser, DateTime.now().toStandard() + " " + username + action + "了模块" + logName);
+        return DateTime.now().toStandard() + " " + username + getAction(method) + "了模块" + getName(method);
     }
 
 
