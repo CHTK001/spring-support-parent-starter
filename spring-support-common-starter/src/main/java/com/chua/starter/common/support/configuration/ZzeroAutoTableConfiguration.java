@@ -212,6 +212,6 @@ public class ZzeroAutoTableConfiguration implements PriorityOrdered, Application
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
         autoTableProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(AutoTableProperties.PRE, AutoTableProperties.class);
-//        refresh();
+        refresh();
     }
 }
