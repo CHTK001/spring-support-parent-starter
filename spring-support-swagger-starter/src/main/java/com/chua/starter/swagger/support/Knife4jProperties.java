@@ -17,7 +17,10 @@ public class Knife4jProperties {
 
 
     private List<Knife4j> knife4j;
-
+    /**
+     * 是否开启swagger注解记录用户操作日志
+     */
+    private boolean log;
 
     @Data
     @Accessors(chain = true)

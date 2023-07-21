@@ -1,11 +1,12 @@
 package com.chua.starter.swagger.support;
 
+import com.chua.starter.common.support.logger.LoggerService;
+import com.chua.starter.swagger.support.log.SwaggerLoggerPointcutAdvisor;
 import com.github.xiaoymin.knife4j.spring.annotations.EnableKnife4j;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableTable;
 import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -19,12 +20,14 @@ import org.springframework.boot.actuate.endpoint.web.annotation.ControllerEndpoi
 import org.springframework.boot.actuate.endpoint.web.annotation.ServletEndpointsSupplier;
 import org.springframework.boot.actuate.endpoint.web.servlet.WebMvcEndpointHandlerMapping;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.env.Environment;
 import org.springframework.util.StringUtils;
 import springfox.bean.validators.configuration.BeanValidatorPluginsConfiguration;
@@ -32,16 +35,15 @@ import springfox.documentation.builders.ApiInfoBuilder;
 import springfox.documentation.builders.PathSelectors;
 import springfox.documentation.builders.RequestHandlerSelectors;
 import springfox.documentation.builders.RequestParameterBuilder;
-import springfox.documentation.schema.ModelSpecification;
-import springfox.documentation.service.ApiKey;
 import springfox.documentation.service.ParameterType;
-import springfox.documentation.service.RequestParameter;
-import springfox.documentation.service.SecurityScheme;
 import springfox.documentation.spi.DocumentationType;
 import springfox.documentation.spring.web.plugins.Docket;
 import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * @author CH
@@ -55,6 +57,13 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
 
     Knife4jProperties knife4jProperties;
     private ApplicationContext applicationContext;
+    @Bean
+    @ConditionalOnMissingBean
+    @Lazy
+    @ConditionalOnProperty(prefix = "plugin.swagger", name = "log", havingValue = "true", matchIfMissing = true)
+    public SwaggerLoggerPointcutAdvisor swaggerLoggerPointcutAdvisor(@Autowired(required = false) LoggerService loggerService) {
+        return new SwaggerLoggerPointcutAdvisor(loggerService);
+    }
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
