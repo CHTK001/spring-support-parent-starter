@@ -21,6 +21,10 @@ public class SysBase implements Serializable {
     @ApiModelProperty("创建人")
     @JsonInclude(value = JsonInclude.Include.NON_NULL)
     private String createName;
+    @TableField(fill = FieldFill.INSERT)
+    @ApiModelProperty("创建人")
+    @JsonInclude(value = JsonInclude.Include.NON_NULL)
+    private String createBy;
 
     @TableField(fill = FieldFill.INSERT)
     @ApiModelProperty("创建时间")
@@ -28,7 +32,7 @@ public class SysBase implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;
 
-    @TableField(fill = FieldFill.INSERT_UPDATE)
+    @TableField(fill = FieldFill.UPDATE)
     @JsonInclude(value = JsonInclude.Include.NON_NULL)
     @JsonDeserialize(using = LocalDateTimeDeserializer.class)
     @JsonSerialize(using = LocalDateTimeSerializer.class)
@@ -36,8 +40,14 @@ public class SysBase implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updateTime;
 
-    @TableField(fill = FieldFill.INSERT_UPDATE)
+
+    @TableField(fill = FieldFill.UPDATE)
     @JsonInclude(value = JsonInclude.Include.NON_NULL)
     @ApiModelProperty("更新人")
     private String updateName;
+
+    @TableField(fill = FieldFill.UPDATE)
+    @JsonInclude(value = JsonInclude.Include.NON_NULL)
+    @ApiModelProperty("更新人")
+    private String updateId;
 }

@@ -57,6 +57,9 @@ public class SwaggerLoggerPointcutAdvisor extends LoggerPointcutAdvisor {
         if (name.contains("DELETE") || name.contains("DROP") || name.contains("REMOVE")) {
             return "删除";
         }
+        if (name.contains("RESET")) {
+            return "重置";
+        }
         return "查询";
     }
 

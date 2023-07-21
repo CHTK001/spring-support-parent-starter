@@ -33,7 +33,7 @@ public class JsonArrayToStringDeserialize extends JsonDeserializer<String> {
         return Converter.convertIfNecessary(analysisValue(treeNode), String.class);
     }
 
-    private Object analysisValue(TreeNode treeNode1) {
+    public static Object analysisValue(TreeNode treeNode1) {
         if (treeNode1 instanceof IntNode) {
             return ((IntNode) treeNode1).asInt();
         }

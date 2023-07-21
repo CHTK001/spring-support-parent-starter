@@ -1,4 +1,4 @@
-package com.chua.starter.task.support.pojo;
+package com.chua.starter.task.support.params;
 
 import lombok.Builder;
 import lombok.Data;

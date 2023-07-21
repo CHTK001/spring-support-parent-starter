@@ -18,14 +18,17 @@ import com.chua.common.support.utils.ArrayUtils;
 import com.chua.common.support.utils.FileUtils;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.value.Value;
 import com.chua.starter.common.support.configuration.CacheConfiguration;
 import com.chua.starter.common.support.result.Result;
 import com.chua.starter.common.support.result.ResultData;
+import com.chua.starter.common.support.result.ReturnCode;
 import com.chua.starter.common.support.view.ResponseHandler;
 import com.chua.starter.mybatis.entity.DelegatePage;
-import com.chua.starter.oss.support.pojo.DeepQuery;
-import com.chua.starter.oss.support.pojo.OssQuery;
 import com.chua.starter.oss.support.pojo.SysOss;
+import com.chua.starter.oss.support.query.DeepQuery;
+import com.chua.starter.oss.support.query.OssQuery;
+import com.chua.starter.oss.support.query.UploadResult;
 import com.chua.starter.oss.support.service.OssSystemService;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.http.HttpHeaders;
@@ -45,6 +48,7 @@ import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -143,7 +147,7 @@ public class OssProvider {
      */
     @ResponseBody
     @PostMapping("/upload")
-    public Result<Boolean> saveOss(String ossBucket, @RequestParam(value = "parentPath", defaultValue = "") String parentPath, MultipartFile[] files) {
+    public Result<List<UploadResult>> saveOss(String ossBucket, @RequestParam(value = "parentPath", defaultValue = "") String parentPath, MultipartFile[] files) {
         if(ArrayUtils.isEmpty(files)) {
             return Result.failed("上传文件不能为空");
         }
@@ -161,16 +165,22 @@ public class OssProvider {
             return Result.failed("bucket不存在");
         }
         try {
+            List<UploadResult> rs = new LinkedList<>();
             for (MultipartFile file : files) {
                 try (InputStream inputStream = file.getInputStream()) {
                     byte[] bytes = IoUtils.toByteArray(inputStream);
                     com.chua.common.support.pojo.OssSystem ossSystem1 = BeanUtils.copyProperties(ossSystem, com.chua.common.support.pojo.OssSystem.class);
                     String suffix = FileUtils.getExtension(file.getOriginalFilename());
                     String name = AbstractOssResolver.getNamedStrategy(ossSystem1, FileUtils.getBaseName(file.getOriginalFilename()), bytes) + "." + suffix;
-                    ossResolver.storage(parentPath, bytes, ossSystem1, name);
+                    try {
+                        Value<String> storage = ossResolver.storage(parentPath, bytes, ossSystem1, name);
+                        rs.add(new UploadResult(file.getOriginalFilename(), ReturnCode.OK.getCode(), storage.getStringValue()));
+                    } catch (Exception e) {
+                        rs.add(new UploadResult(file.getOriginalFilename(), ReturnCode.FILE_UPLOAD_FILE_ERROR.getCode(), null));
+                    }
                 }
             }
-            return Result.success();
+            return Result.success(rs);
         } catch (Exception e) {
             return Result.failed(e.getLocalizedMessage());
         }

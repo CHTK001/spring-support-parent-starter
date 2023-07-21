@@ -65,7 +65,12 @@ public class LoginCheck {
                 continue;
             }
 
-            userResult = userInfoService.checkLogin(username, passwd, address, ext);
+            try {
+                userResult = userInfoService.checkLogin(username, passwd, address, ext);
+            } catch (Exception e) {
+                e.printStackTrace();
+                continue;
+            }
             if (null != userResult && Strings.isNullOrEmpty(userResult.getMessage())) {
                 Class<?> userClass = ClassUtils.getUserClass(userInfoService.getClass());
                 userResult.setBeanType(userClass.getTypeName());

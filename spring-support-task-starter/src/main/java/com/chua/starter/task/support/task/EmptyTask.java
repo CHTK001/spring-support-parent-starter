@@ -3,9 +3,8 @@ package com.chua.starter.task.support.task;
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.annotations.SpiOption;
 import com.chua.common.support.utils.ThreadUtils;
-import com.chua.starter.task.support.manager.TaskManager;
+import com.chua.starter.task.support.params.TaskParam;
 import com.chua.starter.task.support.pojo.SysTask;
-import com.chua.starter.task.support.pojo.TaskParam;
 
 /**
  * @author CH
