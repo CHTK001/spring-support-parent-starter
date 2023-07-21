@@ -1,13 +1,11 @@
 package com.chua.starter.common.support.logger;
 
+import com.chua.common.support.function.Joiner;
+import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.common.support.view.view.TreeView;
-import com.chua.common.support.view.view.TreeViewNode;
 import com.chua.starter.common.support.result.ResultData;
 import com.chua.starter.common.support.utils.RequestUtils;
-import com.chua.starter.common.support.watch.NewTrackManager;
-import com.chua.starter.common.support.watch.Span;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import org.aopalliance.intercept.MethodInterceptor;
@@ -105,6 +103,28 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
         return proceed;
     }
 
+    protected String getAction(Method method) {
+        Logger logger = method.getDeclaredAnnotation(Logger.class);
+        return logger.action();
+    }
+
+    protected String getName(Method method) {
+        Logger logger = method.getDeclaredAnnotation(Logger.class);
+        return logger.value();
+    }
+
+
+    protected String getContent(StandardEvaluationContext standardEvaluationContext, Method method) {
+        Logger logger = method.getDeclaredAnnotation(Logger.class);
+        try {//+ ' 账号在( '+ #ip + ' )'  + #args[0].username + '登录系统(状态: ' + #result['code'] + '  '   #result['msg'] + ') 登录方式('WEB' ) '
+            return expressionParser.parseExpression(
+                            logger.content(), new TemplateParserContext())
+                    .getValue(standardEvaluationContext, String.class);
+        } catch (Exception ignored) {
+        }
+        return "";
+    }
+
     protected void saveLog(Object proceed, MethodInvocation invocation, int status, long startTime) {
         String key = GuidhreadLocal.get();
         Boolean ifPresent = CACHE.getIfPresent(key);
@@ -120,7 +140,7 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
         Date date = now.toDate();
         HttpSession session = request.getSession();
 
-        Logger logger = method.getDeclaredAnnotation(Logger.class);
+
         SysLog sysLog = new SysLog();
         StandardEvaluationContext standardEvaluationContext = new StandardEvaluationContext(applicationContext);
         standardEvaluationContext.addPropertyAccessor(new BeanFactoryAccessor());
@@ -133,9 +153,10 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
         }
         sysLog.setMethodName(method.getName());
         sysLog.setClassName(method.getDeclaringClass().getName());
-        sysLog.setLogName(logger.value());
-        sysLog.setLogAction(logger.action());
+        sysLog.setLogName(getName(method));
+        sysLog.setLogAction(getAction(method));
         sysLog.setLogCode(GuidhreadLocal.get());
+        sysLog.setLogParam(Json.prettyFormat(invocation.getArguments()));
         sysLog.setLogAddress(address);
         if (StringUtils.isEmpty(sysLog.getLogName()) || StringUtils.isEmpty(sysLog.getLogAction())) {
             return;
@@ -149,17 +170,14 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
         standardEvaluationContext.setVariable("result", proceed);
         standardEvaluationContext.setVariable("method", method);
         standardEvaluationContext.setVariable("args", invocation.getArguments());
-        recordLog(sysLog, proceed, standardEvaluationContext, logger, status, startTime, expressionParser, null);
+        recordLog(sysLog, proceed, status, startTime, getContent(standardEvaluationContext, method));
     }
 
 
     public void recordLog(SysLog sysLog,
                                  Object proceed,
-                                 StandardEvaluationContext standardEvaluationContext,
-                                 Logger logger,
                                  int status,
                                  long startTime,
-                                 ExpressionParser expressionParser,
                                   String content
                                  ) {
         sysLog.setResult(proceed);
@@ -171,42 +189,20 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
         } if (proceed instanceof ResultData) {
             sysLog.setLogStatus(((ResultData<?>) proceed).getCode());
         }
-
-        Stack<Span> spans = NewTrackManager.currentSpans();
-        TreeViewNode treeViewNode = TreeViewNode.newBuilder("root");
-        Map<String, TreeViewNode> pid = new HashMap<>(spans.size());
-        long endTime = spans.get(spans.size() - 1).getEnterTime();
-        for (int i = 0; i < spans.size(); i++) {
-            if (i > 10) {
-                break;
-            }
-            Span item = spans.get(i);
-            TreeViewNode treeViewNode1 = null;
-            if (i == 0) {
-                treeViewNode1 = TreeViewNode.newBuilder(item.getTypeMethod());
-            } else {
-                treeViewNode1 = new TreeViewNode(pid.get(item.getPid()), item.getTypeMethod());
-            }
-            treeViewNode1.totalCost = item.getCostTime();
-            treeViewNode1.beginTimestamp = item.getEnterTime();
-            if (endTime > 0L) {
-                treeViewNode1.endTimestamp = endTime;
-            }
-            pid.put(item.getId(), treeViewNode1);
-            treeViewNode.addChildren(treeViewNode1);
+        Enumeration<String> headerNames = request.getHeaderNames();
+        List<String> stack = new LinkedList<>();
+        stack.add("<strong class=\"node-details__name collapse-handle\">Request headers</strong>");
+        while (headerNames.hasMoreElements()) {
+            String headerName = headerNames.nextElement();
+            stack.add(headerName + ": " + request.getHeader(headerName));
         }
-        TreeView treeView = new TreeView(true, treeViewNode);
-        sysLog.setLogWatch(treeView.draw());
-        if(null == content && null != expressionParser) {
-            try {//+ ' 账号在( '+ #ip + ' )'  + #args[0].username + '登录系统(状态: ' + #result['code'] + '  '   #result['msg'] + ') 登录方式('WEB' ) '
-                sysLog.setLogContent(expressionParser.parseExpression(
-                                logger.content(), new TemplateParserContext())
-                        .getValue(standardEvaluationContext, String.class));
-            } catch (Exception ignored) {
-            }
-        } else {
-            sysLog.setLogContent(content);
+        stack.add("<strong class=\"node-details__name collapse-handle\">Request parameter</strong>");
+        Map<String, String[]> parameterMap = request.getParameterMap();
+        for (Map.Entry<String, String[]> entry : parameterMap.entrySet()) {
+            stack.add(entry.getKey() + ": " + (entry.getValue().length == 1 ? entry.getValue()[0] : entry.getValue()));
         }
+        sysLog.setLogWatch(Joiner.on("<br />").join(stack));
+        sysLog.setLogContent(content);
         loggerService.save(sysLog);
     }
 
