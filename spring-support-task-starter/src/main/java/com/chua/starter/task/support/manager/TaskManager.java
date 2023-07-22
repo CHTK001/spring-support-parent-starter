@@ -181,7 +181,7 @@ public class TaskManager implements ApplicationContextAware, DisposableBean, Com
         }
 
         Task task = ServiceProvider.of(Task.class)
-                .getNewExtension(sysTask.getTaskType() + ":" + sysTask.getTaskCid(),
+                .getNewExtension(sysTask.getTaskCid(),
                         sysTask, this);
 
         if(null != task) {
