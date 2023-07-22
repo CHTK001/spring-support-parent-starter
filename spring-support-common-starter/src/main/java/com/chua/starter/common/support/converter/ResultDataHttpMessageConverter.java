@@ -27,9 +27,7 @@ public class ResultDataHttpMessageConverter
     @Override
     public boolean canWrite(Class<?> clazz, MediaType mediaType) {
         if(
-                null == mediaType ||
-                mediaType.includes(MediaType.APPLICATION_JSON) ||
-                mediaType.includes(MediaType.TEXT_PLAIN)
+               null != mediaType && mediaType.includes(MediaType.APPLICATION_JSON)
         ) {
             return true;
         }
