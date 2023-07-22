@@ -10,7 +10,7 @@ import com.chua.starter.task.support.pojo.SysTask;
  * @author CH
  */
 @Spi("task")
-@SpiOption(value = "测试任务", type = "empty")
+@SpiOption(value = "测试任务", type = "测试")
 public class EmptyTask extends Task{
     @Override
     protected void execute(long offset, TaskParam taskParam) {
