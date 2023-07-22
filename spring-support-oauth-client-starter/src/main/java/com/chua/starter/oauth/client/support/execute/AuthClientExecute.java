@@ -27,7 +27,6 @@ import com.google.common.base.Strings;
 import kong.unirest.HttpResponse;
 import kong.unirest.Unirest;
 import kong.unirest.UnirestException;
-import org.springframework.beans.BeanUtils;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -38,7 +37,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import static com.chua.starter.common.support.result.ReturnCode.*;
+import static com.chua.starter.common.support.result.ReturnCode.OK;
 import static com.chua.starter.oauth.client.support.contants.AuthConstant.ACCESS_KEY;
 import static com.chua.starter.oauth.client.support.contants.AuthConstant.SECRET_KEY;
 
@@ -288,5 +287,23 @@ public class AuthClientExecute {
                 username +
                 userResult.getPassword() +
                 userResult.getAuthType());
+    }
+
+    /**
+     * 刷新token
+     */
+    public void refreshToken() {
+        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
+        if (requestAttributes == null) {
+            return;
+        }
+
+        ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
+        HttpServletRequest request = attributes.getRequest();
+        WebRequest webRequest1 = new WebRequest(
+                authClientProperties,
+                request, null);
+
+        webRequest1.refreshToken();
     }
 }

@@ -191,4 +191,14 @@ public class WebRequest {
     public void doChain(FilterChain chain, HttpServletResponse response) throws IOException, ServletException {
         chain.doFilter(request, response);
     }
+
+    /**
+     * 刷新token
+     */
+    public void refreshToken() {
+        Cookie[] cookie = getCookie();
+        String token = getToken();
+        Protocol protocol = ServiceProvider.of(Protocol.class).getExtension(authProperties.getProtocol());
+        protocol.refreshToken(cookie, token);
+    }
 }

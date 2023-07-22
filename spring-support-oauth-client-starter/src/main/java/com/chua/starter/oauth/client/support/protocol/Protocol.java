@@ -18,4 +18,11 @@ public interface Protocol {
      */
     AuthenticationInformation approve(Cookie[] cookie, String token);
 
+    /**
+     * 刷新token
+     *
+     * @param cookie cookie
+     * @param token  token
+     */
+    void refreshToken(Cookie[] cookie, String token);
 }

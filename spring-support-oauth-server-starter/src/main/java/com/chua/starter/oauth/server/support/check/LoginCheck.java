@@ -102,4 +102,30 @@ public class LoginCheck {
         }
         return token;
     }
+
+    /**
+     * 获取用户信息
+     *
+     * @param userResult1 用户信息
+     * @return 用户信息
+     */
+    public UserResult getUserInfo(UserResult userResult1) {
+        try {
+            Map<String, UserInfoService> beansOfType = applicationContext.getBeansOfType(UserInfoService.class);
+            UserInfoService userInfoService = null;
+            for (Map.Entry<String, UserInfoService> entry : beansOfType.entrySet()) {
+                if (ClassUtils.getUserClass(entry.getValue()).getTypeName().equalsIgnoreCase(userResult1.getBeanType())) {
+                    userInfoService = entry.getValue();
+                    break;
+                }
+            }
+            if (null == userInfoService) {
+                return null;
+            }
+
+            return userInfoService.getUserInfo(userResult1.getUsername());
+        } catch (Exception e) {
+            return null;
+        }
+    }
 }

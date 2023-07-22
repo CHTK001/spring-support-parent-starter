@@ -18,4 +18,12 @@ public interface UserInfoService {
      * @return 检验ak/sk是否合法
      */
     UserResult checkLogin(String accessKey, String secretKey, String address, Object ext);
+
+    /**
+     * 获取用户信息
+     *
+     * @param accessKey 账号
+     * @return 用户信息
+     */
+    UserResult getUserInfo(String accessKey);
 }

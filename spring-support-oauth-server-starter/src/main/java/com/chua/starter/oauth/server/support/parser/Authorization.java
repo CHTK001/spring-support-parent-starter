@@ -51,4 +51,11 @@ public interface Authorization {
      * @return 结果
      */
     ReturnResult<String> authentication();
+
+    /**
+     * 刷新缓存
+     *
+     * @return 刷新缓存
+     */
+    ReturnResult<String> refresh();
 }

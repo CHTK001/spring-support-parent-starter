@@ -39,7 +39,9 @@ public class SwaggerLoggerPointcutAdvisor extends LoggerPointcutAdvisor {
         if (Proxy.isProxyClass(targetClass)) {
             return false;
         }
-        return (!AnnotatedElementUtils.hasAnnotation(method, LoggerIgnore.class) && !AnnotatedElementUtils.hasAnnotation(method, Logger.class) && !AnnotatedElementUtils.hasAnnotation(targetClass, Logger.class))
+        return (!AnnotatedElementUtils.hasAnnotation(method, LoggerIgnore.class)
+                && AnnotatedElementUtils.hasAnnotation(method, Logger.class)
+                && AnnotatedElementUtils.hasAnnotation(targetClass, Logger.class))
                 && (AnnotatedElementUtils.hasAnnotation(method, ApiOperation.class) || AnnotatedElementUtils.hasAnnotation(method, Operation.class));
 
 
