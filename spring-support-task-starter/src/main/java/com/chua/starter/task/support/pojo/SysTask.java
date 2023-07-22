@@ -88,15 +88,6 @@ public class SysTask extends SysBase implements Comparable<SysTask> {
     @Column(comment = "任务耗时", defaultValue = "0")
     private Long taskCost;
 
-    /**
-     * 是否完成
-     *
-     * @return 是否完成
-     */
-    public boolean isFinish() {
-        return null != getTaskStatus() && (getTaskStatus() == 1 || getTaskCurrent() >= getTaskTotal());
-    }
-
     @Override
     public int compareTo(SysTask o) {
         return (taskType + taskTid + taskBusiness + taskCid).compareTo(o.taskType + o.taskTid + o.taskBusiness + o.taskCid);
