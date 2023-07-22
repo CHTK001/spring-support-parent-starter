@@ -111,7 +111,6 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
                                 task.getTaskCid() +
                                 task.getTaskParams()));
         SysTask byTaskTid = getTaskByTaskTid(task.getTaskTid());
-        task.setTaskStatus(3);
         boolean b = false;
         if (null != byTaskTid) {
             if (null != task.getTaskOver() && task.getTaskOver() == 0) {
@@ -122,8 +121,11 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
                 throw new RuntimeException("任务未完成不能覆盖: " + task.getTaskTid());
             }
             task.setTaskId(byTaskTid.getTaskId());
+            task.setTaskStatus(3);
+            task.setTaskCurrent(0L);
             b = 1 == baseMapper.updateById(task);
         } else {
+            task.setTaskStatus(3);
             b = 1 == baseMapper.insert(task);
         }
 
