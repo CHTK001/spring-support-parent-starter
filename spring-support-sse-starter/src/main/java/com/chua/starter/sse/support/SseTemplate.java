@@ -16,6 +16,8 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import javax.annotation.Resource;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
@@ -29,7 +31,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Service
 public class SseTemplate implements DisposableBean, InitializingBean {
-    private static final Map<String, Sse> sseCache = new ConcurrentHashMap<>();
+    private static final Map<String, List<Sse>> sseCache = new ConcurrentHashMap<>();
     private final ScheduledExecutorService scheduledExecutorUpdateService = ThreadUtils.newScheduledThreadPoolExecutor("update-heart");
     @Resource
     private SseEventBus sseEventBus;
@@ -66,12 +68,14 @@ public class SseTemplate implements DisposableBean, InitializingBean {
 
     private void updateHeart(String[] clientIds) {
         for (String clientId : clientIds) {
-            Sse sse = sseCache.get(clientId);
-            if(null == sse) {
+            List<Sse> sse = sseCache.get(clientId);
+            if (null == sse) {
                 continue;
             }
 
-            sse.setCreateTime(System.currentTimeMillis());
+            for (Sse sse1 : sse) {
+                sse1.setCreateTime(System.currentTimeMillis());
+            }
         }
     }
 
@@ -96,9 +100,11 @@ public class SseTemplate implements DisposableBean, InitializingBean {
     public void afterPropertiesSet() throws Exception {
         long toMillis = TimeUnit.SECONDS.toMillis(30);
         scheduledExecutorUpdateService.scheduleAtFixedRate(() -> {
-            for (Sse sse : sseCache.values()) {
-                if (System.currentTimeMillis() - sse.getCreateTime() < toMillis) {
-                    unSubscribe(sse.getTaskTid());
+            for (List<Sse> sse : sseCache.values()) {
+                for (Sse sse1 : sse) {
+                    if (System.currentTimeMillis() - sse1.getCreateTime() < toMillis) {
+                        unSubscribe(sse1.getTaskTid());
+                    }
                 }
             }
         }, 0, 10, TimeUnit.MINUTES);
@@ -112,7 +118,7 @@ public class SseTemplate implements DisposableBean, InitializingBean {
      */
     public SseEmitter createSseEmitter(String clientId, String... event) {
         SseEmitter sseEmitter = sseEventBus.createSseEmitter(clientId, event);
-        sseCache.put(clientId, new Sse(clientId, sseEmitter, System.currentTimeMillis()));
+        sseCache.computeIfAbsent(clientId, it -> new LinkedList<>()).add(new Sse(clientId, sseEmitter, System.currentTimeMillis()));
         return sseEmitter;
     }
 
