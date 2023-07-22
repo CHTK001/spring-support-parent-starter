@@ -47,4 +47,13 @@ public interface TokenResolver {
      * @return 登录信息
      */
     ReturnResult<UserResult> resolve(Cookie[] cookies, String token);
+
+    /**
+     * 刷新token
+     *
+     * @param cookies cookie
+     * @param token   token
+     * @return 登录信息
+     */
+    ReturnResult<UserResult> refresh(Cookie[] cookies, String token);
 }

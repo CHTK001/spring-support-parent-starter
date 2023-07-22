@@ -61,19 +61,18 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         String key = UUID.randomUUID().toString();
         Map<String, Object> jsonObject = new HashMap<>(2);
         Cookie[] cookies = Optional.ofNullable(cookie).orElse(new Cookie[0]);
-        jsonObject.put("x-oauth-cookie", cookies);
-        jsonObject.put("x-oauth-token", token);
         String cacheKey = getCacheKey(cookies, token);
-        if(null != cacheKey) {
+        if (null != cacheKey) {
             Value o = CACHEABLE.get(cacheKey);
-            if(null != o) {
+            if (null != o) {
                 AuthenticationInformation authenticationInformation = (AuthenticationInformation) o.getValue();
                 if (authenticationInformation.getInformation().getCode() != 403) {
                     return authenticationInformation;
                 }
             }
         }
-
+        jsonObject.put("x-oauth-cookie", cookies);
+        jsonObject.put("x-oauth-token", token);
         String accessKey = authClientProperties.getAccessKey();
         String secretKey = authClientProperties.getSecretKey();
         String serviceKey = authClientProperties.getServiceKey();
@@ -156,8 +155,106 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         return inCache(cacheKey, AuthenticationInformation.authServerNotFound());
     }
 
+    @Override
+    public void refreshToken(Cookie[] cookie, String token) {
+        String key = UUID.randomUUID().toString();
+        Map<String, Object> jsonObject = new HashMap<>(2);
+        Cookie[] cookies = Optional.ofNullable(cookie).orElse(new Cookie[0]);
+        String cacheKey = getCacheKey(cookies, token);
+        jsonObject.put("x-oauth-cookie", cookies);
+        jsonObject.put("x-oauth-token", token);
+        String accessKey = authClientProperties.getAccessKey();
+        String secretKey = authClientProperties.getSecretKey();
+        String serviceKey = authClientProperties.getServiceKey();
+        if (Strings.isNullOrEmpty(accessKey) || Strings.isNullOrEmpty(secretKey)) {
+            accessKey = DefSecret.ACCESS_KEY;
+            secretKey = DefSecret.SECRET_KEY;
+        }
+
+        String asString = Json.toJson(jsonObject);
+
+        String request = encode.encodeHex(asString, Md5Utils.getInstance()
+                .getMd5String(accessKey + DigestUtils.md5Hex(secretKey + key)));
+        Map<String, Object> item2 = new HashMap<>(3);
+        item2.put(AuthConstant.ACCESS_KEY, accessKey);
+        item2.put(AuthConstant.SECRET_KEY, secretKey);
+        item2.put(AuthConstant.OAUTH_VALUE, request);
+        item2.put(AuthConstant.OAUTH_KEY, key);
+        request = encode.encodeHex(Json.toJson(item2), serviceKey);
+
+
+        Robin<String> balance = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
+        Robin<String> stringRobin = balance.create();
+        String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(authClientProperties.getAuthAddress()).split(",");
+        stringRobin.addNode(split);
+        Node<String> robin = stringRobin.selectNode();
+        HttpResponse<String> httpResponse = null;
+        try {
+            String url = robin.getContent();
+            if (null == url) {
+                throw new IllegalArgumentException("OSS服务器不存在");
+            }
+
+            httpResponse = Unirest.post(
+                            StringUtils.endWithAppend(StringUtils.startWithAppend(url, "http://"), "/") + "refresh")
+                    .header("x-oauth-timestamp", System.nanoTime() + "")
+                    .field("data", request)
+                    .asString();
+
+        } catch (UnirestException ignored) {
+        }
+
+        if (null == httpResponse) {
+            throw new IllegalArgumentException("OSS服务器不存在");
+        }
+        int status = httpResponse.getStatus();
+        String body = httpResponse.getBody();
+        if (status > 400 && status < 600 || Strings.isNullOrEmpty(body)) {
+            inCache(cacheKey, AuthenticationInformation.authServerNotFound());
+            throw new IllegalArgumentException("OSS服务器不存在");
+        }
+
+        if (status == 200) {
+            ReturnResult returnResult = Json.fromJson(body, ReturnResult.class);
+            String code = returnResult.getCode();
+            if (SYSTEM_NO_OAUTH.getCode().equals(code)) {
+                HttpServletRequest servletRequest = RequestUtils.getRequest();
+                if (null != servletRequest) {
+                    CookieUtil.remove(servletRequest, ResponseUtils.getResponse(), "x-oauth-cookie");
+                }
+
+                inCache(cacheKey, new AuthenticationInformation(AUTHENTICATION_FAILURE, null));
+                throw new IllegalArgumentException("OSS服务器不存在");
+
+            }
+
+            Object data = returnResult.getData();
+            if (Objects.isNull(data)) {
+                inCache(cacheKey, new AuthenticationInformation(AUTHENTICATION_SERVER_EXCEPTION, null));
+                throw new IllegalArgumentException("OSS服务器不存在");
+
+            }
+
+            if (ReturnCode.OK.getCode().equals(code)) {
+                body = decode.decodeHex(data.toString(), key);
+
+                UserResume userResume = Json.fromJson(body, UserResume.class);
+                inCache(cacheKey, new AuthenticationInformation(OK, userResume));
+                return;
+            }
+
+
+            inCache(cacheKey, new AuthenticationInformation(OTHER, null));
+            throw new IllegalArgumentException("OSS服务器不存在");
+
+        }
+        inCache(cacheKey, AuthenticationInformation.authServerNotFound());
+        throw new IllegalArgumentException("OSS服务器不存在");
+
+    }
+
     private AuthenticationInformation inCache(String cacheKey, AuthenticationInformation authenticationInformation) {
-        if(null == cacheKey) {
+        if (null == cacheKey) {
             return authenticationInformation;
         }
 
@@ -165,12 +262,12 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
     }
 
     private String getCacheKey(Cookie[] cookies, String token) {
-        if(StringUtils.isNotEmpty(StringUtils.ifValid(token, ""))) {
+        if (StringUtils.isNotEmpty(StringUtils.ifValid(token, ""))) {
             return token;
         }
 
         for (Cookie cookie : cookies) {
-            if(cookie.getName().equals("x-oauth-cookie")) {
+            if (cookie.getName().equals("x-oauth-cookie")) {
                 return cookie.getValue();
             }
         }
@@ -182,7 +279,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
     public void afterPropertiesSet() throws Exception {
         this.encode = ServiceProvider.of(KeyEncode.class).getExtension(authClientProperties.getEncryption());
         this.decode = ServiceProvider.of(KeyDecode.class).getExtension(authClientProperties.getEncryption());
-        CACHEABLE =  new GuavaCacheable().configuration(CacheConfiguration.builder()
+        CACHEABLE = new GuavaCacheable().configuration(CacheConfiguration.builder()
                 .expireAfterWrite(authClientProperties.getCacheTimeout())
                 .build());
     }

@@ -35,4 +35,9 @@ public final class InvalidAuthorization implements Authorization {
     public ReturnResult<String> authentication() {
         return ReturnResult.noAuth();
     }
+
+    @Override
+    public ReturnResult<String> refresh() {
+        return ReturnResult.noAuth();
+    }
 }

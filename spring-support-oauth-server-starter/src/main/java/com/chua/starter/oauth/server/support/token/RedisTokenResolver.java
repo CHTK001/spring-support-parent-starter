@@ -10,6 +10,7 @@ import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.user.LoginResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
+import com.chua.starter.oauth.server.support.check.LoginCheck;
 import com.chua.starter.oauth.server.support.generation.TokenGeneration;
 import com.chua.starter.oauth.server.support.properties.AuthServerProperties;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -37,6 +38,8 @@ public class RedisTokenResolver implements TokenResolver {
 
     @Resource
     private AuthServerProperties authServerProperties;
+    @Resource
+    private LoginCheck loginCheck;
 
     @Override
     public ReturnResult<LoginResult> createToken(String address, UserResult userResult, String authType) {
@@ -132,6 +135,35 @@ public class RedisTokenResolver implements TokenResolver {
             resetExpire(userResult, token);
         }
         return ReturnResult.ok(userResult);
+    }
+
+    @Override
+    public ReturnResult<UserResult> refresh(Cookie[] cookies, String token) {
+        Cookie cookie = CookieUtil.getCookie(cookies, authServerProperties.getCookieName());
+        String cv = token;
+        if (StringUtils.isEmpty(StringUtils.ifValid(cv, ""))) {
+            cv = null == cookie ? null : cookie.getValue();
+        }
+
+        if (null == cv) {
+            return ReturnResult.noAuth();
+        }
+        cv = TOKEN_PRE + cv;
+        String s = stringRedisTemplate.opsForValue().get(cv);
+        if (null == s) {
+            return ReturnResult.noAuth();
+        }
+
+        UserResult userResult = Json.fromJson(s, UserResult.class);
+        UserResult userResult1 = loginCheck.getUserInfo(userResult);
+        if (null == userResult1) {
+            return ReturnResult.ok(userResult);
+        }
+        stringRedisTemplate.opsForValue().set(token, Json.toJson(BeanMap.create(userResult1)));
+        if (authServerProperties.isRenew()) {
+            resetExpire(userResult1, token);
+        }
+        return ReturnResult.ok(userResult1);
     }
 
     /**

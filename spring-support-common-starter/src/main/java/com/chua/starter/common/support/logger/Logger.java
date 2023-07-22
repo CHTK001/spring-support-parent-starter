@@ -19,13 +19,14 @@ public @interface Logger {
      *
      * @return 模块名称
      */
-    String value();
+    String value() default "";
 
     /**
      * 动作
+     *
      * @return 动作
      */
-    String action();
+    String action() default "";
 
     /**
      * 模块编号

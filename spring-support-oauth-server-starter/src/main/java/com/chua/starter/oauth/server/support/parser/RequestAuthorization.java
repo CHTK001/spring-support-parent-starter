@@ -5,6 +5,7 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.common.support.result.ReturnResultBuilder;
 import com.chua.starter.oauth.client.support.user.UserResult;
+import com.chua.starter.oauth.server.support.check.LoginCheck;
 import com.chua.starter.oauth.server.support.information.AuthInformation;
 import com.chua.starter.oauth.server.support.token.TokenResolver;
 import com.google.common.base.Strings;
@@ -29,6 +30,9 @@ public final class RequestAuthorization implements Authorization {
 
     @Resource
     private ApplicationContext applicationContext;
+
+    @Resource
+    private LoginCheck loginCheck;
 
     public RequestAuthorization(AuthInformation authInformation, String token, Cookie[] cookie, String accessKey, String secretKey) {
         this.authInformation = authInformation;
@@ -66,6 +70,21 @@ public final class RequestAuthorization implements Authorization {
             return ReturnResult.error(null, "认证服务器无法认证");
         }
         ReturnResult<UserResult> resolve = tokenResolver.resolve(cookie, token);
+        ReturnResultBuilder<String> result = ReturnResult.<String>newBuilder().code(resolve.getCode()).msg(resolve.getMsg());
+        if (OK.getCode().equals(resolve.getCode())) {
+            result.setData(authInformation.getEncode().encodeHex(Json.toJson(resolve.getData()), authInformation.getOauthKey()));
+        }
+        return result.build();
+    }
+
+    @Override
+    public ReturnResult<String> refresh() {
+        String tokenManagement = authInformation.getAuthServerProperties().getTokenManagement();
+        TokenResolver tokenResolver = ServiceProvider.of(TokenResolver.class).getExtension(tokenManagement);
+        if (null == tokenResolver) {
+            return ReturnResult.error(null, "认证服务器无法认证");
+        }
+        ReturnResult<UserResult> resolve = tokenResolver.refresh(cookie, token);
         ReturnResultBuilder<String> result = ReturnResult.<String>newBuilder().code(resolve.getCode()).msg(resolve.getMsg());
         if (OK.getCode().equals(resolve.getCode())) {
             result.setData(authInformation.getEncode().encodeHex(Json.toJson(resolve.getData()), authInformation.getOauthKey()));
