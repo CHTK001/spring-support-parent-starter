@@ -1,5 +1,6 @@
 package com.chua.starter.oss.support.pojo;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.chua.common.support.database.annotation.Column;
 import com.chua.common.support.database.annotation.Id;
@@ -13,7 +14,7 @@ import lombok.Data;
 public class SysOss {
     @Column(comment = "ossID")
     @Id
-    @TableId
+    @TableId(type = IdType.AUTO)
     private Integer ossId;
     @Column(comment = "oss路径")
     private String ossPath;
