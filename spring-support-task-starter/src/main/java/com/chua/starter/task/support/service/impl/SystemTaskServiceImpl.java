@@ -112,11 +112,21 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
                                 task.getTaskParams()));
         SysTask byTaskTid = getTaskByTaskTid(task.getTaskTid());
         task.setTaskStatus(3);
-        if(null != byTaskTid) {
-            throw new RuntimeException("有相同任务: " + task.getTaskTid());
+        boolean b = false;
+        if (null != byTaskTid) {
+            if (null != task.getTaskOver() && task.getTaskOver() == 0) {
+                throw new RuntimeException("有相同任务: " + task.getTaskTid());
+            }
+
+            if (null != task.getTaskStatus() && task.getTaskStatus() != 1) {
+                throw new RuntimeException("任务未完成不能覆盖: " + task.getTaskTid());
+            }
+            task.setTaskId(byTaskTid.getTaskId());
+            b = 1 == baseMapper.updateById(task);
+        } else {
+            b = 1 == baseMapper.insert(task);
         }
 
-        boolean b = 1 == baseMapper.insert(task);
         if (b) {
             eventbusTemplate.post(EventbusType.GUAVA, "task", task);
         }

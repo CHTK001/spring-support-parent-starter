@@ -1,6 +1,7 @@
 package com.chua.starter.task.support.pojo;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.Version;
 import com.chua.common.support.database.annotation.Column;
@@ -87,6 +88,12 @@ public class SysTask extends SysBase implements Comparable<SysTask> {
 
     @Column(comment = "任务耗时", defaultValue = "0")
     private Long taskCost;
+
+    /**
+     * 任务相同是否覆盖
+     */
+    @TableField(exist = false)
+    private Integer taskOver;
 
     @Override
     public int compareTo(SysTask o) {
