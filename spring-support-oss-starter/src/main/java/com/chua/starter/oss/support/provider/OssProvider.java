@@ -23,6 +23,7 @@ import com.chua.starter.common.support.configuration.CacheConfiguration;
 import com.chua.starter.common.support.result.Result;
 import com.chua.starter.common.support.result.ResultData;
 import com.chua.starter.common.support.result.ReturnCode;
+import com.chua.starter.common.support.result.ReturnPageResult;
 import com.chua.starter.common.support.view.ResponseHandler;
 import com.chua.starter.mybatis.entity.DelegatePage;
 import com.chua.starter.oss.support.pojo.SysOss;
@@ -336,11 +337,11 @@ public class OssProvider {
      */
     @GetMapping("page")
     @ResponseBody
-    public ResultData<com.baomidou.mybatisplus.extension.plugins.pagination.Page<SysOss>> page(DelegatePage<SysOss> page, @Valid SysOss entity, BindingResult bindingResult) {
+    public ReturnPageResult<SysOss> page(DelegatePage<SysOss> page, @Valid SysOss entity, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnPageResult.illegal(bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
-        return ResultData.success(ossSystemService.page(page.createPage(), Wrappers.lambdaQuery(entity)));
+        return ReturnPageResult.ok(ossSystemService.page(page.createPage(), Wrappers.lambdaQuery(entity)));
     }
 
     /**
@@ -390,7 +391,7 @@ public class OssProvider {
     @PostMapping("save")
     @ResponseBody
     @CacheEvict(cacheManager = CacheConfiguration.DEFAULT_CACHE_MANAGER, cacheNames = "oss", allEntries = true)
-    public ResultData<Boolean> save(@Valid @RequestBody SysOss t, BindingResult bindingResult) {
+    public ResultData<SysOss> save(@Valid @RequestBody SysOss t, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
@@ -407,7 +408,7 @@ public class OssProvider {
                 return ResultData.failure(PARAM_ERROR, "bucket已存在");
             }
         }
-
-        return ResultData.success(ossSystemService.saveOrUpdate(t));
+        ossSystemService.saveOrUpdate(t);
+        return ResultData.success(t);
     }
 }
