@@ -1,10 +1,16 @@
 package com.chua.starter.common.support.result;
 
+import com.chua.common.support.lang.page.Page;
+import com.chua.common.support.reflection.describe.TypeDescribe;
+import com.chua.common.support.utils.ClassUtils;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 import static com.chua.starter.common.support.result.ReturnCode.*;
+
 
 /**
  * 返回结果
@@ -74,7 +80,36 @@ public class ReturnPageResult<T> {
     /**
      * 初始化
      *
+     * @param data 数据
      * @param <T>  类型
+     * @return 结果
+     */
+    public static <T> ReturnPageResult<T> ok(Object data) {
+        if (data instanceof Page) {
+            return ok(PageResult.<T>builder()
+                    .page(((Page<?>) data).getPageNum())
+                    .pageSize(((Page<?>) data).getPageSize())
+                    .data((List<T>) ((Page<?>) data).getData())
+                    .totalPages(((Page<?>) data).getPages())
+                    .build());
+        }
+
+        if (ClassUtils.isAssignableFrom(data, "com.baomidou.mybatisplus.core.metadata.IPage")) {
+            TypeDescribe typeDescribe = TypeDescribe.create(data);
+            return ok(PageResult.<T>builder()
+                    .page(typeDescribe.getMethodDescribe("getCurrent").executeSelf(int.class))
+                    .pageSize(typeDescribe.getMethodDescribe("getSize").executeSelf(int.class))
+                    .data((List<T>) typeDescribe.getMethodDescribe("getRecords").executeSelf())
+                    .totalPages(typeDescribe.getMethodDescribe("getPages").executeSelf(int.class))
+                    .build());
+        }
+        return ok(null, "");
+    }
+
+    /**
+     * 初始化
+     *
+     * @param <T> 类型
      * @return 结果
      */
     public static <T> ReturnPageResult<T> ok() {
@@ -140,11 +175,22 @@ public class ReturnPageResult<T> {
     /**
      * 初始化
      *
-     * @param <T>  类型
+     * @param message 数据
+     * @param <T>     类型
+     * @return 结果
+     */
+    public static <T> ReturnPageResult<T> illegal(String message) {
+        return illegal(null, message);
+    }
+
+    /**
+     * 初始化
+     *
+     * @param <T> 类型
      * @return 结果
      */
     public static <T> ReturnPageResult<T> illegal() {
-        return illegal(null);
+        return illegal(null, null);
     }
 
     /**
