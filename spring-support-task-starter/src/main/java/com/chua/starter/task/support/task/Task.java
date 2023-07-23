@@ -20,6 +20,7 @@ import javax.annotation.Resource;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.chua.starter.sse.support.SseMessageType.*;
 
@@ -30,6 +31,7 @@ import static com.chua.starter.sse.support.SseMessageType.*;
  */
 public abstract class Task implements AutoCloseable {
 
+    private final AtomicInteger cnt = new AtomicInteger(0);
     public static final String SUBSCRIBE = "Task:Subscribe";
     private final AtomicBoolean status = new AtomicBoolean(true);
     public static final String PRE = "";
@@ -101,8 +103,12 @@ public abstract class Task implements AutoCloseable {
             return;
         }
         try {
-            execute(taskCurrent, taskParam);
-            doAnalysis();
+            if (cnt.getAndIncrement() < 50) {
+                execute(taskCurrent, taskParam);
+                doAnalysis();
+                return;
+            }
+            cnt.decrementAndGet();
         } catch (Exception e) {
             log.error("运行失败: {}", e.getMessage());
         }
