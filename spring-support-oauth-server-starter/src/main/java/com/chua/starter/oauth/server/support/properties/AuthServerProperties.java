@@ -53,6 +53,10 @@ public class AuthServerProperties {
      * 是否开启密钥校验
      */
     private boolean openCheckAkSk;
+    /**
+     * 是否开启回写加密
+     */
+    private boolean openReturnCheckAkSk = true;
 
     /**
      * 令牌管理, 用于管理token, cookie
