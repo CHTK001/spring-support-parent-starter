@@ -216,7 +216,7 @@ public class AuthClientExecute {
                 return null;
             }
 
-            decode.decodeHex(request, serviceKey);
+
             httpResponse = Unirest.post(
                             StringUtils.endWithAppend(StringUtils.startWithAppend(url, "http://"), "/")
                                     + "doLogin")
@@ -243,7 +243,7 @@ public class AuthClientExecute {
             if (code.equals(OK.getCode())) {
                 LoginAuthResult loginAuthResult = null;
                 try {
-                    loginAuthResult = Json.fromJson(decode.decode(data.toString(), uid), LoginAuthResult.class);
+                    loginAuthResult = Json.fromJson(decode.decodeHex(data.toString(), uid), LoginAuthResult.class);
                 } catch (Exception ignore) {
                 }
 

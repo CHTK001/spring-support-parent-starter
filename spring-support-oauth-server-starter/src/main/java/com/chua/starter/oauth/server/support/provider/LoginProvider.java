@@ -53,6 +53,7 @@ import static com.chua.starter.oauth.client.support.contants.AuthConstant.*;
  */
 @Controller
 @Conditional(OnBeanCondition.class)
+@SuppressWarnings("ALL")
 @RequestMapping("${plugin.auth.server.context-path:}")
 public class LoginProvider implements InitializingBean {
     private KeyDecode decode;
@@ -179,7 +180,7 @@ public class LoginProvider implements InitializingBean {
             passwd = accessSecret.getPassword();
         }
 
-        if(null != accessSecret.getExt()) {
+        if (null != accessSecret.getExt()) {
             address = MapUtils.getString(accessSecret.getExt(), "address", address);
         }
 
@@ -202,10 +203,31 @@ public class LoginProvider implements InitializingBean {
             logout(request, response);
             return ReturnResult.newBuilder().code(ReturnCode.SYSTEM_NO_OAUTH.getCode()).msg("ak/sk无效").build();
         }
+        if (authServerProperties.isOpenReturnCheckAkSk()) {
+            doEncodeReturnValue(result, accessSecret);
+        }
 
         loggerResolver.register("doLogin", OK.getCode(), "登录成功", address);
         return result;
 
+    }
+
+    /**
+     * 加密返回结果
+     *
+     * @param resultReturnResult 结果
+     * @param accessSecret       AK/SK
+     */
+    private void doEncodeReturnValue(ReturnResult resultReturnResult, AccessSecret accessSecret) {
+        if (!authServerProperties.isOpenReturnCheckAkSk()) {
+            return;
+        }
+
+        LoginResult loginResult = (LoginResult) resultReturnResult.getData();
+        loginResult.getUserResult().setAccessSecret(new AccessSecret());
+
+        String json = Json.toJson(loginResult);
+        resultReturnResult.setData(encode.encodeHex(json, accessSecret.getUKey()));
     }
 
     private AccessSecret getAkSk(String data) {
@@ -217,7 +239,7 @@ public class LoginProvider implements InitializingBean {
      *
      * @param resultReturnResult 数据
      * @param data               请求数据
-     * @param accessSecret1      accessSecret1
+     * @param accessSecret1      AK/SK
      * @return 合法性
      */
     private boolean checkAkSk(ReturnResult<Object> resultReturnResult, String data, AccessSecret accessSecret1) {
@@ -253,14 +275,6 @@ public class LoginProvider implements InitializingBean {
     private boolean doEncode(boolean status, ReturnResult<Object> resultReturnResult, String uKey) {
         if (!authServerProperties.isOpenCheckAkSk()) {
             return true;
-        }
-
-        if (status) {
-            LoginResult loginResult = (LoginResult) resultReturnResult.getData();
-            loginResult.getUserResult().setAccessSecret(new AccessSecret());
-
-            String json = Json.toJson(loginResult);
-            resultReturnResult.setData(encode.encode(json, uKey));
         }
 
         return status;
