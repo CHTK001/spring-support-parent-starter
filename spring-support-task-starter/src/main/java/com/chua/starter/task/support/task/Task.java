@@ -32,13 +32,14 @@ import static com.chua.starter.sse.support.SseMessageType.*;
 public abstract class Task implements AutoCloseable {
 
     private final AtomicInteger cnt = new AtomicInteger(0);
+    private final AtomicBoolean clear = new AtomicBoolean(false);
     public static final String SUBSCRIBE = "Task:Subscribe";
     private final AtomicBoolean status = new AtomicBoolean(true);
     public static final String PRE = "";
     protected static final Log log = Log.getLogger(Task.class);
     protected TaskParam taskParam;
     private String taskTid;
-    private ValueOperations<String, String> opsForList;
+    private volatile ValueOperations<String, String> opsForList;
     private String key;
     @Resource(name = com.chua.common.support.protocol.server.Constant.STRING_REDIS)
     private StringRedisTemplate redisTemplate;
@@ -91,7 +92,11 @@ public abstract class Task implements AutoCloseable {
             return;
         }
 
-        doAnalysis();
+        while (status.get()) {
+            clear.set(false);
+            doAnalysis();
+            ThreadUtils.sleepSecondsQuietly(0);
+        }
     }
 
     private void doWork(Integer taskCurrent, TaskParam taskParam) {
@@ -103,11 +108,13 @@ public abstract class Task implements AutoCloseable {
             return;
         }
         try {
-            if (cnt.getAndIncrement() < 50) {
+            if (!clear.get() && cnt.get() < 50) {
+                cnt.incrementAndGet();
                 execute(taskCurrent, taskParam);
                 doAnalysis();
                 return;
             }
+            clear.set(true);
             cnt.decrementAndGet();
         } catch (Exception e) {
             log.error("运行失败: {}", e.getMessage());
@@ -191,7 +198,7 @@ public abstract class Task implements AutoCloseable {
         finish(sysTask);
         try {
             sseTemplate.emit(SseMessage.builder().message(sysTask.getTaskCost() + "").type(FINISH).tid(taskTid).build(), Task.SUBSCRIBE);
-        } catch (Exception e) {
+        } catch (Exception ignored) {
         }
         ThreadUtils.sleepSecondsQuietly(0);
     }
