@@ -16,7 +16,7 @@ public class DeepQuery {
     private String path;
     private String ossId;
 
-    private Integer pageNum = 1;
+    private Integer page = 1;
     private Integer pageSize = 10;
 
 

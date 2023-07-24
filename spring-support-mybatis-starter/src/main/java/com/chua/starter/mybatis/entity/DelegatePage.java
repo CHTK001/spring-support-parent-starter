@@ -1,16 +1,7 @@
 package com.chua.starter.mybatis.entity;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.PageDTO;
-import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.database.annotation.ColumnIgnore;
-import com.chua.common.support.utils.CollectionUtils;
-import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
-
-import java.util.Collections;
-import java.util.List;
 
 /**
  * page
@@ -28,9 +19,15 @@ public class DelegatePage<T>{
      * 当前页
      */
     @ColumnIgnore
-    protected long pageNo = 1;
+    protected long pageNo = 0;
+
+    /**
+     * 当前页
+     */
+    @ColumnIgnore
+    protected long page = 0;
 
     public com.baomidou.mybatisplus.extension.plugins.pagination.Page<T> createPage() {
-        return new com.baomidou.mybatisplus.extension.plugins.pagination.Page<T>(pageNo, pageSize);
+        return new com.baomidou.mybatisplus.extension.plugins.pagination.Page<T>(page < 0 ? Math.max(pageNo, 1) : page, pageSize);
     }
 }
