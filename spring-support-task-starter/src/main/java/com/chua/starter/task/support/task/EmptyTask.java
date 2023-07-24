@@ -15,7 +15,7 @@ public class EmptyTask extends Task{
     @Override
     protected void execute(long offset, TaskParam taskParam) {
         log.info("空任务: {}", offset);
-        ThreadUtils.sleepSecondsQuietly(2);
+        ThreadUtils.sleepSecondsQuietly(1);
         step(1);
     }
 

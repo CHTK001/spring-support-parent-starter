@@ -216,6 +216,7 @@ public class AuthClientExecute {
                 return null;
             }
 
+            decode.decodeHex(request, serviceKey);
             httpResponse = Unirest.post(
                             StringUtils.endWithAppend(StringUtils.startWithAppend(url, "http://"), "/")
                                     + "doLogin")
