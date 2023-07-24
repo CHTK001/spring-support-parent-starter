@@ -100,7 +100,7 @@ public class OssProvider {
         }
 
         if (StringUtils.isBlank(query.getPath())) {
-            return listObjects(query.getOssId(), query.getName(), query.getOssBucket(), query.getPageNum(), query.getPageSize());
+            return listObjects(query.getOssId(), query.getName(), query.getOssBucket(), query.getPage(), query.getPageSize());
         }
         OssAnalysis ossAnalysis = ServiceProvider.of(OssAnalysis.class).getDeepNewExtension(ossSystem.getOssType());
 
@@ -109,7 +109,7 @@ public class OssProvider {
                 query.getOssBucket(),
                 query.getPath(),
                 query.getName(),
-                query.getPageNum(),
+                query.getPage(),
                 query.getPageSize()
         ));
 
@@ -119,8 +119,8 @@ public class OssProvider {
     public Result<Page<OssNode>> listObjects(String ossId,
                                              String name,
                                              String ossBucket,
-                                             @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
-                                             @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
+                                             @RequestParam(value = "page", defaultValue = "1") Integer pageNum,
+                                             @RequestParam(value = "pageSize", defaultValue = "20") Integer pageSize) {
 
         SysOss ossSystem = null;
         if(StringUtils.isNotEmpty(ossId)) {
@@ -407,6 +407,12 @@ public class OssProvider {
             if (ossSystemService.count(Wrappers.<SysOss>lambdaQuery().eq(SysOss::getOssBucket, t.getOssBucket())) > 0L) {
                 return ResultData.failure(PARAM_ERROR, "bucket已存在");
             }
+        }
+        if(StringUtils.isNotEmpty(t.getOssNameStrategy())) {
+            t.setOssNameStrategy(t.getOssNameStrategy().toUpperCase());
+        }
+        if(StringUtils.isNotEmpty(t.getOssNameStrategy())) {
+            t.setOssNameStrategy(t.getOssNameStrategy().toUpperCase());
         }
         ossSystemService.saveOrUpdate(t);
         return ResultData.success(t);

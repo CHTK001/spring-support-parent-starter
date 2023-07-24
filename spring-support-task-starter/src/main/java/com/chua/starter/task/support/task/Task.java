@@ -96,6 +96,7 @@ public abstract class Task implements AutoCloseable {
             clear.set(false);
             doAnalysis();
             ThreadUtils.sleepSecondsQuietly(0);
+            log.info("堆栈清除完成");
         }
     }
 
@@ -115,6 +116,9 @@ public abstract class Task implements AutoCloseable {
                 return;
             }
             clear.set(true);
+            if(cnt.get() >= 50) {
+                log.info("开始清除堆栈");
+            }
             cnt.decrementAndGet();
         } catch (Exception e) {
             log.error("运行失败: {}", e.getMessage());

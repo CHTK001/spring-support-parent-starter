@@ -90,6 +90,7 @@ public class ReturnPageResult<T> {
                     .page(((Page<?>) data).getPageNum())
                     .pageSize(((Page<?>) data).getPageSize())
                     .data((List<T>) ((Page<?>) data).getData())
+                    .total(((Page<?>) data).getTotal())
                     .totalPages(((Page<?>) data).getPages())
                     .build());
         }
@@ -100,6 +101,7 @@ public class ReturnPageResult<T> {
                     .page(typeDescribe.getMethodDescribe("getCurrent").executeSelf(int.class))
                     .pageSize(typeDescribe.getMethodDescribe("getSize").executeSelf(int.class))
                     .data((List<T>) typeDescribe.getMethodDescribe("getRecords").executeSelf())
+                    .total(typeDescribe.getMethodDescribe("getTotal").executeSelf(long.class))
                     .totalPages(typeDescribe.getMethodDescribe("getPages").executeSelf(int.class))
                     .build());
         }

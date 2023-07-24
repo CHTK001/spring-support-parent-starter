@@ -35,6 +35,7 @@ public class CommonConfigurationConfiguration implements EnvironmentPostProcesso
         }
 
         properties.setProperty("spring.main.allow-circular-references", "true");
+        properties.setProperty("server.compression.enable", "true");
 
         properties.setProperty("spring.servlet.multipart.enabled", "true");
         properties.setProperty("spring.servlet.multipart.max-file-size", "200MB");

@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.configuration;
 
+import com.chua.starter.common.support.configuration.resolver.RequestParamsMapMethodArgumentResolver;
 import com.chua.starter.common.support.converter.FastJsonHttpMessageConverter;
 import com.chua.starter.common.support.converter.ResultDataHttpMessageConverter;
 import com.chua.starter.common.support.limit.LimitAspect;
@@ -37,6 +38,7 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.http.converter.xml.MappingJackson2XmlHttpMessageConverter;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandler;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
@@ -76,6 +78,11 @@ public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAw
     @Override
     public void addReturnValueHandlers(List<HandlerMethodReturnValueHandler> handlers) {
         handlers.add(new ResponseModelViewMethodProcessor(messageConverters));
+    }
+
+    @Override
+    public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
+        resolvers.add(new RequestParamsMapMethodArgumentResolver());
     }
 
     @Override
