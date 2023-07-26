@@ -201,7 +201,7 @@ public abstract class Task implements AutoCloseable {
         }
         finish(sysTask);
         try {
-            sseTemplate.emit(SseMessage.builder().message(sysTask.getTaskCost() + "").type(FINISH).tid(taskTid).build(), Task.SUBSCRIBE);
+            sseTemplate.emit(SseMessage.builder().message(sysTask.getTaskCost() + "").type(FINISH).tid(taskTid).build(), Task.SUBSCRIBE, taskTid);
         } catch (Exception ignored) {
         }
         ThreadUtils.sleepSecondsQuietly(0);
@@ -250,7 +250,7 @@ public abstract class Task implements AutoCloseable {
             opsForList.set(message, message, 4, TimeUnit.SECONDS);
         }
         try {
-            sseTemplate.emit(SseMessage.builder().message(message).type(type).tid(taskTid).build(), Task.SUBSCRIBE);
+            sseTemplate.emit(SseMessage.builder().message(message).type(type).tid(taskTid).build(), Task.SUBSCRIBE, taskTid);
         } catch (Exception ignored) {
         }
     }
