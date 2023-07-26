@@ -2,7 +2,6 @@ package com.chua.starter.oauth.client.support.configuration;
 
 import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.oauth.client.support.annotation.UserPermission;
-import com.chua.starter.oauth.client.support.exception.OauthException;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.user.UserResume;
@@ -28,12 +27,12 @@ import java.util.Set;
 @Aspect
 public class PermissionAspect {
 
-    private static final String ANY = "*";
-    private static final String ONE = "?";
+    protected static final String ANY = "*";
+    protected static final String ONE = "?";
     @Resource
     private AuthClientProperties authProperties;
 
-    private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
+    protected static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
     /**
      * 环绕
@@ -66,8 +65,8 @@ public class PermissionAspect {
         return ReturnResult.noAuth();
     }
 
-    private boolean isPass(String[] value, String[] role, UserResume userResume) {
-        if(userResume.isAdmin()) {
+    protected static boolean isPass(String[] value, String[] role, UserResume userResume) {
+        if (userResume.isAdmin()) {
             return true;
         }
         return userResume.hasRole(role) && userResume.hasPermission(value);
@@ -81,7 +80,7 @@ public class PermissionAspect {
      * @param permission 权限
      * @return 鉴定结果
      */
-    private boolean hasPermissions(String[] value, Set<String> permission) {
+    protected boolean hasPermissions(String[] value, Set<String> permission) {
         if (permission == null) {
             return false;
         }
