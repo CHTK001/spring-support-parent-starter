@@ -1,6 +1,7 @@
 package com.chua.starter.oss.support.provider;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.chua.common.support.annotations.Permission;
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.function.strategy.name.OssNamedStrategy;
 import com.chua.common.support.function.strategy.name.RejectStrategy;
@@ -306,6 +307,7 @@ public class OssProvider {
 
     @ResponseBody
     @GetMapping("options")
+    @Permission(role = {"ADMIN", "OPS"})
     public Result<List<Option<String>>> option(@RequestParam(value = "type", defaultValue = "0") Integer type) {
         if (0 == type) {
             //实现方式
@@ -351,6 +353,7 @@ public class OssProvider {
      * @return 分页结果
      */
     @ResponseBody
+    @Permission(role = {"ADMIN", "OPS"})
     @GetMapping("delete/{id}")
     @CacheEvict(cacheManager = CacheConfiguration.DEFAULT_CACHE_MANAGER, cacheNames = "oss", allEntries = true)
     public ResultData<Boolean> delete(@PathVariable("id") String id) {
@@ -368,6 +371,7 @@ public class OssProvider {
      */
     @PostMapping("update")
     @ResponseBody
+    @Permission(role = {"ADMIN", "OPS"})
     @CacheEvict(cacheManager = CacheConfiguration.DEFAULT_CACHE_MANAGER, cacheNames = "oss", allEntries = true)
     public ResultData<Boolean> updateById(@Valid @RequestBody SysOss t, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
@@ -389,6 +393,7 @@ public class OssProvider {
      * @return 分页结果
      */
     @PostMapping("save")
+    @Permission(role = {"ADMIN", "OPS"})
     @ResponseBody
     @CacheEvict(cacheManager = CacheConfiguration.DEFAULT_CACHE_MANAGER, cacheNames = "oss", allEntries = true)
     public ResultData<SysOss> save(@Valid @RequestBody SysOss t, BindingResult bindingResult) {

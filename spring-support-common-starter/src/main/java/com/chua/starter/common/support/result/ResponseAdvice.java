@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.result;
 
+import com.chua.common.support.lang.exception.AuthenticationException;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -173,6 +174,13 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
     public <T> Result<T> processSQLSyntaxErrorException(SQLSyntaxErrorException e) {
         log.error(e.getMessage(), e);
         return Result.failed("无权限操作");
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public <T> Result<T> authenticationException(AuthenticationException e) {
+        log.error(e.getMessage(), e);
+        return Result.failed(RESULT_ACCESS_UNAUTHORIZED, "无权限操作");
     }
 
 
