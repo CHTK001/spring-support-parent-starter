@@ -83,7 +83,7 @@ public class SysTask extends SysBase implements Comparable<SysTask> {
     private Integer taskVersion;
 
 
-    @Column(comment = "任务参数", jdbcType = JdbcType.LONGTEXT)
+    @Column(comment = "任务参数", length = 1000)
     private String taskParams;
 
     @Column(comment = "任务耗时", defaultValue = "0")
