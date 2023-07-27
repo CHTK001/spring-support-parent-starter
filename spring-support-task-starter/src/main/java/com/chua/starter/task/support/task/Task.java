@@ -102,7 +102,7 @@ public abstract class Task implements AutoCloseable, InitializingAware {
         while (status.get()) {
             clear.set(false);
             doAnalysis();
-            ThreadUtils.sleepSecondsQuietly(0);
+            ThreadUtils.sleepSecondsQuietly(1000);
             log.info("堆栈清除完成");
         }
     }
