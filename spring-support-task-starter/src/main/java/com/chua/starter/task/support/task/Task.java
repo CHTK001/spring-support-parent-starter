@@ -115,21 +115,7 @@ public abstract class Task implements AutoCloseable, InitializingAware {
         if (null == task) {
             return;
         }
-        try {
-            if (!clear.get() && cnt.get() < 50) {
-                cnt.incrementAndGet();
-                execute(taskCurrent, taskParam);
-                doAnalysis();
-                return;
-            }
-            clear.set(true);
-            if(cnt.get() >= 50) {
-                log.info("开始清除堆栈");
-            }
-            cnt.decrementAndGet();
-        } catch (Exception e) {
-            log.error("运行失败: {}", e.getMessage());
-        }
+        execute(taskCurrent, taskParam);
     }
 
     /**
@@ -227,7 +213,6 @@ public abstract class Task implements AutoCloseable, InitializingAware {
             check();
             opsForList.set(newKey, NumberUtils.toInt(opsForList.get(newKey)) + currentOffset + "");
             redisTemplate.expire(newKey, taskManager.getTask(key).getTaskExpire(), TimeUnit.SECONDS);
-            doAnalysis();
         } catch (Exception e) {
             log.info("任务处理异常");
         }
