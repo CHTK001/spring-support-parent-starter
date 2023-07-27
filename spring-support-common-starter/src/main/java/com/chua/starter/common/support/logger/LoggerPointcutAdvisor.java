@@ -61,8 +61,7 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
         if (Proxy.isProxyClass(targetClass)) {
             return false;
         }
-        return AnnotatedElementUtils.hasAnnotation(method, Logger.class) ||
-                AnnotatedElementUtils.hasAnnotation(targetClass, Logger.class);
+        return AnnotatedElementUtils.hasAnnotation(method, Logger.class) && StringUtils.isNotEmpty(method.getDeclaredAnnotation(Logger.class).value());
 
     }
 

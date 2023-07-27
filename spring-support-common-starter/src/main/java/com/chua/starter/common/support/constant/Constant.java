@@ -27,4 +27,5 @@ public interface Constant {
     String VERSION = "version";
     String METHOD = "method";
     String ACTION = "action";
+    String BUTTON = "BUTTON";
 }

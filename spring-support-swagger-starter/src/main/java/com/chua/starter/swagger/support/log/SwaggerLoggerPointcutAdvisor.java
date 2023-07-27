@@ -40,9 +40,10 @@ public class SwaggerLoggerPointcutAdvisor extends LoggerPointcutAdvisor {
             return false;
         }
         return (!AnnotatedElementUtils.hasAnnotation(method, LoggerIgnore.class)
-                && AnnotatedElementUtils.hasAnnotation(method, Logger.class)
-                && AnnotatedElementUtils.hasAnnotation(targetClass, Logger.class))
-                && (AnnotatedElementUtils.hasAnnotation(method, ApiOperation.class) || AnnotatedElementUtils.hasAnnotation(method, Operation.class));
+                && AnnotatedElementUtils.hasAnnotation(method, Logger.class))
+                &&
+                (AnnotatedElementUtils.hasAnnotation(method, ApiOperation.class) ||
+                AnnotatedElementUtils.hasAnnotation(method, Operation.class));
 
 
     }
