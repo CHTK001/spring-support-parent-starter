@@ -7,14 +7,21 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.env.Environment;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.util.ClassUtils;
+import org.springframework.util.PathMatcher;
 import org.springframework.util.ReflectionUtils;
+import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.servlet.mvc.condition.PatternsRequestCondition;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -26,6 +33,8 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 @Slf4j
 public class SpringBeanUtils {
+
+    public static PathMatcher Matcher = new AntPathMatcher();
     /**
      * 上下文
      */
@@ -187,5 +196,25 @@ public class SpringBeanUtils {
 
     public static Environment getEnvironment() {
         return getApplicationContext().getEnvironment();
+    }
+
+    /**
+     * 方法处理器
+     * @param requestMappingHandlerMapping 映射
+     * @param url 地址
+     * @return 处理器
+     */
+    public static HandlerMethod getMethodInfo(RequestMappingHandlerMapping requestMappingHandlerMapping, String url) {
+        Map<RequestMappingInfo, HandlerMethod> handlerMethods = requestMappingHandlerMapping.getHandlerMethods();
+        for (Map.Entry<RequestMappingInfo, HandlerMethod> entry : handlerMethods.entrySet()) {
+            RequestMappingInfo requestMappingInfo = entry.getKey();
+            PatternsRequestCondition patternsCondition = requestMappingInfo.getPatternsCondition();
+            for (String pattern : Optional.ofNullable(patternsCondition.getPatterns()).orElse(Collections.emptySet())) {
+                if(Matcher.match(pattern, url)) {
+                    return entry.getValue();
+                }
+            }
+        }
+        return null;
     }
 }
