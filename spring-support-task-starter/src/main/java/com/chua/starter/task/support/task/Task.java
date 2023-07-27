@@ -1,6 +1,7 @@
 package com.chua.starter.task.support.task;
 
 
+import com.chua.common.support.function.InitializingAware;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.log.Log;
 import com.chua.common.support.utils.NumberUtils;
@@ -29,7 +30,7 @@ import static com.chua.starter.sse.support.SseMessageType.*;
  *
  * @author CH
  */
-public abstract class Task implements AutoCloseable {
+public abstract class Task implements AutoCloseable, InitializingAware {
 
     private final AtomicInteger cnt = new AtomicInteger(0);
     private final AtomicBoolean clear = new AtomicBoolean(false);
@@ -68,9 +69,15 @@ public abstract class Task implements AutoCloseable {
         String taskParams = sysTask.getTaskParams();
         this.taskParam = new TaskParam(Json.toMapStringObject(taskParams));
         this.taskParam.addProfile("taskName", sysTask.getTaskName());
+        this.afterPropertiesSet();
     }
 
     public Task() {
+
+    }
+
+    @Override
+    public void afterPropertiesSet() {
 
     }
 
@@ -201,7 +208,10 @@ public abstract class Task implements AutoCloseable {
         }
         finish(sysTask);
         try {
-            sseTemplate.emit(SseMessage.builder().message(sysTask.getTaskCost() + "").type(FINISH).tid(taskTid).build(), Task.SUBSCRIBE, taskTid);
+            sseTemplate.emit(SseMessage.builder().message(sysTask.getTaskCost() + "").type(FINISH).tid(taskTid).build(),
+                    Task.SUBSCRIBE);
+            sseTemplate.emit(SseMessage.builder().event(taskTid).message(sysTask.getTaskCost() + "").type(FINISH).tid(taskTid).build(),
+                    Task.SUBSCRIBE + taskTid);
         } catch (Exception ignored) {
         }
         ThreadUtils.sleepSecondsQuietly(0);
@@ -250,7 +260,8 @@ public abstract class Task implements AutoCloseable {
             opsForList.set(message, message, 4, TimeUnit.SECONDS);
         }
         try {
-            sseTemplate.emit(SseMessage.builder().message(message).type(type).tid(taskTid).build(), Task.SUBSCRIBE, taskTid);
+            sseTemplate.emit(SseMessage.builder().message(message).type(type).tid(taskTid).build(), Task.SUBSCRIBE);
+            sseTemplate.emit(SseMessage.builder().message(message).event(taskTid).type(type).tid(taskTid).build(), Task.SUBSCRIBE + taskTid);
         } catch (Exception ignored) {
         }
     }
