@@ -5,6 +5,7 @@ import com.chua.common.support.function.InitializingAware;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.log.Log;
 import com.chua.common.support.utils.NumberUtils;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.common.support.constant.Constant;
 import com.chua.starter.sse.support.SseMessage;
@@ -21,7 +22,6 @@ import javax.annotation.Resource;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.chua.starter.sse.support.SseMessageType.*;
 
@@ -32,14 +32,12 @@ import static com.chua.starter.sse.support.SseMessageType.*;
  */
 public abstract class Task implements AutoCloseable, InitializingAware {
 
-    private final AtomicInteger cnt = new AtomicInteger(0);
-    private final AtomicBoolean clear = new AtomicBoolean(false);
     public static final String SUBSCRIBE = "Task:Subscribe";
     private final AtomicBoolean status = new AtomicBoolean(true);
     public static final String PRE = "";
     protected static final Log log = Log.getLogger(Task.class);
     protected TaskParam taskParam;
-    private String taskTid;
+    protected String taskTid;
     private volatile ValueOperations<String, String> opsForList;
     private String key;
     @Resource(name = com.chua.common.support.protocol.server.Constant.STRING_REDIS)
@@ -100,10 +98,7 @@ public abstract class Task implements AutoCloseable, InitializingAware {
         }
 
         while (status.get()) {
-            clear.set(false);
             doAnalysis();
-            ThreadUtils.sleepSecondsQuietly(1000);
-            log.info("堆栈清除完成");
         }
     }
 
@@ -123,8 +118,8 @@ public abstract class Task implements AutoCloseable, InitializingAware {
      *
      * @param sysTask 任務
      */
-    protected void finish(SysTask sysTask) {
-
+    protected String finish(SysTask sysTask) {
+        return "";
     }
 
     /**
@@ -141,6 +136,7 @@ public abstract class Task implements AutoCloseable, InitializingAware {
         int exact = NumberUtils.toInt(opsForList.get(newKey));
         SysTask sysTask = taskManager.getTask(key);
         if (null == sysTask) {
+            status.set(false);
             return;
         }
 
@@ -192,14 +188,23 @@ public abstract class Task implements AutoCloseable, InitializingAware {
             systemTaskService.forUpdateCurrent(sysTask);
         } catch (Exception ignored) {
         }
-        finish(sysTask);
+        String finish = finish(sysTask);
         try {
             sseTemplate.emit(SseMessage.builder().message(sysTask.getTaskCost() + "").type(FINISH).tid(taskTid).build(),
                     Task.SUBSCRIBE);
             sseTemplate.emit(SseMessage.builder().event(taskTid).message(sysTask.getTaskCost() + "").type(FINISH).tid(taskTid).build(),
                     Task.SUBSCRIBE + taskTid);
+
+            redisTemplate.delete(newKey);
+            String userId = taskParam.getString("userId");
+            if (StringUtils.isNotBlank(userId)) {
+                String key = Task.SUBSCRIBE + ":LIST:" + userId;
+                redisTemplate.opsForList().leftPush(key, finish);
+                redisTemplate.expire(key, sysTask.getTaskExpire(), TimeUnit.SECONDS);
+            }
         } catch (Exception ignored) {
         }
+        status.set(false);
         ThreadUtils.sleepSecondsQuietly(0);
     }
 
@@ -211,8 +216,12 @@ public abstract class Task implements AutoCloseable, InitializingAware {
     protected synchronized void step(int currentOffset) {
         try {
             check();
+            SysTask task = taskManager.getTask(key);
             opsForList.set(newKey, NumberUtils.toInt(opsForList.get(newKey)) + currentOffset + "");
-            redisTemplate.expire(newKey, taskManager.getTask(key).getTaskExpire(), TimeUnit.SECONDS);
+            redisTemplate.expire(newKey, task.getTaskExpire(), TimeUnit.SECONDS);
+            if (isFinish(currentOffset, task)) {
+                return;
+            }
         } catch (Exception e) {
             log.info("任务处理异常");
         }

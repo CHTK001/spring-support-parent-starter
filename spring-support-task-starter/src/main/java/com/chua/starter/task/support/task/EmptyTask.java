@@ -4,7 +4,6 @@ import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.annotations.SpiOption;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.task.support.params.TaskParam;
-import com.chua.starter.task.support.pojo.SysTask;
 
 /**
  * @author CH
@@ -19,8 +18,4 @@ public class EmptyTask extends Task{
         step(1);
     }
 
-    @Override
-    protected void finish(SysTask sysTask) {
-
-    }
 }
