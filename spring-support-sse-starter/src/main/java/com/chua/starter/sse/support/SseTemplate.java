@@ -56,14 +56,15 @@ public class SseTemplate implements DisposableBean, InitializingBean {
     public void emit(SseMessage sseMessage, Duration retry, String... clientIds) {
         SseEvent.Builder builder = SseEvent.builder()
                 .id(IdUtils.uuid())
+                .event(sseMessage.getEvent())
                 .clientIds(Arrays.asList(clientIds))
                 .data(Json.toJson(sseMessage));
-
         if (null != retry) {
             builder.retry(retry);
         }
         updateHeart(clientIds);
         this.sseEventBus.handleEvent(builder.build());
+
     }
 
     private void updateHeart(String[] clientIds) {

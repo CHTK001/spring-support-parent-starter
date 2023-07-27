@@ -121,11 +121,11 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
                 throw new RuntimeException("任务未完成不能覆盖: " + task.getTaskTid());
             }
             task.setTaskId(byTaskTid.getTaskId());
-            task.setTaskStatus(3);
+            task.setTaskStatus(task.getTaskTotal() == 0 ? 2: 3);
             task.setTaskCurrent(0L);
             b = 1 == baseMapper.updateById(task);
         } else {
-            task.setTaskStatus(3);
+            task.setTaskStatus(task.getTaskTotal() == 0 ? 2: 3);
             b = 1 == baseMapper.insert(task);
         }
 
