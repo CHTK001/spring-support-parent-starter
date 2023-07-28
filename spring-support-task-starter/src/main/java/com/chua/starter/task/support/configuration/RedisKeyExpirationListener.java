@@ -1,15 +1,13 @@
 package com.chua.starter.task.support.configuration;
 
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.chua.starter.task.support.pojo.SysTask;
 import com.chua.starter.task.support.service.SystemTaskService;
 import com.chua.starter.task.support.task.Task;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.listener.KeyExpirationEventMessageListener;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
-import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 
@@ -23,7 +21,7 @@ public class RedisKeyExpirationListener extends KeyExpirationEventMessageListene
 
     @Resource
     private SystemTaskService systemTaskService;
-    public RedisKeyExpirationListener(RedisMessageListenerContainer listenerContainer) {
+    public RedisKeyExpirationListener(@Autowired RedisMessageListenerContainer listenerContainer) {
         super(listenerContainer);
     }
 
@@ -34,6 +32,9 @@ public class RedisKeyExpirationListener extends KeyExpirationEventMessageListene
     @Override
     public void onMessage(Message message, byte[] pattern) {
         String redisId = message.toString();
+        if(redisId.startsWith(Task.SUBSCRIBE)) {
+            systemTaskService.expire(redisId.substring(redisId.lastIndexOf(":") + 1));
+        }
         log.info("redis失效id:{}",redisId);
     }
 }

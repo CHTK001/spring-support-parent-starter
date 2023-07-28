@@ -35,6 +35,13 @@ public class SysTask extends SysBase implements Comparable<SysTask> {
     @Column(comment = "任务执行的超时时间(s)", defaultValue = "86400")
     private Integer taskExpire;
     /**
+     * 任务过期记录是否删除
+     */
+    @Column(comment = "任务过期记录是否删除; 1: 删除; 0: 不删除", defaultValue = "1")
+    private Integer taskDelete;
+    @Column(comment = "任务删除列表多个,分割", length = 1000)
+    private String taskDeleteList;
+    /**
      * 任务类型
      */
     @Column(comment = "任务类型")
@@ -75,6 +82,11 @@ public class SysTask extends SysBase implements Comparable<SysTask> {
      */
     @Column(comment = "是否完成; 0: 未完成; 1:完成;2: 暂停; 3: 进行中", defaultValue = "0")
     private Integer taskStatus;
+    /**
+     * 是否完成
+     */
+    @Column(comment = "通知类型;导出: export, 信息: report", defaultValue = "export")
+    private String taskNoticeType;
     /**
      * 版本
      */

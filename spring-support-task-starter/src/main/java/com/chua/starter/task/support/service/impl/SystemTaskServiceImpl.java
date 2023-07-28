@@ -7,10 +7,7 @@ import com.chua.common.support.eventbus.EventbusType;
 import com.chua.common.support.eventbus.Subscribe;
 import com.chua.common.support.lang.date.DateUtils;
 import com.chua.common.support.log.Log;
-import com.chua.common.support.utils.DigestUtils;
-import com.chua.common.support.utils.IdUtils;
-import com.chua.common.support.utils.NumberUtils;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.*;
 import com.chua.starter.common.support.configuration.CacheConfiguration;
 import com.chua.starter.common.support.eventbus.EventbusTemplate;
 import com.chua.starter.task.support.mapper.SystemTaskMapper;
@@ -27,6 +24,8 @@ import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.io.File;
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -143,8 +142,10 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
     }
 
     @Override
-    public Page<SysTask> withPage(Page<SysTask> page) {
-        Page<SysTask> sysTaskPage = baseMapper.selectPage(page, Wrappers.lambdaQuery());
+    public Page<SysTask> withPage(Page<SysTask> page, boolean onlyFinish) {
+        Page<SysTask> sysTaskPage = baseMapper.selectPage(page, Wrappers.<SysTask>lambdaQuery()
+                .eq(onlyFinish, SysTask::getTaskStatus, 1).orderByDesc(SysTask::getCreateTime)
+        );
         List<SysTask> records = sysTaskPage.getRecords();
         ValueOperations<String, String> opsForValue = redisTemplate.opsForValue();
         for (SysTask record : records) {
@@ -156,6 +157,10 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
                 record.setTaskCurrent(record.getTaskTotal());
                 record.setTaskStatus(1);
                 baseMapper.updateById(record);
+            }
+
+            if(record.getTaskStatus() == 1) {
+                record.setTaskFinishFile(opsForValue.get(record.getKey()));
             }
 
         }
@@ -205,6 +210,27 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
         systemTask.setTaskStatus(0);
         systemTask.setTaskCurrent(0L);
         baseMapper.updateById(systemTask);
+    }
+
+    @Override
+    public void expire(String taskTid) {
+        SysTask taskByTaskTid = getTaskByTaskTid(taskTid);
+        if(null == taskByTaskTid) {
+            return;
+        }
+        if(taskByTaskTid.getTaskDelete() == null || taskByTaskTid.getTaskDelete() == 1) {
+            deleteWithId(taskTid);
+        }
+        String taskDeleteList = taskByTaskTid.getTaskDeleteList();
+        if(StringUtils.isNotEmpty(taskDeleteList)) {
+            String[] split = taskDeleteList.split(",");
+            for (String s : split) {
+                try {
+                    FileUtils.forceDelete(new File(s));
+                } catch (IOException ignored) {
+                }
+            }
+        }
     }
 
     private synchronized void doUpdateForSize(SysTask task, int count) {

@@ -48,10 +48,11 @@ public interface SystemTaskService {
     /**
      * 查询
      *
-     * @param page 分页
+     * @param page     分页
+     * @param onlyFile 是否只查询完成的任务
      * @return 结果
      */
-    Page<SysTask> withPage(Page<SysTask> page);
+    Page<SysTask> withPage(Page<SysTask> page, boolean onlyFile);
 
     /**
      * 更新數據状态
@@ -97,4 +98,10 @@ public interface SystemTaskService {
      * @param taskTid ID
      */
     void reset(String taskTid);
+
+    /**
+     * 过期
+     * @param taskTid 任务ID
+     */
+    void expire(String taskTid);
 }
