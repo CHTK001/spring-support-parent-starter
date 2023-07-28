@@ -51,5 +51,5 @@ public class SysBase implements Serializable {
     @TableField(fill = FieldFill.UPDATE)
     @JsonInclude(value = JsonInclude.Include.NON_NULL)
     @ApiModelProperty("更新人")
-    private String updateId;
+    private String updateBy;
 }
