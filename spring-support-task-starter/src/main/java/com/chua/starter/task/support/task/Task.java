@@ -198,8 +198,8 @@ public abstract class Task implements AutoCloseable, InitializingAware {
             redisTemplate.delete(newKey);
             String userId = taskParam.getString("userId");
             if (StringUtils.isNotBlank(userId)) {
-                String key = Task.SUBSCRIBE + ":LIST:" + userId;
-                redisTemplate.opsForList().leftPush(key, finish);
+                String key = sysTask.getFileKey(userId);
+                opsForList.set(key, finish);
                 redisTemplate.expire(key, sysTask.getTaskExpire(), TimeUnit.SECONDS);
             }
         } catch (Exception ignored) {

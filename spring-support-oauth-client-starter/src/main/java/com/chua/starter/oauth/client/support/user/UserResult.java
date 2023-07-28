@@ -1,6 +1,7 @@
 package com.chua.starter.oauth.client.support.user;
 
 import com.chua.common.support.utils.MapUtils;
+import com.chua.starter.common.support.constant.DataFilterTypeEnum;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -158,5 +159,14 @@ public class UserResult {
 
     public String getExtValue(String key) {
         return MapUtils.getString(ext, key);
+    }
+
+    public DataFilterTypeEnum getDataPermissionEnum() {
+        for (DataFilterTypeEnum value : DataFilterTypeEnum.values()) {
+            if (value.getCode().equalsIgnoreCase(getDataPermission())) {
+                return value;
+            }
+        }
+        return null;
     }
 }

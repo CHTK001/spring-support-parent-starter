@@ -5,8 +5,8 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.Version;
 import com.chua.common.support.database.annotation.Column;
-import com.chua.common.support.database.entity.JdbcType;
 import com.chua.starter.mybatis.pojo.SysBase;
+import com.chua.starter.task.support.task.Task;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -27,7 +27,7 @@ public class SysTask extends SysBase implements Comparable<SysTask> {
     /**
      * 任务ID
      */
-    @Column(comment = "任务ID(系统生成的唯一标识)", jdbcType = JdbcType.LONGTEXT)
+    @Column(comment = "任务ID(系统生成的唯一标识)")
     private String taskTid;
     /**
      * 任务执行的超时时间(s)
@@ -83,7 +83,7 @@ public class SysTask extends SysBase implements Comparable<SysTask> {
     private Integer taskVersion;
 
 
-    @Column(comment = "任务参数", length = 1000)
+    @Column(comment = "任务参数", length = 2000)
     private String taskParams;
 
     @Column(comment = "任务耗时", defaultValue = "0")
@@ -95,6 +95,14 @@ public class SysTask extends SysBase implements Comparable<SysTask> {
     @TableField(exist = false)
     private Integer taskOver;
 
+
+    /**
+     * 任务相同时,当文件存在返回文件路径
+     */
+    @TableField(exist = false)
+    private String taskFinishFile;
+
+
     @Override
     public int compareTo(SysTask o) {
         return (taskType + taskTid + taskBusiness + taskCid).compareTo(o.taskType + o.taskTid + o.taskBusiness + o.taskCid);
@@ -102,5 +110,14 @@ public class SysTask extends SysBase implements Comparable<SysTask> {
 
     public String getKey() {
         return taskTid;
+    }
+
+    /**
+     * 文件key
+     * @param userId 用户ID
+     * @return 文件key
+     */
+    public String getFileKey(String userId) {
+        return Task.SUBSCRIBE + ":LIST:" + userId +":" + taskTid;
     }
 }

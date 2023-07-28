@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * @author CH
  */
-public interface SystemTaskService  {
+public interface SystemTaskService {
 
     /**
      * 更新数据集
@@ -27,6 +27,7 @@ public interface SystemTaskService  {
      * @return 结果
      */
     int updateWithId(SysTask task);
+
     /**
      * 更新数据集
      *
@@ -38,10 +39,11 @@ public interface SystemTaskService  {
     /**
      * 更新数据集
      *
-     * @param task 任务
+     * @param task   任务
+     * @param userId 用户ID
      * @return 结果
      */
-    boolean save(SysTask task);
+    boolean save(SysTask task, String userId);
 
     /**
      * 查询
@@ -75,6 +77,7 @@ public interface SystemTaskService  {
 
     /**
      * 获取当前进度
+     *
      * @param taskTid 任务ID
      * @return 进度
      */
@@ -82,6 +85,7 @@ public interface SystemTaskService  {
 
     /**
      * 查询任务
+     *
      * @param wrapper 条件
      * @return 结果
      */
@@ -89,6 +93,7 @@ public interface SystemTaskService  {
 
     /**
      * 重置
+     *
      * @param taskTid ID
      */
     void reset(String taskTid);

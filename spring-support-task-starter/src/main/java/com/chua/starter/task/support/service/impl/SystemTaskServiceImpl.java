@@ -87,7 +87,7 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
 
     @Override
     @CacheEvict(cacheManager = CacheConfiguration.DEFAULT_CACHE_MANAGER, cacheNames = "task", key = "#task.taskTid")
-    public boolean save(SysTask task) {
+    public boolean save(SysTask task, String userId) {
         if(null == task.getTaskTotal() || task.getTaskTotal() <= 0) {
             throw new RuntimeException("总量不能为空");
         }
@@ -101,7 +101,9 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
             throw new RuntimeException("任务实现不能为空");
         }
         task.setCreateTime(LocalDateTime.now());
-        task.setTaskExpire(taskProperties.getTaskExpire());
+        if(null == task.getTaskExpire()) {
+            task.setTaskExpire(taskProperties.getTaskExpire());
+        }
         task.setTaskTid(
                 (taskProperties.isCanSame() ? (DigestUtils.md5Hex(IdUtils.createTid()) + "_") : "") +
                 DigestUtils.md5Hex(
@@ -113,8 +115,13 @@ public class SystemTaskServiceImpl implements SystemTaskService, CommandLineRunn
         SysTask byTaskTid = getTaskByTaskTid(task.getTaskTid());
         boolean b = false;
         if (null != byTaskTid) {
-            if (null != task.getTaskOver() && task.getTaskOver() == 0) {
-                throw new RuntimeException("有相同任务: " + task.getTaskTid());
+            String s = redisTemplate.opsForValue().get(task.getFileKey(userId));
+            if(null != s) {
+                if (null == task.getTaskOver() || task.getTaskOver() == 0) {
+                    task.setTaskFinishFile(s);
+                    return true;
+//                    throw new RuntimeException("有相同任务: " + task.getTaskTid());
+                }
             }
 
             if (null != task.getTaskStatus() && task.getTaskStatus() != 1) {
