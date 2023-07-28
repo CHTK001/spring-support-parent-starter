@@ -1,6 +1,8 @@
 package com.chua.starter.mybatis;
 
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.handler.DataPermissionHandler;
+import com.baomidou.mybatisplus.extension.plugins.inner.DataPermissionInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.chua.starter.mybatis.endpoint.MybatisEndpoint;
@@ -11,6 +13,7 @@ import com.chua.starter.mybatis.reloader.MapperReload;
 import com.chua.starter.mybatis.reloader.Reload;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.session.SqlSessionFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.AutoConfigureOrder;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -57,6 +60,23 @@ public class MybatisConfiguration {
         return new PaginationInnerInterceptor();
     }
 
+
+
+    /**
+     * 数据权限
+     *
+     * @return OptimisticLockerInnerInterceptor
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public DataPermissionInterceptor dataPermissionInterceptor(@Autowired(required = false) DataPermissionHandler dataPermissionHandler) {
+        if(null == dataPermissionHandler) {
+            dataPermissionHandler = new EmptyDataPermissionHandler();
+        }
+        return new DataPermissionInterceptor(dataPermissionHandler);
+    }
+
+
     /**
      * 乐观锁
      *
@@ -76,11 +96,13 @@ public class MybatisConfiguration {
     @ConditionalOnMissingBean
     public MybatisPlusInterceptor mybatisPlusInterceptor(
             OptimisticLockerInnerInterceptor optimisticLockerInnerInterceptor,
-            PaginationInnerInterceptor paginationInnerInterceptor
+            PaginationInnerInterceptor paginationInnerInterceptor,
+            DataPermissionInterceptor dataPermissionInterceptor
             ) {
         MybatisPlusInterceptor mybatisPlusInterceptor = new MybatisPlusInterceptor();
         mybatisPlusInterceptor.addInnerInterceptor(optimisticLockerInnerInterceptor);
         mybatisPlusInterceptor.addInnerInterceptor(paginationInnerInterceptor);
+        mybatisPlusInterceptor.addInnerInterceptor(dataPermissionInterceptor);
         return mybatisPlusInterceptor;
     }
 
