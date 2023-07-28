@@ -3,7 +3,10 @@ package com.chua.starter.mybatis.interceptor;
 import com.baomidou.mybatisplus.extension.plugins.handler.DataPermissionHandler;
 import com.baomidou.mybatisplus.extension.plugins.handler.MultiDataPermissionHandler;
 import com.baomidou.mybatisplus.extension.plugins.inner.DataPermissionInterceptor;
-import lombok.*;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 
@@ -13,12 +16,16 @@ import net.sf.jsqlparser.statement.select.PlainSelect;
  */
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
 public class CustomDataPermissionInterceptor extends DataPermissionInterceptor {
 
     private DataPermissionHandler dataPermissionHandler;
+
+    public CustomDataPermissionInterceptor(DataPermissionHandler dataPermissionHandler) {
+        super(dataPermissionHandler);
+        this.dataPermissionHandler = dataPermissionHandler;
+    }
 
     @Override
     protected void setWhere(PlainSelect plainSelect, String whereSegment) {
