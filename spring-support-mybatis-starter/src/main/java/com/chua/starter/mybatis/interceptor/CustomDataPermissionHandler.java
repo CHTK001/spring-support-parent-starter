@@ -23,8 +23,8 @@ import javax.annotation.Resource;
  */
 public class CustomDataPermissionHandler implements SelectDataPermissionHandler {
 
-    private static final String CREATE_BY = "create_by";
-    private static final String DEPT_ID = "dept_id";
+    private static final String CREATE_BY = "rule_create_by";
+    private static final String DEPT_ID = "rule_dept_id";
     @Resource
     private AuthService authService;
 
