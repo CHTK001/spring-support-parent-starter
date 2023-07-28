@@ -58,10 +58,11 @@ public abstract class Task implements AutoCloseable, InitializingAware {
     @Resource
     private TaskManager taskManager;
 
-    private SysTask sysTask;
+    protected SysTask sysTask;
 
     public void setSysTask(SysTask sysTask) {
         this.newKey = sysTask.getKey();
+        this.sysTask = sysTask;
         this.key = sysTask.getKey();
         this.taskTid = sysTask.getTaskTid();
         String taskParams = sysTask.getTaskParams();
