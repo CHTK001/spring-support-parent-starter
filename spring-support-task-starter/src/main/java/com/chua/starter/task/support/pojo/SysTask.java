@@ -85,7 +85,7 @@ public class SysTask extends SysBase implements Comparable<SysTask> {
     /**
      * 是否完成
      */
-    @Column(comment = "通知类型;导出: export, 信息: report", defaultValue = "export")
+    @Column(comment = "通知类型;导出: export, 信息: report", defaultValue = "'export'")
     private String taskNoticeType;
     /**
      * 版本
