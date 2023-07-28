@@ -2,6 +2,7 @@ package com.chua.starter.sse.support;
 
 import ch.rasc.sse.eventbus.SseEvent;
 import ch.rasc.sse.eventbus.SseEventBus;
+import ch.rasc.sse.eventbus.config.EnableSseEventBus;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.IdUtils;
 import com.chua.common.support.utils.ThreadUtils;
@@ -10,7 +11,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.annotation.Resource;
@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit;
  *
  * @author CH
  */
-@Service
+@EnableSseEventBus
 public class SseTemplate implements DisposableBean, InitializingBean {
     private static final Map<String, List<Sse>> sseCache = new ConcurrentHashMap<>();
     private final ScheduledExecutorService scheduledExecutorUpdateService = ThreadUtils.newScheduledThreadPoolExecutor("update-heart");
