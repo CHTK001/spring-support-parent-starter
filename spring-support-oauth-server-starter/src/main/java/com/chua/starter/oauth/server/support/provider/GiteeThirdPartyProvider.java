@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
@@ -63,48 +64,52 @@ public class GiteeThirdPartyProvider implements InitializingBean {
      * @return 登录页
      */
     @GetMapping("/gitee-index")
-    public String thirdIndex(AuthCallback authCallback, HttpServletResponse response) {
+    public String thirdIndex(AuthCallback authCallback, RedirectAttributes attributes, HttpServletResponse response) {
         AuthResponse<AuthUser> authResponse = authRequest.login(authCallback);
         AuthUser data = authResponse.getData();
         if (null == data) {
-            if (StringUtils.isNotBlank(casProperties.getNewLoginUrl())) {
+            attributes.addAttribute("msg", "操作超时");
+            if (StringUtils.isBlank(casProperties.getNewLoginUrl())) {
                 try {
                     return "redirect:" + contextPath + "/login?redirect_url=" +
-                            URLEncoder.encode("", "UTF-8") + "&msg=" + URLEncoder.encode("操作超时", "UTF-8");
+                            URLEncoder.encode("", "UTF-8");
                 } catch (UnsupportedEncodingException e) {
-                    return "redirect:" + contextPath + "/login?redirect_url=" + "&msg=操作超时";
+                    return "redirect:" + contextPath + "/login?redirect_url=";
                 }
             }
             try {
                 return "redirect:" + casProperties.getNewLoginUrl() + "?redirect_url=" +
-                        URLEncoder.encode("", "UTF-8") + "&msg=" + URLEncoder.encode("操作超时", "UTF-8");
+                        URLEncoder.encode("", "UTF-8");
             } catch (UnsupportedEncodingException e) {
-                return "redirect:" + casProperties.getNewLoginUrl() + "?redirect_url=" + "&msg=操作超时";
+                return "redirect:" + casProperties.getNewLoginUrl() + "?redirect_url=";
             }
         }
         ReturnResult<LoginResult> result = loginCheck.doLogin(data.getLocation(), data.getUsername(), null, "gitee", data);
         loggerResolver.register("gitee", result.getCode(), "认证服务器离线", null);
         if (SYSTEM_NO_OAUTH.getCode().equals(result.getCode())) {
-            if (StringUtils.isNotBlank(casProperties.getNewLoginUrl())) {
+            if (StringUtils.isBlank(casProperties.getNewLoginUrl())) {
                 try {
+                    attributes.addAttribute("msg", URLEncoder.encode(result.getMsg(), "UTF-8"));
+
                     return "redirect:" + contextPath + "/login?redirect_url=" +
-                            URLEncoder.encode("", "UTF-8") + "&msg=" + URLEncoder.encode(result.getData().toString(), "UTF-8");
+                            URLEncoder.encode("", "UTF-8");
                 } catch (UnsupportedEncodingException e) {
-                    return "redirect:" + contextPath + "/login?redirect_url=" + "&msg=" + result.getData().toString();
+                    return "redirect:" + contextPath + "/login?redirect_url=";
                 }
             }
             try {
+                attributes.addAttribute("msg", URLEncoder.encode(result.getMsg(), "UTF-8"));
                 return "redirect:" + casProperties.getNewLoginUrl() + "?redirect_url=" +
-                        URLEncoder.encode("", "UTF-8") + "&msg=" + URLEncoder.encode(result.getData().toString(), "UTF-8");
+                        URLEncoder.encode("", "UTF-8");
             } catch (UnsupportedEncodingException e) {
-                return "redirect:" + casProperties.getNewLoginUrl() + "?redirect_url=" + "&msg=" + result.getData().toString();
+                return "redirect:" + casProperties.getNewLoginUrl() + "?redirect_url=";
             }
         }
 
         LoginResult loginResult = result.getData();
         loggerResolver.register("gitee", OK.getCode(), "登录成功", null);
         CookieUtil.set(response, authServerProperties.getCookieName(), loginResult.getToken(), true);
-        if (StringUtils.isNotBlank(casProperties.getNewLoginUrl())) {
+        if (StringUtils.isBlank(casProperties.getNewLoginUrl())) {
             return "third-index";
         }
         return "redirect:" + casProperties.getNewIndexUrl();
