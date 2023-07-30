@@ -307,4 +307,43 @@ public class AuthClientExecute {
 
         webRequest1.refreshToken();
     }
+
+    /**
+     * 登陆码
+     *
+     * @param loginCodeType 登录类型
+     * @return 登陆码
+     */
+    public String getLoginCode(String loginCodeType) {
+        Robin<String> robin1 = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
+        Robin<String> balance = robin1.create();
+        String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(authClientProperties.getAuthAddress()).split(",");
+        balance.addNode(split);
+        Node<String> robin = balance.selectNode();
+        HttpResponse<String> httpResponse = null;
+        try {
+            String url = robin.getContent();
+            if (null == url) {
+                return null;
+            }
+
+
+            httpResponse = Unirest.get(
+                            StringUtils.endWithAppend(StringUtils.startWithAppend(url, "http://"), "/")
+                                    + loginCodeType + "/loginCodeType?redirect_url=")
+                    .asString();
+
+        } catch (UnirestException ignored) {
+        }
+
+        if (null == httpResponse) {
+            return null;
+        }
+
+        if (httpResponse.getStatus() != 200) {
+            return null;
+        }
+
+        return httpResponse.getBody();
+    }
 }
