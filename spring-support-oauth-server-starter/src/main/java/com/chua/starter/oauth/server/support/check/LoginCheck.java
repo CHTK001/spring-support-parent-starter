@@ -42,7 +42,7 @@ public class LoginCheck {
         Class<?> aClass = ClassUtils.getUserClass(userInfoService.getClass());
         UserLoginType userLoginType = aClass.getDeclaredAnnotation(UserLoginType.class);
         if (null == userLoginType) {
-            return true;
+            return false;
         }
         String value = userLoginType.value();
         return null != value && value.equals(authType);

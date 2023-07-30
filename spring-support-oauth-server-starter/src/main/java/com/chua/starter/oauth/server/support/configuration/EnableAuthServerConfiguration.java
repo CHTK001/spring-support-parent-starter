@@ -6,6 +6,7 @@ import com.chua.starter.common.support.utils.BeanDefinitionRegistryUtils;
 import com.chua.starter.oauth.server.support.check.LoginCheck;
 import com.chua.starter.oauth.server.support.processor.ResponseAdviceMethodProcessor;
 import com.chua.starter.oauth.server.support.properties.AuthServerProperties;
+import com.chua.starter.oauth.server.support.properties.CasProperties;
 import com.chua.starter.oauth.server.support.properties.ThirdPartyProperties;
 import com.chua.starter.oauth.server.support.protocol.Protocol;
 import com.chua.starter.oauth.server.support.provider.GiteeThirdPartyProvider;
@@ -47,7 +48,7 @@ import java.util.*;
  * @since 2022/7/23 8:51
  */
 @Slf4j
-@EnableConfigurationProperties({AuthServerProperties.class, ThirdPartyProperties.class})
+@EnableConfigurationProperties({AuthServerProperties.class, ThirdPartyProperties.class, CasProperties.class})
 public class EnableAuthServerConfiguration implements BeanDefinitionRegistryPostProcessor,
         EnvironmentPostProcessor,
         CommandLineRunner,
@@ -126,7 +127,7 @@ public class EnableAuthServerConfiguration implements BeanDefinitionRegistryPost
 
     @Override
     public void addReturnValueHandlers(List<HandlerMethodReturnValueHandler> handlers) {
-        handlers.add(new ResponseAdviceMethodProcessor(messageConverters));
+        handlers.add(0, new ResponseAdviceMethodProcessor(messageConverters));
     }
 
     @Override

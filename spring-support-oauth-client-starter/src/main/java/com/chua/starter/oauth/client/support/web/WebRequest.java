@@ -22,6 +22,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
@@ -50,6 +51,7 @@ public class WebRequest {
         this(authProperties, null, null);
     }
 
+    private static final Set<HandlerMethod> PASS = new LinkedHashSet<>();
     /**
      * 是否通过
      *
@@ -68,14 +70,19 @@ public class WebRequest {
             } catch (Exception ignored) {
             }
             if (null != handlerMethod) {
+                if (PASS.contains(handlerMethod)) {
+                    return true;
+                }
                 Method method = handlerMethod.getMethod();
                 boolean annotationPresent = method.isAnnotationPresent(AuthIgnore.class);
                 if (annotationPresent) {
+                    PASS.add(handlerMethod);
                     return true;
                 }
 
                 boolean annotationPresent1 = handlerMethod.getBeanType().isAnnotationPresent(AuthIgnore.class);
                 if (annotationPresent1) {
+                    PASS.add(handlerMethod);
                     return true;
                 }
             }
