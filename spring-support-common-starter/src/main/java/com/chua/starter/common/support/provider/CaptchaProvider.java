@@ -8,6 +8,7 @@ import com.wf.captcha.*;
 import com.wf.captcha.base.Captcha;
 import lombok.Builder;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,6 +28,7 @@ import java.util.Base64;
  * @author CH
  */
 @RestController
+@Slf4j
 @RequestMapping("${plugin.captcha.context-path:/v1/}")
 @ConditionalOnProperty(prefix = CaptchaProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = true)
 public class CaptchaProvider {
@@ -141,6 +143,7 @@ public class CaptchaProvider {
         }
         Captcha captcha = producer(captchaTypeEnum, randomInt);
         String captchaText = captcha.text();
+        log.info("当前校验码: {}", captcha);
         String captchaBase64 = captcha.toBase64();
         try {
             HttpSession session = request.getSession();
