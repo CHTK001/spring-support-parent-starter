@@ -143,7 +143,7 @@ public class CaptchaProvider {
         }
         Captcha captcha = producer(captchaTypeEnum, randomInt);
         String captchaText = captcha.text();
-        log.info("当前校验码: {}", captcha);
+        log.info("当前校验码: {}", captchaText);
         String captchaBase64 = captcha.toBase64();
         try {
             HttpSession session = request.getSession();
