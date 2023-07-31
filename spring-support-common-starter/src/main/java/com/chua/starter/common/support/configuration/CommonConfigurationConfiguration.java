@@ -1,8 +1,8 @@
 package com.chua.starter.common.support.configuration;
 
 import com.chua.common.support.function.Joiner;
-import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.utils.NetUtils;
+import com.chua.common.support.utils.StringUtils;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.env.EnvironmentPostProcessor;
 import org.springframework.core.env.ConfigurableEnvironment;
@@ -30,7 +30,8 @@ public class CommonConfigurationConfiguration implements EnvironmentPostProcesso
 //        properties.setProperty("spring.datasource.h2.console.enabled", "true");
 //        properties.setProperty("spring.datasource.h2.console.path", "/h2-console");
 
-        if (ClassUtils.isPresent("com.chua.hibernate.support.dialect.SQLiteDialect")) {
+        String property1 = StringUtils.defaultString(environment.getProperty("spring.datasource.url"), properties.getProperty("spring.datasource.url"));
+        if (null != property1 && property1.contains("jdbc:sqlite")) {
             properties.setProperty("spring.jpa.database-platform", "com.chua.hibernate.support.dialect.SQLiteDialect");
         }
 
@@ -38,7 +39,7 @@ public class CommonConfigurationConfiguration implements EnvironmentPostProcesso
         properties.setProperty("server.compression.enable", "true");
 
         properties.setProperty("spring.servlet.multipart.enabled", "true");
-        properties.setProperty("spring.servlet.multipart.max-file-size", "200MB");
+        properties.setProperty("spring.servlet.multipart.max-file-size", "600MB");
         properties.setProperty("spring.servlet.multipart.max-request-size", "2000MB");
 
         properties.setProperty("localhost.address", NetUtils.getLocalIpv4());
