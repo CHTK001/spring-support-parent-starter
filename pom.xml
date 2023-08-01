@@ -42,6 +42,7 @@
         <module>spring-support-task-starter</module>
         <module>spring-support-socketio-starter</module>
         <module>spring-support-sse-starter</module>
+        <module>spring-support-elasticsearch-starter</module>
     </modules>
 
     <properties>
