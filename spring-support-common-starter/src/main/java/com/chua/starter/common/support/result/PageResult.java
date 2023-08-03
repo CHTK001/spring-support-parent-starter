@@ -33,5 +33,9 @@ public class PageResult<T> {
      */
     private List<T> data;
 
+    private static final PageResult EMPTY = PageResult.builder().build();
 
+    public static <T> PageResult<T> empty() {
+        return EMPTY;
+    }
 }
