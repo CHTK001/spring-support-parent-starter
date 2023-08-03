@@ -58,7 +58,7 @@ public class DocumentServiceImpl implements DocumentService {
         }
         NativeSearchQuery query = new NativeSearchQueryBuilder()
                 .withQuery(QueryBuilders.queryStringQuery(queries))
-                .withPageable(PageRequest.of(page, pageSize))
+                .withPageable(PageRequest.of(page - 1, pageSize))
                 .withHighlightBuilder(new HighlightBuilder().field("name").preTags("<font color='#dd4b39'>").postTags("</font>"))
                 .build();
         SearchHits<T> search = elasticsearchRestTemplate.search(query, target, IndexCoordinates.of(indexName.toLowerCase()));
