@@ -1,6 +1,7 @@
 package com.chua.starter.elasticsearch.support;
 
 import com.chua.starter.elasticsearch.support.properties.ElasticSearchProperties;
+import com.chua.starter.elasticsearch.support.service.impl.DocumentServiceImpl;
 import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestClientBuilder;
@@ -8,6 +9,7 @@ import org.elasticsearch.client.RestHighLevelClient;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 
 import javax.annotation.Resource;
 import java.util.ArrayList;
@@ -19,6 +21,7 @@ import java.util.List;
  * @author CH
  */
 @EnableConfigurationProperties(ElasticSearchProperties.class)
+@Import(DocumentServiceImpl.class)
 public class ElasticSearchConfiguration {
 
 
