@@ -37,4 +37,17 @@ public interface DocumentService {
      * @return 结果
      */
     <T> PageResult<T> listDocument(String indexName, String queries, Class<T> target, int page, int pageSize);
+
+    /**
+     * 特征值查询文档
+     *
+     * @param feature   特征值
+     * @param indexName 名称
+     * @param queries   查询器
+     * @param target    返回类型
+     * @param page      页码
+     * @param pageSize  每页数量
+     * @return 结果
+     */
+    <T> PageResult<T> listDocument(float[] feature, String indexName, String queries, Class<T> target, int page, int pageSize);
 }
