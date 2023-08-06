@@ -50,4 +50,13 @@ public interface DocumentService {
      * @return 结果
      */
     <T> PageResult<T> listDocument(float[] feature, String indexName, String queries, Class<T> target, int page, int pageSize);
+
+    /**
+     * 底库刪除
+     *
+     * @param indexName 名称
+     * @param code      唯一编码
+     * @return 结果
+     */
+    boolean deleteDocument(String indexName, String code);
 }
