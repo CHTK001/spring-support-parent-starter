@@ -1,6 +1,5 @@
 package com.chua.starter.elasticsearch.support.service.impl;
 
-import com.chua.common.support.bean.BeanMap;
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.starter.common.support.result.PageResult;
 import com.chua.starter.elasticsearch.support.service.DocumentService;
@@ -10,7 +9,6 @@ import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
-import org.elasticsearch.common.document.DocumentField;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.functionscore.FunctionScoreQueryBuilder;
 import org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders;
@@ -149,6 +147,12 @@ public class DocumentServiceImpl implements DocumentService {
         }
         builder.data(searchAnswerList);
         return builder.build();
+    }
+
+    @Override
+    public boolean deleteDocument(String indexName, String code) {
+        String code1 = elasticsearchRestTemplate.delete(code, IndexCoordinates.of(indexName.toLowerCase()));
+        return !Strings.isNullOrEmpty(code1);
     }
 
 }
