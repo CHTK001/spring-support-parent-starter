@@ -5,6 +5,7 @@ import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.starter.common.support.result.PageResult;
 import com.chua.starter.common.support.result.Result;
+import com.chua.starter.elasticsearch.support.pojo.Mapping;
 import com.chua.starter.elasticsearch.support.service.DocumentService;
 import com.google.common.base.Strings;
 import lombok.AllArgsConstructor;
@@ -22,7 +23,6 @@ import org.elasticsearch.script.ScriptType;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.fetch.subphase.highlight.HighlightBuilder;
 import org.elasticsearch.xcontent.XContentBuilder;
-import org.elasticsearch.xcontent.XContentFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
@@ -209,36 +209,40 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     @Override
-    public Result<String> createMapping(String indexName, String mapping) {
-        if (!existIndex(indexName)) {
-            return Result.failed("索引不存在");
+    public Result<String> createMapping(Mapping mapping) {
+        if (!existIndex(mapping.getIndexName())) {
+            if(!mapping.isOverIndex()) {
+                return Result.failed("索引不存在");
+            }
+            checkIndex(mapping.getIndexName());
         }
-        PutMappingRequest request = new PutMappingRequest(indexName.toLowerCase());
+        PutMappingRequest request = new PutMappingRequest(mapping.getIndexName().toLowerCase());
         try {
-            XContentBuilder builder = XContentFactory.jsonBuilder();
-            builder.startObject();
-            doBuilder(builder, mapping);
-            builder.endObject();
-            request.source(builder);
+            request.source(JSON.parseObject(mapping.getMapping()));
             restHighLevelClient.indices().putMapping(request, RequestOptions.DEFAULT);
         } catch (Exception e) {
             e.printStackTrace();
-            return Result.failed("创建失败");
+            return Result.failed("更新失败");
         }
-        return Result.success("创建成功");
+        return Result.success("更新成功");
     }
 
     @Override
-    public Result<String> addMapping(String indexName, String mapping) {
-        return createMapping(indexName, mapping);
+    public Result<String> addMapping(Mapping mapping) {
+        return createMapping( mapping);
     }
 
     private void doBuilder(XContentBuilder builder, Object mapping) throws Exception{
         JSONObject jsonObject = null;
         if(mapping instanceof JSONObject) {
             jsonObject = (JSONObject) mapping;
-        } else if(mapping instanceof String) {
-            jsonObject = JSON.parseObject(mapping.toString());
+        } else if(mapping instanceof String ) {
+            String str = mapping.toString();
+            if(str.startsWith("{")) {
+                jsonObject = JSON.parseObject(mapping.toString());
+                builder.map(jsonObject);
+                return ;
+            }
         }
         if(null == jsonObject) {
             return;
