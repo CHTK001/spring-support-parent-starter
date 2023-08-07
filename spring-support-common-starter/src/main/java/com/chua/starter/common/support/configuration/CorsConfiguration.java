@@ -173,7 +173,7 @@ public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAw
         //放行哪些原始域
         config.addAllowedOrigin("*");
         //是否发送 Cookie
-        config.setAllowCredentials(true);
+//        config.setAllowCredentials(true);
         //放行哪些请求方式
         config.addAllowedMethod("*");
         //放行哪些原始请求头部信息

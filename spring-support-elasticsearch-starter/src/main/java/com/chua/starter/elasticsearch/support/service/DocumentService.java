@@ -2,6 +2,7 @@ package com.chua.starter.elasticsearch.support.service;
 
 import com.chua.starter.common.support.result.PageResult;
 import com.chua.starter.common.support.result.Result;
+import com.chua.starter.elasticsearch.support.pojo.Mapping;
 
 /**
  * 文档服务
@@ -97,18 +98,16 @@ public interface DocumentService {
     /**
      * 创建映射
      *
-     * @param indexName 索引
      * @param mapping   映射
      * @return 结果
      */
-    Result<String> createMapping(String indexName, String mapping);
+    Result<String> createMapping(Mapping mapping);
 
     /**
      * 添加映射
      *
-     * @param indexName 索引
      * @param mapping   映射
      * @return 添加映射
      */
-    Result<String> addMapping(String indexName, String mapping);
+    Result<String> addMapping(Mapping mapping);
 }
