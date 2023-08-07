@@ -1,6 +1,7 @@
 package com.chua.starter.elasticsearch.support.service;
 
 import com.chua.starter.common.support.result.PageResult;
+import com.chua.starter.common.support.result.Result;
 
 /**
  * 文档服务
@@ -11,20 +12,22 @@ public interface DocumentService {
 
 
     /**
-     * 检查人脸索引
-     *
-     * @param indexName 索引
-     */
-    void checkIndex(String indexName);
-
-    /**
      * 保存文档
      *
      * @param indexName 索引
      * @param document  文档
      * @return 状态
      */
-    boolean saveIndexDocument(String indexName, Object... document);
+    boolean addDocument(String indexName, Object... document);
+
+    /**
+     * 删除文档
+     *
+     * @param indexName 索引
+     * @param did       文档ID
+     * @return 状态
+     */
+    boolean deleteDocument(String indexName, Object[] did);
 
     /**
      * 查询文档
@@ -36,7 +39,7 @@ public interface DocumentService {
      * @param pageSize  每页数量
      * @return 结果
      */
-    <T> PageResult<T> listDocument(String indexName, String queries, Class<T> target, int page, int pageSize);
+    <T> PageResult<T> queryDocument(String indexName, String queries, Class<T> target, int page, int pageSize);
 
     /**
      * 特征值查询文档
@@ -49,7 +52,7 @@ public interface DocumentService {
      * @param pageSize  每页数量
      * @return 结果
      */
-    <T> PageResult<T> listDocument(float[] feature, String indexName, String queries, Class<T> target, int page, int pageSize);
+    <T> PageResult<T> queryDocument(float[] feature, String indexName, String queries, Class<T> target, int page, int pageSize);
 
     /**
      * 底库刪除
@@ -59,4 +62,53 @@ public interface DocumentService {
      * @return 结果
      */
     boolean deleteDocument(String indexName, String code);
+
+    /**
+     * 创建索引
+     *
+     * @param indexName 索引
+     * @return 结果
+     */
+    Result<String> createIndex(String indexName);
+
+    /**
+     * 检查索引(不存在则创建)
+     *
+     * @param indexName 索引
+     */
+    void checkIndex(String indexName);
+
+    /**
+     * 检查索引是否存在
+     *
+     * @param indexName 索引
+     * @return 检查索引是否存在
+     */
+    boolean existIndex(String indexName);
+
+    /**
+     * 删除索引
+     *
+     * @param indexName 索引
+     * @return 结果
+     */
+    Result<String> deleteIndex(String indexName);
+
+    /**
+     * 创建映射
+     *
+     * @param indexName 索引
+     * @param mapping   映射
+     * @return 结果
+     */
+    Result<String> createMapping(String indexName, String mapping);
+
+    /**
+     * 添加映射
+     *
+     * @param indexName 索引
+     * @param mapping   映射
+     * @return 添加映射
+     */
+    Result<String> addMapping(String indexName, String mapping);
 }
