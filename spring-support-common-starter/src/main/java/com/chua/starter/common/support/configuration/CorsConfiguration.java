@@ -1,6 +1,5 @@
 package com.chua.starter.common.support.configuration;
 
-import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.common.support.configuration.resolver.RequestParamsMapMethodArgumentResolver;
 import com.chua.starter.common.support.converter.FastJsonHttpMessageConverter;
 import com.chua.starter.common.support.converter.ResultDataHttpMessageConverter;
@@ -16,7 +15,6 @@ import com.chua.starter.common.support.properties.LimitProperties;
 import com.chua.starter.common.support.properties.OptionProperties;
 import com.chua.starter.common.support.provider.OptionsProvider;
 import com.chua.starter.common.support.result.ResponseAdvice;
-import com.chua.starter.common.support.spi.SpringServiceFinder;
 import com.chua.starter.common.support.version.ApiVersionRequestMappingHandlerMapping;
 import com.chua.starter.common.support.watch.WatchPointcutAdvisor;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
@@ -203,6 +201,5 @@ public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAw
         messageConverters.add(new FastJsonHttpMessageConverter());
         messageConverters.add(new MappingJackson2XmlHttpMessageConverter());
         messageConverters.add(new StringHttpMessageConverter());
-        ServiceProvider.DEFAULT.add(new SpringServiceFinder());
     }
 }
