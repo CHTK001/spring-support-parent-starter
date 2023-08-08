@@ -133,7 +133,7 @@ public class DocumentServiceImpl implements DocumentService {
         Script script = new Script(
                 ScriptType.INLINE,
                 "painless",
-                "cosineSimilarity(params.queryVector, doc['feature'])",
+                "(cosineSimilarity(params.queryVector, doc['feature']) + 1)/2",
                 Collections.singletonMap("queryVector", feature));
 
         FunctionScoreQueryBuilder functionScoreQueryBuilder = QueryBuilders.functionScoreQuery(
