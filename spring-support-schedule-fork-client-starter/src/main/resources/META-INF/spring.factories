@@ -1,0 +1,5 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+  com.chua.starter.scheduler.client.support.configuration.SchedulerConfiguration
+
+org.springframework.boot.env.EnvironmentPostProcessor=\
+    com.chua.starter.scheduler.client.support.configuration.SchedulerConfigurationConfiguration
