@@ -43,6 +43,8 @@
         <module>spring-support-socketio-starter</module>
         <module>spring-support-sse-starter</module>
         <module>spring-support-elasticsearch-starter</module>
+        <module>spring-support-schedule-fork-server-starter</module>
+        <module>spring-support-schedule-fork-client-starter</module>
     </modules>
 
     <properties>
