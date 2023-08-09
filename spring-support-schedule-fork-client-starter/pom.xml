@@ -23,6 +23,11 @@
             <artifactId>xxl-job-core</artifactId>
             <version>2.4.0</version>
         </dependency>
+
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-common-starter</artifactId>
+        </dependency>
     </dependencies>
 
 </project>

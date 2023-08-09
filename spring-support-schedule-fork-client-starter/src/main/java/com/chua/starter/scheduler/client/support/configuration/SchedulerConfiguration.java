@@ -1,10 +1,13 @@
 package com.chua.starter.scheduler.client.support.configuration;
 
+import com.chua.starter.scheduler.client.support.JobLogService;
+import com.chua.starter.scheduler.client.support.executor.JobSpringExecutor;
 import com.chua.starter.scheduler.client.support.properties.SchedulerProperties;
-import com.xxl.job.core.executor.impl.XxlJobSpringExecutor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 
 import javax.annotation.Resource;
 
@@ -14,16 +17,18 @@ import javax.annotation.Resource;
  * @author CH
  */
 @Slf4j
+@Import(JobLogService.class)
 @EnableConfigurationProperties(SchedulerProperties.class)
 public class SchedulerConfiguration {
 
     @Resource
     private SchedulerProperties schedulerProperties;
     @Bean
-    public XxlJobSpringExecutor xxlJobExecutor() {
+    @ConditionalOnProperty(name = "plugin.scheduler.open", matchIfMissing = true, havingValue = "true")
+    public JobSpringExecutor xxlJobExecutor() {
         log.info(">>>>>>>>>>> scheduler-job config init.");
         SchedulerProperties.ExecutorConfiguration executor = schedulerProperties.getExecutor();
-        XxlJobSpringExecutor xxlJobSpringExecutor = new XxlJobSpringExecutor();
+        JobSpringExecutor xxlJobSpringExecutor = new JobSpringExecutor();
         xxlJobSpringExecutor.setAdminAddresses(schedulerProperties.getAddress());
         xxlJobSpringExecutor.setAppname(executor.getAppName());
         xxlJobSpringExecutor.setIp(executor.getIp());

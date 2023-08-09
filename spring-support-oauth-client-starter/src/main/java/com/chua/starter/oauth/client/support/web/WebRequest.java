@@ -2,6 +2,7 @@ package com.chua.starter.oauth.client.support.web;
 
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.annotations.Ignore;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.oauth.client.support.annotation.AuthIgnore;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
@@ -79,9 +80,20 @@ public class WebRequest {
                     PASS.add(handlerMethod);
                     return true;
                 }
+                boolean annotationPresent11 = method.isAnnotationPresent(Ignore.class);
+                if (annotationPresent11) {
+                    PASS.add(handlerMethod);
+                    return true;
+                }
 
                 boolean annotationPresent1 = handlerMethod.getBeanType().isAnnotationPresent(AuthIgnore.class);
                 if (annotationPresent1) {
+                    PASS.add(handlerMethod);
+                    return true;
+                }
+
+                boolean annotationPresent12 = handlerMethod.getBeanType().isAnnotationPresent(Ignore.class);
+                if (annotationPresent12) {
                     PASS.add(handlerMethod);
                     return true;
                 }

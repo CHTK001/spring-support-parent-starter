@@ -47,10 +47,13 @@ public class JobGroupController {
 										@RequestParam(value = "page",required = false, defaultValue = "0") int start,
 										@RequestParam(value = "pageSize",required = false, defaultValue = "10") int length,
 										String appname, String title) {
-
+		start = start == 0 ? 0 : (start - 1) * length;
 		// page query
-		List<XxlJobGroup> list = xxlJobGroupDao.pageList(start, length, appname, title);
 		int list_count = xxlJobGroupDao.pageListCount(start, length, appname, title);
+		List<XxlJobGroup> list = Collections.emptyList();
+		if(list_count > 0) {
+			 list = xxlJobGroupDao.pageList(start, length, appname, title);
+		}
 
 		// package result
 		Map<String, Object> maps = new HashMap<String, Object>();

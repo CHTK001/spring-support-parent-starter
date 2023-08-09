@@ -2,6 +2,7 @@ package com.chua.starter.common.support.result;
 
 import com.chua.common.support.lang.exception.AuthenticationException;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.annotations.Ignore;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.SneakyThrows;
@@ -10,6 +11,7 @@ import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.core.MethodParameter;
+import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
@@ -247,16 +249,26 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
     @SneakyThrows
     @Override
     public Object beforeBodyWrite(Object o, MethodParameter methodParameter, MediaType mediaType, Class<? extends HttpMessageConverter<?>> aClass, ServerHttpRequest serverHttpRequest, ServerHttpResponse serverHttpResponse) {
-        String typeName = methodParameter.getDeclaringClass().getTypeName();
+        Class<?> declaringClass = methodParameter.getDeclaringClass();
+        String typeName = declaringClass.getTypeName();
         if (typeName.contains("swagger")) {
             return o;
         }
+
 
         if(mediaType.getSubtype().contains("spring-boot.actuator")) {
             return o;
         }
 
         if(mediaType.getSubtype().contains("event-stream")) {
+            return o;
+        }
+
+        if(AnnotationUtils.isAnnotationDeclaredLocally(Ignore.class, declaringClass)) {
+            return o;
+        }
+
+        if(null != methodParameter.getMethodAnnotation(Ignore.class)) {
             return o;
         }
 

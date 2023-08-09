@@ -22,6 +22,10 @@ public class SchedulerProperties {
      */
     private String accessToken;
     /**
+     * 是否开启
+     */
+    private boolean open = true;
+    /**
      * 执行器
      */
     @NestedConfigurationProperty
