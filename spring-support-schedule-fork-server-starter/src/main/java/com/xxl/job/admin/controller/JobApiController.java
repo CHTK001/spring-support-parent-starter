@@ -1,5 +1,6 @@
 package com.xxl.job.admin.controller;
 
+import com.chua.starter.common.support.annotations.Ignore;
 import com.xxl.job.admin.controller.annotation.PermissionLimit;
 import com.xxl.job.admin.core.conf.XxlJobAdminConfig;
 import com.xxl.job.core.biz.AdminBiz;
@@ -37,6 +38,7 @@ public class JobApiController {
      */
     @RequestMapping("/{uri}")
     @ResponseBody
+    @Ignore
     @PermissionLimit(limit=false)
     public ReturnT<String> api(HttpServletRequest request, @PathVariable("uri") String uri, @RequestBody(required = false) String data) {
 
