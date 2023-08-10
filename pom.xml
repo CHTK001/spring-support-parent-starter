@@ -45,6 +45,7 @@
         <module>spring-support-elasticsearch-starter</module>
         <module>spring-support-schedule-fork-server-starter</module>
         <module>spring-support-schedule-fork-client-starter</module>
+        <module>spring-support-milvus-starter</module>
     </modules>
 
     <properties>
@@ -284,6 +285,12 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-common-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-milvus-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
         </dependencies>
