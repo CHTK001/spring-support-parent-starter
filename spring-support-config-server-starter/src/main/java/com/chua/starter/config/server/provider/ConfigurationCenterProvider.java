@@ -1,14 +1,15 @@
 package com.chua.starter.config.server.provider;
 
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.result.ReturnPageResult;
 import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.config.server.pojo.TConfigurationCenterInfo;
 import com.chua.starter.config.server.properties.ConfigServerProperties;
 import com.chua.starter.config.server.protocol.ProtocolServer;
+import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.data.domain.Page;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -20,8 +21,8 @@ import java.util.List;
  * @since 2022/8/1 14:54
  */
 @RequestMapping("${plugin.configuration.server.context-path:}")
-@Controller
-public class ConfigurationCenterProvider {
+@RestController
+public class ConfigurationCenterProvider implements ApplicationContextAware {
 
     @Resource
     private ApplicationContext applicationContext;
@@ -29,27 +30,7 @@ public class ConfigurationCenterProvider {
     @Resource
     private ConfigServerProperties configServerProperties;
 
-    @Resource
     private ProtocolServer protocolServer;
-    /**
-     * 配置頁面
-     * @param model 模塊
-     * @return 頁面
-     */
-    @GetMapping("/config-page")
-    public String configPage(Model model) {
-        return "config/config-page";
-    }
-    /**
-     * 配置配置頁面
-     * @param model 模塊
-     * @return 頁面
-     */
-    @GetMapping("/config-distribute-page")
-    public String configDistributePage(Model model) {
-        return "config/config-distribute-page";
-    }
-
     /**
      * 配置頁面
      * @return 頁面
@@ -97,4 +78,8 @@ public class ConfigurationCenterProvider {
         return ReturnResult.ok();
     }
 
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        protocolServer = applicationContext.getBean(StringUtils.defaultString(configServerProperties.getProtocol(), ConfigServerProperties.DEFAULT_PROTOCOL), ProtocolServer.class);
+    }
 }

@@ -22,6 +22,8 @@ import org.springframework.context.EnvironmentAware;
 import org.springframework.core.env.Environment;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
+import static com.chua.starter.config.server.properties.ConfigServerProperties.DEFAULT_PROTOCOL;
+
 /**
  * 配置中心配置
  * @author CH
@@ -43,12 +45,12 @@ public class ConfigServerConfiguration implements BeanDefinitionRegistryPostProc
 
         String protocol = configServerProperties.getProtocol();
         if(Strings.isNullOrEmpty(protocol)) {
-            protocol = "http";
+            protocol = DEFAULT_PROTOCOL;
         }
         ServiceProvider<ProtocolServer> serviceProvider = ServiceProvider.of(ProtocolServer.class);
         ProtocolServer protocolServer = serviceProvider.getExtension(protocol);
         if(null != protocolServer) {
-            registry.registerBeanDefinition(ProtocolServer.class.getTypeName() + "@" + protocol, BeanDefinitionBuilder.genericBeanDefinition(protocolServer.getClass()).getBeanDefinition());
+            registry.registerBeanDefinition(protocol, BeanDefinitionBuilder.genericBeanDefinition(protocolServer.getClass()).getBeanDefinition());
         }
 
         registry.registerBeanDefinition(ConfigurationCenterProvider.class.getTypeName(), BeanDefinitionBuilder.genericBeanDefinition(ConfigurationCenterProvider.class).getBeanDefinition());

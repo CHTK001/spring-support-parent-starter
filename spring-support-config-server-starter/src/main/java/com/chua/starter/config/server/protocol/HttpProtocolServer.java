@@ -15,8 +15,11 @@ import kong.unirest.UnirestException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.CookieStore;
 import org.apache.http.impl.cookie.BasicClientCookie;
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -40,7 +43,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/config")
 @Spi("http")
-public class HttpProtocolServer implements ProtocolServer, ProtocolResolver{
+public class HttpProtocolServer implements ProtocolServer, ProtocolResolver, ApplicationContextAware {
 
     @Autowired(required = false)
     private ConfigurationCenterInfoRepository configurationCenterInfoRepository;
@@ -92,14 +95,7 @@ public class HttpProtocolServer implements ProtocolServer, ProtocolResolver{
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        log.info(">>>>>>> 配置中心启动[Http]");
-        this.configurationManager = ServiceProvider.of(ConfigurationManager.class).getExtension(configServerProperties.getConfigManager());
-        try {
-            applicationContext.getAutowireCapableBeanFactory().autowireBean(configurationManager);
-            configurationManager.afterPropertiesSet();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+
     }
 
     @Override
@@ -155,6 +151,20 @@ public class HttpProtocolServer implements ProtocolServer, ProtocolResolver{
                     .asString();
         } catch (UnirestException e) {
             e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.configServerProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(ConfigServerProperties.PRE, ConfigServerProperties.class);
+        log.info(">>>>>>> 配置中心启动[Http]");
+        this.configurationManager = ServiceProvider.of(ConfigurationManager.class)
+                .getExtension(configServerProperties.getConfigManager());
+        try {
+            applicationContext.getAutowireCapableBeanFactory().autowireBean(configurationManager);
+            configurationManager.afterPropertiesSet();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 }
