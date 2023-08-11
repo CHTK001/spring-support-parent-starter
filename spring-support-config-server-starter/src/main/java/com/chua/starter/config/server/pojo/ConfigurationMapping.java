@@ -65,14 +65,14 @@ public class ConfigurationMapping {
      * 类型
      * e.q.MAPPING,BEAN
      */
-    @Column(columnDefinition = "DEFAULT 'MAPPING'")
+    @Column(length = 255, columnDefinition = "VARCHAR(255) DEFAULT 'MAPPING'")
     @Comment("类型;MAPPING,BEAN")
     private String mapType;
     /**
      * 是否禁用
      * e.q.system
      */
-    @Column(columnDefinition = "DEFAULT 0")
+    @Column(columnDefinition = "int DEFAULT 0")
     @Comment("是否禁用;0:启用")
     private Integer mapApplicationStatus;
     /**
