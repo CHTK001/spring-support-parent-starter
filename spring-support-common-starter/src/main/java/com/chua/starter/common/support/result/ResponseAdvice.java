@@ -217,7 +217,7 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> handleRuntimeException(RuntimeException e) {
         log.error("unknown exception: {}", e);
-        return Result.failed(e);
+        return Result.failed("当前系统不支持该功能/操作");
     }
 
     /**
