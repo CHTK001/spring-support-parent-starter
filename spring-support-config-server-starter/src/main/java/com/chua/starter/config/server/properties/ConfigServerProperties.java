@@ -5,6 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import static com.chua.starter.config.server.properties.ConfigServerProperties.PRE;
 
+
 /**
  * 配置中心配置
  * @author CH
@@ -16,6 +17,7 @@ public class ConfigServerProperties {
 
 
     public static final String PRE = "plugin.configuration.server";
+    public static final String DEFAULT_PROTOCOL = "http";
     /**
      * 启动协议
      */
@@ -50,10 +52,10 @@ public class ConfigServerProperties {
      * file
      * database
      */
-    private String configManager = "file";
+    private String configManager = "database";
     /**
      * 密钥管理工厂(鉴权位置)
      */
-    private String keyManager = "file";
+    private String keyManager = "database";
 
 }

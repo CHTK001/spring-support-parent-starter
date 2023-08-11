@@ -1,6 +1,7 @@
 package com.chua.starter.config.server.manager;
 
 import com.chua.common.support.annotations.Spi;
+import com.chua.common.support.annotations.SpiDefault;
 import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.spi.ServiceProvider;
@@ -47,6 +48,7 @@ import static com.chua.starter.common.support.constant.Constant.DEFAULT_SER;
  */
 @Slf4j
 @Spi("database")
+@SpiDefault
 public class DatabaseConfigurationManager implements ConfigurationManager, ApplicationContextAware {
 
 
