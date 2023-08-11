@@ -34,6 +34,8 @@ public class CommonConfigurationConfiguration implements EnvironmentPostProcesso
         if (null != property1 && property1.contains("jdbc:sqlite")) {
             properties.setProperty("spring.jpa.database-platform", "com.chua.hibernate.support.dialect.SQLiteDialect");
         }
+        properties.setProperty("spring.jpa.hibernate.ddl-auto", "update");
+        properties.setProperty("spring.jpa.show-sql", "true");
 
         properties.setProperty("spring.main.allow-circular-references", "true");
         properties.setProperty("server.compression.enable", "true");

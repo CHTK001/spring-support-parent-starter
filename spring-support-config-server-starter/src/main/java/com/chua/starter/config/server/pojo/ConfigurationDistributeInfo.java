@@ -11,9 +11,9 @@ import javax.persistence.*;
  * @since 2022/8/1 13:03
  */
 @Data
-@Entity(name = "T_CONFIGURATION_DISTRIBUTE_INFO")
-@Table(name = "T_CONFIGURATION_DISTRIBUTE_INFO")
-public class TConfigurationDistributeInfo {
+@Entity(name = "CONFIGURATION_DISTRIBUTE_INFO")
+@Table(name = "CONFIGURATION_DISTRIBUTE_INFO")
+public class ConfigurationDistributeInfo {
     /**
      * 配置ID
      */

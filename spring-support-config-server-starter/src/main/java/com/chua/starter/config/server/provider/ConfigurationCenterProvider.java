@@ -3,7 +3,7 @@ package com.chua.starter.config.server.provider;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.result.ReturnPageResult;
 import com.chua.starter.common.support.result.ReturnResult;
-import com.chua.starter.config.server.pojo.TConfigurationCenterInfo;
+import com.chua.starter.config.server.pojo.ConfigurationCenterInfo;
 import com.chua.starter.config.server.properties.ConfigServerProperties;
 import com.chua.starter.config.server.protocol.ProtocolServer;
 import org.springframework.beans.BeansException;
@@ -37,14 +37,14 @@ public class ConfigurationCenterProvider implements ApplicationContextAware {
      */
     @GetMapping("/config-list")
     @ResponseBody
-    public ReturnPageResult<TConfigurationCenterInfo> configList(
+    public ReturnPageResult<ConfigurationCenterInfo> configList(
             @RequestParam(value = "page", defaultValue = "1") Integer page,
             @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize,
             @RequestParam(value = "profile", defaultValue = "dev") String profile
     ) {
 
-        Page<TConfigurationCenterInfo> infoPage = protocolServer.findAll(page - 1, pageSize, profile);
-        return ReturnPageResult.ok(ReturnPageResult.<TConfigurationCenterInfo>newBuilder()
+        Page<ConfigurationCenterInfo> infoPage = protocolServer.findAll(page - 1, pageSize, profile);
+        return ReturnPageResult.ok(ReturnPageResult.<ConfigurationCenterInfo>newBuilder()
                 .data(infoPage.getContent()).page(page).pageSize(pageSize).totalPages(infoPage.getTotalPages()).total(infoPage.getTotalElements()).build());
     }
 

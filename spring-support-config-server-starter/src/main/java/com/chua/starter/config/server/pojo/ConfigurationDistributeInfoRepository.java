@@ -19,25 +19,25 @@ import java.util.List;
 @SuppressWarnings("ALL")
 @Repository
 public interface ConfigurationDistributeInfoRepository extends
-        PagingAndSortingRepository<TConfigurationDistributeInfo, Integer>,
-        CrudRepository<TConfigurationDistributeInfo, Integer>,
-        JpaRepository<TConfigurationDistributeInfo, Integer> {
+        PagingAndSortingRepository<ConfigurationDistributeInfo, Integer>,
+        CrudRepository<ConfigurationDistributeInfo, Integer>,
+        JpaRepository<ConfigurationDistributeInfo, Integer> {
     /**
      * 查询数据
      * @param configId 配置ID
      * @param configItem 标识
      * @return 结果
      */
-    @Query(value = "select t.* from T_CONFIGURATION_DISTRIBUTE_INFO t where t.config_id in (?1) and t.config_item = ?2", nativeQuery = true)
-    List<TConfigurationDistributeInfo> queryById(List<Integer> configId, String configItem);
+    @Query(value = "select t.* from CONFIGURATION_DISTRIBUTE_INFO t where t.config_id in (?1) and t.config_item = ?2", nativeQuery = true)
+    List<ConfigurationDistributeInfo> queryById(List<Integer> configId, String configItem);
 
     /**
      * 查询数据
      * @param configItem 标识
      * @return 结果
      */
-    @Query(value = "select t.* from T_CONFIGURATION_DISTRIBUTE_INFO t where t.config_item = ?2", nativeQuery = true)
-    List<TConfigurationDistributeInfo> queryById(String configItem);
+    @Query(value = "select t.* from CONFIGURATION_DISTRIBUTE_INFO t where t.config_item = ?2", nativeQuery = true)
+    List<ConfigurationDistributeInfo> queryById(String configItem);
 
     /**
      * 删除数据
@@ -45,6 +45,6 @@ public interface ConfigurationDistributeInfoRepository extends
      */
     @Modifying
     @Transactional
-    @Query(" DELETE FROM T_CONFIGURATION_DISTRIBUTE_INFO WHERE config_item = ?1")
+    @Query(" DELETE FROM CONFIGURATION_DISTRIBUTE_INFO WHERE config_item = ?1")
     void deleteByConfigItem(String configItem);
 }

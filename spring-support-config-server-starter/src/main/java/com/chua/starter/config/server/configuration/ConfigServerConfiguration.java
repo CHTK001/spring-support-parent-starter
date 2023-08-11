@@ -1,10 +1,7 @@
 package com.chua.starter.config.server.configuration;
 
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.starter.config.server.pojo.ConfigurationCenterInfoRepository;
-import com.chua.starter.config.server.pojo.ConfigurationDistributeInfoRepository;
-import com.chua.starter.config.server.pojo.TConfigurationCenterInfo;
-import com.chua.starter.config.server.pojo.TConfigurationDistributeInfo;
+import com.chua.starter.config.server.pojo.*;
 import com.chua.starter.config.server.properties.ConfigServerProperties;
 import com.chua.starter.config.server.protocol.ProtocolServer;
 import com.chua.starter.config.server.provider.ConfigurationCenterProvider;
@@ -30,8 +27,15 @@ import static com.chua.starter.config.server.properties.ConfigServerProperties.D
  * @since 2022/8/1 8:51
  */
 @Slf4j
-@EntityScan(basePackageClasses = {TConfigurationCenterInfo.class, TConfigurationDistributeInfo.class})
-@EnableJpaRepositories(basePackageClasses = {ConfigurationCenterInfoRepository.class, ConfigurationDistributeInfoRepository.class})
+@EntityScan(basePackageClasses = {
+        ConfigurationMapping.class,
+        ConfigurationCenterInfo.class,
+        ConfigurationDistributeInfo.class
+})
+@EnableJpaRepositories(basePackageClasses = {
+        ConfigurationMappingRepository.class,
+        ConfigurationCenterInfoRepository.class,
+        ConfigurationDistributeInfoRepository.class})
 @EnableConfigurationProperties(ConfigServerProperties.class)
 public class ConfigServerConfiguration implements BeanDefinitionRegistryPostProcessor, EnvironmentAware {
 
