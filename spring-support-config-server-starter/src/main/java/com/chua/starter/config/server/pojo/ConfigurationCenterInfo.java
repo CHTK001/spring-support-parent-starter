@@ -12,9 +12,9 @@ import javax.persistence.*;
  * @since 2022/8/1 13:03
  */
 @Data
-@Entity(name = "T_CONFIGURATION_CENTER_INFO")
-@Table(name = "T_CONFIGURATION_CENTER_INFO")
-public class TConfigurationCenterInfo {
+@Entity(name = "CONFIGURATION_CENTER_INFO")
+@Table(name = "CONFIGURATION_CENTER_INFO")
+public class ConfigurationCenterInfo {
     /**
      * 配置ID
      */

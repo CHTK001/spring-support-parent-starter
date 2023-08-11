@@ -6,9 +6,9 @@ import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.config.server.cammand.CommandProvider;
 import com.chua.starter.config.server.entity.NotifyConfig;
 import com.chua.starter.config.server.manager.ConfigurationManager;
+import com.chua.starter.config.server.pojo.ConfigurationCenterInfo;
 import com.chua.starter.config.server.pojo.ConfigurationCenterInfoRepository;
 import com.chua.starter.config.server.pojo.ConfigurationDistributeInfoRepository;
-import com.chua.starter.config.server.pojo.TConfigurationCenterInfo;
 import com.chua.starter.config.server.properties.ConfigServerProperties;
 import kong.unirest.Unirest;
 import kong.unirest.UnirestException;
@@ -110,7 +110,7 @@ public class HttpProtocolServer implements ProtocolServer, ProtocolResolver, App
     }
 
     @Override
-    public Page<TConfigurationCenterInfo> findAll(Integer page, Integer pageSize, String profile) {
+    public Page<ConfigurationCenterInfo> findAll(Integer page, Integer pageSize, String profile) {
         return configurationManager.findAll(page, pageSize, profile);
     }
 

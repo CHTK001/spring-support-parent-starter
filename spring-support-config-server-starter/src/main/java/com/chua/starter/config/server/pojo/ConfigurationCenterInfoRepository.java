@@ -19,9 +19,9 @@ import java.util.List;
 @SuppressWarnings("ALL")
 @Repository
 public interface ConfigurationCenterInfoRepository extends
-        PagingAndSortingRepository<TConfigurationCenterInfo, Integer>,
-        CrudRepository<TConfigurationCenterInfo, Integer>,
-        JpaRepository<TConfigurationCenterInfo, Integer> {
+        PagingAndSortingRepository<ConfigurationCenterInfo, Integer>,
+        CrudRepository<ConfigurationCenterInfo, Integer>,
+        JpaRepository<ConfigurationCenterInfo, Integer> {
     /**
      * 删除数据
      *
@@ -29,7 +29,7 @@ public interface ConfigurationCenterInfoRepository extends
      */
     @Modifying
     @Transactional
-    @Query(value = "DELETE FROM T_CONFIGURATION_CENTER_INFO WHERE config_item = ?1", nativeQuery = false)
+    @Query(value = "DELETE FROM CONFIGURATION_CENTER_INFO WHERE config_item = ?1", nativeQuery = false)
     void delete(String binderName);
 
     /**
@@ -40,7 +40,7 @@ public interface ConfigurationCenterInfoRepository extends
      */
     @Modifying
     @Transactional
-    @Query(value = "UPDATE T_CONFIGURATION_CENTER_INFO SET config_value = ?2 WHERE config_item = ?3 AND config_name = ?1", nativeQuery = false)
+    @Query(value = "UPDATE CONFIGURATION_CENTER_INFO SET config_value = ?2 WHERE config_item = ?3 AND config_name = ?1", nativeQuery = false)
     void update(String name, String value, String binderName);
 
     /**
@@ -52,7 +52,7 @@ public interface ConfigurationCenterInfoRepository extends
      */
     @Modifying
     @Transactional
-    @Query(value = "UPDATE T_CONFIGURATION_CENTER_INFO  SET config_value = ?1, disable = ?2 WHERE config_id = ?3", nativeQuery = false)
+    @Query(value = "UPDATE CONFIGURATION_CENTER_INFO  SET config_value = ?1, disable = ?2 WHERE config_id = ?3", nativeQuery = false)
     void update(String configValue, Integer disable, Integer configId);
 
     /**
@@ -61,8 +61,8 @@ public interface ConfigurationCenterInfoRepository extends
      * @param configItem 标识
      * @return 配置
      */
-    @Query(value = "SELECT t.* FROM T_CONFIGURATION_CENTER_INFO t  WHERE config_item = ?1 AND (config_name = 'binder-port' OR config_name = 'binder-client')", nativeQuery = true)
-    List<TConfigurationCenterInfo> findBinder(String configItem);
+    @Query(value = "SELECT t.* FROM CONFIGURATION_CENTER_INFO t  WHERE config_item = ?1 AND (config_name = 'binder-port' OR config_name = 'binder-client')", nativeQuery = true)
+    List<ConfigurationCenterInfo> findBinder(String configItem);
 
     /**
      * 查询binder
@@ -71,16 +71,16 @@ public interface ConfigurationCenterInfoRepository extends
      * @param profile    环境
      * @return 配置
      */
-    @Query(value = "SELECT t.* FROM T_CONFIGURATION_CENTER_INFO t WHERE disable = 0 AND config_profile = ?2 and (config_item = ?1 or config_id in (select config_id from T_CONFIGURATION_DISTRIBUTE_INFO  where config_item = ?1))", nativeQuery = true)
-    List<TConfigurationCenterInfo> list(String binderName, String profile);
+    @Query(value = "SELECT t.* FROM CONFIGURATION_CENTER_INFO t WHERE disable = 0 AND config_profile = ?2 and (config_item = ?1 or config_id in (select config_id from CONFIGURATION_DISTRIBUTE_INFO  where config_item = ?1))", nativeQuery = true)
+    List<ConfigurationCenterInfo> list(String binderName, String profile);
     /**
      * 查询binder
      *
      * @param configId 标识
      * @return 配置
      */
-    @Query(value = "SELECT distinct t.* FROM T_CONFIGURATION_CENTER_INFO t " +
-            "WHERE t.config_item in (select config_item from T_CONFIGURATION_DISTRIBUTE_INFO  where config_id = ?1) " +
-            "or t.config_item in (SELECT config_item FROM T_CONFIGURATION_CENTER_INFO WHERE config_id = ?1) and t.config_name = 'binder-port' or t.config_name = 'binder-client'", nativeQuery = true)
-    List<TConfigurationCenterInfo> listByConfigId(Integer configId);
+    @Query(value = "SELECT distinct t.* FROM CONFIGURATION_CENTER_INFO t " +
+            "WHERE t.config_item in (select config_item from CONFIGURATION_DISTRIBUTE_INFO  where config_id = ?1) " +
+            "or t.config_item in (SELECT config_item FROM CONFIGURATION_CENTER_INFO WHERE config_id = ?1) and t.config_name = 'binder-port' or t.config_name = 'binder-client'", nativeQuery = true)
+    List<ConfigurationCenterInfo> listByConfigId(Integer configId);
 }

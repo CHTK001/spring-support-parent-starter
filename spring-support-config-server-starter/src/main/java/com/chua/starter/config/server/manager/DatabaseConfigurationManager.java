@@ -10,10 +10,10 @@ import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.key.KeyManagerProvider;
 import com.chua.starter.config.entity.KeyValue;
 import com.chua.starter.config.server.entity.NotifyConfig;
+import com.chua.starter.config.server.pojo.ConfigurationCenterInfo;
 import com.chua.starter.config.server.pojo.ConfigurationCenterInfoRepository;
+import com.chua.starter.config.server.pojo.ConfigurationDistributeInfo;
 import com.chua.starter.config.server.pojo.ConfigurationDistributeInfoRepository;
-import com.chua.starter.config.server.pojo.TConfigurationCenterInfo;
-import com.chua.starter.config.server.pojo.TConfigurationDistributeInfo;
 import com.chua.starter.config.server.properties.ConfigServerProperties;
 import com.chua.starter.config.server.protocol.ProtocolServer;
 import com.google.common.base.Strings;
@@ -67,7 +67,7 @@ public class DatabaseConfigurationManager implements ConfigurationManager, Appli
     @Override
     public void register(Map<String, Object> data, String binderName) {
         Boolean refresh = MapUtils.getBoolean(data, "binder-auto-refresh", false);
-        TConfigurationCenterInfo tConfigurationCenterInfo = new TConfigurationCenterInfo();
+        ConfigurationCenterInfo tConfigurationCenterInfo = new ConfigurationCenterInfo();
         tConfigurationCenterInfo.setConfigItem(binderName);
 
         boolean exists = configurationCenterInfoRepository.exists(Example.of(tConfigurationCenterInfo));
@@ -95,16 +95,16 @@ public class DatabaseConfigurationManager implements ConfigurationManager, Appli
     private void updateOrSave(Map<String, Object> data, String name, String binderName, Boolean refresh) {
         String port = MapUtils.getString(data, name);
 
-        TConfigurationCenterInfo query = new TConfigurationCenterInfo();
+        ConfigurationCenterInfo query = new ConfigurationCenterInfo();
         query.setConfigName(name);
         query.setConfigItem(binderName);
 
-        TConfigurationCenterInfo tConfigurationCenterInfo1 = configurationCenterInfoRepository
+        ConfigurationCenterInfo tConfigurationCenterInfo1 = configurationCenterInfoRepository
                 .findOne(Example.of(query)).get();
         if (null != tConfigurationCenterInfo1 && refresh) {
             configurationCenterInfoRepository.update(name, port, binderName);
         } else {
-            tConfigurationCenterInfo1 = new TConfigurationCenterInfo();
+            tConfigurationCenterInfo1 = new ConfigurationCenterInfo();
             tConfigurationCenterInfo1.setConfigName(name);
             tConfigurationCenterInfo1.setConfigItem(binderName);
             tConfigurationCenterInfo1.setConfigValue(port);
@@ -122,7 +122,7 @@ public class DatabaseConfigurationManager implements ConfigurationManager, Appli
         String profile = MapUtils.getString(data, "binder-profile", "dev");
         Map transfer = (Map) MapUtils.getObject(data, "transfer");
         data.remove("transfer");
-        List<TConfigurationCenterInfo> tConfigurationCenterInfoList = new ArrayList<>();
+        List<ConfigurationCenterInfo> tConfigurationCenterInfoList = new ArrayList<>();
         for (Map.Entry<String, Object> entry : data.entrySet()) {
             String key = entry.getKey();
             if ("binder-key".equalsIgnoreCase(key)) {
@@ -135,7 +135,7 @@ public class DatabaseConfigurationManager implements ConfigurationManager, Appli
                 continue;
             }
 
-            TConfigurationCenterInfo item = new TConfigurationCenterInfo();
+            ConfigurationCenterInfo item = new ConfigurationCenterInfo();
             item.setConfigItem(binderName);
             item.setConfigName(key);
             item.setConfigDesc(MapUtils.getString(transfer, key));
@@ -160,12 +160,12 @@ public class DatabaseConfigurationManager implements ConfigurationManager, Appli
      * @param binderName                   标识
      */
     @SuppressWarnings("ALL")
-    private void render(Map tranfer, Map map, String mapping, String profile, List<TConfigurationCenterInfo> tConfigurationCenterInfoList, String binderName) {
+    private void render(Map tranfer, Map map, String mapping, String profile, List<ConfigurationCenterInfo> tConfigurationCenterInfoList, String binderName) {
         map.forEach((key, value) -> {
             if (value instanceof Map) {
                 render(tranfer, (Map) value, key.toString(), profile, tConfigurationCenterInfoList, binderName);
             }
-            TConfigurationCenterInfo item = new TConfigurationCenterInfo();
+            ConfigurationCenterInfo item = new ConfigurationCenterInfo();
             item.setConfigItem(binderName);
             item.setConfigName(key.toString());
             item.setConfigDesc(MapUtils.getString(tranfer, key));
@@ -186,16 +186,16 @@ public class DatabaseConfigurationManager implements ConfigurationManager, Appli
 
     @Override
     public String findValue(String binderName, String profile) {
-        List<TConfigurationCenterInfo> list = configurationCenterInfoRepository.list(binderName, profile);
-        Map<String, List<TConfigurationCenterInfo>> valueMapping = new HashMap<>();
-        for (TConfigurationCenterInfo info : list) {
+        List<ConfigurationCenterInfo> list = configurationCenterInfoRepository.list(binderName, profile);
+        Map<String, List<ConfigurationCenterInfo>> valueMapping = new HashMap<>();
+        for (ConfigurationCenterInfo info : list) {
             valueMapping.computeIfAbsent(info.getConfigItem(), it -> new ArrayList<>()).add(info);
         }
         Map<String, Map<String, Object>> rs = new HashMap<>();
 
-        for (Map.Entry<String, List<TConfigurationCenterInfo>> entry : valueMapping.entrySet()) {
+        for (Map.Entry<String, List<ConfigurationCenterInfo>> entry : valueMapping.entrySet()) {
             String key = entry.getKey();
-            List<TConfigurationCenterInfo> entryValue = entry.getValue();
+            List<ConfigurationCenterInfo> entryValue = entry.getValue();
             rs.put(key + ".data", render(key, entryValue));
         }
 
@@ -209,13 +209,13 @@ public class DatabaseConfigurationManager implements ConfigurationManager, Appli
      * @param entryValue 权限
      * @return 数据
      */
-    private Map<String, Object> render(String key, List<TConfigurationCenterInfo> entryValue) {
+    private Map<String, Object> render(String key, List<ConfigurationCenterInfo> entryValue) {
         Map<String, Object> rs1 = new HashMap<>(1);
         Map<String, Object> rs = new HashMap<>(entryValue.size());
 
         rs1.put(key, rs);
 
-        for (TConfigurationCenterInfo tConfigurationCenterInfo : entryValue) {
+        for (ConfigurationCenterInfo tConfigurationCenterInfo : entryValue) {
             String configCondition = tConfigurationCenterInfo.getConfigCondition();
             if (!Strings.isNullOrEmpty(configCondition) && isMatcher(configCondition)) {
                 continue;
@@ -271,7 +271,7 @@ public class DatabaseConfigurationManager implements ConfigurationManager, Appli
     public void notifyConfig(Integer configId, String configValue, Integer disable, ProtocolServer protocolServer) {
         List<NotifyConfig> notifyConfig = new ArrayList<>();
         try {
-            TConfigurationCenterInfo referenceById = configurationCenterInfoRepository.findById(configId).get();
+            ConfigurationCenterInfo referenceById = configurationCenterInfoRepository.findById(configId).get();
             referenceById.setConfigValue(configValue);
             referenceById.setDisable(disable);
             configurationCenterInfoRepository.update(configValue, disable, configId);
@@ -279,15 +279,15 @@ public class DatabaseConfigurationManager implements ConfigurationManager, Appli
                 return;
             }
 
-            Map<String, List<TConfigurationCenterInfo>> temp = new HashMap<>();
-            List<TConfigurationCenterInfo> tConfigurationCenterInfos = configurationCenterInfoRepository.listByConfigId(configId);
-            for (TConfigurationCenterInfo tConfigurationCenterInfo : tConfigurationCenterInfos) {
+            Map<String, List<ConfigurationCenterInfo>> temp = new HashMap<>();
+            List<ConfigurationCenterInfo> tConfigurationCenterInfos = configurationCenterInfoRepository.listByConfigId(configId);
+            for (ConfigurationCenterInfo tConfigurationCenterInfo : tConfigurationCenterInfos) {
                 temp.computeIfAbsent(tConfigurationCenterInfo.getConfigItem(), it -> new ArrayList<>()).add(tConfigurationCenterInfo);
             }
 
-            for (Map.Entry<String, List<TConfigurationCenterInfo>> entry : temp.entrySet()) {
+            for (Map.Entry<String, List<ConfigurationCenterInfo>> entry : temp.entrySet()) {
                 String key = entry.getKey();
-                List<TConfigurationCenterInfo> value = entry.getValue();
+                List<ConfigurationCenterInfo> value = entry.getValue();
 
                 NotifyConfig item = new NotifyConfig();
                 item.setConfigName(referenceById.getConfigName()).setConfigValue(configValue);
@@ -296,8 +296,8 @@ public class DatabaseConfigurationManager implements ConfigurationManager, Appli
                     continue;
                 }
                 try {
-                    item.setBinderPort(value.stream().filter(it -> "binder-port".equalsIgnoreCase(it.getConfigName())).map(TConfigurationCenterInfo::getConfigValue).collect(Collectors.toList()).get(0));
-                    item.setBinderIp(value.stream().filter(it -> "binder-client".equalsIgnoreCase(it.getConfigName())).map(TConfigurationCenterInfo::getConfigValue).collect(Collectors.toList()).get(0));
+                    item.setBinderPort(value.stream().filter(it -> "binder-port".equalsIgnoreCase(it.getConfigName())).map(ConfigurationCenterInfo::getConfigValue).collect(Collectors.toList()).get(0));
+                    item.setBinderIp(value.stream().filter(it -> "binder-client".equalsIgnoreCase(it.getConfigName())).map(ConfigurationCenterInfo::getConfigValue).collect(Collectors.toList()).get(0));
 
                     notifyConfig.add(item);
                 } catch (Exception ignored) {
@@ -315,8 +315,8 @@ public class DatabaseConfigurationManager implements ConfigurationManager, Appli
     }
 
     @Override
-    public Page<TConfigurationCenterInfo> findAll(Integer page, Integer pageSize, String profile) {
-        TConfigurationCenterInfo query = new TConfigurationCenterInfo();
+    public Page<ConfigurationCenterInfo> findAll(Integer page, Integer pageSize, String profile) {
+        ConfigurationCenterInfo query = new ConfigurationCenterInfo();
         query.setConfigProfile(profile);
         return configurationCenterInfoRepository.findAll(Example.of(query), PageRequest.of(page, pageSize));
     }
@@ -325,9 +325,9 @@ public class DatabaseConfigurationManager implements ConfigurationManager, Appli
     public void distributeUpdate(List<Integer> configId, String configItem) {
         configurationDistributeInfoRepository.deleteByConfigItem(configItem);
 
-        List<TConfigurationDistributeInfo> rs = new ArrayList<>(configId.size());
+        List<ConfigurationDistributeInfo> rs = new ArrayList<>(configId.size());
         for (Integer integer : configId) {
-            TConfigurationDistributeInfo item = new TConfigurationDistributeInfo();
+            ConfigurationDistributeInfo item = new ConfigurationDistributeInfo();
 
             item.setConfigId(integer);
             item.setConfigItem(configItem);

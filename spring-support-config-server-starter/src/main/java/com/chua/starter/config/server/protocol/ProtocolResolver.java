@@ -1,7 +1,7 @@
 package com.chua.starter.config.server.protocol;
 
 import com.chua.starter.config.server.entity.NotifyConfig;
-import com.chua.starter.config.server.pojo.TConfigurationCenterInfo;
+import com.chua.starter.config.server.pojo.ConfigurationCenterInfo;
 import org.springframework.data.domain.Page;
 
 import java.util.List;
@@ -39,7 +39,7 @@ public interface ProtocolResolver {
      * @param profile
      * @return 结果
      */
-    Page<TConfigurationCenterInfo> findAll(Integer page, Integer pageSize, String profile);
+    Page<ConfigurationCenterInfo> findAll(Integer page, Integer pageSize, String profile);
 
     /**
      * 权限分类
