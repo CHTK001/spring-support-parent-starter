@@ -82,6 +82,9 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         }
 
         String asString = Json.toJson(jsonObject);
+        if(null == encode) {
+            this.encode = ServiceProvider.of(KeyEncode.class).getExtension(authClientProperties.getEncryption());
+        }
 
         String request = encode.encodeHex(asString, Md5Utils.getInstance()
                 .getMd5String(accessKey + DigestUtils.md5Hex(secretKey + key)));
