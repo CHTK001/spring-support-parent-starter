@@ -8,6 +8,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 import java.lang.reflect.Method;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * 自定义
@@ -33,5 +34,9 @@ public class CustomRequestMappingHandlerMapping extends RequestMappingHandlerMap
         this.mappingList.add(mapping);
         eventbusTemplate.post(EventbusType.GUAVA, SUBSCRIBE, mapping);
         return mappingForMethod;
+    }
+
+    public void forEach(Consumer<Mapping> mappingConsumer) {
+        mappingList.forEach(mappingConsumer);
     }
 }

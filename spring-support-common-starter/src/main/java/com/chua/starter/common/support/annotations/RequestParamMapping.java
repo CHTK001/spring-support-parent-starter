@@ -11,10 +11,10 @@ import java.lang.annotation.*;
  * @see org.springframework.web.bind.annotation.RequestParam
  * @author CH
  */
-@Target(ElementType.PARAMETER)
+@Target({ElementType.PARAMETER, ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface RequestParams {
+public @interface RequestParamMapping {
 
     /**
      * Alias for {@link #name}.
