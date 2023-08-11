@@ -28,4 +28,6 @@ public interface Constant {
     String METHOD = "method";
     String ACTION = "action";
     String BUTTON = "BUTTON";
+    String MAPPING = "MAPPING";
+    String BEAN = "BEAN";
 }
