@@ -20,7 +20,7 @@ import java.util.List;
  * @author CH
  * @since 2022/8/1 14:54
  */
-@RequestMapping("${plugin.configuration.server.context-path:}")
+@RequestMapping("/v1/configuration")
 @RestController
 public class ConfigurationCenterProvider implements ApplicationContextAware {
 
@@ -35,7 +35,7 @@ public class ConfigurationCenterProvider implements ApplicationContextAware {
      * 配置頁面
      * @return 頁面
      */
-    @GetMapping("/config-list")
+    @GetMapping("/page")
     @ResponseBody
     public ReturnPageResult<ConfigurationCenterInfo> configList(
             @RequestParam(value = "page", defaultValue = "1") Integer page,
@@ -48,12 +48,35 @@ public class ConfigurationCenterProvider implements ApplicationContextAware {
                 .data(infoPage.getContent()).page(page).pageSize(pageSize).totalPages(infoPage.getTotalPages()).total(infoPage.getTotalElements()).build());
     }
 
+    /**
+     * 配置頁面
+     *
+     * @return 頁面
+     */
+    @PostMapping("/save")
+    @ResponseBody
+    public ReturnResult<Void> configSave(@RequestBody ConfigurationCenterInfo configValue) {
+        protocolServer.save(configValue);
+        return ReturnResult.ok();
+    }
+
+    /**
+     * 刪除頁面
+     *
+     * @return 頁面
+     */
+    @DeleteMapping("/delete")
+    public ReturnResult<Void> configSave(String configId) {
+        protocolServer.deleteById(configId);
+        return ReturnResult.ok();
+    }
 
     /**
      * 配置頁面
+     *
      * @return 頁面
      */
-    @PostMapping("/config-update")
+    @PostMapping("/update")
     @ResponseBody
     public ReturnResult<Void> configUpdate(
             @RequestParam(value = "config-id", defaultValue = "") Integer configId,

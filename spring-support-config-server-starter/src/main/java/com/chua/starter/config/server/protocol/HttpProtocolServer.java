@@ -155,6 +155,16 @@ public class HttpProtocolServer implements ProtocolServer, ProtocolResolver, App
     }
 
     @Override
+    public void save(ConfigurationCenterInfo configValue) {
+        configurationCenterInfoRepository.save(configValue);
+    }
+
+    @Override
+    public void deleteById(String configId) {
+        configurationCenterInfoRepository.deleteById(Integer.valueOf(configId));
+    }
+
+    @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.configServerProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(ConfigServerProperties.PRE, ConfigServerProperties.class);
         log.info(">>>>>>> 配置中心启动[Http]");

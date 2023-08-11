@@ -19,7 +19,7 @@ public class ConfigProperties {
     /**
      * 配置中心地址
      */
-    private String configAddress;
+    private String configAddress = "127.0.0.1:18173/api/config";
     /**
      * 协议
      */
@@ -39,15 +39,11 @@ public class ConfigProperties {
     /**
      * 多网卡或者不确定网卡需要绑定该配置或者采用非http协议
      */
-    private String bindIp;
+    private String bindIp = "127.0.0.1";
     /**
      * 多网卡或者不确定网卡需要绑定该配置或者采用非http协议
      */
-    private String bindPort;
-    /**
-     * 配置名称
-     */
-    private String configName;
+    private int bindPort = 23987;
     /**
      * i18n
      */
@@ -56,10 +52,6 @@ public class ConfigProperties {
      * 重連次數
      */
     private Integer reconnectLimit = 3;
-    /**
-     * 配置描述
-     */
-    private String configAppName;
     /**
      * 是否自动刷新配置中心配置
      */
@@ -73,10 +65,5 @@ public class ConfigProperties {
     /**
      * 链接超时时间
      */
-    private int connectTimeout = 10 * 1000;
-    /**
-     * net
-     */
-    private Integer netPort = 23987;
 
 }

@@ -5,6 +5,7 @@ import com.chua.common.support.function.NamedThreadFactory;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.MapUtils;
+import com.chua.common.support.utils.NetUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.common.support.constant.Constant;
@@ -16,9 +17,11 @@ import kong.unirest.HttpResponse;
 import kong.unirest.Unirest;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.springframework.beans.BeansException;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.origin.OriginTrackedValue;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MutablePropertySources;
 import org.springframework.core.env.PropertiesPropertySource;
@@ -46,11 +49,16 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @since 2022/7/30 12:07
  */
 @Slf4j
-public abstract class AbstractProtocolProvider implements ProtocolProvider, Constant {
+public abstract class AbstractProtocolProvider implements ProtocolProvider, ApplicationContextAware, Constant, AutoCloseable {
 
     private ConfigurableEnvironment environment;
 
     private String ck;
+
+    protected int port;
+    protected String host;
+
+    protected String applicationName;
 
     private final AtomicBoolean run = new AtomicBoolean(false);
     private final AtomicInteger count = new AtomicInteger(0);
@@ -76,22 +84,17 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Cons
 
     @Override
     public List<PropertiesPropertySource> register(ConfigurableEnvironment environment) {
-        configProperties = Binder.get(environment).bindOrCreate(ConfigProperties.PRE, ConfigProperties.class);
-        if(!configProperties.isOpen()) {
+        if (!configProperties.isOpen()) {
             return Collections.emptyList();
         }
 
-        if(Strings.isNullOrEmpty(configProperties.getConfigAppName())) {
+        this.applicationName = environment.getProperty("spring.application.name");
+        if (Strings.isNullOrEmpty(applicationName)) {
             throw new IllegalArgumentException("config-app-name不能为空");
         }
 
         this.environment = environment;
         this.reconnectLimit = configProperties.getReconnectLimit();
-        String configName = configProperties.getConfigName();
-        if (Strings.isNullOrEmpty(configName)) {
-            log.warn("plugin.configuration.config-name 注冊中心配置名稱不能为空");
-            return Collections.emptyList();
-        }
         if (Strings.isNullOrEmpty(configProperties.getConfigAddress())) {
             log.warn("plugin.configuration.config-address 注冊的中心地址不能为空");
             return Collections.emptyList();
@@ -156,6 +159,7 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Cons
 
     /**
      * 渲染数据
+     *
      * @param req 请求
      */
     private void renderData(Map<String, Object> req) {
@@ -195,30 +199,50 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Cons
 
     /**
      * 渲染基础数据
+     *
      * @param req 请求
      */
     private void renderBase(Map<String, Object> req) {
-        req.put("binder-client", Optional.ofNullable(configProperties.getBindIp()).orElse(getHostIp()));
-        if(!"http".equalsIgnoreCase(configProperties.getProtocol()) && null != configProperties.getNetPort()) {
-            req.put("binder-port", configProperties.getNetPort());
-        } else {
-            req.put("binder-port", Optional.ofNullable(configProperties.getBindPort()).orElse(environment.resolvePlaceholders(environment.getProperty("server.port"))));
-        }
+        req.put("binder-client", getHost());
+        req.put("binder-port", getPort());
 
         req.put("binder-profile", environment.getProperty("spring.profiles.active", "dev"));
         req.put("binder-key", (ck = UUID.randomUUID().toString()));
-        req.put("binder-name", configProperties.getConfigName());
-        req.put("binder-app-name", configProperties.getConfigAppName());
+        req.put("binder-name", applicationName);
+        req.put("binder-app-name", applicationName);
         req.put("binder-auto-refresh", configProperties.isAutoRefresh());
+    }
+
+    protected int getPort() {
+        if (this.port > 0) {
+            return this.port;
+        }
+
+        if (configProperties.getBindPort() > -1) {
+            return (this.port = configProperties.getBindPort());
+        }
+        return (this.port = NetUtils.getAvailablePort());
+    }
+
+    protected String getHost() {
+        if (StringUtils.isNotBlank(this.host)) {
+            return this.host;
+        }
+
+        if (StringUtils.isNotBlank(configProperties.getBindIp())) {
+            return (this.host = configProperties.getBindIp());
+        }
+        return (this.host = NetUtils.getLocalIpv4());
     }
 
     /**
      * 渲染数据
+     *
      * @param req 请求
      */
     private void renderI18n(Map<String, Object> req) {
         String i18n = configProperties.getI18n();
-        if(Strings.isNullOrEmpty(i18n)) {
+        if (Strings.isNullOrEmpty(i18n)) {
             return;
         }
 
@@ -230,7 +254,7 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Cons
             PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
             org.springframework.core.io.Resource[] resources = resolver.getResources("classpath:config/config-message-" + i18n + ".properties");
             for (org.springframework.core.io.Resource resource : resources) {
-                try (InputStreamReader isr = new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8)){
+                try (InputStreamReader isr = new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8)) {
                     Properties properties = new Properties();
                     properties.load(isr);
 
@@ -244,8 +268,9 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Cons
 
     /**
      * 渲染描述
+     *
      * @param properties 字段
-     * @param transfer 请求
+     * @param transfer   请求
      */
     private void renderI18nEnv(Properties properties, Map<String, String> transfer) {
         for (Map.Entry<Object, Object> entry : properties.entrySet()) {
@@ -255,6 +280,7 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Cons
 
     /**
      * 发送信息
+     *
      * @param encode 数据
      * @return 响应
      */
@@ -262,6 +288,7 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Cons
 
     /**
      * 获取该主机上所有网卡的ip
+     *
      * @return ip
      */
     public static String getHostIp() {
@@ -275,7 +302,7 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Cons
                     if (ip instanceof Inet4Address
                             && !ip.isLoopbackAddress() //loopback地址即本机地址，IPv4的loopback范围是127.0.0.0 ~ 127.255.255.255
                             && !ip.getHostAddress().contains(":")) {
-                        if(ip.getHostName().equalsIgnoreCase(Inet4Address.getLocalHost().getHostName())) {
+                        if (ip.getHostName().equalsIgnoreCase(Inet4Address.getLocalHost().getHostName())) {
                             return ip.getHostAddress();
                         }
                     }
@@ -310,14 +337,14 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Cons
      * 心跳
      */
     private void beat() {
-        String configName = configProperties.getConfigName();
+        String configName = applicationName;
         beat.execute(() -> {
             while (run.get()) {
                 try {
                     ThreadUtils.sleepSecondsQuietly(60);
                     HttpResponse<String> response = Unirest.post(named() + "://" + configProperties.getConfigAddress().concat("/config/beat"))
                             .field("data", "")
-                            .field("binder", configProperties.getConfigName())
+                            .field("binder", applicationName)
                             .asString();
                     if (null != response && response.getStatus() == 200) {
                         if (log.isDebugEnabled()) {
@@ -343,18 +370,15 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Cons
 
     @Override
     public void destroy() throws Exception {
+        close();
         run.set(false);
         Map<String, Object> rs = new HashMap<>(3);
 
         Codec provider = ServiceProvider.of(Codec.class).getExtension(configProperties.getEncrypt());
         rs.put("binder-client", Optional.ofNullable(configProperties.getBindIp()).orElse(getHostIp()));
-        if(null != configProperties.getNetPort()) {
-            rs.put("binder-port", configProperties.getNetPort());
-        } else {
-            rs.put("binder-port", Optional.ofNullable(configProperties.getBindPort()).orElse(environment.resolvePlaceholders(environment.getProperty("server.port"))));
-        }
+        rs.put("binder-port", getPort());
         rs.put("binder-key", (ck = UUID.randomUUID().toString()));
-        rs.put("binder-name", configProperties.getConfigName());
+        rs.put("binder-name", applicationName);
         String encode = provider.encodeHex(Json.toJson(rs), StringUtils.defaultString(configProperties.getKey(), DEFAULT_SER));
         String body = null;
         try {
@@ -375,12 +399,26 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Cons
 
     /**
      * 注销
+     *
      * @param encode 数据
      * @return 注销
      */
     protected abstract String sendDestroy(String encode);
 
+    /**
+     * 启动
+     */
+    protected abstract void start();
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        configProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(ConfigProperties.PRE, ConfigProperties.class);
+        start();
+    }
+
+
     @Override
     public void afterPropertiesSet() throws Exception {
+
     }
 }
