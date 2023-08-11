@@ -27,10 +27,6 @@ public class ConfigServerProperties {
      */
     private boolean isOpen = true;
     /**
-     * 路徑
-     */
-    private String contextPath;
-    /**
      * 是否开启密钥
      */
     private boolean openKey;
