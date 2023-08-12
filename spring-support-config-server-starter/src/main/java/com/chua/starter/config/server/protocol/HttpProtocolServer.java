@@ -14,8 +14,6 @@ import com.chua.starter.config.server.properties.ConfigServerProperties;
 import kong.unirest.Unirest;
 import kong.unirest.UnirestException;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.http.client.CookieStore;
-import org.apache.http.impl.cookie.BasicClientCookie;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.bind.Binder;
@@ -23,14 +21,14 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.annotation.Resource;
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -134,28 +132,31 @@ public class HttpProtocolServer implements ProtocolServer, ProtocolResolver, App
 
     @Override
     public void notifyClient(NotifyConfig config, String keyValue) {
-        HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
+//        if(null ==  RequestContextHolder.getRequestAttributes()) {
+//            return;
+//        }
+//        HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
         Map<String, String> headers = new HashMap<>();
-        Enumeration<String> headerNames = request.getHeaderNames();
-        while (headerNames.hasMoreElements()) {
-            String element = headerNames.nextElement();
-            if("content-type".equalsIgnoreCase(element)) {
-                continue;
-            }
-
-            if("Content-Length".equalsIgnoreCase(element)) {
-                continue;
-            }
-            headers.put(element, request.getHeader(element));
-        }
-        Cookie[] cookies = request.getCookies();
-        if(null != cookies) {
-            CookieStore cookieStore = new org.apache.http.impl.client.BasicCookieStore();
-            for (Cookie cookie : cookies) {
-                cookieStore.addCookie(new BasicClientCookie(cookie.getName(), cookie.getValue()));
-            }
-            Unirest.config().httpClient(org.apache.http.impl.client.HttpClients.custom().setDefaultCookieStore(cookieStore).build());
-        }
+//        Enumeration<String> headerNames = request.getHeaderNames();
+//        while (headerNames.hasMoreElements()) {
+//            String element = headerNames.nextElement();
+//            if("content-type".equalsIgnoreCase(element)) {
+//                continue;
+//            }
+//
+//            if("Content-Length".equalsIgnoreCase(element)) {
+//                continue;
+//            }
+//            headers.put(element, request.getHeader(element));
+//        }
+//        Cookie[] cookies = request.getCookies();
+//        if(null != cookies) {
+//            CookieStore cookieStore = new org.apache.http.impl.client.BasicCookieStore();
+//            for (Cookie cookie : cookies) {
+//                cookieStore.addCookie(new BasicClientCookie(cookie.getName(), cookie.getValue()));
+//            }
+//            Unirest.config().httpClient(org.apache.http.impl.client.HttpClients.custom().setDefaultCookieStore(cookieStore).build());
+//        }
 
         try {
             Unirest.post("http://" + config.getBinderIp() + ":" + config.getBinderPort() + LISTENER)
@@ -189,7 +190,11 @@ public class HttpProtocolServer implements ProtocolServer, ProtocolResolver, App
 
     @Override
     public void updateById(ConfigurationCenterInfo configValue) {
-        configurationCenterInfoRepository.update(configValue.getConfigName(), configValue.getConfigValue(), configValue.getConfigProfile(), configValue.getConfigItem());
+        if (null != configValue.getDisable()) {
+            configurationCenterInfoRepository.update(configValue.getConfigValue(), configValue.getDisable(), configValue.getConfigId());
+        } else {
+            configurationCenterInfoRepository.update(configValue.getConfigName(), configValue.getConfigValue(), configValue.getConfigProfile(), configValue.getConfigItem());
+        }
         notifyConfig(configValue, this);
     }
 
