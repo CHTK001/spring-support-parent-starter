@@ -101,7 +101,7 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
         request.body(new Handler<AsyncResult<Buffer>>() {
             @Override
             public void handle(AsyncResult<Buffer> event) {
-                String data = event.result().toString();
+                String data = event.result().toString().replace("data=", "");
                 //服务端主动发起信息
                 Codec provider = ServiceProvider.of(Codec.class).getExtension(configProperties.getEncrypt());
                 String decode = provider.decodeHex(data, StringUtils.defaultString(configProperties.getKey(), DEFAULT_SER));

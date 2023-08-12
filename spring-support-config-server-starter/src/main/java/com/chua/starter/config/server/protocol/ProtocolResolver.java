@@ -24,6 +24,14 @@ public interface ProtocolResolver {
     /**
      * 通知
      *
+     * @param configurationCenterInfo 配置ID
+     * @param protocolServer          server
+     */
+    void notifyConfig(ConfigurationCenterInfo configurationCenterInfo, ProtocolServer protocolServer);
+
+    /**
+     * 通知
+     *
      * @param configId       配置ID
      * @param configValue    配置值
      * @param disable        是否可用

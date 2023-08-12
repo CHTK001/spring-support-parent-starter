@@ -29,10 +29,7 @@ import javax.annotation.Resource;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * http
@@ -103,6 +100,11 @@ public class HttpProtocolServer implements ProtocolServer, ProtocolResolver, App
         configurationManager.notifyConfig(notifyConfig, this);
     }
 
+    @Override
+    public void notifyConfig(ConfigurationCenterInfo configurationCenterInfo, ProtocolServer protocolServer) {
+        configurationManager.notifyConfig(configurationCenterInfo, this);
+    }
+
 
     @Override
     public void notifyConfig(Integer configId, String configValue, Integer disable, ProtocolServer protocolServer) {
@@ -162,6 +164,17 @@ public class HttpProtocolServer implements ProtocolServer, ProtocolResolver, App
     @Override
     public void deleteById(String configId) {
         configurationCenterInfoRepository.deleteById(Integer.valueOf(configId));
+    }
+
+    @Override
+    public Set<String> profile() {
+        return configurationCenterInfoRepository.profile();
+    }
+
+    @Override
+    public void updateById(ConfigurationCenterInfo configValue) {
+        configurationCenterInfoRepository.update(configValue.getConfigName(), configValue.getConfigValue(), configValue.getConfigProfile(), configValue.getConfigItem());
+        notifyConfig(configValue, this);
     }
 
     @Override

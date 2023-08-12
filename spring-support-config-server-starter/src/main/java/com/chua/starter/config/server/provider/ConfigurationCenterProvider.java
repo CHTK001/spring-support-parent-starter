@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 配置中心
@@ -40,7 +41,7 @@ public class ConfigurationCenterProvider implements ApplicationContextAware {
     public ReturnPageResult<ConfigurationCenterInfo> configList(
             @RequestParam(value = "page", defaultValue = "1") Integer page,
             @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize,
-            @RequestParam(value = "profile", defaultValue = "dev") String profile
+            @RequestParam(value = "profile", required = false) String profile
     ) {
 
         Page<ConfigurationCenterInfo> infoPage = protocolServer.findAll(page - 1, pageSize, profile);
@@ -55,9 +56,13 @@ public class ConfigurationCenterProvider implements ApplicationContextAware {
      */
     @PostMapping("/save")
     @ResponseBody
-    public ReturnResult<Void> configSave(@RequestBody ConfigurationCenterInfo configValue) {
-        protocolServer.save(configValue);
-        return ReturnResult.ok();
+    public ReturnResult<ConfigurationCenterInfo> configSave(@RequestBody ConfigurationCenterInfo configValue) {
+        if (null == configValue.getConfigId()) {
+            protocolServer.save(configValue);
+        } else {
+            protocolServer.updateById(configValue);
+        }
+        return ReturnResult.ok(configValue);
     }
 
     /**
@@ -69,6 +74,17 @@ public class ConfigurationCenterProvider implements ApplicationContextAware {
     public ReturnResult<Void> configSave(String configId) {
         protocolServer.deleteById(configId);
         return ReturnResult.ok();
+    }
+
+    /**
+     * 环境
+     *
+     * @return 环境
+     */
+    @PostMapping("/profile")
+    @ResponseBody
+    public ReturnResult<Set<String>> profile() {
+        return ReturnResult.ok(protocolServer.profile());
     }
 
     /**
