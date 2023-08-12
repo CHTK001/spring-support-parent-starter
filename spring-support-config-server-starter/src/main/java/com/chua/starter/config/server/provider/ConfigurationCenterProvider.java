@@ -75,7 +75,6 @@ public class ConfigurationCenterProvider implements ApplicationContextAware {
         protocolServer.deleteById(configId);
         return ReturnResult.ok();
     }
-
     /**
      * 环境
      *
@@ -86,7 +85,6 @@ public class ConfigurationCenterProvider implements ApplicationContextAware {
     public ReturnResult<Set<String>> profile() {
         return ReturnResult.ok(protocolServer.profile());
     }
-
     /**
      * 配置頁面
      *

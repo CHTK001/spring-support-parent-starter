@@ -39,14 +39,12 @@ public interface ProtocolServer extends ProtocolResolver, NameAware, Initializin
 
     /**
      * 环境
-     *
      * @return 环境
      */
     Set<String> profile();
 
     /**
      * 更新
-     *
      * @param configValue configValue
      */
     void updateById(ConfigurationCenterInfo configValue);

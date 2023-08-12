@@ -45,6 +45,7 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
             response = Unirest.post(named()[0] + "://" + configProperties.getConfigAddress().concat("/config/registerBean"))
                     .field("data", encode)
                     .field("binder", applicationName)
+                    .field("subscribe", subscribeName)
                     .asString();
         } catch (Throwable e) {
             log.warn(e.getMessage());
@@ -120,6 +121,12 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
                 configValueAnnotationBeanPostProcessor.onChange(keyValue);
             }
         });
+
+        HttpServerResponse response = request.response();
+        //设置响应头
+        response.putHeader("Content-type", "application/json;charset=utf-8");
+        // 响应数据
+        response.end("");
 
     }
 

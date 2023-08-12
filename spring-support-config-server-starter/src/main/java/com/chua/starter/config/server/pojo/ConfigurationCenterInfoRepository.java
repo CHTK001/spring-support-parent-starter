@@ -74,7 +74,6 @@ public interface ConfigurationCenterInfoRepository extends
      */
     @Query(value = "SELECT t.* FROM CONFIGURATION_CENTER_INFO t WHERE disable = 0 AND config_profile = ?2 and (config_item = ?1 or config_id in (select config_id from CONFIGURATION_DISTRIBUTE_INFO  where config_item = ?1))", nativeQuery = true)
     List<ConfigurationCenterInfo> list(String binderName, String profile);
-
     /**
      * 查询binder
      *
@@ -88,7 +87,6 @@ public interface ConfigurationCenterInfoRepository extends
 
     /**
      * 环境
-     *
      * @return 环境
      */
     @Query(value = "SELECT config_profile FROM CONFIGURATION_CENTER_INFO GROUP BY config_profile ", nativeQuery = true)

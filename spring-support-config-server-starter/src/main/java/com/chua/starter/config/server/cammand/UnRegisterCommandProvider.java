@@ -17,14 +17,14 @@ import javax.servlet.http.HttpServletRequest;
  */
 public class UnRegisterCommandProvider implements CommandProvider {
     @Override
-    public ReturnResult<String> command(String binder, String data, ConfigServerProperties configServerProperties, HttpServletRequest request) {
-        if(!configServerProperties.isOpenAutoDestroy()) {
+    public ReturnResult<String> command(String subscribe, String binder, String data, ConfigServerProperties configServerProperties, HttpServletRequest request) {
+        if (!configServerProperties.isOpenAutoDestroy()) {
             return ReturnResult.ok();
         }
 
         ServiceProvider<Codec> serviceProvider = ServiceProvider.of(Codec.class);
         Codec encrypt = serviceProvider.getExtension(configServerProperties.getEncrypt());
-        if(null == encrypt) {
+        if (null == encrypt) {
             return ReturnResult.illegal();
         }
         ServiceProvider<KeyManagerProvider> providerServiceProvider = ServiceProvider.of(KeyManagerProvider.class);
