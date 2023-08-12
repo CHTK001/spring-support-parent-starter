@@ -334,6 +334,7 @@ public class DatabaseConfigurationManager implements ConfigurationManager, Appli
     public Page<ConfigurationCenterInfo> findAll(Integer page, Integer pageSize, String profile) {
         ConfigurationCenterInfo query = new ConfigurationCenterInfo();
         query.setConfigProfile(profile);
+        query.setDisable(null);
         return configurationCenterInfoRepository.findAll(Example.of(query), PageRequest.of(page, pageSize)
                 .withSort(Sort.Direction.DESC, "configId")
         );
