@@ -1,6 +1,7 @@
 package com.chua.starter.config.server.protocol;
 
 import com.chua.common.support.annotations.Spi;
+import com.chua.common.support.function.Splitter;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.common.support.result.ReturnResult;
@@ -30,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
+import java.util.stream.Collectors;
 
 /**
  * http
@@ -175,7 +177,8 @@ public class HttpProtocolServer implements ProtocolServer, ProtocolResolver, App
 
     @Override
     public void deleteById(String configId) {
-        configurationCenterInfoRepository.deleteById(Integer.valueOf(configId));
+        configurationCenterInfoRepository.deleteAllById(Splitter.on(',').omitEmptyStrings().trimResults().splitToList(configId)
+                .stream().map(Integer::valueOf).collect(Collectors.toSet()));
     }
 
     @Override
