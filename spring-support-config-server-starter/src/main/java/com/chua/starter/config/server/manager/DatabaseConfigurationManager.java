@@ -102,7 +102,7 @@ public class DatabaseConfigurationManager implements ConfigurationManager, Appli
         ConfigurationCenterInfo tConfigurationCenterInfo1 = configurationCenterInfoRepository
                 .findOne(Example.of(query)).get();
         if (null != tConfigurationCenterInfo1 && refresh) {
-            configurationCenterInfoRepository.update(name, port, binderName);
+            configurationCenterInfoRepository.update(name, port, tConfigurationCenterInfo1.getConfigProfile(), binderName);
         } else {
             tConfigurationCenterInfo1 = new ConfigurationCenterInfo();
             tConfigurationCenterInfo1.setConfigName(name);
@@ -266,21 +266,13 @@ public class DatabaseConfigurationManager implements ConfigurationManager, Appli
         }
     }
 
-
     @Override
-    public void notifyConfig(Integer configId, String configValue, Integer disable, ProtocolServer protocolServer) {
-        List<NotifyConfig> notifyConfig = new ArrayList<>();
+    public void notifyConfig(ConfigurationCenterInfo configurationCenterInfo, ProtocolServer protocolServer) {
         try {
-            ConfigurationCenterInfo referenceById = configurationCenterInfoRepository.findById(configId).get();
-            referenceById.setConfigValue(configValue);
-            referenceById.setDisable(disable);
-            configurationCenterInfoRepository.update(configValue, disable, configId);
-            if (disable != 0) {
-                return;
-            }
+            List<NotifyConfig> notifyConfig = new ArrayList<>();
 
             Map<String, List<ConfigurationCenterInfo>> temp = new HashMap<>();
-            List<ConfigurationCenterInfo> tConfigurationCenterInfos = configurationCenterInfoRepository.listByConfigId(configId);
+            List<ConfigurationCenterInfo> tConfigurationCenterInfos = configurationCenterInfoRepository.listByConfigId(configurationCenterInfo.getConfigId());
             for (ConfigurationCenterInfo tConfigurationCenterInfo : tConfigurationCenterInfos) {
                 temp.computeIfAbsent(tConfigurationCenterInfo.getConfigItem(), it -> new ArrayList<>()).add(tConfigurationCenterInfo);
             }
@@ -290,7 +282,8 @@ public class DatabaseConfigurationManager implements ConfigurationManager, Appli
                 List<ConfigurationCenterInfo> value = entry.getValue();
 
                 NotifyConfig item = new NotifyConfig();
-                item.setConfigName(referenceById.getConfigName()).setConfigValue(configValue);
+                item.setConfigName(configurationCenterInfo.getConfigName())
+                        .setConfigValue(configurationCenterInfo.getConfigValue());
                 item.setConfigItem(key);
                 if (value.isEmpty()) {
                     continue;
@@ -303,15 +296,30 @@ public class DatabaseConfigurationManager implements ConfigurationManager, Appli
                 } catch (Exception ignored) {
                 }
             }
+
+            if (notifyConfig.isEmpty()) {
+                return;
+            }
+            notifyConfig(notifyConfig, protocolServer);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    @Override
+    public void notifyConfig(Integer configId, String configValue, Integer disable, ProtocolServer protocolServer) {
+        try {
+            Optional<ConfigurationCenterInfo> byId = configurationCenterInfoRepository.findById(configId);
+            if (!byId.isPresent()) {
+                return;
+            }
+            ConfigurationCenterInfo referenceById = byId.get();
+            notifyConfig(referenceById, protocolServer);
         } catch (Exception e) {
             e.printStackTrace();
             return;
         }
-
-        if (notifyConfig.isEmpty()) {
-            return;
-        }
-        notifyConfig(notifyConfig, protocolServer);
     }
 
     @Override

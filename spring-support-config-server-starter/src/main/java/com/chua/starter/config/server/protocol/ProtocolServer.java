@@ -6,6 +6,8 @@ import com.chua.starter.config.server.pojo.ConfigurationCenterInfo;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 
+import java.util.Set;
+
 /**
  * 协议服务
  *
@@ -34,4 +36,18 @@ public interface ProtocolServer extends ProtocolResolver, NameAware, Initializin
      * @param configId 配置
      */
     void deleteById(String configId);
+
+    /**
+     * 环境
+     *
+     * @return 环境
+     */
+    Set<String> profile();
+
+    /**
+     * 更新
+     *
+     * @param configValue configValue
+     */
+    void updateById(ConfigurationCenterInfo configValue);
 }
