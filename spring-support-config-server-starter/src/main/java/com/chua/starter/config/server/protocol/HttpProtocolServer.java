@@ -183,6 +183,11 @@ public class HttpProtocolServer implements ProtocolServer, ProtocolResolver, App
     }
 
     @Override
+    public Set<String> applications() {
+        return configurationCenterInfoRepository.applications();
+    }
+
+    @Override
     public void updateById(ConfigurationCenterInfo configValue) {
         configurationCenterInfoRepository.update(configValue.getConfigName(), configValue.getConfigValue(), configValue.getConfigProfile(), configValue.getConfigItem());
         notifyConfig(configValue, this);

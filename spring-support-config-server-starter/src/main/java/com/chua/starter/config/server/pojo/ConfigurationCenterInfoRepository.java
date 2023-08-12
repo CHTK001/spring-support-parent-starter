@@ -87,8 +87,17 @@ public interface ConfigurationCenterInfoRepository extends
 
     /**
      * 环境
+     *
      * @return 环境
      */
     @Query(value = "SELECT config_profile FROM CONFIGURATION_CENTER_INFO GROUP BY config_profile ", nativeQuery = true)
     Set<String> profile();
+
+    /**
+     * 环境
+     *
+     * @return 环境
+     */
+    @Query(value = "SELECT config_item FROM CONFIGURATION_CENTER_INFO GROUP BY config_item ", nativeQuery = true)
+    Set<String> applications();
 }
