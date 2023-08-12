@@ -29,6 +29,10 @@ public class ConfigProperties {
      */
     private boolean isOpen = true;
     /**
+     * 订阅的应用配置
+     */
+    private String subscribeName;
+    /**
      * 密钥
      */
     private String key;
@@ -58,12 +62,8 @@ public class ConfigProperties {
     private boolean autoRefresh;
 
     /**
-     * 是否注册配置
+     * 是否自动上报当前应用配置
      */
     private boolean openRegister = true;
-
-    /**
-     * 链接超时时间
-     */
 
 }

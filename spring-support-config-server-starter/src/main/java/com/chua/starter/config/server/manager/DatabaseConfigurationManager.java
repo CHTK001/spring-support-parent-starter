@@ -3,6 +3,7 @@ package com.chua.starter.config.server.manager;
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.annotations.SpiDefault;
 import com.chua.common.support.crypto.Codec;
+import com.chua.common.support.function.Splitter;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.MapUtils;
@@ -26,6 +27,7 @@ import org.springframework.context.expression.BeanFactoryAccessor;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.expression.EvaluationException;
 import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
@@ -185,8 +187,14 @@ public class DatabaseConfigurationManager implements ConfigurationManager, Appli
     }
 
     @Override
-    public String findValue(String binderName, String profile) {
-        List<ConfigurationCenterInfo> list = configurationCenterInfoRepository.list(binderName, profile);
+    public String findValue(String subscribe, String profile) {
+        List<ConfigurationCenterInfo> list = new LinkedList<>();
+        for (String s : Splitter.on(',').trimResults().omitEmptyStrings().splitToList(subscribe)) {
+            try {
+                list.addAll(configurationCenterInfoRepository.list(s, profile));
+            } catch (Exception ignored) {
+            }
+        }
         Map<String, List<ConfigurationCenterInfo>> valueMapping = new HashMap<>();
         for (ConfigurationCenterInfo info : list) {
             valueMapping.computeIfAbsent(info.getConfigItem(), it -> new ArrayList<>()).add(info);
@@ -326,7 +334,9 @@ public class DatabaseConfigurationManager implements ConfigurationManager, Appli
     public Page<ConfigurationCenterInfo> findAll(Integer page, Integer pageSize, String profile) {
         ConfigurationCenterInfo query = new ConfigurationCenterInfo();
         query.setConfigProfile(profile);
-        return configurationCenterInfoRepository.findAll(Example.of(query), PageRequest.of(page, pageSize));
+        return configurationCenterInfoRepository.findAll(Example.of(query), PageRequest.of(page, pageSize)
+                .withSort(Sort.Direction.DESC, "configId")
+        );
     }
 
     @Override

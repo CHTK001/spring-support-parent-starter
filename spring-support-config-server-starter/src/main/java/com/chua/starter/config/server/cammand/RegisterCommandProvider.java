@@ -25,11 +25,11 @@ import java.util.Map;
  */
 public class RegisterCommandProvider implements CommandProvider, Constant {
     @Override
-    public ReturnResult<String> command(String binder, String data, ConfigServerProperties configServerProperties, HttpServletRequest request) {
+    public ReturnResult<String> command(String subscribe, String binder, String data, ConfigServerProperties configServerProperties, HttpServletRequest request) {
 
         ServiceProvider<Codec> serviceProvider = ServiceProvider.of(Codec.class);
         Codec encrypt = serviceProvider.getExtension(configServerProperties.getEncrypt());
-        if(null == encrypt) {
+        if (null == encrypt) {
             return ReturnResult.illegal();
         }
 
@@ -56,7 +56,7 @@ public class RegisterCommandProvider implements CommandProvider, Constant {
         } catch (Exception ignored) {
         }
         configurationManager.register(stringObjectMap, binder);
-        String value = configurationManager.findValue(binder, MapUtils.getString(stringObjectMap, "binder-profile", "dev"));
+        String value = configurationManager.findValue(subscribe, MapUtils.getString(stringObjectMap, "binder-profile", "dev"));
         return ReturnResult.ok(encrypt.encodeHex(value, MapUtils.getString(stringObjectMap, "binder-key")));
     }
 

@@ -59,6 +59,7 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
     protected String host;
 
     protected String applicationName;
+    protected String subscribeName;
 
     private final AtomicBoolean run = new AtomicBoolean(false);
     private final AtomicInteger count = new AtomicInteger(0);
@@ -93,6 +94,7 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
             throw new IllegalArgumentException("config-app-name不能为空");
         }
 
+        this.subscribeName = StringUtils.defaultString(configProperties.getSubscribeName(), applicationName);
         this.environment = environment;
         this.reconnectLimit = configProperties.getReconnectLimit();
         if (Strings.isNullOrEmpty(configProperties.getConfigAddress())) {

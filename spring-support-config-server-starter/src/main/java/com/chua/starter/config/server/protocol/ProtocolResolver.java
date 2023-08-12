@@ -28,7 +28,6 @@ public interface ProtocolResolver {
      * @param protocolServer          server
      */
     void notifyConfig(ConfigurationCenterInfo configurationCenterInfo, ProtocolServer protocolServer);
-
     /**
      * 通知
      *

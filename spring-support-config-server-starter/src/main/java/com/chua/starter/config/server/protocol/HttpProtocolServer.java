@@ -2,6 +2,7 @@ package com.chua.starter.config.server.protocol;
 
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.config.server.cammand.CommandProvider;
 import com.chua.starter.config.server.entity.NotifyConfig;
@@ -30,6 +31,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
 
 /**
  * http
@@ -57,6 +59,8 @@ public class HttpProtocolServer implements ProtocolServer, ProtocolResolver, App
     private static final String LISTENER = "/config/listener";
     private ConfigurationManager configurationManager;
 
+    private final ExecutorService executorService = ThreadUtils.newProcessorThreadExecutor();
+
     @Override
     public String[] named() {
         return new String[]{"http"};
@@ -75,6 +79,7 @@ public class HttpProtocolServer implements ProtocolServer, ProtocolResolver, App
             @PathVariable("command") String command,
             @RequestParam("data") String data,
             @RequestParam("binder") String binder,
+            @RequestParam("subscribe") String subscribe, //订阅的配置
             HttpServletRequest request, HttpServletResponse response) {
         ServiceProvider<CommandProvider> serviceProvider = ServiceProvider.of(CommandProvider.class);
         CommandProvider commandProvider = serviceProvider.getExtension(command);
@@ -82,12 +87,12 @@ public class HttpProtocolServer implements ProtocolServer, ProtocolResolver, App
             return ReturnResult.illegal(null, "命令不存在");
         }
 
-        return commandProvider.command(binder, data, configServerProperties, request);
+        return commandProvider.command(subscribe, binder, data, configServerProperties, request);
     }
 
     @Override
     public void destroy() throws Exception {
-
+        ThreadUtils.shutdownNow(executorService);
     }
 
     @Override
@@ -97,18 +102,24 @@ public class HttpProtocolServer implements ProtocolServer, ProtocolResolver, App
 
     @Override
     public void notifyConfig(List<NotifyConfig> notifyConfig, ProtocolServer protocolServer) {
-        configurationManager.notifyConfig(notifyConfig, this);
+        executorService.execute(() -> {
+            configurationManager.notifyConfig(notifyConfig, this);
+        });
     }
 
     @Override
     public void notifyConfig(ConfigurationCenterInfo configurationCenterInfo, ProtocolServer protocolServer) {
-        configurationManager.notifyConfig(configurationCenterInfo, this);
+        executorService.execute(() -> {
+            configurationManager.notifyConfig(configurationCenterInfo, this);
+        });
     }
 
 
     @Override
     public void notifyConfig(Integer configId, String configValue, Integer disable, ProtocolServer protocolServer) {
-        configurationManager.notifyConfig(configId, configValue, disable, this);
+        executorService.execute(() -> {
+            configurationManager.notifyConfig(configId, configValue, disable, this);
+        });
     }
 
     @Override

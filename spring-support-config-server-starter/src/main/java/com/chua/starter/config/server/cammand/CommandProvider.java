@@ -16,11 +16,12 @@ public interface CommandProvider extends NameAware {
     /**
      * 处理数据
      *
+     * @param subscribe
      * @param binder                 绑定的名称
      * @param data                   数据
      * @param configServerProperties 配置
      * @param request                请求
      * @return 结果
      */
-    ReturnResult<String> command(String binder, String data, ConfigServerProperties configServerProperties, HttpServletRequest request);
+    ReturnResult<String> command(String subscribe, String binder, String data, ConfigServerProperties configServerProperties, HttpServletRequest request);
 }
