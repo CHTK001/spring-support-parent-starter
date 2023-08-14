@@ -11,10 +11,7 @@ import com.chua.starter.common.support.logger.LoggerService;
 import com.chua.starter.common.support.logger.WatchGuidAspect;
 import com.chua.starter.common.support.mapping.CustomRequestMappingHandlerMapping;
 import com.chua.starter.common.support.processor.ResponseModelViewMethodProcessor;
-import com.chua.starter.common.support.properties.CoreProperties;
-import com.chua.starter.common.support.properties.CorsProperties;
-import com.chua.starter.common.support.properties.LimitProperties;
-import com.chua.starter.common.support.properties.OptionProperties;
+import com.chua.starter.common.support.properties.*;
 import com.chua.starter.common.support.provider.OptionsProvider;
 import com.chua.starter.common.support.result.ResponseAdvice;
 import com.chua.starter.common.support.version.ApiVersionRequestMappingHandlerMapping;
@@ -57,7 +54,13 @@ import java.util.List;
  * @author CH
  */
 @Slf4j
-@EnableConfigurationProperties({OptionProperties.class, CorsProperties.class, CoreProperties.class, LimitProperties.class})
+@EnableConfigurationProperties({
+        OptionProperties.class,
+        CorsProperties.class,
+        CoreProperties.class,
+        BeanProperties.class,
+        LimitProperties.class
+})
 public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAware, WebMvcRegistrations {
 
     @Resource
