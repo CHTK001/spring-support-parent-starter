@@ -12,6 +12,8 @@ import com.chua.starter.config.constant.ConfigConstant;
 import com.chua.starter.config.entity.PluginMeta;
 import com.chua.starter.config.properties.ConfigProperties;
 import com.google.common.base.Strings;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.boot.context.properties.bind.Binder;
@@ -20,12 +22,10 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.env.ConfigurableEnvironment;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -56,33 +56,31 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
             new LinkedBlockingQueue<Runnable>(), new NamedThreadFactory("config-reconnect"));
     private ApplicationContext applicationContext;
     protected ConfigProperties configProperties;
-    private PluginMeta meta;
-    private String subscribe;
-    private String dataType;
-    private Map<String, Object> data;
-    private Consumer<Map<String, Object>> consumer;
+    protected PluginMeta meta;
+
+
+    private final List<CacheMeta> cacheMetaList = new CopyOnWriteArrayList<>();
+    private List<CacheMeta> cacheMetaFailureList = new CopyOnWriteArrayList<>();
 
     @Override
     public void subscribe(String subscribe, String dataType, Map<String, Object> data, Consumer<Map<String, Object>> consumer) {
-        this.subscribe = subscribe;
-        this.dataType = dataType;
-        this.data = data;
-        this.consumer = consumer;
+        CacheMeta cacheMeta = new CacheMeta(subscribe, dataType, data, consumer);
+        this.cacheMetaList.add(cacheMeta);
         Codec encrypt = ServiceProvider.of(Codec.class).getExtension(configProperties.getEncrypt());
         renderBase(data);
         //注册配置到配置中心
         String encode = encrypt.encodeHex(Json.toJson(data), StringUtils.defaultString(configProperties.getKey(), DEFAULT_SER));
         String body = null;
         try {
-            body = send(encode);
+            body = send(encode, subscribe, dataType);
         } catch (Exception e) {
             log.warn(e.getMessage());
-            connect.set(false);
         }
 
         if (Strings.isNullOrEmpty(body)) {
             log.info("注册中心连接异常");
             connect.set(false);
+            this.cacheMetaFailureList.add(cacheMeta);
             return;
         }
         log.info("注册中心连接成功");
@@ -106,13 +104,14 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
         } catch (Exception ignored) {
         }
     }
+
     /**
      * 发送信息
      *
      * @param encode 数据
      * @return 响应
      */
-    protected abstract String send(String encode);
+    protected abstract String send(String encode, String subscribe, String dataType);
 
     /**
      * 心跳
@@ -133,9 +132,10 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
         rs.put(ConfigConstant.KEY, (meta.createKey()));
         rs.put(ConfigConstant.APPLICATION_NAME, meta.getApplicationName());
         String encode = provider.encodeHex(Json.toJson(rs), StringUtils.defaultString(configProperties.getKey(), DEFAULT_SER));
-        String body = null;
         try {
-            body = sendDestroy(encode);
+            for (CacheMeta cacheMeta : cacheMetaList) {
+                sendDestroy(encode, cacheMeta.getDataType());
+            }
             ThreadUtils.sleepSecondsQuietly(1);
         } catch (Throwable e) {
             log.warn(e.getMessage());
@@ -143,10 +143,6 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
 
         beat.shutdownNow();
         reconnect.shutdownNow();
-        if (Strings.isNullOrEmpty(body)) {
-            log.error("注册中心注销失败");
-            return;
-        }
         log.error("注册中心注销成功");
     }
 
@@ -156,7 +152,7 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
      * @param encode 数据
      * @return 注销
      */
-    protected abstract String sendDestroy(String encode);
+    protected abstract String sendDestroy(String encode, String dataType);
 
     /**
      * 启动
@@ -172,10 +168,15 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
             return;
         }
 
+        if (isStart()) {
+            return;
+        }
         start();
         reconnect();
         beat();
     }
+
+    abstract boolean isStart();
 
 
     protected void reconnect() {
@@ -184,7 +185,9 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
                 ThreadUtils.sleepSecondsQuietly(15);
                 if (!connect.get()) {
                     log.warn("开始重连注册中心");
-                    this.subscribe(subscribe, dataType, data, consumer);
+                    for (CacheMeta cacheMeta : cacheMetaFailureList) {
+                        this.subscribe(cacheMeta.subscribe, cacheMeta.dataType, cacheMeta.getData(), cacheMeta.getConsumer());
+                    }
                 }
             }
         });
@@ -211,5 +214,14 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
         req.put(ConfigConstant.PROFILE, environment.getProperty("spring.profiles.active", "dev"));
         req.put(ConfigConstant.KEY, (meta.createKey()));
         req.put(ConfigConstant.REFRESH, configProperties.isAutoRefresh());
+    }
+
+    @Data
+    @AllArgsConstructor
+    private class CacheMeta {
+        private String subscribe;
+        private String dataType;
+        private Map<String, Object> data;
+        private Consumer<Map<String, Object>> consumer;
     }
 }
