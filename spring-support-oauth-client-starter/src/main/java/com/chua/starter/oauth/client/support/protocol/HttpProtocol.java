@@ -14,7 +14,6 @@ import com.chua.common.support.task.cache.Cacheable;
 import com.chua.common.support.utils.Md5Utils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.value.Value;
-import com.chua.guava.support.cache.GuavaCacheable;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.result.ReturnCode;
 import com.chua.starter.common.support.result.ReturnResult;
@@ -282,8 +281,8 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
     public void afterPropertiesSet() throws Exception {
         this.encode = ServiceProvider.of(KeyEncode.class).getExtension(authClientProperties.getEncryption());
         this.decode = ServiceProvider.of(KeyDecode.class).getExtension(authClientProperties.getEncryption());
-        CACHEABLE = new GuavaCacheable(CacheConfiguration.builder()
-                .expireAfterWrite(authClientProperties.getCacheTimeout())
+        CACHEABLE = Cacheable.auto(CacheConfiguration.builder()
+                .expireAfterWrite((int) authClientProperties.getCacheTimeout())
                 .build());
     }
 }
