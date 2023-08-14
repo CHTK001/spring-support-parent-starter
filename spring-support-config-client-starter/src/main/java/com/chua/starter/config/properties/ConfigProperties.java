@@ -67,7 +67,7 @@ public class ConfigProperties {
     /**
      * 是否自动上报当前应用配置
      */
-    private boolean openRegister = true;
+    private boolean openRegister;
 
     @Data
     public static class Subscribe {

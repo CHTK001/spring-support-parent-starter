@@ -5,6 +5,8 @@ import com.chua.starter.config.server.support.config.NotifyConfig;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 
+import java.util.List;
+
 /**
  * 协议服务
  *
@@ -15,9 +17,8 @@ public interface ProtocolServer extends NameAware, InitializingBean, DisposableB
     /**
      * 通知
      *
-     * @param config   配置
-     * @param keyValue 數據
+     * @param configs   配置
      */
-    void notifyClient(NotifyConfig config, String keyValue);
+    void notifyClient(List<NotifyConfig> configs);
 
 }

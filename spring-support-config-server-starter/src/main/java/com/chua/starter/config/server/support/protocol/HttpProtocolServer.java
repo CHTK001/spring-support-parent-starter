@@ -1,10 +1,14 @@
 package com.chua.starter.config.server.support.protocol;
 
 import com.chua.common.support.annotations.Spi;
+import com.chua.common.support.crypto.Codec;
+import com.chua.common.support.json.Json;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.ThreadUtils;
+import com.chua.starter.common.support.key.KeyManagerProvider;
 import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.config.constant.ConfigConstant;
+import com.chua.starter.config.entity.KeyValue;
 import com.chua.starter.config.server.support.command.CommandProvider;
 import com.chua.starter.config.server.support.config.NotifyConfig;
 import com.chua.starter.config.server.support.manager.DataManager;
@@ -22,8 +26,11 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
+
+import static com.chua.starter.common.support.constant.Constant.DEFAULT_SER;
 
 /**
  * http
@@ -70,7 +77,7 @@ public class HttpProtocolServer implements ProtocolServer, ApplicationContextAwa
             @RequestParam(ConfigConstant.APPLICATION_DATA_TYPE) String dataType,
             @RequestParam(ConfigConstant.APPLICATION_DATA) String data,
             @RequestParam(ConfigConstant.APPLICATION_NAME) String applicationName,
-            @RequestParam(ConfigConstant.APPLICATION_SUBSCRIBE) String subscribe,
+            @RequestParam(value = ConfigConstant.APPLICATION_SUBSCRIBE, required = false) String subscribe,
             HttpServletRequest request, HttpServletResponse response) {
         ServiceProvider<CommandProvider> serviceProvider = ServiceProvider.of(CommandProvider.class);
         CommandProvider commandProvider = serviceProvider.getExtension(command);
@@ -92,6 +99,29 @@ public class HttpProtocolServer implements ProtocolServer, ApplicationContextAwa
     }
 
     @Override
+    public void notifyClient(List<NotifyConfig> notifyConfig) {
+        executorService.execute(() -> {
+            try {
+                ServiceProvider<KeyManagerProvider> providerServiceProvider = ServiceProvider.of(KeyManagerProvider.class);
+                KeyManagerProvider keyManagerProvider = providerServiceProvider.getExtension(configServerProperties.getKeyManager());
+                ServiceProvider<Codec> serviceProvider = ServiceProvider.of(Codec.class);
+                Codec encrypt = serviceProvider.getExtension(configServerProperties.getEncrypt());
+
+                for (NotifyConfig config : notifyConfig) {
+                    String providerKey = configServerProperties.isOpenKey() ?
+                            keyManagerProvider.getKey(config.getConfigItem()) : DEFAULT_SER;
+                    KeyValue keyValue = new KeyValue();
+                    keyValue.setDataId(config.getConfigName());
+                    keyValue.setData(config.getConfigValue());
+
+                    notifyClient(config, encrypt.encodeHex(Json.toJson(keyValue), providerKey));
+                }
+            } catch (Exception e) {
+                log.warn(e.getLocalizedMessage());
+            }
+        });
+    }
+
     public void notifyClient(NotifyConfig config, String keyValue) {
         Map<String, String> headers = new HashMap<>();
         try {
@@ -112,6 +142,7 @@ public class HttpProtocolServer implements ProtocolServer, ApplicationContextAwa
                 .getExtension(configServerProperties.getDataManager());
         try {
             applicationContext.getAutowireCapableBeanFactory().autowireBean(dataManager);
+            dataManager.setProtocol(this);
             dataManager.afterPropertiesSet();
         } catch (Exception e) {
             throw new RuntimeException(e);
