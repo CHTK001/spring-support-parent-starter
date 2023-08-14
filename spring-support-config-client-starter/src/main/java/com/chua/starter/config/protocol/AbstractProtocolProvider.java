@@ -60,7 +60,7 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
     protected String applicationName;
     protected String subscribeName;
 
-    private final AtomicBoolean run = new AtomicBoolean(false);
+    private final AtomicBoolean run = new AtomicBoolean(true);
     private final AtomicInteger count = new AtomicInteger(0);
     private final AtomicBoolean connect = new AtomicBoolean(false);
 
@@ -134,8 +134,8 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
 
         run.set(true);
         if (Strings.isNullOrEmpty(body)) {
-            reconnect();
             log.info("注册中心连接异常");
+            connect.set(false);
             return Collections.emptyList();
         }
 
@@ -327,25 +327,6 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
     }
 
     /**
-     * 重连
-     */
-    private void reconnect() {
-        int andIncrement = count.getAndIncrement();
-        if (reconnectLimit != -1 || reconnectLimit < andIncrement) {
-            connect.set(true);
-            return;
-        }
-
-        reconnect.execute(() -> {
-            while (run.get() && !connect.get()) {
-                ThreadUtils.sleepSecondsQuietly(5);
-                log.warn("开始重连注册中心");
-                register(environment);
-            }
-        });
-    }
-
-    /**
      * 心跳
      */
     private void beat() {
@@ -355,20 +336,22 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
                 try {
                     ThreadUtils.sleepSecondsQuietly(60);
                     HttpResponse<String> response = Unirest.post(named() + "://" + configProperties.getConfigAddress().concat("/config/beat"))
-                            .field("data", "")
-                            .field("binder", applicationName)
+                            .field(ConfigConstant.APPLICATION_DATA, "")
+                            .field(ConfigConstant.APPLICATION_DATA_TYPE, ConfigConstant.CONFIG)
+                            .field(ConfigConstant.APPLICATION_NAME, applicationName)
                             .asString();
                     if (null != response && response.getStatus() == 200) {
                         if (log.isDebugEnabled()) {
                             log.debug("{}心跳包正常", configName);
                         }
+                        continue;
                     }
                 } catch (Throwable e) {
                     log.warn(e.getMessage());
                 }
                 if (log.isWarnEnabled()) {
                     log.warn("{}心跳包异常开始重连", configName);
-                    reconnect();
+                    connect.set(false);
                 }
             }
         });
@@ -383,14 +366,15 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
     @Override
     public void destroy() throws Exception {
         close();
+        connect.set(true);
         run.set(false);
         Map<String, Object> rs = new HashMap<>(3);
 
         Codec provider = ServiceProvider.of(Codec.class).getExtension(configProperties.getEncrypt());
-        rs.put("binder-client", Optional.ofNullable(configProperties.getBindIp()).orElse(getHostIp()));
-        rs.put("binder-port", getPort());
-        rs.put("binder-key", (ck = UUID.randomUUID().toString()));
-        rs.put("binder-name", applicationName);
+        rs.put(ConfigConstant.APPLICATION_HOST, Optional.ofNullable(configProperties.getBindIp()).orElse(getHostIp()));
+        rs.put(ConfigConstant.APPLICATION_PORT, getPort());
+        rs.put(ConfigConstant.KEY, (ck = UUID.randomUUID().toString()));
+        rs.put(ConfigConstant.APPLICATION_NAME, applicationName);
         String encode = provider.encodeHex(Json.toJson(rs), StringUtils.defaultString(configProperties.getKey(), DEFAULT_SER));
         String body = null;
         try {
@@ -426,11 +410,23 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         configProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(ConfigProperties.PRE, ConfigProperties.class);
         start();
+        reconnect();
+        beat();
     }
 
+    protected void reconnect() {
+        reconnect.execute(() -> {
+            while (run.get()) {
+                ThreadUtils.sleepSecondsQuietly(15);
+                if( !connect.get()) {
+                    log.warn("开始重连注册中心");
+                    this.register(environment);
+                }
+            }
+        });
+    }
 
     @Override
     public void afterPropertiesSet() throws Exception {
-
     }
 }
