@@ -162,6 +162,9 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        if (this.applicationContext != null) {
+            return;
+        }
         this.applicationContext = applicationContext;
         configProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(ConfigProperties.PRE, ConfigProperties.class);
         this.meta = new PluginMeta(configProperties, (ConfigurableEnvironment) applicationContext.getEnvironment());
