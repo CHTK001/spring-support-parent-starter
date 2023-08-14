@@ -23,19 +23,31 @@ public class ConfigurationBeanInfo {
     private Integer beanId;
 
     /**
-     *  配置所在配置名称
+     * 配置所在配置名称
      */
     @Column
     @Comment("类型")
     private String beanTypeName;
     /**
-     *  名称
+     * beanName
+     */
+    @Column
+    @Comment("beanName")
+    private String beanName;
+    /**
+     * 额外定义
+     */
+    @Column
+    @Comment("额外定义")
+    private String beanDefinition;
+    /**
+     * 名称
      */
     @Column
     @Comment("文件目录")
     private String beanFilePath;
     /**
-     *  描述
+     * 描述
      */
     @Column
     @Comment("所属应用")

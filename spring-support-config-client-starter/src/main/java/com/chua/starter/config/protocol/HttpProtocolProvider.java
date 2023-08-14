@@ -5,13 +5,13 @@ import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.config.constant.ConfigConstant;
 import com.chua.starter.config.entity.KeyValue;
+import com.chua.starter.config.plugin.Plugin;
 import com.google.common.base.Strings;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
@@ -90,11 +90,12 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
         this.httpServer.listen(getPort(), getHost());
     }
 
+    static final String MAPPING = "/config/listener/";
 
     @Override
     public void handle(HttpServerRequest request) {
         String uri = request.uri();
-        if (!"/config/listener".equals(uri)) {
+        if (!uri.startsWith(MAPPING)) {
             HttpServerResponse response = request.response();
             //设置响应头
             response.putHeader("Content-type", "application/json;charset=utf-8");
@@ -103,26 +104,27 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
             return;
         }
 
-        request.body(new Handler<AsyncResult<Buffer>>() {
-            @Override
-            public void handle(AsyncResult<Buffer> event) {
-                String data = event.result().toString().replace("data=", "");
-                //服务端主动发起信息
-                Codec provider = ServiceProvider.of(Codec.class).getExtension(configProperties.getEncrypt());
-                String decode = provider.decodeHex(data, StringUtils.defaultString(configProperties.getKey(), DEFAULT_SER));
-                if (Strings.isNullOrEmpty(decode)) {
-                    log.warn("参数无法解析");
-                    return;
-                }
+        String event1 = uri.replace(MAPPING, "");
+        request.body(event -> {
+            String data = event.result().toString().replace("data=", "");
+            //服务端主动发起信息
+            Codec provider = ServiceProvider.of(Codec.class).getExtension(configProperties.getEncrypt());
+            String decode = provider.decodeHex(data, StringUtils.defaultString(configProperties.getKey(), DEFAULT_SER));
+            if (Strings.isNullOrEmpty(decode)) {
+                log.warn("参数无法解析");
+                return;
+            }
 
-                KeyValue keyValue = JSON.parseObject(decode, KeyValue.class);
-                if (null == keyValue) {
-                    log.warn("参数无法解析");
-                    return;
-                }
+            KeyValue keyValue = JSON.parseObject(decode, KeyValue.class);
+            if (null == keyValue) {
+                log.warn("参数无法解析");
+                return;
+            }
 
-                log.info("配置{} -> {}", keyValue.getDataId(), keyValue.getData());
-                configValueAnnotationBeanPostProcessor.onChange(keyValue);
+            log.info("配置{} -> {}", keyValue.getDataId(), keyValue.getData());
+            Plugin plugin = ServiceProvider.of(Plugin.class).getExtension(event1);
+            if (null != plugin) {
+                plugin.onListener(keyValue);
             }
         });
 
@@ -135,8 +137,61 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
     }
 
     @Override
+    public <T> String subscribe(String subscribe, String dataType) {
+        HttpResponse<String> response = null;
+        try {
+            response = Unirest.post(named()[0] + "://" + configProperties.getConfigAddress().concat("/config/register"))
+                    .field(ConfigConstant.APPLICATION_DATA, "")
+                    .field(ConfigConstant.APPLICATION_NAME, applicationName)
+                    .field(ConfigConstant.APPLICATION_SUBSCRIBE, subscribe)
+                    .field(ConfigConstant.APPLICATION_DATA_TYPE, dataType)
+                    .asString();
+        } catch (Throwable e) {
+            log.warn(e.getMessage());
+            return null;
+        }
+
+        if (null == response || response.getStatus() != 200) {
+            return null;
+        }
+
+        return response.getBody();
+    }
+
+    @Override
     public void listener(String data) {
 
+    }
+
+    /**
+     * 心跳
+     */
+    protected void beat() {
+        String configName = applicationName;
+        beat.execute(() -> {
+            while (run.get()) {
+                try {
+                    ThreadUtils.sleepSecondsQuietly(60);
+                    HttpResponse<String> response = Unirest.post(named()[0] + "://" + configProperties.getConfigAddress().concat("/config/beat"))
+                            .field(ConfigConstant.APPLICATION_DATA, "")
+                            .field(ConfigConstant.APPLICATION_DATA_TYPE, ConfigConstant.CONFIG)
+                            .field(ConfigConstant.APPLICATION_NAME, applicationName)
+                            .asString();
+                    if (null != response && response.getStatus() == 200) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("{}心跳包正常", configName);
+                        }
+                        continue;
+                    }
+                } catch (Throwable e) {
+                    log.warn(e.getMessage());
+                }
+                if (log.isWarnEnabled()) {
+                    log.warn("{}心跳包异常开始重连", configName);
+                    connect.set(false);
+                }
+            }
+        });
     }
 
     @Override

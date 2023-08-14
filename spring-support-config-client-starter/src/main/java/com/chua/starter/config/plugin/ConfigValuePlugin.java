@@ -1,10 +1,14 @@
-package com.chua.starter.config.annotation;
+package com.chua.starter.config.plugin;
 
+import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.utils.Md5Utils;
 import com.chua.starter.common.support.processor.AnnotationInjectedBeanPostProcessor;
+import com.chua.starter.config.annotation.ConfigValue;
+import com.chua.starter.config.constant.ConfigConstant;
 import com.chua.starter.config.entity.KeyValue;
 import com.chua.starter.config.event.ConfigValueReceivedEvent;
 import com.chua.starter.config.protocol.ProtocolProvider;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.TypeConverter;
@@ -12,6 +16,8 @@ import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.annotation.InjectionMetadata;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.core.MethodParameter;
@@ -31,13 +37,18 @@ import java.util.Map;
 import static org.springframework.core.annotation.AnnotationUtils.getAnnotation;
 
 /**
+ * 配置文件插件
+ *
  * @author CH
- * @since 2022/7/30 11:38
  */
 @Slf4j
-public class ConfigValueAnnotationBeanPostProcessor extends AnnotationInjectedBeanPostProcessor<ConfigValue> implements BeanFactoryAware, EnvironmentAware, ApplicationListener<ConfigValueReceivedEvent> {
+@Spi(ConfigConstant.CONFIG)
+public class ConfigValuePlugin extends AnnotationInjectedBeanPostProcessor<ConfigValue> implements BeanFactoryAware, EnvironmentAware, ApplicationListener<ConfigValueReceivedEvent>, Plugin, ApplicationContextAware {
+
+    @Setter
+    private ProtocolProvider protocolProvider;
     /**
-     * The name of {@link ConfigValueAnnotationBeanPostProcessor} bean
+     *
      */
     public static final String BEAN_NAME = "ConfigValueAnnotationBeanPostProcessor";
 
@@ -89,22 +100,17 @@ public class ConfigValueAnnotationBeanPostProcessor extends AnnotationInjectedBe
                     "ConfigValueAnnotationBeanPostProcessor requires a ConfigurableListableBeanFactory");
         }
         this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
+        this.beanFactory.autowireBean(protocolProvider);
     }
 
     @Override
     public void setEnvironment(Environment environment) {
         this.environment = environment;
-        if(!(environment instanceof ConfigurableEnvironment)) {
-           return;
+        if (!(environment instanceof ConfigurableEnvironment)) {
+            return;
         }
-        ProtocolProvider protocolProvider = null;
-        try {
-            protocolProvider = beanFactory.getBeansOfType(ProtocolProvider.class).get(ProtocolProvider.class.getTypeName() + "@" + environment.getProperty("plugin.configuration.protocol", "http"));
-        } catch (Exception ignored) {
-        }
-        if(null != protocolProvider) {
-            protocolProvider.register(this);
-            protocolProvider.postProcessEnvironment((ConfigurableEnvironment)environment);
+        if (null != protocolProvider) {
+            protocolProvider.postProcessEnvironment((ConfigurableEnvironment) environment);
         }
     }
 
@@ -149,7 +155,7 @@ public class ConfigValueAnnotationBeanPostProcessor extends AnnotationInjectedBe
         }
         String newValue = keyValue.getData();
         List<ConfigValueTarget> beanPropertyList = placeholderConfigValueTargetMap.get(keyValue.getDataId());
-        if(null == beanPropertyList) {
+        if (null == beanPropertyList) {
             return;
         }
 
@@ -303,6 +309,18 @@ public class ConfigValueAnnotationBeanPostProcessor extends AnnotationInjectedBe
                         "Can't update value of the " + fieldName + " (field) in "
                                 + configValueTarget.beanName + " (bean)", e);
             }
+        }
+    }
+
+    @Override
+    public void onListener(KeyValue keyValue) {
+        onChange(keyValue);
+    }
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        if (protocolProvider instanceof ApplicationContextAware) {
+            ((ApplicationContextAware) protocolProvider).setApplicationContext(applicationContext);
         }
     }
 

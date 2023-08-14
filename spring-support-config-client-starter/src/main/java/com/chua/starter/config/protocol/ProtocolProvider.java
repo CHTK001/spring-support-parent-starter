@@ -1,7 +1,6 @@
 package com.chua.starter.config.protocol;
 
 import com.chua.common.support.function.NameAware;
-import com.chua.starter.config.annotation.ConfigValueAnnotationBeanPostProcessor;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.core.PriorityOrdered;
@@ -27,17 +26,22 @@ public interface ProtocolProvider extends NameAware, PriorityOrdered, Initializi
     List<PropertiesPropertySource> register(ConfigurableEnvironment environment);
 
     /**
+     * 订阅书
+     *
+     * @param subscribe 订阅
+     * @param dataType  数据类型
+     * @param <T>       类型
+     * @return 结果
+     */
+    <T> String subscribe(String subscribe, String dataType);
+
+    /**
      * 监听数据
      *
      * @param data 数据
      */
     void listener(String data);
 
-    /**
-     * 注册对象
-     * @param configValueAnnotationBeanPostProcessor 对象
-     */
-    void register(ConfigValueAnnotationBeanPostProcessor configValueAnnotationBeanPostProcessor);
     /**
      * 注册数据
      *
