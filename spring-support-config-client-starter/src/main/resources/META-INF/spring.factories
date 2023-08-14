@@ -1,6 +1,7 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
   com.chua.starter.config.configuration.ConfigConfiguration,\
-  com.chua.starter.config.annotation.ConfigValueAnnotationBeanPostProcessor
+  com.chua.starter.config.annotation.ConfigValueAnnotationBeanPostProcessor,\
+  com.chua.starter.config.configuration.ScriptConfiguration
 
 com.chua.starter.config.protocol.ProtocolProvider=\
   com.chua.starter.config.protocol.HttpProtocolProvider

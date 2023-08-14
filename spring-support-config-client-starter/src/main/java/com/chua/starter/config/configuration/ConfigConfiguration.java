@@ -1,6 +1,7 @@
 package com.chua.starter.config.configuration;
 
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.ClassUtils;
 import com.chua.starter.config.properties.ConfigProperties;
 import com.chua.starter.config.protocol.ProtocolProvider;
 import org.springframework.beans.BeansException;
@@ -31,6 +32,10 @@ public class ConfigConfiguration implements BeanDefinitionRegistryPostProcessor,
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         if(!configProperties.isOpen()) {
+            return;
+        }
+
+        if(ClassUtils.isPresent("com.chua.starter.config.server.support.configuration.ConfigServerConfiguration")) {
             return;
         }
 
