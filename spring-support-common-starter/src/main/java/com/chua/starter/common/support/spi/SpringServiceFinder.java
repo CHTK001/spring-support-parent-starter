@@ -18,8 +18,8 @@ public class SpringServiceFinder extends AbstractServiceFinder {
     protected List<ServiceDefinition> find() {
         List<ServiceDefinition> rs = new LinkedList<>();
         Map<String, ?> beansOfType = SpringBeanUtils.getApplicationContext().getBeansOfType(service);
-        for (Object o : beansOfType.values()) {
-            rs.addAll(buildDefinition(o));
+        for (Map.Entry<String, ?> entry : beansOfType.entrySet()) {
+            rs.addAll(buildDefinition(entry.getValue(), null, entry.getKey(), null));
         }
         return rs;
     }
