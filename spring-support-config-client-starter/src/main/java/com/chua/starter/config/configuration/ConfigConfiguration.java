@@ -2,6 +2,7 @@ package com.chua.starter.config.configuration;
 
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.ClassUtils;
+import com.chua.starter.config.plugin.Plugin;
 import com.chua.starter.config.properties.ConfigProperties;
 import com.chua.starter.config.protocol.ProtocolProvider;
 import org.springframework.beans.BeansException;
@@ -16,6 +17,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
 import javax.annotation.Resource;
+import java.util.Map;
 
 /**
  * 配置中心配置
@@ -35,17 +37,23 @@ public class ConfigConfiguration implements BeanDefinitionRegistryPostProcessor,
             return;
         }
 
-        if(ClassUtils.isPresent("com.chua.starter.config.server.support.configuration.ConfigServerConfiguration")) {
+        if (ClassUtils.isPresent("com.chua.starter.config.server.support.configuration.ConfigServerConfiguration")) {
             return;
         }
 
         String protocol = configProperties.getProtocol();
         ProtocolProvider protocolProvider = ServiceProvider.of(ProtocolProvider.class).getExtension(protocol);
-        if(null == protocolProvider) {
+        if (null == protocolProvider) {
             return;
         }
 
-        registry.registerBeanDefinition(ProtocolProvider.class.getTypeName() + "@" + protocol, BeanDefinitionBuilder.genericBeanDefinition(protocolProvider.getClass()).getBeanDefinition());
+        Map<String, Plugin> stringPluginMap = ServiceProvider.of(Plugin.class).list();
+        for (Plugin plugin : stringPluginMap.values()) {
+            registry.registerBeanDefinition(plugin.getClass().getTypeName() + "@" + protocol, BeanDefinitionBuilder
+                    .genericBeanDefinition(plugin.getClass())
+                    .addPropertyValue("protocolProvider", protocolProvider)
+                    .getBeanDefinition());
+        }
     }
 
     @Override

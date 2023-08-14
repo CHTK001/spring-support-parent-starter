@@ -22,6 +22,10 @@ public class ConfigConstant {
      */
     public static final String CONFIG = "config";
     /**
+     * 配置
+     */
+    public static final String BEAN = "bean";
+    /**
      * 客户端IP
      */
     public static final String APPLICATION_HOST = "config-client-host";
@@ -45,4 +49,5 @@ public class ConfigConstant {
      * 数据类型
      */
     public static final String APPLICATION_DATA_TYPE = "config-client-data-type";
+
 }

@@ -6,13 +6,10 @@ import com.chua.common.support.json.Json;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.*;
 import com.chua.starter.common.support.constant.Constant;
-import com.chua.starter.config.annotation.ConfigValueAnnotationBeanPostProcessor;
 import com.chua.starter.config.constant.ConfigConstant;
 import com.chua.starter.config.properties.ConfigProperties;
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
-import kong.unirest.HttpResponse;
-import kong.unirest.Unirest;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.springframework.beans.BeansException;
@@ -60,13 +57,11 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
     protected String applicationName;
     protected String subscribeName;
 
-    private final AtomicBoolean run = new AtomicBoolean(true);
+    protected final AtomicBoolean run = new AtomicBoolean(true);
     private final AtomicInteger count = new AtomicInteger(0);
-    private final AtomicBoolean connect = new AtomicBoolean(false);
+    protected final AtomicBoolean connect = new AtomicBoolean(false);
 
-    protected ConfigValueAnnotationBeanPostProcessor configValueAnnotationBeanPostProcessor;
-
-    private final ExecutorService beat = new ThreadPoolExecutor(1, 1,
+    protected final ExecutorService beat = new ThreadPoolExecutor(1, 1,
             0L, TimeUnit.MILLISECONDS,
             new LinkedBlockingQueue<Runnable>(), new NamedThreadFactory("config-beat"));
 
@@ -86,32 +81,21 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
 
     @Override
     public List<PropertiesPropertySource> register(ConfigurableEnvironment environment) {
-        if (!configProperties.isOpen()) {
+        if (isLimit()) {
+            log.warn("spring.application.name/plugin.configuration.config-address 注冊的中心地址不能为空, 当前不订阅数据");
             return Collections.emptyList();
         }
 
-        this.applicationName = environment.getProperty("spring.application.name");
-        if (Strings.isNullOrEmpty(applicationName)) {
-            log.warn("spring.application.name不能为空, 当前不订阅数据");
-            return Collections.emptyList();
-
-        }
-
-        if (Strings.isNullOrEmpty(configProperties.getConfigAddress())) {
-            log.warn("plugin.configuration.config-address 注冊的中心地址不能为空, 当前不订阅数据");
-            return Collections.emptyList();
+        if (null == configProperties) {
+            configProperties = Binder.get(environment).bindOrCreate(ConfigProperties.PRE, ConfigProperties.class);
         }
 
         List<ConfigProperties.Subscribe> subscribe = configProperties.getSubscribe();
         Set<ConfigProperties.Subscribe> collect = subscribe.stream().filter(it -> ConfigConstant.CONFIG.equals(it.getDataType())).collect(Collectors.toSet());
-//        if(collect.isEmpty()) {
-//            log.warn("未订阅数据");
-//            return Collections.emptyList();
-//        }
 
         isRun = true;
         ConfigProperties.Subscribe subscribe1 = CollectionUtils.findFirst(collect);
-        this.subscribeName = null == subscribe1 ? applicationName: subscribe1.getSubscribe();
+        this.subscribeName = null == subscribe1 ? applicationName : subscribe1.getSubscribe();
         this.dataType = null == subscribe1 ? ConfigConstant.CONFIG : subscribe1.getDataType();
         this.environment = environment;
         this.reconnectLimit = configProperties.getReconnectLimit();
@@ -330,39 +314,8 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
     /**
      * 心跳
      */
-    private void beat() {
-        String configName = applicationName;
-        beat.execute(() -> {
-            while (run.get()) {
-                try {
-                    ThreadUtils.sleepSecondsQuietly(60);
-                    HttpResponse<String> response = Unirest.post(named()[0] + "://" + configProperties.getConfigAddress().concat("/config/beat"))
-                            .field(ConfigConstant.APPLICATION_DATA, "")
-                            .field(ConfigConstant.APPLICATION_DATA_TYPE, ConfigConstant.CONFIG)
-                            .field(ConfigConstant.APPLICATION_NAME, applicationName)
-                            .asString();
-                    if (null != response && response.getStatus() == 200) {
-                        if (log.isDebugEnabled()) {
-                            log.debug("{}心跳包正常", configName);
-                        }
-                        continue;
-                    }
-                } catch (Throwable e) {
-                    log.warn(e.getMessage());
-                }
-                if (log.isWarnEnabled()) {
-                    log.warn("{}心跳包异常开始重连", configName);
-                    connect.set(false);
-                }
-            }
-        });
-    }
+    abstract protected void beat();
 
-
-    @Override
-    public void register(ConfigValueAnnotationBeanPostProcessor configValueAnnotationBeanPostProcessor) {
-        this.configValueAnnotationBeanPostProcessor = configValueAnnotationBeanPostProcessor;
-    }
 
     @Override
     public void destroy() throws Exception {
@@ -409,23 +362,9 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.applicationContext = applicationContext;
         configProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(ConfigProperties.PRE, ConfigProperties.class);
-        if (!configProperties.isOpen()) {
-            return;
-        }
-
-        this.environment = (ConfigurableEnvironment) applicationContext.getEnvironment();
-        Boolean property = environment.getProperty(ConfigProperties.PRE + ".is-open", Boolean.class);
-        if (null == property || !property) {
-            return;
-        }
-        this.applicationName = environment.getProperty("spring.application.name");
-        if (Strings.isNullOrEmpty(applicationName)) {
-            return ;
-
-        }
-
-        if (Strings.isNullOrEmpty(configProperties.getConfigAddress())) {
+        if (isLimit()) {
             return;
         }
 
@@ -434,11 +373,38 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
         beat();
     }
 
+    private boolean isLimit() {
+        if (!configProperties.isOpen()) {
+            return true;
+        }
+
+        this.environment = (ConfigurableEnvironment) applicationContext.getEnvironment();
+        Boolean property = environment.getProperty(ConfigProperties.PRE + ".is-open", Boolean.class);
+        if (null != property && !property) {
+            return true;
+        }
+        this.applicationName = environment.getProperty("spring.application.name");
+        if (Strings.isNullOrEmpty(applicationName)) {
+            return true;
+
+        }
+
+        if (Strings.isNullOrEmpty(configProperties.getConfigAddress())) {
+            return true;
+        }
+
+
+        if (ClassUtils.isPresent("com.chua.starter.config.server.support.configuration.ConfigServerConfiguration")) {
+            return true;
+        }
+        return false;
+    }
+
     protected void reconnect() {
         reconnect.execute(() -> {
             while (run.get()) {
                 ThreadUtils.sleepSecondsQuietly(15);
-                if( !connect.get()) {
+                if (!connect.get()) {
                     log.warn("开始重连注册中心");
                     this.register(environment);
                 }
