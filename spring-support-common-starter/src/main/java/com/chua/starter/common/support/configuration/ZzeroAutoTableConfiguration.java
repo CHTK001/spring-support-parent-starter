@@ -17,7 +17,6 @@ import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostP
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.Ordered;
@@ -217,7 +216,7 @@ public class ZzeroAutoTableConfiguration implements PriorityOrdered, Application
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
-        autoTableProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(AutoTableProperties.PRE, AutoTableProperties.class);
+        autoTableProperties = SpringBeanUtils.bindOrCreate(applicationContext, AutoTableProperties.PRE, AutoTableProperties.class);
         refresh();
     }
 }
