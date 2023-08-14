@@ -153,7 +153,7 @@ public class ConfigValuePlugin extends AnnotationInjectedBeanPostProcessor<Confi
 
         String subscribeName = pluginMeta.getSubscribeName(ConfigConstant.CONFIG);
         ;
-        String dataType = pluginMeta.getDataType();
+        String dataType = ConfigConstant.CONFIG;
 
         Map<String, Object> req = new HashMap<>(12);
 
