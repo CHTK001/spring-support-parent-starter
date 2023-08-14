@@ -82,6 +82,7 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
     protected ConfigProperties configProperties;
     protected String dataType;
 
+    private boolean isRun = false;
 
     @Override
     public List<PropertiesPropertySource> register(ConfigurableEnvironment environment) {
@@ -108,7 +109,7 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
 //            return Collections.emptyList();
 //        }
 
-
+        isRun = true;
         ConfigProperties.Subscribe subscribe1 = CollectionUtils.findFirst(collect);
         this.subscribeName = null == subscribe1 ? applicationName: subscribe1.getSubscribe();
         this.dataType = null == subscribe1 ? ConfigConstant.CONFIG : subscribe1.getDataType();
@@ -335,7 +336,7 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
             while (run.get()) {
                 try {
                     ThreadUtils.sleepSecondsQuietly(60);
-                    HttpResponse<String> response = Unirest.post(named() + "://" + configProperties.getConfigAddress().concat("/config/beat"))
+                    HttpResponse<String> response = Unirest.post(named()[0] + "://" + configProperties.getConfigAddress().concat("/config/beat"))
                             .field(ConfigConstant.APPLICATION_DATA, "")
                             .field(ConfigConstant.APPLICATION_DATA_TYPE, ConfigConstant.CONFIG)
                             .field(ConfigConstant.APPLICATION_NAME, applicationName)
@@ -409,6 +410,20 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         configProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(ConfigProperties.PRE, ConfigProperties.class);
+        if (!configProperties.isOpen()) {
+            return;
+        }
+
+        this.applicationName = environment.getProperty("spring.application.name");
+        if (Strings.isNullOrEmpty(applicationName)) {
+            return ;
+
+        }
+
+        if (Strings.isNullOrEmpty(configProperties.getConfigAddress())) {
+            return;
+        }
+
         start();
         reconnect();
         beat();
