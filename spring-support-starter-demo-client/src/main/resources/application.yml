@@ -12,9 +12,9 @@ spring:
 
 plugin:
   configuration:
-    config-address: 127.0.0.1:8888
-    config-name: test
-    config-app-name: test-app
+    subscribe:
+      - data-type: config
+        subscribe: test
   cors:
     enable: true
   oauth:

@@ -5,11 +5,16 @@ import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.config.constant.ConfigConstant;
 import com.chua.starter.config.server.support.base.ConfigurationRepository;
+import com.chua.starter.config.server.support.config.NotifyConfig;
+import com.chua.starter.config.server.support.protocol.ProtocolServer;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import org.springframework.context.expression.BeanFactoryAccessor;
 import org.springframework.data.domain.Example;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.expression.EvaluationException;
 import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
@@ -24,6 +29,7 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * TConfigurationCenterInfo
@@ -237,5 +243,93 @@ public interface ConfigurationCenterInfoRepository extends ConfigurationReposito
         ConfigurationCenterInfo configurationCenterInfo = new ConfigurationCenterInfo();
         configurationCenterInfo.setConfigApplicationName(applicationName);
         delete(configurationCenterInfo);
+    }
+
+    @Override
+    default Page<?> findAll(String profile, Pageable pageable) {
+        ConfigurationCenterInfo configurationCenterInfo = new ConfigurationCenterInfo();
+        configurationCenterInfo.setConfigProfile(profile);
+        return findAll(Example.of(configurationCenterInfo), pageable);
+    }
+
+
+    /**
+     * 环境
+     *
+     * @return 环境
+     */
+    @Query(value = "SELECT config_profile FROM CONFIGURATION_CENTER_INFO GROUP BY config_profile ", nativeQuery = true)
+    Set<String> profile();
+
+    /**
+     * 环境
+     *
+     * @return 环境
+     */
+    @Query(value = "SELECT config_item FROM CONFIGURATION_CENTER_INFO GROUP BY config_item ", nativeQuery = true)
+    Set<String> applications();
+
+    @Override
+    default void notifyConfig(ProtocolServer protocolServer, Integer configId, String configValue, Integer disable, Object o) {
+        try {
+            Optional<ConfigurationCenterInfo> byId = findById(configId);
+            if (!byId.isPresent()) {
+                return;
+            }
+            ConfigurationCenterInfo referenceById = byId.get();
+            notifyConfig(referenceById, protocolServer);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return;
+        }
+    }
+
+    default void notifyConfig(ConfigurationCenterInfo configurationCenterInfo, ProtocolServer protocolServer) {
+        try {
+            List<NotifyConfig> notifyConfig = new ArrayList<>();
+
+            Map<String, List<ConfigurationCenterInfo>> temp = new HashMap<>();
+            List<ConfigurationCenterInfo> tConfigurationCenterInfos = findAll(new Specification<ConfigurationCenterInfo>() {
+                @Override
+                public Predicate toPredicate(Root<ConfigurationCenterInfo> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                    List<Predicate> predicateList = new LinkedList<>();
+                    predicateList.add(criteriaBuilder.or(
+                            criteriaBuilder.equal(root.get("configName"), ConfigConstant.APPLICATION_HOST),
+                            criteriaBuilder.equal(root.get("configName"), ConfigConstant.APPLICATION_PORT)
+                    ));
+                    return query.where(predicateList.toArray(new Predicate[0])).getRestriction();
+                }
+            });
+            for (ConfigurationCenterInfo tConfigurationCenterInfo : tConfigurationCenterInfos) {
+                temp.computeIfAbsent(tConfigurationCenterInfo.getConfigApplicationName(), it -> new ArrayList<>()).add(tConfigurationCenterInfo);
+            }
+
+            for (Map.Entry<String, List<ConfigurationCenterInfo>> entry : temp.entrySet()) {
+                String key = entry.getKey();
+                List<ConfigurationCenterInfo> value = entry.getValue();
+
+                NotifyConfig item = new NotifyConfig();
+                item.setConfigName(configurationCenterInfo.getConfigName())
+                        .setConfigValue(configurationCenterInfo.getConfigValue());
+                item.setConfigItem(key);
+                if (value.isEmpty()) {
+                    continue;
+                }
+                try {
+                    item.setBinderPort(value.stream().filter(it -> ConfigConstant.APPLICATION_PORT.equalsIgnoreCase(it.getConfigName())).map(ConfigurationCenterInfo::getConfigValue).collect(Collectors.toList()).get(0));
+                    item.setBinderIp(value.stream().filter(it -> ConfigConstant.APPLICATION_HOST.equalsIgnoreCase(it.getConfigName())).map(ConfigurationCenterInfo::getConfigValue).collect(Collectors.toList()).get(0));
+
+                    notifyConfig.add(item);
+                } catch (Exception ignored) {
+                }
+            }
+
+            if (notifyConfig.isEmpty()) {
+                return;
+            }
+            protocolServer.notifyClient(notifyConfig);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

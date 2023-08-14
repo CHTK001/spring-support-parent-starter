@@ -103,15 +103,15 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
 
         List<ConfigProperties.Subscribe> subscribe = configProperties.getSubscribe();
         Set<ConfigProperties.Subscribe> collect = subscribe.stream().filter(it -> ConfigConstant.CONFIG.equals(it.getDataType())).collect(Collectors.toSet());
-        if(collect.isEmpty()) {
-            log.warn("未订阅数据");
-            return Collections.emptyList();
-        }
+//        if(collect.isEmpty()) {
+//            log.warn("未订阅数据");
+//            return Collections.emptyList();
+//        }
 
 
         ConfigProperties.Subscribe subscribe1 = CollectionUtils.findFirst(collect);
-        this.subscribeName = subscribe1.getSubscribe();
-        this.dataType = subscribe1.getDataType();
+        this.subscribeName = null == subscribe1 ? applicationName: subscribe1.getSubscribe();
+        this.dataType = null == subscribe1 ? ConfigConstant.CONFIG : subscribe1.getDataType();
         this.environment = environment;
         this.reconnectLimit = configProperties.getReconnectLimit();
 
