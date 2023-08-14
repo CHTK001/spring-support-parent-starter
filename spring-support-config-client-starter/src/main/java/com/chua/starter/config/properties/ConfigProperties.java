@@ -3,6 +3,9 @@ package com.chua.starter.config.properties;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.util.LinkedList;
+import java.util.List;
+
 import static com.chua.starter.config.properties.ConfigProperties.PRE;
 
 
@@ -31,7 +34,7 @@ public class ConfigProperties {
     /**
      * 订阅的应用配置
      */
-    private String subscribeName;
+    private List<Subscribe> subscribe = new LinkedList<>();
     /**
      * 密钥
      */
@@ -65,5 +68,17 @@ public class ConfigProperties {
      * 是否自动上报当前应用配置
      */
     private boolean openRegister = true;
+
+    @Data
+    public static class Subscribe {
+        /**
+         * 订阅的数据类型
+         */
+        private String dataType;
+        /**
+         * 订阅的名称(多个逗号分隔)
+         */
+        private String subscribe;
+    }
 
 }

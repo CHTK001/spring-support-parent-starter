@@ -4,12 +4,10 @@ import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.function.NamedThreadFactory;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.utils.MapUtils;
-import com.chua.common.support.utils.NetUtils;
-import com.chua.common.support.utils.StringUtils;
-import com.chua.common.support.utils.ThreadUtils;
+import com.chua.common.support.utils.*;
 import com.chua.starter.common.support.constant.Constant;
 import com.chua.starter.config.annotation.ConfigValueAnnotationBeanPostProcessor;
+import com.chua.starter.config.constant.ConfigConstant;
 import com.chua.starter.config.properties.ConfigProperties;
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
@@ -41,6 +39,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * 协议
@@ -81,6 +80,7 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
     public static final String ORDER = "config.order";
     private Integer reconnectLimit;
     protected ConfigProperties configProperties;
+    protected String dataType;
 
 
     @Override
@@ -91,16 +91,29 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
 
         this.applicationName = environment.getProperty("spring.application.name");
         if (Strings.isNullOrEmpty(applicationName)) {
-            throw new IllegalArgumentException("config-app-name不能为空");
+            log.warn("spring.application.name不能为空, 当前不订阅数据");
+            return Collections.emptyList();
+
         }
 
-        this.subscribeName = StringUtils.defaultString(configProperties.getSubscribeName(), applicationName);
-        this.environment = environment;
-        this.reconnectLimit = configProperties.getReconnectLimit();
         if (Strings.isNullOrEmpty(configProperties.getConfigAddress())) {
-            log.warn("plugin.configuration.config-address 注冊的中心地址不能为空");
+            log.warn("plugin.configuration.config-address 注冊的中心地址不能为空, 当前不订阅数据");
             return Collections.emptyList();
         }
+
+        List<ConfigProperties.Subscribe> subscribe = configProperties.getSubscribe();
+        Set<ConfigProperties.Subscribe> collect = subscribe.stream().filter(it -> ConfigConstant.CONFIG.equals(it.getDataType())).collect(Collectors.toSet());
+        if(collect.isEmpty()) {
+            log.warn("未订阅数据");
+            return Collections.emptyList();
+        }
+
+
+        ConfigProperties.Subscribe subscribe1 = CollectionUtils.findFirst(collect);
+        this.subscribeName = subscribe1.getSubscribe();
+        this.dataType = subscribe1.getDataType();
+        this.environment = environment;
+        this.reconnectLimit = configProperties.getReconnectLimit();
 
         Codec encrypt = ServiceProvider.of(Codec.class).getExtension(configProperties.getEncrypt());
         Map<String, Object> req = new HashMap<>(12);
@@ -170,8 +183,7 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
             Map<String, Map<String, Object>> rs = new HashMap<>(propertySources.size());
             propertySources.iterator().forEachRemaining(it -> {
                 if (
-                        "systemProperties".equalsIgnoreCase(it.getName()) ||
-                                "systemEnvironment".equalsIgnoreCase(it.getName())
+                        !it.getName().contains("application")
                 ) {
                     return;
                 }
@@ -205,14 +217,12 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
      * @param req 请求
      */
     private void renderBase(Map<String, Object> req) {
-        req.put("binder-client", getHost());
-        req.put("binder-port", getPort());
+        req.put(ConfigConstant.APPLICATION_HOST, getHost());
+        req.put(ConfigConstant.APPLICATION_PORT, getPort());
 
-        req.put("binder-profile", environment.getProperty("spring.profiles.active", "dev"));
-        req.put("binder-key", (ck = UUID.randomUUID().toString()));
-        req.put("binder-name", applicationName);
-        req.put("binder-app-name", applicationName);
-        req.put("binder-auto-refresh", configProperties.isAutoRefresh());
+        req.put(ConfigConstant.PROFILE, environment.getProperty("spring.profiles.active", "dev"));
+        req.put(ConfigConstant.KEY, (ck = UUID.randomUUID().toString()));
+        req.put(ConfigConstant.REFRESH, configProperties.isAutoRefresh());
     }
 
     protected int getPort() {

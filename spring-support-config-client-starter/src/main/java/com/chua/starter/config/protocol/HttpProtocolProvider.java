@@ -5,6 +5,7 @@ import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.config.constant.ConfigConstant;
 import com.chua.starter.config.entity.KeyValue;
 import com.google.common.base.Strings;
 import io.vertx.core.AsyncResult;
@@ -42,10 +43,11 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
     protected String send(String encode) {
         HttpResponse<String> response = null;
         try {
-            response = Unirest.post(named()[0] + "://" + configProperties.getConfigAddress().concat("/config/registerBean"))
-                    .field("data", encode)
-                    .field("binder", applicationName)
-                    .field("subscribe", subscribeName)
+            response = Unirest.post(named()[0] + "://" + configProperties.getConfigAddress().concat("/config/register"))
+                    .field(ConfigConstant.APPLICATION_DATA, encode)
+                    .field(ConfigConstant.APPLICATION_NAME, applicationName)
+                    .field(ConfigConstant.APPLICATION_SUBSCRIBE, subscribeName)
+                    .field(ConfigConstant.APPLICATION_DATA_TYPE, dataType)
                     .asString();
         } catch (Throwable e) {
             log.warn(e.getMessage());
@@ -63,9 +65,11 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
     protected String sendDestroy(String encode) {
         HttpResponse<String> response = null;
         try {
-            response = Unirest.post(named()[0] + "://" + configProperties.getConfigAddress().concat("/config/unregister"))
-                    .field("data", encode)
-                    .field("binder", applicationName)
+            response = Unirest.post(named()[0] + "://" +
+                            configProperties.getConfigAddress().concat("/config/unregister"))
+                    .field(ConfigConstant.APPLICATION_DATA, encode)
+                    .field(ConfigConstant.APPLICATION_NAME, applicationName)
+                    .field(ConfigConstant.APPLICATION_DATA_TYPE, dataType)
                     .asString();
         } catch (Throwable e) {
             log.warn(e.getMessage());
