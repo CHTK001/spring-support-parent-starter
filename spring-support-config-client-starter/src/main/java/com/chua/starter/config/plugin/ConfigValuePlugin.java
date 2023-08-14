@@ -1,21 +1,29 @@
 package com.chua.starter.config.plugin;
 
 import com.chua.common.support.annotations.Spi;
+import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.Md5Utils;
 import com.chua.starter.common.support.processor.AnnotationInjectedBeanPostProcessor;
 import com.chua.starter.config.annotation.ConfigValue;
 import com.chua.starter.config.constant.ConfigConstant;
 import com.chua.starter.config.entity.KeyValue;
+import com.chua.starter.config.entity.PluginMeta;
 import com.chua.starter.config.event.ConfigValueReceivedEvent;
+import com.chua.starter.config.properties.ConfigProperties;
 import com.chua.starter.config.protocol.ProtocolProvider;
+import com.google.common.base.Function;
+import com.google.common.base.Strings;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.TypeConverter;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.annotation.InjectionMetadata;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.boot.origin.OriginTrackedValue;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ApplicationListener;
@@ -23,16 +31,20 @@ import org.springframework.context.EnvironmentAware;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.Environment;
+import org.springframework.core.env.MutablePropertySources;
+import org.springframework.core.env.PropertiesPropertySource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.util.ReflectionUtils;
 
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.function.Consumer;
 
 import static org.springframework.core.annotation.AnnotationUtils.getAnnotation;
 
@@ -67,6 +79,9 @@ public class ConfigValuePlugin extends AnnotationInjectedBeanPostProcessor<Confi
     private ConfigurableListableBeanFactory beanFactory;
 
     private Environment environment;
+    private ConfigProperties configProperties;
+    @Setter
+    private ApplicationContext applicationContext;
 
     @Override
     protected Object doGetInjectedBean(ConfigValue annotation, Object bean, String beanName, Class<?> injectedType,
@@ -109,10 +124,146 @@ public class ConfigValuePlugin extends AnnotationInjectedBeanPostProcessor<Confi
         if (!(environment instanceof ConfigurableEnvironment)) {
             return;
         }
-        if (null != protocolProvider) {
-            protocolProvider.postProcessEnvironment((ConfigurableEnvironment) environment);
+        if (null == protocolProvider) {
+            return;
+        }
+        postProcessEnvironment((ConfigurableEnvironment) environment);
+    }
+
+    void postProcessEnvironment(ConfigurableEnvironment environment) {
+        MutablePropertySources propertySources = environment.getPropertySources();
+        try {
+            register(environment, propertySources);
+        } catch (Exception ignored) {
+        }
+
+    }
+
+    public void register(ConfigurableEnvironment environment, MutablePropertySources propertySources) {
+        if (null == configProperties) {
+            configProperties = Binder.get(environment).bindOrCreate(ConfigProperties.PRE, ConfigProperties.class);
+        }
+
+        PluginMeta pluginMeta = protocolProvider.getMeta();
+        if (pluginMeta.isLimit()) {
+            log.warn("spring.application.name/plugin.configuration.config-address 注冊的中心地址不能为空, 当前不订阅数据");
+            return;
+        }
+
+
+        String subscribeName = pluginMeta.getSubscribeName(ConfigConstant.CONFIG);
+        ;
+        String dataType = pluginMeta.getDataType();
+
+        Map<String, Object> req = new HashMap<>(12);
+
+        renderData(req);
+        renderI18n(req);
+        protocolProvider.subscribe(subscribeName, dataType, req, new Consumer<Map<String, Object>>() {
+            @Override
+            public void accept(Map<String, Object> value) {
+                List<PropertiesPropertySource> rs = new ArrayList<>();
+                value.forEach((k, v) -> {
+                    PropertiesPropertySource propertiesPropertySource = new PropertiesPropertySource(k, MapUtils.asProp(v));
+                    rs.add(propertiesPropertySource);
+                });
+
+                rs.sort((o1, o2) -> {
+                    int intValue1 = MapUtils.getIntValue(o1.getSource(), PluginMeta.ORDER, 0);
+                    int intValue2 = MapUtils.getIntValue(o2.getSource(), PluginMeta.ORDER, 0);
+                    return intValue2 - intValue1;
+                });
+
+                for (PropertiesPropertySource propertiesPropertySource : rs) {
+                    propertySources.addFirst(propertiesPropertySource);
+                }
+            }
+        });
+    }
+
+    /**
+     * 渲染数据
+     *
+     * @param req 请求
+     */
+    private void renderI18n(Map<String, Object> req) {
+        String i18n = configProperties.getI18n();
+        if (Strings.isNullOrEmpty(i18n)) {
+            return;
+        }
+
+
+        Map<String, String> transfer = new HashMap<>();
+        req.put("transfer", transfer);
+
+        try {
+            PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+            org.springframework.core.io.Resource[] resources = resolver.getResources("classpath:config/config-message-" + i18n + ".properties");
+            for (org.springframework.core.io.Resource resource : resources) {
+                try (InputStreamReader isr = new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8)) {
+                    Properties properties = new Properties();
+                    properties.load(isr);
+
+                    renderI18nEnv(properties, transfer);
+                } catch (IOException ignored) {
+                }
+            }
+        } catch (IOException ignored) {
         }
     }
+
+    /**
+     * 渲染描述
+     *
+     * @param properties 字段
+     * @param transfer   请求
+     */
+    private void renderI18nEnv(Properties properties, Map<String, String> transfer) {
+        for (Map.Entry<Object, Object> entry : properties.entrySet()) {
+            transfer.put(entry.getKey().toString(), entry.getValue().toString());
+        }
+    }
+
+    /**
+     * 渲染数据
+     *
+     * @param req 请求
+     */
+    private void renderData(Map<String, Object> req) {
+        if (configProperties.isOpenRegister() && environment instanceof ConfigurableEnvironment) {
+            ConfigurableEnvironment configurableEnvironment = (ConfigurableEnvironment) environment;
+            MutablePropertySources propertySources = configurableEnvironment.getPropertySources();
+            Map<String, Map<String, Object>> rs = new HashMap<>(propertySources.size());
+            propertySources.iterator().forEachRemaining(it -> {
+                if (
+                        !it.getName().contains("application")
+                ) {
+                    return;
+                }
+                Object source = it.getSource();
+                if (source instanceof Map) {
+                    Map<String, Object> stringObjectMap = rs.computeIfAbsent(it.getName(), new Function<String, Map<String, Object>>() {
+                        @Override
+                        public @Nullable Map<String, Object> apply(@Nullable String input) {
+                            Map<String, Object> rs = new HashMap<>();
+                            return rs;
+                        }
+                    });
+
+                    ((Map<?, ?>) source).forEach((k, v) -> {
+                        Object value = null;
+                        if (v instanceof OriginTrackedValue) {
+                            value = ((OriginTrackedValue) v).getValue();
+                        }
+                        stringObjectMap.put(k.toString(), value);
+                    });
+                }
+            });
+
+            req.put("data", rs);
+        }
+    }
+
 
     @Override
     public Object postProcessBeforeInitialization(Object bean, final String beanName)
@@ -319,6 +470,7 @@ public class ConfigValuePlugin extends AnnotationInjectedBeanPostProcessor<Confi
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.applicationContext = applicationContext;
         if (protocolProvider instanceof ApplicationContextAware) {
             ((ApplicationContextAware) protocolProvider).setApplicationContext(applicationContext);
         }

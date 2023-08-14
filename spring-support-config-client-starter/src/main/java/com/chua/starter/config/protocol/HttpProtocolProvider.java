@@ -158,10 +158,12 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
         return response.getBody();
     }
 
+
     @Override
     public void listener(String data) {
 
     }
+
 
     /**
      * 心跳
