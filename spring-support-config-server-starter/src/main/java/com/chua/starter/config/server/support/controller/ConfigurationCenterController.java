@@ -60,6 +60,7 @@ public class ConfigurationCenterController implements ApplicationContextAware {
     @ResponseBody
     public ReturnResult<ConfigurationCenterInfo> configSave(@RequestBody ConfigurationCenterInfo configValue) {
         dataManager.save(ConfigConstant.CONFIG, configValue);
+        dataManager.notifyConfig(ConfigConstant.CONFIG, configValue.getConfigId(), configValue.getConfigValue(), configValue.getDisable(), null);
         return ReturnResult.ok(configValue);
     }
 
