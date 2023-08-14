@@ -166,6 +166,7 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
             return;
         }
         this.applicationContext = applicationContext;
+        this.environment = (ConfigurableEnvironment) applicationContext.getEnvironment();
         configProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(ConfigProperties.PRE, ConfigProperties.class);
         this.meta = new PluginMeta(configProperties, (ConfigurableEnvironment) applicationContext.getEnvironment());
         if (meta.isLimit()) {
