@@ -1,16 +1,12 @@
 package com.chua.starter.config.configuration;
 
-import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.starter.config.properties.ConfigProperties;
-import com.chua.starter.config.protocol.ProtocolProvider;
+import lombok.Data;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -18,14 +14,11 @@ import org.springframework.context.ApplicationContextAware;
 import javax.annotation.Resource;
 
 /**
- * 配置中心配置
+ * 脚本配置
  * @author CH
- * @since 2022/7/30 8:34
  */
-@ConditionalOnMissingClass(value = {"com.chua.starter.config.server.properties.ConfigServerProperties"})
-@EnableConfigurationProperties(ConfigProperties.class)
-public class ConfigConfiguration implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware {
-
+@Data
+public class ScriptConfiguration implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware {
     @Resource
     private ConfigProperties configProperties;
 
@@ -39,13 +32,7 @@ public class ConfigConfiguration implements BeanDefinitionRegistryPostProcessor,
             return;
         }
 
-        String protocol = configProperties.getProtocol();
-        ProtocolProvider protocolProvider = ServiceProvider.of(ProtocolProvider.class).getExtension(protocol);
-        if(null == protocolProvider) {
-            return;
-        }
-
-        registry.registerBeanDefinition(ProtocolProvider.class.getTypeName() + "@" + protocol, BeanDefinitionBuilder.genericBeanDefinition(protocolProvider.getClass()).getBeanDefinition());
+        System.out.println();
     }
 
     @Override
