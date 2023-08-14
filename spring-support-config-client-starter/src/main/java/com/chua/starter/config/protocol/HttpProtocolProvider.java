@@ -40,13 +40,13 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
     }
 
     @Override
-    protected String send(String encode) {
+    protected String send(String encode, String subscribe, String dataType) {
         HttpResponse<String> response = null;
         try {
             response = Unirest.post(named()[0] + "://" + configProperties.getConfigAddress().concat("/config/register"))
                     .field(ConfigConstant.APPLICATION_DATA, encode)
-                    .field(ConfigConstant.APPLICATION_NAME, applicationName)
-                    .field(ConfigConstant.APPLICATION_SUBSCRIBE, subscribeName)
+                    .field(ConfigConstant.APPLICATION_NAME, meta.getApplicationName())
+                    .field(ConfigConstant.APPLICATION_SUBSCRIBE, subscribe)
                     .field(ConfigConstant.APPLICATION_DATA_TYPE, dataType)
                     .asString();
         } catch (Throwable e) {
@@ -62,13 +62,13 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
     }
 
     @Override
-    protected String sendDestroy(String encode) {
+    protected String sendDestroy(String encode, String dataType) {
         HttpResponse<String> response = null;
         try {
             response = Unirest.post(named()[0] + "://" +
                             configProperties.getConfigAddress().concat("/config/unregister"))
                     .field(ConfigConstant.APPLICATION_DATA, encode)
-                    .field(ConfigConstant.APPLICATION_NAME, applicationName)
+                    .field(ConfigConstant.APPLICATION_NAME, meta.getApplicationName())
                     .field(ConfigConstant.APPLICATION_DATA_TYPE, dataType)
                     .asString();
         } catch (Throwable e) {
@@ -87,7 +87,12 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
     protected void start() {
         this.httpServer = vertx.createHttpServer();
         this.httpServer.requestHandler(this);
-        this.httpServer.listen(getPort(), getHost());
+        this.httpServer.listen(meta.getPort(), meta.getHost());
+    }
+
+    @Override
+    boolean isStart() {
+        return null != this.httpServer;
     }
 
     static final String MAPPING = "/config/listener/";
@@ -136,28 +141,6 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
 
     }
 
-    @Override
-    public <T> String subscribe(String subscribe, String dataType) {
-        HttpResponse<String> response = null;
-        try {
-            response = Unirest.post(named()[0] + "://" + configProperties.getConfigAddress().concat("/config/register"))
-                    .field(ConfigConstant.APPLICATION_DATA, "")
-                    .field(ConfigConstant.APPLICATION_NAME, applicationName)
-                    .field(ConfigConstant.APPLICATION_SUBSCRIBE, subscribe)
-                    .field(ConfigConstant.APPLICATION_DATA_TYPE, dataType)
-                    .asString();
-        } catch (Throwable e) {
-            log.warn(e.getMessage());
-            return null;
-        }
-
-        if (null == response || response.getStatus() != 200) {
-            return null;
-        }
-
-        return response.getBody();
-    }
-
 
     @Override
     public void listener(String data) {
@@ -169,7 +152,7 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
      * 心跳
      */
     protected void beat() {
-        String configName = applicationName;
+        String configName = meta.getApplicationName();
         beat.execute(() -> {
             while (run.get()) {
                 try {
@@ -177,7 +160,7 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
                     HttpResponse<String> response = Unirest.post(named()[0] + "://" + configProperties.getConfigAddress().concat("/config/beat"))
                             .field(ConfigConstant.APPLICATION_DATA, "")
                             .field(ConfigConstant.APPLICATION_DATA_TYPE, ConfigConstant.CONFIG)
-                            .field(ConfigConstant.APPLICATION_NAME, applicationName)
+                            .field(ConfigConstant.APPLICATION_NAME, configName)
                             .asString();
                     if (null != response && response.getStatus() == 200) {
                         if (log.isDebugEnabled()) {
