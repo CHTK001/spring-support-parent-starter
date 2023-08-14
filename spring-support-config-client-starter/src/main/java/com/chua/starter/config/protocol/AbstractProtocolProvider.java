@@ -188,6 +188,9 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
             while (run.get()) {
                 ThreadUtils.sleepSecondsQuietly(15);
                 if (!connect.get()) {
+                    if (cacheMetaFailureList.isEmpty()) {
+                        continue;
+                    }
                     log.warn("开始重连注册中心");
                     for (CacheMeta cacheMeta : cacheMetaFailureList.values()) {
                         this.subscribe(cacheMeta.subscribe, cacheMeta.dataType, cacheMeta.getData(), cacheMeta.getConsumer());
