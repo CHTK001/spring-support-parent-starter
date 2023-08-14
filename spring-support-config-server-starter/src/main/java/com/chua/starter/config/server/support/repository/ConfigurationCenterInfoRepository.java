@@ -266,7 +266,7 @@ public interface ConfigurationCenterInfoRepository extends ConfigurationReposito
      *
      * @return 环境
      */
-    @Query(value = "SELECT config_item FROM CONFIGURATION_CENTER_INFO GROUP BY config_item ", nativeQuery = true)
+    @Query(value = "SELECT config_application_name FROM CONFIGURATION_CENTER_INFO GROUP BY config_application_name ", nativeQuery = true)
     Set<String> applications();
 
     @Override
