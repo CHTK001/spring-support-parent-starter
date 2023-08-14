@@ -60,12 +60,14 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
     private String subscribe;
     private String dataType;
     private Map<String, Object> data;
+    private Consumer<Map<String, Object>> consumer;
 
     @Override
     public void subscribe(String subscribe, String dataType, Map<String, Object> data, Consumer<Map<String, Object>> consumer) {
         this.subscribe = subscribe;
         this.dataType = dataType;
         this.data = data;
+        this.consumer = consumer;
         Codec encrypt = ServiceProvider.of(Codec.class).getExtension(configProperties.getEncrypt());
         renderBase(data);
         //注册配置到配置中心
@@ -182,7 +184,7 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
                 ThreadUtils.sleepSecondsQuietly(15);
                 if (!connect.get()) {
                     log.warn("开始重连注册中心");
-                    this.subscribe(subscribe, dataType, data);
+                    this.subscribe(subscribe, dataType, data, consumer);
                 }
             }
         });
