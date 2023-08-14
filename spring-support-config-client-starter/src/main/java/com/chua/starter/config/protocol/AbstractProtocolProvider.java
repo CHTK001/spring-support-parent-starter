@@ -414,6 +414,11 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
             return;
         }
 
+        this.environment = (ConfigurableEnvironment) applicationContext.getEnvironment();
+        Boolean property = environment.getProperty(ConfigProperties.PRE + ".is-open", Boolean.class);
+        if (null == property || !property) {
+            return;
+        }
         this.applicationName = environment.getProperty("spring.application.name");
         if (Strings.isNullOrEmpty(applicationName)) {
             return ;
