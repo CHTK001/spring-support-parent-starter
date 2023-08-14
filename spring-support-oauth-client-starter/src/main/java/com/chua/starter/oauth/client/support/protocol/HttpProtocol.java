@@ -282,7 +282,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
     public void afterPropertiesSet() throws Exception {
         this.encode = ServiceProvider.of(KeyEncode.class).getExtension(authClientProperties.getEncryption());
         this.decode = ServiceProvider.of(KeyDecode.class).getExtension(authClientProperties.getEncryption());
-        CACHEABLE = new GuavaCacheable().configuration(CacheConfiguration.builder()
+        CACHEABLE = new GuavaCacheable(CacheConfiguration.builder()
                 .expireAfterWrite(authClientProperties.getCacheTimeout())
                 .build());
     }
