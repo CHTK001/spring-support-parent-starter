@@ -30,6 +30,7 @@ public class ConfigConfiguration implements BeanDefinitionRegistryPostProcessor,
 
     @Resource
     private ConfigProperties configProperties;
+    private ApplicationContext applicationContext;
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
@@ -52,6 +53,7 @@ public class ConfigConfiguration implements BeanDefinitionRegistryPostProcessor,
             registry.registerBeanDefinition(plugin.getClass().getTypeName() + "@" + protocol, BeanDefinitionBuilder
                     .genericBeanDefinition(plugin.getClass())
                     .addPropertyValue("protocolProvider", protocolProvider)
+                    .addPropertyValue("applicationContext", applicationContext)
                     .getBeanDefinition());
         }
     }
@@ -63,6 +65,7 @@ public class ConfigConfiguration implements BeanDefinitionRegistryPostProcessor,
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.applicationContext = applicationContext;
         configProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(ConfigProperties.PRE, ConfigProperties.class);
     }
 }

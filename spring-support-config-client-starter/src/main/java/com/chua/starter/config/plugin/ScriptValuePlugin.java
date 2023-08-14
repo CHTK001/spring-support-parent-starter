@@ -43,7 +43,6 @@ public class ScriptValuePlugin implements Plugin, BeanDefinitionRegistryPostProc
         }
 
         ConfigProperties.Subscribe first = CollectionUtils.findFirst(collect);
-        protocolProvider.subscribe(first.getSubscribe(), first.getDataType());
         System.out.println();
 
     }
