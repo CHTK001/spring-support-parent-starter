@@ -60,7 +60,7 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
 
 
     private final List<CacheMeta> cacheMetaList = new CopyOnWriteArrayList<>();
-    private List<CacheMeta> cacheMetaFailureList = new CopyOnWriteArrayList<>();
+    private Map<String, CacheMeta> cacheMetaFailureList = new ConcurrentHashMap<>();
 
     @Override
     public void subscribe(String subscribe, String dataType, Map<String, Object> data, Consumer<Map<String, Object>> consumer) {
@@ -73,6 +73,7 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
         String body = null;
         try {
             body = send(encode, subscribe, dataType);
+            this.cacheMetaFailureList.remove(dataType + subscribe);
         } catch (Exception e) {
             log.warn(e.getMessage());
         }
@@ -80,7 +81,7 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
         if (Strings.isNullOrEmpty(body)) {
             log.info("注册中心连接异常");
             connect.set(false);
-            this.cacheMetaFailureList.add(cacheMeta);
+            this.cacheMetaFailureList.put(dataType + subscribe, cacheMeta);
             return;
         }
         log.info("注册中心连接成功");
@@ -185,7 +186,7 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
                 ThreadUtils.sleepSecondsQuietly(15);
                 if (!connect.get()) {
                     log.warn("开始重连注册中心");
-                    for (CacheMeta cacheMeta : cacheMetaFailureList) {
+                    for (CacheMeta cacheMeta : cacheMetaFailureList.values()) {
                         this.subscribe(cacheMeta.subscribe, cacheMeta.dataType, cacheMeta.getData(), cacheMeta.getConsumer());
                     }
                 }
