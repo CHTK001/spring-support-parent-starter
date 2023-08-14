@@ -10,6 +10,8 @@ import com.chua.hibernate.support.database.resolver.HibernateMetadataResolver;
 import com.chua.starter.common.support.annotations.DS;
 import com.chua.starter.common.support.annotations.EnableAutoTable;
 import com.chua.starter.common.support.properties.AutoTableProperties;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
@@ -32,8 +34,10 @@ import org.springframework.util.MultiValueMap;
 
 import javax.sql.DataSource;
 import java.io.IOException;
+import java.sql.Connection;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 自动建表
@@ -53,6 +57,8 @@ public class ZzeroAutoTableConfiguration implements PriorityOrdered, Application
     private static final List<Object> DEAL = new CopyOnWriteArrayList<>();
     PathMatchingResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver();
     MetadataReaderFactory metaReader = new CachingMetadataReaderFactory();
+    private static final Cache<String, Connection> CONNECTION_CACHE = CacheBuilder.newBuilder().expireAfterWrite(20, TimeUnit.SECONDS).build();
+    private static final Cache<String, DataSource> DATA_SOURCE_CACHE = CacheBuilder.newBuilder().expireAfterWrite(20, TimeUnit.SECONDS).build();
 
     @Override
     public boolean postProcessAfterInstantiation(Object bean, String beanName) throws BeansException {
@@ -160,7 +166,7 @@ public class ZzeroAutoTableConfiguration implements PriorityOrdered, Application
 
         for (Class<?> aClass : classList) {
             if(DEAL.contains(aClass)) {
-                return;
+                continue;
             }
             DEAL.add(aClass);
             DataSource dataSource = getDataSource(aClass);
