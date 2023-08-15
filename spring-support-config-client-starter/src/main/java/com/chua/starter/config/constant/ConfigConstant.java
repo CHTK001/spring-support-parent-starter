@@ -49,5 +49,16 @@ public class ConfigConstant {
      * 数据类型
      */
     public static final String APPLICATION_DATA_TYPE = "config-client-data-type";
-
+    /**
+     * 订阅
+     */
+    public static final String SUBSCRIBE = "subscribe";
+    /**
+     * 文件类型
+     */
+    public static final String FILE_TYPE = "config-bean-file-type";
+    /**
+     * 内容
+     */
+    public static final String FILE_TYPE_CONTENT = "config-bean-file-type-content";
 }

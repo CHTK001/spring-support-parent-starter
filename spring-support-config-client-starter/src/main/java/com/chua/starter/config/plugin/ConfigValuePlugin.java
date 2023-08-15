@@ -162,6 +162,7 @@ public class ConfigValuePlugin extends AnnotationInjectedBeanPostProcessor<Confi
         protocolProvider.subscribe(subscribeName, dataType, req, new Consumer<Map<String, Object>>() {
             @Override
             public void accept(Map<String, Object> value) {
+                log.info(">>>>>>>> 已从配置中心拉取订阅配置");
                 List<PropertiesPropertySource> rs = new ArrayList<>();
                 value.forEach((k, v) -> {
                     PropertiesPropertySource propertiesPropertySource = new PropertiesPropertySource(k, MapUtils.asProp(v));

@@ -129,6 +129,7 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
             log.info("配置{} -> {}", keyValue.getDataId(), keyValue.getData());
             Plugin plugin = ServiceProvider.of(Plugin.class).getExtension(event1);
             if (null != plugin) {
+                log.info("监听到数据: {}", event1);
                 plugin.onListener(keyValue);
             }
         });

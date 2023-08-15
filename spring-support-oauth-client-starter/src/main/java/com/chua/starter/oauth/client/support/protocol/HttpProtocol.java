@@ -65,7 +65,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
             Value o = CACHEABLE.get(cacheKey);
             if (null != o) {
                 AuthenticationInformation authenticationInformation = (AuthenticationInformation) o.getValue();
-                if (authenticationInformation.getInformation().getCode() != 403) {
+                if (authenticationInformation.getInformation().getCode() == 200) {
                     return authenticationInformation;
                 }
             }

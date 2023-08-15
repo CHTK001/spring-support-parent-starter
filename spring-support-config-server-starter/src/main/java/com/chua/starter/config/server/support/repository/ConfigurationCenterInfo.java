@@ -20,7 +20,7 @@ public class ConfigurationCenterInfo {
      */
     @Id
     @com.chua.common.support.database.annotation.Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Integer configId;
 
     /**

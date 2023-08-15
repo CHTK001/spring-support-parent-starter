@@ -111,7 +111,7 @@ public class HttpProtocolServer implements ProtocolServer, ApplicationContextAwa
                     String providerKey = configServerProperties.isOpenKey() ?
                             keyManagerProvider.getKey(config.getConfigItem()) : DEFAULT_SER;
                     KeyValue keyValue = new KeyValue();
-                    keyValue.setDataId(config.getConfigName());
+                    keyValue.setDataId(config.getConfigItem());
                     keyValue.setData(config.getConfigValue());
 
                     notifyClient(config, encrypt.encodeHex(Json.toJson(keyValue), providerKey));

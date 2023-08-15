@@ -2,6 +2,8 @@ package com.chua.starter.config.server.support.manager;
 
 import com.chua.common.support.function.InitializingAware;
 import com.chua.starter.config.server.support.protocol.ProtocolServer;
+import com.chua.starter.config.server.support.query.DetailUpdate;
+import com.chua.starter.config.server.support.repository.ConfigurationSubscribeInfo;
 import org.springframework.data.domain.Page;
 
 import java.io.Serializable;
@@ -87,17 +89,34 @@ public interface DataManager extends InitializingAware {
     /**
      * 通知
      *
-     * @param dataType    数据类型
-     * @param configId    ID
-     * @param configValue 值
-     * @param disable     是否禁用
-     * @param o           o
+     * @param dataType      数据类型
+     * @param subscribeInfo 订阅条件
+     * @param configValue   值
      */
-    void notifyConfig(String dataType, Integer configId, String configValue, Integer disable, Object o);
+    void notifyConfig(String dataType, ConfigurationSubscribeInfo subscribeInfo, Object configValue);
 
     /**
      * 设置协议
+     *
      * @param protocolServer 协议
      */
     void setProtocol(ProtocolServer protocolServer);
+
+    /**
+     * 详情
+     *
+     * @param dataType 数据类型
+     * @param configId ID
+     * @return 详情
+     */
+    Object getDetail(String dataType, String configId);
+
+    /**
+     * 修改脚本
+     *
+     * @param dataType     数据类型
+     * @param detailUpdate 请求
+     * @return
+     */
+    Object detailUpdate(String dataType, DetailUpdate detailUpdate);
 }

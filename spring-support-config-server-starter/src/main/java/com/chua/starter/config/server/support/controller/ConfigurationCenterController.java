@@ -7,6 +7,7 @@ import com.chua.starter.config.constant.ConfigConstant;
 import com.chua.starter.config.server.support.manager.DataManager;
 import com.chua.starter.config.server.support.properties.ConfigServerProperties;
 import com.chua.starter.config.server.support.repository.ConfigurationCenterInfo;
+import com.chua.starter.config.server.support.repository.ConfigurationSubscribeInfo;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -60,7 +61,11 @@ public class ConfigurationCenterController implements ApplicationContextAware {
     @ResponseBody
     public ReturnResult<ConfigurationCenterInfo> configSave(@RequestBody ConfigurationCenterInfo configValue) {
         dataManager.save(ConfigConstant.CONFIG, configValue);
-        dataManager.notifyConfig(ConfigConstant.CONFIG, configValue.getConfigId(), configValue.getConfigValue(), configValue.getDisable(), null);
+        ConfigurationSubscribeInfo configurationSubscribeInfo = new ConfigurationSubscribeInfo();
+        configurationSubscribeInfo.setSubscribeProfile(configValue.getConfigProfile());
+        configurationSubscribeInfo.setSubscribeType(ConfigConstant.CONFIG);
+        dataManager.notifyConfig(ConfigConstant.CONFIG,
+                configurationSubscribeInfo,  configurationSubscribeInfo);
         return ReturnResult.ok(configValue);
     }
 
@@ -95,23 +100,6 @@ public class ConfigurationCenterController implements ApplicationContextAware {
     @ResponseBody
     public ReturnResult<Set<String>> applications() {
         return ReturnResult.ok(dataManager.applications(ConfigConstant.CONFIG));
-    }
-
-    /**
-     * 配置頁面
-     *
-     * @return 頁面
-     */
-    @PostMapping("/update")
-    @ResponseBody
-    public ReturnResult<Void> configUpdate(
-            @RequestParam(value = "config-id", defaultValue = "") Integer configId,
-            @RequestParam(value = "config-value", defaultValue = "") String configValue,
-            @RequestParam(value = "config-disable", defaultValue = "") Integer disable
-    ) {
-
-        dataManager.notifyConfig(ConfigConstant.CONFIG, configId, configValue, disable, null);
-        return ReturnResult.ok();
     }
 
     @Override
