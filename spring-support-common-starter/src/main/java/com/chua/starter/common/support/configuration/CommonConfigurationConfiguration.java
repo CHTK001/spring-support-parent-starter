@@ -27,7 +27,7 @@ public class CommonConfigurationConfiguration implements EnvironmentPostProcesso
         properties.setProperty("spring.datasource.driver-class-name", "org.sqlite.JDBC");
         properties.setProperty("spring.datasource.username", "sa");
         properties.setProperty("spring.datasource.password", "");
-        properties.setProperty("logging.level.org.zbus.net.tcp.TcpClient", "NONE");
+        properties.setProperty("logging.level.org.zbus.net.tcp.TcpClient", "OFF");
 //        properties.setProperty("spring.datasource.h2.console.enabled", "true");
 //        properties.setProperty("spring.datasource.h2.console.path", "/h2-console");
 
