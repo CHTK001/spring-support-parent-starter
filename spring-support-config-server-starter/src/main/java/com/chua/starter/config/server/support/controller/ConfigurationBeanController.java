@@ -1,5 +1,6 @@
 package com.chua.starter.config.server.support.controller;
 
+import com.chua.common.support.collection.ImmutableBuilder;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.common.support.result.ReturnPageResult;
 import com.chua.starter.common.support.result.ReturnResult;
@@ -103,7 +104,8 @@ public class ConfigurationBeanController implements ApplicationContextAware {
             configurationSubscribeInfo.setSubscribeProfile(update.toString());
             configurationSubscribeInfo.setSubscribeType(ConfigConstant.BEAN);
             dataManager.notifyConfig(ConfigConstant.BEAN,
-                    configurationSubscribeInfo,  configurationSubscribeInfo);
+                    configurationSubscribeInfo, ImmutableBuilder
+                            .builderOfStringMap().put("value", detailUpdate.getContent()).build());
             return ReturnResult.ok(update);
         }
 
