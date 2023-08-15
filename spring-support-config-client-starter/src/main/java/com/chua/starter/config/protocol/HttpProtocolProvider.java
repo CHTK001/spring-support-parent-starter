@@ -95,7 +95,7 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
         return null != this.httpServer;
     }
 
-    static final String MAPPING = "/config/listener/";
+    static final String MAPPING = "/config/listener";
 
     @Override
     public void handle(HttpServerRequest request) {
