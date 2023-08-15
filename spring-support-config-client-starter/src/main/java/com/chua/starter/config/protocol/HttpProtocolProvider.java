@@ -109,7 +109,6 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
             return;
         }
 
-        String event1 = uri.replace(MAPPING, "");
         request.body(event -> {
             String data = event.result().toString().replace("data=", "");
             //服务端主动发起信息
@@ -126,6 +125,7 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
                 return;
             }
 
+            String event1 = keyValue.getDataType();
             log.info("配置{} -> {}", keyValue.getDataId(), keyValue.getData());
             Plugin plugin = ServiceProvider.of(Plugin.class).getExtension(event1);
             if (null != plugin) {
