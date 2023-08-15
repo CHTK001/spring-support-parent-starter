@@ -170,7 +170,7 @@ public interface ConfigurationBeanInfoRepository extends ConfigurationRepository
 
         try (FileOutputStream fos = new FileOutputStream(configurationBeanInfo.getBeanFilePath())){
             IoUtils.write(detailUpdate.getContent(), fos, StandardCharsets.UTF_8);
-            return "success";
+            return configurationBeanInfo.getBeanProfile();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
