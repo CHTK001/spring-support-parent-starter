@@ -24,11 +24,11 @@ public class NotifyConfig {
      */
     private String configItem;
     /**
-     * 配置名称
-     */
-    private String configName;
-    /**
      * 配置值
      */
     private String configValue;
+
+    public boolean isEmpty() {
+        return null == binderIp || null == binderPort || null == configItem || null == configValue;
+    }
 }

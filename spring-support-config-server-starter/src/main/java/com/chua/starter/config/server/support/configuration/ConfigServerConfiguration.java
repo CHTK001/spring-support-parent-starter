@@ -1,6 +1,7 @@
 package com.chua.starter.config.server.support.configuration;
 
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.starter.config.server.support.controller.ConfigurationBeanController;
 import com.chua.starter.config.server.support.controller.ConfigurationCenterController;
 import com.chua.starter.config.server.support.properties.ConfigServerProperties;
 import com.chua.starter.config.server.support.protocol.ProtocolServer;
@@ -67,5 +68,10 @@ public class ConfigServerConfiguration implements BeanDefinitionRegistryPostProc
     @ConditionalOnMissingBean
     public ConfigurationCenterController configurationCenterController() {
         return new ConfigurationCenterController();
+    }
+    @Bean
+    @ConditionalOnMissingBean
+    public ConfigurationBeanController configurationBeanController() {
+        return new ConfigurationBeanController();
     }
 }

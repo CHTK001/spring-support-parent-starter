@@ -7,6 +7,8 @@ import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.config.constant.ConfigConstant;
 import com.chua.starter.config.server.support.base.ConfigurationRepository;
 import com.chua.starter.config.server.support.protocol.ProtocolServer;
+import com.chua.starter.config.server.support.query.DetailUpdate;
+import com.chua.starter.config.server.support.repository.ConfigurationSubscribeInfo;
 import com.google.common.base.Strings;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -113,17 +115,36 @@ public class DataBaseDataManager implements DataManager {
     }
 
     @Override
-    public void notifyConfig(String dataType, Integer configId, String configValue, Integer disable, Object o) {
-        ConfigurationRepository crudRepository = ServiceProvider.of(ConfigurationRepository.class).getExtension(dataType);
+    public void notifyConfig(String dataType, ConfigurationSubscribeInfo subscribeInfo, Object configValue) {
+        ConfigurationRepository crudRepository = ServiceProvider.of(ConfigurationRepository.class).getExtension(ConfigConstant.SUBSCRIBE);
         if(null == crudRepository) {
             return;
         }
-        crudRepository.notifyConfig(protocolServer, configId, configValue, disable, o);
+        crudRepository.notifyConfig(protocolServer, subscribeInfo, configValue);
     }
+
 
     @Override
     public void setProtocol(ProtocolServer protocolServer) {
         this.protocolServer = protocolServer;
+    }
+
+    @Override
+    public Object getDetail(String dataType, String configId) {
+        ConfigurationRepository crudRepository = ServiceProvider.of(ConfigurationRepository.class).getExtension(dataType);
+        if(null == crudRepository) {
+            return null;
+        }
+        return crudRepository.getDetail(configId);
+    }
+
+    @Override
+    public Object detailUpdate(String dataType, DetailUpdate detailUpdate) {
+        ConfigurationRepository crudRepository = ServiceProvider.of(ConfigurationRepository.class).getExtension(dataType);
+        if(null == crudRepository) {
+            return null;
+        }
+        return crudRepository.detailUpdate(detailUpdate);
     }
 
 

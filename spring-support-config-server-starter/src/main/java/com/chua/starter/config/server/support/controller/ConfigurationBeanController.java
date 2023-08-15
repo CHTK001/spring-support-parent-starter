@@ -6,6 +6,8 @@ import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.config.constant.ConfigConstant;
 import com.chua.starter.config.server.support.manager.DataManager;
 import com.chua.starter.config.server.support.properties.ConfigServerProperties;
+import com.chua.starter.config.server.support.query.DetailUpdate;
+import com.chua.starter.config.server.support.repository.ConfigurationBeanInfo;
 import com.chua.starter.config.server.support.repository.ConfigurationCenterInfo;
 import com.chua.starter.config.server.support.repository.ConfigurationSubscribeInfo;
 import org.springframework.beans.BeansException;
@@ -22,9 +24,9 @@ import java.util.Set;
  * @author CH
  * @since 2022/8/1 14:54
  */
-@RequestMapping("/v1/configuration")
+@RequestMapping("/v1/bean")
 @RestController
-public class ConfigurationCenterController implements ApplicationContextAware {
+public class ConfigurationBeanController implements ApplicationContextAware {
 
     @Resource
     private ApplicationContext applicationContext;
@@ -41,13 +43,13 @@ public class ConfigurationCenterController implements ApplicationContextAware {
     @GetMapping("/page")
     @ResponseBody
     @SuppressWarnings("ALL")
-    public ReturnPageResult<ConfigurationCenterInfo> configList(
+    public ReturnPageResult<ConfigurationBeanInfo> configList(
             @RequestParam(value = "page", defaultValue = "1") Integer page,
             @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize,
             @RequestParam(value = "profile", required = false) String profile
     ) {
 
-        Page infoPage = dataManager.findAll(ConfigConstant.CONFIG, page - 1, pageSize, profile);
+        Page infoPage = dataManager.findAll(ConfigConstant.BEAN, page - 1, pageSize, profile);
         return ReturnPageResult.ok(ReturnPageResult.<ConfigurationCenterInfo>newBuilder()
                 .data(infoPage.getContent()).page(page).pageSize(pageSize).totalPages(infoPage.getTotalPages()).total(infoPage.getTotalElements()).build());
     }
@@ -59,12 +61,12 @@ public class ConfigurationCenterController implements ApplicationContextAware {
      */
     @PostMapping("/save")
     @ResponseBody
-    public ReturnResult<ConfigurationCenterInfo> configSave(@RequestBody ConfigurationCenterInfo configValue) {
-        dataManager.save(ConfigConstant.CONFIG, configValue);
+    public ReturnResult<ConfigurationBeanInfo> configSave(@RequestBody ConfigurationBeanInfo configValue) {
+        dataManager.save(ConfigConstant.BEAN, configValue);
         ConfigurationSubscribeInfo configurationSubscribeInfo = new ConfigurationSubscribeInfo();
-        configurationSubscribeInfo.setSubscribeProfile(configValue.getConfigProfile());
-        configurationSubscribeInfo.setSubscribeType(ConfigConstant.CONFIG);
-        dataManager.notifyConfig(ConfigConstant.CONFIG,
+        configurationSubscribeInfo.setSubscribeProfile(configValue.getBeanProfile());
+        configurationSubscribeInfo.setSubscribeType(ConfigConstant.BEAN);
+        dataManager.notifyConfig(ConfigConstant.BEAN,
                 configurationSubscribeInfo,  configurationSubscribeInfo);
         return ReturnResult.ok(configValue);
     }
@@ -76,10 +78,27 @@ public class ConfigurationCenterController implements ApplicationContextAware {
      */
     @DeleteMapping("/delete")
     public ReturnResult<Void> configSave(String configId) {
-        dataManager.delete(ConfigConstant.CONFIG, configId);
+        dataManager.delete(ConfigConstant.BEAN, configId);
         return ReturnResult.ok();
     }
-
+    /**
+     * 获取脚本
+     *
+     * @return 获取脚本
+     */
+    @GetMapping("/detail")
+    public ReturnResult<Object> detail(String configId) {
+        return ReturnResult.ok(dataManager.getDetail(ConfigConstant.BEAN, configId));
+    }
+    /**
+     * 修改脚本
+     *
+     * @return 修改脚本
+     */
+    @PostMapping("/detailUpdate")
+    public ReturnResult<Object> detailUpdate(@RequestBody DetailUpdate detailUpdate) {
+        return ReturnResult.ok(dataManager.detailUpdate(ConfigConstant.BEAN, detailUpdate));
+    }
     /**
      * 环境
      *
@@ -88,7 +107,7 @@ public class ConfigurationCenterController implements ApplicationContextAware {
     @PostMapping("/profile")
     @ResponseBody
     public ReturnResult<Set<String>> profile() {
-        return ReturnResult.ok(dataManager.profile(ConfigConstant.CONFIG));
+        return ReturnResult.ok(dataManager.profile(ConfigConstant.BEAN));
     }
 
     /**
@@ -99,7 +118,7 @@ public class ConfigurationCenterController implements ApplicationContextAware {
     @PostMapping("/applications")
     @ResponseBody
     public ReturnResult<Set<String>> applications() {
-        return ReturnResult.ok(dataManager.applications(ConfigConstant.CONFIG));
+        return ReturnResult.ok(dataManager.applications(ConfigConstant.BEAN));
     }
 
     @Override

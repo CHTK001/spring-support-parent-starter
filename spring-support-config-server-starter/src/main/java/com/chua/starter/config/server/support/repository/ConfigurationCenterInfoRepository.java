@@ -1,12 +1,13 @@
 package com.chua.starter.config.server.support.repository;
 
 import com.chua.common.support.json.Json;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.config.constant.ConfigConstant;
 import com.chua.starter.config.server.support.base.ConfigurationRepository;
-import com.chua.starter.config.server.support.config.NotifyConfig;
 import com.chua.starter.config.server.support.protocol.ProtocolServer;
+import com.chua.starter.config.server.support.query.DetailUpdate;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import org.springframework.context.expression.BeanFactoryAccessor;
@@ -29,7 +30,6 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * TConfigurationCenterInfo
@@ -55,44 +55,14 @@ public interface ConfigurationCenterInfoRepository extends ConfigurationReposito
             intoDatabase(data, applicationName, configurationCenterInfos);
         }
 
-        updateOrSave(data, ConfigConstant.APPLICATION_HOST, applicationName, true);
-        updateOrSave(data, ConfigConstant.APPLICATION_PORT, applicationName, true);
+        ConfigurationRepository repository = ServiceProvider.of(ConfigurationRepository.class).getExtension(ConfigConstant.SUBSCRIBE);
+        if(null != repository) {
+            data.put(ConfigConstant.APPLICATION_DATA_TYPE, ConfigConstant.BEAN);
+            repository.analysis(applicationName, data);
+        }
     }
 
 
-    /**
-     * 保存或者更新数据
-     *
-     * @param data       数据
-     * @param name       key
-     * @param applicationName 标识
-     * @param refresh
-     */
-    default void updateOrSave(Map<String, Object> data, String name, String applicationName, Boolean refresh) {
-        String value = MapUtils.getString(data, name);
-        String profile = MapUtils.getString(data, ConfigConstant.PROFILE, "dev");
-
-        ConfigurationCenterInfo query = new ConfigurationCenterInfo();
-        query.setConfigName(name);
-        query.setConfigApplicationName(applicationName);
-        query.setConfigProfile(profile);
-
-        ConfigurationCenterInfo tConfigurationCenterInfo1 = null;
-        try {
-            tConfigurationCenterInfo1 = findOne(Example.of(query)).get();
-        } catch (Exception e) {
-        }
-        if (null != tConfigurationCenterInfo1 && refresh) {
-            tConfigurationCenterInfo1.setConfigValue(value);
-        } else {
-            tConfigurationCenterInfo1 = new ConfigurationCenterInfo();
-            tConfigurationCenterInfo1.setConfigName(name);
-            tConfigurationCenterInfo1.setConfigApplicationName(applicationName);
-            tConfigurationCenterInfo1.setConfigValue(value);
-            tConfigurationCenterInfo1.setConfigProfile(profile);
-        }
-        save(tConfigurationCenterInfo1);
-    }
     /**
      * 保存到數據庫
      *
@@ -269,67 +239,19 @@ public interface ConfigurationCenterInfoRepository extends ConfigurationReposito
     @Query(value = "SELECT config_application_name FROM CONFIGURATION_CENTER_INFO GROUP BY config_application_name ", nativeQuery = true)
     Set<String> applications();
 
+
     @Override
-    default void notifyConfig(ProtocolServer protocolServer, Integer configId, String configValue, Integer disable, Object o) {
-        try {
-            Optional<ConfigurationCenterInfo> byId = findById(configId);
-            if (!byId.isPresent()) {
-                return;
-            }
-            ConfigurationCenterInfo referenceById = byId.get();
-            notifyConfig(referenceById, protocolServer);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return;
-        }
+    default void notifyConfig(ProtocolServer protocolServer,  ConfigurationSubscribeInfo subscribeInfo, Object configValue) {
+
     }
 
-    default void notifyConfig(ConfigurationCenterInfo configurationCenterInfo, ProtocolServer protocolServer) {
-        try {
-            List<NotifyConfig> notifyConfig = new ArrayList<>();
+    @Override
+    default Object getDetail(String configId) {
+        return getById(Integer.valueOf(configId));
+    }
 
-            Map<String, List<ConfigurationCenterInfo>> temp = new HashMap<>();
-            List<ConfigurationCenterInfo> tConfigurationCenterInfos = findAll(new Specification<ConfigurationCenterInfo>() {
-                @Override
-                public Predicate toPredicate(Root<ConfigurationCenterInfo> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
-                    List<Predicate> predicateList = new LinkedList<>();
-                    predicateList.add(criteriaBuilder.or(
-                            criteriaBuilder.equal(root.get("configName"), ConfigConstant.APPLICATION_HOST),
-                            criteriaBuilder.equal(root.get("configName"), ConfigConstant.APPLICATION_PORT)
-                    ));
-                    return query.where(predicateList.toArray(new Predicate[0])).getRestriction();
-                }
-            });
-            for (ConfigurationCenterInfo tConfigurationCenterInfo : tConfigurationCenterInfos) {
-                temp.computeIfAbsent(tConfigurationCenterInfo.getConfigApplicationName(), it -> new ArrayList<>()).add(tConfigurationCenterInfo);
-            }
-
-            for (Map.Entry<String, List<ConfigurationCenterInfo>> entry : temp.entrySet()) {
-                String key = entry.getKey();
-                List<ConfigurationCenterInfo> value = entry.getValue();
-
-                NotifyConfig item = new NotifyConfig();
-                item.setConfigName(configurationCenterInfo.getConfigName())
-                        .setConfigValue(configurationCenterInfo.getConfigValue());
-                item.setConfigItem(key);
-                if (value.isEmpty()) {
-                    continue;
-                }
-                try {
-                    item.setBinderPort(value.stream().filter(it -> ConfigConstant.APPLICATION_PORT.equalsIgnoreCase(it.getConfigName())).map(ConfigurationCenterInfo::getConfigValue).collect(Collectors.toList()).get(0));
-                    item.setBinderIp(value.stream().filter(it -> ConfigConstant.APPLICATION_HOST.equalsIgnoreCase(it.getConfigName())).map(ConfigurationCenterInfo::getConfigValue).collect(Collectors.toList()).get(0));
-
-                    notifyConfig.add(item);
-                } catch (Exception ignored) {
-                }
-            }
-
-            if (notifyConfig.isEmpty()) {
-                return;
-            }
-            protocolServer.notifyClient(notifyConfig);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    @Override
+    default Object detailUpdate(DetailUpdate detailUpdate) {
+        return null;
     }
 }

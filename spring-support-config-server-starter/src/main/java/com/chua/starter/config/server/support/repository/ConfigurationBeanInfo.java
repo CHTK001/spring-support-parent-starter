@@ -19,7 +19,7 @@ public class ConfigurationBeanInfo {
      * 配置ID
      */
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Integer beanId;
 
     /**

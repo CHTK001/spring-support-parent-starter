@@ -1,6 +1,8 @@
 package com.chua.starter.config.server.support.base;
 
 import com.chua.starter.config.server.support.protocol.ProtocolServer;
+import com.chua.starter.config.server.support.query.DetailUpdate;
+import com.chua.starter.config.server.support.repository.ConfigurationSubscribeInfo;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -73,10 +75,24 @@ public interface ConfigurationRepository<T> extends
      * 通知
      *
      * @param protocolServer 协议
-     * @param configId       ID
+     * @param subscribeInfo  订阅条件
      * @param configValue    值
-     * @param disable        是否禁用
-     * @param o              o
      */
-    void notifyConfig(ProtocolServer protocolServer, Integer configId, String configValue, Integer disable, Object o);
+    void notifyConfig(ProtocolServer protocolServer, ConfigurationSubscribeInfo subscribeInfo, Object configValue);
+
+    /**
+     * 详情
+     *
+     * @param configId ID
+     * @return 详情
+     */
+    Object getDetail(String configId);
+
+    /**
+     * 修改脚本
+     *
+     * @param detailUpdate 请求
+     * @return 结果
+     */
+    Object detailUpdate(DetailUpdate detailUpdate);
 }
