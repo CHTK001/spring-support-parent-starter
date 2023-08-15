@@ -97,7 +97,17 @@ public class ConfigurationBeanController implements ApplicationContextAware {
      */
     @PostMapping("/detailUpdate")
     public ReturnResult<Object> detailUpdate(@RequestBody DetailUpdate detailUpdate) {
-        return ReturnResult.ok(dataManager.detailUpdate(ConfigConstant.BEAN, detailUpdate));
+        Object update = dataManager.detailUpdate(ConfigConstant.BEAN, detailUpdate);
+        if(null != update) {
+            ConfigurationSubscribeInfo configurationSubscribeInfo = new ConfigurationSubscribeInfo();
+            configurationSubscribeInfo.setSubscribeProfile(update.toString());
+            configurationSubscribeInfo.setSubscribeType(ConfigConstant.BEAN);
+            dataManager.notifyConfig(ConfigConstant.BEAN,
+                    configurationSubscribeInfo,  configurationSubscribeInfo);
+            return ReturnResult.ok(update);
+        }
+
+        return ReturnResult.illegal();
     }
     /**
      * 环境

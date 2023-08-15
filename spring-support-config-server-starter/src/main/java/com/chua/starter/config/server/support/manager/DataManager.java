@@ -116,7 +116,7 @@ public interface DataManager extends InitializingAware {
      *
      * @param dataType     数据类型
      * @param detailUpdate 请求
-     * @return
+     * @return 环境
      */
     Object detailUpdate(String dataType, DetailUpdate detailUpdate);
 }
