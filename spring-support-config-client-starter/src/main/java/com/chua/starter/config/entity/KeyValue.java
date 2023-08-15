@@ -13,4 +13,6 @@ public class KeyValue {
     private String dataId;
 
     private String data;
+
+    private String dataType;
 }

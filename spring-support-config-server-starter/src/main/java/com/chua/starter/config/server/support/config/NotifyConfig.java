@@ -12,6 +12,10 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class NotifyConfig {
     /**
+     * 数据类型
+     */
+    private String dataType;
+    /**
      * 地址
      */
     private String binderIp;
@@ -29,6 +33,6 @@ public class NotifyConfig {
     private String configValue;
 
     public boolean isEmpty() {
-        return null == binderIp || null == binderPort || null == configItem || null == configValue;
+        return null == dataType || null == binderIp || null == binderPort || null == configItem || null == configValue;
     }
 }

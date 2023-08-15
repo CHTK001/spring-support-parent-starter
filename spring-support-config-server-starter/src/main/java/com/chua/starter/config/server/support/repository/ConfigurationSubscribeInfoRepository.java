@@ -114,13 +114,14 @@ public interface ConfigurationSubscribeInfoRepository extends ConfigurationRepos
 
         protocolServer.notifyClient(rs);
     }
-    default NotifyConfig createNotifyConfig(ConfigurationSubscribeInfo configurationCenterInfo, ProtocolServer protocolServer, Object configValue) {
+    default NotifyConfig createNotifyConfig(ConfigurationSubscribeInfo configurationSubscribeInfo, ProtocolServer protocolServer, Object configValue) {
         try {
             NotifyConfig item = new NotifyConfig();
             item.setConfigValue(Json.toJson(BeanMap.create(configValue)));
-            item.setConfigItem(configurationCenterInfo.getSubscribeApplicationName());
-            item.setBinderPort(configurationCenterInfo.getSubscribePort());
-            item.setBinderIp(configurationCenterInfo.getSubscribeHost());
+            item.setConfigItem(configurationSubscribeInfo.getSubscribeApplicationName());
+            item.setBinderPort(configurationSubscribeInfo.getSubscribePort());
+            item.setBinderIp(configurationSubscribeInfo.getSubscribeHost());
+            item.setDataType(configurationSubscribeInfo.getSubscribeType());
 
             if (item.isEmpty()) {
                 return null;
