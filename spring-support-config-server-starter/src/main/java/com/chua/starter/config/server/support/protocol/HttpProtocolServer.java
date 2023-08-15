@@ -113,6 +113,7 @@ public class HttpProtocolServer implements ProtocolServer, ApplicationContextAwa
                     KeyValue keyValue = new KeyValue();
                     keyValue.setDataId(config.getConfigItem());
                     keyValue.setData(config.getConfigValue());
+                    keyValue.setDataType(config.getDataType());
 
                     notifyClient(config, encrypt.encodeHex(Json.toJson(keyValue), providerKey));
                 }
