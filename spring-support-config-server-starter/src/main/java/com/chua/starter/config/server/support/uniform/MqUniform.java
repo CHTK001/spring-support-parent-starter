@@ -9,6 +9,8 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.config.constant.ConfigConstant;
 import com.chua.starter.config.server.support.properties.ConfigUniformProperties;
+import com.chua.starter.sse.support.SseMessage;
+import com.chua.starter.sse.support.SseTemplate;
 import org.zbus.broker.Broker;
 import org.zbus.broker.BrokerConfig;
 import org.zbus.broker.SingleBroker;
@@ -19,7 +21,10 @@ import org.zbus.mq.server.MqServer;
 import org.zbus.mq.server.MqServerConfig;
 import org.zbus.net.http.Message;
 
+import javax.annotation.Resource;
 import java.io.IOException;
+
+import static com.chua.starter.config.constant.ConfigConstant.SUBSCRIBE_SSE;
 
 /**
  * 统一检测中心
@@ -33,8 +38,10 @@ public class MqUniform implements Uniform, Consumer.ConsumerHandler {
     private final ConfigUniformProperties configUniformProperties;
     private Consumer consumer;
 
-    final FileStore fileStore ;
+    final FileStore fileStore;
 
+    @Resource
+    private SseTemplate sseTemplate;
 
     public MqUniform(ConfigUniformProperties configUniformProperties) {
         this.fileStore = ServiceProvider.of(FileStore.class).getNewExtension(configUniformProperties.getStoreType(), configUniformProperties.getStore(), ".idx", configUniformProperties.getStoreConfig());
@@ -93,7 +100,7 @@ public class MqUniform implements Uniform, Consumer.ConsumerHandler {
         }
         String mode = jsonObject.getString(ConfigConstant.UNIFORM_MODE);
         String message = jsonObject.getString(ConfigConstant.UNIFORM_MESSAGE);
+        sseTemplate.emit(SseMessage.builder().event(mode).message(message).build(), SUBSCRIBE_SSE);
         fileStore.write(applicationName, StringUtils.format("[{}] [{}] [{}] {}", DateTime.now().toStandard(), applicationName, mode, message), mode);
-        System.out.println();
     }
 }

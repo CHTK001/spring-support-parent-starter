@@ -73,4 +73,5 @@ public class ConfigConstant {
      * uniform数据
      */
     public static final String UNIFORM_MESSAGE = "message";
+    public static final String SUBSCRIBE_SSE = "UNIFORM";
 }

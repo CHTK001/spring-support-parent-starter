@@ -293,6 +293,12 @@
                 <artifactId>utils-support-milvus-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-lucene-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
