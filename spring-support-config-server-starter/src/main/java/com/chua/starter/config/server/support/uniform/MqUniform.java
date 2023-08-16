@@ -5,7 +5,7 @@ import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.lang.store.FileStore;
-import com.chua.common.support.lang.store.NioFileStore;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.config.constant.ConfigConstant;
 import com.chua.starter.config.server.support.properties.ConfigUniformProperties;
@@ -37,7 +37,7 @@ public class MqUniform implements Uniform, Consumer.ConsumerHandler {
 
 
     public MqUniform(ConfigUniformProperties configUniformProperties) {
-        this.fileStore = new NioFileStore(configUniformProperties.getStore(), configUniformProperties.getStoreConfig());
+        this.fileStore = ServiceProvider.of(FileStore.class).getNewExtension(configUniformProperties.getStoreType(), configUniformProperties.getStore(), ".idx", configUniformProperties.getStoreConfig());
         this.configUniformProperties = configUniformProperties;
         MqServerConfig mqServerConfig = new MqServerConfig();
         mqServerConfig.setServerHost(configUniformProperties.getHost());
@@ -93,7 +93,7 @@ public class MqUniform implements Uniform, Consumer.ConsumerHandler {
         }
         String mode = jsonObject.getString(ConfigConstant.UNIFORM_MODE);
         String message = jsonObject.getString(ConfigConstant.UNIFORM_MESSAGE);
-        fileStore.write(StringUtils.format("[{}] [{}] [{}] {}", DateTime.now().toStandard(), applicationName, mode, message), applicationName, mode);
+        fileStore.write(applicationName, StringUtils.format("[{}] [{}] [{}] {}", DateTime.now().toStandard(), applicationName, mode, message), mode);
         System.out.println();
     }
 }
