@@ -61,4 +61,16 @@ public class ConfigConstant {
      * 内容
      */
     public static final String FILE_TYPE_CONTENT = "config-bean-file-type-content";
+    /**
+     * uniform数据来源类型
+     */
+    public static final String UNIFORM_MODE = "mode";
+    /**
+     * uniform数据来源
+     */
+    public static final String UNIFORM_APPLICATION_NAME = "applicationName";
+    /**
+     * uniform数据
+     */
+    public static final String UNIFORM_MESSAGE = "message";
 }
