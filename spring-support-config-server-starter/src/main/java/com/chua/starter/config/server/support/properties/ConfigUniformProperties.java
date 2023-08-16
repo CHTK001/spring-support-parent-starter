@@ -43,6 +43,11 @@ public class ConfigUniformProperties {
     private String store = "./";
 
     /**
+     * 数据存储方式
+     */
+    private String storeType = "nio";
+
+    /**
      * 存储配置
      */
     private StoreConfig storeConfig = new StoreConfig();
