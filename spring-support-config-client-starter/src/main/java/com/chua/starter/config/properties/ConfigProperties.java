@@ -6,15 +6,13 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.util.LinkedList;
 import java.util.List;
 
-import static com.chua.starter.config.properties.ConfigProperties.PRE;
-
 
 /**
  * @author CH
  * @since 2022/7/30 8:37
  */
 @Data
-@ConfigurationProperties(prefix = PRE, ignoreInvalidFields = true)
+@ConfigurationProperties(prefix = ConfigProperties.PRE, ignoreInvalidFields = true)
 public class ConfigProperties {
 
     public static final String PRE = "plugin.configuration";
@@ -73,6 +71,8 @@ public class ConfigProperties {
     public static class Subscribe {
         /**
          * 订阅的数据类型
+         * config: 配置项
+         * bean: 脚本对象
          */
         private String dataType;
         /**

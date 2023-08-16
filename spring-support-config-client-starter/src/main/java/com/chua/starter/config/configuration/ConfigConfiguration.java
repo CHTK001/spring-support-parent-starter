@@ -4,6 +4,7 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.starter.config.plugin.Plugin;
 import com.chua.starter.config.properties.ConfigProperties;
+import com.chua.starter.config.properties.ConfigUniformProperties;
 import com.chua.starter.config.protocol.ProtocolProvider;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
@@ -25,7 +26,7 @@ import java.util.Map;
  * @since 2022/7/30 8:34
  */
 @ConditionalOnMissingClass(value = {"com.chua.starter.config.server.properties.ConfigServerProperties"})
-@EnableConfigurationProperties(ConfigProperties.class)
+@EnableConfigurationProperties({ConfigProperties.class, ConfigUniformProperties.class})
 public class ConfigConfiguration implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware {
 
     @Resource

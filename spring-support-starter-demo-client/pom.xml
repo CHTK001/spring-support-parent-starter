@@ -29,6 +29,12 @@
 
         <dependency>
             <groupId>com.chua</groupId>
+            <artifactId>utils-support-agent-support</artifactId>
+            <version>3.1.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.chua</groupId>
             <artifactId>spring-support-schedule-client-starter</artifactId>
         </dependency>
 

@@ -1,5 +1,6 @@
 package com.chua.starter.config.plugin;
 
+import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.annotations.Spi;
@@ -117,6 +118,7 @@ public class ScriptValuePlugin implements Plugin, BeanDefinitionRegistryPostProc
 
     @Override
     public void onListener(KeyValue keyValue) {
+        JSON.parseObject(keyValue.getData()).getString("value");
         System.out.println();
     }
 
