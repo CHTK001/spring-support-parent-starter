@@ -1,9 +1,11 @@
 package com.chua.starter.config.server.support.configuration;
 
+import com.chua.common.support.spi.ServiceDefinition;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.config.server.support.controller.ConfigurationBeanController;
 import com.chua.starter.config.server.support.controller.ConfigurationCenterController;
+import com.chua.starter.config.server.support.controller.UniformController;
 import com.chua.starter.config.server.support.properties.ConfigServerProperties;
 import com.chua.starter.config.server.support.properties.ConfigUniformProperties;
 import com.chua.starter.config.server.support.protocol.ProtocolServer;
@@ -16,10 +18,13 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
@@ -32,7 +37,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @EntityScan(basePackages = {"com.chua.starter.config.server.support.repository"})
 @EnableJpaRepositories(basePackages = {"com.chua.starter.config.server.support.repository"})
 @EnableConfigurationProperties({ConfigServerProperties.class, ConfigUniformProperties.class})
-public class ConfigServerConfiguration implements BeanDefinitionRegistryPostProcessor, EnvironmentAware, DisposableBean {
+@AutoConfigureAfter
+public class ConfigServerConfiguration implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware, EnvironmentAware, DisposableBean {
 
     private ConfigServerProperties configServerProperties;
     private ConfigUniformProperties configUniformProperties;
@@ -49,19 +55,26 @@ public class ConfigServerConfiguration implements BeanDefinitionRegistryPostProc
      * @param registry 注册器
      */
     private void registerUniformCenter(BeanDefinitionRegistry registry) {
-        if(!configUniformProperties.isOpen()) {
+        if (!configUniformProperties.isOpen()) {
             return;
         }
 
         String protocol = configUniformProperties.getProtocol();
-        if(StringUtils.isEmpty(protocol)) {
+        if (StringUtils.isEmpty(protocol)) {
             return;
         }
 
         ServiceProvider<Uniform> serviceProvider = ServiceProvider.of(Uniform.class);
-        this.uniform = serviceProvider.getNewExtension(protocol, configUniformProperties);
-        if(null != uniform) {
-            uniform.start();
+        ServiceDefinition definition = serviceProvider.getDefinition(protocol, null);
+        if (null != definition && null != definition.getImplClass()) {
+            Class<?> implClass = definition.getImplClass();
+            registry.registerBeanDefinition(implClass.getTypeName(),
+                    BeanDefinitionBuilder.rootBeanDefinition(implClass)
+                            .setInitMethodName("start").setDestroyMethodName("stop")
+                            .addConstructorArgValue(configUniformProperties)
+                            .getBeanDefinition()
+
+            );
         }
 
     }
@@ -98,6 +111,11 @@ public class ConfigServerConfiguration implements BeanDefinitionRegistryPostProc
         configUniformProperties = Binder.get(environment).bindOrCreate(ConfigUniformProperties.PRE, ConfigUniformProperties.class);
     }
 
+    @Bean
+    @ConditionalOnMissingBean
+    public UniformController niformController() {
+        return new UniformController();
+    }
 
 
     @Bean
@@ -105,6 +123,7 @@ public class ConfigServerConfiguration implements BeanDefinitionRegistryPostProc
     public ConfigurationCenterController configurationCenterController() {
         return new ConfigurationCenterController();
     }
+
     @Bean
     @ConditionalOnMissingBean
     public ConfigurationBeanController configurationBeanController() {
@@ -113,12 +132,17 @@ public class ConfigServerConfiguration implements BeanDefinitionRegistryPostProc
 
     @Override
     public void destroy() throws Exception {
-        if(null == uniform) {
+        if (null == uniform) {
             return;
         }
         try {
             uniform.stop();
         } catch (Exception ignored) {
         }
+    }
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+
     }
 }
