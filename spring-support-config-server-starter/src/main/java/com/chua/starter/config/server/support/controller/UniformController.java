@@ -36,7 +36,7 @@ public class UniformController {
 
     @GetMapping(value = "search")
     public Result<List<Map<String, Object>>> search(String keyword) {
-        return Result.success(uniform.search(keyword));
+        return Result.success(uniform.search(keyword.contains(":") ? keyword : "message:*" + keyword + "*"));
     }
     /**
      * 注册监听
