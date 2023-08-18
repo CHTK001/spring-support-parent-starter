@@ -23,6 +23,8 @@ import org.zbus.net.http.Message;
 
 import javax.annotation.Resource;
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 import static com.chua.starter.config.constant.ConfigConstant.SUBSCRIBE_SSE;
 
@@ -89,6 +91,11 @@ public class MqUniform implements Uniform, Consumer.ConsumerHandler {
             fileStore.close();
         } catch (Exception ignored) {
         }
+    }
+
+    @Override
+    public List<Map<String, Object>> search(String keyword) {
+        return fileStore.search(keyword);
     }
 
     @Override
