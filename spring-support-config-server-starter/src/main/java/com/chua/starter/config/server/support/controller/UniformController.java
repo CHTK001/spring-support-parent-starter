@@ -2,7 +2,9 @@ package com.chua.starter.config.server.support.controller;
 
 import com.chua.common.support.annotations.Permission;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.result.Result;
 import com.chua.starter.config.constant.ConfigConstant;
+import com.chua.starter.config.server.support.uniform.Uniform;
 import com.chua.starter.sse.support.SseTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,6 +15,8 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 统一中心
@@ -27,7 +31,13 @@ public class UniformController {
     @Resource
     private SseTemplate sseTemplate;
 
+    @Resource
+    private Uniform uniform;
 
+    @GetMapping(value = "search")
+    public Result<List<Map<String, Object>>> search(String keyword) {
+        return Result.success(uniform.search(keyword));
+    }
     /**
      * 注册监听
      *
