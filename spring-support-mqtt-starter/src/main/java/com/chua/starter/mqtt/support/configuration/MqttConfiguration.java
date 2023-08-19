@@ -42,12 +42,14 @@ public class MqttConfiguration implements ApplicationContextAware, SmartInstanti
 
     @Override
     public boolean postProcessAfterInstantiation(Object bean, String beanName) throws BeansException {
-        Class<?> aClass = bean.getClass();
-        ReflectionUtils.doWithMethods(aClass, method -> {
-            if(method.isAnnotationPresent(Mqtt.class)) {
-                mqttTemplate.register(method, bean);
-            }
-        });
+        if (null != mqttTemplate) {
+            Class<?> aClass = bean.getClass();
+            ReflectionUtils.doWithMethods(aClass, method -> {
+                if (method.isAnnotationPresent(Mqtt.class)) {
+                    mqttTemplate.register(method, bean);
+                }
+            });
+        }
         return SmartInstantiationAwareBeanPostProcessor.super.postProcessAfterInstantiation(bean, beanName);
     }
 
