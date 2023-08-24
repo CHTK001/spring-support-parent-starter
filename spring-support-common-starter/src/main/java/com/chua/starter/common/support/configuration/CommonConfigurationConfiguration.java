@@ -1,7 +1,7 @@
 package com.chua.starter.common.support.configuration;
 
 import com.chua.common.support.function.Joiner;
-import com.chua.common.support.utils.NetUtils;
+import com.chua.common.support.net.NetUtils;
 import com.chua.common.support.utils.StringUtils;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.env.EnvironmentPostProcessor;

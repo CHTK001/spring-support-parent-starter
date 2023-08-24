@@ -2,7 +2,7 @@ package com.chua.starter.common.support.transpond.resolve;
 
 import com.chua.common.support.annotations.Extension;
 import com.chua.common.support.log.Log;
-import com.chua.common.support.utils.NetAddress;
+import com.chua.common.support.net.NetAddress;
 import com.chua.starter.common.support.properties.ProxyProperties;
 import io.vertx.core.Vertx;
 import io.vertx.core.net.NetServer;

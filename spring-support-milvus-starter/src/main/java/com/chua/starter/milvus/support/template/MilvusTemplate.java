@@ -1,6 +1,6 @@
 package com.chua.starter.milvus.support.template;
 
-import com.chua.common.support.utils.NetAddress;
+import com.chua.common.support.net.NetAddress;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.milvus.support.properties.MilvusProperties;
 import io.milvus.client.MilvusServiceClient;
