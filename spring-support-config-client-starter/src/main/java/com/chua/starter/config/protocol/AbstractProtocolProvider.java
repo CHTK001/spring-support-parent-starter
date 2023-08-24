@@ -187,7 +187,7 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
     protected void reconnect() {
         reconnect.execute(() -> {
             while (run.get()) {
-                ThreadUtils.sleepSecondsQuietly(15);
+                ThreadUtils.sleepSecondsQuietly(30);
                 if (!connect.get()) {
                     if (cacheMetaFailureList.isEmpty()) {
                         continue;
