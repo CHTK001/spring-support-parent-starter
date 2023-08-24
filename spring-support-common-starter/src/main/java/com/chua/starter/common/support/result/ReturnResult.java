@@ -1,10 +1,8 @@
 package com.chua.starter.common.support.result;
 
-import lombok.AllArgsConstructor;
+import com.chua.common.support.lang.code.ResultCode;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import javax.xml.bind.annotation.XmlElement;
 
 import static com.chua.starter.common.support.result.ReturnCode.*;
 

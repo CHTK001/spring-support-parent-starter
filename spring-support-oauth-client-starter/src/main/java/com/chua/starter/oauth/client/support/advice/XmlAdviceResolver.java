@@ -1,7 +1,6 @@
 package com.chua.starter.oauth.client.support.advice;
 
 import com.chua.common.support.file.xml.XML;
-import com.chua.starter.common.support.result.ResultCode;
 import com.chua.starter.common.support.result.ReturnResult;
 import org.springframework.http.MediaType;
 

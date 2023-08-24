@@ -1,7 +1,6 @@
 package com.chua.starter.oauth.client.support.advice;
 
 import com.alibaba.fastjson2.JSON;
-import com.chua.starter.common.support.result.ResultCode;
 import com.chua.starter.common.support.result.ReturnResult;
 import org.springframework.http.MediaType;
 
