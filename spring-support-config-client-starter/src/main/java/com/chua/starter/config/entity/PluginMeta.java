@@ -1,8 +1,8 @@
 package com.chua.starter.config.entity;
 
+import com.chua.common.support.net.NetUtils;
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.utils.CollectionUtils;
-import com.chua.common.support.utils.NetUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.config.constant.ConfigConstant;
 import com.chua.starter.config.properties.ConfigProperties;
