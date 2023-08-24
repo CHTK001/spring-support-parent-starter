@@ -96,14 +96,14 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         request = encode.encodeHex(Json.toJson(item2), serviceKey);
 
 
-        Robin<String> balance = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
-        Robin<String> stringRobin = balance.create();
+        Robin balance = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
+        Robin stringRobin = balance.create();
         String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(authClientProperties.getAuthAddress()).split(",");
         stringRobin.addNode(split);
-        Node<String> robin = stringRobin.selectNode();
+        Node robin = stringRobin.selectNode();
         HttpResponse<String> httpResponse = null;
         try {
-            String url = robin.getContent();
+            String url = robin.getString();
             if (null == url) {
                 return inCache(cacheKey, AuthenticationInformation.authServerError());
             }
@@ -186,14 +186,14 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         request = encode.encodeHex(Json.toJson(item2), serviceKey);
 
 
-        Robin<String> balance = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
-        Robin<String> stringRobin = balance.create();
+        Robin balance = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
+        Robin stringRobin = balance.create();
         String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(authClientProperties.getAuthAddress()).split(",");
         stringRobin.addNode(split);
-        Node<String> robin = stringRobin.selectNode();
+        Node robin = stringRobin.selectNode();
         HttpResponse<String> httpResponse = null;
         try {
-            String url = robin.getContent();
+            String url = robin.getString();
             if (null == url) {
                 throw new IllegalArgumentException("OSS服务器不存在");
             }
@@ -284,6 +284,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         this.decode = ServiceProvider.of(KeyDecode.class).getExtension(authClientProperties.getEncryption());
         CACHEABLE = new GuavaCacheable(CacheConfiguration.builder()
                 .expireAfterWrite((int) authClientProperties.getCacheTimeout())
+                .hotColdBackup(authClientProperties.isCacheHotColdBackup())
                 .build());
     }
 }
