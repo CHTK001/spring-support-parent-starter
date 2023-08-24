@@ -1,6 +1,6 @@
 package com.chua.starter.common.support.exception;
 
-import com.chua.starter.common.support.result.ResultCode;
+import com.chua.common.support.lang.code.ResultCode;
 import lombok.Getter;
 
 /**

@@ -189,9 +189,9 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
     @ExceptionHandler(BusinessException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> handleBizException(BusinessException e) {
-        log.error("biz exception: {}", e);
+        e.printStackTrace();
         if (e.getResultCode() != null) {
-            return Result.failed(e.getResultCode());
+            return Result.failed(e.getLocalizedMessage());
         }
         return Result.failed("系统繁忙");
     }

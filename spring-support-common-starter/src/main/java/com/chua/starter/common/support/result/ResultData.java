@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.result;
 
+import com.chua.common.support.lang.code.ResultCode;
 import lombok.Data;
 
 import javax.xml.bind.annotation.*;
