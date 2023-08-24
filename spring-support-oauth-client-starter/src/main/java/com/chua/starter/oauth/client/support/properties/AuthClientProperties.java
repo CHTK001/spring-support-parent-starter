@@ -28,6 +28,10 @@ public class AuthClientProperties {
      */
     private long cacheTimeout = 60 * 60;
     /**
+     * 是否开启客户端缓存冷热备份
+     */
+    private boolean cacheHotColdBackup = true;
+    /**
      * 鉴权地址
      */
     private String authAddress = "http://127.0.0.1:${server.port}";
