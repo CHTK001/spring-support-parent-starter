@@ -50,7 +50,7 @@ public class PrivacySerializer extends JsonSerializer<String> implements Context
                     jsonGenerator.writeString(PrivacyUtils.hideChineseName(origin));
                     break;
                 case ID_CARD:
-                    jsonGenerator.writeString(PrivacyUtils.hideIDCard(origin));
+                    jsonGenerator.writeString(PrivacyUtils.hideCard(origin));
                     break;
                 case PHONE:
                     jsonGenerator.writeString(PrivacyUtils.hidePhone(origin));
