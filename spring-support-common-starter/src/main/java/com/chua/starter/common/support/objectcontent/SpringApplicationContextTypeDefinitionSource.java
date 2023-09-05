@@ -8,6 +8,8 @@ import com.chua.common.support.objects.source.TypeDefinitionSource;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import org.springframework.context.ApplicationContext;
 
+import java.lang.annotation.Annotation;
+
 import static com.chua.common.support.objects.source.AbstractTypeDefinitionSource.COMPARABLE;
 
 /**
@@ -59,5 +61,10 @@ public class SpringApplicationContextTypeDefinitionSource implements TypeDefinit
     @Override
     public void register(TypeDefinition definition) {
 
+    }
+
+    @Override
+    public SortedList<TypeDefinition> getBeanByMethod(Class<? extends Annotation> annotationType) {
+        return SortedList.emptyList();
     }
 }
