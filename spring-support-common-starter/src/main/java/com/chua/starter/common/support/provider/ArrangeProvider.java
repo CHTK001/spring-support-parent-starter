@@ -3,11 +3,10 @@ package com.chua.starter.common.support.provider;
 import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.database.AutoMetadata;
-import com.chua.common.support.database.orm.conditions.Wrappers;
+import com.chua.common.support.database.orm.conditions.SqlWrappers;
 import com.chua.common.support.database.repository.Repository;
 import com.chua.common.support.function.Joiner;
 import com.chua.common.support.lang.arrange.Arrange;
-import com.chua.common.support.lang.arrange.ArrangeFactory;
 import com.chua.common.support.lang.arrange.ArrangeHandler;
 import com.chua.common.support.lang.arrange.DelegateArrangeFactory;
 import com.chua.common.support.lang.page.Page;
@@ -21,8 +20,6 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
-import org.springframework.context.annotation.Bean;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -77,15 +74,15 @@ public class ArrangeProvider implements ApplicationContextAware {
     @Transactional
     public Result<Integer> saveOrUpdateNode(@RequestBody JSONObject json) {
         String arrangeId = json.getString("arrangeId");
-        if(!repository.exist(Wrappers.<SysArrange>lambdaQuery().eq(SysArrange::getArrangeId, arrangeId))) {
+        if(!repository.exist(SqlWrappers.<SysArrange>lambdaQuery().eq(SysArrange::getArrangeId, arrangeId))) {
             return Result.failed("任务名称不存在");
         }
         List<SysArrangeNode> nodes = BeanUtils.copyPropertiesList(json.getJSONArray("nodes"), SysArrangeNode.class);
-        nodeRepository.delete(Wrappers.<SysArrangeNode>lambdaQuery().eq(SysArrangeNode::getArrangeId, arrangeId));
+        nodeRepository.delete(SqlWrappers.<SysArrangeNode>lambdaQuery().eq(SysArrangeNode::getArrangeId, arrangeId));
         nodeRepository.saveBatch(nodes);
 
         List<SysArrangeEdge> edges = BeanUtils.copyPropertiesList(json.getJSONArray("edges"), SysArrangeEdge.class);
-        edgeRepository.delete(Wrappers.<SysArrangeEdge>lambdaQuery().eq(SysArrangeEdge::getArrangeId, arrangeId));
+        edgeRepository.delete(SqlWrappers.<SysArrangeEdge>lambdaQuery().eq(SysArrangeEdge::getArrangeId, arrangeId));
         edgeRepository.saveBatch(edges);
 
         return Result.success();
@@ -102,8 +99,8 @@ public class ArrangeProvider implements ApplicationContextAware {
     public Result<String> run(@RequestParam("arrangeId") String arrangeId) {
         String tid = IdUtils.createTid();
         DelegateArrangeFactory arrangeFactory = DelegateArrangeFactory.create(new SysArrangeListener(tid, arrangeId, loggerRepository));
-        List<SysArrangeNode> nodes = nodeRepository.list(Wrappers.<SysArrangeNode>lambdaQuery().eq(SysArrangeNode::getArrangeId, arrangeId));
-        List<SysArrangeEdge> edges = edgeRepository.list(Wrappers.<SysArrangeEdge>lambdaQuery().eq(SysArrangeEdge::getArrangeId, arrangeId));
+        List<SysArrangeNode> nodes = nodeRepository.list(SqlWrappers.<SysArrangeNode>lambdaQuery().eq(SysArrangeNode::getArrangeId, arrangeId));
+        List<SysArrangeEdge> edges = edgeRepository.list(SqlWrappers.<SysArrangeEdge>lambdaQuery().eq(SysArrangeEdge::getArrangeId, arrangeId));
         doRegister(arrangeFactory, edges, nodes);
         return Result.success();
     }
@@ -140,8 +137,8 @@ public class ArrangeProvider implements ApplicationContextAware {
     @Transactional
     public Result<JSONObject> nodeAndEdge(@RequestParam("arrangeId") String arrangeId) {
         JSONObject jsonObject = new JSONObject();
-        jsonObject.put("nodes", nodeRepository.list(Wrappers.<SysArrangeNode>lambdaQuery().eq(SysArrangeNode::getArrangeId, arrangeId)));
-        jsonObject.put("edges", edgeRepository.list(Wrappers.<SysArrangeEdge>lambdaQuery().eq(SysArrangeEdge::getArrangeId, arrangeId)));
+        jsonObject.put("nodes", nodeRepository.list(SqlWrappers.<SysArrangeNode>lambdaQuery().eq(SysArrangeNode::getArrangeId, arrangeId)));
+        jsonObject.put("edges", edgeRepository.list(SqlWrappers.<SysArrangeEdge>lambdaQuery().eq(SysArrangeEdge::getArrangeId, arrangeId)));
         return Result.success(jsonObject);
     }
 
@@ -154,7 +151,7 @@ public class ArrangeProvider implements ApplicationContextAware {
     @CacheEvict(cacheManager = DEFAULT_CACHE_MANAGER, cacheNames = "'arrange'")
     @PostMapping("/saveOrUpdate")
     public Result<Integer> saveOrUpdate(@RequestBody SysArrange sysArrange) {
-        if (repository.exist(Wrappers.<SysArrange>lambdaQuery()
+        if (repository.exist(SqlWrappers.<SysArrange>lambdaQuery()
                 .eq(SysArrange::getArrangeName, sysArrange.getArrangeName())
                 .ne(null != sysArrange.getArrangeId(), SysArrange::getArrangeId, sysArrange.getArrangeId()))
         ) {
@@ -173,8 +170,8 @@ public class ArrangeProvider implements ApplicationContextAware {
     @CacheEvict(cacheManager = DEFAULT_CACHE_MANAGER, cacheNames = "'arrange'")
     public Result<Boolean> delete(@RequestParam("id") String id) {
         if (repository.deleteById(id) > 0) {
-            edgeRepository.delete(Wrappers.<SysArrangeEdge>lambdaQuery().eq(SysArrangeEdge::getArrangeId, id));
-            nodeRepository.delete(Wrappers.<SysArrangeNode>lambdaQuery().eq(SysArrangeNode::getArrangeId, id));
+            edgeRepository.delete(SqlWrappers.<SysArrangeEdge>lambdaQuery().eq(SysArrangeEdge::getArrangeId, id));
+            nodeRepository.delete(SqlWrappers.<SysArrangeNode>lambdaQuery().eq(SysArrangeNode::getArrangeId, id));
         }
         return Result.success(true);
     }
