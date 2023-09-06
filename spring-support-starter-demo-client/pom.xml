@@ -29,7 +29,7 @@
 
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>utils-support-agent-support</artifactId>
+            <artifactId>utils-support-agent-starter</artifactId>
             <version>3.1.0</version>
         </dependency>
 
