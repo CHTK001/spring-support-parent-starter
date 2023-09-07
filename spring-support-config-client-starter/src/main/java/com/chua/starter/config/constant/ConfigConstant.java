@@ -2,6 +2,7 @@ package com.chua.starter.config.constant;
 
 /**
  * 配置常量
+ *
  * @author CH
  */
 public class ConfigConstant {
@@ -9,6 +10,10 @@ public class ConfigConstant {
      * 环境
      */
     public static final String PROFILE = "config-profile";
+    /**
+     * 路径
+     */
+    public static final String CONTEXT_PATH = "config-context-path";
     /**
      * 客户端密钥
      */
