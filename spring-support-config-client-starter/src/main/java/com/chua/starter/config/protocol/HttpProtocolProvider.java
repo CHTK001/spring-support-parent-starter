@@ -108,7 +108,7 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
             response.end("不支持");
             return;
         }
-
+        HttpServerResponse response = request.response();
         request.body(event -> {
             String data = event.result().toString().replace("data=", "");
             //服务端主动发起信息
@@ -130,11 +130,10 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
             Plugin plugin = ServiceProvider.of(Plugin.class).getExtension(event1);
             if (null != plugin) {
                 log.info("监听到数据: {}", event1);
-                plugin.onListener(keyValue);
+                plugin.onListener(keyValue, response);
             }
         });
 
-        HttpServerResponse response = request.response();
         //设置响应头
         response.putHeader("Content-type", "application/json;charset=utf-8");
         // 响应数据

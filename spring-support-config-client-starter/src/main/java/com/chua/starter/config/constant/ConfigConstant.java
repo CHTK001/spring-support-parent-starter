@@ -22,6 +22,10 @@ public class ConfigConstant {
      */
     public static final String CONFIG = "config";
     /**
+     * actuator
+     */
+    public static final String ACTUATOR = "actuator";
+    /**
      * 配置
      */
     public static final String BEAN = "bean";

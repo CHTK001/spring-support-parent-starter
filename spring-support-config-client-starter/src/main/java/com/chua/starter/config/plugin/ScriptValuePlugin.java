@@ -117,7 +117,7 @@ public class ScriptValuePlugin implements Plugin, BeanDefinitionRegistryPostProc
     }
 
     @Override
-    public void onListener(KeyValue keyValue) {
+    public void onListener(KeyValue keyValue, Object response) {
         JSON.parseObject(keyValue.getData()).getString("value");
         System.out.println();
     }
