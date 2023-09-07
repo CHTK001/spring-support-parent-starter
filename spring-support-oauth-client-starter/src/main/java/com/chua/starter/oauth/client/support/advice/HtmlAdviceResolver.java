@@ -62,13 +62,13 @@ public class HtmlAdviceResolver implements AdviceResolver {
             return;
         }
 
-        Robin<String> balance1 = ServiceProvider.of(Robin.class).getExtension(authProperties.getBalance());
-        Robin<String> robin1 = balance1.create();
+        Robin balance1 = ServiceProvider.of(Robin.class).getExtension(authProperties.getBalance());
+        Robin robin1 = balance1.create();
         String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(authProperties.getLoginAddress()).split(",");
         robin1.addNode(split);
 
-        Node<String> robin = robin1.selectNode();
-        String address = robin.getContent();
+        Node robin = robin1.selectNode();
+        String address = robin.getString();
 
         String queryString = request.getQueryString();
         String toString = request.getRequestURL().toString();

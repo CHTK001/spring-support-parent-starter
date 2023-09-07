@@ -26,4 +26,9 @@ public class SpelExpressionParser implements ExpressionParser {
     public Value<?> parseExpression(String express) {
         return Value.of(expressionParser.parseExpression(express, new TemplateParserContext()).getValue(evaluationContext));
     }
+
+    @Override
+    public void addFunction(Class<?> type, Object bean) {
+
+    }
 }
