@@ -128,7 +128,7 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
         Map<String, Object> rs = new HashMap<>(3);
 
         Codec provider = ServiceProvider.of(Codec.class).getExtension(configProperties.getEncrypt());
-        rs.put(ConfigConstant.APPLICATION_HOST, Optional.ofNullable(configProperties.getBindIp()).orElse(meta.getHostIp()));
+        rs.put(ConfigConstant.APPLICATION_HOST, Optional.ofNullable(configProperties.getBindIp()).orElse(PluginMeta.getHostIp()));
         rs.put(ConfigConstant.APPLICATION_PORT, meta.getPort());
         rs.put(ConfigConstant.KEY, (meta.createKey()));
         rs.put(ConfigConstant.APPLICATION_NAME, meta.getApplicationName());
@@ -221,6 +221,7 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
 
         req.put(ConfigConstant.PROFILE, environment.getProperty("spring.profiles.active", "dev"));
         req.put(ConfigConstant.KEY, (meta.createKey()));
+        req.put(ConfigConstant.CONTEXT_PATH, environment.getProperty("spring.servlet.context-path", ""));
         req.put(ConfigConstant.REFRESH, configProperties.isAutoRefresh());
     }
 
