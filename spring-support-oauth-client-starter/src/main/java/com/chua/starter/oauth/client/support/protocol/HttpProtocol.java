@@ -63,10 +63,11 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         Cookie[] cookies = Optional.ofNullable(cookie).orElse(new Cookie[0]);
         String cacheKey = getCacheKey(cookies, token);
         if (null != cacheKey) {
+            check();
             Value o = CACHEABLE.get(cacheKey);
             if (null != o) {
                 AuthenticationInformation authenticationInformation = (AuthenticationInformation) o.getValue();
-                if (authenticationInformation.getInformation().getCode() == 200) {
+                if (null != authenticationInformation && authenticationInformation.getInformation().getCode() == 200) {
                     return authenticationInformation;
                 }
             }
@@ -156,6 +157,16 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
             return inCache(cacheKey, new AuthenticationInformation(OTHER, null));
         }
         return inCache(cacheKey, AuthenticationInformation.authServerNotFound());
+    }
+
+    private void check() {
+        if (null != CACHEABLE) {
+            return;
+        }
+        try {
+            afterPropertiesSet();
+        } catch (Exception ignored) {
+        }
     }
 
     @Override
