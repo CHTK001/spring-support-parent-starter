@@ -465,7 +465,7 @@ public class ConfigValuePlugin extends AnnotationInjectedBeanPostProcessor<Confi
     }
 
     @Override
-    public void onListener(KeyValue keyValue) {
+    public void onListener(KeyValue keyValue, Object response) {
         onChange(keyValue);
     }
 
@@ -476,6 +476,7 @@ public class ConfigValuePlugin extends AnnotationInjectedBeanPostProcessor<Confi
             ((ApplicationContextAware) protocolProvider).setApplicationContext(applicationContext);
         }
     }
+
 
     private static class ConfigValueTarget {
 
