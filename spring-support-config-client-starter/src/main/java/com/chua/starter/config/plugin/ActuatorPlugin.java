@@ -2,6 +2,7 @@ package com.chua.starter.config.plugin;
 
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.utils.CollectionUtils;
+import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.config.constant.ConfigConstant;
 import com.chua.starter.config.entity.KeyValue;
 import com.chua.starter.config.properties.ConfigProperties;
@@ -13,6 +14,7 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.env.Environment;
 
 import java.util.LinkedHashMap;
@@ -28,7 +30,7 @@ import java.util.stream.Collectors;
 @Setter
 @Slf4j
 @Spi(ConfigConstant.ACTUATOR)
-public class ActuatorPlugin implements Plugin, BeanDefinitionRegistryPostProcessor {
+public class ActuatorPlugin implements Plugin, BeanDefinitionRegistryPostProcessor, ApplicationContextAware {
     private Environment environment;
 
     @Setter
@@ -62,4 +64,14 @@ public class ActuatorPlugin implements Plugin, BeanDefinitionRegistryPostProcess
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
 
     }
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.configProperties = SpringBeanUtils.bindOrCreate(ConfigProperties.PRE, ConfigProperties.class);
+        applicationContext.getAutowireCapableBeanFactory().autowireBean(protocolProvider);
+        if (protocolProvider instanceof ApplicationContextAware) {
+            ((ApplicationContextAware) protocolProvider).setApplicationContext(applicationContext);
+        }
+    }
+
 }
