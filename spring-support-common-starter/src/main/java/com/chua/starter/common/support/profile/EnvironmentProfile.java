@@ -62,8 +62,4 @@ public class EnvironmentProfile extends DelegateProfile {
         return null;
     }
 
-    @Override
-    public String getProperty(String name) {
-        return environment.getProperty(name);
-    }
 }

@@ -1,6 +1,7 @@
 package com.chua.starter.oauth.client.support.advice;
 
 import com.alibaba.fastjson2.JSON;
+import com.chua.common.support.lang.code.ResultCode;
 import com.chua.starter.common.support.result.ReturnResult;
 import org.springframework.http.MediaType;
 
@@ -22,7 +23,7 @@ public class JsonAdviceResolver implements AdviceResolver {
 
     @Override
     public Object resolve(HttpServletResponse response, Integer status, String message) {
-        ReturnResult rs = ReturnResult.newBuilder().code(ResultCode.transferHttpCode(status)).msg(message).build();
+        ReturnResult rs = ReturnResult.newBuilder().code(ResultCode.transferForHttpCode(status).getCode()).msg(message).build();
         if (null == response) {
             return rs;
         }
