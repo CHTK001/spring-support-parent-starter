@@ -1,7 +1,7 @@
 package com.chua.starter.common.support.result;
 
 import com.chua.common.support.lang.page.Page;
-import com.chua.common.support.reflection.describe.TypeDescribe;
+import com.chua.common.support.objects.definition.element.TypeDescribe;
 import com.chua.common.support.utils.ClassUtils;
 import lombok.AllArgsConstructor;
 import lombok.Data;
