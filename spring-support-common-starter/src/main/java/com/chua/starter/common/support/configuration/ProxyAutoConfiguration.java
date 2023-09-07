@@ -1,8 +1,8 @@
 package com.chua.starter.common.support.configuration;
 
-import com.chua.common.support.context.resolver.ProxyResolver;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.common.support.properties.ProxyProperties;
+import com.chua.starter.common.support.transpond.resolve.ProxyResolver;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;

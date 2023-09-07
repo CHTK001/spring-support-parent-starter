@@ -1,6 +1,6 @@
 package com.chua.starter.common.support.spi;
 
-import com.chua.common.support.context.annotation.AutoInject;
+import com.chua.common.support.objects.scanner.annotations.AutoInject;
 import com.chua.common.support.spi.autowire.ServiceAutowire;
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.utils.CollectionUtils;
