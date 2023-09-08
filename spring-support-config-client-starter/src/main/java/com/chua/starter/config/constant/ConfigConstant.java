@@ -35,6 +35,10 @@ public class ConfigConstant {
      */
     public static final String BEAN = "bean";
     /**
+     * 配置
+     */
+    public static final String APP = "application";
+    /**
      * 客户端IP
      */
     public static final String APPLICATION_HOST = "config-client-host";
@@ -42,6 +46,10 @@ public class ConfigConstant {
      * 客户端端口
      */
     public static final String APPLICATION_PORT = "config-client-port";
+    /**
+     * 客户端端口
+     */
+    public static final String SPRING_PORT = "config-client-spring-port";
     /**
      * 客户端名称
      */

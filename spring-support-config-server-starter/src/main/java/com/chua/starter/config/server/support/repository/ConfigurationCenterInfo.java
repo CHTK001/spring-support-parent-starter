@@ -12,6 +12,7 @@ import javax.persistence.*;
  * @since 2022/8/1 13:03
  */
 @Data
+@Deprecated
 @Entity(name = "CONFIGURATION_CENTER_INFO")
 @Table(name = "CONFIGURATION_CENTER_INFO")
 public class ConfigurationCenterInfo {

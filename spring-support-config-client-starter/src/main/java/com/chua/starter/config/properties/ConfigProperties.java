@@ -74,11 +74,23 @@ public class ConfigProperties {
          * config: 配置项
          * bean: 脚本对象
          */
-        private String dataType;
+        private SubScribeType dataType;
         /**
          * 订阅的名称(多个逗号分隔)
          */
         private String subscribe;
+    }
+
+
+    public static enum SubScribeType {
+        /**
+         * config
+         */
+        CONFIG,
+        /**
+         * bean
+         */
+        BEAN
     }
 
 }

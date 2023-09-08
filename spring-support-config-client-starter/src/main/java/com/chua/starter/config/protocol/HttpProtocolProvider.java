@@ -40,13 +40,35 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
     }
 
     @Override
-    protected String send(String encode, String subscribe, String dataType) {
+    protected String register(String encode, String dataType) {
         HttpResponse<String> response = null;
         try {
             response = Unirest.post(named()[0] + "://" + configProperties.getConfigAddress().concat("/config/register"))
                     .field(ConfigConstant.APPLICATION_DATA, encode)
                     .field(ConfigConstant.APPLICATION_NAME, meta.getApplicationName())
-                    .field(ConfigConstant.APPLICATION_SUBSCRIBE, subscribe)
+                    .field(ConfigConstant.PROFILE, meta.getProfile())
+                    .field(ConfigConstant.APPLICATION_DATA_TYPE, dataType)
+                    .asString();
+        } catch (Throwable e) {
+            log.warn(e.getMessage());
+            return null;
+        }
+
+        if(null == response || response.getStatus() != 200) {
+            return null;
+        }
+
+        return response.getBody();
+    }
+
+    @Override
+    protected String subscribe(String encode, String dataType) {
+        HttpResponse<String> response = null;
+        try {
+            response = Unirest.post(named()[0] + "://" + configProperties.getConfigAddress().concat("/config/subscribe"))
+                    .field(ConfigConstant.APPLICATION_DATA, encode)
+                    .field(ConfigConstant.APPLICATION_NAME, meta.getApplicationName())
+                    .field(ConfigConstant.PROFILE, meta.getProfile())
                     .field(ConfigConstant.APPLICATION_DATA_TYPE, dataType)
                     .asString();
         } catch (Throwable e) {
@@ -161,6 +183,7 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
                             .field(ConfigConstant.APPLICATION_DATA, "")
                             .field(ConfigConstant.APPLICATION_DATA_TYPE, ConfigConstant.CONFIG)
                             .field(ConfigConstant.APPLICATION_NAME, configName)
+                            .field(ConfigConstant.PROFILE, meta.getProfile())
                             .asString();
                     if (null != response && response.getStatus() == 200) {
                         if (log.isDebugEnabled()) {

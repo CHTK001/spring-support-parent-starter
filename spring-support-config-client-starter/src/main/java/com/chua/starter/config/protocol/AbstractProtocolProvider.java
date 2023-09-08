@@ -4,6 +4,7 @@ import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.function.NamedThreadFactory;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.utils.ThreadUtils;
@@ -29,6 +30,8 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+
+import static com.chua.starter.config.constant.ConfigConstant.APPLICATION_SUBSCRIBE;
 
 /**
  * 协议
@@ -60,7 +63,7 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
 
 
     private final List<CacheMeta> cacheMetaList = new CopyOnWriteArrayList<>();
-    private Map<String, CacheMeta> cacheMetaFailureList = new ConcurrentHashMap<>();
+    private final Map<String, CacheMeta> cacheMetaFailureList = new ConcurrentHashMap<>();
 
     @Override
     public void subscribe(String subscribe, String dataType, Map<String, Object> data, Consumer<Map<String, Object>> consumer) {
@@ -72,10 +75,21 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
         String encode = encrypt.encodeHex(Json.toJson(data), StringUtils.defaultString(configProperties.getKey(), DEFAULT_SER));
         String body = null;
         try {
-            body = send(encode, subscribe, dataType);
+            body = register(encode, dataType);
             this.cacheMetaFailureList.remove(dataType + subscribe);
         } catch (Exception e) {
             log.warn(e.getMessage());
+        }
+
+        if(StringUtils.isNotBlank(subscribe)) {
+            try {
+                data.put(APPLICATION_SUBSCRIBE, subscribe);
+                encode = encrypt.encodeHex(Json.toJson(data), StringUtils.defaultString(configProperties.getKey(), DEFAULT_SER));
+                body = subscribe(encode, dataType);
+                this.cacheMetaFailureList.remove(dataType + subscribe);
+            } catch (Exception e) {
+                log.warn(e.getMessage());
+            }
         }
 
         if (Strings.isNullOrEmpty(body)) {
@@ -107,12 +121,23 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
     }
 
     /**
+     * 登记
      * 发送信息
      *
-     * @param encode 数据
+     * @param encode   数据
+     * @param dataType 数据类型
      * @return 响应
      */
-    protected abstract String send(String encode, String subscribe, String dataType);
+    protected abstract String register(String encode, String dataType);
+    /**
+     * 登记
+     * 发送信息
+     *
+     * @param encode   数据
+     * @param dataType 数据类型
+     * @return 响应
+     */
+    protected abstract String subscribe(String encode, String dataType);
 
     /**
      * 心跳
@@ -218,11 +243,18 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
     protected void renderBase(Map<String, Object> req) {
         req.put(ConfigConstant.APPLICATION_HOST, meta.getHost());
         req.put(ConfigConstant.APPLICATION_PORT, meta.getPort());
+        req.put(ConfigConstant.SPRING_PORT, environment.getProperty("server.port", ""));
 
         req.put(ConfigConstant.PROFILE, environment.getProperty("spring.profiles.active", "dev"));
         req.put(ConfigConstant.KEY, (meta.createKey()));
-        req.put(ConfigConstant.CONTEXT_PATH, environment.getProperty("spring.servlet.context-path", ""));
+        req.put(ConfigConstant.CONTEXT_PATH, environment.getProperty("server.servlet.context-path", environment.getProperty("server.servlet.contextPath", "")));
         req.put(ConfigConstant.REFRESH, configProperties.isAutoRefresh());
+        if(ClassUtils.isPresent("org.springframework.boot.actuate.endpoint.web.servlet.WebMvcEndpointHandlerMapping")) {
+            req.put(ConfigConstant.ACTUATOR, environment.getProperty("management.context-path",
+                    environment.getProperty("management.context-path",
+                            environment.getProperty("management.endpoints.base-path",
+                            environment.getProperty("management.endpoints.basePath", "/actuator")))));
+        }
     }
 
     @Data

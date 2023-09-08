@@ -12,6 +12,7 @@ import com.chua.starter.config.server.support.protocol.ProtocolServer;
 import com.chua.starter.config.server.support.uniform.Uniform;
 import com.google.common.base.Strings;
 import lombok.extern.slf4j.Slf4j;
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
@@ -20,24 +21,25 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.env.Environment;
-import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 /**
  * @author CH
  */
 @Slf4j
-@EntityScan(basePackages = {"com.chua.starter.config.server.support.repository"})
-@EnableJpaRepositories(basePackages = {"com.chua.starter.config.server.support.repository"})
+//@EntityScan(basePackages = {"com.chua.starter.config.server.support.repository"})
+//@EnableJpaRepositories(basePackages = {"com.chua.starter.config.server.support.repository"})
 @EnableConfigurationProperties({ConfigServerProperties.class, ConfigUniformProperties.class})
 @AutoConfigureAfter
+@MapperScan("com.chua.starter.config.server.support.mapper")
+@ComponentScan("com.chua.starter.config.server.support.service.impl")
 public class ConfigServerConfiguration implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware, EnvironmentAware, DisposableBean {
 
     private ConfigServerProperties configServerProperties;

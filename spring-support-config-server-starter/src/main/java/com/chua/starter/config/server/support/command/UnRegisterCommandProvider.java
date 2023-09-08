@@ -24,7 +24,7 @@ public class UnRegisterCommandProvider implements CommandProvider {
     private ConfigServerProperties configServerProperties;
 
     @Override
-    public ReturnResult<String> command(String subscribe, String applicationName, String data, String dataType, DataManager dataManager, HttpServletRequest request) {
+    public ReturnResult<String> command(String applicationName, String data, String dataType, String applicationProfile, DataManager dataManager, HttpServletRequest request) {
         if (!configServerProperties.isOpenAutoDestroy()) {
             return ReturnResult.ok();
         }
@@ -45,8 +45,9 @@ public class UnRegisterCommandProvider implements CommandProvider {
         if(null == decode) {
             return ReturnResult.illegal();
         }
-        dataManager.unregister(applicationName, dataType);
+        dataManager.unregister(applicationName, dataType, applicationProfile);
 
         return ReturnResult.ok();
     }
+
 }

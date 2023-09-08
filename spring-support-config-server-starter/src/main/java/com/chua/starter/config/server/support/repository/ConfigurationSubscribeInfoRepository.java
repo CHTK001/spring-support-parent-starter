@@ -27,6 +27,7 @@ import java.util.concurrent.Executor;
  * @since 2022/8/1 13:06
  */
 @SuppressWarnings("ALL")
+@Deprecated
 @Repository("subscribe")
 public interface ConfigurationSubscribeInfoRepository extends ConfigurationRepository<ConfigurationSubscribeInfo> {
 

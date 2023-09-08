@@ -60,7 +60,7 @@ public class ScriptValuePlugin implements Plugin, BeanDefinitionRegistryPostProc
         }
 
         ConfigProperties.Subscribe first = CollectionUtils.findFirst(collect);
-        protocolProvider.subscribe(first.getSubscribe(), first.getDataType(), new LinkedHashMap<>(), new Consumer<Map<String, Object>>() {
+        protocolProvider.subscribe(first.getSubscribe(), first.getDataType().name(), new LinkedHashMap<>(), new Consumer<Map<String, Object>>() {
             @Override
             public void accept(Map<String, Object> stringObjectMap) {
                 log.info(">>>>>>> 已从配置中心拉取Bean");

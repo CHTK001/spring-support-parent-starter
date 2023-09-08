@@ -18,7 +18,7 @@ import java.util.function.Consumer;
 public interface ProtocolProvider extends NameAware, PriorityOrdered, InitializingBean, DisposableBean {
 
     /**
-     * 订阅书
+     * 订阅
      *
      * @param subscribe 订阅
      * @param data      数据

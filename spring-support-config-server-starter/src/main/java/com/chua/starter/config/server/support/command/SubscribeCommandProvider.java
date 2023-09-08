@@ -5,9 +5,8 @@ import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.MapUtils;
-import com.chua.common.support.utils.ThreadUtils;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
-import com.chua.starter.common.support.constant.Constant;
 import com.chua.starter.common.support.key.KeyManagerProvider;
 import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.config.constant.ConfigConstant;
@@ -18,23 +17,24 @@ import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
 
+import static com.chua.starter.common.support.constant.Constant.DEFAULT_SER;
+import static com.chua.starter.config.constant.ConfigConstant.APPLICATION_NAME;
+import static com.chua.starter.config.constant.ConfigConstant.APPLICATION_SUBSCRIBE;
 
 /**
- * 注册
+ * 订阅
  *
  * @author CH
- * @since 2022/8/1 9:20
  */
-@Spi("register")
-public class RegisterCommandProvider implements CommandProvider, Constant {
-    private final ExecutorService executorService = ThreadUtils.newProcessorThreadExecutor();
+@Spi("subscribe")
+public class SubscribeCommandProvider implements CommandProvider {
 
     @Resource
     private ConfigServerProperties configServerProperties;
     @Override
     public ReturnResult<String> command(String applicationName, String data, String dataType, String applicationProfile, DataManager dataManager, HttpServletRequest request) {
+        dataType = dataType.toLowerCase();
         ServiceProvider<Codec> serviceProvider = ServiceProvider.of(Codec.class);
         Codec encrypt = serviceProvider.getExtension(configServerProperties.getEncrypt());
         if (null == encrypt) {
@@ -57,10 +57,8 @@ public class RegisterCommandProvider implements CommandProvider, Constant {
             return ReturnResult.illegal();
         }
         Map<String, Object> stringObjectMap = Json.toMapStringObject(decode);
-        executorService.execute(() -> {
-            dataManager.register(applicationName, dataType.toLowerCase(), applicationProfile, stringObjectMap);
-        });
-        return ReturnResult.ok(encrypt.encodeHex("", MapUtils.getString(stringObjectMap, ConfigConstant.KEY)));
-    }
+        String value = StringUtils.defaultString(dataManager.getSubscribe(MapUtils.getString(stringObjectMap, APPLICATION_SUBSCRIBE), dataType, MapUtils.getString(stringObjectMap, APPLICATION_NAME), applicationProfile, stringObjectMap), "");
+        return ReturnResult.ok(encrypt.encodeHex(value, MapUtils.getString(stringObjectMap, ConfigConstant.KEY)));
 
+    }
 }

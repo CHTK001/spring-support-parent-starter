@@ -17,31 +17,37 @@ import java.util.Set;
  */
 public interface DataManager extends InitializingAware {
     /**
+     * 登记
      * 注册数据
      *
-     * @param applicationName 数据应用
-     * @param dataType        数据类型
-     * @param stringObjectMap 数据
+     * @param applicationName    数据应用
+     * @param dataType           数据类型
+     * @param stringObjectMap    数据
+     * @param applicationProfile 应用程序配置文件
      */
-    void register(String applicationName, String dataType, Map<String, Object> stringObjectMap);
+    void register(String applicationName, String dataType, String applicationProfile, Map<String, Object> stringObjectMap);
 
     /**
+     * 获取订阅
      * 获取订阅数据
      *
-     * @param subscribe 订阅的名称
-     * @param dataType  数据类型
-     * @param profile   环境
+     * @param subscribe       订阅的名称
+     * @param dataType        数据类型
+     * @param applicationName 应用程序名称
+     * @param profile         环境
+     * @param data            数据
      * @return 数据
      */
-    String getSubscribe(String subscribe, String dataType, String profile);
+    String getSubscribe(String subscribe, String dataType, String applicationName, String profile, Map<String, Object> data);
 
     /**
      * 注销
      *
-     * @param applicationName 应用
-     * @param dataType        数据类型
+     * @param applicationName    应用
+     * @param dataType           数据类型
+     * @param applicationProfile 应用程序配置文件
      */
-    void unregister(String applicationName, String dataType);
+    void unregister(String applicationName, String dataType, String applicationProfile);
 
     /**
      * 查询数据

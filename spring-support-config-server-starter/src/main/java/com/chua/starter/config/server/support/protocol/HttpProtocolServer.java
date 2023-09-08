@@ -54,6 +54,7 @@ public class HttpProtocolServer implements ProtocolServer, ApplicationContextAwa
     private final ExecutorService executorService = ThreadUtils.newProcessorThreadExecutor();
     private DataManager dataManager;
 
+
     @Override
     public String[] named() {
         return new String[]{"http"};
@@ -62,13 +63,13 @@ public class HttpProtocolServer implements ProtocolServer, ApplicationContextAwa
     /**
      * 注册地址
      *
-     * @param command         命令
-     * @param data            数据
-     * @param dataType        数据类型
-     * @param applicationName 当前数据的应用
-     * @param subscribe       订阅那些数据
-     * @param request         请求
-     * @param response        响应
+     * @param command            命令
+     * @param data               数据
+     * @param dataType           数据类型
+     * @param applicationName    当前数据的应用
+     * @param applicationProfile 环境
+     * @param request            请求
+     * @param response           响应
      * @return 结果
      */
     @PostMapping("/{command}")
@@ -77,7 +78,7 @@ public class HttpProtocolServer implements ProtocolServer, ApplicationContextAwa
             @RequestParam(ConfigConstant.APPLICATION_DATA_TYPE) String dataType,
             @RequestParam(ConfigConstant.APPLICATION_DATA) String data,
             @RequestParam(ConfigConstant.APPLICATION_NAME) String applicationName,
-            @RequestParam(value = ConfigConstant.APPLICATION_SUBSCRIBE, required = false) String subscribe,
+            @RequestParam(ConfigConstant.PROFILE) String applicationProfile,
             HttpServletRequest request, HttpServletResponse response) {
         ServiceProvider<CommandProvider> serviceProvider = ServiceProvider.of(CommandProvider.class);
         CommandProvider commandProvider = serviceProvider.getExtension(command);
@@ -85,7 +86,7 @@ public class HttpProtocolServer implements ProtocolServer, ApplicationContextAwa
             return ReturnResult.illegal(null, "命令不存在");
         }
 
-        return commandProvider.command(subscribe, applicationName, data, dataType, dataManager, request);
+        return commandProvider.command(applicationName, data, dataType, applicationProfile, dataManager, request);
     }
 
     @Override
