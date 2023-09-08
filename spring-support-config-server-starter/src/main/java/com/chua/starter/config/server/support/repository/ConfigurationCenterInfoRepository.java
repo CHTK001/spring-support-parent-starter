@@ -38,6 +38,7 @@ import java.util.*;
  * @since 2022/8/1 13:06
  */
 @SuppressWarnings("ALL")
+@Deprecated
 @Repository("config")
 public interface ConfigurationCenterInfoRepository extends ConfigurationRepository<ConfigurationCenterInfo> {
 

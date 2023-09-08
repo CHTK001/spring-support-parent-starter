@@ -13,15 +13,16 @@ import javax.servlet.http.HttpServletRequest;
  */
 public interface CommandProvider {
     /**
+     * 命令
      * 处理数据
      *
-     * @param subscribe       订阅的数据类型
-     * @param applicationName 当前应用名称
-     * @param data            数据
-     * @param dataType
-     * @param dataManager
-     * @param request         请求
+     * @param applicationName    当前应用名称
+     * @param data               数据
+     * @param dataType           数据类型
+     * @param dataManager        数据管理器
+     * @param request            请求
+     * @param applicationProfile 应用程序配置文件
      * @return 结果
      */
-    ReturnResult<String> command(String subscribe, String applicationName, String data, String dataType, DataManager dataManager, HttpServletRequest request);
+    ReturnResult<String> command(String applicationName, String data, String dataType, String applicationProfile, DataManager dataManager, HttpServletRequest request);
 }

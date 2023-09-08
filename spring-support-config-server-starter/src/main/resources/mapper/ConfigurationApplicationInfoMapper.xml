@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.config.server.support.mapper.ConfigurationApplicationInfoMapper">
+  <resultMap id="BaseResultMap" type="com.chua.starter.config.server.support.entity.ConfigurationApplicationInfo">
+    <!--@mbg.generated-->
+    <!--@Table configuration_application_info-->
+    <id column="app_id" jdbcType="INTEGER" property="appId" />
+    <result column="app_name" jdbcType="VARCHAR" property="appName" />
+    <result column="app_host" jdbcType="VARCHAR" property="appHost" />
+    <result column="app_port" jdbcType="INTEGER" property="appPort" />
+    <result column="app_profile" jdbcType="VARCHAR" property="appProfile" />
+    <result column="app_spring_port" jdbcType="INTEGER" property="appSpringPort" />
+    <result column="app_context_path" jdbcType="VARCHAR" property="appContextPath" />
+    <result column="app_actuator" jdbcType="VARCHAR" property="appActuator" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    app_id, app_name, app_host, app_port, app_profile, app_spring_port, app_context_path, 
+    app_actuator
+  </sql>
+</mapper>

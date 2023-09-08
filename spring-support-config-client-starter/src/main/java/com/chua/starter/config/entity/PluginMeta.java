@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 @Data
 public class PluginMeta {
 
+    private final String profile;
     private ApplicationContext applicationContext;
     private String ck;
 
@@ -45,6 +46,7 @@ public class PluginMeta {
         this.configProperties = configProperties;
         this.environment = environment;
         this.applicationName = environment.getProperty("spring.application.name");
+        this.profile = environment.getProperty("spring.profiles.active", "dev");
     }
 
     public int getPort() {
@@ -122,28 +124,28 @@ public class PluginMeta {
         return null;
     }
 
-    public String getSubscribeName(String config) {
+    public String getSubscribeName(ConfigProperties.SubScribeType config) {
         List<ConfigProperties.Subscribe> subscribe = configProperties.getSubscribe();
         Set<ConfigProperties.Subscribe> collect = subscribe.stream().filter(it -> config.equals(it.getDataType())).collect(Collectors.toSet());
 
         ConfigProperties.Subscribe subscribe1 = CollectionUtils.findFirst(collect);
-        if (ConfigConstant.CONFIG.equalsIgnoreCase(config)) {
+        if (ConfigProperties.SubScribeType.CONFIG == config) {
             return null == subscribe1 ? applicationName : subscribe1.getSubscribe();
         }
 
         return null == subscribe1 ? null : subscribe1.getSubscribe();
     }
 
-    public String getDateType(String config) {
+    public String getDateType(ConfigProperties.SubScribeType config) {
         List<ConfigProperties.Subscribe> subscribe = configProperties.getSubscribe();
         Set<ConfigProperties.Subscribe> collect = subscribe.stream().filter(it -> config.equals(it.getDataType())).collect(Collectors.toSet());
 
         ConfigProperties.Subscribe subscribe1 = CollectionUtils.findFirst(collect);
-        if (ConfigConstant.CONFIG.equalsIgnoreCase(config)) {
-            return null == subscribe1 ? ConfigConstant.CONFIG : subscribe1.getDataType();
+        if (ConfigProperties.SubScribeType.CONFIG == config) {
+            return null == subscribe1 ? ConfigConstant.CONFIG : subscribe1.getDataType().name();
         }
 
-        return null == subscribe1 ? null : subscribe1.getDataType();
+        return null == subscribe1 ? null : subscribe1.getDataType().name();
     }
 
     /**

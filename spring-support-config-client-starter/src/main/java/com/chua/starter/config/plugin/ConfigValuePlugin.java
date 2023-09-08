@@ -44,7 +44,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.function.Consumer;
 
 import static org.springframework.core.annotation.AnnotationUtils.getAnnotation;
 
@@ -151,7 +150,7 @@ public class ConfigValuePlugin extends AnnotationInjectedBeanPostProcessor<Confi
         }
 
 
-        String subscribeName = pluginMeta.getSubscribeName(ConfigConstant.CONFIG);
+        String subscribeName = pluginMeta.getSubscribeName(ConfigProperties.SubScribeType.CONFIG);
 
         String dataType = ConfigConstant.CONFIG;
 
@@ -159,25 +158,22 @@ public class ConfigValuePlugin extends AnnotationInjectedBeanPostProcessor<Confi
 
         renderData(req);
         renderI18n(req);
-        protocolProvider.subscribe(subscribeName, dataType, req, new Consumer<Map<String, Object>>() {
-            @Override
-            public void accept(Map<String, Object> value) {
-                log.info(">>>>>>>> 已从配置中心拉取订阅配置");
-                List<PropertiesPropertySource> rs = new ArrayList<>();
-                value.forEach((k, v) -> {
-                    PropertiesPropertySource propertiesPropertySource = new PropertiesPropertySource(k, MapUtils.asProp(v));
-                    rs.add(propertiesPropertySource);
-                });
+        protocolProvider.subscribe(subscribeName, dataType, req, value -> {
+            log.info(">>>>>>>> 已从配置中心拉取订阅配置");
+            List<PropertiesPropertySource> rs = new ArrayList<>();
+            value.forEach((k, v) -> {
+                PropertiesPropertySource propertiesPropertySource = new PropertiesPropertySource(k, MapUtils.asProp(v));
+                rs.add(propertiesPropertySource);
+            });
 
-                rs.sort((o1, o2) -> {
-                    int intValue1 = MapUtils.getIntValue(o1.getSource(), PluginMeta.ORDER, 0);
-                    int intValue2 = MapUtils.getIntValue(o2.getSource(), PluginMeta.ORDER, 0);
-                    return intValue2 - intValue1;
-                });
+            rs.sort((o1, o2) -> {
+                int intValue1 = MapUtils.getIntValue(o1.getSource(), PluginMeta.ORDER, 0);
+                int intValue2 = MapUtils.getIntValue(o2.getSource(), PluginMeta.ORDER, 0);
+                return intValue2 - intValue1;
+            });
 
-                for (PropertiesPropertySource propertiesPropertySource : rs) {
-                    propertySources.addFirst(propertiesPropertySource);
-                }
+            for (PropertiesPropertySource propertiesPropertySource : rs) {
+                propertySources.addFirst(propertiesPropertySource);
             }
         });
     }

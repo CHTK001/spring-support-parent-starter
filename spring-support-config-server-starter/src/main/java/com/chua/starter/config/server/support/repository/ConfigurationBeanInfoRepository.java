@@ -36,6 +36,7 @@ import java.util.*;
  */
 @SuppressWarnings("ALL")
 @Repository("bean")
+@Deprecated
 public interface ConfigurationBeanInfoRepository extends ConfigurationRepository<ConfigurationBeanInfo> {
 
 

@@ -16,7 +16,7 @@ import javax.servlet.http.HttpServletRequest;
 @Spi("beat")
 public class BeatCommandProvider implements CommandProvider {
     @Override
-    public ReturnResult<String> command(String subscribe, String binder, String data, String dataType, DataManager dataManager, HttpServletRequest request) {
+    public ReturnResult<String> command(String binder, String data, String dataType, String applicationProfile, DataManager dataManager, HttpServletRequest request) {
         if (Strings.isNullOrEmpty(binder)) {
             return ReturnResult.illegal();
         }
