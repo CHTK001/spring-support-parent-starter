@@ -4,9 +4,9 @@ import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.annotations.SpiDefault;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.config.constant.ConfigConstant;
+import com.chua.starter.config.server.support.entity.ConfigurationSubscribeInfo;
 import com.chua.starter.config.server.support.protocol.ProtocolServer;
 import com.chua.starter.config.server.support.query.DetailUpdate;
-import com.chua.starter.config.server.support.repository.ConfigurationSubscribeInfo;
 import com.chua.starter.config.server.support.service.ConfigurationService;
 import com.google.common.base.Strings;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +15,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.io.Serializable;
@@ -42,6 +43,7 @@ public class DataBaseDataManager implements DataManager {
     private ApplicationContext applicationContext;
 
     @Override
+    @Transactional
     public void register(String applicationName, String dataType, String applicationProfile, Map<String, Object> data) {
         Boolean refresh = MapUtils.getBoolean(data, ConfigConstant.REFRESH, false);
         if (refresh) {

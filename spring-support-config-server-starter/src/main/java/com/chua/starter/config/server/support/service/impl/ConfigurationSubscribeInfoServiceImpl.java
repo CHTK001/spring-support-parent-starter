@@ -12,7 +12,6 @@ import com.chua.starter.config.server.support.service.ConfigurationSubscribeInfo
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.io.Serializable;
 import java.util.Map;
@@ -29,7 +28,6 @@ public class ConfigurationSubscribeInfoServiceImpl extends ServiceImpl<Configura
         implements ConfigurationSubscribeInfoService, ConfigurationService<ConfigurationSubscribeInfo> {
 
     @Override
-    @Transactional
     public void register(String applicationName, String applicationProfile, Map<String, Object> data) {
         ConfigurationSubscribeInfo configurationSubscribeInfo = new ConfigurationSubscribeInfo();
         configurationSubscribeInfo.setSubscribeProfile(applicationProfile);
@@ -81,7 +79,11 @@ public class ConfigurationSubscribeInfoServiceImpl extends ServiceImpl<Configura
 
     @Override
     public void saveData(ConfigurationSubscribeInfo data) {
-
+        if (null != data.getSubscribeId()) {
+            baseMapper.updateById(data);
+            return;
+        }
+        baseMapper.insert(data);
     }
 
     @Override
@@ -90,7 +92,7 @@ public class ConfigurationSubscribeInfoServiceImpl extends ServiceImpl<Configura
     }
 
     @Override
-    public void notifyConfig(ProtocolServer protocolServer, com.chua.starter.config.server.support.repository.ConfigurationSubscribeInfo subscribeInfo, Object configValue) {
+    public void notifyConfig(ProtocolServer protocolServer, ConfigurationSubscribeInfo subscribeInfo, Object configValue) {
 
     }
 }

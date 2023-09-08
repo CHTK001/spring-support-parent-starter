@@ -10,10 +10,10 @@ import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.config.constant.ConfigConstant;
 import com.chua.starter.config.server.support.entity.ConfigurationBeanInfo;
+import com.chua.starter.config.server.support.entity.ConfigurationSubscribeInfo;
 import com.chua.starter.config.server.support.mapper.ConfigurationBeanInfoMapper;
 import com.chua.starter.config.server.support.protocol.ProtocolServer;
 import com.chua.starter.config.server.support.query.DetailUpdate;
-import com.chua.starter.config.server.support.repository.ConfigurationSubscribeInfo;
 import com.chua.starter.config.server.support.service.ConfigurationBeanInfoService;
 import com.chua.starter.config.server.support.service.ConfigurationService;
 import org.springframework.data.domain.Page;
@@ -151,6 +151,10 @@ public class ConfigurationBeanInfoServiceImpl extends ServiceImpl<ConfigurationB
 
     @Override
     public void saveData(ConfigurationBeanInfo data) {
+        if (null != data.getBeanId()) {
+            baseMapper.updateById(data);
+            return;
+        }
         baseMapper.insert(data);
     }
 

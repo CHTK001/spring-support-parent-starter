@@ -10,10 +10,10 @@ import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.config.constant.ConfigConstant;
 import com.chua.starter.config.server.support.config.NotifyConfig;
 import com.chua.starter.config.server.support.entity.ConfigurationCenterInfo;
+import com.chua.starter.config.server.support.entity.ConfigurationSubscribeInfo;
 import com.chua.starter.config.server.support.mapper.ConfigurationCenterInfoMapper;
 import com.chua.starter.config.server.support.protocol.ProtocolServer;
 import com.chua.starter.config.server.support.query.DetailUpdate;
-import com.chua.starter.config.server.support.repository.ConfigurationSubscribeInfo;
 import com.chua.starter.config.server.support.service.ConfigurationCenterInfoService;
 import com.chua.starter.config.server.support.service.ConfigurationService;
 import com.google.common.base.Strings;
@@ -253,6 +253,10 @@ public class ConfigurationCenterInfoServiceImpl extends ServiceImpl<Configuratio
 
     @Override
     public void saveData(ConfigurationCenterInfo data) {
+        if (null != data.getConfigId()) {
+            baseMapper.updateById(data);
+            return;
+        }
         baseMapper.insert(data);
     }
 
