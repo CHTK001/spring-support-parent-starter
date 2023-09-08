@@ -41,6 +41,10 @@ public class CustomServletInputStream extends ServletInputStream {
 
     @Override
     public int read() throws IOException {
-        return inputStream.read();
+        try {
+            return inputStream.read();
+        } catch (IOException e) {
+            return -1;
+        }
     }
 }
