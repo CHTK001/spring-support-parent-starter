@@ -3,6 +3,7 @@ package com.chua.starter.config.server.support.service.impl;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.common.support.utils.MapUtils;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.config.constant.ConfigConstant;
 import com.chua.starter.config.server.support.entity.ConfigurationApplicationInfo;
 import com.chua.starter.config.server.support.entity.ConfigurationSubscribeInfo;
@@ -66,7 +67,7 @@ public class ConfigurationApplicationInfoServiceImpl
     public Page<?> findAll(String profile, Pageable pageable) {
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<ConfigurationApplicationInfo> selectPage = baseMapper.selectPage(
                 new com.baomidou.mybatisplus.extension.plugins.pagination.Page<ConfigurationApplicationInfo>(pageable.getPageNumber(), pageable.getPageSize()
-                ), Wrappers.<ConfigurationApplicationInfo>lambdaQuery().eq(ConfigurationApplicationInfo::getAppProfile, profile));
+                ), Wrappers.<ConfigurationApplicationInfo>lambdaQuery().eq(StringUtils.isNotBlank(profile), ConfigurationApplicationInfo::getAppProfile, profile));
 
         return  new PageImpl<>(selectPage.getRecords(), pageable, selectPage.getTotal());
     }

@@ -3,10 +3,12 @@ package com.chua.starter.config.protocol;
 import com.alibaba.fastjson2.JSON;
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.crypto.Codec;
+import com.chua.common.support.json.Json;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.config.constant.ConfigConstant;
+import com.chua.starter.config.entity.CommandRequest;
 import com.chua.starter.config.entity.KeyValue;
 import com.chua.starter.config.plugin.Plugin;
 import com.google.common.base.Strings;
@@ -64,19 +66,21 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
     @Override
     protected String subscribe(String encode, String dataType) {
         HttpResponse<String> response = null;
+        CommandRequest commandRequest = new CommandRequest();
+        commandRequest.setDataType(dataType);
+        commandRequest.setApplicationName(meta.getApplicationName());
+        commandRequest.setApplicationProfile(meta.getProfile());
+        commandRequest.setData(encode);
         try {
             response = Unirest.post(named()[0] + "://" + configProperties.getConfigAddress().concat("/config/subscribe"))
-                    .field(ConfigConstant.APPLICATION_DATA, encode)
-                    .field(ConfigConstant.APPLICATION_NAME, meta.getApplicationName())
-                    .field(ConfigConstant.PROFILE, meta.getProfile())
-                    .field(ConfigConstant.APPLICATION_DATA_TYPE, dataType)
+                    .body(Json.toJson(commandRequest))
                     .asString();
         } catch (Throwable e) {
             log.warn(e.getMessage());
             return null;
         }
 
-        if(null == response || response.getStatus() != 200) {
+        if (null == response || response.getStatus() != 200) {
             return null;
         }
 
@@ -86,12 +90,15 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
     @Override
     protected String sendDestroy(String encode, String dataType) {
         HttpResponse<String> response = null;
+        CommandRequest commandRequest = new CommandRequest();
+        commandRequest.setDataType(dataType);
+        commandRequest.setApplicationName(meta.getApplicationName());
+        commandRequest.setApplicationProfile(meta.getProfile());
+        commandRequest.setData(encode);
         try {
             response = Unirest.post(named()[0] + "://" +
                             configProperties.getConfigAddress().concat("/config/unregister"))
-                    .field(ConfigConstant.APPLICATION_DATA, encode)
-                    .field(ConfigConstant.APPLICATION_NAME, meta.getApplicationName())
-                    .field(ConfigConstant.APPLICATION_DATA_TYPE, dataType)
+                    .body(Json.toJson(commandRequest))
                     .asString();
         } catch (Throwable e) {
             log.warn(e.getMessage());
