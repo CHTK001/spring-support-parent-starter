@@ -19,6 +19,11 @@ public class CoreProperties {
      * 是否开启统一响应(返回值自动包裹对象)
      */
     private boolean uniformParameter = true;
+
+    /**
+     * 开启请求参数日志打印
+     */
+    private boolean openParamLog = true;
     /**
      * 是否开启版本控制
      */

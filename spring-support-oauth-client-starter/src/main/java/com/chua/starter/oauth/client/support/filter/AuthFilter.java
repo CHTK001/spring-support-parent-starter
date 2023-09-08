@@ -14,7 +14,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -43,19 +42,6 @@ public class AuthFilter implements Filter {
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         log.info("拦截到请求: {}", request instanceof HttpServletRequest ? ((HttpServletRequest) request).getRequestURI() : request.getRemoteAddr());
-        if(request instanceof HttpServletRequest) {
-            HttpServletRequest httpServletRequest = (HttpServletRequest) request;
-            Map<String, String[]> parameterMap = httpServletRequest.getParameterMap();
-            if(null != parameterMap) {
-                log.info("获取前端参数:");
-                for (Map.Entry<String, String[]> entry : parameterMap.entrySet()) {
-                    if (entry.getValue().length > 400) {
-                        continue;
-                    }
-                    log.info("\t\n {} : {}", entry.getKey(), entry.getValue());
-                }
-            }
-        }
         WebRequest webRequest = new WebRequest(this.webRequest.getAuthProperties(), (HttpServletRequest) request, requestMappingHandlerMapping);
         if (webRequest.isPass()) {
             chain.doFilter(request, response);
