@@ -1,9 +1,9 @@
 package com.chua.starter.config.server.support.manager;
 
 import com.chua.common.support.function.InitializingAware;
+import com.chua.starter.config.server.support.entity.ConfigurationSubscribeInfo;
 import com.chua.starter.config.server.support.protocol.ProtocolServer;
 import com.chua.starter.config.server.support.query.DetailUpdate;
-import com.chua.starter.config.server.support.repository.ConfigurationSubscribeInfo;
 import org.springframework.data.domain.Page;
 
 import java.io.Serializable;

@@ -1,7 +1,6 @@
 package com.chua.starter.oauth.client.support.filter;
 
 
-import com.chua.common.support.json.Json;
 import com.chua.common.support.log.Log;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
@@ -48,7 +47,13 @@ public class AuthFilter implements Filter {
             HttpServletRequest httpServletRequest = (HttpServletRequest) request;
             Map<String, String[]> parameterMap = httpServletRequest.getParameterMap();
             if(null != parameterMap) {
-                log.info("获取前端参数: \n{}", Json.toPrettyFormat(parameterMap));
+                log.info("获取前端参数:");
+                for (Map.Entry<String, String[]> entry : parameterMap.entrySet()) {
+                    if (entry.getValue().length > 400) {
+                        continue;
+                    }
+                    log.info("\t\n {} : {}", entry.getKey(), entry.getValue());
+                }
             }
         }
         WebRequest webRequest = new WebRequest(this.webRequest.getAuthProperties(), (HttpServletRequest) request, requestMappingHandlerMapping);

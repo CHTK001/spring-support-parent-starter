@@ -5,10 +5,10 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.config.constant.ConfigConstant;
 import com.chua.starter.config.server.support.entity.ConfigurationApplicationInfo;
+import com.chua.starter.config.server.support.entity.ConfigurationSubscribeInfo;
 import com.chua.starter.config.server.support.mapper.ConfigurationApplicationInfoMapper;
 import com.chua.starter.config.server.support.protocol.ProtocolServer;
 import com.chua.starter.config.server.support.query.DetailUpdate;
-import com.chua.starter.config.server.support.repository.ConfigurationSubscribeInfo;
 import com.chua.starter.config.server.support.service.ConfigurationApplicationInfoService;
 import com.chua.starter.config.server.support.service.ConfigurationService;
 import org.springframework.data.domain.Page;
@@ -100,7 +100,11 @@ public class ConfigurationApplicationInfoServiceImpl
 
     @Override
     public void saveData(ConfigurationApplicationInfo data) {
-
+        if (null != data.getAppId()) {
+            baseMapper.updateById(data);
+            return;
+        }
+        baseMapper.insert(data);
     }
 
     @Override
