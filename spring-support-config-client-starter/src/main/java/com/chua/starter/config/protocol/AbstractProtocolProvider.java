@@ -173,9 +173,11 @@ public abstract class AbstractProtocolProvider implements ProtocolProvider, Appl
     }
 
     /**
+     * 发送销毁
      * 注销
      *
-     * @param encode 数据
+     * @param encode   数据
+     * @param dataType 数据类型
      * @return 注销
      */
     protected abstract String sendDestroy(String encode, String dataType);

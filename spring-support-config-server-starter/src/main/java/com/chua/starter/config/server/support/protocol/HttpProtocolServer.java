@@ -7,7 +7,7 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.common.support.key.KeyManagerProvider;
 import com.chua.starter.common.support.result.ReturnResult;
-import com.chua.starter.config.constant.ConfigConstant;
+import com.chua.starter.config.entity.CommandRequest;
 import com.chua.starter.config.entity.KeyValue;
 import com.chua.starter.config.server.support.command.CommandProvider;
 import com.chua.starter.config.server.support.config.NotifyConfig;
@@ -75,10 +75,7 @@ public class HttpProtocolServer implements ProtocolServer, ApplicationContextAwa
     @PostMapping("/{command}")
     public ReturnResult<String> command(
             @PathVariable("command") String command,
-            @RequestParam(ConfigConstant.APPLICATION_DATA_TYPE) String dataType,
-            @RequestParam(ConfigConstant.APPLICATION_DATA) String data,
-            @RequestParam(ConfigConstant.APPLICATION_NAME) String applicationName,
-            @RequestParam(ConfigConstant.PROFILE) String applicationProfile,
+            @RequestBody CommandRequest commandRequest,
             HttpServletRequest request, HttpServletResponse response) {
         ServiceProvider<CommandProvider> serviceProvider = ServiceProvider.of(CommandProvider.class);
         CommandProvider commandProvider = serviceProvider.getExtension(command);
@@ -86,7 +83,10 @@ public class HttpProtocolServer implements ProtocolServer, ApplicationContextAwa
             return ReturnResult.illegal(null, "命令不存在");
         }
 
-        return commandProvider.command(applicationName, data, dataType, applicationProfile, dataManager, request);
+        return commandProvider.command(commandRequest.getApplicationName(),
+                commandRequest.getData(),
+                commandRequest.getDataType(),
+                commandRequest.getApplicationProfile(), dataManager, request);
     }
 
     @Override

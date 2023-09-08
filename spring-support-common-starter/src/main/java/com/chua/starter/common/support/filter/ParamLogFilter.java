@@ -9,7 +9,6 @@ import java.io.IOException;
 
 import static com.chua.common.support.constant.NameConstant.GET;
 import static com.chua.common.support.constant.NameConstant.POST;
-import static com.chua.common.support.http.HttpClientUtils.APPLICATION_JSON;
 
 /**
  * 参数日志过滤器
@@ -33,7 +32,7 @@ public class ParamLogFilter implements Filter {
         String method = requestWrapper.getMethod();
         if (GET.equalsIgnoreCase(method)) {
             log.info("请求参数: {}", requestWrapper.getQueryString());
-        } else if (POST.equalsIgnoreCase(method) && APPLICATION_JSON.equalsIgnoreCase(requestWrapper.getContentType())) {
+        } else if (POST.equalsIgnoreCase(method)) {
             String body = IoUtils.toString(requestWrapper.getInputStream(), requestWrapper.getCharacterEncoding());
             log.info("请求参数: {}", body);
         }

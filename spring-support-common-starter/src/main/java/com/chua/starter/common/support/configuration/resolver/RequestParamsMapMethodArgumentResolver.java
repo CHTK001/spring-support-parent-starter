@@ -1,9 +1,15 @@
 package com.chua.starter.common.support.configuration.resolver;
 
 import com.chua.common.support.bean.BeanMap;
+import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.converter.Converter;
+import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.ArrayUtils;
+import com.chua.common.support.utils.ClassUtils;
+import com.chua.common.support.utils.IoUtils;
+import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.common.support.annotations.RequestParamMapping;
+import com.chua.starter.common.support.filter.CustomHttpServletRequestWrapper;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.annotation.AnnotationUtils;
@@ -27,6 +33,7 @@ import javax.servlet.http.Part;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Parameter;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -39,21 +46,23 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
     @Override
     public boolean supportsParameter(MethodParameter parameter) {
         RequestParamMapping requestParam = parameter.getParameterAnnotation(RequestParamMapping.class);
-         boolean has = (requestParam != null && Map.class.isAssignableFrom(parameter.getParameterType()) &&
+        boolean has = (requestParam != null && Map.class.isAssignableFrom(parameter.getParameterType()) &&
                 !ArrayUtils.isEmpty(requestParam.name()));
-         if(has) {
-             return true;
-         }
+        if (has) {
+            return true;
+        }
 
-        Class<?> type = parameter.getParameter().getType();
-        Field[] declaredFields = type.getDeclaredFields();
-        for (Field declaredField : declaredFields) {
-            if(declaredField.isAnnotationPresent(RequestParamMapping.class)) {
-                return true;
+        Class<?> type = parameter.getParameterType();
+        if (!ClassUtils.isJavaType(type)) {
+            Field[] declaredFields = type.getDeclaredFields();
+            for (Field declaredField : declaredFields) {
+                if (declaredField.isAnnotationPresent(RequestParamMapping.class)) {
+                    return true;
+                }
             }
         }
 
-        return false;
+        return parameter.hasParameterAnnotation(RequestParamMapping.class);
     }
 
     @Override
@@ -193,6 +202,21 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
                         result.put(key, values[0]);
                     }
                 });
+                if (result.isEmpty()) {
+                    Object nativeRequest = webRequest.getNativeRequest();
+                    if (nativeRequest instanceof CustomHttpServletRequestWrapper) {
+                        String s = IoUtils.toString(((CustomHttpServletRequestWrapper) nativeRequest).getInputStream(), StandardCharsets.UTF_8);
+                        if (s.startsWith(CommonConstant.SYMBOL_LEFT_BIG_PARENTHESES)) {
+                            return Json.toMapStringObject(s);
+                        }
+
+                        if (s.startsWith(CommonConstant.SYMBOL_LEFT_SQUARE_BRACKET)) {
+                            return result;
+                        }
+
+                        return MapUtils.asMap(s, "&", "=");
+                    }
+                }
                 return result;
             }
         }
