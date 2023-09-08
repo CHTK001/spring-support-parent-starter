@@ -4,6 +4,7 @@ import com.chua.starter.common.support.configuration.resolver.RequestParamsMapMe
 import com.chua.starter.common.support.converter.FastJsonHttpMessageConverter;
 import com.chua.starter.common.support.converter.ResultDataHttpMessageConverter;
 import com.chua.starter.common.support.eventbus.EventbusTemplate;
+import com.chua.starter.common.support.filter.ParamLogFilter;
 import com.chua.starter.common.support.limit.LimitAspect;
 import com.chua.starter.common.support.logger.LogGuidAspect;
 import com.chua.starter.common.support.logger.LoggerPointcutAdvisor;
@@ -126,6 +127,13 @@ public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAw
     @ConditionalOnProperty(name = "plugin.limit.open-limit", havingValue = "true", matchIfMissing = true)
     public LimitAspect limitAspect(LimitProperties limitProperties) {
         return new LimitAspect(limitProperties);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(name = "plugin.core.open-param-log", havingValue = "true", matchIfMissing = true)
+    public ParamLogFilter paramLogFilter() {
+        return new ParamLogFilter();
     }
 
     @Bean
