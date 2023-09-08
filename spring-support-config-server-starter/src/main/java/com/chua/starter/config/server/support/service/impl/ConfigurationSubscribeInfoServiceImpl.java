@@ -6,7 +6,6 @@ import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.config.server.support.entity.ConfigurationSubscribeInfo;
 import com.chua.starter.config.server.support.mapper.ConfigurationSubscribeInfoMapper;
 import com.chua.starter.config.server.support.protocol.ProtocolServer;
-import com.chua.starter.config.server.support.query.DetailUpdate;
 import com.chua.starter.config.server.support.service.ConfigurationService;
 import com.chua.starter.config.server.support.service.ConfigurationSubscribeInfoService;
 import org.springframework.data.domain.Page;
@@ -73,7 +72,7 @@ public class ConfigurationSubscribeInfoServiceImpl extends ServiceImpl<Configura
     }
 
     @Override
-    public Object detailUpdate(DetailUpdate detailUpdate) {
+    public Object detailUpdate(ConfigurationSubscribeInfo detailUpdate) {
         return null;
     }
 

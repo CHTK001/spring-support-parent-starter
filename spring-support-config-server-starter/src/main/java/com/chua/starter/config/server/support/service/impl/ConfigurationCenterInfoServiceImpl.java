@@ -13,7 +13,6 @@ import com.chua.starter.config.server.support.entity.ConfigurationCenterInfo;
 import com.chua.starter.config.server.support.entity.ConfigurationSubscribeInfo;
 import com.chua.starter.config.server.support.mapper.ConfigurationCenterInfoMapper;
 import com.chua.starter.config.server.support.protocol.ProtocolServer;
-import com.chua.starter.config.server.support.query.DetailUpdate;
 import com.chua.starter.config.server.support.service.ConfigurationCenterInfoService;
 import com.chua.starter.config.server.support.service.ConfigurationService;
 import com.google.common.base.Strings;
@@ -149,6 +148,7 @@ public class ConfigurationCenterInfoServiceImpl extends ServiceImpl<Configuratio
     public String getSubscribe(String subscribe, String profile) {
         List<ConfigurationCenterInfo> list = baseMapper.selectList(Wrappers.<ConfigurationCenterInfo>lambdaQuery()
                 .eq(ConfigurationCenterInfo::getConfigProfile, profile)
+                .eq(ConfigurationCenterInfo::getDisable, 0)
                 .in(ConfigurationCenterInfo::getConfigApplicationName, Splitter.on(',').omitEmptyStrings().trimResults().splitToSet(subscribe))
         );
         Map<String, List<ConfigurationCenterInfo>> valueMapping = new HashMap<>();
@@ -247,7 +247,7 @@ public class ConfigurationCenterInfoServiceImpl extends ServiceImpl<Configuratio
     }
 
     @Override
-    public Object detailUpdate(DetailUpdate detailUpdate) {
+    public Object detailUpdate(ConfigurationCenterInfo detailUpdate) {
         return null;
     }
 

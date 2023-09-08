@@ -8,7 +8,6 @@ import com.chua.starter.config.server.support.entity.ConfigurationApplicationInf
 import com.chua.starter.config.server.support.entity.ConfigurationSubscribeInfo;
 import com.chua.starter.config.server.support.mapper.ConfigurationApplicationInfoMapper;
 import com.chua.starter.config.server.support.protocol.ProtocolServer;
-import com.chua.starter.config.server.support.query.DetailUpdate;
 import com.chua.starter.config.server.support.service.ConfigurationApplicationInfoService;
 import com.chua.starter.config.server.support.service.ConfigurationService;
 import org.springframework.data.domain.Page;
@@ -94,8 +93,8 @@ public class ConfigurationApplicationInfoServiceImpl
     }
 
     @Override
-    public Object detailUpdate(DetailUpdate detailUpdate) {
-        return null;
+    public Object detailUpdate(ConfigurationApplicationInfo detailUpdate) {
+        return baseMapper.updateById(detailUpdate);
     }
 
     @Override
