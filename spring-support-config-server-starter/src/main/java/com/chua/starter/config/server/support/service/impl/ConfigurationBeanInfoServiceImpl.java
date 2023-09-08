@@ -13,7 +13,6 @@ import com.chua.starter.config.server.support.entity.ConfigurationBeanInfo;
 import com.chua.starter.config.server.support.entity.ConfigurationSubscribeInfo;
 import com.chua.starter.config.server.support.mapper.ConfigurationBeanInfoMapper;
 import com.chua.starter.config.server.support.protocol.ProtocolServer;
-import com.chua.starter.config.server.support.query.DetailUpdate;
 import com.chua.starter.config.server.support.service.ConfigurationBeanInfoService;
 import com.chua.starter.config.server.support.service.ConfigurationService;
 import org.springframework.data.domain.Page;
@@ -48,6 +47,7 @@ public class ConfigurationBeanInfoServiceImpl extends ServiceImpl<ConfigurationB
     public String getSubscribe(String subscribe, String profile) {
         List<ConfigurationBeanInfo> list = baseMapper.selectList(Wrappers.<ConfigurationBeanInfo>lambdaQuery()
                 .eq(ConfigurationBeanInfo::getBeanProfile, profile)
+                .eq(ConfigurationBeanInfo::getDisable, 0)
                 .in(ConfigurationBeanInfo::getBeanApplicationName, Splitter.on(',').omitEmptyStrings().trimResults().splitToSet(subscribe))
         );
         Map<String, List<ConfigurationBeanInfo>> valueMapping = new HashMap<>();
@@ -145,7 +145,7 @@ public class ConfigurationBeanInfoServiceImpl extends ServiceImpl<ConfigurationB
     }
 
     @Override
-    public Object detailUpdate(DetailUpdate detailUpdate) {
+    public Object detailUpdate(ConfigurationBeanInfo detailUpdate) {
         return null;
     }
 

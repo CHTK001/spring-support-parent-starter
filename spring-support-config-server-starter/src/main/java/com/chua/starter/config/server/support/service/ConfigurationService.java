@@ -2,7 +2,6 @@ package com.chua.starter.config.server.support.service;
 
 import com.chua.starter.config.server.support.entity.ConfigurationSubscribeInfo;
 import com.chua.starter.config.server.support.protocol.ProtocolServer;
-import com.chua.starter.config.server.support.query.DetailUpdate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -82,7 +81,7 @@ public interface ConfigurationService<T> {
      * @param detailUpdate 请求
      * @return 结果
      */
-    Object detailUpdate(DetailUpdate detailUpdate);
+    Object detailUpdate(T detailUpdate);
 
     /**
      * 保存

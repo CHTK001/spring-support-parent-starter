@@ -3,6 +3,7 @@ package com.chua.starter.config.server.support.configuration;
 import com.chua.common.support.spi.ServiceDefinition;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.config.server.support.controller.ConfigurationApplicationController;
 import com.chua.starter.config.server.support.controller.ConfigurationBeanController;
 import com.chua.starter.config.server.support.controller.ConfigurationCenterController;
 import com.chua.starter.config.server.support.controller.UniformController;
@@ -130,6 +131,12 @@ public class ConfigServerConfiguration implements BeanDefinitionRegistryPostProc
     @ConditionalOnMissingBean
     public ConfigurationBeanController configurationBeanController() {
         return new ConfigurationBeanController();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public ConfigurationApplicationController configurationApplicationController() {
+        return new ConfigurationApplicationController();
     }
 
     @Override
