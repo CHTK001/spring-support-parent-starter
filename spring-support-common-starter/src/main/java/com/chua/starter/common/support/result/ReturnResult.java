@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.result;
 
+import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.lang.code.ResultCode;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -232,6 +233,16 @@ public class ReturnResult<T> {
      */
     public static <T> ReturnResult<T> illegal() {
         return illegal(null, "操作失败");
+    }
+
+    /**
+     * 属于
+     *
+     * @param body 消息体
+     * @return {@link ReturnResult}<{@link T}>
+     */
+    public static <T> ReturnResult<T> of(Object body) {
+        return BeanUtils.copyProperties(body, ReturnResult.class);
     }
 
     @Override
