@@ -1,6 +1,9 @@
 package com.chua.starter.config.server.support.controller;
 
 import com.alibaba.fastjson2.JSONObject;
+import com.chua.common.support.json.Json;
+import com.chua.common.support.lang.code.ResultCode;
+import com.chua.common.support.lang.code.ReturnResultCode;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.common.support.result.ReturnPageResult;
 import com.chua.starter.common.support.result.ReturnResult;
@@ -13,11 +16,19 @@ import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.Resource;
 import java.util.Set;
+
+import static com.chua.common.support.http.HttpConstant.ACCEPT;
+import static com.chua.common.support.http.HttpConstant.APPLICATION_JSON_UTF_8;
+import static com.chua.common.support.http.HttpHeaders.CONTENT_TYPE;
 
 /**
  * 配置中心应用
@@ -48,15 +59,40 @@ public class ConfigurationApplicationController implements ApplicationContextAwa
     @GetMapping("/command")
     @ResponseBody
     @SuppressWarnings("ALL")
-    public ReturnPageResult<JSONObject> command(
+    public ReturnResult<JSONObject> command(
             @RequestParam(value = "page", defaultValue = "1") Integer page,
             @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize,
+            @RequestParam(value = "dataId") String dataId,
             @RequestParam(value = "command") String command,
-            @RequestParam(value = "method") String method
+            @RequestParam(value = "param", defaultValue = "{}", required = false) String param,
+            @RequestParam(value = "method", defaultValue = "GET") String method
     ) {
+        ConfigurationApplicationInfo detail = (ConfigurationApplicationInfo) dataManager.getDetail(ConfigConstant.APP, dataId);
+        if (null == detail) {
+            return ReturnResult.illegal("数据不存在");
+        }
 
-
-        return ReturnPageResult.ok();
+        HttpMethod httpMethod = HttpMethod.valueOf(method.toUpperCase());
+        HttpHeaders httpHeaders = new HttpHeaders();
+        httpHeaders.add(ACCEPT, APPLICATION_JSON_UTF_8);
+        if (httpMethod == HttpMethod.POST) {
+            httpHeaders.add(CONTENT_TYPE, APPLICATION_JSON_UTF_8);
+        }
+        HttpEntity httpEntity = new HttpEntity<>(Json.toMapStringObject(param), httpHeaders);
+        ResponseEntity<JSONObject> exchange = null;
+        try {
+            exchange = restTemplate.exchange(
+                    "http://" + detail.getAppHost() + ":" + detail.getAppSpringPort() + "" + detail.getAppContextPath() + "" + detail.getAppActuator() + "/" + command,
+                    httpMethod, httpEntity, JSONObject.class
+            );
+        } catch (Throwable e) {
+            return ReturnResult.of(ReturnResultCode.SYSTEM_SERVER_NOT_FOUND, null, "操作失败");
+        }
+        JSONObject exchangeBody = exchange.getBody();
+        if (null != exchangeBody) {
+            return ReturnResult.of(exchangeBody);
+        }
+        return ReturnResult.of(ResultCode.transferForHttpCode(exchange.getStatusCodeValue()));
     }
 
     /**
