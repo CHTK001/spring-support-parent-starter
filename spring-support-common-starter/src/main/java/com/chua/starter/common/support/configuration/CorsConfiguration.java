@@ -143,11 +143,18 @@ public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAw
         return new ResponseAdvice();
     }
 
+//    @Bean
+//    @ConditionalOnMissingBean
+//    @Lazy
+//    public LoggerPointcutAdvisor loggerPointcutAdvisor(@Autowired(required = false) LoggerService loggerService) {
+//        return new LoggerPointcutAdvisor(loggerService);
+//    }
+
     @Bean
     @ConditionalOnMissingBean
     @Lazy
-    public LoggerPointcutAdvisor loggerPointcutAdvisor(@Autowired(required = false) LoggerService loggerService) {
-        return new LoggerPointcutAdvisor(loggerService);
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
     }
 
 //    @Bean

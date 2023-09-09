@@ -1,5 +1,6 @@
 package com.chua.starter.config.server.support.controller;
 
+import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.common.support.result.ReturnPageResult;
 import com.chua.starter.common.support.result.ReturnResult;
@@ -34,6 +35,28 @@ public class ConfigurationApplicationController implements ApplicationContextAwa
     private ConfigServerProperties configServerProperties;
 
     private DataManager dataManager;
+
+    @Resource
+    private RestTemplate restTemplate;
+
+    /**
+     * 配置頁面
+     *
+     * @return 頁面
+     */
+    @GetMapping("/command")
+    @ResponseBody
+    @SuppressWarnings("ALL")
+    public ReturnPageResult<JSONObject> command(
+            @RequestParam(value = "page", defaultValue = "1") Integer page,
+            @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize,
+            @RequestParam(value = "command") String command,
+            @RequestParam(value = "method") String method,
+    ) {
+
+
+        return ReturnPageResult.ok();
+    }
 
     /**
      * 配置頁面

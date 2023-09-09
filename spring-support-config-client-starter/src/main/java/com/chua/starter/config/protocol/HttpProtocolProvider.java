@@ -22,6 +22,8 @@ import kong.unirest.Unirest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.RestController;
 
+import static com.chua.common.support.http.HttpClientUtils.APPLICATION_JSON;
+
 /**
  * 协议
  *
@@ -74,6 +76,7 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
         try {
             response = Unirest.post(named()[0] + "://" + configProperties.getConfigAddress().concat("/config/subscribe"))
                     .body(Json.toJson(commandRequest))
+                    .contentType(APPLICATION_JSON)
                     .asString();
         } catch (Throwable e) {
             log.warn(e.getMessage());
@@ -98,6 +101,7 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
         try {
             response = Unirest.post(named()[0] + "://" +
                             configProperties.getConfigAddress().concat("/config/unregister"))
+                    .contentType(APPLICATION_JSON)
                     .body(Json.toJson(commandRequest))
                     .asString();
         } catch (Throwable e) {

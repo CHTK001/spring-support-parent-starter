@@ -20,8 +20,6 @@
         <module>spring-support-common-starter</module>
         <module>spring-support-schedule-server-starter</module>
         <module>spring-support-schedule-client-starter</module>
-        <module>spring-support-starter-demo-server</module>
-        <module>spring-support-starter-demo-client</module>
         <module>spring-support-mybatis-starter</module>
         <module>spring-support-script-starter</module>
         <module>spring-support-shell-starter</module>
@@ -35,7 +33,6 @@
         <module>spring-support-redis-starter</module>
         <module>spring-support-swagger-starter</module>
         <module>spring-support-mail-starter</module>
-        <module>spring-support-websql-starter</module>
         <module>spring-support-oss-starter</module>
         <module>spring-support-mqtt-starter</module>
         <module>spring-support-minio-starter</module>
