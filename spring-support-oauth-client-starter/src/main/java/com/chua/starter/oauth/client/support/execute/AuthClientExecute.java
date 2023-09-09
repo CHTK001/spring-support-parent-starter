@@ -4,6 +4,7 @@ import com.chua.common.support.crypto.decode.KeyDecode;
 import com.chua.common.support.crypto.encode.KeyEncode;
 import com.chua.common.support.crypto.utils.DigestUtils;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.lang.exception.AuthenticationException;
 import com.chua.common.support.lang.robin.Node;
 import com.chua.common.support.lang.robin.Robin;
 import com.chua.common.support.spi.ServiceProvider;
@@ -15,6 +16,7 @@ import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.common.support.watch.Watch;
 import com.chua.starter.oauth.client.support.advice.def.DefSecret;
 import com.chua.starter.oauth.client.support.contants.AuthConstant;
+import com.chua.starter.oauth.client.support.entity.AuthRequest;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
@@ -37,6 +39,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import static com.chua.common.support.http.HttpClientUtils.APPLICATION_JSON;
 import static com.chua.starter.common.support.result.ReturnCode.OK;
 import static com.chua.starter.oauth.client.support.contants.AuthConstant.ACCESS_KEY;
 import static com.chua.starter.oauth.client.support.contants.AuthConstant.SECRET_KEY;
@@ -84,6 +87,9 @@ public class AuthClientExecute {
         UserResult userResult = new UserResult();
         AuthenticationInformation authentication = webRequest1.authentication();
         UserResume returnResult = authentication.getReturnResult();
+        if (null == returnResult) {
+            throw new AuthenticationException("请重新登录");
+        }
         com.chua.common.support.bean.BeanUtils.copyProperties(returnResult, userResult);
         return userResult;
     }
@@ -138,13 +144,16 @@ public class AuthClientExecute {
                 return null;
             }
 
+            AuthRequest request1 = new AuthRequest();
+            request1.setData(request);
+            request1.setType(logoutType.name());
             httpResponse = Unirest.post(
                             StringUtils.endWithAppend(StringUtils.startWithAppend(url, "http://"), "/")
                                     + "logout")
                     .header("accept", "application/json")
                     .header("x-oauth-timestamp", System.nanoTime() + "")
-                    .field("data", request)
-                    .field("type", logoutType.name())
+                    .contentType(APPLICATION_JSON)
+                    .body(Json.toJson(request1))
                     .asString();
 
         } catch (UnirestException ignored) {
@@ -216,15 +225,17 @@ public class AuthClientExecute {
                 return null;
             }
 
-
+            AuthRequest request1 = new AuthRequest();
+            request1.setData(request);
+            request1.setUsername(username);
+            request1.setType(authType.name());
             httpResponse = Unirest.post(
                             StringUtils.endWithAppend(StringUtils.startWithAppend(url, "http://"), "/")
                                     + "doLogin")
+                    .contentType(APPLICATION_JSON)
                     .header("accept", "application/json")
                     .header("x-oauth-timestamp", System.nanoTime() + "")
-                    .field("data", request)
-                    .field("username", username)
-                    .field("type", authType.name())
+                    .body(Json.toJson(request1))
                     .asString();
 
         } catch (UnirestException ignored) {

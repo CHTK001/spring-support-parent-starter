@@ -2,6 +2,7 @@ package com.chua.starter.config.protocol;
 
 import com.alibaba.fastjson2.JSON;
 import com.chua.common.support.annotations.Spi;
+import com.chua.common.support.collection.ImmutableBuilder;
 import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.spi.ServiceProvider;
@@ -47,11 +48,14 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
     protected String register(String encode, String dataType) {
         HttpResponse<String> response = null;
         try {
+            CommandRequest commandRequest = new CommandRequest();
+            commandRequest.setDataType(dataType);
+            commandRequest.setApplicationName(meta.getApplicationName());
+            commandRequest.setApplicationProfile(meta.getProfile());
+            commandRequest.setData(encode);
             response = Unirest.post(named()[0] + "://" + configProperties.getConfigAddress().concat("/config/register"))
-                    .field(ConfigConstant.APPLICATION_DATA, encode)
-                    .field(ConfigConstant.APPLICATION_NAME, meta.getApplicationName())
-                    .field(ConfigConstant.PROFILE, meta.getProfile())
-                    .field(ConfigConstant.APPLICATION_DATA_TYPE, dataType)
+                    .body(Json.toJson(commandRequest))
+                    .contentType(APPLICATION_JSON)
                     .asString();
         } catch (Throwable e) {
             log.warn(e.getMessage());
@@ -189,12 +193,17 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
         beat.execute(() -> {
             while (run.get()) {
                 try {
+
                     ThreadUtils.sleepSecondsQuietly(60);
                     HttpResponse<String> response = Unirest.post(named()[0] + "://" + configProperties.getConfigAddress().concat("/config/beat"))
-                            .field(ConfigConstant.APPLICATION_DATA, "")
-                            .field(ConfigConstant.APPLICATION_DATA_TYPE, ConfigConstant.CONFIG)
-                            .field(ConfigConstant.APPLICATION_NAME, configName)
-                            .field(ConfigConstant.PROFILE, meta.getProfile())
+                            .contentType(APPLICATION_JSON)
+                            .body(Json.toJson(ImmutableBuilder.builderOfStringMap()
+                                    .put(ConfigConstant.APPLICATION_DATA, "")
+                                    .put(ConfigConstant.APPLICATION_DATA_TYPE, ConfigConstant.CONFIG)
+                                    .put(ConfigConstant.APPLICATION_NAME, configName)
+                                    .put(ConfigConstant.PROFILE, meta.getProfile())
+                                    .build()
+                            ))
                             .asString();
                     if (null != response && response.getStatus() == 200) {
                         if (log.isDebugEnabled()) {

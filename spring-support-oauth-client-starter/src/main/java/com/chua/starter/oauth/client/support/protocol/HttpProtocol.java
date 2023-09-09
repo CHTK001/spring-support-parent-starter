@@ -23,6 +23,7 @@ import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.common.support.utils.ResponseUtils;
 import com.chua.starter.oauth.client.support.advice.def.DefSecret;
 import com.chua.starter.oauth.client.support.contants.AuthConstant;
+import com.chua.starter.oauth.client.support.entity.AuthRequest;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.user.UserResume;
@@ -37,6 +38,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import java.util.*;
 
+import static com.chua.common.support.http.HttpClientUtils.APPLICATION_JSON;
 import static com.chua.starter.common.support.result.ReturnCode.SYSTEM_NO_OAUTH;
 import static com.chua.starter.oauth.client.support.infomation.Information.*;
 
@@ -108,11 +110,13 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
             if (null == url) {
                 return inCache(cacheKey, AuthenticationInformation.authServerError());
             }
-
+            AuthRequest request1 = new AuthRequest();
+            request1.setData(request);
             httpResponse = Unirest.post(
                             StringUtils.endWithAppend(StringUtils.startWithAppend(url, "http://"), "/") + StringUtils.startWithMove(authClientProperties.getOauthUrl(), "/"))
                     .header("x-oauth-timestamp", System.nanoTime() + "")
-                    .field("data", request)
+                    .contentType(APPLICATION_JSON)
+                    .body(Json.toJson(request1))
                     .asString();
 
         } catch (UnirestException ignored) {
