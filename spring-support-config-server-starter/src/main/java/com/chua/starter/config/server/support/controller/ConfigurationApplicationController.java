@@ -14,6 +14,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.Resource;
 import java.util.Set;
@@ -51,7 +52,7 @@ public class ConfigurationApplicationController implements ApplicationContextAwa
             @RequestParam(value = "page", defaultValue = "1") Integer page,
             @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize,
             @RequestParam(value = "command") String command,
-            @RequestParam(value = "method") String method,
+            @RequestParam(value = "method") String method
     ) {
 
 

@@ -4,6 +4,7 @@ import com.chua.common.support.annotations.Extension;
 import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.contants.AuthConstant;
+import com.chua.starter.oauth.client.support.entity.AuthRequest;
 import com.chua.starter.oauth.server.support.condition.OnBeanCondition;
 import com.chua.starter.oauth.server.support.information.AuthInformation;
 import com.chua.starter.oauth.server.support.parser.Authorization;
@@ -14,10 +15,7 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -58,7 +56,8 @@ public class HttpProtocol implements Protocol, InitializingBean {
      */
     @PostMapping("/oauth")
     @ResponseBody
-    public ReturnResult<String> oauth(@RequestParam("data") String data, HttpServletRequest request, HttpServletResponse response) {
+    public ReturnResult<String> oauth(@RequestBody AuthRequest request1, HttpServletRequest request, HttpServletResponse response) {
+        String data = request1.getData();
         AuthInformation authInformation = new AuthInformation(data, request, authServerProperties);
         Authorization authorization = authInformation.resolve();
         String address = RequestUtils.getIpAddress(request);

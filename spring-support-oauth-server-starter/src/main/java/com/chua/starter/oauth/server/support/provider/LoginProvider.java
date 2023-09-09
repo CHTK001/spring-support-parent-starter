@@ -13,6 +13,7 @@ import com.chua.starter.common.support.result.ReturnCode;
 import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.starter.oauth.client.support.entity.AuthRequest;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.user.AccessSecret;
 import com.chua.starter.oauth.client.support.user.LoginResult;
@@ -88,7 +89,9 @@ public class LoginProvider implements InitializingBean {
      */
     public ReturnResult<UserResult> logout(
             HttpServletRequest request, HttpServletResponse response) {
-        logoutWeb(null, LogoutType.NONE, request, response);
+        AuthRequest request1 = new AuthRequest();
+        request1.setType(LogoutType.NONE.name());
+        logoutWeb(request1, request, response);
         return ReturnResult.ok();
     }
 
@@ -100,10 +103,10 @@ public class LoginProvider implements InitializingBean {
      */
     @PostMapping("/logout")
     @ResponseBody
-    public AdviceView logoutWeb(
-            String data,
-            LogoutType type,
-            HttpServletRequest request, HttpServletResponse response) {
+    public AdviceView logoutWeb(@RequestBody AuthRequest request1,
+                                HttpServletRequest request, HttpServletResponse response) {
+        String data = request1.getData();
+        LogoutType type = LogoutType.valueOf(request1.getType().toUpperCase());
         String address = RequestUtils.getIpAddress(request);
         String accept = request.getHeader("accept");
 
@@ -159,7 +162,7 @@ public class LoginProvider implements InitializingBean {
         String uid = request1.getString("uid");
         request.setAttribute("uid", uid);
         request.setAttribute("type", type);
-        return logoutWeb(null, null, request, response);
+        return logoutWeb(new AuthRequest(), request, response);
     }
 
     /**
@@ -231,7 +234,7 @@ public class LoginProvider implements InitializingBean {
     }
 
     private AccessSecret getAkSk(String data) {
-        return createAccessSecret(data);
+        return null != data ? createAccessSecret(data) : null;
     }
 
     /**
@@ -310,19 +313,20 @@ public class LoginProvider implements InitializingBean {
      */
     @PostMapping("/doLogin")
     public AdviceView doWebLogin(
+            @RequestBody AuthRequest authRequest,
             HttpServletRequest request,
             HttpServletResponse response,
             RedirectAttributes redirectAttributes,
-            @RequestParam(value = "username") String username,
-            @RequestParam(value = "passwd", required = false) String passwd,
-            @RequestParam(value = "code", required = false) String code,
-            @RequestParam(value = "type") String type,
-            @RequestParam(value = "data") String data,
-            @RequestParam(value = "redirect_url", required = false) String url,
-            @RequestParam(value = "mode", required = false) String mode,
-            @RequestParam(value = "ifRemember", required = false) String ifRemember,
             RedirectAttributes modelMap
     ) {
+        String username = authRequest.getUsername(),
+                passwd = authRequest.getPasswd(),
+                code = authRequest.getCode(),
+                type = authRequest.getType(),
+                data = authRequest.getData(),
+                url = authRequest.getRedirect_url(),
+                mode = authRequest.getMode(),
+                ifRemember = authRequest.getIfRemember();
         String address = RequestUtils.getIpAddress(request);
         String accept = request.getHeader("accept");
         if (null != accept && !accept.contains("text/html")) {

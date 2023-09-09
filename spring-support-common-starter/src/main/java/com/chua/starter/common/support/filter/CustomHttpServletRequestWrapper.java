@@ -33,4 +33,14 @@ public class CustomHttpServletRequestWrapper extends HttpServletRequestWrapper {
     public BufferedReader getReader() throws IOException {
         return new BufferedReader(new InputStreamReader(getInputStream(), getCharacterEncoding()));
     }
+
+    @Override
+    public String getParameter(String name) {
+        return super.getParameter(name);
+    }
+
+    @Override
+    public String[] getParameterValues(String name) {
+        return super.getParameterValues(name);
+    }
 }
