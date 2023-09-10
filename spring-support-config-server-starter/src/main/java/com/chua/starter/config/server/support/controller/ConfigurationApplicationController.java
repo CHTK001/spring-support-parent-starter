@@ -64,6 +64,7 @@ public class ConfigurationApplicationController implements ApplicationContextAwa
             @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize,
             @RequestParam(value = "dataId") String dataId,
             @RequestParam(value = "command") String command,
+            @RequestParam(value = "isOtherServer", defaultValue = "false") Boolean isOtherServer,
             @RequestParam(value = "param", defaultValue = "{}", required = false) String param,
             @RequestParam(value = "method", defaultValue = "GET") String method
     ) {
@@ -81,10 +82,17 @@ public class ConfigurationApplicationController implements ApplicationContextAwa
         HttpEntity httpEntity = new HttpEntity<>(Json.toMapStringObject(param), httpHeaders);
         ResponseEntity<JSONObject> exchange = null;
         try {
-            exchange = restTemplate.exchange(
-                    "http://" + detail.getAppHost() + ":" + detail.getAppSpringPort() + "" + detail.getAppContextPath() + "" + detail.getAppActuator() + "/" + command,
-                    httpMethod, httpEntity, JSONObject.class
-            );
+            if(!isOtherServer) {
+                exchange = restTemplate.exchange(
+                        "http://" + detail.getAppHost() + ":" + detail.getAppSpringPort() + "" + detail.getAppContextPath() + "" + detail.getAppActuator() + "/" + command,
+                        httpMethod, httpEntity, JSONObject.class
+                );
+            } else {
+                exchange = restTemplate.exchange(
+                        "http://" + detail.getAppHost() + ":" + detail.getAppPort() +  "/config/listener/" + command,
+                        httpMethod, httpEntity, JSONObject.class
+                );
+            }
         } catch (Throwable e) {
             return ReturnResult.of(ReturnResultCode.SYSTEM_SERVER_NOT_FOUND, null, "操作失败");
         }

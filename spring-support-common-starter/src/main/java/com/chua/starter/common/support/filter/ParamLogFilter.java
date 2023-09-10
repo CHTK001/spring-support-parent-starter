@@ -2,6 +2,7 @@ package com.chua.starter.common.support.filter;
 
 import com.chua.common.support.log.Log;
 import com.chua.common.support.utils.IoUtils;
+import com.chua.common.support.utils.StringUtils;
 
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
@@ -29,11 +30,14 @@ public class ParamLogFilter implements Filter {
 
     private void printLog(CustomHttpServletRequestWrapper requestWrapper) throws IOException {
         log.info("请求URL: {}", requestWrapper.getRequestURL());
-        String method = requestWrapper.getMethod();
+        String body = null;
+            String method = requestWrapper.getMethod();
         if (GET.equalsIgnoreCase(method)) {
-            log.info("请求参数: {}", requestWrapper.getQueryString());
+            body = requestWrapper.getQueryString();
         } else if (POST.equalsIgnoreCase(method)) {
-            String body = IoUtils.toString(requestWrapper.getInputStream(), requestWrapper.getCharacterEncoding());
+            body = IoUtils.toString(requestWrapper.getInputStream(), requestWrapper.getCharacterEncoding());
+        }
+        if(StringUtils.isNotEmpty(body)) {
             log.info("请求参数: {}", body);
         }
     }

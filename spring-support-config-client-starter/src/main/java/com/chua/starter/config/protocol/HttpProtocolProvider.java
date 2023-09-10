@@ -11,6 +11,7 @@ import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.config.constant.ConfigConstant;
 import com.chua.starter.config.entity.CommandRequest;
 import com.chua.starter.config.entity.KeyValue;
+import com.chua.starter.config.event.Event;
 import com.chua.starter.config.plugin.Plugin;
 import com.google.common.base.Strings;
 import io.vertx.core.Handler;
@@ -146,6 +147,20 @@ public class HttpProtocolProvider extends AbstractProtocolProvider implements Ha
             return;
         }
         HttpServerResponse response = request.response();
+
+        String event2 = StringUtils.startWithMove(uri.replace(MAPPING, ""), "/");
+        Event plugin1 = ServiceProvider.of(Event.class).getExtension(event2);
+        if(null != plugin1) {
+            if(log.isDebugEnabled()) {
+                log.debug("监听到数据: {}", event2);
+            }
+            //设置响应头
+            response.putHeader("Content-type", "application/json;charset=utf-8");
+            plugin1.onListener(response);
+            return;
+        }
+
+
         request.body(event -> {
             String data = event.result().toString().replace("data=", "");
             //服务端主动发起信息
