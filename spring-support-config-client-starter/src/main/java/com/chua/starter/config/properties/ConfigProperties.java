@@ -48,7 +48,7 @@ public class ConfigProperties {
     /**
      * 多网卡或者不确定网卡需要绑定该配置或者采用非http协议
      */
-    private int bindPort = 23987;
+    private int bindPort;
     /**
      * i18n
      */
