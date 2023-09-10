@@ -14,10 +14,6 @@
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
-
-    <properties>
         <commons-io.version>2.11.0</commons-io.version>
         <orai18n.version>19.7.0.0</orai18n.version>
         <polaris-all.version>1.13.0</polaris-all.version>
