@@ -14,10 +14,10 @@ import org.springframework.boot.autoconfigure.ldap.LdapAutoConfiguration;
         exclude = {LdapAutoConfiguration.class},
         scanBasePackages = "org.apache.shenyu.admin"
 )
-public class GatewayApplication {
+public class GatewayAdminApplication {
 
     public static void main(final String[] args) {
-        SpringApplication.run(GatewayApplication.class, args);
+        SpringApplication.run(GatewayAdminApplication.class, args);
     }
 
 }
