@@ -23,10 +23,11 @@ public class OshiEvent implements Event{
     public void onListener(HttpServerResponse response) {
 
         response.end(new JSONObject()
-                .fluentPut("cpu", Oshi.newCpu())
+                .fluentPut("cpu", Oshi.newCpu(1000))
                 .fluentPut("mem", Oshi.newMem())
                 .fluentPut("jvm", Oshi.newJvm())
-                .fluentPut("process", Oshi.newProcess())
+                .fluentPut("time", System.currentTimeMillis() / 1000)
+//                .fluentPut("process", Oshi.newProcess())
                 .fluentPut("startupTime", startupTimeListener.getStartupTime())
                 .fluentPut("pid", Projects.getPid())
                 .fluentPut("sys", Oshi.newSys()).toString());
