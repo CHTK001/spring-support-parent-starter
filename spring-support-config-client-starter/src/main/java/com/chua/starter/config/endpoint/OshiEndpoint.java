@@ -22,10 +22,10 @@ public class OshiEndpoint {
     @ReadOperation
     public JSONObject oshi() {
         return new JSONObject()
-                .fluentPut("cpu", Oshi.newCpu())
+                .fluentPut("cpu", Oshi.newCpu(1000))
                 .fluentPut("mem", Oshi.newMem())
                 .fluentPut("jvm", Oshi.newJvm())
-                .fluentPut("process", Oshi.newProcess())
+//                .fluentPut("process", Oshi.newProcess())
                 .fluentPut("startupTime", startupTimeListener.getStartupTime())
                 .fluentPut("pid", Projects.getPid())
                 .fluentPut("sys", Oshi.newSys());
