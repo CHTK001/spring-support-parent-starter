@@ -2,6 +2,7 @@ package com.chua.starter.config.configuration;
 
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.ClassUtils;
+import com.chua.starter.config.endpoint.OshiEndpoint;
 import com.chua.starter.config.plugin.Plugin;
 import com.chua.starter.config.properties.ConfigProperties;
 import com.chua.starter.config.properties.ConfigUniformProperties;
@@ -16,6 +17,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.annotation.Import;
 
 import javax.annotation.Resource;
 import java.util.Map;
@@ -25,6 +27,7 @@ import java.util.Map;
  * @author CH
  * @since 2022/7/30 8:34
  */
+@Import({OshiEndpoint.class, StartupTimeListener.class})
 @ConditionalOnMissingClass(value = {"com.chua.starter.config.server.properties.ConfigServerProperties"})
 @EnableConfigurationProperties({ConfigProperties.class, ConfigUniformProperties.class})
 public class ConfigConfiguration implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware {

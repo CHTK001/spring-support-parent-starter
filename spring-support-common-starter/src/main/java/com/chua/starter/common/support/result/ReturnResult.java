@@ -242,7 +242,11 @@ public class ReturnResult<T> {
      * @return {@link ReturnResult}<{@link T}>
      */
     public static <T> ReturnResult<T> of(Object body) {
-        return BeanUtils.copyProperties(body, ReturnResult.class);
+        ReturnResult returnResult = BeanUtils.copyProperties(body, ReturnResult.class);
+        if(null == returnResult.getCode()) {
+            return (ReturnResult<T>) ReturnResult.ok(body);
+        }
+        return returnResult;
     }
 
     @Override
