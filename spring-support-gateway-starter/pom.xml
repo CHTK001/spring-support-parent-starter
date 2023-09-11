@@ -15,8 +15,9 @@
     <version>3.1.0</version>
 
     <modules>
-        <module>spring-support-gateway-admin-support</module>
+        <module>spring-support-gateway-admin-starter</module>
         <module>spring-support-gateway-bootstrap-starter</module>
+        <module>spring-support-gateway-bootstrap-http-starter</module>
     </modules>
 
     <properties>
