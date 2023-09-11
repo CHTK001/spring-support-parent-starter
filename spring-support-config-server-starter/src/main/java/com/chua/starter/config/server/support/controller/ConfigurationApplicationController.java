@@ -88,8 +88,11 @@ public class ConfigurationApplicationController implements ApplicationContextAwa
                         httpMethod, httpEntity, JSONObject.class
                 );
             } else {
+                if (detail.getAppPort() == 0) {
+                    return ReturnResult.ok();
+                }
                 exchange = restTemplate.exchange(
-                        "http://" + detail.getAppHost() + ":" + detail.getAppPort() +  "/config/listener/" + command,
+                        "http://" + detail.getAppHost() + ":" + detail.getAppPort() + "/config/listener/" + command,
                         httpMethod, httpEntity, JSONObject.class
                 );
             }
