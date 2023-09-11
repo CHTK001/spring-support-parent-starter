@@ -12,6 +12,8 @@ import com.chua.starter.config.server.support.entity.ConfigurationApplicationInf
 import com.chua.starter.config.server.support.manager.DataManager;
 import com.chua.starter.config.server.support.properties.ConfigServerProperties;
 import com.chua.starter.config.server.support.query.DetailUpdate;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -25,6 +27,7 @@ import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.Resource;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import static com.chua.common.support.http.HttpConstant.ACCEPT;
 import static com.chua.common.support.http.HttpConstant.APPLICATION_JSON_UTF_8;
@@ -51,6 +54,10 @@ public class ConfigurationApplicationController implements ApplicationContextAwa
     @Resource
     private RestTemplate restTemplate;
 
+    private final Cache<String, ConfigurationApplicationInfo> cache = CacheBuilder.newBuilder()
+            .expireAfterWrite(4, TimeUnit.SECONDS)
+            .build();
+
     /**
      * 配置頁面
      *
@@ -68,7 +75,14 @@ public class ConfigurationApplicationController implements ApplicationContextAwa
             @RequestParam(value = "param", defaultValue = "{}", required = false) String param,
             @RequestParam(value = "method", defaultValue = "GET") String method
     ) {
-        ConfigurationApplicationInfo detail = (ConfigurationApplicationInfo) dataManager.getDetail(ConfigConstant.APP, dataId);
+        ConfigurationApplicationInfo detail = cache.getIfPresent(dataId);
+        if (null == detail) {
+            detail = (ConfigurationApplicationInfo) dataManager.getDetail(ConfigConstant.APP, dataId);
+            try {
+                cache.put(dataId, detail);
+            } catch (Exception ignore) {
+            }
+        }
         if (null == detail) {
             return ReturnResult.illegal("数据不存在");
         }

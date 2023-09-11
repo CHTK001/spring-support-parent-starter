@@ -54,7 +54,7 @@ public class PluginMeta {
             return this.port;
         }
 
-        if (configProperties.getBindPort() > -1) {
+        if (configProperties.getBindPort() > 0) {
             return (this.port = configProperties.getBindPort());
         }
         return (this.port = NetUtils.getAvailablePort());
