@@ -109,6 +109,7 @@ public class MqUniform implements Uniform, Consumer.ConsumerHandler {
         String mode = jsonObject.getString(ConfigConstant.UNIFORM_MODE);
         String message = jsonObject.getString(ConfigConstant.UNIFORM_MESSAGE);
         String format = StringUtils.format("[{}] [{}] [{}] {}", DateTime.now().toStandard(), applicationName, mode, message);
+        sseTemplate.emit(SseMessage.builder().event(mode + applicationName).message(format).build(), Duration.ofSeconds(10), SUBSCRIBE_SSE);
         sseTemplate.emit(SseMessage.builder().event(mode).message(format).build(), Duration.ofSeconds(10), SUBSCRIBE_SSE);
         fileStore.write(applicationName, format, mode);
     }
