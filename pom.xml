@@ -44,7 +44,6 @@
         <module>spring-support-schedule-fork-client-starter</module>
         <module>spring-support-milvus-starter</module>
         <module>spring-support-rpc-starter</module>
-        <module>spring-support-gateway-starter</module>
         <!--        <module>spring-support-disconvery-starter</module>-->
     </modules>
 
