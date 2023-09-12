@@ -1,4 +1,5 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-  com.chua.starter.config.server.support.configuration.ConfigServerConfiguration
+  com.chua.starter.config.server.support.configuration.ConfigServerConfiguration,\
+  com.chua.starter.config.server.support.configuration.ConfigServerWebSocketConfiguration
 org.springframework.boot.env.EnvironmentPostProcessor=\
   com.chua.starter.config.server.support.configuration.ConfigEnvironmentPostProcessor
