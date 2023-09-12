@@ -64,10 +64,6 @@ public class HttpProtocolServer implements ProtocolServer, ApplicationContextAwa
      * 注册地址
      *
      * @param command            命令
-     * @param data               数据
-     * @param dataType           数据类型
-     * @param applicationName    当前数据的应用
-     * @param applicationProfile 环境
      * @param request            请求
      * @param response           响应
      * @return 结果

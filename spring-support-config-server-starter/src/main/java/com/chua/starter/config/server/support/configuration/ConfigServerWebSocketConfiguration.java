@@ -1,13 +1,14 @@
 package com.chua.starter.config.server.support.configuration;
 
 
+import com.chua.starter.config.server.support.endpoint.WebSocketEndpoint;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.web.servlet.ServletContextInitializer;
+import org.springframework.context.annotation.Bean;
 import org.springframework.web.socket.server.standard.ServerEndpointExporter;
 
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
-import javax.websocket.ClientEndpointConfig;
 import javax.websocket.HandshakeResponse;
 import javax.websocket.server.HandshakeRequest;
 import javax.websocket.server.ServerEndpointConfig;
@@ -19,12 +20,19 @@ import java.util.Map;
  *
  * @author CH
  */
-public class ConfigServerWebSocketConfiguration extends ClientEndpointConfig.Configurator implements ServletContextInitializer {
+public class ConfigServerWebSocketConfiguration extends ServerEndpointConfig.Configurator implements ServletContextInitializer {
 
 
+    @Bean
     @ConditionalOnMissingBean
     public ServerEndpointExporter serverEndpointExporter () {
         return new ServerEndpointExporter();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public WebSocketEndpoint webSocketEndpoint () {
+        return new WebSocketEndpoint();
     }
 
     @Override
