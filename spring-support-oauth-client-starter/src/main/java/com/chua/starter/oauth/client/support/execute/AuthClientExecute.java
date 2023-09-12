@@ -101,6 +101,16 @@ public class AuthClientExecute {
      * @return token
      */
     public LoginAuthResult logout(String uid, LogoutType logoutType) {
+        AuthType authType = null;
+        String oauthUrl = authClientProperties.getAuthAddress();
+        if(StringUtils.isEmpty(oauthUrl)) {
+            authType = AuthType.EMBED;
+        }
+
+        if(authType == AuthType.EMBED) {
+            return new LoginAuthResult(200, "");
+        }
+
         if (Strings.isNullOrEmpty(uid) && logoutType == LogoutType.UN_REGISTER) {
             return new LoginAuthResult(400, "uid不能为空");
         }
@@ -188,6 +198,15 @@ public class AuthClientExecute {
      */
     @Watch
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
+        String oauthUrl = authClientProperties.getAuthAddress();
+        if(StringUtils.isEmpty(oauthUrl)) {
+            authType = AuthType.EMBED;
+        }
+
+        if(authType == AuthType.EMBED) {
+            return newLoginAuthResult(username, password);
+        }
+
         String accessKey = authClientProperties.getAccessKey();
         String secretKey = authClientProperties.getSecretKey();
         String serviceKey = authClientProperties.getServiceKey();
@@ -278,6 +297,33 @@ public class AuthClientExecute {
         LoginAuthResult loginAuthResult = new LoginAuthResult();
         loginAuthResult.setCode(status);
         loginAuthResult.setMessage("认证服务器异常");
+        return loginAuthResult;
+
+    }
+
+    /**
+     * 新登录身份验证结果
+     *
+     * @param username 用户名
+     * @param password 暗语
+     * @return {@link LoginAuthResult}
+     */
+    private LoginAuthResult newLoginAuthResult(String username, String password) {
+        AuthClientProperties.TempUser temp = authClientProperties.getTemp();
+        LoginAuthResult loginAuthResult = new LoginAuthResult();
+        if(username.equals(temp.getUser()) && password.equals(Md5Utils.getInstance().getMd5String(temp.getPassword()))) {
+            loginAuthResult.setCode(200);
+            UserResult userResult = new UserResult();
+            userResult.setId("0");
+            userResult.setAuthType(AuthType.EMBED.name());
+            userResult.setUsername(username);
+            loginAuthResult.setUserResult(userResult);
+            loginAuthResult.setToken(DigestUtils.sha512Hex(username));
+            return loginAuthResult;
+        }
+
+        loginAuthResult.setCode(403);
+        loginAuthResult.setMessage("账号或密码错误");
         return loginAuthResult;
 
     }

@@ -2,6 +2,7 @@ package com.chua.starter.oauth.client.support.configuration;
 
 import com.chua.starter.oauth.client.support.filter.AuthFilter;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
+import com.chua.starter.oauth.client.support.provider.TempProvider;
 import com.chua.starter.oauth.client.support.web.WebRequest;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
@@ -9,6 +10,7 @@ import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -36,6 +38,16 @@ public class AuthClientConfiguration implements ApplicationContextAware, BeanDef
 
     private AuthClientProperties authProperties;
 
+    /**
+     * 鉴权过滤器
+     *
+     * @return 鉴权过滤器
+     */
+    @Bean
+    @ConditionalOnProperty(name = "plugin.oauth.temp.open", havingValue = "true", matchIfMissing = true)
+    public TempProvider tempProvider() {
+        return new TempProvider();
+    }
     /**
      * 鉴权过滤器
      *
