@@ -1,0 +1,1 @@
+import{_ as r,r as t,o,g as s}from"./index-a5e257d7.js";const c={};function n(_,a){const e=t("router-view");return o(),s(e)}const u=r(c,[["render",n],["__file","Z:/works/vue-support-parent-starter/vue-support-config-starter/src/layout/other/empty.vue"]]);export{u as default};
