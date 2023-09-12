@@ -1,10 +1,12 @@
 package com.chua.starter.oauth.client.support.properties;
 
+import com.chua.starter.oauth.client.support.provider.RouteVO;
 import com.google.common.collect.Sets;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -16,6 +18,11 @@ import java.util.Set;
 @ConfigurationProperties(prefix = AuthClientProperties.PRE, ignoreInvalidFields = true)
 public class AuthClientProperties {
 
+    public AuthClientProperties() {
+        whitelist.add("/**/captcha");
+        whitelist.add("/**/login");
+        whitelist.add("/**/logout");
+    }
 
     public static final String PRE = "plugin.oauth";
     /**
@@ -34,7 +41,7 @@ public class AuthClientProperties {
     /**
      * 鉴权地址
      */
-    private String authAddress = "http://127.0.0.1:${server.port}";
+    private String authAddress;
     /**
      * 登录地址
      */
@@ -95,4 +102,18 @@ public class AuthClientProperties {
      * 无权限页面
      */
     private String noPermissionPage = "/oauth-page";
+
+    private TempUser  temp = new TempUser();
+
+    @Data
+    public static class TempUser {
+        private boolean open;
+
+        private String menuPath;
+        /**
+         * 临时账号(只用于账号类型为Embed)
+         */
+        private String user = "guest";
+        private String password = "guest";
+    }
 }

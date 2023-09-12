@@ -161,6 +161,6 @@ public class UserResume  {
     }
 
     public boolean isAdmin() {
-        return this.roles.contains("ADMIN");
+        return null != this.roles && this.roles.contains("ADMIN");
     }
 }

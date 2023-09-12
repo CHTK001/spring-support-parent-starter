@@ -9,7 +9,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @author CH
  */
 @Data
-@ConfigurationProperties(prefix = "plugin.oauth")
+@ConfigurationProperties(prefix = "plugin.oauth.third.url")
 public class CasProperties {
     /**
      * 登录地址

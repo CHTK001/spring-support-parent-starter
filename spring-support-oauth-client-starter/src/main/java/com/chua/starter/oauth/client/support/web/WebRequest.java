@@ -5,11 +5,14 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.annotations.Ignore;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.oauth.client.support.annotation.AuthIgnore;
+import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.infomation.Information;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.protocol.Protocol;
+import com.chua.starter.oauth.client.support.user.UserResume;
 import com.google.common.base.Strings;
+import com.google.common.collect.Sets;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.AntPathMatcher;
@@ -23,6 +26,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -53,6 +58,7 @@ public class WebRequest {
     }
 
     private static final Set<HandlerMethod> PASS = new LinkedHashSet<>();
+
     /**
      * 是否通过
      *
@@ -62,6 +68,26 @@ public class WebRequest {
         Set<String> whitelist = authProperties.getWhitelist();
         if (null == whitelist) {
             return false;
+        }
+
+
+        String uri = request.getRequestURI();
+        uri = StringUtils.isNotBlank(contextPath) ? StringUtils.removeStart(uri, contextPath) : uri;
+
+        for (String s : whitelist) {
+            if (PATH_MATCHER.match(s, uri)) {
+                return true;
+            }
+        }
+
+        String authUrl = authProperties.getLoginPage();
+        if (uri.equalsIgnoreCase(authUrl)) {
+            return true;
+        }
+
+        String authUrl1 = authProperties.getNoPermissionPage();
+        if (uri.equalsIgnoreCase(authUrl1)) {
+            return true;
         }
 
         if (null != requestMappingHandlerMapping) {
@@ -98,25 +124,6 @@ public class WebRequest {
                     return true;
                 }
             }
-        }
-
-        String uri = request.getRequestURI();
-        uri = StringUtils.isNotBlank(contextPath) ? StringUtils.removeStart(uri, contextPath) : uri;
-
-        for (String s : whitelist) {
-            if (PATH_MATCHER.match(s, uri)) {
-                return true;
-            }
-        }
-
-        String authUrl = authProperties.getLoginPage();
-        if (uri.equalsIgnoreCase(authUrl)) {
-            return true;
-        }
-
-        String authUrl1 = authProperties.getNoPermissionPage();
-        if (uri.equalsIgnoreCase(authUrl1)) {
-            return true;
         }
 
         return false;
@@ -197,8 +204,34 @@ public class WebRequest {
     public AuthenticationInformation authentication() {
         Cookie[] cookie = getCookie();
         String token = getToken();
+        if (isEmbed()) {
+            return newAuthenticationInformation();
+        }
         Protocol protocol = ServiceProvider.of(Protocol.class).getExtension(authProperties.getProtocol());
         return protocol.approve(cookie, token);
+    }
+
+    /**
+     * 新身份验证信息
+     *
+     * @return {@link AuthenticationInformation}
+     */
+    private AuthenticationInformation newAuthenticationInformation() {
+        UserResume userResume = new UserResume();
+        userResume.setUsername(authProperties.getTemp().getUser());
+        userResume.setRoles(Sets.newHashSet("OPS"));
+        userResume.setPermission(Collections.emptySet());
+        return new AuthenticationInformation(Information.OK, userResume);
+    }
+
+    /**
+     * 是嵌入
+     *
+     * @return boolean
+     */
+    private boolean isEmbed() {
+        String oauthUrl = authProperties.getAuthAddress();
+        return StringUtils.isEmpty(oauthUrl);
     }
 
     /**

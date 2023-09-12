@@ -67,7 +67,7 @@ public class Binder {
      * @return T
      */
     public <T> T binder(Class<T> type) {
-        return org.springframework.boot.context.properties.bind.Binder.get(environment).bind(pre, type).get();
+        return org.springframework.boot.context.properties.bind.Binder.get(environment).bindOrCreate(pre, type);
     }
 
 
