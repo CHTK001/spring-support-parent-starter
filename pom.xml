@@ -18,8 +18,6 @@
     <modules>
         <module>spring-support-datasource-starter</module>
         <module>spring-support-common-starter</module>
-        <module>spring-support-schedule-server-starter</module>
-        <module>spring-support-schedule-client-starter</module>
         <module>spring-support-mybatis-starter</module>
         <module>spring-support-script-starter</module>
         <module>spring-support-shell-starter</module>
@@ -28,8 +26,6 @@
         <module>spring-support-config-client-starter</module>
         <module>spring-support-config-server-starter</module>
         <module>spring-support-cacheable-starter</module>
-        <!--        <module>spring-support-webjar-extension-starter</module>-->
-        <!--        <module>spring-support-webjar-starter</module>-->
         <module>spring-support-redis-starter</module>
         <module>spring-support-swagger-starter</module>
         <module>spring-support-mail-starter</module>
@@ -44,7 +40,6 @@
         <module>spring-support-schedule-fork-client-starter</module>
         <module>spring-support-milvus-starter</module>
         <module>spring-support-rpc-starter</module>
-        <!--        <module>spring-support-disconvery-starter</module>-->
     </modules>
 
     <properties>
