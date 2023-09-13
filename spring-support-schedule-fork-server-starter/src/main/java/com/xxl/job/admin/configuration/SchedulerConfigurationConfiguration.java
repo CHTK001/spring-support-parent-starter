@@ -17,6 +17,8 @@ public class SchedulerConfigurationConfiguration implements EnvironmentPostProce
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         Properties properties = new Properties();
+        properties.setProperty("plugin.configuration.isOpen", "false");
+        properties.setProperty("plugin.configuration.is-open", "false");
         //## 调度线程池最大线程配置【必填】
         properties.setProperty("plugin.scheduler.open", "false");
         properties.setProperty("xxl.job.triggerpool.fast.max", "2000");
