@@ -62,7 +62,6 @@ public class MqUniform implements Uniform, Consumer.ConsumerHandler {
         } catch (Exception ignored) {
         }
         try {
-
             BrokerConfig config = new BrokerConfig();
             config.setBrokerAddress(configUniformProperties.getHost() + ":" + configUniformProperties.getPort());
             Broker broker = new SingleBroker(config);
