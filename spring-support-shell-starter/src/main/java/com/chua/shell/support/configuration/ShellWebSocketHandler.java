@@ -101,9 +101,7 @@ public class ShellWebSocketHandler {
         }
         HANDLER_ITEM_CONCURRENT_HASH_MAP.remove(session);
         int cnt = count.decrementAndGet();
-        if (log.isTraceEnabled()) {
-            log.trace("有连接关闭，当前连接数为：{}", cnt);
-        }
+        log.info("有连接关闭，当前连接数为：{}", cnt);
     }
 
     /**
@@ -198,7 +196,7 @@ public class ShellWebSocketHandler {
         }
     }
 
-    private static void sendText(Session session, String msg) {
+    protected static void sendText(Session session, String msg) {
         try {
             session.getBasicRemote().sendText(msg);
         } catch (IOException e) {
