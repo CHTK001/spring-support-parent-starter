@@ -1,11 +1,16 @@
 package com.chua.shell.support.configuration;
 
 import com.chua.common.support.constant.CommonConstant;
+import com.chua.common.support.crypto.decode.AesDecode;
+import com.chua.common.support.json.Json;
+import com.chua.common.support.json.JsonObject;
+import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.matcher.AntPathMatcher;
 import com.chua.common.support.net.NetUtils;
+import com.chua.common.support.protocol.client.ClientOption;
 import com.chua.common.support.shell.BaseShell;
-import com.chua.common.support.shell.ShellResult;
 import com.chua.shell.support.properties.ShellProperties;
+import com.chua.sshd.support.client.SshClient;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
@@ -13,20 +18,24 @@ import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.Resource;
 import javax.websocket.*;
+import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
-import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.chua.shell.support.configuration.ShellWebSocketConfiguration.ADDRESS;
+import static com.chua.shell.support.configuration.ShellWebSocketHandler.sendText;
 
 /**
+ * ssh网络套接字hanlder
+ *
  * @author CH
+ * @since 2023/09/19
  */
-@ServerEndpoint(value = "/channel/shell", configurator = ShellWebSocketConfiguration.class)
 @Slf4j
-public class ShellWebSocketHandler {
-    private static final ConcurrentHashMap<Session, HandlerItem> HANDLER_ITEM_CONCURRENT_HASH_MAP = new ConcurrentHashMap<>();
+@ServerEndpoint(value = "/channel/ssh/{info}", configurator = ShellWebSocketConfiguration.class)
+public class SshWebSocketHandler {
+    private static final ConcurrentHashMap<Session, SshClient> HANDLER_ITEM_CONCURRENT_HASH_MAP = new ConcurrentHashMap<>();
     private final String prompt = "$ ";
 
     @Resource
@@ -35,24 +44,30 @@ public class ShellWebSocketHandler {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private BaseShell shell = ShellWebSocketConfiguration.shell;
 
-    private static final AtomicInteger count = new AtomicInteger(0);
+    private static final AtomicInteger COUNT = new AtomicInteger(0);
 
     /**
      * 连接建立成功调用的方法
      */
     @OnOpen
-    public void onOpen(Session session) throws Exception {
+    public void onOpen(Session session, @PathParam("info") String info) throws Exception {
         if(!check(session)) {
             sendText(session, "@auth 无权限访问");
             session.close();
             return;
         }
-        int cnt = count.incrementAndGet();
+        int cnt = COUNT.incrementAndGet();
         log.info("有连接加入，当前连接数为：{}", cnt);
 
-        HandlerItem handlerItem = new HandlerItem(session);
-        HANDLER_ITEM_CONCURRENT_HASH_MAP.put(session, handlerItem);
-        handlerItem.help();
+        AesDecode aesDecode = new AesDecode();
+        byte[] decode = aesDecode.decode(info, DateTime.now().toString("yyyyMMdd"));
+        JsonObject jsonObject = Json.fromJson(decode, JsonObject.class);
+        ClientOption clientOption = ClientOption.newBuilder().username(jsonObject.getString("username"))
+                        .password(jsonObject.getString("password"));
+        SshClient sshClient = new SshClient(clientOption);
+        sshClient.connect(jsonObject.getString("ip") + ":" + jsonObject.getIntValue("port", 22));
+        sshClient.addListener(session.getId(), s -> sendText(session, s));
+        HANDLER_ITEM_CONCURRENT_HASH_MAP.put(session, sshClient);
     }
 
     /**
@@ -93,14 +108,14 @@ public class ShellWebSocketHandler {
      */
     @OnClose
     public void onClose(Session session) {
-        HandlerItem handlerItem = HANDLER_ITEM_CONCURRENT_HASH_MAP.get(session);
+        SshClient sshClient = HANDLER_ITEM_CONCURRENT_HASH_MAP.get(session);
         try {
-            handlerItem.close();
+            sshClient.close();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
         HANDLER_ITEM_CONCURRENT_HASH_MAP.remove(session);
-        int cnt = count.decrementAndGet();
+        int cnt = COUNT.decrementAndGet();
         log.info("有连接关闭，当前连接数为：{}", cnt);
     }
 
@@ -111,15 +126,14 @@ public class ShellWebSocketHandler {
      */
     @OnMessage
     public void onMessage(String message, Session session) throws Exception {
-        HandlerItem handlerItem = HANDLER_ITEM_CONCURRENT_HASH_MAP.get(session);
+        SshClient sshClient = HANDLER_ITEM_CONCURRENT_HASH_MAP.get(session);
         if (Strings.isNullOrEmpty(message)) {
-            this.sendCommand(handlerItem, "");
             return;
         }
         if (log.isTraceEnabled()) {
             log.trace("来自客户端的消息：{}", message);
         }
-        this.sendCommand(handlerItem, message);
+        sshClient.send(message);
     }
 
     /**
@@ -133,75 +147,4 @@ public class ShellWebSocketHandler {
         log.error("发生错误：{}，Session ID： {}", error.getMessage(), session.getId());
         error.printStackTrace();
     }
-
-    private void sendCommand(HandlerItem handlerItem, String data) throws Exception {
-        handlerItem.send(data);
-    }
-
-
-    private class HandlerItem implements Runnable, AutoCloseable {
-        private final Session session;
-
-        HandlerItem(Session session) throws IOException {
-            this.session = session;
-            send("");
-        }
-
-
-        @Override
-        public void run() {
-        }
-
-        public void send(String data) {
-            try {
-                if (null == data) {
-                    return;
-                }
-
-                if ("".equals(data)) {
-                    session.getBasicRemote().sendText(prompt + " ");
-                    return;
-                }
-
-                ShellResult result = shell.handlerAnalysis(data, session);
-                if(null == result) {
-                    session.getBasicRemote().sendText("@text 无");
-                    return;
-                }
-                String result1 = result.getResult();
-                if (Strings.isNullOrEmpty(result1)) {
-                    session.getBasicRemote().sendText("");
-                    return;
-                }
-                session.getBasicRemote().sendText("@" + result.getMode().name().toLowerCase() + " " + result1);
-            } catch (IOException ignored) {
-            }
-        }
-
-        @Override
-        public void close() throws Exception {
-            try {
-                session.close();
-            } catch (IOException ignored) {
-            }
-        }
-
-        public void help() {
-            send(null);
-            try {
-                session.getBasicRemote().sendText("@welcome " + shellProperties.getWelcome());
-                session.getBasicRemote().sendText("@help" + objectMapper.writeValueAsString(shell.usageCommand()));
-            } catch (IOException ignored) {
-            }
-        }
-    }
-
-    protected static void sendText(Session session, String msg) {
-        try {
-            session.getBasicRemote().sendText(msg);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
 }
-
