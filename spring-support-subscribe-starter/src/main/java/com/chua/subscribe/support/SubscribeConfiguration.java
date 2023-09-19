@@ -16,6 +16,8 @@ import org.springframework.context.annotation.Bean;
 import java.util.Map;
 import java.util.concurrent.Executor;
 
+import static com.chua.common.support.eventbus.EventbusType.KAFKA;
+
 /**
  * 订阅配置
  *
@@ -85,6 +87,9 @@ public class SubscribeConfiguration  {
          * @return {@link SubscribeEventbus}
          */
         private SubscribeEventbus createSubscribeEventbus(String key, EventbusProperties.SubscribeEventbusConfig value) {
+            if(KAFKA.name().equalsIgnoreCase(key)) {
+                return ServiceProvider.of(SubscribeEventbus.class).getNewExtension(key, value.getHost(), value.getPort(), value.getPasswd(), value.getUsername(), value.getGroupId());
+            }
             return ServiceProvider.of(SubscribeEventbus.class).getNewExtension(key, value.getHost(), value.getPort(), value.getPasswd(), value.getUsername());
         }
     }
