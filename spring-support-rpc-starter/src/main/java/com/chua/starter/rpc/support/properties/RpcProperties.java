@@ -1,11 +1,7 @@
 package com.chua.starter.rpc.support.properties;
 
-import com.chua.common.support.rpc.RpcApplicationConfig;
-import com.chua.common.support.rpc.RpcConsumerConfig;
-import com.chua.common.support.rpc.RpcProtocolConfig;
-import com.chua.common.support.rpc.RpcReferenceConfig;
+import com.chua.common.support.rpc.*;
 import lombok.Data;
-import org.apache.dubbo.config.RegistryConfig;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
@@ -74,7 +70,7 @@ public class RpcProperties {
      * 注册器
      */
     @NestedConfigurationProperty
-    private RegistryConfig registry;
+    private List<RpcRegistryConfig> registry;
     /**
      * 注册器
      */
