@@ -49,8 +49,8 @@ import static org.springframework.util.StringUtils.hasText;
  * @author CH
  */
 @Slf4j
-@ConditionalOnProperty(prefix = "plugin.rpc", name = "open", havingValue = "true", matchIfMissing = false)
-public class RpcReferenceAnnotationBeanPostProcessor extends AbstractAnnotationBeanPostProcessor
+@ConditionalOnProperty(prefix = "plugin.rpc", name = "impl", havingValue = "dubbo", matchIfMissing = false)
+public class RpcDubboReferenceAnnotationBeanPostProcessor extends AbstractAnnotationBeanPostProcessor
         implements ApplicationContextAware, BeanFactoryPostProcessor {
 
     /**
@@ -79,7 +79,7 @@ public class RpcReferenceAnnotationBeanPostProcessor extends AbstractAnnotationB
      * <p>
      * {@link DubboReference bean} has been supported since 2.7.7
      */
-    public RpcReferenceAnnotationBeanPostProcessor() {
+    public RpcDubboReferenceAnnotationBeanPostProcessor() {
         super(RpcInject.class);
     }
 
