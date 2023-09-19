@@ -1,6 +1,8 @@
 package com.chua.starter.common.support.configuration;
 
+import com.chua.starter.common.support.mapping.EnvironmentMapping;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.boot.context.properties.bind.Binder;
@@ -36,6 +38,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class SpringBeanUtils {
 
     public static PathMatcher Matcher = new AntPathMatcher();
+    private static EnvironmentMapping environmentMapping;
     /**
      * 上下文
      */
@@ -74,6 +77,12 @@ public class SpringBeanUtils {
      */
     public static void setApplicationContext(ApplicationContext applicationContext) {
         APPLICATION_CONTEXT.set(applicationContext);
+        ConversionService conversionService1 = null;
+        try {
+            conversionService1 = applicationContext.getBean(ConversionService.class);
+        } catch (Throwable ignored) {
+        }
+        environmentMapping = new EnvironmentMapping(applicationContext.getEnvironment(), conversionService1);
     }
 
     /**
@@ -90,6 +99,15 @@ public class SpringBeanUtils {
         } finally {
             APPLICATION_CONTEXT.set(applicationContext);
             APPLICATION_CONTEXT.remove();
+        }
+    }
+
+
+    public static <T> T getBean(Class<T> target) {
+        try {
+            return getApplicationContext().getBean(target);
+        } catch (BeansException e) {
+            return null;
         }
     }
 
@@ -199,8 +217,22 @@ public class SpringBeanUtils {
         return null == conversionService ? null : conversionService.convert(value, type);
     }
 
+    /**
+     * 获取环境
+     *
+     * @return {@link Environment}
+     */
     public static Environment getEnvironment() {
         return getApplicationContext().getEnvironment();
+    }
+
+    /**
+     * 获取环境映射
+     *
+     * @return {@link EnvironmentMapping}
+     */
+    public static EnvironmentMapping getEnvironmentMapping() {
+        return environmentMapping;
     }
 
     /**

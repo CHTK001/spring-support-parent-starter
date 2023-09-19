@@ -1,7 +1,7 @@
 package com.chua.starter.mybatis.watchdog;
 
-import com.chua.common.support.mysql.BinaryLogClient;
-import com.chua.common.support.mysql.event.*;
+import com.chua.common.support.mysql.binlog.BinaryLogClient;
+import com.chua.common.support.mysql.binlog.event.*;
 import com.chua.starter.mybatis.marker.MysqlSqlMethodMarker;
 import com.chua.starter.mybatis.method.DynamicSqlMethod;
 import lombok.extern.slf4j.Slf4j;

@@ -1,11 +1,12 @@
 package com.chua.shell.support.command;
 
+import com.chua.common.support.shell.ShellMapping;
+import com.chua.common.support.shell.ShellParam;
+import com.chua.common.support.shell.ShellResult;
 import com.chua.shell.support.command.spring.EnvironmentSpring;
 import com.chua.shell.support.command.spring.InvokeSpring;
 import com.chua.shell.support.command.spring.LoggerSpring;
 import com.chua.shell.support.command.spring.ShowSpring;
-import com.chua.shell.support.shell.ShellMapping;
-import com.chua.shell.support.shell.ShellParam;
 
 import java.util.List;
 
@@ -22,7 +23,7 @@ public class SpringCommand {
      * @return help
      */
     @ShellMapping(value = {"spring"}, describe = "spring的操作命令")
-    public String spring(
+    public ShellResult spring(
             @ShellParam(value = "invoke", numberOfArgs = 2, describe = "执行spring对象", example = {"spring -invoke bean method: 执行spring无参方法"}) List<String> invoke,
             @ShellParam(value = "show", numberOfArgs = 2, describe = "获取Bean/Mapping变量", example = {"spring -show bean: 获取Bean等级"}) List<String> show,
             @ShellParam(value = "env", numberOfArgs = 3, describe = "设置/获取环境变量", example = {"spring -e get server.port: 获取spring参数", "spring -e set server.port 9090: 设置/更新spring参数"}) List<String> env,

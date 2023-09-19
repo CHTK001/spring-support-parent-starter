@@ -3,12 +3,10 @@ package com.chua.starter.common.support.configuration;
 import com.chua.starter.common.support.configuration.resolver.RequestParamsMapMethodArgumentResolver;
 import com.chua.starter.common.support.converter.FastJsonHttpMessageConverter;
 import com.chua.starter.common.support.converter.ResultDataHttpMessageConverter;
-import com.chua.starter.common.support.eventbus.EventbusTemplate;
 import com.chua.starter.common.support.filter.ParamLogFilter;
 import com.chua.starter.common.support.limit.LimitAspect;
 import com.chua.starter.common.support.logger.LogGuidAspect;
 import com.chua.starter.common.support.logger.WatchGuidAspect;
-import com.chua.starter.common.support.mapping.CustomRequestMappingHandlerMapping;
 import com.chua.starter.common.support.processor.ResponseModelViewMethodProcessor;
 import com.chua.starter.common.support.properties.*;
 import com.chua.starter.common.support.provider.OptionsProvider;
@@ -68,9 +66,6 @@ public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAw
     private CoreProperties coreProperties;
     private List<HttpMessageConverter<?>> messageConverters;
 
-    @Resource
-    private EventbusTemplate eventbusTemplate;
-
     @Bean
     public Jackson2ObjectMapperBuilderCustomizer jackson2ObjectMapperBuilderCustomizer() {
         return builder -> {
@@ -111,7 +106,7 @@ public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAw
         if (coreProperties.isOpenVersion()) {
             return new ApiVersionRequestMappingHandlerMapping();
         }
-        return new CustomRequestMappingHandlerMapping(eventbusTemplate);
+        return new RequestMappingHandlerMapping();
     }
 
     @Bean

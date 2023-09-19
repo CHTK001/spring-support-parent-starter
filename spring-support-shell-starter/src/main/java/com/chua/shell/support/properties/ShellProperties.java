@@ -1,4 +1,4 @@
-package com.chua.shell.support.spring;
+package com.chua.shell.support.properties;
 
 import com.google.common.collect.Lists;
 import lombok.Data;
@@ -12,7 +12,10 @@ import java.util.List;
 @Data
 @ConfigurationProperties("plugin.shell")
 public class ShellProperties {
-
+    /**
+     *
+     */
+    private String welcome = "连接成功...";
     /**
      * 白名单
      */

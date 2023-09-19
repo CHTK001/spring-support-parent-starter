@@ -1,10 +1,11 @@
-package com.chua.shell.support.spring;
+package com.chua.starter.common.support.mapping;
 
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.convert.ConversionService;
+import org.springframework.core.env.Environment;
 import org.springframework.util.ReflectionUtils;
 
 import java.lang.reflect.Field;
@@ -15,22 +16,27 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 对象管理器
+ * 环境映射
  *
  * @author CH
  */
-public class BeanManager {
+public class EnvironmentMapping {
+    private final Map<String, List<BeanField>> fieldMapping = new ConcurrentHashMap<>();
+    private final Environment environment;
 
     private ConversionService conversionService;
 
-    private static final BeanManager BEAN_MANAGER = new BeanManager();
-
-    public static BeanManager getInstance() {
-        return BEAN_MANAGER;
+    public EnvironmentMapping(Environment environment, ConversionService conversionService) {
+        this.environment = environment;
+        this.conversionService = conversionService;
     }
 
-    private final Map<String, List<BeanField>> fieldMapping = new ConcurrentHashMap<>();
-
+    /**
+     * 注册
+     *
+     * @param bean     bean
+     * @param beanName bean名称
+     */
     public void register(Object bean, String beanName) {
         Class<?> aClass = bean.getClass();
         ReflectionUtils.doWithFields(aClass, field -> {
@@ -53,18 +59,22 @@ public class BeanManager {
         });
     }
 
-    public void execute(String s1, String s2) {
-        if (!fieldMapping.containsKey(s1)) {
+    /**
+     * 执行
+     *
+     * @param name  名称
+     * @param value 值
+     */
+    public void execute(String name, String value) {
+        if (!fieldMapping.containsKey(name)) {
             return;
         }
 
-        List<BeanField> beanFields = fieldMapping.get(s1);
+        List<BeanField> beanFields = fieldMapping.get(name);
         for (BeanField beanField : beanFields) {
-            beanField.setValue(s2);
+            beanField.setValue(value);
         }
     }
-
-
     @Data
     @AllArgsConstructor
     final class BeanField {
@@ -78,7 +88,7 @@ public class BeanManager {
         public void setValue(String s2) {
             Class<?> type = field.getType();
             if (null == conversionService) {
-                synchronized (getInstance()) {
+                synchronized (this) {
                     if (null == conversionService) {
                         conversionService = SpringBeanUtils.getApplicationContext().getBean(ConversionService.class);
                     }
