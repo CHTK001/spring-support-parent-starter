@@ -1,7 +1,6 @@
 package com.chua.starter.rpc.support.resolver;
 
 import com.chua.common.support.bean.BeanUtils;
-import com.chua.common.support.rpc.RpcProtocolConfig;
 import com.chua.starter.common.support.utils.BeanDefinitionUtils;
 import com.chua.starter.rpc.support.properties.RpcProperties;
 import com.google.common.base.Strings;
@@ -24,9 +23,8 @@ import java.util.Map;
 public class DubboBeanDefinitionResolver implements BeanDefinitionResolver{
     @Override
     public void register(RpcProperties rpcProperties, BeanDefinitionRegistry registry) {
-        List<RpcProtocolConfig> protocols = rpcProperties.getProtocols();
-        List<ProtocolConfig> protocol = BeanUtils.copyPropertiesList(protocols, ProtocolConfig.class);
-        RegistryConfig registry1 = rpcProperties.getRegistry();
+        List<ProtocolConfig> protocols = BeanUtils.copyPropertiesList(rpcProperties.getProtocols(), ProtocolConfig.class);
+        List<RegistryConfig> registrys =  BeanUtils.copyPropertiesList(rpcProperties.getRegistry(), RegistryConfig.class);
         BeanDefinitionUtils.registerTypePropertiesBeanDefinition(registry, ApplicationConfig.class, create(rpcProperties.getApplication()));
 
         ConsumerConfig consumer = BeanUtils.copyProperties(rpcProperties.getConsumer(), ConsumerConfig.class);
@@ -34,11 +32,13 @@ public class DubboBeanDefinitionResolver implements BeanDefinitionResolver{
         ReferenceConfig reference = BeanUtils.copyProperties(rpcProperties.getReference(), ReferenceConfig.class);
 
         log.info(rpcProperties.getApplication().toString());
-        log.info(registry1.toString());
 
-        BeanDefinitionUtils.registerTypePropertiesBeanDefinition(registry, RegistryConfig.class, create(registry1));
+        for (RegistryConfig registryConfig : registrys) {
+            log.info(registryConfig.toString());
+            BeanDefinitionUtils.registerTypePropertiesBeanDefinition(registryConfig.getAccepts() ,registry, RegistryConfig.class, create(registryConfig));
+        }
 
-        for (ProtocolConfig protocolConfig : protocol) {
+        for (ProtocolConfig protocolConfig : protocols) {
             if (Strings.isNullOrEmpty(protocolConfig.getSerialization())) {
                 protocolConfig.setSerialization(RpcProperties.DEFAULT_SERIALIZATION);
             }
