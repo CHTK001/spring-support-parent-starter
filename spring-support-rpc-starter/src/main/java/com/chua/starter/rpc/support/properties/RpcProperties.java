@@ -1,7 +1,11 @@
 package com.chua.starter.rpc.support.properties;
 
+import com.chua.common.support.rpc.RpcApplicationConfig;
+import com.chua.common.support.rpc.RpcConsumerConfig;
+import com.chua.common.support.rpc.RpcProtocolConfig;
+import com.chua.common.support.rpc.RpcReferenceConfig;
 import lombok.Data;
-import org.apache.dubbo.config.*;
+import org.apache.dubbo.config.RegistryConfig;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
@@ -48,25 +52,24 @@ public class RpcProperties {
      */
     private String crypto = "aes";
     /**
+     * 实现
+     */
+    private String impl = "dubbo";
+    /**
      * 协议
      */
     @NestedConfigurationProperty
-    private List<ProtocolConfig> protocols;
+    private List<RpcProtocolConfig> protocols;
     /**
      * 应用
      */
     @NestedConfigurationProperty
-    private ApplicationConfig application;
+    private RpcApplicationConfig application;
     /**
      * 消费者
      */
     @NestedConfigurationProperty
-    private ConsumerConfig consumer;
-    /**
-     * 监控器
-     */
-    @NestedConfigurationProperty
-    private MonitorConfig monitor;
+    private RpcConsumerConfig consumer;
     /**
      * 注册器
      */
@@ -76,6 +79,6 @@ public class RpcProperties {
      * 注册器
      */
     @NestedConfigurationProperty
-    private ReferenceConfig reference;
+    private RpcReferenceConfig reference;
 
 }

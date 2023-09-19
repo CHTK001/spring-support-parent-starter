@@ -1,5 +1,6 @@
 package com.chua.starter.rpc.support.annotation;
 
+import com.chua.rpc.support.annotation.RpcInject;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.common.utils.Assert;
 import org.apache.dubbo.common.utils.ClassUtils;

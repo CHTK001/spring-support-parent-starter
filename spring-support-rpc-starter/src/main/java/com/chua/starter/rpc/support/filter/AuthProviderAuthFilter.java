@@ -1,7 +1,7 @@
 package com.chua.starter.rpc.support.filter;
 
+import com.chua.rpc.support.annotation.RpcSecret;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
-import com.chua.starter.rpc.support.annotation.RpcSecret;
 import com.chua.starter.rpc.support.constant.Constant;
 import com.chua.starter.rpc.support.properties.RpcProperties;
 import com.chua.starter.rpc.support.secret.SecretResolver;
@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.common.constants.CommonConstants;
 import org.apache.dubbo.common.extension.Activate;
 import org.apache.dubbo.rpc.*;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ApplicationContext;
 import org.springframework.util.ClassUtils;
 
@@ -26,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Activate(group = {CommonConstants.PROVIDER})
+@ConditionalOnProperty(prefix = "plugin.rpc", name = "impl", havingValue = "dubbo", matchIfMissing = false)
 public class AuthProviderAuthFilter implements Filter, Constant {
 
     private final Map<String, MethodValue> methodMap = new ConcurrentHashMap<>();
