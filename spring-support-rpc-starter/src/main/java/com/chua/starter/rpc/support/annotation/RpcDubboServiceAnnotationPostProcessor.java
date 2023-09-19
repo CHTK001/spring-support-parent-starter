@@ -66,8 +66,8 @@ import static org.springframework.util.ClassUtils.resolveClassName;
  *
  * @author CH
  */
-@ConditionalOnProperty(prefix = "plugin.rpc", name = "open", havingValue = "true", matchIfMissing = false)
-public class RpcServiceAnnotationPostProcessor implements BeanDefinitionRegistryPostProcessor, EnvironmentAware,
+@ConditionalOnProperty(prefix = "plugin.rpc", name = "impl", havingValue = "dubbo", matchIfMissing = false)
+public class RpcDubboServiceAnnotationPostProcessor implements BeanDefinitionRegistryPostProcessor, EnvironmentAware,
         ResourceLoaderAware, BeanClassLoaderAware, ApplicationContextAware, InitializingBean {
 
     private final static List<Class<? extends Annotation>> SERVICE_ANNOTATION_TYPES = asList(

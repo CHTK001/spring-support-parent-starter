@@ -1,4 +1,4 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
   com.chua.starter.rpc.support.configuration.EnableRpcConfiguration,\
-  com.chua.starter.rpc.support.annotation.RpcReferenceAnnotationBeanPostProcessor,\
-  com.chua.starter.rpc.support.annotation.RpcServiceAnnotationPostProcessor
+  com.chua.starter.rpc.support.annotation.RpcDubboReferenceAnnotationBeanPostProcessor,\
+  com.chua.starter.rpc.support.annotation.RpcDubboServiceAnnotationPostProcessor
