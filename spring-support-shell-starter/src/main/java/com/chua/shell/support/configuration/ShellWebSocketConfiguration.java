@@ -103,6 +103,10 @@ public class ShellWebSocketConfiguration extends ServerEndpointConfig.Configurat
                 BeanDefinitionBuilder.rootBeanDefinition(ShellWebSocketHandler.class)
                         .setAutowireMode(AUTOWIRE_BY_TYPE)
                         .getBeanDefinition());
+        registry.registerBeanDefinition(SshWebSocketHandler.class.getTypeName(),
+                BeanDefinitionBuilder.rootBeanDefinition(SshWebSocketHandler.class)
+                        .setAutowireMode(AUTOWIRE_BY_TYPE)
+                        .getBeanDefinition());
     }
 
 
