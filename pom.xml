@@ -320,6 +320,12 @@
 
             <dependency>
                 <groupId>com.chua</groupId>
+                <artifactId>spring-support-subscribe-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
                 <artifactId>spring-support-oauth-server-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>

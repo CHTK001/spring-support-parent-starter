@@ -1,5 +1,6 @@
 package com.chua.starter.task.support.configuration;
 
+import com.chua.common.support.eventbus.Eventbus;
 import com.chua.starter.common.support.annotations.EnableAutoTable;
 import com.chua.starter.common.support.configuration.ZzeroAutoTableConfiguration;
 import com.chua.starter.task.support.manager.TaskManager;
@@ -28,12 +29,11 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 @Lazy
 public class TaskConfiguration {
 
-
     @Bean
-    public TaskManager taskManager(@Qualifier(com.chua.common.support.protocol.server.Constant.STRING_REDIS) StringRedisTemplate redisTemplate) {
-        return new TaskManager(redisTemplate);
+    public TaskManager taskManager(@Qualifier(com.chua.common.support.protocol.server.Constant.STRING_REDIS)
+                                       StringRedisTemplate redisTemplate, Eventbus eventbus) {
+        return new TaskManager(redisTemplate, eventbus);
     }
-
 
 
 }
