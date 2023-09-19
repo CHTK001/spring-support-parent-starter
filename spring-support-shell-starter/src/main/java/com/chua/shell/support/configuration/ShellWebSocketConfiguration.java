@@ -5,6 +5,7 @@ import com.chua.common.support.shell.WebShell;
 import com.chua.common.support.shell.mapping.DelegateCommand;
 import com.chua.common.support.shell.mapping.HelpCommand;
 import com.chua.common.support.shell.mapping.SystemCommand;
+import com.chua.shell.support.command.CfrCommand;
 import com.chua.shell.support.command.SpringCommand;
 import com.chua.shell.support.properties.ShellProperties;
 import com.chua.starter.common.support.utils.RequestUtils;
@@ -49,6 +50,7 @@ public class ShellWebSocketConfiguration extends ServerEndpointConfig.Configurat
         shell.register(new DelegateCommand());
         shell.register(new SystemCommand());
         shell.register(new SpringCommand());
+        shell.register(new CfrCommand());
     }
     public static final String ADDRESS = "IP.ADDRESS";
 
