@@ -1,3 +1,0 @@
-org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-  com.chua.starter.cacheable.support.configuration.CacheConfiguration
-

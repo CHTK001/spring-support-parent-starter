@@ -1,9 +1,8 @@
 package com.chua.starter.common.support.filter;
 
-import com.chua.common.support.mysql.io.ByteArrayInputStream;
-
 import javax.servlet.ReadListener;
 import javax.servlet.ServletInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
 /**
@@ -22,11 +21,7 @@ public class CustomServletInputStream extends ServletInputStream {
 
     @Override
     public boolean isFinished() {
-        try {
-            return inputStream.available() == 0;
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        return inputStream.available() == 0;
     }
 
     @Override
@@ -41,10 +36,6 @@ public class CustomServletInputStream extends ServletInputStream {
 
     @Override
     public int read() throws IOException {
-        try {
-            return inputStream.read();
-        } catch (IOException e) {
-            return -1;
-        }
+        return inputStream.read();
     }
 }

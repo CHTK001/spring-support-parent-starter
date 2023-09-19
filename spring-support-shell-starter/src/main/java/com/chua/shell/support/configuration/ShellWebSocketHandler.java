@@ -1,49 +1,91 @@
-package com.chua.shell.support.spring;
+package com.chua.shell.support.configuration;
 
-import com.chua.shell.support.command.ArthasCommand;
-import com.chua.shell.support.command.SpringCommand;
-import com.chua.shell.support.oshi.OshiCommand;
-import com.chua.shell.support.shell.Shell;
-import com.chua.shell.support.shell.ThreadManager;
-import com.chua.shell.support.shell.WebShell;
-import com.chua.shell.support.shell.mapping.DelegateCommand;
-import com.chua.shell.support.shell.mapping.SystemCommand;
+import com.chua.common.support.constant.CommonConstant;
+import com.chua.common.support.matcher.AntPathMatcher;
+import com.chua.common.support.net.NetUtils;
+import com.chua.common.support.shell.BaseShell;
+import com.chua.common.support.shell.ShellResult;
+import com.chua.shell.support.properties.ShellProperties;
+import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import lombok.extern.slf4j.Slf4j;
 
+import javax.annotation.Resource;
 import javax.websocket.*;
 import javax.websocket.server.ServerEndpoint;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.chua.shell.support.configuration.ShellWebSocketConfiguration.ADDRESS;
+
 /**
  * @author CH
  */
-@ServerEndpoint("/channel/shell")
+@ServerEndpoint(value = "/channel/shell", configurator = ShellWebSocketConfiguration.class)
 @Slf4j
 public class ShellWebSocketHandler {
     private static final ConcurrentHashMap<Session, HandlerItem> HANDLER_ITEM_CONCURRENT_HASH_MAP = new ConcurrentHashMap<>();
     private final String prompt = "$ ";
 
+    @Resource
+    private ShellProperties shellProperties = SpringBeanUtils.getBean(ShellProperties.class);
+
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private Shell shell;
+    private BaseShell shell = ShellWebSocketConfiguration.shell;
 
     private static final AtomicInteger count = new AtomicInteger(0);
-
 
     /**
      * 连接建立成功调用的方法
      */
     @OnOpen
     public void onOpen(Session session) throws Exception {
+        if(!check(session)) {
+            sendText(session, "@auth 无权限访问");
+            session.close();
+            return;
+        }
         int cnt = count.incrementAndGet();
         log.info("有连接加入，当前连接数为：{}", cnt);
 
         HandlerItem handlerItem = new HandlerItem(session);
         HANDLER_ITEM_CONCURRENT_HASH_MAP.put(session, handlerItem);
         handlerItem.help();
+    }
+
+    /**
+     * 检查
+     *
+     * @param session 一场
+     * @return boolean
+     */
+    private boolean check(Session session) {
+        Object o = session.getUserProperties().get(ADDRESS);
+        if(o == null) {
+            return false;
+        }
+
+        String ip = o.toString();
+        if(NetUtils.getLocalHost().equals(ip) || NetUtils.LOCAL_HOST.equals(ip)) {
+            return true;
+        }
+
+        for (String ipPass : shellProperties.getIpPass()) {
+            if(ipPass.contains(CommonConstant.SYMBOL_ASTERISK)) {
+                if(AntPathMatcher.INSTANCE.match(ipPass, ip)) {
+                    return true;
+                }
+                continue;
+            }
+
+            if(ipPass.equals(ip)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -101,7 +143,6 @@ public class ShellWebSocketHandler {
 
     private class HandlerItem implements Runnable, AutoCloseable {
         private final Session session;
-        private WebShell shell;
 
         HandlerItem(Session session) throws IOException {
             this.session = session;
@@ -115,14 +156,7 @@ public class ShellWebSocketHandler {
 
         public void send(String data) {
             try {
-                openShell();
-
                 if (null == data) {
-                    return;
-                }
-
-                if ("@close".equals(data)) {
-                    ThreadManager.getInstance().closeThread(session.getId());
                     return;
                 }
 
@@ -131,35 +165,23 @@ public class ShellWebSocketHandler {
                     return;
                 }
 
-                String execute = shell.handlerAnalysis(data, session);
-                if (Strings.isNullOrEmpty(execute)) {
+                ShellResult result = shell.handlerAnalysis(data, session);
+                if(null == result) {
+                    session.getBasicRemote().sendText("@text 无");
+                    return;
+                }
+                String result1 = result.getResult();
+                if (Strings.isNullOrEmpty(result1)) {
                     session.getBasicRemote().sendText("");
                     return;
                 }
-                session.getBasicRemote().sendText(execute);
+                session.getBasicRemote().sendText("@" + result.getMode().name().toLowerCase() + " " + result1);
             } catch (IOException ignored) {
-            }
-        }
-
-        private void openShell() {
-            if (null == shell) {
-                synchronized (this) {
-                    if (null == shell) {
-                        shell = new WebShell(
-                                new SystemCommand(),
-                                new ArthasCommand(),
-                                new DelegateCommand(),
-                                new OshiCommand(),
-                                new SpringCommand()
-                        );
-                    }
-                }
             }
         }
 
         @Override
         public void close() throws Exception {
-            ThreadManager.getInstance().closeThread(session.getId());
             try {
                 session.close();
             } catch (IOException ignored) {
@@ -169,6 +191,7 @@ public class ShellWebSocketHandler {
         public void help() {
             send(null);
             try {
+                session.getBasicRemote().sendText("@welcome " + shellProperties.getWelcome());
                 session.getBasicRemote().sendText("@help" + objectMapper.writeValueAsString(shell.usageCommand()));
             } catch (IOException ignored) {
             }
