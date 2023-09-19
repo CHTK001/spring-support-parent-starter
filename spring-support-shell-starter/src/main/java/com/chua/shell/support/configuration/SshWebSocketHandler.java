@@ -1,7 +1,6 @@
 package com.chua.shell.support.configuration;
 
 import com.chua.common.support.constant.CommonConstant;
-import com.chua.common.support.crypto.decode.AesDecode;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.date.DateTime;
@@ -9,6 +8,7 @@ import com.chua.common.support.matcher.AntPathMatcher;
 import com.chua.common.support.net.NetUtils;
 import com.chua.common.support.protocol.client.ClientOption;
 import com.chua.common.support.shell.BaseShell;
+import com.chua.common.support.utils.DigestUtils;
 import com.chua.shell.support.properties.ShellProperties;
 import com.chua.sshd.support.client.SshClient;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
@@ -59,9 +59,8 @@ public class SshWebSocketHandler {
         int cnt = COUNT.incrementAndGet();
         log.info("有连接加入，当前连接数为：{}", cnt);
 
-        AesDecode aesDecode = new AesDecode();
-        byte[] decode = aesDecode.decode(info, DateTime.now().toString("yyyyMMdd"));
-        JsonObject jsonObject = Json.fromJson(decode, JsonObject.class);
+        String key = DateTime.now().toString("yyyyMMdd");
+        JsonObject jsonObject = Json.fromJson(DigestUtils.aesDecrypt(info, key + key), JsonObject.class);
         ClientOption clientOption = ClientOption.newBuilder().username(jsonObject.getString("username"))
                         .password(jsonObject.getString("password"));
         SshClient sshClient = new SshClient(clientOption);
