@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.common.constants.CommonConstants;
 import org.apache.dubbo.common.extension.Activate;
 import org.apache.dubbo.rpc.*;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 /**
  * 权限检验
@@ -16,6 +17,7 @@ import org.apache.dubbo.rpc.*;
  */
 @Slf4j
 @Activate(group = {CommonConstants.CONSUMER})
+@ConditionalOnProperty(prefix = "plugin.rpc", name = "impl", havingValue = "dubbo", matchIfMissing = false)
 public class AuthConsumerAuthFilter implements Filter, Constant {
 
     private final RpcProperties rpcProperties = SpringBeanUtils.bindOrCreate(RpcProperties.PRE, RpcProperties.class);
