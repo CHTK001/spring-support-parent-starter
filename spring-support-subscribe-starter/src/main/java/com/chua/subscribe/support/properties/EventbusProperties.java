@@ -45,6 +45,10 @@ public class EventbusProperties {
          * passwd
          */
         private String passwd;
+        /**
+         * kafka分组
+         */
+        private String groupId;
 
     }
 }
