@@ -40,6 +40,7 @@
         <module>spring-support-schedule-fork-client-starter</module>
         <module>spring-support-milvus-starter</module>
         <module>spring-support-rpc-starter</module>
+        <module>spring-support-subscribe-starter</module>
     </modules>
 
     <properties>
