@@ -31,6 +31,11 @@
 
         <dependency>
             <groupId>com.chua</groupId>
+            <artifactId>spring-support-subscribe-starter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.chua</groupId>
             <artifactId>spring-support-redis-starter</artifactId>
         </dependency>
         <dependency>

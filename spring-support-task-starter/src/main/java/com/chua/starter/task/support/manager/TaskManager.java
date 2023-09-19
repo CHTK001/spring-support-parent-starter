@@ -1,12 +1,12 @@
 package com.chua.starter.task.support.manager;
 
+import com.chua.common.support.eventbus.Eventbus;
 import com.chua.common.support.eventbus.EventbusType;
 import com.chua.common.support.eventbus.Subscribe;
 import com.chua.common.support.log.Log;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.common.support.constant.Constant;
-import com.chua.starter.common.support.eventbus.EventbusTemplate;
 import com.chua.starter.task.support.pojo.SysTask;
 import com.chua.starter.task.support.task.Task;
 import lombok.AllArgsConstructor;
@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class TaskManager implements ApplicationContextAware, DisposableBean, CommandLineRunner {
     private final StringRedisTemplate redisTemplate;
+    private final Eventbus eventbus;
 
     private final AtomicBoolean status = new AtomicBoolean(true);
     private static final Log log = Log.getLogger(Task.class);
@@ -46,14 +47,12 @@ public class TaskManager implements ApplicationContextAware, DisposableBean, Com
     @Resource(name = Constant.DEFAULT_TASK_EXECUTOR)
     private Executor executor;
 
-    @Resource
-    private EventbusTemplate eventbusTemplate;
-
 
     private final Map<String, Long> taskStepQueue = new ConcurrentHashMap<>(100000);
 
-    public TaskManager(StringRedisTemplate redisTemplate) {
+    public TaskManager(StringRedisTemplate redisTemplate, Eventbus eventbus) {
         this.redisTemplate = redisTemplate;
+        this.eventbus = eventbus;
     }
 
     @Override
@@ -88,7 +87,7 @@ public class TaskManager implements ApplicationContextAware, DisposableBean, Com
                 Map<String, Long> tpl = new HashMap<>(taskStepQueue);
                 taskStepQueue.clear();
                 for (Map.Entry<String, Long> entry : tpl.entrySet()) {
-                    eventbusTemplate.post("update", entry);
+                    eventbus.post("update", entry);
                 }
             } catch (Exception ignored) {
             }
@@ -146,7 +145,7 @@ public class TaskManager implements ApplicationContextAware, DisposableBean, Com
      * @param taskTid taskTid
      */
     public void reset(String taskTid) {
-        eventbusTemplate.post("reset", taskTid);
+        eventbus.post("reset", taskTid);
     }
 
     @Override
