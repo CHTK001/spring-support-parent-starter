@@ -21,6 +21,7 @@ import javax.annotation.Resource;
 import javax.websocket.*;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
+import java.io.IOException;
 import java.util.Base64;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -29,6 +30,11 @@ import static com.chua.shell.support.configuration.ShellWebSocketConfiguration.A
 import static com.chua.shell.support.configuration.ShellWebSocketHandler.sendText;
 
 /**
+ * <pre>
+ * +---------+     http     +--------+    ssh    +-----------+
+ * | browser | <==========> | webssh | <=======> | ssh server|
+ * +---------+   websocket  +--------+    ssh    +-----------+
+ * </pre>
  * ssh网络套接字hanlder
  *
  * @author CH
@@ -118,15 +124,18 @@ public class SshWebSocketHandler {
     @OnClose
     public void onClose(Session session) {
         SshClient sshClient = HANDLER_ITEM_CONCURRENT_HASH_MAP.get(session);
-        if(null == sshClient) {
+        if (null == sshClient) {
             return;
         }
         try {
             sshClient.close();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        } catch (Exception ignored) {
         }
         HANDLER_ITEM_CONCURRENT_HASH_MAP.remove(session);
+        try {
+            session.close();
+        } catch (IOException ignored) {
+        }
         int cnt = COUNT.decrementAndGet();
         log.info("有连接关闭，当前连接数为：{}", cnt);
     }
@@ -145,7 +154,10 @@ public class SshWebSocketHandler {
         if (log.isTraceEnabled()) {
             log.trace("来自客户端的消息：{}", message);
         }
-        sshClient.send(message);
+
+        if (null != sshClient && sshClient.isConnect()) {
+            sshClient.send(message);
+        }
     }
 
     /**
