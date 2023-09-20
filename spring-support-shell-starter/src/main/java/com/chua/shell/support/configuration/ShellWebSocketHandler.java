@@ -197,6 +197,9 @@ public class ShellWebSocketHandler {
     }
 
     protected static void sendText(Session session, String msg) {
+        if (!session.isOpen()) {
+            return;
+        }
         try {
             session.getBasicRemote().sendText(msg);
         } catch (IOException e) {
