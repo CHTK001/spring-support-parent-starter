@@ -1,14 +1,15 @@
 package com.chua.shell.support.configuration;
 
+import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.json.Json;
-import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.matcher.AntPathMatcher;
 import com.chua.common.support.net.NetUtils;
 import com.chua.common.support.protocol.client.ClientOption;
 import com.chua.common.support.shell.BaseShell;
 import com.chua.common.support.utils.DigestUtils;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.shell.support.properties.ShellProperties;
 import com.chua.sshd.support.client.SshClient;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
@@ -20,6 +21,7 @@ import javax.annotation.Resource;
 import javax.websocket.*;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
+import java.util.Base64;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -59,10 +61,18 @@ public class SshWebSocketHandler {
         int cnt = COUNT.incrementAndGet();
         log.info("有连接加入，当前连接数为：{}", cnt);
 
+        info = StringUtils.utf8Str(Base64.getDecoder().decode(info));
         String key = DateTime.now().toString("yyyyMMdd");
-        JsonObject jsonObject = Json.fromJson(DigestUtils.aesDecrypt(info, key + key), JsonObject.class);
-        ClientOption clientOption = ClientOption.newBuilder().username(jsonObject.getString("username"))
-                        .password(jsonObject.getString("password"));
+        JSONObject jsonObject = Json.fromJson(DigestUtils.aesDecrypt(info, key + key), JSONObject.class);
+        String password = jsonObject.getString("password");
+        if(StringUtils.isEmpty(password)) {
+            sendText(session, "@auth 密码不能为空");
+            session.close();
+            return;
+        }
+
+
+        ClientOption clientOption = ClientOption.newBuilder().username(jsonObject.getString("username")).password(password);
         SshClient sshClient = new SshClient(clientOption);
         sshClient.connect(jsonObject.getString("ip") + ":" + jsonObject.getIntValue("port", 22));
         sshClient.addListener(session.getId(), s -> sendText(session, s));
@@ -108,6 +118,9 @@ public class SshWebSocketHandler {
     @OnClose
     public void onClose(Session session) {
         SshClient sshClient = HANDLER_ITEM_CONCURRENT_HASH_MAP.get(session);
+        if(null == sshClient) {
+            return;
+        }
         try {
             sshClient.close();
         } catch (Exception e) {

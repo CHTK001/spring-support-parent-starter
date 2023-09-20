@@ -1,6 +1,5 @@
 package com.chua.starter.common.support.profile;
 
-import com.chua.common.support.constant.ValueMode;
 import com.chua.common.support.converter.Converter;
 import com.chua.common.support.lang.profile.DelegateProfile;
 import com.chua.common.support.lang.profile.value.ProfileValue;
@@ -50,16 +49,8 @@ public class EnvironmentProfile extends DelegateProfile {
     }
 
     @Override
-    public Object getObject(String name, ValueMode valueMode) {
-        String property = environment.getProperty(name);
-        if (null != property) {
-            return property;
-        }
-
-        if (valueMode == ValueMode.EL) {
-            return environment.resolvePlaceholders(name);
-        }
-        return null;
+    public Object getObject(String name) {
+        return environment.getProperty(name);
     }
 
 }

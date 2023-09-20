@@ -8,6 +8,7 @@ import com.chua.common.support.shell.mapping.SystemCommand;
 import com.chua.shell.support.command.CfrCommand;
 import com.chua.shell.support.command.SpringCommand;
 import com.chua.shell.support.properties.ShellProperties;
+import com.chua.sshd.support.command.SshCommand;
 import com.chua.starter.common.support.utils.RequestUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
@@ -51,6 +52,7 @@ public class ShellWebSocketConfiguration extends ServerEndpointConfig.Configurat
         shell.register(new SystemCommand());
         shell.register(new SpringCommand());
         shell.register(new CfrCommand());
+        shell.register(new SshCommand());
     }
     public static final String ADDRESS = "IP.ADDRESS";
 
