@@ -40,10 +40,16 @@ public class CfrCommand {
                 File file1 = new File("cfr", System.nanoTime() + ".java");
                 try (InputStream is = new URL(location.toExternalForm() + aClass.getTypeName().replace(".", "/") + ".class").openStream()) {
                     FileUtils.copyFile(is, file1);
-                    String decompile = decompiler.decompile(file1.getAbsolutePath(), null, true, true);
-                    return ShellResult.builder().mode(ShellMode.CODE).result(decompile).build();
+                    String decompile = decompiler.decompile(file1.getAbsolutePath(), null, false, true);
+                    return ShellResult.builder().mode(ShellMode.CODE).result(decompile.replace("Decompiled with CFR.", "反编译仅供参考")).build();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    try (InputStream is = new URL("jar:" + location.toExternalForm() + "!/" + aClass.getTypeName().replace(".", "/") + ".class").openStream()) {
+                        FileUtils.copyFile(is, file1);
+                        String decompile = decompiler.decompile(file1.getAbsolutePath(), null, false, true);
+                        return ShellResult.builder().mode(ShellMode.CODE).result(decompile.replace("Decompiled with CFR.", "反编译仅供参考")).build();
+                    } catch (IOException e1) {
+                        e1.printStackTrace();
+                    }
                 } finally {
                     try {
                         FileUtils.forceDelete(file1);
