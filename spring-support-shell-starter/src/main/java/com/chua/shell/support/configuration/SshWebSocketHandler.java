@@ -80,8 +80,8 @@ public class SshWebSocketHandler {
 
         ClientOption clientOption = ClientOption.newBuilder().username(jsonObject.getString("username")).password(password);
         SshClient sshClient = new SshClient(clientOption);
-        sshClient.connect(jsonObject.getString("ip") + ":" + jsonObject.getIntValue("port", 22));
         sshClient.addListener(session.getId(), s -> sendText(session, s));
+        sshClient.connect(jsonObject.getString("ip") + ":" + jsonObject.getIntValue("port", 22));
         HANDLER_ITEM_CONCURRENT_HASH_MAP.put(session, sshClient);
     }
 
