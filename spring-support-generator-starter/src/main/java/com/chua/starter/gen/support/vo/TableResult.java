@@ -14,4 +14,6 @@ public class TableResult {
      * 表名称
      */
     private String tableName;
+    private String database;
+    private String remark;
 }
