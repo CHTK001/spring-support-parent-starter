@@ -144,8 +144,8 @@ public class SysGenColumn implements Serializable {
             sysGenColumn.setColColumnName(resultSet.getString("COLUMN_NAME"));
             sysGenColumn.setColColumnType(resultSet.getString("TYPE_NAME"));
             sysGenColumn.setColColumnComment(resultSet.getString("REMARKS"));
-            sysGenColumn.setColIsRequired(resultSet.getInt("NULLABLE") == 0 ? "NO" : "YES");
-            sysGenColumn.setColIsIncrement(resultSet.getString("IS_AUTOINCREMENT"));
+            sysGenColumn.setColIsRequired(resultSet.getInt("NULLABLE") == 0 ? "0" : "1");
+            sysGenColumn.setColIsIncrement("YES".equalsIgnoreCase(resultSet.getString("IS_AUTOINCREMENT")) ? "1" : "0");
         } catch (Exception ignored) {
         }
         return sysGenColumn;
