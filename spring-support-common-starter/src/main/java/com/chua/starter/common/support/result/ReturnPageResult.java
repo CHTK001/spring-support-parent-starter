@@ -131,6 +131,17 @@ public class ReturnPageResult<T> {
     }
 
     /**
+     * 错误
+     * 初始化
+     *
+     * @param msg 消息
+     * @return 结果
+     */
+    public static <T> ReturnPageResult<T> error(String msg) {
+        return error(null, msg);
+    }
+
+    /**
      * 初始化
      *
      * @param data 数据
