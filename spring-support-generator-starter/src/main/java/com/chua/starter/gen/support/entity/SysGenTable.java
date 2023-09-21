@@ -117,7 +117,7 @@ public class SysGenTable implements Serializable {
     public static com.chua.starter.gen.support.entity.SysGenTable createSysGenTable(Integer genId, String tableName, ResultSet tableResultSet) throws SQLException {
         com.chua.starter.gen.support.entity.SysGenTable sysGenTable = new com.chua.starter.gen.support.entity.SysGenTable();
         sysGenTable.setGenId(genId);
-        sysGenTable.setTabDesc(tableResultSet.getString(4));
+        sysGenTable.setTabDesc(tableResultSet.getString("REMARKS"));
         sysGenTable.setTabName(tableName);
         sysGenTable.setTabClassName(NamingCase.toHyphenUpperCamel(sysGenTable.getTabName()));
 
