@@ -159,7 +159,7 @@ public class ReturnPageResult<T> {
      * @return 结果
      */
     public static <T> ReturnPageResult<T> error() {
-        return error(null);
+        return error(null, "");
     }
 
     /**
