@@ -1,8 +1,6 @@
 package com.chua.starter.datasource.configuration;
 
 import com.chua.starter.datasource.properties.TransactionProperties;
-import com.chua.starter.datasource.support.DataSourceInspect;
-import com.chua.starter.datasource.support.MethodPointcut;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import org.springframework.aop.aspectj.AspectJExpressionPointcut;
@@ -18,7 +16,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
-import org.springframework.context.annotation.Import;
 import org.springframework.core.Ordered;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -36,7 +33,6 @@ import java.util.Optional;
  * @author CH
  * @since 2021-07-19
  */
-@Import({DataSourceInspect.class, MethodPointcut.class})
 @EnableConfigurationProperties(TransactionProperties.class)
 @ConditionalOnClass(name = "org.springframework.jdbc.datasource.DataSourceTransactionManager")
 @AutoConfigureOrder(Ordered.LOWEST_PRECEDENCE + 10)

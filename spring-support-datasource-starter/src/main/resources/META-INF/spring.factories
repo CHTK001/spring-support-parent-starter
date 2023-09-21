@@ -1,2 +1,4 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-    com.chua.starter.datasource.configuration.DataSourceTransactionConfiguration
+    com.chua.starter.datasource.configuration.DataSourceTransactionConfiguration,\
+  com.chua.starter.datasource.support.MethodPointcutAdvisor,\
+  com.chua.starter.datasource.support.DataSourceInspect
