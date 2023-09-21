@@ -118,7 +118,7 @@ public class TableController {
             }
 
 
-        } catch (SQLException e) {
+        } catch (Exception e) {
             e.printStackTrace();
             return ReturnResult.error(null, "导入失败");
         }
