@@ -139,12 +139,15 @@ public class SysGenColumn implements Serializable {
      */
     public static com.chua.starter.gen.support.entity.SysGenColumn createSysGenColumn(SysGenTable sysGenTable, String tableName, ResultSet resultSet) throws SQLException {
         SysGenColumn sysGenColumn = new SysGenColumn();
-        sysGenColumn.setTabId(sysGenColumn.getTabId());
-        sysGenColumn.setColColumnName(resultSet.getString("COLUMN_NAME"));
-        sysGenColumn.setColColumnType(resultSet.getString("TYPE_NAME"));
-        sysGenColumn.setColColumnComment(resultSet.getString("REMARKS"));
-        sysGenColumn.setColIsRequired(resultSet.getInt("NULLABLE") == 0 ? "NO" : "YES");
-        sysGenColumn.setColIsIncrement(resultSet.getString("IS_AUTOINCREMENT"));
+        try {
+            sysGenColumn.setTabId(sysGenColumn.getTabId());
+            sysGenColumn.setColColumnName(resultSet.getString("COLUMN_NAME"));
+            sysGenColumn.setColColumnType(resultSet.getString("TYPE_NAME"));
+            sysGenColumn.setColColumnComment(resultSet.getString("REMARKS"));
+            sysGenColumn.setColIsRequired(resultSet.getInt("NULLABLE") == 0 ? "NO" : "YES");
+            sysGenColumn.setColIsIncrement(resultSet.getString("IS_AUTOINCREMENT"));
+        } catch (Exception ignored) {
+        }
         return sysGenColumn;
     }
 }
