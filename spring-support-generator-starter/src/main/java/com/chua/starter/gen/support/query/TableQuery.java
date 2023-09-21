@@ -16,7 +16,7 @@ public class TableQuery extends RequestPage<TableQuery> {
     /**
      * id
      */
-    private String dataSourceId;
+    private Integer genId;
     /**
      * 名称
      */
@@ -25,5 +25,5 @@ public class TableQuery extends RequestPage<TableQuery> {
     /**
      * 表名称
      */
-    private String tableName;
+    private String[] tableName;
 }
