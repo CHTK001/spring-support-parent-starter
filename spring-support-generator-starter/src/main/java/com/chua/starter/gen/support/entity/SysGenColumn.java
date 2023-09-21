@@ -138,11 +138,13 @@ public class SysGenColumn implements Serializable {
      * @return {@link com.chua.starter.gen.support.entity.SysGenColumn}
      */
     public static com.chua.starter.gen.support.entity.SysGenColumn createSysGenColumn(SysGenTable sysGenTable, String tableName, ResultSet resultSet) throws SQLException {
-        com.chua.starter.gen.support.entity.SysGenColumn sysGenColumn = new com.chua.starter.gen.support.entity.SysGenColumn();
+        SysGenColumn sysGenColumn = new SysGenColumn();
         sysGenColumn.setTabId(sysGenColumn.getTabId());
         sysGenColumn.setColColumnName(resultSet.getString("COLUMN_NAME"));
         sysGenColumn.setColColumnType(resultSet.getString("TYPE_NAME"));
-        sysGenColumn.setColColumnComment(resultSet.getString("COLUMN_COMMENT"));
+        sysGenColumn.setColColumnComment(resultSet.getString("REMARKS"));
+        sysGenColumn.setColIsRequired(resultSet.getInt("NULLABLE") == 0 ? "NO" : "YES");
+        sysGenColumn.setColIsIncrement(resultSet.getString("IS_AUTOINCREMENT"));
         return sysGenColumn;
     }
 }

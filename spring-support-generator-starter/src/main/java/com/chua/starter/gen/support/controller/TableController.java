@@ -20,9 +20,7 @@ import com.chua.starter.mybatis.utils.PageResultUtils;
 import io.swagger.annotations.Api;
 import org.springframework.context.ApplicationContext;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.sql.DataSource;
@@ -65,7 +63,7 @@ public class TableController {
             DatabaseMetaData metaData = connection.getMetaData();
             String database = null != sysGen ? sysGen.getGenDatabase() : null;
 
-            ResultSet resultSet = metaData.getTables(null, null, "%", new String[]{"table"});
+            ResultSet resultSet = metaData.getTables(database, null, "%", new String[]{"table"});
             while (resultSet.next()) {
                 TableResult item = new TableResult();
                 item.setTableName(resultSet.getString("TABLE_NAME"));
@@ -91,9 +89,9 @@ public class TableController {
      *
      * @return {@link ReturnPageResult}<{@link TableResult}>
      */
-    @GetMapping("importColumn")
+    @PostMapping("importColumn")
     @Transactional(rollbackFor = Exception.class)
-    public ReturnResult<Boolean> importColumn(TableQuery query) {
+    public ReturnResult<Boolean> importColumn(@RequestBody TableQuery query) {
         String[] tableName = query.getTableName();
         if (ArrayUtils.isEmpty(tableName)) {
             return ReturnResult.error(null, "表不存在");
