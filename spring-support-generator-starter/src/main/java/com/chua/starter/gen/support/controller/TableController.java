@@ -145,7 +145,7 @@ public class TableController {
      *
      * @return {@link ReturnPageResult}<{@link TableResult}>
      */
-    @GetMapping("updateTable")
+    @GetMapping("update")
     @Transactional(rollbackFor = Exception.class)
     public ReturnResult<Boolean> updateTable(SysGenTable sysGenTable) {
         sysGenTableService.updateById(sysGenTable);
@@ -157,7 +157,7 @@ public class TableController {
      *
      * @return {@link ReturnPageResult}<{@link TableResult}>
      */
-    @GetMapping("deleteTable")
+    @GetMapping("delete")
     @Transactional(rollbackFor = Exception.class)
     public ReturnResult<Boolean> deleteTable(String tableId) {
         sysGenTableService.removeById(tableId);
