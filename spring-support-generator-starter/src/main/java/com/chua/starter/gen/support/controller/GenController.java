@@ -1,6 +1,7 @@
 package com.chua.starter.gen.support.controller;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.utils.ArrayUtils;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.starter.common.support.result.PageResult;
@@ -13,8 +14,8 @@ import com.chua.starter.gen.support.query.TableQuery;
 import com.chua.starter.gen.support.service.SysGenColumnService;
 import com.chua.starter.gen.support.service.SysGenService;
 import com.chua.starter.gen.support.service.SysGenTableService;
-import com.chua.starter.gen.support.vo.ColumnResult;
 import com.chua.starter.gen.support.vo.TableResult;
+import com.chua.starter.mybatis.utils.PageResultUtils;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiParam;
 import io.swagger.v3.oas.annotations.Operation;
@@ -161,7 +162,7 @@ public class GenController {
      */
     @Operation(summary = "获取表的字段列表")
     @GetMapping("column")
-    public ReturnPageResult<TableResult> columnList(
+    public ReturnPageResult<SysGenColumn> columnList(
             @ApiParam("表ID") String tableId,
             @ApiParam("页码") @RequestParam(value = "page", defaultValue = "1") Integer pageNum,
             @ApiParam("每页数量") @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize
@@ -171,31 +172,10 @@ public class GenController {
             return ReturnPageResult.error("表不存在");
         }
 
-        String tableName = sysGenTable.getTabName();
-        List<ColumnResult> results = new LinkedList<>();
-        try (Connection connection = getConnection(sysGenTable)){
-            DatabaseMetaData metaData = connection.getMetaData();
-            ResultSet resultSet = metaData.getColumns(null, null, tableName, null);
-            while (resultSet.next()) {
-                ColumnResult item = new ColumnResult();
-                item.setTableName(tableName);
-                item.setColumn(resultSet.getString("COLUMN_NAME"));
-                item.setColumnType(resultSet.getString("TYPE_NAME"));
-                item.setColumnTypeCode(resultSet.getInt("DATA_TYPE"));
-
-                results.add(item);
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-        List<ColumnResult> page = CollectionUtils.page(pageNum, pageSize, results);
-        return ReturnPageResult.ok(
-                PageResult.<ColumnResult>builder()
-                        .total(results.size())
-                        .data(page)
-                        .pageSize(pageSize)
-                        .page(pageNum)
-        );
+        return PageResultUtils.ok(sysGenColumnService.page(new Page<>(pageNum, pageSize),
+                Wrappers.<SysGenColumn>lambdaQuery()
+                        .eq(SysGenColumn::getTabId, tableId)
+        ));
     }
 
     /**
