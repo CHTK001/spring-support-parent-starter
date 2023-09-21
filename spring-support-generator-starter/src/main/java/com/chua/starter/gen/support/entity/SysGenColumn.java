@@ -140,7 +140,7 @@ public class SysGenColumn implements Serializable {
     public static com.chua.starter.gen.support.entity.SysGenColumn createSysGenColumn(SysGenTable sysGenTable, String tableName, ResultSet resultSet) throws SQLException {
         SysGenColumn sysGenColumn = new SysGenColumn();
         try {
-            sysGenColumn.setTabId(sysGenColumn.getTabId());
+            sysGenColumn.setTabId(sysGenTable.getTabId());
             sysGenColumn.setColColumnName(resultSet.getString("COLUMN_NAME"));
             sysGenColumn.setColColumnType(resultSet.getString("TYPE_NAME"));
             sysGenColumn.setColColumnComment(resultSet.getString("REMARKS"));
