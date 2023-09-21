@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.utils.ArrayUtils;
 import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.result.PageResult;
 import com.chua.starter.common.support.result.ReturnPageResult;
 import com.chua.starter.common.support.result.ReturnResult;
@@ -17,13 +18,10 @@ import com.chua.starter.gen.support.service.SysGenTableService;
 import com.chua.starter.gen.support.vo.TableResult;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiParam;
-import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.context.ApplicationContext;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
@@ -40,7 +38,7 @@ import java.util.List;
 @Api(tags = "表信息接口")
 @RestController
 @RequestMapping("v1/table")
-public class GenController {
+public class TableController {
 
     @Resource
     private SysGenService sysGenService;
@@ -54,23 +52,25 @@ public class GenController {
     private ApplicationContext applicationContext;
 
 
-
     /**
      * 表格列表
      *
      * @return {@link ReturnPageResult}<{@link TableResult}>
      */
-    @Operation(summary = "获取表列表")
     @GetMapping("table")
     public ReturnPageResult<TableResult> tableList(TableQuery query) {
+        SysGen sysGen = getSysGen(query);
         List<TableResult> results = new LinkedList<>();
-        try {
-            Connection connection = getConnection(query);
+        try (Connection connection = getConnection(sysGen, query);) {
             DatabaseMetaData metaData = connection.getMetaData();
+            String database = null != sysGen ? sysGen.getGenDatabase() : null;
+
             ResultSet resultSet = metaData.getTables(null, null, "%", new String[]{"table"});
             while (resultSet.next()) {
                 TableResult item = new TableResult();
-                item.setTableName(resultSet.getString(3));
+                item.setTableName(resultSet.getString("TABLE_NAME"));
+                item.setDatabase(resultSet.getString("TABLE_CAT"));
+                item.setRemark(resultSet.getString("REMARKS"));
                 results.add(item);
             }
         } catch (SQLException e) {
@@ -82,7 +82,7 @@ public class GenController {
                         .total(results.size())
                         .data(page)
                         .pageSize((int) query.getPageSize())
-                        .page((int) query.getPage())
+                        .page((int) query.getPage()).build()
         );
     }
 
@@ -91,16 +91,15 @@ public class GenController {
      *
      * @return {@link ReturnPageResult}<{@link TableResult}>
      */
-    @Operation(summary = "导入")
     @GetMapping("importColumn")
     @Transactional(rollbackFor = Exception.class)
     public ReturnResult<Boolean> importColumn(TableQuery query) {
         String[] tableName = query.getTableName();
-        if(ArrayUtils.isEmpty(tableName)) {
+        if (ArrayUtils.isEmpty(tableName)) {
             return ReturnResult.error(null, "表不存在");
         }
 
-        try (Connection connection = getConnection(query);){
+        try (Connection connection = getConnection(query);) {
             for (String s : tableName) {
                 DatabaseMetaData metaData = connection.getMetaData();
                 ResultSet tableResultSet = metaData.getTables(null, null, s, new String[]{"table"});
@@ -128,71 +127,44 @@ public class GenController {
 
         return ReturnResult.ok();
     }
+
     /**
      * 更新表信息
      *
      * @return {@link ReturnPageResult}<{@link TableResult}>
      */
-    @Operation(summary = "更新表信息")
+    @GetMapping("page")
+    public ReturnPageResult<SysGenTable> page(TableQuery query) {
+        return PageResultUtils.ok(sysGenTableService.page(
+                new Page<>(query.getPage(), query.getPageSize()),
+                Wrappers.<SysGenTable>lambdaQuery()
+                        .like(StringUtils.isNotBlank(query.getKeyword()), SysGenTable::getTabName, query.getKeyword())
+        ));
+    }
+
+    /**
+     * 更新表信息
+     *
+     * @return {@link ReturnPageResult}<{@link TableResult}>
+     */
     @GetMapping("updateTable")
     @Transactional(rollbackFor = Exception.class)
     public ReturnResult<Boolean> updateTable(SysGenTable sysGenTable) {
         sysGenTableService.updateById(sysGenTable);
         return ReturnResult.ok();
     }
+
     /**
      * 删除表信息
      *
      * @return {@link ReturnPageResult}<{@link TableResult}>
      */
-    @Operation(summary = "删除表信息")
     @GetMapping("deleteTable")
     @Transactional(rollbackFor = Exception.class)
     public ReturnResult<Boolean> deleteTable(String tableId) {
         sysGenTableService.removeById(tableId);
         sysGenColumnService.remove(Wrappers.<SysGenColumn>lambdaQuery().eq(SysGenColumn::getTabId, tableId));
         return ReturnResult.ok();
-    }
-
-
-    /**
-     * 表格列表
-     *
-     * @return {@link ReturnPageResult}<{@link TableResult}>
-     */
-    @Operation(summary = "获取表的字段列表")
-    @GetMapping("column")
-    public ReturnPageResult<SysGenColumn> columnList(
-            @ApiParam("表ID") String tableId,
-            @ApiParam("页码") @RequestParam(value = "page", defaultValue = "1") Integer pageNum,
-            @ApiParam("每页数量") @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize
-            ) {
-        SysGenTable sysGenTable = sysGenTableService.getById(tableId);
-        if(null == sysGenTable) {
-            return ReturnPageResult.error("表不存在");
-        }
-
-        return PageResultUtils.ok(sysGenColumnService.page(new Page<>(pageNum, pageSize),
-                Wrappers.<SysGenColumn>lambdaQuery()
-                        .eq(SysGenColumn::getTabId, tableId)
-        ));
-    }
-
-    /**
-     * 获取连接
-     *
-     * @param sysGenTable 查询
-     * @return {@link Connection}
-     * @throws SQLException SQLException
-     */
-    private Connection getConnection(SysGenTable sysGenTable) throws SQLException {
-        if(null == sysGenTable.getGenId()) {
-            DataSource dataSource = applicationContext.getBean(sysGenTable.getGenName(), DataSource.class);
-            return dataSource.getConnection();
-        }
-
-        SysGen sysGen = sysGenService.getById(sysGenTable.getGenId());
-        return DriverManager.getConnection(sysGen.getGenUrl(), sysGen.getGenUser(), sysGen.getGenPassword());
     }
 
     /**
@@ -203,12 +175,57 @@ public class GenController {
      * @throws SQLException SQLException
      */
     private Connection getConnection(TableQuery query) throws SQLException {
-        if(null == query.getGenId()) {
+        if (null == query.getGenId()) {
             DataSource dataSource = applicationContext.getBean(query.getDataSourceName(), DataSource.class);
             return dataSource.getConnection();
         }
 
         SysGen sysGen = sysGenService.getById(query.getGenId());
         return DriverManager.getConnection(sysGen.getGenUrl(), sysGen.getGenUser(), sysGen.getGenPassword());
+    }
+
+    /**
+     * 获取连接
+     *
+     * @param query 查询
+     * @return {@link Connection}
+     * @throws SQLException SQLException
+     */
+    private Connection getConnection(SysGen sysGen, TableQuery query) throws SQLException {
+        if (null == query.getGenId()) {
+            DataSource dataSource = applicationContext.getBean(query.getDataSourceName(), DataSource.class);
+            return dataSource.getConnection();
+        }
+
+        return DriverManager.getConnection(sysGen.getGenUrl(), sysGen.getGenUser(), sysGen.getGenPassword());
+    }
+
+    /**
+     * 获取数据库
+     *
+     * @param query 查询
+     * @return {@link String}
+     */
+    private String getDatabase(TableQuery query) {
+        if (null == query.getGenId()) {
+            return null;
+        }
+
+        SysGen sysGen = sysGenService.getById(query.getGenId());
+        return null != sysGen ? sysGen.getGenDatabase() : null;
+    }
+
+    /**
+     * 获取数据库
+     *
+     * @param query 查询
+     * @return {@link String}
+     */
+    private SysGen getSysGen(TableQuery query) {
+        if (null == query.getGenId()) {
+            return null;
+        }
+
+        return sysGenService.getById(query.getGenId());
     }
 }

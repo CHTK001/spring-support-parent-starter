@@ -26,4 +26,8 @@ public class TableQuery extends RequestPage<TableQuery> {
      * 表名称
      */
     private String[] tableName;
+    /**
+     * 关键字
+     */
+    private String keyword;
 }
