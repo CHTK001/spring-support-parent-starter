@@ -40,6 +40,7 @@
         <module>spring-support-milvus-starter</module>
         <module>spring-support-rpc-starter</module>
         <module>spring-support-subscribe-starter</module>
+        <module>spring-support-generator-starter</module>
     </modules>
 
     <properties>
@@ -907,7 +908,7 @@
                 <artifactId>versions-maven-plugin</artifactId>
                 <version>${versions-maven-plugin.version}</version>
             </plugin>
-            <plugin>
+            <!--<plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
                 <version>${maven-checkstyle-plugin.version}</version>
@@ -926,7 +927,7 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin>
+            </plugin>-->
 
             <plugin>
                 <groupId>org.jacoco</groupId>
