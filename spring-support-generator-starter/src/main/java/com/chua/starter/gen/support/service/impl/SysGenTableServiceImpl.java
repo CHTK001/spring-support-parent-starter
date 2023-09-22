@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.common.support.net.NetUtils;
 import com.chua.common.support.utils.IoUtils;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.gen.support.entity.SysGenColumn;
 import com.chua.starter.gen.support.entity.SysGenTable;
 import com.chua.starter.gen.support.mapper.SysGenTableMapper;
@@ -71,12 +72,16 @@ public class SysGenTableServiceImpl extends ServiceImpl<SysGenTableMapper, SysGe
         // 获取模板列表
         List<String> templates = VelocityUtils.getTemplateList(sysGenTable.getTabTplCategory());
         for (String template : templates) {
+            String fileName = VelocityUtils.getFileName(template, sysGenTable);
+            if(StringUtils.isEmpty(fileName)) {
+                continue;
+            }
             // 渲染模板
             try( StringWriter sw = new StringWriter();) {
                 Template tpl = Velocity.getTemplate(template, UTF_8);
                 tpl.merge(context, sw);
                 // 添加到zip
-                zip.putNextEntry(new ZipEntry(VelocityUtils.getFileName(template, sysGenTable)));
+                zip.putNextEntry(new ZipEntry(fileName));
                 IoUtils.write(zip, StandardCharsets.UTF_8, false, sw.toString());
                 zip.flush();
                 zip.closeEntry();
