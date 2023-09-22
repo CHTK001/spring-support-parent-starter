@@ -4,6 +4,7 @@ import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.gen.support.entity.SysGenColumn;
 import com.chua.starter.gen.support.entity.SysGenTable;
+import com.chua.starter.gen.support.query.Download;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.apache.velocity.VelocityContext;
@@ -43,10 +44,10 @@ public class VelocityUtils {
      *
      * @return 模板列表
      */
-    public static VelocityContext prepareContext(SysGenTable genTable, List<SysGenColumn> sysGenColumns) {
+    public static VelocityContext prepareContext(SysGenTable genTable, List<SysGenColumn> sysGenColumns, Download download) {
         String moduleName = genTable.getTabModuleName();
         String businessName = genTable.getTabBusinessName();
-        String packageName = genTable.getTabPackageName();
+        String packageName = StringUtils.defaultString(download.getPackageName(), genTable.getTabPackageName());
         String tplCategory = genTable.getTabTplCategory();
         String functionName = genTable.getTabFunctionName();
 
