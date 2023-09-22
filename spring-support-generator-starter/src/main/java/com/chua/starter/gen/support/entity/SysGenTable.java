@@ -5,7 +5,10 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.chua.common.support.unit.name.NamingCase;
+import com.chua.starter.gen.support.properties.GenProperties;
 import lombok.Data;
+import org.apache.commons.lang3.RegExUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.Serializable;
 import java.sql.ResultSet;
@@ -103,7 +106,15 @@ public class SysGenTable implements Serializable {
      */
     @TableField(value = "tab_remark")
     private String tabRemark;
+    /**
+     * 使用的模板（crud单表操作 tree树表操作 sub主子表操作）
+     */
+    @TableField(value = "tab_tpl_category")
+    private String tabTplCategory;
 
+
+    @TableField(exist = false)
+    private SysGenColumn tabPkColumn;
     private static final long serialVersionUID = 1L;
 
     /**
@@ -112,15 +123,61 @@ public class SysGenTable implements Serializable {
      * @param genId
      * @param tableName      查询
      * @param tableResultSet 表格结果集
+     * @param genProperties
      * @return {@link com.chua.starter.gen.support.entity.SysGenTable}
      */
-    public static com.chua.starter.gen.support.entity.SysGenTable createSysGenTable(Integer genId, String tableName, ResultSet tableResultSet) throws SQLException {
+    public static com.chua.starter.gen.support.entity.SysGenTable createSysGenTable(Integer genId,
+                                                                                    String tableName,
+                                                                                    ResultSet tableResultSet,
+                                                                                    GenProperties genProperties) throws SQLException {
         com.chua.starter.gen.support.entity.SysGenTable sysGenTable = new com.chua.starter.gen.support.entity.SysGenTable();
         sysGenTable.setGenId(genId);
         sysGenTable.setTabDesc(tableResultSet.getString("REMARKS"));
         sysGenTable.setTabName(tableName);
         sysGenTable.setTabClassName(NamingCase.toHyphenUpperCamel(sysGenTable.getTabName()));
-
+        sysGenTable.setTabPackageName(genProperties.getPackageName());
+        sysGenTable.setTabModuleName(getModuleName(genProperties.getPackageName()));
+        sysGenTable.setTabBusinessName(getBusinessName(sysGenTable.getTabName()));
+        sysGenTable.setTabFunctionName(replaceText(sysGenTable.getTabRemark()));
+        sysGenTable.setTabFunctionAuthor(genProperties.getAuthor());
         return sysGenTable;
     }
+
+    /**
+     * 获取模块名
+     *
+     * @param packageName 包名
+     * @return 模块名
+     */
+    public static String getModuleName(String packageName) {
+        packageName = StringUtils.defaultString(packageName, "com");
+        int lastIndex = packageName.lastIndexOf(".");
+        int nameLength = packageName.length();
+        return StringUtils.substring(packageName, lastIndex + 1, nameLength);
+    }
+
+    /**
+     * 关键字替换
+     *
+     * @param text 需要被替换的名字
+     * @return 替换后的名字
+     */
+    public static String replaceText(String text) {
+        return RegExUtils.replaceAll(text, "(?:表|若依)", "");
+    }
+
+    /**
+     * 获取业务名
+     *
+     * @param tableName 表名
+     * @return 业务名
+     */
+    public static String getBusinessName(String tableName) {
+        int firstIndex = tableName.indexOf("_");
+        int nameLength = tableName.length();
+        String businessName = StringUtils.substring(tableName, firstIndex + 1, nameLength);
+        businessName = NamingCase.toCamelCase(businessName);
+        return businessName;
+    }
+
 }

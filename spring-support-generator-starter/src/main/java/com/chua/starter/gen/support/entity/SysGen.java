@@ -4,12 +4,15 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.util.Date;
 
 @Data
 @TableName(value = "sys_gen")
+@JsonIgnoreProperties("genPassword")
 public class SysGen implements Serializable {
     /**
      * 主键
@@ -64,6 +67,11 @@ public class SysGen implements Serializable {
      */
     @TableField(value = "gen_database")
     private String genDatabase;
+    /**
+     * 创建时间
+     */
+    @TableField(value = "create_time")
+    private Date createTime;
 
     private static final long serialVersionUID = 1L;
 }

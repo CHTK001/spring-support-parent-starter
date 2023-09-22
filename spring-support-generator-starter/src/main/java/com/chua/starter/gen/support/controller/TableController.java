@@ -11,6 +11,7 @@ import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.gen.support.entity.SysGen;
 import com.chua.starter.gen.support.entity.SysGenColumn;
 import com.chua.starter.gen.support.entity.SysGenTable;
+import com.chua.starter.gen.support.properties.GenProperties;
 import com.chua.starter.gen.support.query.TableQuery;
 import com.chua.starter.gen.support.service.SysGenColumnService;
 import com.chua.starter.gen.support.service.SysGenService;
@@ -19,14 +20,18 @@ import com.chua.starter.gen.support.vo.TableResult;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import io.swagger.annotations.Api;
 import org.springframework.context.ApplicationContext;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
-import javax.sql.DataSource;
+import java.io.IOException;
 import java.sql.*;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 生成器控制器
@@ -49,6 +54,9 @@ public class TableController {
     @Resource
     private ApplicationContext applicationContext;
 
+    @Resource
+    private GenProperties genProperties;
+
 
     /**
      * 表格列表
@@ -58,10 +66,10 @@ public class TableController {
     @GetMapping("table")
     public ReturnPageResult<TableResult> tableList(TableQuery query) {
         SysGen sysGen = getSysGen(query);
+        String database = null != sysGen ? sysGen.getGenDatabase() : null;
         List<TableResult> results = new LinkedList<>();
         try (Connection connection = getConnection(sysGen, query);) {
             DatabaseMetaData metaData = connection.getMetaData();
-            String database = null != sysGen ? sysGen.getGenDatabase() : null;
 
             ResultSet resultSet = metaData.getTables(database, null, "%", new String[]{"table"});
             while (resultSet.next()) {
@@ -74,6 +82,22 @@ public class TableController {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
+
+        Map<String, TableResult> tpl = new HashMap<>(results.size());
+        for (TableResult tableResult : results) {
+            tpl.put(tableResult.getTableName(), tableResult);
+        }
+
+        List<SysGenTable> rs = sysGenTableService.list(Wrappers.<SysGenTable>lambdaQuery()
+                .eq(SysGenTable::getGenId, query.getGenId())
+                .in(SysGenTable::getTabName, tpl.keySet())
+        );
+        for (SysGenTable r : rs) {
+            tpl.remove(r.getTabName());
+        }
+
+        results = new LinkedList<>(tpl.values());
+
         List<TableResult> page = CollectionUtils.page((int) query.getPage(), (int) query.getPageSize(), results);
         return ReturnPageResult.ok(
                 PageResult.<TableResult>builder()
@@ -82,6 +106,27 @@ public class TableController {
                         .pageSize((int) query.getPageSize())
                         .page((int) query.getPage()).build()
         );
+    }
+
+    /**
+     * 批生成代码
+     * 批量生成代码
+     *
+     * @param tabIds 选项卡ID
+     * @return {@link ResponseEntity}<{@link byte[]}>
+     * @throws IOException IOException
+     */
+    @GetMapping("/batchGenCode")
+    public ResponseEntity<byte[]> batchGenCode(String tabIds) throws IOException {
+        byte[] data = sysGenTableService.downloadCode(tabIds);
+        return ResponseEntity.ok()
+                .header("Content-Length", String.valueOf(data.length))
+                .header("Access-Control-Allow-Origin", "*")
+                .header("Access-Control-Expose-Headers", "Content-Disposition")
+                .header("Content-Disposition", "attachment; filename=\"code.zip\"")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(data);
+
     }
 
     /**
@@ -96,18 +141,19 @@ public class TableController {
         if (ArrayUtils.isEmpty(tableName)) {
             return ReturnResult.error(null, "表不存在");
         }
-
+        SysGen sysGen = getSysGen(query);
         try (Connection connection = getConnection(query);) {
             for (String s : tableName) {
                 DatabaseMetaData metaData = connection.getMetaData();
                 ResultSet tableResultSet = metaData.getTables(null, null, s, new String[]{"table"});
                 SysGenTable sysGenTable = null;
                 while (tableResultSet.next()) {
-                    sysGenTable = SysGenTable.createSysGenTable(query.getGenId(), s, tableResultSet);
+                    sysGenTable = SysGenTable.createSysGenTable(query.getGenId(), s, tableResultSet, genProperties);
                 }
-                sysGenTable.setGenName(query.getDataSourceName());
-
-                sysGenTableService.save(sysGenTable);
+                if(null != sysGenTable && null != sysGen) {
+                    sysGenTable.setGenName(sysGen.getGenName());
+                    sysGenTableService.save(sysGenTable);
+                }
                 List<SysGenColumn> rs = new LinkedList<>();
                 ResultSet resultSet = metaData.getColumns(null, null, s, null);
                 while (resultSet.next()) {
@@ -173,11 +219,6 @@ public class TableController {
      * @throws SQLException SQLException
      */
     private Connection getConnection(TableQuery query) throws SQLException {
-        if (null == query.getGenId()) {
-            DataSource dataSource = applicationContext.getBean(query.getDataSourceName(), DataSource.class);
-            return dataSource.getConnection();
-        }
-
         SysGen sysGen = sysGenService.getById(query.getGenId());
         return DriverManager.getConnection(sysGen.getGenUrl(), sysGen.getGenUser(), sysGen.getGenPassword());
     }
@@ -190,11 +231,6 @@ public class TableController {
      * @throws SQLException SQLException
      */
     private Connection getConnection(SysGen sysGen, TableQuery query) throws SQLException {
-        if (null == query.getGenId()) {
-            DataSource dataSource = applicationContext.getBean(query.getDataSourceName(), DataSource.class);
-            return dataSource.getConnection();
-        }
-
         return DriverManager.getConnection(sysGen.getGenUrl(), sysGen.getGenUser(), sysGen.getGenPassword());
     }
 
