@@ -1,6 +1,8 @@
 package com.chua.starter.gen.support.configuration;
 
+import com.chua.starter.gen.support.properties.GenProperties;
 import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.ComponentScan;
 
 /**
@@ -11,5 +13,6 @@ import org.springframework.context.annotation.ComponentScan;
  */
 @ComponentScan("com.chua.starter.gen.support")
 @MapperScan("com.chua.starter.gen.support.mapper")
+@EnableConfigurationProperties(GenProperties.class)
 public class GenConfiguration {
 }
