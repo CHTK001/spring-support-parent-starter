@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.incrementer.DefaultIdentifierGenerator;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.net.NetUtils;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.starter.gen.support.entity.SysGenColumn;
@@ -41,15 +40,11 @@ public class SysGenTableServiceImpl extends ServiceImpl<SysGenTableMapper, SysGe
     private SysGenColumnService sysGenColumnService;
     @Override
     public byte[] downloadCode(String tabIds) {
-       try(ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        ZipOutputStream zip = new ZipOutputStream(outputStream);) {
-           for (String tabId : tabIds.split(CommonConstant.SYMBOL_COMMA)) {
-               generatorCode(tabId.trim(), zip);
-           }
-           return outputStream.toByteArray();
-       } catch (IOException e) {
-           throw new RuntimeException(e);
-       }
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        ZipOutputStream zip = new ZipOutputStream(outputStream);
+        generatorCode(tabIds, zip);
+        IoUtils.closeQuietly(zip);
+        return outputStream.toByteArray();
     }
 
     /**
