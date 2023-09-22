@@ -72,14 +72,12 @@ public class SysGenTableServiceImpl extends ServiceImpl<SysGenTableMapper, SysGe
         List<String> templates = VelocityUtils.getTemplateList(sysGenTable.getTabTplCategory());
         for (String template : templates) {
             // 渲染模板
-            StringWriter sw = new StringWriter();
-            Template tpl = Velocity.getTemplate(template, UTF_8);
-            tpl.merge(context, sw);
-            try {
+            try( StringWriter sw = new StringWriter();) {
+                Template tpl = Velocity.getTemplate(template, UTF_8);
+                tpl.merge(context, sw);
                 // 添加到zip
                 zip.putNextEntry(new ZipEntry(VelocityUtils.getFileName(template, sysGenTable)));
                 IoUtils.write(zip, StandardCharsets.UTF_8, false, sw.toString());
-                IoUtils.closeQuietly(sw);
                 zip.flush();
                 zip.closeEntry();
             } catch (IOException e) {
