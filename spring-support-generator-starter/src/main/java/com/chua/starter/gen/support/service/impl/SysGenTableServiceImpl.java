@@ -40,11 +40,16 @@ public class SysGenTableServiceImpl extends ServiceImpl<SysGenTableMapper, SysGe
     private SysGenColumnService sysGenColumnService;
     @Override
     public byte[] downloadCode(String tabIds) {
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        ZipOutputStream zip = new ZipOutputStream(outputStream);
-        generatorCode(tabIds, zip);
-        IoUtils.closeQuietly(zip);
-        return outputStream.toByteArray();
+        ByteArrayOutputStream outputStream;
+        ZipOutputStream zip = null;
+        try {
+            outputStream = new ByteArrayOutputStream();
+            zip = new ZipOutputStream(outputStream);
+            generatorCode(tabIds, zip);
+            return outputStream.toByteArray();
+        } finally {
+            IoUtils.closeQuietly(zip);
+        }
     }
 
     /**
