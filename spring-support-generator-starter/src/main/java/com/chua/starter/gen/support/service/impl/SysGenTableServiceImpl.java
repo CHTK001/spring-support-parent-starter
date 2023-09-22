@@ -10,6 +10,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.gen.support.entity.SysGenColumn;
 import com.chua.starter.gen.support.entity.SysGenTable;
 import com.chua.starter.gen.support.mapper.SysGenTableMapper;
+import com.chua.starter.gen.support.query.Download;
 import com.chua.starter.gen.support.service.SysGenColumnService;
 import com.chua.starter.gen.support.service.SysGenTableService;
 import com.chua.starter.gen.support.util.VelocityInitializer;
@@ -40,13 +41,13 @@ public class SysGenTableServiceImpl extends ServiceImpl<SysGenTableMapper, SysGe
     @Resource
     private SysGenColumnService sysGenColumnService;
     @Override
-    public byte[] downloadCode(String tabIds) {
+    public byte[] downloadCode(Download download) {
         ByteArrayOutputStream outputStream;
         ZipOutputStream zip = null;
         try {
             outputStream = new ByteArrayOutputStream();
             zip = new ZipOutputStream(outputStream);
-            generatorCode(tabIds, zip);
+            generatorCode(download.getTabIds(), zip, download);
             return outputStream.toByteArray();
         } finally {
             IoUtils.closeQuietly(zip);
@@ -56,10 +57,11 @@ public class SysGenTableServiceImpl extends ServiceImpl<SysGenTableMapper, SysGe
     /**
      * 生成器代码
      *
-     * @param tabId tabId
-     * @param zip  zip
+     * @param tabId    tabId
+     * @param zip      zip
+     * @param download download
      */
-    private void generatorCode(String tabId, ZipOutputStream zip) {
+    private void generatorCode(String tabId, ZipOutputStream zip, Download download) {
         // 查询表信息
         SysGenTable sysGenTable = baseMapper.selectById(tabId);
         List<SysGenColumn> sysGenColumns = sysGenColumnService.list(Wrappers.<SysGenColumn>lambdaQuery().eq(SysGenColumn::getTabId, tabId));
@@ -67,7 +69,7 @@ public class SysGenTableServiceImpl extends ServiceImpl<SysGenTableMapper, SysGe
         // 设置主键列信息
         setPkColumn(sysGenTable, sysGenColumns);
 
-        VelocityContext context = VelocityUtils.prepareContext(sysGenTable, sysGenColumns);
+        VelocityContext context = VelocityUtils.prepareContext(sysGenTable, sysGenColumns, download);
 
         // 获取模板列表
         List<String> templates = VelocityUtils.getTemplateList(sysGenTable.getTabTplCategory());

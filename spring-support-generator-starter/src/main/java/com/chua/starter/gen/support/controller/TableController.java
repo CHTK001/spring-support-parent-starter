@@ -12,6 +12,7 @@ import com.chua.starter.gen.support.entity.SysGen;
 import com.chua.starter.gen.support.entity.SysGenColumn;
 import com.chua.starter.gen.support.entity.SysGenTable;
 import com.chua.starter.gen.support.properties.GenProperties;
+import com.chua.starter.gen.support.query.Download;
 import com.chua.starter.gen.support.query.TableQuery;
 import com.chua.starter.gen.support.service.SysGenColumnService;
 import com.chua.starter.gen.support.service.SysGenService;
@@ -116,9 +117,9 @@ public class TableController {
      * @return {@link ResponseEntity}<{@link byte[]}>
      * @throws IOException IOException
      */
-    @GetMapping("/batchGenCode")
-    public ResponseEntity<byte[]> batchGenCode(String tabIds) throws IOException {
-        byte[] data = sysGenTableService.downloadCode(tabIds);
+    @PostMapping("/batchGenCode")
+    public ResponseEntity<byte[]> batchGenCode(Download download) throws IOException {
+        byte[] data = sysGenTableService.downloadCode(download);
         return ResponseEntity.ok()
                 .header("Content-Length", String.valueOf(data.length))
                 .header("Access-Control-Allow-Origin", "*")
