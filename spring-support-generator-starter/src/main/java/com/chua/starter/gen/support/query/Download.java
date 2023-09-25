@@ -22,7 +22,10 @@ public class Download {
      */
     String author = "admin";
 
-
+    /**
+     * 模块名称
+     */
+    String moduleName ;
     /**
      * 函数名称
      */

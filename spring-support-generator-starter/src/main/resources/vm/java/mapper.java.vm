@@ -7,7 +7,7 @@ import ${packageName}.entity.${ClassName};
  * ${functionName}Mapper接口
  *
  * @author ${author}
- * @date ${datetime}
+ * @since ${datetime}
  */
 public interface ${ClassName}Mapper extends BaseMapper<${ClassName}> {
 
