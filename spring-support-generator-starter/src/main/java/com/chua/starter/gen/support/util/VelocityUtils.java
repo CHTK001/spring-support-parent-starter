@@ -8,7 +8,13 @@ import com.chua.starter.gen.support.query.Download;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.apache.velocity.VelocityContext;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -49,20 +55,23 @@ public class VelocityUtils {
         String businessName = genTable.getTabBusinessName();
         String packageName = StringUtils.defaultString(download.getPackageName(), genTable.getTabPackageName());
         String tplCategory = genTable.getTabTplCategory();
-        String functionName = genTable.getTabFunctionName();
+        String functionName = StringUtils.defaultString(download.getFunctionName(), genTable.getTabFunctionName());
 
         VelocityContext velocityContext = new VelocityContext();
+        velocityContext.put("openSwagger", download.getOpenSwagger());
         velocityContext.put("tplCategory", genTable.getTabTplCategory());
         velocityContext.put("tableName", genTable.getTabName());
+        velocityContext.put("version", download.getVersion());
         velocityContext.put("functionName", StringUtils.isNotEmpty(functionName) ? functionName : "【请填写功能名称】");
         velocityContext.put("ClassName", genTable.getTabClassName());
         velocityContext.put("className", StringUtils.uncapitalize(genTable.getTabClassName()));
         velocityContext.put("moduleName", genTable.getTabModuleName());
         velocityContext.put("BusinessName", StringUtils.capitalize(genTable.getTabBusinessName()));
         velocityContext.put("businessName", genTable.getTabBusinessName());
+        velocityContext.put("Entity", genTable.getTabClassName());
         velocityContext.put("basePackage", getPackagePrefix(packageName));
         velocityContext.put("packageName", packageName);
-        velocityContext.put("author", genTable.getTabFunctionAuthor());
+        velocityContext.put("author", download.getAuthor());
         velocityContext.put("datetime", DateTime.now().toStandard());
         velocityContext.put("pkColumn", genTable.getTabPkColumn());
         velocityContext.put("importList", getImportList(sysGenColumns));
@@ -77,34 +86,52 @@ public class VelocityUtils {
      *
      * @return 模板列表
      */
-    public static List<String> getTemplateList(String tplCategory) {
+    public static List<String> getTemplateList(String templatePath) {
         List<String> templates = new ArrayList<String>();
-        templates.add("vm/java/entity.java.vm");
-        templates.add("vm/java/mapper.java.vm");
-        templates.add("vm/java/service.java.vm");
-        templates.add("vm/java/serviceImpl.java.vm");
-        templates.add("vm/java/controller.java.vm");
-        templates.add("vm/xml/mapper.xml.vm");
-        templates.add("vm/sql/sql.vm");
-        templates.add("vm/js/api.js.vm");
-        templates.add("vm/vue3/api.ts.vm");
+        if (StringUtils.isEmpty(templatePath)) {
+            try {
+                PathMatchingResourcePatternResolver pathMatchingResourcePatternResolver = new PathMatchingResourcePatternResolver();
+                Resource[] resources = pathMatchingResourcePatternResolver.getResources("classpath:vm/**/*.vm");
+                for (Resource resource : resources) {
+                    templates.add(resource.getURL().toExternalForm());
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            return templates;
+        }
+
+        try {
+            Files.walkFileTree(Paths.get(templatePath), new SimpleFileVisitor<Path>() {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                    File file1 = file.toFile();
+                    boolean endsWith = file1.getName().endsWith(".vm");
+                    if(endsWith) {
+                        templates.add(file1.toURI().toURL().toExternalForm());
+                    }
+                    return super.visitFile(file, attrs);
+                }
+            });
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         return templates;
     }
 
     /**
      * 获取文件名
      */
-    public static String getFileName(String template, SysGenTable genTable) {
+    public static String getFileName(String template, SysGenTable genTable, Download download) {
         // 文件名称
         String fileName = "";
-        // 包路径
-        String packageName = genTable.getTabPackageName();
-        // 模块名
         String moduleName = genTable.getTabModuleName();
+        String businessName = genTable.getTabBusinessName();
+        String packageName = StringUtils.defaultString(download.getPackageName(), genTable.getTabPackageName());
+        String tplCategory = genTable.getTabTplCategory();
+        String functionName = StringUtils.defaultString(download.getFunctionName(), genTable.getTabFunctionName());
         // 大写类名
         String className = genTable.getTabClassName();
-        // 业务名称
-        String businessName = genTable.getTabBusinessName();
 
         String javaPath = PROJECT_PATH + "/" + StringUtils.replace(packageName, ".", "/");
         String mybatisPath = MYBATIS_PATH + "/" + moduleName;
@@ -119,6 +146,8 @@ public class VelocityUtils {
             fileName = StringUtils.format("{}/mapper/{}Mapper.java", javaPath, className);
         } else if (template.contains("service.java.vm")) {
             fileName = StringUtils.format("{}/service/{}Service.java", javaPath, className);
+        }else if (template.endsWith("query.vm")) {
+            fileName = StringUtils.format("{}/query/PageQuery.java", javaPath);
         } else if (template.contains("serviceImpl.java.vm")) {
             fileName = StringUtils.format("{}/service/impl/{}ServiceImpl.java", javaPath, className);
         } else if (template.contains("controller.java.vm")) {

@@ -3,8 +3,6 @@ package ${packageName}.controller;
 import java.util.List;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.tduck.cloud.common.util.QueryWrapperUtils;
-import com.tduck.cloud.common.util.Result;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,34 +13,34 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.tduck.cloud.oplog.annotation.Log;
-import com.tduck.cloud.oplog.enums.BusinessType;
-import com.tduck.cloud.common.validator.group.AddGroup;
-import com.tduck.cloud.excel.util.ExcelUtils;
 import ${packageName}.entity.${ClassName}Entity;
 import ${packageName}.service.${ClassName}Service;
+import com.chua.starter.common.support.result.ReturnPageResult;
 
-
+import javax.annotation.Resource;
 /**
  * ${functionName}
  *
  * @author ${author}
  * @since  ${datetime}
  */
-@RequiredArgsConstructor
 @RestController
+#if($version)
+@RequestMapping("/${version}/${businessName}")
+#else
 @RequestMapping("/${moduleName}/${businessName}")
+#end
 public class ${ClassName}Controller {
 
-    private final ${ClassName}Service ${className}Service;
+    @Resource
+    private ${ClassName}Service ${className}Service;
 
     /**
      * 查询${functionName}列表
      */
-    @PreAuthorize("@ss.hasPermi('${permissionPrefix}:page')")
     @GetMapping("/page")
-    public Result queryPage(Page page,${ClassName}Entity ${className}) {
-        return Result.success(${className}Service.page(page, QueryWrapperUtils.toSimpleQuery(${className})));
+    public ReturnPageResult queryPage(Page pag) {
+        return Result.success(${className}Service.page(page));
     }
 
     /**
