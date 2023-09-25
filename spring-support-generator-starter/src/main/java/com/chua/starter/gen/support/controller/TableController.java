@@ -18,6 +18,7 @@ import com.chua.starter.gen.support.entity.SysGenTable;
 import com.chua.starter.gen.support.properties.GenProperties;
 import com.chua.starter.gen.support.query.Download;
 import com.chua.starter.gen.support.query.TableQuery;
+import com.chua.starter.gen.support.result.TemplateResult;
 import com.chua.starter.gen.support.service.SysGenColumnService;
 import com.chua.starter.gen.support.service.SysGenService;
 import com.chua.starter.gen.support.service.SysGenTableService;
@@ -128,10 +129,23 @@ public class TableController {
                 .header("Content-Length", String.valueOf(data.length))
                 .header("Access-Control-Allow-Origin", "*")
                 .header("Access-Control-Expose-Headers", "Content-Disposition")
-                .header("Content-Disposition", "attachment; filename=\"code"+ DateTime.now().toString(DateFormatConstant.YYYYMMDD) +".zip\"")
+                .header("Content-Disposition", "attachment; filename=\"code" + DateTime.now().toString(DateFormatConstant.YYYYMMDD) + ".zip\"")
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .body(data);
 
+    }
+
+    /**
+     * 批生成代码
+     * 批量生成代码
+     *
+     * @param tabId tabId
+     * @return {@link ResponseEntity}<{@link byte[]}>
+     * @throws IOException IOException
+     */
+    @GetMapping("/template")
+    public ReturnResult<List<TemplateResult>> template(Integer tabId) throws IOException {
+        return ReturnResult.ok(sysGenTableService.template(tabId));
     }
 
     /**
