@@ -20,6 +20,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static com.chua.common.support.constant.CommonConstant.EMPTY;
 import static com.chua.common.support.constant.NameConstant.*;
 
 /**
@@ -51,7 +52,7 @@ public class VelocityUtils {
      * @return 模板列表
      */
     public static VelocityContext prepareContext(SysGenTable genTable, List<SysGenColumn> sysGenColumns, Download download) {
-        String moduleName = genTable.getTabModuleName();
+        String moduleName = StringUtils.defaultString(download.getModuleName(), EMPTY);
         String businessName = genTable.getTabBusinessName();
         String packageName = StringUtils.defaultString(download.getPackageName(), genTable.getTabPackageName());
         String tplCategory = genTable.getTabTplCategory();
@@ -125,7 +126,7 @@ public class VelocityUtils {
     public static String getFileName(String template, SysGenTable genTable, Download download) {
         // 文件名称
         String fileName = "";
-        String moduleName = genTable.getTabModuleName();
+        String moduleName =  StringUtils.defaultString(download.getModuleName(), EMPTY);
         String businessName = genTable.getTabBusinessName();
         String packageName = StringUtils.defaultString(download.getPackageName(), genTable.getTabPackageName());
         String tplCategory = genTable.getTabTplCategory();
@@ -138,15 +139,15 @@ public class VelocityUtils {
         String vuePath = "vue";
 
         if (template.contains("entity.java.vm")) {
-            fileName = StringUtils.format("{}/entity/{}Entity.java", javaPath, className);
+            fileName = StringUtils.format("{}/entity/{}.java", javaPath, className);
         }
         if (template.contains("sub-domain.java.vm") && StringUtils.equals(TPL_SUB, genTable.getTabTplCategory())) {
-            fileName = StringUtils.format("{}/entity/{}Entity.java", javaPath, genTable.getTabClassName());
+            fileName = StringUtils.format("{}/entity/{}.java", javaPath, genTable.getTabClassName());
         } else if (template.contains("mapper.java.vm")) {
             fileName = StringUtils.format("{}/mapper/{}Mapper.java", javaPath, className);
         } else if (template.contains("service.java.vm")) {
             fileName = StringUtils.format("{}/service/{}Service.java", javaPath, className);
-        }else if (template.endsWith("query.vm")) {
+        }else if (template.endsWith("query.java.vm")) {
             fileName = StringUtils.format("{}/query/PageQuery.java", javaPath);
         } else if (template.contains("serviceImpl.java.vm")) {
             fileName = StringUtils.format("{}/service/impl/{}ServiceImpl.java", javaPath, className);

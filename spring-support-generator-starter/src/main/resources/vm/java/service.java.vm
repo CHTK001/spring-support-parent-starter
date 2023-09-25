@@ -9,7 +9,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
  * ${functionName}Service接口
  *
  * @author ${author}
- * @date ${datetime}
+ * @since ${datetime}
  */
 public interface ${ClassName}Service extends IService<${ClassName}> {
 

@@ -3,21 +3,29 @@ package ${packageName}.controller;
 import java.util.List;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import ${packageName}.entity.${ClassName}Entity;
+import ${packageName}.entity.${ClassName};
+import ${packageName}.query.PageQuery;
 import ${packageName}.service.${ClassName}Service;
+import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.common.support.result.ReturnPageResult;
+import com.chua.starter.mybatis.utils.PageResultUtils;
+import com.chua.starter.common.support.result.Result;
+import com.chua.starter.gen.support.validator.group.AddGroup;
 
 import javax.annotation.Resource;
+import java.util.Arrays;
 /**
  * ${functionName}
  *
@@ -25,11 +33,11 @@ import javax.annotation.Resource;
  * @since  ${datetime}
  */
 @RestController
-#if($version)
-@RequestMapping("/${version}/${businessName}")
-#else
-@RequestMapping("/${moduleName}/${businessName}")
-#end
+    #if($version)
+    @RequestMapping("/${version}/${businessName}")
+    #else
+    @RequestMapping("/${moduleName}/${businessName}")
+    #end
 public class ${ClassName}Controller {
 
     @Resource
@@ -37,63 +45,50 @@ public class ${ClassName}Controller {
 
     /**
      * 查询${functionName}列表
+     * @param query 查询条件
      */
     @GetMapping("/page")
-    public ReturnPageResult queryPage(Page pag) {
-        return Result.success(${className}Service.page(page));
-    }
-
-    /**
-     * 导出${functionName}列表
-     */
-    @PreAuthorize("@ss.hasPermi('${permissionPrefix}:export')")
-    @Log(title = "${functionName}", businessType = BusinessType.EXPORT)
-    @GetMapping("/export")
-    public void export(${ClassName}Entity ${className}) {
-        List<${ClassName}Entity> list = ${className}Service.list(QueryWrapperUtils.toSimpleQuery(${className}));
-        ExcelUtils.exportExcel(list, "${functionName}数据", ${ClassName}Entity.class);
+    public ReturnPageResult<${Entity}> queryPage(PageQuery<${Entity}> query) {
+        return PageResultUtils.ok(${className}Service.page(new Page<${Entity}>(query.getPageNum(), query.getPageSize())));
     }
 
     /**
      * 获取${functionName}详细信息
      *
-     * @param ${pkColumn.javaField} 主键
+     * @param ${pkColumn.colJavaField} 主键
      */
-    @PreAuthorize("@ss.hasPermi('${permissionPrefix}:query')")
-    @GetMapping(value = "/{${pkColumn.javaField}}")
-    public Result<${ClassName}Entity> getInfo(@PathVariable("${pkColumn.javaField}") ${pkColumn.javaType} ${pkColumn.javaField}) {
-        return Result.success(${className}Service.getById(${pkColumn.javaField}));
+    @GetMapping(value = "/{${pkColumn.colJavaField}}")
+    public ReturnResult<${ClassName}> getInfo(@PathVariable("${pkColumn.colJavaField}") ${pkColumn.colJavaType} ${pkColumn.colJavaField}) {
+        return Result.success(${className}Service.getById(${pkColumn.colJavaField}));
     }
 
     /**
      * 新增${functionName}
      */
-    @PreAuthorize("@ss.hasPermi('${permissionPrefix}:add')")
-    @Log(title = "${functionName}", businessType = BusinessType.INSERT)
     @PostMapping("/add")
-    public Result<Boolean> add(@Validated(AddGroup.class) @RequestBody ${ClassName}Entity ${className}) {
-        return Result.success(${className}Service.save(${className}));
+    public Result<${ClassName}> add(@Validated(AddGroup.class) @RequestBody ${ClassName} ${className}) {
+            ${className}Service.save(${className});
+        return Result.success(${className});
     }
 
     /**
      * 修改${functionName}
      */
-    @PreAuthorize("@ss.hasPermi('${permissionPrefix}:update')")
-    @Log(title = "${functionName}", businessType = BusinessType.UPDATE)
-    @PostMapping("/update")
-    public Result<Boolean> update(@RequestBody ${ClassName}Entity ${className}) {
+    @PutMapping("/update")
+    public Result<Boolean> update(@RequestBody ${ClassName} ${className}) {
         return Result.success(${className}Service.updateById(${className}));
     }
 
     /**
      * 删除${functionName}
      *
-     * @param ${pkColumn.javaField}s 主键串
+     * @param ${pkColumn.colJavaField}s 主键串
      */
-    @PreAuthorize("@ss.hasPermi('${permissionPrefix}:delete')")
-    @Log(title = "${functionName}", businessType = BusinessType.DELETE)
-    @PostMapping("/delete/{${pkColumn.javaField}s}")
-    public Result<Boolean> delete(@PathVariable List<${pkColumn.javaType} > ${pkColumn.javaField}s) {
-        return Result.success(${className}Service.removeByIds(${pkColumn.javaField}s));
+    @DeleteMapping("/delete")
+    public ReturnResult<Boolean> delete(String ${pkColumn.colJavaField}s) {
+        if(null == ${pkColumn.colJavaField}s) {
+            return Result.illegal(false, "数据不存在");
+        }
+        return Result.success(${className}Service.removeByIds(Arrays.asList(${pkColumn.colJavaField}s.split(","));
     }
 }
