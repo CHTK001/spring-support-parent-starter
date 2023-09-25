@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.core.incrementer.DefaultIdentifierGenerator;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.chua.common.support.function.Splitter;
 import com.chua.common.support.net.NetUtils;
+import com.chua.common.support.utils.FileUtils;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.gen.support.entity.SysGenColumn;
@@ -12,6 +14,7 @@ import com.chua.starter.gen.support.entity.SysGenTable;
 import com.chua.starter.gen.support.mapper.SysGenTableMapper;
 import com.chua.starter.gen.support.properties.GenProperties;
 import com.chua.starter.gen.support.query.Download;
+import com.chua.starter.gen.support.result.TemplateResult;
 import com.chua.starter.gen.support.service.SysGenColumnService;
 import com.chua.starter.gen.support.service.SysGenTableService;
 import com.chua.starter.gen.support.util.VelocityInitializer;
@@ -26,7 +29,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
+import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -44,6 +47,7 @@ public class SysGenTableServiceImpl extends ServiceImpl<SysGenTableMapper, SysGe
 
     @Resource
     private GenProperties genProperties;
+
     @Override
     public byte[] downloadCode(Download download) {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -51,6 +55,56 @@ public class SysGenTableServiceImpl extends ServiceImpl<SysGenTableMapper, SysGe
         generatorCode(download.getTabIds(), zip, download);
         IoUtils.closeQuietly(zip);
         return outputStream.toByteArray();
+    }
+
+    @Override
+    public List<TemplateResult> template(Integer tabId) {
+        // 获取模板列表
+        List<String> templates = Optional.of(VelocityUtils.getTemplateList(genProperties.getTemplatePath())).orElse(Collections.emptyList());
+        List<TemplateResult> temp = new LinkedList<>();
+        SysGenTable sysGenTable = baseMapper.selectById(tabId);
+        List<SysGenColumn> sysGenColumns = sysGenColumnService.list(Wrappers.<SysGenColumn>lambdaQuery().eq(SysGenColumn::getTabId, tabId));
+
+        Download download = new Download();
+        for (String template : templates) {
+            temp.add(createTemplateResult(template, sysGenTable, sysGenColumns, download));
+        }
+        String tabTplCategory = sysGenTable.getTabTplCategory();
+        if (StringUtils.isNotEmpty(tabTplCategory)) {
+            Set<String> strings = Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(tabTplCategory);
+            for (String template : strings) {
+                temp.add(createTemplateResult(template, sysGenTable, sysGenColumns, download));
+            }
+        }
+
+        return temp;
+    }
+
+    /**
+     * 创建模板结果
+     *
+     * @param template      样板
+     * @param sysGenTable   sys-gen表
+     * @param sysGenColumns sys gen柱
+     * @param download      下载
+     * @return {@link TemplateResult}
+     */
+    private TemplateResult createTemplateResult(String template, SysGenTable sysGenTable, List<SysGenColumn> sysGenColumns, Download download) {
+        TemplateResult item = new TemplateResult();
+        String fileName = FileUtils.getBaseName(template);
+        VelocityInitializer.initVelocity();
+        VelocityContext context = VelocityUtils.prepareContext(sysGenTable, sysGenColumns, download);
+        item.setName(fileName);
+        item.setType(FileUtils.getExtension(fileName));
+        try (StringWriter sw = new StringWriter()) {
+            Template tpl = Velocity.getTemplate(template, UTF_8);
+            tpl.merge(context, sw);
+            item.setContent(sw.toString());
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return item;
     }
 
     /**
