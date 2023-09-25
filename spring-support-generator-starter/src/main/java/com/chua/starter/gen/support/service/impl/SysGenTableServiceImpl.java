@@ -84,7 +84,6 @@ public class SysGenTableServiceImpl extends ServiceImpl<SysGenTableMapper, SysGe
                 tpl.merge(context, sw);
                 // 添加到zip
                 zip.putNextEntry(new ZipEntry(fileName));
-                System.out.println(sw.toString());
                 IoUtils.write(zip, StandardCharsets.UTF_8, false, sw.toString());
                 IoUtils.closeQuietly(sw);
                 zip.flush();
