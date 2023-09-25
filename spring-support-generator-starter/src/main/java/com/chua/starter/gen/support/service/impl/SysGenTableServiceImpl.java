@@ -10,6 +10,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.gen.support.entity.SysGenColumn;
 import com.chua.starter.gen.support.entity.SysGenTable;
 import com.chua.starter.gen.support.mapper.SysGenTableMapper;
+import com.chua.starter.gen.support.properties.GenProperties;
 import com.chua.starter.gen.support.query.Download;
 import com.chua.starter.gen.support.service.SysGenColumnService;
 import com.chua.starter.gen.support.service.SysGenTableService;
@@ -40,18 +41,16 @@ public class SysGenTableServiceImpl extends ServiceImpl<SysGenTableMapper, SysGe
     private final IdentifierGenerator identifierGenerator = new DefaultIdentifierGenerator(NetUtils.getLocalAddress());
     @Resource
     private SysGenColumnService sysGenColumnService;
+
+    @Resource
+    private GenProperties genProperties;
     @Override
     public byte[] downloadCode(Download download) {
-        ByteArrayOutputStream outputStream;
-        ZipOutputStream zip = null;
-        try {
-            outputStream = new ByteArrayOutputStream();
-            zip = new ZipOutputStream(outputStream);
-            generatorCode(download.getTabIds(), zip, download);
-            return outputStream.toByteArray();
-        } finally {
-            IoUtils.closeQuietly(zip);
-        }
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        ZipOutputStream zip = new ZipOutputStream(outputStream);
+        generatorCode(download.getTabIds(), zip, download);
+        IoUtils.closeQuietly(zip);
+        return outputStream.toByteArray();
     }
 
     /**
@@ -72,19 +71,22 @@ public class SysGenTableServiceImpl extends ServiceImpl<SysGenTableMapper, SysGe
         VelocityContext context = VelocityUtils.prepareContext(sysGenTable, sysGenColumns, download);
 
         // 获取模板列表
-        List<String> templates = VelocityUtils.getTemplateList(sysGenTable.getTabTplCategory());
+        List<String> templates = VelocityUtils.getTemplateList(genProperties.getTemplatePath());
         for (String template : templates) {
-            String fileName = VelocityUtils.getFileName(template, sysGenTable);
+            String fileName = VelocityUtils.getFileName(template, sysGenTable, download);
             if(StringUtils.isEmpty(fileName)) {
                 continue;
             }
             // 渲染模板
-            try( StringWriter sw = new StringWriter();) {
+            try {
+                StringWriter sw = new StringWriter();
                 Template tpl = Velocity.getTemplate(template, UTF_8);
                 tpl.merge(context, sw);
                 // 添加到zip
                 zip.putNextEntry(new ZipEntry(fileName));
+                System.out.println(sw.toString());
                 IoUtils.write(zip, StandardCharsets.UTF_8, false, sw.toString());
+                IoUtils.closeQuietly(sw);
                 zip.flush();
                 zip.closeEntry();
             } catch (IOException e) {
@@ -111,6 +113,7 @@ public class SysGenTableServiceImpl extends ServiceImpl<SysGenTableMapper, SysGe
             table.setTabPkColumn(sysGenColumns.get(0));
         }
     }
+
 
 
 }

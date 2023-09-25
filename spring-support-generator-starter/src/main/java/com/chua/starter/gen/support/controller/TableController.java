@@ -2,6 +2,10 @@ package com.chua.starter.gen.support.controller;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.chua.common.support.constant.CommonConstant;
+import com.chua.common.support.database.sqldialect.Dialect;
+import com.chua.common.support.lang.date.DateTime;
+import com.chua.common.support.lang.date.constant.DateFormatConstant;
 import com.chua.common.support.utils.ArrayUtils;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.StringUtils;
@@ -113,18 +117,18 @@ public class TableController {
      * 批生成代码
      * 批量生成代码
      *
-     * @param tabIds 选项卡ID
+     * @param download 选项卡ID
      * @return {@link ResponseEntity}<{@link byte[]}>
      * @throws IOException IOException
      */
     @PostMapping("/batchGenCode")
-    public ResponseEntity<byte[]> batchGenCode(Download download) throws IOException {
+    public ResponseEntity<byte[]> batchGenCode(@RequestBody Download download) throws IOException {
         byte[] data = sysGenTableService.downloadCode(download);
         return ResponseEntity.ok()
                 .header("Content-Length", String.valueOf(data.length))
                 .header("Access-Control-Allow-Origin", "*")
                 .header("Access-Control-Expose-Headers", "Content-Disposition")
-                .header("Content-Disposition", "attachment; filename=\"code.zip\"")
+                .header("Content-Disposition", "attachment; filename=\"code"+ DateTime.now().toString(DateFormatConstant.YYYYMMDD) +".zip\"")
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .body(data);
 
@@ -144,6 +148,7 @@ public class TableController {
         }
         SysGen sysGen = getSysGen(query);
         try (Connection connection = getConnection(query);) {
+            Dialect dialect = Dialect.guessDialect(connection);
             for (String s : tableName) {
                 DatabaseMetaData metaData = connection.getMetaData();
                 ResultSet tableResultSet = metaData.getTables(null, null, s, new String[]{"table"});
@@ -158,7 +163,7 @@ public class TableController {
                 List<SysGenColumn> rs = new LinkedList<>();
                 ResultSet resultSet = metaData.getColumns(null, null, s, null);
                 while (resultSet.next()) {
-                    rs.add(SysGenColumn.createSysGenColumn(sysGenTable, s, resultSet));
+                    rs.add(SysGenColumn.createSysGenColumn(dialect, sysGenTable, s, resultSet));
                 }
 
                 sysGenColumnService.saveBatch(rs);
@@ -167,7 +172,7 @@ public class TableController {
 
         } catch (Exception e) {
             e.printStackTrace();
-            return ReturnResult.error(null, "导入失败");
+            throw new RuntimeException("导入失败");
         }
 
         return ReturnResult.ok();
@@ -207,8 +212,13 @@ public class TableController {
     @GetMapping("delete")
     @Transactional(rollbackFor = Exception.class)
     public ReturnResult<Boolean> deleteTable(String tableId) {
-        sysGenTableService.removeById(tableId);
-        sysGenColumnService.remove(Wrappers.<SysGenColumn>lambdaQuery().eq(SysGenColumn::getTabId, tableId));
+        if(StringUtils.isEmpty(tableId)) {
+            return ReturnResult.illegal("请选择删除的表");
+        }
+        for (String s : tableId.split(CommonConstant.SYMBOL_COMMA)) {
+            sysGenTableService.removeById(s);
+            sysGenColumnService.remove(Wrappers.<SysGenColumn>lambdaQuery().eq(SysGenColumn::getTabId, s));
+        }
         return ReturnResult.ok();
     }
 

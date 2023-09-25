@@ -13,20 +13,24 @@ public class GenProperties {
     /**
      * 作者
      */
-    public String author;
+    private String author;
 
     /**
      * 生成包路径
      */
-    public String packageName;
+    private String packageName;
+    /**
+     * 模板路径
+     */
 
+    private String templatePath;
     /**
      * 自动去除表前缀，默认是false
      */
-    public boolean autoRemovePre;
+    private boolean autoRemovePre;
 
     /**
      * 表前缀(类名不会包含表前缀)
      */
-    public String tablePrefix;
+    private String tablePrefix;
 }

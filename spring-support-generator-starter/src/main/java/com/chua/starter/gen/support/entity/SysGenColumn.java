@@ -4,7 +4,10 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.constant.NameConstant;
+import com.chua.common.support.database.sqldialect.Dialect;
+import com.chua.common.support.unit.name.NamingCase;
 import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
 
@@ -138,12 +141,13 @@ public class SysGenColumn implements Serializable {
     /**
      * 创建sys-gen列
      *
+     * @param dialect     dialect
      * @param sysGenTable sys-gen表
      * @param tableName   表名称
      * @param resultSet   结果集
      * @return {@link com.chua.starter.gen.support.entity.SysGenColumn}
      */
-    public static com.chua.starter.gen.support.entity.SysGenColumn createSysGenColumn(SysGenTable sysGenTable, String tableName, ResultSet resultSet) throws SQLException {
+    public static com.chua.starter.gen.support.entity.SysGenColumn createSysGenColumn(Dialect dialect, SysGenTable sysGenTable, String tableName, ResultSet resultSet) throws SQLException {
         SysGenColumn column = new SysGenColumn();
         column.setTabId(sysGenTable.getTabId());
         column.setColQueryType(NameConstant.QUERY_EQ);
@@ -157,12 +161,26 @@ public class SysGenColumn implements Serializable {
             column.setColColumnComment(resultSet.getString("REMARKS"));
             column.setColIsRequired(resultSet.getInt("NULLABLE") == 0 ? "0" : "1");
             column.setColIsIncrement("YES".equalsIgnoreCase(resultSet.getString("IS_AUTOINCREMENT")) ? "1" : "0");
+            if(CommonConstant.ONE_STR.equals(column.getColIsIncrement())) {
+                column.setColIsPk("1");
+            }
+            int columnSize = resultSet.getInt("COLUMN_SIZE");
+            if(columnSize > 0) {
+                String decimalDigits = resultSet.getString("DECIMAL_DIGITS");
+                if(null != decimalDigits) {
+                    column.setColColumnType(column.getColColumnType() + "(" + columnSize + ", "+ decimalDigits +")");
+                } else {
+                    column.setColColumnType(column.getColColumnType() + "(" + columnSize + ")");
+                }
+            }
             dataType = getDbType(column.getColColumnType());
             columnName = column.getColColumnName();
-
+            column.setColJavaField(NamingCase.toCamelCase(column.getColColumnName()));
+            column.setColJavaType(dialect.toJavaType(dataType).getSimpleName());
         } catch (Exception ignored) {
 
         }
+        dataType = dataType.toLowerCase();
         if (arraysContains(NameConstant.COLUMNTYPE_STR, dataType) || arraysContains(NameConstant.COLUMNTYPE_TEXT, dataType)) {
             // 字符串长度超过500设置为文本域
             Integer columnLength = getColumnLength(column.getColColumnType());
@@ -176,7 +194,7 @@ public class SysGenColumn implements Serializable {
 
             // 如果是浮点型 统一用BigDecimal
             String[] str = StringUtils.split(StringUtils.substringBetween(column.getColColumnType(), "(", ")"), ",");
-            if (str != null && str.length == 2 && Integer.parseInt(str[1]) > 0) {
+            if (str != null && str.length == 2 && Integer.parseInt(str[1].trim()) > 0) {
                 column.setColJavaType(NameConstant.TYPE_BIGDECIMAL);
             }
             // 如果是整形
@@ -210,11 +228,11 @@ public class SysGenColumn implements Serializable {
         }
 
         // 查询字段类型
-        if (StringUtils.endsWithIgnoreCase(columnName, "name")) {
+        if (StringUtils.endsWithIgnoreCase(columnName, NAME)) {
             column.setColQueryType(QUERY_LIKE);
         }
         // 状态字段设置单选框
-        if (StringUtils.endsWithIgnoreCase(columnName, "status")) {
+        if (StringUtils.endsWithIgnoreCase(columnName, STATUS_NAME)) {
             column.setColHtmlType(HTML_RADIO);
         }
         // 类型&性别字段设置下拉框
@@ -223,16 +241,23 @@ public class SysGenColumn implements Serializable {
             column.setColHtmlType(HTML_SELECT);
         }
         // 图片字段设置图片上传控件
-        else if (StringUtils.endsWithIgnoreCase(columnName, "image")) {
+        else if (StringUtils.endsWithIgnoreCase(columnName, NameConstant.IMAGE_NAME)) {
             column.setColHtmlType(HTML_IMAGE_UPLOAD);
         }
         // 文件字段设置文件上传控件
-        else if (StringUtils.endsWithIgnoreCase(columnName, "file")) {
+        else if (StringUtils.endsWithIgnoreCase(columnName, FILE)) {
             column.setColHtmlType(HTML_FILE_UPLOAD);
         }
         // 内容字段设置富文本控件
-        else if (StringUtils.endsWithIgnoreCase(columnName, "content")) {
+        else if (StringUtils.endsWithIgnoreCase(columnName, NameConstant.CONTENT_NAME)) {
             column.setColHtmlType(HTML_EDITOR);
+        }
+
+        if(VERSION.equals(column.getColColumnName())) {
+            column.setColJavaType("version");
+        }
+        if(IS_DELETE.equalsIgnoreCase(column.getColColumnName())) {
+            column.setColJavaType("delFlag");
         }
         return column;
     }
