@@ -5,6 +5,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.result.Result;
 import com.chua.starter.config.constant.ConfigConstant;
 import com.chua.starter.config.server.support.uniform.Uniform;
+import com.chua.starter.sse.support.Emitter;
 import com.chua.starter.sse.support.SseTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -50,6 +51,6 @@ public class UniformController {
         if (StringUtils.isBlank(mode)) {
             throw new RuntimeException("订阅的任务不存在");
         }
-        return sseTemplate.createSseEmitter(ConfigConstant.SUBSCRIBE_SSE, mode);
+        return sseTemplate.createSseEmitter(Emitter.builder().clientId(ConfigConstant.SUBSCRIBE_SSE).event(mode).build());
     }
 }
