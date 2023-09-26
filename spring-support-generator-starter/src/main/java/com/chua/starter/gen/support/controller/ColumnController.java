@@ -11,7 +11,6 @@ import com.chua.starter.gen.support.query.SysGenColumnUpdate;
 import com.chua.starter.gen.support.service.SysGenColumnService;
 import com.chua.starter.gen.support.service.SysGenService;
 import com.chua.starter.gen.support.service.SysGenTableService;
-import com.chua.starter.gen.support.vo.TableResult;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiParam;
@@ -49,7 +48,7 @@ public class ColumnController {
     /**
      * 表格列表
      *
-     * @return {@link ReturnPageResult}<{@link TableResult}>
+     * @return {@link ReturnPageResult}
      */
     @Operation(summary = "获取表的字段列表")
     @GetMapping("column")
@@ -72,7 +71,7 @@ public class ColumnController {
     /**
      * 更新表字段信息
      *
-     * @return {@link ReturnPageResult}<{@link TableResult}>
+     * @return {@link ReturnPageResult}
      */
     @Operation(summary = "更新表字段信息")
     @PutMapping("update")
@@ -89,7 +88,7 @@ public class ColumnController {
     /**
      * 查询表信息
      *
-     * @return {@link ReturnPageResult}<{@link TableResult}>
+     * @return {@link ReturnPageResult}
      */
     @GetMapping("info")
     public ReturnResult<List<SysGenColumn>> info(String tabId) {
