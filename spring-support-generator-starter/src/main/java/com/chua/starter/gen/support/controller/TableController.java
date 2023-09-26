@@ -101,8 +101,8 @@ public class TableController implements InitializingBean {
      * @return 任务ID
      */
     @Permission(role = {"ADMIN", "OPS"})
-    @GetMapping(value = "subscribe/{mode}")
-    public SseEmitter subscribe(String id, @PathVariable String mode, HttpServletRequest request) throws IOException {
+    @GetMapping(value = "subscribe/{id}/{mode}")
+    public SseEmitter subscribe(@PathVariable String id, @PathVariable String mode, HttpServletRequest request) throws IOException {
         if (StringUtils.isBlank(mode)) {
             throw new RuntimeException("订阅的任务不存在");
         }
@@ -132,7 +132,7 @@ public class TableController implements InitializingBean {
         subscribeInfo.setEmitter(sseEmitter);
         NetAddress netAddress = NetAddress.of(sysGen.getGenUrl());
         SubscribeEventbus subscribeEventbus = ServiceProvider.of(SubscribeEventbus.class)
-                .getNewExtension(netAddress.getProtocol());
+                .getNewExtension(netAddress.getProtocol(), netAddress.getHost());
         if(null == subscribeEventbus) {
             throw new RuntimeException("暂不支持日志");
         }
