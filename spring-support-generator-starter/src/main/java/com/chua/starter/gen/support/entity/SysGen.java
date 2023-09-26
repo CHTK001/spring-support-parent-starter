@@ -74,8 +74,16 @@ public class SysGen implements Serializable {
     @TableField(value = "create_time")
     private Date createTime;
 
+    /**
+     * 选项卡名称
+     */
     @TableField(exist = false)
     private String tabName;
+    /**
+     * 制表符备注
+     */
+    @TableField(exist = false)
+    private String tabDesc;
 
     private static final long serialVersionUID = 1L;
 

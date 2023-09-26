@@ -159,13 +159,20 @@ public class TableController {
         SysGen sysGen = sysGenService.getOne(new MPJLambdaWrapper<SysGen>()
                 .selectAll(SysGen.class)
                     .select(SysGenTable::getTabName)
+                    .select(SysGenTable::getTabDesc)
                 .leftJoin(SysGenTable.class, SysGenTable::getGenId, SysGen::getGenId)
                 .eq(SysGenTable::getTabId, tabId)
         );
         try (DatabaseHandler handler = new DatabaseHandler(sysGen.newDatabaseConfig())) {
             List<SysGenColumn> sysGenColumns = sysGenColumnService.list(Wrappers.<SysGenColumn>lambdaQuery().eq(SysGenColumn::getTabId, tabId));
+            TableResult tableResult = new TableResult();
+            tableResult.setDatabase(sysGen.getGenDatabase());
+            tableResult.setTableName(sysGen.getTabName());
+            tableResult.setRemark(sysGen.getTabDesc());
+            handler.updateTable(tableResult);
             handler.updateColumn(sysGenColumns.stream().map(it -> {
                 ColumnResult columnResult = new ColumnResult();
+                columnResult.setDatabaseName(sysGen.getGenDatabase());
                 columnResult.setDecimalDigits(it.getColColumnDecimal());
                 columnResult.setColumnSize(it.getColColumnLength());
                 columnResult.setColumnName(it.getColColumnName());
@@ -174,6 +181,8 @@ public class TableController {
                 columnResult.setTableName(sysGen.getTabName());
                 return columnResult;
             }).collect(Collectors.toSet()));
+        } catch (Exception e) {
+            throw new RuntimeException("同步失败");
         }
         return ReturnResult.ok();
     }
