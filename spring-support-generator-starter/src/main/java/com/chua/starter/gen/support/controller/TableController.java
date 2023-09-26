@@ -136,7 +136,6 @@ public class TableController {
     }
 
     /**
-     * 批生成代码
      * 批量生成代码
      *
      * @param tabId tabId
@@ -146,6 +145,18 @@ public class TableController {
     @GetMapping("/template")
     public ReturnResult<List<TemplateResult>> template(Integer tabId) throws IOException {
         return ReturnResult.ok(sysGenTableService.template(tabId));
+    }
+
+    /**
+     * 同步表结构
+     *
+     * @param tabId tabId
+     * @return {@link ResponseEntity}<{@link byte[]}>
+     * @throws IOException IOException
+     */
+    @GetMapping("/sync")
+    public ReturnResult<Boolean> sync(Integer tabId) throws IOException {
+        return ReturnResult.ok();
     }
 
     /**
