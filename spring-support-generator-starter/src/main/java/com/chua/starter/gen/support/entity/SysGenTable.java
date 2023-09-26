@@ -121,6 +121,9 @@ public class SysGenTable implements Serializable {
     @TableField(exist = false)
     private List<SysGenColumn> tabColumns;
 
+    @TableField(exist = false)
+    private String tabDb;
+
 
     private static final long serialVersionUID = 1L;
 
@@ -140,6 +143,7 @@ public class SysGenTable implements Serializable {
         com.chua.starter.gen.support.entity.SysGenTable sysGenTable = new com.chua.starter.gen.support.entity.SysGenTable();
         sysGenTable.setGenId(genId);
         sysGenTable.setTabDesc(tableResultSet.getString("REMARKS"));
+        sysGenTable.setTabDb(tableResultSet.getString("TABLE_CAT"));
         sysGenTable.setTabName(tableName);
         sysGenTable.setTabClassName(NamingCase.toHyphenUpperCamel(sysGenTable.getTabName()));
         sysGenTable.setTabPackageName(genProperties.getPackageName());
