@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.common.support.database.DatabaseConfig;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 
@@ -73,5 +74,23 @@ public class SysGen implements Serializable {
     @TableField(value = "create_time")
     private Date createTime;
 
+    @TableField(exist = false)
+    private String tabName;
+
     private static final long serialVersionUID = 1L;
+
+    /**
+     * 新数据库配置
+     *
+     * @return {@link DatabaseConfig}
+     */
+    public DatabaseConfig newDatabaseConfig() {
+        DatabaseConfig databaseConfig = new DatabaseConfig();
+        databaseConfig.setDatabase(genDatabase);
+        databaseConfig.setDriver(genDriver);
+        databaseConfig.setUrl(genUrl);
+        databaseConfig.setUser(genUser);
+        databaseConfig.setPassword(genPassword);
+        return databaseConfig;
+    }
 }

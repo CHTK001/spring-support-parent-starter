@@ -3,6 +3,9 @@ package com.chua.starter.gen.support.controller;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.constant.CommonConstant;
+import com.chua.common.support.database.DatabaseHandler;
+import com.chua.common.support.database.entity.ColumnResult;
+import com.chua.common.support.database.entity.TableResult;
 import com.chua.common.support.database.sqldialect.Dialect;
 import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.lang.date.constant.DateFormatConstant;
@@ -22,8 +25,8 @@ import com.chua.starter.gen.support.result.TemplateResult;
 import com.chua.starter.gen.support.service.SysGenColumnService;
 import com.chua.starter.gen.support.service.SysGenService;
 import com.chua.starter.gen.support.service.SysGenTableService;
-import com.chua.starter.gen.support.vo.TableResult;
 import com.chua.starter.mybatis.utils.PageResultUtils;
+import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import io.swagger.annotations.Api;
 import org.springframework.context.ApplicationContext;
 import org.springframework.http.MediaType;
@@ -33,11 +36,14 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import java.io.IOException;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 生成器控制器
@@ -73,19 +79,10 @@ public class TableController {
     public ReturnPageResult<TableResult> tableList(TableQuery query) {
         SysGen sysGen = getSysGen(query);
         String database = null != sysGen ? sysGen.getGenDatabase() : null;
-        List<TableResult> results = new LinkedList<>();
-        try (Connection connection = getConnection(sysGen, query);) {
-            DatabaseMetaData metaData = connection.getMetaData();
-
-            ResultSet resultSet = metaData.getTables(database, null, "%", new String[]{"table"});
-            while (resultSet.next()) {
-                TableResult item = new TableResult();
-                item.setTableName(resultSet.getString("TABLE_NAME"));
-                item.setDatabase(resultSet.getString("TABLE_CAT"));
-                item.setRemark(resultSet.getString("REMARKS"));
-                results.add(item);
-            }
-        } catch (SQLException e) {
+        List<TableResult> results;
+        try (DatabaseHandler handler = new DatabaseHandler(sysGen.newDatabaseConfig())) {
+            results = handler.getTables(database, "%");
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
 
@@ -155,7 +152,29 @@ public class TableController {
      * @throws IOException IOException
      */
     @GetMapping("/sync")
-    public ReturnResult<Boolean> sync(Integer tabId) throws IOException {
+    public ReturnResult<Boolean> sync(Integer tabId) throws Exception {
+        if(null == tabId) {
+            return ReturnResult.illegal("表信息不存在");
+        }
+        SysGen sysGen = sysGenService.getOne(new MPJLambdaWrapper<SysGen>()
+                .selectAll(SysGen.class)
+                    .select(SysGenTable::getTabName)
+                .leftJoin(SysGenTable.class, SysGenTable::getGenId, SysGen::getGenId)
+                .eq(SysGenTable::getTabId, tabId)
+        );
+        try (DatabaseHandler handler = new DatabaseHandler(sysGen.newDatabaseConfig())) {
+            List<SysGenColumn> sysGenColumns = sysGenColumnService.list(Wrappers.<SysGenColumn>lambdaQuery().eq(SysGenColumn::getTabId, tabId));
+            handler.updateColumn(sysGenColumns.stream().map(it -> {
+                ColumnResult columnResult = new ColumnResult();
+                columnResult.setDecimalDigits(it.getColColumnDecimal());
+                columnResult.setColumnSize(it.getColColumnLength());
+                columnResult.setColumnName(it.getColColumnName());
+                columnResult.setRemarks(it.getColColumnComment());
+                columnResult.setTypeName(it.getColColumnType());
+                columnResult.setTableName(sysGen.getTabName());
+                return columnResult;
+            }).collect(Collectors.toSet()));
+        }
         return ReturnResult.ok();
     }
 
@@ -172,24 +191,21 @@ public class TableController {
             return ReturnResult.error(null, "表不存在");
         }
         SysGen sysGen = getSysGen(query);
-        try (Connection connection = getConnection(query);) {
-            Dialect dialect = Dialect.guessDialect(connection);
+        try (DatabaseHandler handler = new DatabaseHandler(sysGen.newDatabaseConfig())) {
+            Dialect dialect = handler.guessDialect();
             for (String s : tableName) {
-                DatabaseMetaData metaData = connection.getMetaData();
-                ResultSet tableResultSet = metaData.getTables(null, null, s, new String[]{"table"});
+                List<TableResult> tables = handler.getTables(null, s);
                 SysGenTable sysGenTable = null;
-                while (tableResultSet.next()) {
-                    sysGenTable = SysGenTable.createSysGenTable(query.getGenId(), s, tableResultSet, genProperties);
-                }
-
-                if(null != sysGenTable && null != sysGen) {
+                if(!tables.isEmpty()) {
+                    sysGenTable = SysGenTable.createSysGenTable(query.getGenId(), s, tables.get(0), genProperties);
                     sysGenTable.setGenName(sysGen.getGenName());
                     sysGenTableService.save(sysGenTable);
                 }
+
                 List<SysGenColumn> rs = new LinkedList<>();
-                ResultSet resultSet = metaData.getColumns(sysGen.getGenDatabase(), null, s, null);
-                while (resultSet.next()) {
-                    rs.add(SysGenColumn.createSysGenColumn(dialect, sysGenTable, s, resultSet));
+                List<ColumnResult> resultSet = handler.getColumns(sysGen.getGenDatabase(),  s);
+                for (ColumnResult columnResult : resultSet) {
+                    rs.add(SysGenColumn.createSysGenColumn(dialect, sysGenTable, s, columnResult));
                 }
 
                 sysGenColumnService.saveBatch(rs);
