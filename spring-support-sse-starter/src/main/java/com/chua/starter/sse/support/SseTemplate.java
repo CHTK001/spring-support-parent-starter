@@ -4,11 +4,10 @@ import ch.rasc.sse.eventbus.SseEvent;
 import ch.rasc.sse.eventbus.SseEventBus;
 import ch.rasc.sse.eventbus.config.EnableSseEventBus;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.IdUtils;
+import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.ThreadUtils;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -31,7 +30,7 @@ import java.util.concurrent.TimeUnit;
  */
 @EnableSseEventBus
 public class SseTemplate implements DisposableBean, InitializingBean {
-    private static final Map<String, List<Sse>> sseCache = new ConcurrentHashMap<>();
+    private static final Map<String, List<Emitter>> sseCache = new ConcurrentHashMap<>();
     private final ScheduledExecutorService scheduledExecutorUpdateService = ThreadUtils.newScheduledThreadPoolExecutor("update-heart");
     @Resource
     private SseEventBus sseEventBus;
@@ -69,13 +68,13 @@ public class SseTemplate implements DisposableBean, InitializingBean {
 
     private void updateHeart(String[] clientIds) {
         for (String clientId : clientIds) {
-            List<Sse> sse = sseCache.get(clientId);
+            List<Emitter> sse = sseCache.get(clientId);
             if (null == sse) {
                 continue;
             }
 
-            for (Sse sse1 : sse) {
-                sse1.setCreateTime(System.currentTimeMillis());
+            for (Emitter sse1 : sse) {
+                sse1.setCreateTime(System.nanoTime());
             }
         }
     }
@@ -88,6 +87,11 @@ public class SseTemplate implements DisposableBean, InitializingBean {
     public void unSubscribe(String... clientIds) {
         for (String clientId : clientIds) {
             this.sseEventBus.unregisterClient(clientId);
+            List<Emitter> emitters = sseCache.get(clientId);
+            for (Emitter emitter : emitters) {
+                IoUtils.closeQuietly(emitter.getEntity());
+            }
+
             sseCache.remove(clientId);
         }
     }
@@ -99,39 +103,45 @@ public class SseTemplate implements DisposableBean, InitializingBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        long toMillis = TimeUnit.SECONDS.toMillis(30);
+        long toMillis = TimeUnit.SECONDS.toNanos(30);
         scheduledExecutorUpdateService.scheduleAtFixedRate(() -> {
-            for (List<Sse> sse : sseCache.values()) {
-                for (Sse sse1 : sse) {
+            for (List<Emitter> sse : sseCache.values()) {
+                for (Emitter sse1 : sse) {
                     if (System.currentTimeMillis() - sse1.getCreateTime() < toMillis) {
-                        unSubscribe(sse1.getTaskTid());
+                        unSubscribe(sse1.getClientId());
                     }
                 }
             }
-        }, 0, 10, TimeUnit.MINUTES);
+        }, 0, 3, TimeUnit.MINUTES);
     }
 
     /**
+     * 创建sse发射器
      * 创建任务
-     * @param clientId 客户端ID
-     * @param event     事件
+     *
+     * @param emitter 发射器
      * @return 结果
      */
-    public SseEmitter createSseEmitter(String clientId, String... event) {
-        SseEmitter sseEmitter = sseEventBus.createSseEmitter(clientId, event);
-        sseCache.computeIfAbsent(clientId, it -> new LinkedList<>()).add(new Sse(clientId, sseEmitter, System.currentTimeMillis()));
+    public SseEmitter createSseEmitter(Emitter emitter) {
+        SseEmitter sseEmitter = sseEventBus.createSseEmitter(emitter.getClientId(), emitter.getEvent().toArray(new String[0]));
+        emitter.setSseEmitter(sseEmitter);
+        sseCache.computeIfAbsent(emitter.getClientId(), it -> new LinkedList<>()).add(emitter);
         return sseEmitter;
     }
 
 
-    @Data
-    @AllArgsConstructor
-    @NoArgsConstructor
-    static final class Sse {
+    /**
+     * 获取（ss）发射器
+     *
+     * @param clientId 客户端id
+     * @return {@link SseEmitter}
+     */
+    public SseEmitter getSseEmitter(String clientId) {
+        List<Emitter> emitters = sseCache.get(clientId);
+        if (CollectionUtils.size(emitters) == 1) {
+            return emitters.get(0).getSseEmitter();
+        }
 
-        private String taskTid;
-
-        private SseEmitter sseEmitter;
-        private long createTime;
+        return null;
     }
 }
