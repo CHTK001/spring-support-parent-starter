@@ -211,9 +211,9 @@ public class TableController {
      *
      * @return {@link ReturnPageResult}<{@link TableResult}>
      */
-    @GetMapping("update")
+    @PutMapping("update")
     @Transactional(rollbackFor = Exception.class)
-    public ReturnResult<Boolean> updateTable(SysGenTable sysGenTable) {
+    public ReturnResult<Boolean> updateTable(@RequestBody SysGenTable sysGenTable) {
         sysGenTableService.updateById(sysGenTable);
         return ReturnResult.ok();
     }
@@ -234,6 +234,20 @@ public class TableController {
             sysGenColumnService.remove(Wrappers.<SysGenColumn>lambdaQuery().eq(SysGenColumn::getTabId, s));
         }
         return ReturnResult.ok();
+    }
+
+    /**
+     * 查询表信息
+     *
+     * @return {@link ReturnPageResult}<{@link TableResult}>
+     */
+    @GetMapping("info")
+    public ReturnResult<SysGenTable> info(String tabId) {
+        if(StringUtils.isEmpty(tabId)) {
+            return ReturnResult.illegal("暂无信息");
+        }
+        SysGenTable sysGenTable = sysGenTableService.getById(tabId);
+        return ReturnResult.ok(sysGenTable);
     }
 
     /**

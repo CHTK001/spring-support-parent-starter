@@ -13,6 +13,7 @@ import org.apache.commons.lang3.StringUtils;
 import java.io.Serializable;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.List;
 
 /**
  * sys-gen表
@@ -115,6 +116,12 @@ public class SysGenTable implements Serializable {
 
     @TableField(exist = false)
     private SysGenColumn tabPkColumn;
+
+
+    @TableField(exist = false)
+    private List<SysGenColumn> tabColumns;
+
+
     private static final long serialVersionUID = 1L;
 
     /**
