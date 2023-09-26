@@ -136,7 +136,7 @@ public class TableController implements InitializingBean {
                             .message(Json.toJson(map)).event(mode).build(), clientId);
                 }
             }
-        }).setName(clientId).setAction(Action.NONE));
+        }).setName(StringUtils.defaultString(sysGen.getTabName(), "*")).setAction(Action.NONE));
         Emitter emitter = Emitter.builder().clientId(clientId)
                 .event(mode)
                 .entity(subscribeEventbus)
