@@ -23,6 +23,7 @@ public class CommonConfigurationConfiguration implements EnvironmentPostProcesso
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         Properties properties = new Properties();
+        properties.setProperty("server.compression.enabled", "true");
         properties.setProperty("spring.datasource.url", "jdbc:sqlite:./sys");
         properties.setProperty("spring.datasource.driver-class-name", "org.sqlite.JDBC");
         properties.setProperty("spring.datasource.username", "sa");

@@ -59,6 +59,18 @@ public class SysGenColumn implements Serializable {
     private String colColumnType;
 
     /**
+     * 列长度
+     */
+    @TableField(value = "col_column_length")
+    private Integer colColumnLength;
+
+    /**
+     * 小数点长度
+     */
+    @TableField(value = "col_column_decimal")
+    private Integer colColumnDecimal;
+
+    /**
      * JAVA类型
      */
     @TableField(value = "col_java_type")
@@ -155,22 +167,22 @@ public class SysGenColumn implements Serializable {
         String dataType = null;
         // 设置默认类型
         column.setColJavaType(NameConstant.TYPE_STRING);
+        column.setColColumnDecimal(0);
         try {
             column.setColColumnName(resultSet.getString("COLUMN_NAME"));
             column.setColColumnType(resultSet.getString("TYPE_NAME"));
             column.setColColumnComment(resultSet.getString("REMARKS"));
-            column.setColIsRequired(resultSet.getInt("NULLABLE") == 0 ? "0" : "1");
+            column.setColIsRequired(resultSet.getInt("NULLABLE") == 0 ? "1" : "0");
             column.setColIsIncrement("YES".equalsIgnoreCase(resultSet.getString("IS_AUTOINCREMENT")) ? "1" : "0");
             if(CommonConstant.ONE_STR.equals(column.getColIsIncrement())) {
                 column.setColIsPk("1");
             }
             int columnSize = resultSet.getInt("COLUMN_SIZE");
+            column.setColColumnLength(columnSize);
             if(columnSize > 0) {
                 String decimalDigits = resultSet.getString("DECIMAL_DIGITS");
                 if(null != decimalDigits) {
-                    column.setColColumnType(column.getColColumnType() + "(" + columnSize + ", "+ decimalDigits +")");
-                } else {
-                    column.setColColumnType(column.getColColumnType() + "(" + columnSize + ")");
+                    column.setColColumnDecimal(Integer.valueOf(decimalDigits));
                 }
             }
             dataType = getDbType(column.getColColumnType());
@@ -194,11 +206,11 @@ public class SysGenColumn implements Serializable {
 
             // 如果是浮点型 统一用BigDecimal
             String[] str = StringUtils.split(StringUtils.substringBetween(column.getColColumnType(), "(", ")"), ",");
-            if (str != null && str.length == 2 && Integer.parseInt(str[1].trim()) > 0) {
+            if (column.getColColumnDecimal() > 0) {
                 column.setColJavaType(NameConstant.TYPE_BIGDECIMAL);
             }
             // 如果是整形
-            else if (str != null && str.length == 1 && Integer.parseInt(str[0]) <= 10) {
+            else if (column.getColColumnLength() <= 10) {
                 column.setColJavaType(NameConstant.TYPE_INTEGER);
             }
             // 长整形
@@ -213,10 +225,6 @@ public class SysGenColumn implements Serializable {
         // BO对象 默认编辑勾选
         if (!arraysContains(COLUMNNAME_NOT_EDIT, columnName)) {
             column.setColIsEdit(REQUIRE);
-        }
-        // BO对象 默认是否必填勾选
-        if (!arraysContains(COLUMNNAME_NOT_EDIT, columnName)) {
-            column.setColIsRequired(REQUIRE);
         }
         // VO对象 默认返回勾选
         if (!arraysContains(COLUMNNAME_NOT_LIST, columnName)) {
