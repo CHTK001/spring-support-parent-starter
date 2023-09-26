@@ -6,13 +6,13 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.constant.NameConstant;
+import com.chua.common.support.database.entity.ColumnResult;
 import com.chua.common.support.database.sqldialect.Dialect;
 import com.chua.common.support.unit.name.NamingCase;
 import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.Serializable;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import static com.chua.common.support.constant.CommonConstant.SYMBOL_LEFT_BRACKETS_CHAR;
@@ -159,7 +159,10 @@ public class SysGenColumn implements Serializable {
      * @param resultSet   结果集
      * @return {@link com.chua.starter.gen.support.entity.SysGenColumn}
      */
-    public static com.chua.starter.gen.support.entity.SysGenColumn createSysGenColumn(Dialect dialect, SysGenTable sysGenTable, String tableName, ResultSet resultSet) throws SQLException {
+    public static com.chua.starter.gen.support.entity.SysGenColumn createSysGenColumn(Dialect dialect,
+                                                                                      SysGenTable sysGenTable,
+                                                                                      String tableName,
+                                                                                      ColumnResult resultSet) throws SQLException {
         SysGenColumn column = new SysGenColumn();
         column.setTabId(sysGenTable.getTabId());
         column.setColQueryType(NameConstant.QUERY_EQ);
@@ -169,20 +172,20 @@ public class SysGenColumn implements Serializable {
         column.setColJavaType(NameConstant.TYPE_STRING);
         column.setColColumnDecimal(0);
         try {
-            column.setColColumnName(resultSet.getString("COLUMN_NAME"));
-            column.setColColumnType(resultSet.getString("TYPE_NAME"));
-            column.setColColumnComment(resultSet.getString("REMARKS"));
-            column.setColIsRequired(resultSet.getInt("NULLABLE") == 0 ? "1" : "0");
-            column.setColIsIncrement("YES".equalsIgnoreCase(resultSet.getString("IS_AUTOINCREMENT")) ? "1" : "0");
+            column.setColColumnName(resultSet.getColumnName());
+            column.setColColumnType(resultSet.getTypeName());
+            column.setColColumnComment(resultSet.getRemarks());
+            column.setColIsRequired(!resultSet.isNullable() ? "1" : "0");
+            column.setColIsIncrement(resultSet.isAutoIncrement() ? "1" : "0");
             if(CommonConstant.ONE_STR.equals(column.getColIsIncrement())) {
                 column.setColIsPk("1");
             }
-            int columnSize = resultSet.getInt("COLUMN_SIZE");
+            int columnSize = resultSet.getColumnSize();
             column.setColColumnLength(columnSize);
             if(columnSize > 0) {
-                String decimalDigits = resultSet.getString("DECIMAL_DIGITS");
+                Integer decimalDigits = resultSet.getDecimalDigits();
                 if(null != decimalDigits) {
-                    column.setColColumnDecimal(Integer.valueOf(decimalDigits));
+                    column.setColColumnDecimal(decimalDigits);
                 }
             }
             dataType = getDbType(column.getColColumnType());

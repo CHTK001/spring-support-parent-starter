@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.common.support.database.entity.TableResult;
 import com.chua.common.support.unit.name.NamingCase;
 import com.chua.starter.gen.support.properties.GenProperties;
 import lombok.Data;
@@ -11,7 +12,6 @@ import org.apache.commons.lang3.RegExUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.Serializable;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -138,12 +138,12 @@ public class SysGenTable implements Serializable {
      */
     public static com.chua.starter.gen.support.entity.SysGenTable createSysGenTable(Integer genId,
                                                                                     String tableName,
-                                                                                    ResultSet tableResultSet,
+                                                                                    TableResult tableResultSet,
                                                                                     GenProperties genProperties) throws SQLException {
         com.chua.starter.gen.support.entity.SysGenTable sysGenTable = new com.chua.starter.gen.support.entity.SysGenTable();
         sysGenTable.setGenId(genId);
-        sysGenTable.setTabDesc(tableResultSet.getString("REMARKS"));
-        sysGenTable.setTabDb(tableResultSet.getString("TABLE_CAT"));
+        sysGenTable.setTabDesc(tableResultSet.getRemark());
+        sysGenTable.setTabDb(tableResultSet.getDatabase());
         sysGenTable.setTabName(tableName);
         sysGenTable.setTabClassName(NamingCase.toHyphenUpperCamel(sysGenTable.getTabName()));
         sysGenTable.setTabPackageName(genProperties.getPackageName());
