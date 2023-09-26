@@ -28,6 +28,11 @@
 
         <dependency>
             <groupId>com.chua</groupId>
+            <artifactId>spring-support-sse-starter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.chua</groupId>
             <artifactId>spring-support-swagger-starter</artifactId>
         </dependency>
 

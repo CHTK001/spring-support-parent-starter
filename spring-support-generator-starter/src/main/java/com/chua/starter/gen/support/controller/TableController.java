@@ -2,19 +2,28 @@ package com.chua.starter.gen.support.controller;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.chua.common.support.annotations.Permission;
+import com.chua.common.support.constant.Action;
 import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.database.DatabaseHandler;
 import com.chua.common.support.database.entity.ColumnResult;
 import com.chua.common.support.database.entity.TableResult;
 import com.chua.common.support.database.sqldialect.Dialect;
+import com.chua.common.support.eventbus.StandardEventbusEvent;
+import com.chua.common.support.eventbus.SubscribeEventbus;
+import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.lang.date.constant.DateFormatConstant;
+import com.chua.common.support.net.NetAddress;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.ArrayUtils;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.common.support.result.PageResult;
 import com.chua.starter.common.support.result.ReturnPageResult;
 import com.chua.starter.common.support.result.ReturnResult;
+import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.gen.support.entity.SysGen;
 import com.chua.starter.gen.support.entity.SysGenColumn;
 import com.chua.starter.gen.support.entity.SysGenTable;
@@ -26,15 +35,22 @@ import com.chua.starter.gen.support.service.SysGenColumnService;
 import com.chua.starter.gen.support.service.SysGenService;
 import com.chua.starter.gen.support.service.SysGenTableService;
 import com.chua.starter.mybatis.utils.PageResultUtils;
+import com.chua.starter.sse.support.SseMessage;
+import com.chua.starter.sse.support.SseMessageType;
+import com.chua.starter.sse.support.SseTemplate;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import io.swagger.annotations.Api;
+import lombok.Data;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -43,6 +59,9 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -53,8 +72,11 @@ import java.util.stream.Collectors;
 @Api(tags = "表信息接口")
 @RestController
 @RequestMapping("v1/table")
-public class TableController {
+public class TableController implements InitializingBean {
+    private final ScheduledExecutorService scheduledExecutorUpdateService = ThreadUtils.newScheduledThreadPoolExecutor(
+            "update-table-log-heart");
 
+    private static final String NAME_TABLE = "TABLE";
     @Resource
     private SysGenService sysGenService;
 
@@ -68,8 +90,70 @@ public class TableController {
 
     @Resource
     private GenProperties genProperties;
+    @Resource
+    private SseTemplate sseTemplate;
+    private static final Map<String, SubscribeInfo> SUBSCRIBE_INFO_MAP = new ConcurrentHashMap<>();
 
+    /**
+     * 注册监听
+     *
+     * @param mode 任务ID
+     * @return 任务ID
+     */
+    @Permission(role = {"ADMIN", "OPS"})
+    @GetMapping(value = "subscribe/{mode}")
+    public SseEmitter subscribe(String id, @PathVariable String mode, HttpServletRequest request) throws IOException {
+        if (StringUtils.isBlank(mode)) {
+            throw new RuntimeException("订阅的任务不存在");
+        }
+        String key = RequestUtils.getIpAddress(request) + id + mode;
+        SysGen sysGen = null;
+        String name = "*";
+        if(NAME_TABLE.equalsIgnoreCase(mode)) {
+            sysGen = sysGenService.getOne(new MPJLambdaWrapper<SysGen>()
+                    .selectAll(SysGen.class)
+                    .select(SysGenTable::getTabName)
+                    .select(SysGenTable::getTabDesc)
+                    .leftJoin(SysGenTable.class, SysGenTable::getGenId, SysGen::getGenId)
+                    .eq(SysGenTable::getTabId, id)
+            );
+            name = sysGen.getTabName();
+        } else {
+            sysGen = sysGenService.getById(id);
+        }
 
+        SubscribeInfo subscribeInfo = SUBSCRIBE_INFO_MAP.get(key);
+        if(subscribeInfo != null) {
+            return subscribeInfo.getEmitter();
+        }
+        String clientId = sysGen.getGenDatabase() + "." + StringUtils.defaultString(sysGen.getTabName(), "*");
+        SseEmitter sseEmitter = sseTemplate.createSseEmitter(clientId, mode);
+        subscribeInfo = new SubscribeInfo();
+        subscribeInfo.setEmitter(sseEmitter);
+        NetAddress netAddress = NetAddress.of(sysGen.getGenUrl());
+        SubscribeEventbus subscribeEventbus = ServiceProvider.of(SubscribeEventbus.class)
+                .getNewExtension(netAddress.getProtocol());
+        if(null == subscribeEventbus) {
+            throw new RuntimeException("暂不支持日志");
+        }
+        StandardEventbusEvent eventbusEvent = new StandardEventbusEvent(maps -> {
+            sseTemplate.emit(SseMessage.builder()
+                            .event(mode)
+                            .message(Json.toJson(maps))
+                            .type(SseMessageType.NOTIFY)
+                    .build(),
+                    clientId);
+            SubscribeInfo subscribeInfo1 = SUBSCRIBE_INFO_MAP.get(key);
+            subscribeInfo1.updateTime();
+        });
+        eventbusEvent.setName(name);
+        eventbusEvent.setAction(Action.NONE);
+        subscribeEventbus.register(eventbusEvent);
+        subscribeInfo.setEventbus(subscribeEventbus);
+        subscribeInfo.setCreateTime(System.nanoTime());
+        SUBSCRIBE_INFO_MAP.put(key, subscribeInfo);
+        return sseEmitter;
+    }
     /**
      * 表格列表
      *
@@ -78,7 +162,10 @@ public class TableController {
     @GetMapping("table")
     public ReturnPageResult<TableResult> tableList(TableQuery query) {
         SysGen sysGen = getSysGen(query);
-        String database = null != sysGen ? sysGen.getGenDatabase() : null;
+        if(null == sysGen) {
+            return ReturnPageResult.illegal("表不存在");
+        }
+        String database = sysGen.getGenDatabase();
         List<TableResult> results;
         try (DatabaseHandler handler = new DatabaseHandler(sysGen.newDatabaseConfig())) {
             results = handler.getTables(database, "%");
@@ -338,4 +425,41 @@ public class TableController {
 
         return sysGenService.getById(query.getGenId());
     }
+
+    @Data
+    class SubscribeInfo {
+        private SubscribeEventbus eventbus;
+
+        private long createTime;
+
+        private SseEmitter emitter;
+
+        public void updateTime() {
+            this.createTime = System.nanoTime();
+        }
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        long toMillis = TimeUnit.SECONDS.toNanos(30);
+        scheduledExecutorUpdateService.scheduleAtFixedRate(() -> {
+            List<String> deleteKey = new LinkedList<>();
+            for (Map.Entry<String, SubscribeInfo> entry : SUBSCRIBE_INFO_MAP.entrySet()) {
+                SubscribeInfo sse = entry.getValue();
+                if (System.nanoTime() - sse.getCreateTime() < toMillis) {
+                    try {
+                        sse.getEventbus().close();
+                        deleteKey.add(entry.getKey());
+                    } catch (Exception ignored) {
+                    }
+                }
+            }
+
+            for (String s : deleteKey) {
+                SUBSCRIBE_INFO_MAP.remove(s);
+            }
+
+        }, 0, 10, TimeUnit.MINUTES);
+    }
+
 }
