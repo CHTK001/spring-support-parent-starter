@@ -93,6 +93,8 @@ public class SysGenTableServiceImpl extends ServiceImpl<SysGenTableMapper, SysGe
         TemplateResult item = new TemplateResult();
         String fileName = FileUtils.getBaseName(template);
         VelocityInitializer.initVelocity();
+        // 设置主键列信息
+        setPkColumn(sysGenTable, sysGenColumns);
         VelocityContext context = VelocityUtils.prepareContext(sysGenTable, sysGenColumns, download);
         item.setName(fileName);
         item.setType(FileUtils.getExtension(fileName));
