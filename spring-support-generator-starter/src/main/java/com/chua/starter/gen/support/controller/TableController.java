@@ -170,12 +170,13 @@ public class TableController {
                 while (tableResultSet.next()) {
                     sysGenTable = SysGenTable.createSysGenTable(query.getGenId(), s, tableResultSet, genProperties);
                 }
+
                 if(null != sysGenTable && null != sysGen) {
                     sysGenTable.setGenName(sysGen.getGenName());
                     sysGenTableService.save(sysGenTable);
                 }
                 List<SysGenColumn> rs = new LinkedList<>();
-                ResultSet resultSet = metaData.getColumns(null, null, s, null);
+                ResultSet resultSet = metaData.getColumns(sysGen.getGenDatabase(), null, s, null);
                 while (resultSet.next()) {
                     rs.add(SysGenColumn.createSysGenColumn(dialect, sysGenTable, s, resultSet));
                 }
