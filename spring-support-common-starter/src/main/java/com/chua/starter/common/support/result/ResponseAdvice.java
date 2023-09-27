@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.result;
 
+import com.chua.common.support.file.univocity.parsers.conversions.Validator;
 import com.chua.common.support.lang.exception.AuthenticationException;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.annotations.Ignore;
@@ -216,8 +217,11 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
     @ExceptionHandler(RuntimeException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> handleRuntimeException(RuntimeException e) {
-        log.error("unknown exception: {}", e);
-        return Result.failed("当前系统不支持该功能/操作");
+        log.error("unknown exception: {}", e.getMessage());
+        if(Validator.hasChinese(e.getMessage())) {
+            return Result.failed(e);
+        }
+        return Result.failed("当前系统版本不支持该功能/操作");
     }
 
     /**
