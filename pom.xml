@@ -41,7 +41,6 @@
         <module>spring-support-rpc-starter</module>
         <module>spring-support-subscribe-starter</module>
         <module>spring-support-generator-starter</module>
-        <module>spring-support-database-starter</module>
     </modules>
 
     <properties>
