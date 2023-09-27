@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.chua.common.support.database.DatabaseConfig;
+import com.chua.common.support.database.sqldialect.Dialect;
+import com.chua.common.support.utils.StringUtils;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 
@@ -50,6 +52,16 @@ public class SysGen implements Serializable {
      */
     @TableField(value = "gen_driver")
     private String genDriver;
+    /**
+     * 驱动包路径
+     */
+    @TableField(value = "gen_driver_file")
+    private String genDriverFile;
+    /**
+     * 数据路径
+     */
+    @TableField(value = "gen_database_file")
+    private String genDatabaseFile;
 
     /**
      * 数据库类型
@@ -73,7 +85,11 @@ public class SysGen implements Serializable {
      */
     @TableField(value = "create_time")
     private Date createTime;
-
+    /**
+     * 数据库
+     */
+    @TableField(value = "gen_database_type")
+    private String genDatabaseType;
     /**
      * 选项卡名称
      */
@@ -95,10 +111,12 @@ public class SysGen implements Serializable {
     public DatabaseConfig newDatabaseConfig() {
         DatabaseConfig databaseConfig = new DatabaseConfig();
         databaseConfig.setDatabase(genDatabase);
+        databaseConfig.setDriverPath(getGenDriverFile());
         databaseConfig.setDriver(genDriver);
-        databaseConfig.setUrl(genUrl);
+        databaseConfig.setDatabaseFile(genDatabaseFile);
         databaseConfig.setUser(genUser);
         databaseConfig.setPassword(genPassword);
+        databaseConfig.setUrl(StringUtils.defaultString(genUrl, Dialect.create(this.genType).getUrl(databaseConfig)));
         return databaseConfig;
     }
 }
