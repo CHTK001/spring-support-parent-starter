@@ -21,7 +21,7 @@ import java.util.List;
  * @author CH
  */
 @RestController
-@RequestMapping("gen/v1/db")
+@RequestMapping("v1/db")
 public class DatabaseController {
 
     @Resource
