@@ -19,6 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import java.io.File;
+import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 
@@ -95,8 +96,9 @@ public class DatabaseController {
             sysGen.setGenDatabaseFile(driver.getData().toString());
         }
 
-        if("DATABASE-TYPE".equalsIgnoreCase(sysGen.getGenType())) {
-            sysGen.setGenType("");
+        Dialect dialect = Dialect.create(sysGen.getGenType());
+        if(null != dialect) {
+            sysGen.setGenUrl(dialect.getUrl(sysGen.newDatabaseConfig()));
         }
         if(null != genDriverFile || null != getDatabaseFile) {
             sysGenService.updateById(sysGen);
@@ -147,6 +149,11 @@ public class DatabaseController {
     @GetMapping("delete")
     public ReturnResult<Boolean> delete(String id) {
         sysGenService.removeById(id);
+        File mkdir = FileUtils.mkdir(new File(genProperties.getTempPath(), id));
+        try {
+            FileUtils.forceMkdir(mkdir);
+        } catch (IOException e) {
+        }
         return ReturnResult.ok(true);
     }
 
