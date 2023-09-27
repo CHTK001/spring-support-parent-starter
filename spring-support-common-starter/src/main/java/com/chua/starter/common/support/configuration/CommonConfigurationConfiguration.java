@@ -24,8 +24,10 @@ public class CommonConfigurationConfiguration implements EnvironmentPostProcesso
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         Properties properties = new Properties();
         properties.setProperty("server.compression.enabled", "true");
-        properties.setProperty("spring.datasource.url", "jdbc:sqlite:./sys");
-        properties.setProperty("spring.datasource.driver-class-name", "org.sqlite.JDBC");
+//        properties.setProperty("spring.datasource.url", "jdbc:sqlite:./sys");
+//        properties.setProperty("spring.datasource.driver-class-name", "org.sqlite.JDBC");
+        properties.setProperty("spring.datasource.url", "jdbc:h2:./sys");
+        properties.setProperty("spring.datasource.driver-class-name", "org.h2.Driver");
         properties.setProperty("spring.datasource.username", "sa");
         properties.setProperty("spring.datasource.password", "");
         properties.setProperty("logging.level.org.zbus.net.tcp.TcpClient", "OFF");
