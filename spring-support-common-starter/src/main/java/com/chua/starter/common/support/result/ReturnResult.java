@@ -5,6 +5,8 @@ import com.chua.common.support.lang.code.ResultCode;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Objects;
+
 import static com.chua.starter.common.support.result.ReturnCode.*;
 
 /**
@@ -252,5 +254,14 @@ public class ReturnResult<T> {
     @Override
     public String toString() {
         return null == data ? "Empty" : data.toString();
+    }
+
+    /**
+     * 可以
+     *
+     * @return boolean
+     */
+    public boolean isOk() {
+        return Objects.equals(code, SUCCESS.getCode());
     }
 }
