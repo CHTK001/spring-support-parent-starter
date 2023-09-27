@@ -12,7 +12,7 @@ public class ResourceConfiguration implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        registry.addResourceHandler("/assets-gen/**").addResourceLocations("classpath:/static/gen/assets-gen/")
+        registry.addResourceHandler("/assets-gen/**").addResourceLocations("classpath:/static/gen/assets/")
                 .setUseLastModified(true);
         registry.addResourceHandler("/gen-ui.html").addResourceLocations("classpath:/static/gen/");
     }
