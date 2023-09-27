@@ -17,7 +17,10 @@ import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.lang.date.constant.DateFormatConstant;
 import com.chua.common.support.net.NetAddress;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.utils.*;
+import com.chua.common.support.utils.ArrayUtils;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.common.support.result.PageResult;
 import com.chua.starter.common.support.result.ReturnPageResult;
 import com.chua.starter.common.support.result.ReturnResult;
@@ -37,7 +40,6 @@ import com.chua.starter.sse.support.Emitter;
 import com.chua.starter.sse.support.SseMessage;
 import com.chua.starter.sse.support.SseTemplate;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
-import io.swagger.annotations.Api;
 import lombok.Data;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
@@ -60,7 +62,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -68,9 +69,8 @@ import java.util.stream.Collectors;
  *
  * @author CH
  */
-@Api(tags = "表信息接口")
 @RestController
-@RequestMapping("v1/table")
+@RequestMapping("gen/v1/table")
 public class TableController implements InitializingBean {
     private final ScheduledExecutorService scheduledExecutorUpdateService = ThreadUtils.newScheduledThreadPoolExecutor(
             "update-table-log-heart");
@@ -127,14 +127,10 @@ public class TableController implements InitializingBean {
         if (null == subscribeEventbus) {
             throw new RuntimeException("暂不支持日志");
         }
-        subscribeEventbus.register(new StandardEventbusEvent(new Consumer<List<Map<String, Object>>>() {
-            @Override
-            public void accept(List<Map<String, Object>> maps) {
-                for (Map<String, Object> map : maps) {
-                    String action = MapUtils.getString(map, "action");
-                    sseTemplate.emit(SseMessage.builder()
-                            .message(Json.toJson(map)).event(mode).build(), clientId);
-                }
+        subscribeEventbus.register(new StandardEventbusEvent(maps -> {
+            for (Map<String, Object> map : maps) {
+                sseTemplate.emit(SseMessage.builder()
+                        .message(Json.toJson(map)).event(mode).build(), clientId);
             }
         }).setName(StringUtils.defaultString(sysGen.getTabName(), "*")).setAction(Action.NONE));
         Emitter emitter = Emitter.builder().clientId(clientId)

@@ -12,9 +12,9 @@ public class ResourceConfiguration implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        registry.addResourceHandler("/assets/**").addResourceLocations("classpath:/static/conf/assets/")
+        registry.addResourceHandler("/conf/assets/**").addResourceLocations("classpath:/static/conf/assets")
                 .setUseLastModified(true);
-        registry.addResourceHandler("index.html").addResourceLocations("classpath:/static/conf/");
+        registry.addResourceHandler("/conf/index.html").addResourceLocations("classpath:/static/");
     }
 
 }
