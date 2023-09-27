@@ -70,7 +70,7 @@ import java.util.stream.Collectors;
  * @author CH
  */
 @RestController
-@RequestMapping("gen/v1/table")
+@RequestMapping("v1/table")
 public class TableController implements InitializingBean {
     private final ScheduledExecutorService scheduledExecutorUpdateService = ThreadUtils.newScheduledThreadPoolExecutor(
             "update-table-log-heart");

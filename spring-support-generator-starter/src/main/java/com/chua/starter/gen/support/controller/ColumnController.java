@@ -25,7 +25,7 @@ import java.util.List;
  * @author CH
  */
 @RestController
-@RequestMapping("gen/v1/column")
+@RequestMapping("v1/column")
 public class ColumnController {
 
     @Resource
