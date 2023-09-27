@@ -1,4 +1,5 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-  com.xxl.job.admin.configuration.SchedulerConfiguration
+  com.xxl.job.admin.configuration.SchedulerConfiguration,\
+  com.xxl.job.admin.configuration.ResourceConfiguration
 org.springframework.boot.env.EnvironmentPostProcessor=\
   com.xxl.job.admin.configuration.SchedulerConfigurationConfiguration
