@@ -19,6 +19,23 @@ public class DatabaseType {
     private String driverUrl;
     private DatabaseEnum database;
 
+    private JdbcType jdbcType = JdbcType.JDBC;
+
+    private boolean log;
+
+
+    public static enum JdbcType {
+        /**
+         * jdbc
+         */
+        JDBC,
+
+        /**
+         * nosql
+         */
+        NOSQL,
+
+    }
 
     public static enum DatabaseEnum {
         /**
