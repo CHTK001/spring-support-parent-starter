@@ -116,7 +116,14 @@ public class SysGen implements Serializable {
         databaseConfig.setDatabaseFile(genDatabaseFile);
         databaseConfig.setUser(genUser);
         databaseConfig.setPassword(genPassword);
-        databaseConfig.setUrl(StringUtils.defaultString(genUrl, Dialect.create(this.genType).getUrl(databaseConfig)));
+        if(StringUtils.isNotEmpty(genUrl)) {
+            databaseConfig.setUrl(genUrl);
+        } else {
+            Dialect dialect = Dialect.create(this.genType);
+            if(null != dialect) {
+                databaseConfig.setUrl(dialect.getUrl(databaseConfig));
+            }
+        }
         return databaseConfig;
     }
 }

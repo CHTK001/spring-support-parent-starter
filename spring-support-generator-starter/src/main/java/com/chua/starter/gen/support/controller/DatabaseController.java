@@ -1,6 +1,7 @@
 package com.chua.starter.gen.support.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.chua.common.support.database.sqldialect.Dialect;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.FileUtils;
 import com.chua.starter.common.support.result.ReturnPageResult;
@@ -129,8 +130,9 @@ public class DatabaseController {
             }
             sysGen.setGenDatabaseFile(driver.getData().toString());
         }
-        if("DATABASE-FILE".equalsIgnoreCase(sysGen.getGenType())) {
-            sysGen.setGenUrl("");
+        Dialect dialect = Dialect.create(sysGen.getGenType());
+        if(null != dialect) {
+            sysGen.setGenUrl(dialect.getUrl(sysGen.newDatabaseConfig()));
         }
 
         sysGenService.updateById(sysGen);
