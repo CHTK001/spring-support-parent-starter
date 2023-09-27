@@ -12,9 +12,6 @@ import com.chua.starter.gen.support.service.SysGenColumnService;
 import com.chua.starter.gen.support.service.SysGenService;
 import com.chua.starter.gen.support.service.SysGenTableService;
 import com.chua.starter.mybatis.utils.PageResultUtils;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiParam;
-import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.context.ApplicationContext;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.bind.annotation.*;
@@ -27,9 +24,8 @@ import java.util.List;
  *
  * @author CH
  */
-@Api(tags = "表信息接口")
 @RestController
-@RequestMapping("v1/column")
+@RequestMapping("gen/v1/column")
 public class ColumnController {
 
     @Resource
@@ -50,12 +46,8 @@ public class ColumnController {
      *
      * @return {@link ReturnPageResult}
      */
-    @Operation(summary = "获取表的字段列表")
     @GetMapping("column")
-    public ReturnPageResult<SysGenColumn> columnList(
-            @ApiParam("表ID") String tableId,
-            @ApiParam("页码") @RequestParam(value = "page", defaultValue = "1") Integer pageNum,
-            @ApiParam("每页数量") @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize
+    public ReturnPageResult<SysGenColumn> columnList( String tableId, @RequestParam(value = "page", defaultValue = "1") Integer pageNum,  @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize
             ) {
         SysGenTable sysGenTable = sysGenTableService.getById(tableId);
         if(null == sysGenTable) {
@@ -73,7 +65,6 @@ public class ColumnController {
      *
      * @return {@link ReturnPageResult}
      */
-    @Operation(summary = "更新表字段信息")
     @PutMapping("update")
     public ReturnResult<Boolean> updateColumn(@RequestBody SysGenColumnUpdate sysGenColumnUpdate) {
         List<SysGenColumn> columns = sysGenColumnUpdate.getColumns();

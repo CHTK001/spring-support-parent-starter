@@ -7,7 +7,6 @@ import com.chua.starter.gen.support.entity.SysGen;
 import com.chua.starter.gen.support.service.SysGenService;
 import com.chua.starter.gen.support.vo.DataSourceResult;
 import com.chua.starter.mybatis.utils.PageResultUtils;
-import io.swagger.annotations.ApiParam;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,7 +21,7 @@ import java.util.List;
  * @author CH
  */
 @RestController
-@RequestMapping("v1/db")
+@RequestMapping("gen/v1/db")
 public class DatabaseController {
 
     @Resource
@@ -40,8 +39,8 @@ public class DatabaseController {
      * @return {@link ReturnResult}<{@link List}<{@link DataSourceResult}>>
      */
     @GetMapping("list")
-    public ReturnPageResult<SysGen> list(@ApiParam("页码") @RequestParam(value = "page", defaultValue = "1") Integer pageNum,
-                                         @ApiParam("每页数量") @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
+    public ReturnPageResult<SysGen> list(@RequestParam(value = "page", defaultValue = "1") Integer pageNum,
+                                         @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
 
         return PageResultUtils.<SysGen>ok(sysGenService.page(new Page<>(pageNum, pageSize)));
     }
