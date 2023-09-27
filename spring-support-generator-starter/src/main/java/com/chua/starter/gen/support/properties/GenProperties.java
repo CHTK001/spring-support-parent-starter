@@ -15,6 +15,11 @@ public class GenProperties {
      */
     private String author;
 
+
+    /**
+     * 临时路径
+     */
+    private String tempPath = "gen";
     /**
      * 生成包路径
      */
