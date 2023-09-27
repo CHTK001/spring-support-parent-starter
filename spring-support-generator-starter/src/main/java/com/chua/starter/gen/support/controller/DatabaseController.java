@@ -89,7 +89,7 @@ public class DatabaseController {
         }
 
         if(null != getDatabaseFile) {
-            ReturnResult driver = MultipartFileUtils.transferTo(getDatabaseFile, mkdir, "driver");
+            ReturnResult driver = MultipartFileUtils.transferTo(getDatabaseFile, mkdir, "database");
             if(!driver.isOk()) {
                 return driver;
             }
@@ -126,7 +126,7 @@ public class DatabaseController {
         }
 
         if(null != getDatabaseFile) {
-            ReturnResult driver = MultipartFileUtils.transferTo(getDatabaseFile, mkdir, "driver");
+            ReturnResult driver = MultipartFileUtils.transferTo(getDatabaseFile, mkdir, "database");
             if(!driver.isOk()) {
                 return driver;
             }
