@@ -53,7 +53,7 @@ public class DatabaseController {
         File mkdir = FileUtils.mkdir(new File(genProperties.getTempPath(), query.getGenId() + ""));
         if("driver".equals(query.getType())) {
             try {
-                FileUtils.forceMkdir(new File(query.getPath()));
+                FileUtils.forceDelete(new File(query.getPath()));
             } catch (IOException e) {
                 e.printStackTrace();
                 return ReturnResult.illegal("卸载失败");
@@ -65,7 +65,7 @@ public class DatabaseController {
 
         if("database".equals(query.getType())) {
             try {
-                FileUtils.forceMkdir(new File(query.getPath()));
+                FileUtils.forceDelete(new File(query.getPath()));
             } catch (IOException e) {
                 e.printStackTrace();
                 return ReturnResult.illegal("卸载失败");
