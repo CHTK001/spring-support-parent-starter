@@ -9,6 +9,7 @@ import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.common.support.utils.MultipartFileUtils;
 import com.chua.starter.gen.support.entity.SysGen;
 import com.chua.starter.gen.support.properties.GenProperties;
+import com.chua.starter.gen.support.query.DeleteFileQuery;
 import com.chua.starter.gen.support.result.DatabaseType;
 import com.chua.starter.gen.support.service.SysGenService;
 import com.chua.starter.gen.support.vo.DataSourceResult;
@@ -41,6 +42,41 @@ public class DatabaseController {
     @Resource
     private ApplicationContext applicationContext;
     private static final String MYSQL = "mysql";
+    /**
+     * 删除文件
+     *
+     * @return {@link ReturnResult}<{@link List}<{@link DataSourceResult}>>
+     */
+    @PostMapping("deleteFile")
+    public ReturnResult<Boolean> deleteFile(@RequestBody DeleteFileQuery query) {
+        SysGen sysGen = sysGenService.getById(query.getGenId());
+        File mkdir = FileUtils.mkdir(new File(genProperties.getTempPath(), query.getGenId() + ""));
+        if("driver".equals(query.getType())) {
+            try {
+                FileUtils.forceMkdir(new File(query.getPath()));
+            } catch (IOException e) {
+                e.printStackTrace();
+                return ReturnResult.illegal("卸载失败");
+            }
+            sysGen.setGenDriverFile("");
+            sysGenService.updateById(sysGen);
+            return ReturnResult.ok();
+        }
+
+        if("database".equals(query.getType())) {
+            try {
+                FileUtils.forceMkdir(new File(query.getPath()));
+            } catch (IOException e) {
+                e.printStackTrace();
+                return ReturnResult.illegal("卸载失败");
+            }
+            sysGen.setGenDatabaseFile("");
+            sysGenService.updateById(sysGen);
+            return ReturnResult.ok();
+        }
+
+        return ReturnResult.illegal("不支持该操作");
+    }
     /**
      * 支持列表
      *
