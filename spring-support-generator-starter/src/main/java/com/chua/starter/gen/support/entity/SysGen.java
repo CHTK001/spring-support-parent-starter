@@ -88,6 +88,16 @@ public class SysGen implements Serializable {
     /**
      * 数据库
      */
+    @TableField(value = "gen_jdbc_type")
+    private String genJdbcType;
+    /**
+     * 数据库
+     */
+    @TableField(value = "gen_log")
+    private String genLog;
+    /**
+     * 数据库
+     */
     @TableField(value = "gen_database_type")
     private String genDatabaseType;
     /**
