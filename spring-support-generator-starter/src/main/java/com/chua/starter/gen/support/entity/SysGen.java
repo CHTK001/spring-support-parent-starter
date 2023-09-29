@@ -15,7 +15,7 @@ import java.util.Date;
 
 @Data
 @TableName(value = "sys_gen")
-@JsonIgnoreProperties("genPassword")
+@JsonIgnoreProperties({"genPassowrd", "dbcDriverUrl"})
 public class SysGen implements Serializable {
     /**
      * 主键
@@ -52,16 +52,12 @@ public class SysGen implements Serializable {
      */
     @TableField(value = "gen_driver")
     private String genDriver;
+
     /**
-     * 驱动包路径
+     * 数据库
      */
-    @TableField(value = "gen_driver_file")
-    private String genDriverFile;
-    /**
-     * 数据路径
-     */
-    @TableField(value = "gen_database_file")
-    private String genDatabaseFile;
+    @TableField(value = "gen_database")
+    private String genDatabase;
 
     /**
      * 数据库类型
@@ -70,48 +66,58 @@ public class SysGen implements Serializable {
     private String genType;
 
     /**
-     * UId
+     * 配置ID
      */
-    @TableField(value = "gen_uid")
-    private String genUid;
+    @TableField(value = "dbc_id")
+    private Integer dbcId;
 
     /**
-     * 数据库
+     * 数据库文件目录
      */
-    @TableField(value = "gen_database")
-    private String genDatabase;
+    @TableField(value = "gen_database_file")
+    private String genDatabaseFile;
+
     /**
      * 创建时间
      */
     @TableField(value = "create_time")
     private Date createTime;
+
     /**
-     * 数据库
+     * 更新时间
      */
-    @TableField(value = "gen_jdbc_type")
-    private String genJdbcType;
-    /**
-     * 数据库
-     */
-    @TableField(value = "gen_log")
-    private String genLog;
-    /**
-     * 数据库
-     */
-    @TableField(value = "gen_database_type")
-    private String genDatabaseType;
+    @TableField(value = "update_time")
+    private Date updateTime;
+
+    private static final long serialVersionUID = 1L;
     /**
      * 选项卡名称
      */
     @TableField(exist = false)
     private String tabName;
+
+
+    /**
+     * 是否有日志
+     */
+    @TableField(exist = false)
+    private String dbcLog;
+
+    /**
+     * 驱动文件地址,服务器生成
+     */
+    @TableField(exist = false)
+    private String dbcDriverUrl;
+    /**
+     * 控制台地址
+     */
+    @TableField(exist = false)
+    private String dbcConsoleUrl;
     /**
      * 制表符备注
      */
     @TableField(exist = false)
     private String tabDesc;
-
-    private static final long serialVersionUID = 1L;
 
     /**
      * 新数据库配置
@@ -121,16 +127,15 @@ public class SysGen implements Serializable {
     public DatabaseConfig newDatabaseConfig() {
         DatabaseConfig databaseConfig = new DatabaseConfig();
         databaseConfig.setDatabase(genDatabase);
-        databaseConfig.setDriverPath(getGenDriverFile());
         databaseConfig.setDriver(genDriver);
         databaseConfig.setDatabaseFile(genDatabaseFile);
         databaseConfig.setUser(genUser);
         databaseConfig.setPassword(genPassword);
-        if(StringUtils.isNotEmpty(genUrl)) {
+        if (StringUtils.isNotEmpty(genUrl)) {
             databaseConfig.setUrl(genUrl);
         } else {
             Dialect dialect = Dialect.create(this.genType);
-            if(null != dialect) {
+            if (null != dialect) {
                 databaseConfig.setUrl(dialect.getUrl(databaseConfig));
             }
         }

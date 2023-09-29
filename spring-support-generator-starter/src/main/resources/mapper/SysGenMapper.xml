@@ -10,13 +10,16 @@
     <result column="gen_user" jdbcType="VARCHAR" property="genUser" />
     <result column="gen_password" jdbcType="VARCHAR" property="genPassword" />
     <result column="gen_driver" jdbcType="VARCHAR" property="genDriver" />
-    <result column="gen_type" jdbcType="VARCHAR" property="genType" />
-    <result column="gen_uid" jdbcType="VARCHAR" property="genUid" />
     <result column="gen_database" jdbcType="VARCHAR" property="genDatabase" />
+    <result column="gen_type" jdbcType="VARCHAR" property="genType" />
+    <result column="dbc_id" jdbcType="INTEGER" property="dbcId" />
+    <result column="gen_database_file" jdbcType="VARCHAR" property="genDatabaseFile" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
-    gen_id, gen_name, gen_url, gen_user, gen_password, gen_driver, gen_type, gen_uid, 
-    gen_database
+    gen_id, gen_name, gen_url, gen_user, gen_password, gen_driver, gen_database, gen_type, 
+    dbc_id, gen_database_file, create_time, update_time
   </sql>
 </mapper>
