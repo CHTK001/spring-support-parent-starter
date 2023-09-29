@@ -2,18 +2,18 @@ package com.chua.starter.gen.support.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.database.sqldialect.Dialect;
-import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.FileUtils;
 import com.chua.starter.common.support.result.ReturnPageResult;
 import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.common.support.utils.MultipartFileUtils;
 import com.chua.starter.gen.support.entity.SysGen;
+import com.chua.starter.gen.support.entity.SysGenConfig;
 import com.chua.starter.gen.support.properties.GenProperties;
 import com.chua.starter.gen.support.query.DeleteFileQuery;
-import com.chua.starter.gen.support.result.DatabaseType;
 import com.chua.starter.gen.support.service.SysGenService;
 import com.chua.starter.gen.support.vo.DataSourceResult;
 import com.chua.starter.mybatis.utils.PageResultUtils;
+import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -51,40 +51,15 @@ public class DatabaseController {
     public ReturnResult<Boolean> deleteFile(@RequestBody DeleteFileQuery query) {
         SysGen sysGen = sysGenService.getById(query.getGenId());
         File mkdir = FileUtils.mkdir(new File(genProperties.getTempPath(), query.getGenId() + ""));
-        if("driver".equals(query.getType())) {
-            try {
-                FileUtils.forceDelete(new File(query.getPath()));
-            } catch (IOException e) {
-                e.printStackTrace();
-                return ReturnResult.illegal("卸载失败");
-            }
-            sysGen.setGenDriverFile("");
-            sysGenService.updateById(sysGen);
-            return ReturnResult.ok();
+        try {
+            FileUtils.forceDelete(new File(sysGen.getGenDatabaseFile()));
+        } catch (IOException e) {
+            e.printStackTrace();
+            return ReturnResult.illegal("卸载失败");
         }
-
-        if("database".equals(query.getType())) {
-            try {
-                FileUtils.forceDelete(new File(query.getPath()));
-            } catch (IOException e) {
-                e.printStackTrace();
-                return ReturnResult.illegal("卸载失败");
-            }
-            sysGen.setGenDatabaseFile("");
-            sysGenService.updateById(sysGen);
-            return ReturnResult.ok();
-        }
-
-        return ReturnResult.illegal("不支持该操作");
-    }
-    /**
-     * 支持列表
-     *
-     * @return {@link ReturnResult}<{@link List}<{@link DataSourceResult}>>
-     */
-    @GetMapping("support")
-    public ReturnResult<List<DatabaseType>> support() {
-        return ReturnResult.ok(Json.fromJsonToList(ClassLoader.getSystemResourceAsStream("database.conf"), DatabaseType.class));
+        sysGen.setGenDatabaseFile("");
+        sysGenService.updateById(sysGen);
+        return ReturnResult.ok();
     }
 
     /**
@@ -96,7 +71,13 @@ public class DatabaseController {
     public ReturnPageResult<SysGen> list(@RequestParam(value = "page", defaultValue = "1") Integer pageNum,
                                          @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
 
-        return PageResultUtils.<SysGen>ok(sysGenService.page(new Page<>(pageNum, pageSize)));
+        return PageResultUtils.<SysGen>ok(sysGenService.page(
+                new Page<>(pageNum, pageSize),
+                new MPJLambdaWrapper<SysGen>()
+                        .selectAll(SysGenConfig.class)
+                        .selectAll(SysGen.class)
+                        .innerJoin(SysGenConfig.class, SysGenConfig::getDbcId, SysGen::getDbcId)
+        ));
     }
 
     /**
@@ -105,40 +86,16 @@ public class DatabaseController {
      * @return {@link ReturnResult}<{@link List}<{@link DataSourceResult}>>
      */
     @PostMapping("save")
-    public ReturnResult<SysGen> save(SysGen sysGen,
-                                     @RequestParam(value = "genDriverFile", required = false) MultipartFile genDriverFile,
-                                     @RequestParam(value = "getDatabaseFile", required = false) MultipartFile getDatabaseFile
-    ) {
+    public ReturnResult<SysGen> save(@RequestBody SysGen sysGen) {
         if (sysGen.getGenUrl().contains(MYSQL) && !sysGen.getGenUrl().contains("?")) {
             sysGen.setGenUrl(sysGen.getGenUrl() + "?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true");
         }
         sysGen.setCreateTime(new Date());
-        sysGenService.save(sysGen);
-        File mkdir = FileUtils.mkdir(new File(genProperties.getTempPath(), sysGen.getGenId() + ""));
-        if(null != genDriverFile) {
-            ReturnResult driver = MultipartFileUtils.transferTo(genDriverFile, mkdir, "driver");
-            if(!driver.isOk()) {
-                return driver;
-            }
-
-            sysGen.setGenDriverFile(driver.getData().toString());
-        }
-
-        if(null != getDatabaseFile) {
-            ReturnResult driver = MultipartFileUtils.transferTo(getDatabaseFile, mkdir, "database");
-            if(!driver.isOk()) {
-                return driver;
-            }
-            sysGen.setGenDatabaseFile(driver.getData().toString());
-        }
-
         Dialect dialect = Dialect.create(sysGen.getGenType());
         if(null != dialect) {
             sysGen.setGenUrl(dialect.getUrl(sysGen.newDatabaseConfig()));
         }
-        if(null != genDriverFile || null != getDatabaseFile) {
-            sysGenService.updateById(sysGen);
-        }
+        sysGenService.save(sysGen);
         return ReturnResult.ok(sysGen);
     }
 
@@ -148,29 +105,30 @@ public class DatabaseController {
      * @return {@link ReturnResult}<{@link List}<{@link DataSourceResult}>>
      */
     @PostMapping("update")
-    public ReturnResult<SysGen> update(SysGen sysGen,
-                                       @RequestParam(value = "genDriverFile", required = false) MultipartFile genDriverFile,
-                                       @RequestParam(value = "getDatabaseFile", required = false) MultipartFile getDatabaseFile) {
-        File mkdir = FileUtils.mkdir(new File(genProperties.getTempPath(), sysGen.getGenId() + ""));
-        if(null != genDriverFile) {
-            ReturnResult driver = MultipartFileUtils.transferTo(genDriverFile, mkdir, "driver");
-            if(!driver.isOk()) {
-                return driver;
-            }
-
-            sysGen.setGenDriverFile(driver.getData().toString());
+    public ReturnResult<SysGen> update(@RequestBody SysGen sysGen) {
+        Dialect dialect = Dialect.create(sysGen.getGenType());
+        if(null != dialect) {
+            sysGen.setGenUrl(dialect.getUrl(sysGen.newDatabaseConfig()));
         }
 
+        sysGenService.updateById(sysGen);
+        return ReturnResult.ok(sysGen);
+    }
+    /**
+     * 列表
+     *
+     * @return {@link ReturnResult}<{@link List}<{@link DataSourceResult}>>
+     */
+    @PostMapping("uploadDriver")
+    public ReturnResult<SysGen> uploadDrvier(SysGen sysGen, @RequestParam(value = "getDatabaseFile", required = false) MultipartFile getDatabaseFile) {
+        File mkdir = FileUtils.mkdir(new File(genProperties.getTempPath(), sysGen.getGenId() + ""));
+
         if(null != getDatabaseFile) {
-            ReturnResult driver = MultipartFileUtils.transferTo(getDatabaseFile, mkdir, "database");
+            ReturnResult driver = MultipartFileUtils.transferTo(getDatabaseFile, mkdir, "database", true);
             if(!driver.isOk()) {
                 return driver;
             }
             sysGen.setGenDatabaseFile(driver.getData().toString());
-        }
-        Dialect dialect = Dialect.create(sysGen.getGenType());
-        if(null != dialect) {
-            sysGen.setGenUrl(dialect.getUrl(sysGen.newDatabaseConfig()));
         }
 
         sysGenService.updateById(sysGen);
@@ -187,7 +145,7 @@ public class DatabaseController {
         sysGenService.removeById(id);
         File mkdir = FileUtils.mkdir(new File(genProperties.getTempPath(), id));
         try {
-            FileUtils.forceMkdir(mkdir);
+            FileUtils.forceDelete(mkdir);
         } catch (IOException e) {
         }
         return ReturnResult.ok(true);
