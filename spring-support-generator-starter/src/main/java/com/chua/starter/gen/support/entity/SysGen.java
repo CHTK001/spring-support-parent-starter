@@ -130,14 +130,10 @@ public class SysGen implements Serializable {
         databaseConfig.setDriver(genDriver);
         databaseConfig.setDatabaseFile(genDatabaseFile);
         databaseConfig.setUser(genUser);
+        databaseConfig.setDriverPath(dbcDriverUrl);
         databaseConfig.setPassword(genPassword);
         if (StringUtils.isNotEmpty(genUrl)) {
             databaseConfig.setUrl(genUrl);
-        } else {
-            Dialect dialect = Dialect.create(this.genType);
-            if (null != dialect) {
-                databaseConfig.setUrl(dialect.getUrl(databaseConfig));
-            }
         }
         return databaseConfig;
     }

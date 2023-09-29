@@ -27,6 +27,7 @@ import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.gen.support.entity.SysGen;
 import com.chua.starter.gen.support.entity.SysGenColumn;
+import com.chua.starter.gen.support.entity.SysGenConfig;
 import com.chua.starter.gen.support.entity.SysGenTable;
 import com.chua.starter.gen.support.properties.GenProperties;
 import com.chua.starter.gen.support.query.Download;
@@ -39,6 +40,7 @@ import com.chua.starter.mybatis.utils.PageResultUtils;
 import com.chua.starter.sse.support.Emitter;
 import com.chua.starter.sse.support.SseMessage;
 import com.chua.starter.sse.support.SseTemplate;
+import com.github.yulichang.query.MPJLambdaQueryWrapper;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.Data;
 import org.springframework.beans.factory.InitializingBean;
@@ -413,7 +415,12 @@ public class TableController implements InitializingBean {
             return null;
         }
 
-        return sysGenService.getById(query.getGenId());
+        return CollectionUtils.findFirst(sysGenService.list(new MPJLambdaWrapper<SysGen>()
+                .selectAll(SysGen.class)
+                .selectAll(SysGenConfig.class)
+                .innerJoin(SysGenConfig.class, SysGenConfig::getDbcId, SysGen::getDbcId)
+                .eq(SysGen::getGenId, query.getGenId()))
+        );
     }
 
     @Data
