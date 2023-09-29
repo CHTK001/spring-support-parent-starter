@@ -132,6 +132,7 @@ public class SysGen implements Serializable {
         databaseConfig.setUser(genUser);
         databaseConfig.setDriverPath(dbcDriverUrl);
         databaseConfig.setPassword(genPassword);
+        databaseConfig.setGenType(genType);
         if (StringUtils.isNotEmpty(genUrl)) {
             databaseConfig.setUrl(genUrl);
         }
