@@ -3,6 +3,7 @@ package com.chua.starter.common.support.result;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -31,7 +32,7 @@ public class PageResult<T> {
     /**
      * 數據
      */
-    private List<T> data;
+    private Collection<T> data;
 
     private static final PageResult EMPTY = PageResult.builder().build();
 
