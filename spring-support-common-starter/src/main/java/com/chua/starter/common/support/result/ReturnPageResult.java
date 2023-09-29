@@ -7,6 +7,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import static com.chua.starter.common.support.result.ReturnCode.*;
@@ -78,6 +80,34 @@ public class ReturnPageResult<T> {
     }
 
     /**
+     * 好啊
+     * 初始化
+     *
+     * @param data 数据
+     * @return 结果
+     */
+    public static <T> ReturnPageResult<T> ok(Collection<T> data) {
+        return ok(PageResult.<T>builder()
+                .data(data)
+                .total(data.size())
+                .build());
+    }
+
+    /**
+     * 好啊
+     * 初始化
+     *
+     * @param data  数据
+     * @param total 全部
+     * @return 结果
+     */
+    public static <T> ReturnPageResult<T> ok(Collection<T> data, int total) {
+        return ok(PageResult.<T>builder()
+                .data(data)
+                .total(total)
+                .build());
+    }
+    /**
      * 初始化
      *
      * @param data 数据
@@ -115,7 +145,7 @@ public class ReturnPageResult<T> {
      * @return 结果
      */
     public static <T> ReturnPageResult<T> ok() {
-        return ok(null);
+        return ok(Collections.emptyList());
     }
 
     /**

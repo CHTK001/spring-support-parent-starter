@@ -57,10 +57,7 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -153,11 +150,15 @@ public class TableController implements InitializingBean {
             return ReturnPageResult.illegal("表不存在");
         }
         String database = sysGen.getGenDatabase();
-        List<TableResult> results;
+        List<TableResult> results = null;
         try (DatabaseHandler handler = new DatabaseHandler(sysGen.newDatabaseConfig())) {
             results = handler.getTables(database, "%");
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
+        }
+
+        if(CollectionUtils.isEmpty(results)) {
+            return ReturnPageResult.ok(Collections.emptyList());
         }
 
         Map<String, TableResult> tpl = new HashMap<>(results.size());
@@ -279,19 +280,27 @@ public class TableController implements InitializingBean {
             for (String s : tableName) {
                 List<TableResult> tables = handler.getTables(null, s);
                 SysGenTable sysGenTable = null;
-                if(!tables.isEmpty()) {
+                if(CollectionUtils.isNotEmpty(tables)) {
                     sysGenTable = SysGenTable.createSysGenTable(query.getGenId(), s, tables.get(0), genProperties);
                     sysGenTable.setGenName(sysGen.getGenName());
                     sysGenTableService.save(sysGenTable);
                 }
 
-                List<SysGenColumn> rs = new LinkedList<>();
-                List<ColumnResult> resultSet = handler.getColumns(sysGen.getGenDatabase(),  s);
-                for (ColumnResult columnResult : resultSet) {
-                    rs.add(SysGenColumn.createSysGenColumn(dialect, sysGenTable, s, columnResult));
+                List<ColumnResult> resultSet = null;
+                try {
+                    resultSet = handler.getColumns(sysGen.getGenDatabase(),  s);
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
 
-                sysGenColumnService.saveBatch(rs);
+                if(CollectionUtils.isNotEmpty(resultSet)) {
+                    List<SysGenColumn> rs = new LinkedList<>();
+                    for (ColumnResult columnResult : resultSet) {
+                        rs.add(SysGenColumn.createSysGenColumn(dialect, sysGenTable, s, columnResult));
+                    }
+
+                    sysGenColumnService.saveBatch(rs);
+                }
             }
 
 
