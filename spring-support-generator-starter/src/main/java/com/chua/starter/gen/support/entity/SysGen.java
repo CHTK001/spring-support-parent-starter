@@ -62,7 +62,7 @@ public class SysGen implements Serializable {
     /**
      * 数据库类型
      */
-    @TableField(value = "gen_type")
+    @TableField(exist = false)
     private String genType;
 
     /**

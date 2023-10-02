@@ -218,6 +218,7 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> handleRuntimeException(RuntimeException e) {
         log.error("unknown exception: {}", e.getMessage());
+        e.printStackTrace();
         if(Validator.hasChinese(e.getMessage())) {
             return Result.failed(e);
         }
