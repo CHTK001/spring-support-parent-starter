@@ -8,6 +8,7 @@ import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.constant.NameConstant;
 import com.chua.common.support.database.DatabaseHandler;
 import com.chua.common.support.database.entity.ColumnResult;
+import com.chua.common.support.database.entity.DatabaseResult;
 import com.chua.common.support.database.entity.TableResult;
 import com.chua.common.support.database.sqldialect.Dialect;
 import com.chua.common.support.eventbus.StandardEventbusEvent;
@@ -138,6 +139,7 @@ public class TableController implements InitializingBean {
                 .build();
         return sseTemplate.createSseEmitter(emitter);
     }
+
     /**
      * 表格列表
      *

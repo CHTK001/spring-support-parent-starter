@@ -19,6 +19,11 @@ public class TableQuery extends RequestPage<TableQuery> {
     private Integer genId;
 
     /**
+     * id
+     */
+    private String databaseId;
+
+    /**
      * 表名称
      */
     private String[] tableName;

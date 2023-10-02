@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.common.support.function.Splitter;
 import com.chua.common.support.net.NetUtils;
+import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.FileUtils;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;
@@ -165,7 +166,7 @@ public class SysGenTableServiceImpl extends ServiceImpl<SysGenTableMapper, SysGe
         }
 
         if(null == table.getTabPkColumn()) {
-            table.setTabPkColumn(sysGenColumns.get(0));
+            table.setTabPkColumn(CollectionUtils.findFirst(sysGenColumns));
         }
     }
 
