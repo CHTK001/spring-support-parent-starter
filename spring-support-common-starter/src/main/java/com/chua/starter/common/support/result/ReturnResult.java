@@ -177,6 +177,17 @@ public class ReturnResult<T> {
     /**
      * 初始化
      *
+     * @param msg 数据
+     * @param <T>  类型
+     * @return 结果
+     */
+    public static <T> ReturnResult<T> error(String msg) {
+        return error(null, msg);
+    }
+
+    /**
+     * 初始化
+     *
      * @param <T> 类型
      * @return 结果
      */
