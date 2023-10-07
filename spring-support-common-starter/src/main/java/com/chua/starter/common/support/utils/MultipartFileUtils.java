@@ -6,6 +6,8 @@ import com.chua.starter.common.support.result.ReturnResult;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 /**
  * 多部分文件实用程序
@@ -79,5 +81,21 @@ public class MultipartFileUtils {
         }
 
         return ReturnResult.ok(driverFile.getAbsolutePath());
+    }
+
+    /**
+     * 到文件
+     *
+     * @param file 文件
+     * @return {@link File}
+     */
+    public static File toFile(MultipartFile file) throws Exception{
+        if(null == file) {
+            return null;
+        }
+        File file1 = new File("./temp", file.getOriginalFilename());
+        FileUtils.mkParentDirs(file1);
+        file.transferTo(file1.toPath());
+        return file1;
     }
 }
