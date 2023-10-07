@@ -1,6 +1,7 @@
 package com.chua.starter.common.support.result;
 
 import com.chua.common.support.bean.BeanUtils;
+import com.chua.common.support.file.univocity.parsers.conversions.Validator;
 import com.chua.common.support.lang.code.ResultCode;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -235,6 +236,9 @@ public class ReturnResult<T> {
      * @return 结果
      */
     public static <T> ReturnResult<T> illegal(Throwable throwable) {
+        if(Validator.hasChinese(throwable.getMessage())) {
+            return Result.failed(throwable);
+        }
         return illegal(null, throwable.getMessage());
     }
 

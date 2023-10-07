@@ -37,7 +37,7 @@ public class Result<T> extends ReturnResult<T> {
         result.setData(data);
         return result;
     }
-    public static <T> Result<T> failed(Exception e) {
+    public static <T> Result<T> failed(Throwable e) {
         String localizedMessage = e.getLocalizedMessage();
         if(null == localizedMessage) {
             return result(SYSTEM_EXECUTION_ERROR.getCode(), "请联系管理员, 或者稍后重试", null);
