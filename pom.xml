@@ -418,6 +418,12 @@
 
             <dependency>
                 <groupId>com.chua</groupId>
+                <artifactId>utils-support-gateway-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
                 <artifactId>utils-support-milvus-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
