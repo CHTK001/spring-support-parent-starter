@@ -185,7 +185,7 @@ public class SessionController {
 
         StringBuilder stringBuffer = new StringBuilder();
         long startTime = System.nanoTime();
-        Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseConfig());
+        Session session = ServiceProvider.of(Session.class).getKeepExtension(executeQuery.getGenId(), sysGen.getGenType(), sysGen.newDatabaseConfig());
         SessionResultSet sessionResultSet = null;
         try {
             sessionResultSet = session.executeQuery(executeQuery.getSql());
@@ -299,7 +299,7 @@ public class SessionController {
             return ReturnResult.error("未配置生成器类型");
         }
 
-        Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseConfig());
+        Session session = ServiceProvider.of(Session.class).getKeepExtension(saveQuery.getGenId(), sysGen.getGenType(), sysGen.newDatabaseConfig());
         SessionInfo sessionInfo = null;
         File file1 = null;
         try {
@@ -336,7 +336,7 @@ public class SessionController {
             return ReturnResult.error("未配置生成器类型");
         }
 
-        Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseConfig());
+        Session session = ServiceProvider.of(Session.class).getKeepExtension(deleteQuery.getGenId(), sysGen.getGenType(), sysGen.newDatabaseConfig());
         SessionInfo sessionInfo = null;
         try {
             sessionInfo = session.delete(deleteQuery);
@@ -377,7 +377,7 @@ public class SessionController {
             file1 = MultipartFileUtils.toFile(file);
         } catch (Exception ignored) {
         }
-        Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseConfig());
+        Session session = ServiceProvider.of(Session.class).getKeepExtension(updateQuery.getGenId(), sysGen.getGenType(), sysGen.newDatabaseConfig());
         SessionInfo sessionInfo = null;
         try {
             sessionInfo = session.update(updateQuery, file1);
