@@ -84,7 +84,8 @@ public class SessionController {
         }
         String database = StringUtils.defaultString(query.getDatabaseId(), sysGen.getGenDatabase());
         List<DatabaseResult> results1 = new LinkedList<>();
-        try (Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseConfig());) {
+        Session session = ServiceProvider.of(Session.class).getKeepExtension(query.getGenId() + "", sysGen.getGenType(), sysGen.newDatabaseConfig());
+        try{
             List<DatabaseResult> database1 = session.getDatabase();
             if(CollectionUtils.isNotEmpty(database1)) {
                 return ReturnResult.ok(database1);

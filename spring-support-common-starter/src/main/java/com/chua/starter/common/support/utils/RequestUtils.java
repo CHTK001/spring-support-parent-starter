@@ -1,6 +1,8 @@
 package com.chua.starter.common.support.utils;
 
+import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.utils.StringUtils;
+import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -14,6 +16,8 @@ import java.net.InetAddress;
 public class RequestUtils {
 
 
+    private static final String SESSION_USERNAME = "x-session-token-username";
+    public static final String SESSION_USER_INFO = "x-session-token-userxxx";
     static String LOCAL = null;
 
     static {
@@ -119,5 +123,107 @@ public class RequestUtils {
         return "127.0.0.1".equals(hostAddress) ||
                 "0:0:0:0:0:0:0:1".equals(hostAddress) ||
                 "localhost".equals(hostAddress);
+    }
+
+    /**
+     * 获取用户名
+     *
+     * @return {@link String}
+     */
+    public static String getUsername() {
+        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
+        if (requestAttributes == null) {
+            return null;
+        }
+
+        ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
+
+        HttpServletRequest request = attributes.getRequest();
+        Object attribute = request.getSession().getAttribute(SESSION_USERNAME);
+        return null == attribute ? null : attribute.toString();
+    }
+
+    /**
+     * 设置用户名
+     *
+     * @param username 用户名
+     */
+    public static void setUsername(String username) {
+        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
+        if (requestAttributes == null) {
+            return;
+        }
+
+        ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
+
+        HttpServletRequest request = attributes.getRequest();
+        request.getSession().setAttribute(SESSION_USERNAME, username);
+    }
+    /**
+     * 设置用户信息
+     *
+     * @param userInfo 用户名
+     */
+    public static void setUserInfo(Object userInfo) {
+        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
+        if (requestAttributes == null) {
+            return;
+        }
+
+        ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
+
+        HttpServletRequest request = attributes.getRequest();
+        request.getSession().setAttribute(SESSION_USER_INFO, userInfo);
+    }
+    /**
+     * 获取用户信息
+     *
+     */
+    @SuppressWarnings("ALL")
+    public static <T>T getUserInfo(Class<T> target) {
+        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
+        if (requestAttributes == null) {
+            return null;
+        }
+
+        ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
+
+        HttpServletRequest request = attributes.getRequest();
+        Object attribute = request.getSession().getAttribute(SESSION_USER_INFO);
+        if(null != attribute || target.isAssignableFrom(attribute.getClass())) {
+            return (T) attribute;
+        }
+
+        return BeanUtils.copyProperties(attribute, target);
+    }
+
+    /**
+     * 删除用户名
+     */
+    public static void removeUsername() {
+        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
+        if (requestAttributes == null) {
+            return;
+        }
+
+        ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
+
+        HttpServletRequest request = attributes.getRequest();
+        request.getSession().removeAttribute(SESSION_USER_INFO);
+    }
+
+    /**
+     * 删除用户信息
+     */
+    public static void removeUserInfo() {
+        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
+        if (requestAttributes == null) {
+            return;
+        }
+
+        ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
+
+        HttpServletRequest request = attributes.getRequest();
+       request.getSession().removeAttribute(SESSION_USER_INFO);
     }
 }

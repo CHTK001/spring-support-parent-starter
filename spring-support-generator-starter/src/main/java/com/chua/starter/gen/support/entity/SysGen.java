@@ -5,7 +5,6 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.chua.common.support.database.DatabaseConfig;
-import com.chua.common.support.database.sqldialect.Dialect;
 import com.chua.common.support.utils.StringUtils;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
@@ -88,6 +87,11 @@ public class SysGen implements Serializable {
      */
     @TableField(value = "update_time")
     private Date updateTime;
+    /**
+     * 创建人
+     */
+    @TableField(value = "create_by")
+    private String createBy;
 
     private static final long serialVersionUID = 1L;
     /**
