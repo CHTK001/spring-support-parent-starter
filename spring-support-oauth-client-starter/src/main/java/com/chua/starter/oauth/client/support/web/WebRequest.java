@@ -5,11 +5,12 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.annotations.Ignore;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.oauth.client.support.annotation.AuthIgnore;
-import com.chua.starter.oauth.client.support.enums.AuthType;
+import com.chua.starter.oauth.client.support.execute.AuthClientExecute;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.infomation.Information;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.protocol.Protocol;
+import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
@@ -26,7 +27,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -205,7 +205,7 @@ public class WebRequest {
         Cookie[] cookie = getCookie();
         String token = getToken();
         if (isEmbed()) {
-            return newAuthenticationInformation();
+            return newAuthenticationInformation(token, cookie);
         }
         Protocol protocol = ServiceProvider.of(Protocol.class).getExtension(authProperties.getProtocol());
         return protocol.approve(cookie, token);
@@ -216,9 +216,23 @@ public class WebRequest {
      *
      * @return {@link AuthenticationInformation}
      */
-    private AuthenticationInformation newAuthenticationInformation() {
+    private AuthenticationInformation newAuthenticationInformation(String token, Cookie[] cookie) {
         UserResume userResume = new UserResume();
-        userResume.setUsername(authProperties.getTemp().getUser());
+        UserResult userResult = AuthClientExecute.getInstance().getUserResult(token);
+
+        if(null == userResult && null != cookie) {
+            for (Cookie cookie1 : cookie) {
+                userResult = AuthClientExecute.getInstance().getUserResult(cookie1.getValue());
+                if(null != userResult) {
+                    break;
+                }
+            }
+        }
+
+        if(null != userResult) {
+            userResume.setUsername(userResult.getUsername());
+        }
+
         userResume.setRoles(Sets.newHashSet("OPS"));
         userResume.setPermission(Collections.emptySet());
         return new AuthenticationInformation(Information.OK, userResume);

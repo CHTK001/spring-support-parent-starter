@@ -2,11 +2,14 @@ package com.chua.starter.gen.support.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.database.sqldialect.Dialect;
+import com.chua.common.support.session.Session;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.FileUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.result.ReturnPageResult;
 import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.common.support.utils.MultipartFileUtils;
+import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.gen.support.entity.SysGen;
 import com.chua.starter.gen.support.entity.SysGenConfig;
 import com.chua.starter.gen.support.properties.GenProperties;
@@ -72,12 +75,14 @@ public class DatabaseController {
     public ReturnPageResult<SysGen> list(@RequestParam(value = "page", defaultValue = "1") Integer pageNum,
                                          @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
 
+        String username = RequestUtils.getUsername();
         return PageResultUtils.<SysGen>ok(sysGenService.page(
                 new Page<>(pageNum, pageSize),
                 new MPJLambdaWrapper<SysGen>()
                         .selectAll(SysGenConfig.class)
                         .selectAll(SysGen.class)
                         .selectAs(SysGenConfig::getDbcType, "genType")
+                        .eq(SysGen::getCreateBy, username)
                         .innerJoin(SysGenConfig.class, SysGenConfig::getDbcId, SysGen::getDbcId)
         ));
     }
@@ -94,6 +99,7 @@ public class DatabaseController {
         }
 
         sysGen.setCreateTime(new Date());
+        sysGen.setCreateBy(RequestUtils.getUsername());
         Dialect dialect = Dialect.createDriver(sysGen.getGenDriver());
         if(null != dialect) {
             sysGen.setGenUrl(dialect.getUrl(sysGen.newDatabaseConfig()));
@@ -113,6 +119,8 @@ public class DatabaseController {
         if(null != dialect) {
             sysGen.setGenUrl(dialect.getUrl(sysGen.newDatabaseConfig()));
         }
+        sysGen.setCreateBy(RequestUtils.getUsername());
+        ServiceProvider.of(Session.class).closeKeepExtension(sysGen.getGenId() + "");
 
         sysGenService.updateById(sysGen);
         return ReturnResult.ok(sysGen);
@@ -149,12 +157,17 @@ public class DatabaseController {
      */
     @GetMapping("delete")
     public ReturnResult<Boolean> delete(String id) {
+        SysGen sysGen = sysGenService.getById(id);
+        if(null == sysGen) {
+            return ReturnResult.illegal("数据信息不存在");
+        }
         sysGenService.removeById(id);
         File mkdir = FileUtils.mkdir(new File(genProperties.getTempPath(), id));
         try {
             FileUtils.forceDelete(mkdir);
         } catch (IOException e) {
         }
+        ServiceProvider.of(Session.class).closeKeepExtension(sysGen.getGenId() + "");
         return ReturnResult.ok(true);
     }
 

@@ -59,6 +59,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
     private static Cacheable CACHEABLE;
 
     @Override
+    @SuppressWarnings("ALL")
     public AuthenticationInformation approve(Cookie[] cookie, String token) {
         String key = UUID.randomUUID().toString();
         Map<String, Object> jsonObject = new HashMap<>(2);
@@ -70,6 +71,9 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
             if (null != o) {
                 AuthenticationInformation authenticationInformation = (AuthenticationInformation) o.getValue();
                 if (null != authenticationInformation && authenticationInformation.getInformation().getCode() == 200) {
+                    UserResume userResume = authenticationInformation.getReturnResult();
+                    RequestUtils.setUsername(userResume.getUsername());
+                    RequestUtils.setUserInfo(userResume);
                     return authenticationInformation;
                 }
             }
@@ -154,6 +158,8 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
                 body = decode.decodeHex(data.toString(), key);
 
                 UserResume userResume = Json.fromJson(body, UserResume.class);
+                RequestUtils.setUsername(userResume.getUsername());
+                RequestUtils.setUserInfo(userResume);
                 return inCache(cacheKey, new AuthenticationInformation(OK, userResume));
             }
 

@@ -24,6 +24,7 @@ import java.util.List;
  * @author CH
  */
 @Slf4j
+@SuppressWarnings("ALL")
 @EnableConfigurationProperties(SocketIoProperties.class)
 public class SocketConfiguration {
 

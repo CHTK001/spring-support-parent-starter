@@ -3,16 +3,19 @@ package com.chua.starter.oauth.client.support.execute;
 import com.chua.common.support.crypto.decode.KeyDecode;
 import com.chua.common.support.crypto.encode.KeyEncode;
 import com.chua.common.support.crypto.utils.DigestUtils;
+import com.chua.common.support.function.Splitter;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.exception.AuthenticationException;
 import com.chua.common.support.lang.robin.Node;
 import com.chua.common.support.lang.robin.Robin;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.Md5Utils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.application.Binder;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.result.ReturnResult;
+import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.common.support.watch.Watch;
 import com.chua.starter.oauth.client.support.advice.def.DefSecret;
 import com.chua.starter.oauth.client.support.contants.AuthConstant;
@@ -26,6 +29,8 @@ import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.chua.starter.oauth.client.support.web.WebRequest;
 import com.google.common.base.Strings;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import kong.unirest.HttpResponse;
 import kong.unirest.Unirest;
 import kong.unirest.UnirestException;
@@ -34,13 +39,13 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 
+import static com.chua.common.support.constant.NumberConstant.NUM_200;
 import static com.chua.common.support.http.HttpClientUtils.APPLICATION_JSON;
 import static com.chua.starter.common.support.result.ReturnCode.OK;
+import static com.chua.starter.common.support.utils.RequestUtils.SESSION_USER_INFO;
 import static com.chua.starter.oauth.client.support.contants.AuthConstant.ACCESS_KEY;
 import static com.chua.starter.oauth.client.support.contants.AuthConstant.SECRET_KEY;
 
@@ -56,6 +61,8 @@ public class AuthClientExecute {
     private final KeyDecode decode;
 
     public static final AuthClientExecute INSTANCE = new AuthClientExecute();
+    private static final Cache<String, UserResult> CACHE = CacheBuilder.
+            newBuilder().expireAfterWrite(1, TimeUnit.DAYS).build();
 
     public static AuthClientExecute getInstance() {
         return INSTANCE;
@@ -79,7 +86,12 @@ public class AuthClientExecute {
         }
 
         ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
+
         HttpServletRequest request = attributes.getRequest();
+        Object attribute = request.getSession().getAttribute(SESSION_USER_INFO);
+        if(null != attribute) {
+            return (UserResult) attribute;
+        }
         WebRequest webRequest1 = new WebRequest(
                 authClientProperties,
                 request, null);
@@ -91,6 +103,7 @@ public class AuthClientExecute {
             throw new AuthenticationException("请重新登录");
         }
         com.chua.common.support.bean.BeanUtils.copyProperties(returnResult, userResult);
+        request.getSession().setAttribute(SESSION_USER_INFO, userResult);
         return userResult;
     }
 
@@ -108,6 +121,7 @@ public class AuthClientExecute {
         }
 
         if(authType == AuthType.EMBED) {
+            dehookUid(uid);
             return new LoginAuthResult(200, "");
         }
 
@@ -174,10 +188,10 @@ public class AuthClientExecute {
         }
 
         int status = httpResponse.getStatus();
-        if (status == 200) {
+        if (status == NUM_200) {
             LoginAuthResult loginAuthResult = new LoginAuthResult();
             loginAuthResult.setCode(status);
-
+            dehook(null);
             return loginAuthResult;
         }
         LoginAuthResult loginAuthResult = new LoginAuthResult();
@@ -204,7 +218,7 @@ public class AuthClientExecute {
         }
 
         if(authType == AuthType.EMBED) {
-            return newLoginAuthResult(username, password);
+            return hook(newLoginAuthResult(username, password));
         }
 
         String accessKey = authClientProperties.getAccessKey();
@@ -241,7 +255,7 @@ public class AuthClientExecute {
         try {
             String url = robin.getString();
             if (null == url) {
-                return null;
+                return dehook(null);
             }
 
             AuthRequest request1 = new AuthRequest();
@@ -261,12 +275,12 @@ public class AuthClientExecute {
         }
 
         if (null == httpResponse) {
-            return null;
+            return dehook(null);
         }
 
         int status = httpResponse.getStatus();
         String body = httpResponse.getBody();
-        if (status == 200) {
+        if (status == NUM_200) {
             ReturnResult returnResult = Json.fromJson(body, ReturnResult.class);
             String code = returnResult.getCode();
             Object data = returnResult.getData();
@@ -282,23 +296,71 @@ public class AuthClientExecute {
                 }
 
                 if (null == loginAuthResult) {
-                    return null;
+                    return dehook(null);
                 }
 
                 loginAuthResult.setCode(status);
-                return loginAuthResult;
+                return hook(loginAuthResult);
             }
             LoginAuthResult loginAuthResult = new LoginAuthResult();
             loginAuthResult.setCode(403);
             loginAuthResult.setMessage(returnResult.getMsg());
 
-            return loginAuthResult;
+            return dehook(loginAuthResult);
         }
         LoginAuthResult loginAuthResult = new LoginAuthResult();
         loginAuthResult.setCode(status);
         loginAuthResult.setMessage("认证服务器异常");
-        return loginAuthResult;
+        return dehook(loginAuthResult);
 
+    }
+
+    /**
+     * 删除hook
+     *
+     * @param loginAuthResult 登录身份验证结果
+     * @return {@link LoginAuthResult}
+     */
+    private LoginAuthResult dehook(LoginAuthResult loginAuthResult) {
+        RequestUtils.removeUsername();
+        RequestUtils.removeUserInfo();
+        if(null != loginAuthResult) {
+            CACHE.invalidate(loginAuthResult.getToken());
+        }
+        return loginAuthResult;
+    }
+
+    /**
+     * dehook
+     * 删除hook
+     *
+     * @param uid) 登录身份验证结果
+     * @return {@link LoginAuthResult}
+     */
+    private void dehookUid(String uid) {
+        RequestUtils.removeUsername();
+        RequestUtils.removeUserInfo();
+        CACHE.invalidate(uid);
+    }
+
+    /**
+     * 注册
+     *
+     * @param loginAuthResult 登录身份验证结果
+     * @return {@link LoginAuthResult}
+     */
+    private LoginAuthResult hook(LoginAuthResult loginAuthResult) {
+        UserResult userResult = loginAuthResult.getUserResult();
+        if(null == userResult) {
+            return loginAuthResult;
+        }
+
+        if(null != loginAuthResult && loginAuthResult.getToken().equals(userResult.getUid())) {
+            CACHE.put(loginAuthResult.getToken(), userResult);
+        }
+        RequestUtils.setUsername(userResult.getUsername());
+        RequestUtils.setUserInfo(userResult);
+        return loginAuthResult;
     }
 
     /**
@@ -311,21 +373,51 @@ public class AuthClientExecute {
     private LoginAuthResult newLoginAuthResult(String username, String password) {
         AuthClientProperties.TempUser temp = authClientProperties.getTemp();
         LoginAuthResult loginAuthResult = new LoginAuthResult();
-        if(username.equals(temp.getUser()) && password.equals(Md5Utils.getInstance().getMd5String(temp.getPassword()))) {
-            loginAuthResult.setCode(200);
-            UserResult userResult = new UserResult();
-            userResult.setId("0");
-            userResult.setAuthType(AuthType.EMBED.name());
-            userResult.setUsername(username);
-            loginAuthResult.setUserResult(userResult);
-            loginAuthResult.setToken(DigestUtils.sha512Hex(username));
-            return loginAuthResult;
+        String user = temp.getUser();
+        if(StringUtils.isNotEmpty(user)) {
+            Set<String> strings = Splitter.on(";").omitEmptyStrings().trimResults().splitToSet(user);
+            for (String string : strings) {
+                List<String> userAndPassword = Splitter.on(":").omitEmptyStrings().limit(2).trimResults().splitToList(string);
+                if(isMatch(userAndPassword, username, password)) {
+                    loginAuthResult.setCode(200);
+                    UserResult userResult = new UserResult();
+                    userResult.setId("0");
+                    userResult.setAuthType(AuthType.EMBED.name());
+                    userResult.setUsername(username);
+                    loginAuthResult.setUserResult(userResult);
+                    loginAuthResult.setToken(DigestUtils.sha512Hex(username));
+                    userResult.setUid(loginAuthResult.getToken());
+                    return loginAuthResult;
+                }
+            }
         }
 
         loginAuthResult.setCode(403);
         loginAuthResult.setMessage("账号或密码错误");
         return loginAuthResult;
 
+    }
+
+    /**
+     * 匹配
+     *
+     * @param userAndPassword 用户和密码
+     * @param username        用户名
+     * @param password        暗语
+     * @return boolean
+     */
+    private boolean isMatch(List<String> userAndPassword, String username, String password) {
+        if(userAndPassword.isEmpty()) {
+            return false;
+        }
+
+        String user = CollectionUtils.find(userAndPassword, 0);
+        if(userAndPassword.size() == 1) {
+            return user.equals(username) && user.equals(password);
+        }
+
+        String passwd = CollectionUtils.find(userAndPassword, 1);
+        return user.equals(username) && DigestUtils.md5Hex(passwd).equals(password);
     }
 
     /**
@@ -402,5 +494,18 @@ public class AuthClientExecute {
         }
 
         return httpResponse.getBody();
+    }
+
+    /**
+     * 获取用户结果
+     *
+     * @param token token
+     * @return {@link UserResult}
+     */
+    public UserResult getUserResult(String token) {
+        if(null == token) {
+            return null;
+        }
+        return CACHE.getIfPresent(token);
     }
 }
