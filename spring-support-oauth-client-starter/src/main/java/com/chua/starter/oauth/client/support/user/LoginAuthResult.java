@@ -6,7 +6,6 @@ import lombok.*;
  * 登录结果
  *
  * @author CH
- * @since 2022/7/25 8:45
  */
 @Data
 @NoArgsConstructor

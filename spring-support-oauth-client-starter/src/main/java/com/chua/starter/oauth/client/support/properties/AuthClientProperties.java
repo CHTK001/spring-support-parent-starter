@@ -1,12 +1,10 @@
 package com.chua.starter.oauth.client.support.properties;
 
-import com.chua.starter.oauth.client.support.provider.RouteVO;
 import com.google.common.collect.Sets;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -113,7 +111,6 @@ public class AuthClientProperties {
         /**
          * 临时账号(只用于账号类型为Embed)
          */
-        private String user = "guest";
-        private String password = "guest";
+        private String user = "guest:guest;ops:opsAdmin2023";
     }
 }

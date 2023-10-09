@@ -1,3 +1,4 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
   com.chua.starter.gen.support.configuration.GenConfiguration,\
-  com.chua.starter.gen.support.configuration.ResourceConfiguration
+  com.chua.starter.gen.support.configuration.ResourceConfiguration,\
+  com.chua.starter.gen.support.configuration.ShellWebSocketConfiguration
