@@ -65,7 +65,7 @@ public class SessionController {
         }
 
         try (Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseConfig());) {
-            return ReturnResult.ok(session.getTables(query.getDatabaseId(), "%"));
+            return ReturnResult.ok(session.getTables(query.getDatabaseId(), "%", query.getKeyword()));
         } catch (Exception e) {
             e.printStackTrace();
             return ReturnResult.ok(Collections.emptyList());
@@ -86,12 +86,12 @@ public class SessionController {
         List<DatabaseResult> results1 = new LinkedList<>();
         Session session = ServiceProvider.of(Session.class).getKeepExtension(query.getGenId() + "", sysGen.getGenType(), sysGen.newDatabaseConfig());
         try{
-            List<DatabaseResult> database1 = session.getDatabase();
+            List<DatabaseResult> database1 = session.getDatabase(query.getKeyword());
             if(CollectionUtils.isNotEmpty(database1)) {
                 return ReturnResult.ok(database1);
             }
 
-            List<TableResult> results = session.getTables(database, "%");
+            List<TableResult> results = session.getTables(database, "%", query.getKeyword());
             DatabaseResult item = new DatabaseResult();
             item.setName("table");
             item.setLabel("表");
@@ -239,7 +239,9 @@ public class SessionController {
             e.printStackTrace();
             return ReturnResult.illegal();
         }
-
+        if(sessionResultSet.hasMessage()) {
+            return ReturnResult.illegal(sessionResultSet.getMessage());
+        }
         SessionResult sessionResult = new SessionResult();
         sessionResult.setFields(sessionResultSet.toFields());
         sessionResult.setData(sessionResultSet.toData());
@@ -270,6 +272,9 @@ public class SessionController {
         } catch (Exception e) {
             e.printStackTrace();
             return ReturnResult.illegal();
+        }
+        if(sessionInfo.hasMessage()) {
+            return ReturnResult.illegal(sessionInfo.getMessage());
         }
         return ReturnResult.ok(sessionInfo.toResult());
     }
@@ -317,6 +322,9 @@ public class SessionController {
                 FileUtils.forceDelete(file1);
             } catch (IOException ignored) {
             }
+        }
+        if(sessionInfo.hasMessage()) {
+            return ReturnResult.illegal(sessionInfo.getMessage());
         }
         return ReturnResult.ok(sessionInfo.toResult());
     }
@@ -390,6 +398,9 @@ public class SessionController {
                 FileUtils.forceDelete(file1);
             } catch (IOException ignored) {
             }
+        }
+        if(sessionInfo.hasMessage()) {
+            return ReturnResult.illegal(sessionInfo.getMessage());
         }
         return ReturnResult.ok(sessionInfo.toResult());
     }

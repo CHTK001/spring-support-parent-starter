@@ -11,7 +11,7 @@
  Target Server Version : 80033
  File Encoding         : 65001
 
- Date: 09/10/2023 15:08:11
+ Date: 10/10/2023 08:45:44
 */
 
 SET NAMES utf8mb4;
@@ -40,9 +40,11 @@ CREATE TABLE `sys_gen`  (
 -- ----------------------------
 -- Records of sys_gen
 -- ----------------------------
-INSERT INTO `sys_gen` VALUES (1, '本地数据库', 'jdbc:mysql://127.0.0.1:3306/config?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true', 'root', 'root', 'com.mysql.cj.jdbc.Driver', 'config', 1, NULL, NULL, '2023-09-28 21:56:40', '2023-10-09 13:11:17');
-INSERT INTO `sys_gen` VALUES (2, '本地redis', '127.0.0.1:6379', 'root', '', NULL, NULL, 4, NULL, NULL, '2023-09-30 18:45:34', '2023-10-09 13:11:18');
-INSERT INTO `sys_gen` VALUES (3, '本地SSH', '192.168.110.100', 'root', 'boren1818', NULL, NULL, 7, NULL, NULL, '2023-10-09 15:05:56', NULL);
+INSERT INTO `sys_gen` VALUES (1, '本地数据库', 'jdbc:mysql://127.0.0.1:3306/config?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true', 'root', 'root', 'com.mysql.cj.jdbc.Driver', 'config', 1, NULL, 'guest', '2023-09-28 21:56:40', '2023-10-09 15:20:20');
+INSERT INTO `sys_gen` VALUES (2, '本地redis', '127.0.0.1:6379', 'root', '', NULL, NULL, 4, NULL, 'guest', '2023-09-30 18:45:34', '2023-10-09 15:20:21');
+INSERT INTO `sys_gen` VALUES (4, '测试SSH', '192.168.110.100:22', 'root', 'boren1818', NULL, NULL, 7, NULL, 'ops', '2023-10-09 15:04:33', '2023-10-09 15:05:12');
+INSERT INTO `sys_gen` VALUES (5, '本地redis', '127.0.0.1:6379', '', '', NULL, NULL, 4, NULL, 'ops', '2023-10-09 21:53:07', NULL);
+INSERT INTO `sys_gen` VALUES (6, '测试SFTP', '192.168.110.100:22', 'root', 'boren1818', NULL, NULL, 6, NULL, 'ops', '2023-10-09 21:54:32', NULL);
 
 -- ----------------------------
 -- Table structure for sys_gen_column
@@ -122,10 +124,10 @@ CREATE TABLE `sys_gen_config`  (
 INSERT INTO `sys_gen_config` VALUES (1, 'false', 'JDBC', 'NONE', 'https://archiva-maven-storage-prod.oss-cn-beijing.aliyuncs.com/repository/central/mysql/mysql-connector-java/8.0.30/mysql-connector-java-8.0.30.jar?Expires=1695912654&OSSAccessKeyId=LTAIfU51SusnnfCC&Signature=rZ7nYH3oWgUa6phzVnKdB%2FiKxuU%3D', 'com.mysql.cj.jdbc.Driver', '', '[{\"name\":\"控制台\",\"url\":\"/ext/jdbc/console\"},{\"name\":\"日志\",\"url\":\"/ext/jdbc/log\"},{\"name\":\"UI\",\"url\":\"/ext/jdbc/board\"},{\"name\":\"文档\",\"url\":\"/ext/jdbc/doc\"}]', 'MYSQL', 1, '2023-09-28 21:56:40', '2023-10-09 13:11:17');
 INSERT INTO `sys_gen_config` VALUES (2, 'false', 'JDBC', 'FILE', 'https://archiva-maven-storage-prod.oss-cn-beijing.aliyuncs.com/repository/gradle-plugin/org/xerial/sqlite-jdbc/3.8.9.1/sqlite-jdbc-3.8.9.1.jar?Expires=1695966895&OSSAccessKeyId=LTAIfU51SusnnfCC&Signature=TO%2BwBB7FbGbhS7uJ%2Fkj8Xjn9zPQ%3D', 'org.sqlite.JDBC', 'Z:\\works\\utils-support-parent-starter\\gen\\3\\driver\\sqlite-jdbc-3.8.9.1.jar', '[{\"name\":\"控制台\",\"url\":\"/ext/jdbc/console\"},{\"name\":\"文档\",\"url\":\"/ext/jdbc/doc\"}]', 'SQLITE', 1, '2023-09-29 12:52:55', '2023-10-09 13:11:18');
 INSERT INTO `sys_gen_config` VALUES (3, 'false', 'CALCITE', 'NONE', NULL, NULL, NULL, '[{\"name\":\"控制台\",\"url\":\"/ext/jdbc/console\"}]', 'CALCITE', 1, '2023-09-29 18:39:50', '2023-10-09 13:11:18');
-INSERT INTO `sys_gen_config` VALUES (4, 'false', 'REDIS', 'NONE', NULL, NULL, NULL, '[{\"name\":\"UI\",\"url\":\"/ext/redis/console\"}]', 'REDIS', 1, '2023-09-30 18:45:34', '2023-10-09 13:11:18');
-INSERT INTO `sys_gen_config` VALUES (5, 'false', 'FTP', 'NONE', NULL, NULL, NULL, '[{\"name\":\"UI\",\"url\":\"/ext/ftp/console\"}]', 'FTP', 1, '2023-10-02 15:18:19', '2023-10-09 13:11:19');
-INSERT INTO `sys_gen_config` VALUES (6, 'false', 'SFTP', 'NONE', NULL, NULL, NULL, '[{\"name\":\"UI\",\"url\":\"/ext/ftp/console\"}]', 'SFTP', 1, '2023-10-03 10:07:05', '2023-10-09 13:11:19');
-INSERT INTO `sys_gen_config` VALUES (7, 'false', 'SSH', 'NONE', NULL, NULL, NULL, '[{\"name\":\"UI\",\"url\":\"/ext/ssh/console\"}]', 'SSH', 1, '2023-10-09 15:04:33', '2023-10-09 15:05:12');
+INSERT INTO `sys_gen_config` VALUES (4, 'false', 'REDIS', 'REMOTE', NULL, NULL, NULL, '[{\"name\":\"UI\",\"url\":\"/ext/redis/console\"}]', 'REDIS', 1, '2023-09-30 18:45:34', '2023-10-09 13:11:18');
+INSERT INTO `sys_gen_config` VALUES (5, 'false', 'FTP', 'REMOTE', NULL, NULL, NULL, '[{\"name\":\"UI\",\"url\":\"/ext/ftp/console\"}]', 'FTP', 1, '2023-10-02 15:18:19', '2023-10-09 13:11:19');
+INSERT INTO `sys_gen_config` VALUES (6, 'false', 'SFTP', 'REMOTE', NULL, NULL, NULL, '[{\"name\":\"UI\",\"url\":\"/ext/ftp/console\"}]', 'SFTP', 1, '2023-10-03 10:07:05', '2023-10-09 13:11:19');
+INSERT INTO `sys_gen_config` VALUES (7, 'false', 'SSH', 'REMOTE', NULL, NULL, NULL, '[{\"name\":\"UI\",\"url\":\"/ext/ssh/console\"}]', 'SSH', 1, '2023-10-09 15:04:33', '2023-10-09 15:05:12');
 
 -- ----------------------------
 -- Table structure for sys_gen_table
