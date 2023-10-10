@@ -4,6 +4,7 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.annotations.Ignore;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.annotation.AuthIgnore;
 import com.chua.starter.oauth.client.support.execute.AuthClientExecute;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
@@ -204,7 +205,7 @@ public class WebRequest {
     public AuthenticationInformation authentication() {
         Cookie[] cookie = getCookie();
         String token = getToken();
-        if (isEmbed()) {
+        if (isEmbed(authProperties)) {
             return newAuthenticationInformation(token, cookie);
         }
         Protocol protocol = ServiceProvider.of(Protocol.class).getExtension(authProperties.getProtocol());
@@ -222,19 +223,23 @@ public class WebRequest {
 
         if(null == userResult && null != cookie) {
             for (Cookie cookie1 : cookie) {
-                userResult = AuthClientExecute.getInstance().getUserResult(cookie1.getValue());
-                if(null != userResult) {
-                    break;
+                if(!"JSESSIONID".equals(cookie1.getName())) {
+                    userResult = AuthClientExecute.getInstance().getUserResult(cookie1.getValue());
+                    if(null != userResult) {
+                        break;
+                    }
                 }
             }
         }
 
         if(null != userResult) {
             userResume.setUsername(userResult.getUsername());
+            RequestUtils.setUsername(userResume.getUsername());
         }
 
         userResume.setRoles(Sets.newHashSet("OPS"));
         userResume.setPermission(Collections.emptySet());
+        RequestUtils.setUserInfo(userResume);
         return new AuthenticationInformation(Information.OK, userResume);
     }
 
@@ -243,7 +248,7 @@ public class WebRequest {
      *
      * @return boolean
      */
-    private boolean isEmbed() {
+    public static boolean isEmbed(AuthClientProperties authProperties) {
         String oauthUrl = authProperties.getAuthAddress();
         return StringUtils.isEmpty(oauthUrl);
     }
