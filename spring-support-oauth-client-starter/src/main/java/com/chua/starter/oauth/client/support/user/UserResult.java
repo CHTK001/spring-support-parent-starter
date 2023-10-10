@@ -153,7 +153,7 @@ public class UserResult {
         return finalNewInstance;
     }
 
-    public boolean isRoot() {
+    public boolean hasRootRole() {
         return this.getRoles().contains("admin");
     }
 

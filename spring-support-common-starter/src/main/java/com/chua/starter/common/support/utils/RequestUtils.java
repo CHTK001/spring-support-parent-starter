@@ -16,7 +16,7 @@ import java.net.InetAddress;
 public class RequestUtils {
 
 
-    private static final String SESSION_USERNAME = "x-session-token-username";
+    public static final String SESSION_USERNAME = "x-session-token-username";
     public static final String SESSION_USER_INFO = "x-session-token-userxxx";
     static String LOCAL = null;
 

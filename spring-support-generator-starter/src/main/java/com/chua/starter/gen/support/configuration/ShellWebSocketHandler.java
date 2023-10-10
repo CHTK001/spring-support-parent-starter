@@ -1,38 +1,39 @@
 package com.chua.starter.gen.support.configuration;
 
-import com.chua.common.support.net.NetUtils;
 import com.chua.common.support.utils.IoUtils;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.chua.ssh.support.session.SshSession;
+import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.starter.gen.support.entity.SysGen;
+import com.chua.starter.gen.support.service.SysGenService;
 import com.google.common.base.Strings;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.websocket.*;
+import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.chua.starter.gen.support.configuration.ShellWebSocketConfiguration.ADDRESS;
-
 /**
  * @author CH
  */
-@ServerEndpoint(value = "/channel/shell", configurator = ShellWebSocketConfiguration.class)
+@ServerEndpoint(value = "/channel/shell/{channelId}", configurator = ShellWebSocketConfiguration.class)
 @Slf4j
 public class ShellWebSocketHandler {
     private static final ConcurrentHashMap<Session, HandlerItem> HANDLER_ITEM_CONCURRENT_HASH_MAP = new ConcurrentHashMap<>();
-    private final String prompt = "$ ";
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
-
     private static final AtomicInteger count = new AtomicInteger(0);
+
+    private SysGenService sysGenService;
 
     /**
      * 连接建立成功调用的方法
      */
     @OnOpen
-    public void onOpen(Session session) throws Exception {
-        if(!check(session)) {
+    public void onOpen(Session session, @PathParam("channelId") String channelId) throws Exception {
+        SysGen sysGen = getSysGen(channelId);
+        if(!check(session, sysGen)) {
             sendText(session, "@auth 无权限访问");
             IoUtils.closeQuietly(session);
             return;
@@ -40,30 +41,34 @@ public class ShellWebSocketHandler {
         int cnt = count.incrementAndGet();
         log.info("有连接加入，当前连接数为：{}", cnt);
 
-        HandlerItem handlerItem = new HandlerItem(session);
+        HandlerItem handlerItem = new HandlerItem(session, sysGen);
         HANDLER_ITEM_CONCURRENT_HASH_MAP.put(session, handlerItem);
     }
 
     /**
      * 检查
      *
-     * @param session 一场
+     * @param session   session
+     * @param sysGen sysGen
      * @return boolean
      */
-    private boolean check(Session session) {
-        Object o = session.getUserProperties().get(ADDRESS);
-        if(o == null) {
-            return false;
-        }
-
-        String ip = o.toString();
-        if(NetUtils.getLocalHost().equals(ip) || NetUtils.LOCAL_HOST.equals(ip)) {
-            return true;
-        }
-
-        return false;
+    private synchronized boolean check(Session session, SysGen sysGen) {
+        return sysGen.getCreateBy().equals(session.getUserProperties().get(RequestUtils.SESSION_USERNAME));
     }
 
+
+    /**
+     * 获取系统生成
+     *
+     * @param channelId 通道id
+     * @return {@link SysGen}
+     */
+    private SysGen getSysGen(String channelId) {
+        if(null == sysGenService) {
+            sysGenService = SpringBeanUtils.getApplicationContext().getBean(SysGenService.class);
+        }
+        return sysGenService.getById(channelId);
+    }
     /**
      * 连接关闭调用的方法
      */
@@ -120,10 +125,26 @@ public class ShellWebSocketHandler {
 
     private class HandlerItem implements Runnable, AutoCloseable {
         private final Session session;
+        private final SysGen sysGen;
+        private final SshSession sshSession;
 
-        HandlerItem(Session session) throws IOException {
+        HandlerItem(Session session, SysGen sysGen) throws IOException {
             this.session = session;
-            send("");
+            this.sysGen = sysGen;
+            this.sshSession = new SshSession(sysGen.newDatabaseConfig());
+            this.sshSession.setListen(s -> {
+                if(session.isOpen()) {
+                    try {
+                        session.getBasicRemote().sendText(s);
+                    } catch (Exception e) {
+                        try {
+                            session.getBasicRemote().sendText(s);
+                        } catch (IOException ex) {
+                            ex.printStackTrace();
+                        }
+                    }
+                }
+            });
         }
 
 
@@ -132,13 +153,20 @@ public class ShellWebSocketHandler {
         }
 
         public void send(String data) {
-
+            try {
+                sshSession.executeQuery(data);
+            } catch (Exception ignored) {
+            }
         }
 
         @Override
         public void close() throws Exception {
             try {
                 session.close();
+            } catch (IOException ignored) {
+            }
+            try {
+                sshSession.close();
             } catch (IOException ignored) {
             }
         }

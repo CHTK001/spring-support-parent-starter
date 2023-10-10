@@ -1,5 +1,7 @@
 package com.chua.starter.oauth.client.support.execute;
 
+import com.chua.common.support.constant.CommonConstant;
+import com.chua.common.support.crypto.aes.Aes;
 import com.chua.common.support.crypto.decode.KeyDecode;
 import com.chua.common.support.crypto.encode.KeyEncode;
 import com.chua.common.support.crypto.utils.DigestUtils;
@@ -29,8 +31,6 @@ import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.chua.starter.oauth.client.support.web.WebRequest;
 import com.google.common.base.Strings;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import kong.unirest.HttpResponse;
 import kong.unirest.Unirest;
 import kong.unirest.UnirestException;
@@ -40,7 +40,6 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 
 import static com.chua.common.support.constant.NumberConstant.NUM_200;
 import static com.chua.common.support.http.HttpClientUtils.APPLICATION_JSON;
@@ -60,9 +59,9 @@ public class AuthClientExecute {
     private final KeyEncode encode;
     private final KeyDecode decode;
 
+    private static final Aes AES = new Aes("1234567890123456");
+
     public static final AuthClientExecute INSTANCE = new AuthClientExecute();
-    private static final Cache<String, UserResult> CACHE = CacheBuilder.
-            newBuilder().expireAfterWrite(1, TimeUnit.DAYS).build();
 
     public static AuthClientExecute getInstance() {
         return INSTANCE;
@@ -324,9 +323,6 @@ public class AuthClientExecute {
     private LoginAuthResult dehook(LoginAuthResult loginAuthResult) {
         RequestUtils.removeUsername();
         RequestUtils.removeUserInfo();
-        if(null != loginAuthResult) {
-            CACHE.invalidate(loginAuthResult.getToken());
-        }
         return loginAuthResult;
     }
 
@@ -340,7 +336,6 @@ public class AuthClientExecute {
     private void dehookUid(String uid) {
         RequestUtils.removeUsername();
         RequestUtils.removeUserInfo();
-        CACHE.invalidate(uid);
     }
 
     /**
@@ -355,9 +350,6 @@ public class AuthClientExecute {
             return loginAuthResult;
         }
 
-        if(null != loginAuthResult && loginAuthResult.getToken().equals(userResult.getUid())) {
-            CACHE.put(loginAuthResult.getToken(), userResult);
-        }
         RequestUtils.setUsername(userResult.getUsername());
         RequestUtils.setUserInfo(userResult);
         return loginAuthResult;
@@ -384,8 +376,12 @@ public class AuthClientExecute {
                     userResult.setId("0");
                     userResult.setAuthType(AuthType.EMBED.name());
                     userResult.setUsername(username);
+                    userResult.setExpire(System.nanoTime());
                     loginAuthResult.setUserResult(userResult);
-                    loginAuthResult.setToken(DigestUtils.sha512Hex(username));
+                    try {
+                        loginAuthResult.setToken(AES.encrypt(Json.toJson(userResult)));
+                    } catch (Exception ignored) {
+                    }
                     userResult.setUid(loginAuthResult.getToken());
                     return loginAuthResult;
                 }
@@ -503,9 +499,16 @@ public class AuthClientExecute {
      * @return {@link UserResult}
      */
     public UserResult getUserResult(String token) {
-        if(null == token) {
+        if(StringUtils.isEmpty(token) || CommonConstant.NULL.equals(token)) {
             return null;
         }
-        return CACHE.getIfPresent(token);
+        if(WebRequest.isEmbed(authClientProperties)) {
+            try {
+                return Json.fromJson(AES.decrypt(token), UserResult.class);
+            } catch (Exception ignored) {
+            }
+        }
+
+        return null;
     }
 }
