@@ -11,7 +11,7 @@
  Target Server Version : 80033
  File Encoding         : 65001
 
- Date: 10/10/2023 08:45:44
+ Date: 10/10/2023 20:52:35
 */
 
 SET NAMES utf8mb4;
@@ -35,16 +35,15 @@ CREATE TABLE `sys_gen`  (
   `create_time` datetime NULL DEFAULT NULL COMMENT '创建时间',
   `update_time` datetime NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`gen_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 17 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of sys_gen
 -- ----------------------------
 INSERT INTO `sys_gen` VALUES (1, '本地数据库', 'jdbc:mysql://127.0.0.1:3306/config?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true', 'root', 'root', 'com.mysql.cj.jdbc.Driver', 'config', 1, NULL, 'guest', '2023-09-28 21:56:40', '2023-10-09 15:20:20');
-INSERT INTO `sys_gen` VALUES (2, '本地redis', '127.0.0.1:6379', 'root', '', NULL, NULL, 4, NULL, 'guest', '2023-09-30 18:45:34', '2023-10-09 15:20:21');
-INSERT INTO `sys_gen` VALUES (4, '测试SSH', '192.168.110.100:22', 'root', 'boren1818', NULL, NULL, 7, NULL, 'ops', '2023-10-09 15:04:33', '2023-10-09 15:05:12');
-INSERT INTO `sys_gen` VALUES (5, '本地redis', '127.0.0.1:6379', '', '', NULL, NULL, 4, NULL, 'ops', '2023-10-09 21:53:07', NULL);
-INSERT INTO `sys_gen` VALUES (6, '测试SFTP', '192.168.110.100:22', 'root', 'boren1818', NULL, NULL, 6, NULL, 'ops', '2023-10-09 21:54:32', NULL);
+INSERT INTO `sys_gen` VALUES (2, '本地redis', '172.16.2.226:6379', '', '', NULL, NULL, 4, NULL, 'guest', '2023-09-30 18:45:34', '2023-10-09 13:11:18');
+INSERT INTO `sys_gen` VALUES (3, '本地zk', '127.0.0.1:2181', '', '', NULL, NULL, 8, NULL, 'guest', '2023-10-10 09:11:31', NULL);
+INSERT INTO `sys_gen` VALUES (4, 'nginx', '192.168.110.100:22', 'root', 'boren1818', NULL, NULL, 9, NULL, 'guest', '2023-10-10 20:33:22', '2023-10-10 20:33:22');
 
 -- ----------------------------
 -- Table structure for sys_gen_column
@@ -73,7 +72,7 @@ CREATE TABLE `sys_gen_column`  (
   `col_sort` int NULL DEFAULT NULL COMMENT '排序',
   PRIMARY KEY (`col_id`) USING BTREE,
   INDEX `index_tab_id`(`tab_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 834 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 20 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of sys_gen_column
@@ -128,6 +127,8 @@ INSERT INTO `sys_gen_config` VALUES (4, 'false', 'REDIS', 'REMOTE', NULL, NULL, 
 INSERT INTO `sys_gen_config` VALUES (5, 'false', 'FTP', 'REMOTE', NULL, NULL, NULL, '[{\"name\":\"UI\",\"url\":\"/ext/ftp/console\"}]', 'FTP', 1, '2023-10-02 15:18:19', '2023-10-09 13:11:19');
 INSERT INTO `sys_gen_config` VALUES (6, 'false', 'SFTP', 'REMOTE', NULL, NULL, NULL, '[{\"name\":\"UI\",\"url\":\"/ext/ftp/console\"}]', 'SFTP', 1, '2023-10-03 10:07:05', '2023-10-09 13:11:19');
 INSERT INTO `sys_gen_config` VALUES (7, 'false', 'SSH', 'REMOTE', NULL, NULL, NULL, '[{\"name\":\"UI\",\"url\":\"/ext/ssh/console\"}]', 'SSH', 1, '2023-10-09 15:04:33', '2023-10-09 15:05:12');
+INSERT INTO `sys_gen_config` VALUES (8, 'false', 'ZOOKEEPER', 'REMOTE', NULL, NULL, NULL, '[{\"name\":\"UI\",\"url\":\"/ext/zk/console\"}]', 'ZOOKEEPER', 1, '2023-10-10 08:58:54', '2023-10-10 09:03:08');
+INSERT INTO `sys_gen_config` VALUES (9, NULL, 'NGINX', 'REMOTE', NULL, NULL, NULL, '[{\"name\":\"UI\",\"url\":\"/ext/nginx/console\"}]', 'NGINX', 1, '2023-10-10 20:33:22', '2023-10-10 20:33:22');
 
 -- ----------------------------
 -- Table structure for sys_gen_table
@@ -150,7 +151,7 @@ CREATE TABLE `sys_gen_table`  (
   `tab_remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '备注',
   `tab_tpl_category` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '使用的模板（crud单表操作 tree树表操作 sub主子表操作）',
   PRIMARY KEY (`tab_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 44 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of sys_gen_table
