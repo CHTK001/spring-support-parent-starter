@@ -65,7 +65,7 @@ public class SessionController {
         }
 
         try (Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseConfig());) {
-            return ReturnResult.ok(session.getTables(query.getDatabaseId(), "%", query.getKeyword()));
+            return ReturnResult.ok(session.getTables(query.getDatabaseId(), "%", query.createSessionQuery()));
         } catch (Exception e) {
             e.printStackTrace();
             return ReturnResult.ok(Collections.emptyList());
@@ -91,7 +91,7 @@ public class SessionController {
                 return ReturnResult.ok(database1);
             }
 
-            List<TableResult> results = session.getTables(database, "%", query.getKeyword());
+            List<TableResult> results = session.getTables(database, "%",  query.createSessionQuery());
             DatabaseResult item = new DatabaseResult();
             item.setName("table");
             item.setLabel("表");
