@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.gen.support.mapper.SysGenNginxUpstreamItemMapper">
+  <resultMap id="BaseResultMap" type="com.chua.starter.gen.support.entity.SysGenNginxUpstreamItem">
+    <!--@mbg.generated-->
+    <!--@Table sys_gen_nginx_upstream_item-->
+    <id column="upstream_item_id" jdbcType="INTEGER" property="upstreamItemId" />
+    <result column="upstream_id" jdbcType="VARCHAR" property="upstreamId" />
+    <result column="upstream_item_ip" jdbcType="VARCHAR" property="upstreamItemIp" />
+    <result column="upstream_item_port" jdbcType="INTEGER" property="upstreamItemPort" />
+    <result column="upstream_item_weight" jdbcType="INTEGER" property="upstreamItemWeight" />
+    <result column="upstream_item_failure" jdbcType="INTEGER" property="upstreamItemFailure" />
+    <result column="upstream_item_conn" jdbcType="INTEGER" property="upstreamItemConn" />
+    <result column="upstream_item_st" jdbcType="VARCHAR" property="upstreamItemSt" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    upstream_item_id, upstream_id, upstream_item_ip, upstream_item_port, upstream_item_weight, 
+    upstream_item_failure, upstream_item_conn, upstream_item_st
+  </sql>
+</mapper>
