@@ -143,8 +143,8 @@ public class SessionController {
         Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseConfig());
         SessionResultSet sessionResultSet = null;
         try {
-            sessionResultSet = session.executeQuery("explain " + explainQuery.getSql());
-            stringBuffer.append("explain\r\n " + HighlightingFormatter.INSTANCE.format(SqlFormatter.format(explainQuery.getSql())));
+            sessionResultSet = session.executeQuery("explain " + explainQuery.getContent(), explainQuery);
+            stringBuffer.append("explain\r\n " + HighlightingFormatter.INSTANCE.format(SqlFormatter.format(explainQuery.getContent())));
         } catch (Exception e) {
             String localizedMessage = e.getLocalizedMessage();
             if(null != localizedMessage) {
@@ -191,8 +191,10 @@ public class SessionController {
         Session session = ServiceProvider.of(Session.class).getKeepExtension(executeQuery.getGenId(), sysGen.getGenType(), sysGen.newDatabaseConfig());
         SessionResultSet sessionResultSet = null;
         try {
-            sessionResultSet = session.executeQuery(executeQuery.getSql());
-            stringBuffer.append(HighlightingFormatter.INSTANCE.format(SqlFormatter.format(executeQuery.getSql())));
+            sessionResultSet = session.executeQuery(executeQuery.getContent(), executeQuery);
+            if(StringUtils.isNotEmpty(executeQuery.getContent())) {
+                stringBuffer.append(HighlightingFormatter.INSTANCE.format(SqlFormatter.format(executeQuery.getContent())));
+            }
         } catch (Exception e) {
             String localizedMessage = e.getLocalizedMessage();
             if(null != localizedMessage) {

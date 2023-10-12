@@ -154,7 +154,7 @@ public class ShellWebSocketHandler {
 
         public void send(String data) {
             try {
-                sshSession.executeQuery(data);
+                sshSession.executeQuery(data, null);
             } catch (Exception ignored) {
             }
         }
