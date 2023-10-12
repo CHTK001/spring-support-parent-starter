@@ -8,9 +8,10 @@
     <result column="http_config_name" jdbcType="VARCHAR" property="httpConfigName" />
     <result column="http_config_value" jdbcType="VARCHAR" property="httpConfigValue" />
     <result column="http_config_status" jdbcType="INTEGER" property="httpConfigStatus" />
+    <result column="gen_id" jdbcType="INTEGER" property="genId" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
-    http_config_id, http_config_name, http_config_value, http_config_status
+    http_config_id, http_config_name, http_config_value, http_config_status, gen_id
   </sql>
 </mapper>
