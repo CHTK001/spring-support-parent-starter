@@ -158,11 +158,13 @@ public class SessionController {
 
             return ReturnResult.illegal();
         }
-        stringBuffer.append("\r\n").append("耗时: ").append(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime));
+        long toMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
+        stringBuffer.append("\r\n").append("耗时: ").append(toMillis);
         stringBuffer.append(" ms");
         SessionResult sessionResult = new SessionResult();
         sessionResult.setFields(sessionResultSet.toFields());
         sessionResult.setData(sessionResultSet.toData());
+        sessionResult.setCost(toMillis);
         sessionResult.setTotal(sessionResultSet.toTotal());
         sessionResult.setMessage(stringBuffer.toString());
         return ReturnResult.ok(sessionResult);
@@ -204,13 +206,15 @@ public class SessionController {
 
             return ReturnResult.illegal();
         }
-        stringBuffer.append("\r\n").append("耗时: ").append(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime));
+        long toMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
+        stringBuffer.append("\r\n").append("耗时: ").append(toMillis);
         stringBuffer.append(" ms");
 
         SessionResult sessionResult = new SessionResult();
         sessionResult.setFields(sessionResultSet.toFields());
         sessionResult.setData(sessionResultSet.toData());
         sessionResult.setMessage(stringBuffer.toString());
+        sessionResult.setCost(toMillis);
         sessionResult.setTotal(sessionResultSet.toTotal());
         return ReturnResult.ok(sessionResult);
     }
@@ -350,8 +354,7 @@ public class SessionController {
         try {
             sessionInfo = session.delete(deleteQuery);
         } catch (Exception e) {
-            e.printStackTrace();
-            return ReturnResult.illegal();
+            throw new RuntimeException(e);
         }
         return ReturnResult.ok(sessionInfo.toResult());
     }

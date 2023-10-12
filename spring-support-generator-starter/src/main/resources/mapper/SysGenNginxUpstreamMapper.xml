@@ -8,10 +8,11 @@
     <result column="upstream_name" jdbcType="VARCHAR" property="upstreamName" />
     <result column="upstream_desc" jdbcType="VARCHAR" property="upstreamDesc" />
     <result column="upstrean_type" jdbcType="VARCHAR" property="upstreanType" />
-    <result column="upstream_strage" jdbcType="VARCHAR" property="upstreamStrage" />
+    <result column="upstream_strategy" jdbcType="VARCHAR" property="upstreamStrategy" />
+    <result column="gen_id" jdbcType="INTEGER" property="genId" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
-    upstream_id, upstream_name, upstream_desc, upstrean_type, upstream_strage
+    upstream_id, upstream_name, upstream_desc, upstrean_type, upstream_strategy, gen_id
   </sql>
 </mapper>

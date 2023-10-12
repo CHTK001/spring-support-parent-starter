@@ -17,7 +17,7 @@ import java.io.Serializable;
 @Data
 @TableName(value = "sys_gen_nginx_upstream_item")
 public class SysGenNginxUpstreamItem implements Serializable {
-    @TableId(value = "upstream_item_id", type = IdType.INPUT)
+    @TableId(value = "upstream_item_id", type = IdType.AUTO)
     @NotNull(message = "不能为null")
     private Integer upstreamItemId;
 
