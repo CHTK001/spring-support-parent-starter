@@ -12,13 +12,12 @@ import java.io.Serializable;
 import java.util.List;
 
 /**
- *    
  * @author CH
- */     
+ */
 @Data
 @TableName(value = "sys_gen_nginx_server")
 public class SysGenNginxServer implements Serializable {
-    @TableId(value = "server_id", type = IdType.INPUT)
+    @TableId(value = "server_id", type = IdType.AUTO)
     @NotNull(message = "不能为null")
     private Integer serverId;
 
@@ -26,21 +25,21 @@ public class SysGenNginxServer implements Serializable {
      * 转发类型; http/https, tcp, udp
      */
     @TableField(value = "server_type")
-    @Size(max = 255,message = "转发类型; http/https, tcp, udp最大长度要小于 255")
+    @Size(max = 255, message = "转发类型; http/https, tcp, udp最大长度要小于 255")
     private String serverType;
 
     /**
-     * 监听ip端口	
+     * 监听ip端口
      */
     @TableField(value = "server_address")
-    @Size(max = 255,message = "监听ip端口	最大长度要小于 255")
+    @Size(max = 255, message = "监听ip端口	最大长度要小于 255")
     private String serverAddress;
 
     /**
      * 监听域名
      */
     @TableField(value = "server_domain")
-    @Size(max = 255,message = "监听域名最大长度要小于 255")
+    @Size(max = 255, message = "监听域名最大长度要小于 255")
     private String serverDomain;
 
     /**
@@ -53,7 +52,7 @@ public class SysGenNginxServer implements Serializable {
      * 额外参数
      */
     @TableField(value = "server_param")
-    @Size(max = 255,message = "额外参数最大长度要小于 255")
+    @Size(max = 255, message = "额外参数最大长度要小于 255")
     private String serverParam;
 
     /**
@@ -68,8 +67,10 @@ public class SysGenNginxServer implements Serializable {
     @TableField(value = "upstream_id")
     private Integer upstreamId;
 
+    @TableField(value = "gen_id")
+    private Integer genId;
 
+    private static final long serialVersionUID = 1L;
     @TableField(exist = false)
     private List<SysGenNginxServerItem> item;
-    private static final long serialVersionUID = 1L;
 }

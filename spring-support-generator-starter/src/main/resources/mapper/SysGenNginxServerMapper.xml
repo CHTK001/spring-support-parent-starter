@@ -12,10 +12,11 @@
     <result column="server_param" jdbcType="VARCHAR" property="serverParam" />
     <result column="server_status" jdbcType="INTEGER" property="serverStatus" />
     <result column="upstream_id" jdbcType="INTEGER" property="upstreamId" />
+    <result column="gen_id" jdbcType="INTEGER" property="genId" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
     server_id, server_type, server_address, server_domain, server_ssl, server_param, 
-    server_status, upstream_id
+    server_status, upstream_id, gen_id
   </sql>
 </mapper>

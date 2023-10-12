@@ -5,9 +5,8 @@ import com.chua.starter.gen.support.entity.SysGenNginxHttpConfig;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- *    
  * @author CH
- */     
+ */
 @Mapper
 public interface SysGenNginxHttpConfigMapper extends BaseMapper<SysGenNginxHttpConfig> {
 }

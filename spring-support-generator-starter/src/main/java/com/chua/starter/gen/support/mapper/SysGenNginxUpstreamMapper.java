@@ -5,9 +5,8 @@ import com.chua.starter.gen.support.entity.SysGenNginxUpstream;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- *    
  * @author CH
- */     
+ */
 @Mapper
 public interface SysGenNginxUpstreamMapper extends BaseMapper<SysGenNginxUpstream> {
 }

@@ -17,7 +17,7 @@ import java.io.Serializable;
 @Data
 @TableName(value = "sys_gen_nginx_server_item")
 public class SysGenNginxServerItem implements Serializable {
-    @TableId(value = "server_item_id", type = IdType.INPUT)
+    @TableId(value = "server_item_id", type = IdType.AUTO)
     @NotNull(message = "不能为null")
     private Integer serverItemId;
 
