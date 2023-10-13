@@ -112,6 +112,8 @@ public class SessionController {
                 child.setType("VIEW");
             }
             results1.add(item1);
+        } catch (NullPointerException e) {
+            throw new RuntimeException("请安装" + sysGen.getGenType() + "依赖");
         } catch (Exception e) {
             e.printStackTrace();
         }
