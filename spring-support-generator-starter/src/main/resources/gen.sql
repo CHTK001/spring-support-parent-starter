@@ -11,7 +11,7 @@
  Target Server Version : 80033
  File Encoding         : 65001
 
- Date: 10/10/2023 20:52:35
+ Date: 13/10/2023 16:46:43
 */
 
 SET NAMES utf8mb4;
@@ -35,7 +35,7 @@ CREATE TABLE `sys_gen`  (
   `create_time` datetime NULL DEFAULT NULL COMMENT '创建时间',
   `update_time` datetime NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`gen_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of sys_gen
@@ -44,6 +44,26 @@ INSERT INTO `sys_gen` VALUES (1, '本地数据库', 'jdbc:mysql://127.0.0.1:3306
 INSERT INTO `sys_gen` VALUES (2, '本地redis', '172.16.2.226:6379', '', '', NULL, NULL, 4, NULL, 'guest', '2023-09-30 18:45:34', '2023-10-09 13:11:18');
 INSERT INTO `sys_gen` VALUES (3, '本地zk', '127.0.0.1:2181', '', '', NULL, NULL, 8, NULL, 'guest', '2023-10-10 09:11:31', NULL);
 INSERT INTO `sys_gen` VALUES (4, 'nginx', '192.168.110.100:22', 'root', 'boren1818', NULL, NULL, 9, NULL, 'guest', '2023-10-10 20:33:22', '2023-10-10 20:33:22');
+INSERT INTO `sys_gen` VALUES (5, 'es', 'http://172.16.1.112:9200', '', '', NULL, NULL, 10, NULL, 'guest', '2023-10-11 13:17:19', '2023-10-11 13:17:21');
+
+-- ----------------------------
+-- Table structure for sys_gen_backup
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_gen_backup`;
+CREATE TABLE `sys_gen_backup`  (
+  `backup_id` int NOT NULL AUTO_INCREMENT,
+  `gen_id` int NULL DEFAULT NULL COMMENT '工具ID',
+  `backup_status` int NULL DEFAULT NULL COMMENT '是否开启; 1:开启; 0:暂停',
+  `backup_period` int NULL DEFAULT NULL COMMENT '保存周期, 天',
+  `backup_path` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '备份目录',
+  `create_time` datetime NULL DEFAULT NULL COMMENT '创建时间',
+  `update_time` datetime NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`backup_id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of sys_gen_backup
+-- ----------------------------
 
 -- ----------------------------
 -- Table structure for sys_gen_column
@@ -72,7 +92,7 @@ CREATE TABLE `sys_gen_column`  (
   `col_sort` int NULL DEFAULT NULL COMMENT '排序',
   PRIMARY KEY (`col_id`) USING BTREE,
   INDEX `index_tab_id`(`tab_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 20 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 19 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of sys_gen_column
@@ -115,7 +135,7 @@ CREATE TABLE `sys_gen_config`  (
   `create_time` datetime NULL DEFAULT NULL COMMENT '创建时间',
   `update_time` datetime NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`dbc_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 9 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 11 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of sys_gen_config
@@ -129,6 +149,103 @@ INSERT INTO `sys_gen_config` VALUES (6, 'false', 'SFTP', 'REMOTE', NULL, NULL, N
 INSERT INTO `sys_gen_config` VALUES (7, 'false', 'SSH', 'REMOTE', NULL, NULL, NULL, '[{\"name\":\"UI\",\"url\":\"/ext/ssh/console\"}]', 'SSH', 1, '2023-10-09 15:04:33', '2023-10-09 15:05:12');
 INSERT INTO `sys_gen_config` VALUES (8, 'false', 'ZOOKEEPER', 'REMOTE', NULL, NULL, NULL, '[{\"name\":\"UI\",\"url\":\"/ext/zk/console\"}]', 'ZOOKEEPER', 1, '2023-10-10 08:58:54', '2023-10-10 09:03:08');
 INSERT INTO `sys_gen_config` VALUES (9, NULL, 'NGINX', 'REMOTE', NULL, NULL, NULL, '[{\"name\":\"UI\",\"url\":\"/ext/nginx/console\"}]', 'NGINX', 1, '2023-10-10 20:33:22', '2023-10-10 20:33:22');
+INSERT INTO `sys_gen_config` VALUES (10, NULL, 'ELASTICSEARCH', 'REMOTE', NULL, NULL, NULL, '[{\"name\":\"UI\",\"url\":\"/ext/es/console\"}]', 'ELASTICSEARCH', 1, '2023-10-11 13:17:19', '2023-10-11 13:17:21');
+
+-- ----------------------------
+-- Table structure for sys_gen_nginx_http_config
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_gen_nginx_http_config`;
+CREATE TABLE `sys_gen_nginx_http_config`  (
+  `http_config_id` int NOT NULL AUTO_INCREMENT,
+  `http_config_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '配置名称',
+  `http_config_value` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '配置值',
+  `http_config_status` int NULL DEFAULT 1 COMMENT '状态; 0禁用',
+  `gen_id` int NULL DEFAULT NULL,
+  PRIMARY KEY (`http_config_id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 15 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of sys_gen_nginx_http_config
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for sys_gen_nginx_server
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_gen_nginx_server`;
+CREATE TABLE `sys_gen_nginx_server`  (
+  `server_id` int NOT NULL AUTO_INCREMENT,
+  `server_type` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '转发类型; http/https, tcp, udp',
+  `server_address` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '监听ip端口	',
+  `server_domain` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '监听域名',
+  `server_ssl` int NULL DEFAULT NULL COMMENT '是否开启ssl; 0：不开启',
+  `server_param` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '额外参数',
+  `server_status` int NULL DEFAULT NULL COMMENT '是否启用; 0:停用',
+  `upstream_id` int NULL DEFAULT NULL COMMENT '负载均衡方式； tcp使用',
+  `gen_id` int NULL DEFAULT NULL,
+  PRIMARY KEY (`server_id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of sys_gen_nginx_server
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for sys_gen_nginx_server_item
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_gen_nginx_server_item`;
+CREATE TABLE `sys_gen_nginx_server_item`  (
+  `server_item_id` int NOT NULL AUTO_INCREMENT,
+  `server_id` int NULL DEFAULT NULL COMMENT '反向代理(server)id',
+  `server_item_path` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '监控路径',
+  `server_item_type` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '代理类型; dymaic: 动态http, static: 静态html,upstream: 负载均衡',
+  `server_item_websocket` int NULL DEFAULT NULL COMMENT '是否开启ws; 0:不开启',
+  `server_item_cors` int NULL DEFAULT NULL COMMENT '是否开启跨域; 0:不开启',
+  `server_item_host` int NULL DEFAULT NULL COMMENT '是否设置$host;0:不开启',
+  `server_item_param` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '额外参数',
+  PRIMARY KEY (`server_item_id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of sys_gen_nginx_server_item
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for sys_gen_nginx_upstream
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_gen_nginx_upstream`;
+CREATE TABLE `sys_gen_nginx_upstream`  (
+  `upstream_id` int NOT NULL AUTO_INCREMENT,
+  `upstream_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '名称',
+  `upstream_desc` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '描述',
+  `upstrean_type` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '转发类型; http/https; tcp/udp',
+  `upstream_strategy` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '策略; least_conn',
+  `gen_id` int NULL DEFAULT NULL,
+  PRIMARY KEY (`upstream_id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of sys_gen_nginx_upstream
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for sys_gen_nginx_upstream_item
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_gen_nginx_upstream_item`;
+CREATE TABLE `sys_gen_nginx_upstream_item`  (
+  `upstream_item_id` int NOT NULL AUTO_INCREMENT,
+  `upstream_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '配置名称',
+  `upstream_item_ip` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT 'IP',
+  `upstream_item_port` int NULL DEFAULT NULL COMMENT '端口',
+  `upstream_item_weight` int NULL DEFAULT NULL COMMENT '权重',
+  `upstream_item_failure` int NULL DEFAULT NULL COMMENT '最大失败次数',
+  `upstream_item_conn` int NULL DEFAULT NULL COMMENT '最大连接数',
+  `upstream_item_st` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '策略; down: 停用；backup: 备用;',
+  PRIMARY KEY (`upstream_item_id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of sys_gen_nginx_upstream_item
+-- ----------------------------
 
 -- ----------------------------
 -- Table structure for sys_gen_table
