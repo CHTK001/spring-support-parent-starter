@@ -115,6 +115,10 @@ public class DatabaseController {
      */
     @PostMapping("update")
     public ReturnResult<SysGen> update(@RequestBody SysGen sysGen) {
+        SysGen sysGen1 = sysGenService.getByIdWithType(sysGen.getGenId());
+        if(null == sysGen1) {
+            return ReturnResult.illegal("数据不存在");
+        }
         Dialect dialect = Dialect.createDriver(sysGen.getGenDriver());
         if(null != dialect) {
             sysGen.setGenUrl(dialect.getUrl(sysGen.newDatabaseConfig()));
@@ -157,7 +161,7 @@ public class DatabaseController {
      */
     @GetMapping("delete")
     public ReturnResult<Boolean> delete(String id) {
-        SysGen sysGen = sysGenService.getById(id);
+        SysGen sysGen = sysGenService.getByIdWithType(id);
         if(null == sysGen) {
             return ReturnResult.illegal("数据信息不存在");
         }
