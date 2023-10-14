@@ -1,10 +1,10 @@
 package com.chua.starter.script.watchdog;
 
-import com.chua.common.support.mysql.BinaryLogClient;
-import com.chua.common.support.mysql.event.Event;
-import com.chua.common.support.mysql.event.EventData;
-import com.chua.common.support.mysql.event.TableMapEventData;
-import com.chua.common.support.mysql.event.UpdateRowsEventData;
+import com.chua.common.support.mysql.binlog.BinaryLogClient;
+import com.chua.common.support.mysql.binlog.event.Event;
+import com.chua.common.support.mysql.binlog.event.EventData;
+import com.chua.common.support.mysql.binlog.event.TableMapEventData;
+import com.chua.common.support.mysql.binlog.event.UpdateRowsEventData;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.script.ScriptExtension;
 import com.chua.starter.script.bean.ScriptBean;
