@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
+import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -25,31 +26,29 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequestMapping("v1/backup")
 public class BackupController {
 
-    private static final Map<Integer, Backup> BACKUP_MAP = new ConcurrentHashMap<>();
-    @Resource
-    private SysGenService sysGenService;
 
     @Resource
     private SysGenBackupService sysGenBackupService;
 
+    /**
+     * 开始
+     *
+     * @param genId gen id
+     * @return {@link ReturnResult}<{@link SysGenBackup}>
+     */
     @GetMapping("start")
     public ReturnResult<SysGenBackup> start(Integer genId) {
-        if(null == genId) {
-            return ReturnResult.error("备份信息不存在");
-        }
+        return sysGenBackupService.start(genId);
+    }
 
-        if(BACKUP_MAP.containsKey(genId)) {
-            return ReturnResult.illegal("已开启备份");
-        }
-        SysGen sysGen = sysGenService.getByIdWithType(genId);
-        if(null == sysGen) {
-            return ReturnResult.illegal("配置信息不存在");
-        }
-
-        SysGenBackup sysGenBackup = sysGenBackupService.getOne(Wrappers.<SysGenBackup>lambdaQuery().eq(SysGenBackup::getGenId, genId));
-        Backup backup = ServiceProvider.of(Backup.class).getNewExtension(sysGenBackup.getBackupId() + "", sysGenBackup.newBackupOption());
-        if(null == backup) {
-            return ReturnResult.illegal("无法开启备份功能(当前系统不支持备份)");
-        }
+    /**
+     * 开始
+     *
+     * @param genId gen id
+     * @return {@link ReturnResult}<{@link SysGenBackup}>
+     */
+    @GetMapping("stop")
+    public ReturnResult<Boolean> stop(Integer genId) {
+        return sysGenBackupService.stop(genId);
     }
 }
