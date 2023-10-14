@@ -77,6 +77,12 @@ public class SysGen implements Serializable {
     private String genDatabaseFile;
 
     /**
+     * 0:未启动
+     */
+    @TableField(value = "gen_backup_status")
+    private Integer genBackupStatus;
+
+    /**
      * 创建时间
      */
     @TableField(value = "create_time")
