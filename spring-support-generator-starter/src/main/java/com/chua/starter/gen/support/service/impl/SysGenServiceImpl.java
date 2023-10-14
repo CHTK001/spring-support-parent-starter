@@ -25,6 +25,7 @@ public class SysGenServiceImpl extends ServiceImpl<SysGenMapper, SysGen> impleme
         return CollectionUtils.findFirst(baseMapper.selectList(new MPJLambdaWrapper<SysGen>()
                         .selectAll(SysGen.class)
                         .selectAs(SysGenConfig::getDbcType, "genType")
+                        .selectAs(SysGenConfig::getDbcName, "dbcName")
                         .innerJoin(SysGenConfig.class, SysGenConfig::getDbcId, SysGen::getDbcId)
                         .eq(SysGen::getCreateBy, username)
                         .eq(SysGen::getGenId, genId)

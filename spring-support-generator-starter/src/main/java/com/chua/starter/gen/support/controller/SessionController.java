@@ -64,7 +64,7 @@ public class SessionController {
             return ReturnResult.illegal("表不存在");
         }
 
-        try (Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseConfig());) {
+        try (Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions());) {
             return ReturnResult.ok(session.getTables(query.getDatabaseId(), "%", query.createSessionQuery()));
         } catch (Exception e) {
             e.printStackTrace();
@@ -84,7 +84,7 @@ public class SessionController {
         }
         String database = StringUtils.defaultString(query.getDatabaseId(), sysGen.getGenDatabase());
         List<DatabaseResult> results1 = new LinkedList<>();
-        Session session = ServiceProvider.of(Session.class).getKeepExtension(query.getGenId() + "", sysGen.getGenType(), sysGen.newDatabaseConfig());
+        Session session = ServiceProvider.of(Session.class).getKeepExtension(query.getGenId() + "", sysGen.getGenType(), sysGen.newDatabaseOptions());
         try{
             List<DatabaseResult> database1 = session.getDatabase(query.getKeyword());
             if(CollectionUtils.isNotEmpty(database1)) {
@@ -142,7 +142,7 @@ public class SessionController {
         }
         StringBuilder stringBuffer = new StringBuilder();
         long startTime = System.nanoTime();
-        Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseConfig());
+        Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions());
         SessionResultSet sessionResultSet = null;
         try {
             sessionResultSet = session.executeQuery("explain " + explainQuery.getContent(), explainQuery);
@@ -190,7 +190,7 @@ public class SessionController {
 
         StringBuilder stringBuffer = new StringBuilder();
         long startTime = System.nanoTime();
-        Session session = ServiceProvider.of(Session.class).getKeepExtension(executeQuery.getGenId(), sysGen.getGenType(), sysGen.newDatabaseConfig());
+        Session session = ServiceProvider.of(Session.class).getKeepExtension(executeQuery.getGenId(), sysGen.getGenType(), sysGen.newDatabaseOptions());
         SessionResultSet sessionResultSet = null;
         try {
             sessionResultSet = session.executeQuery(executeQuery.getContent(), executeQuery);
@@ -239,7 +239,7 @@ public class SessionController {
             return ReturnResult.error("未配置生成器类型");
         }
 
-        Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseConfig());
+        Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions());
         SessionResultSet sessionResultSet = null;
         try {
             sessionResultSet = session.log(executeQuery);
@@ -273,7 +273,7 @@ public class SessionController {
             return ReturnResult.error("未配置生成器类型");
         }
 
-        Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseConfig());
+        Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions());
         SessionInfo sessionInfo = null;
         try {
             sessionInfo = session.info();
@@ -313,7 +313,7 @@ public class SessionController {
             return ReturnResult.error("未配置生成器类型");
         }
 
-        Session session = ServiceProvider.of(Session.class).getKeepExtension(saveQuery.getGenId(), sysGen.getGenType(), sysGen.newDatabaseConfig());
+        Session session = ServiceProvider.of(Session.class).getKeepExtension(saveQuery.getGenId(), sysGen.getGenType(), sysGen.newDatabaseOptions());
         SessionInfo sessionInfo = null;
         File file1 = null;
         try {
@@ -353,7 +353,7 @@ public class SessionController {
             return ReturnResult.error("未配置生成器类型");
         }
 
-        Session session = ServiceProvider.of(Session.class).getKeepExtension(deleteQuery.getGenId(), sysGen.getGenType(), sysGen.newDatabaseConfig());
+        Session session = ServiceProvider.of(Session.class).getKeepExtension(deleteQuery.getGenId(), sysGen.getGenType(), sysGen.newDatabaseOptions());
         SessionInfo sessionInfo = null;
         try {
             sessionInfo = session.delete(deleteQuery);
@@ -393,7 +393,7 @@ public class SessionController {
             file1 = MultipartFileUtils.toFile(file);
         } catch (Exception ignored) {
         }
-        Session session = ServiceProvider.of(Session.class).getKeepExtension(updateQuery.getGenId(), sysGen.getGenType(), sysGen.newDatabaseConfig());
+        Session session = ServiceProvider.of(Session.class).getKeepExtension(updateQuery.getGenId(), sysGen.getGenType(), sysGen.newDatabaseOptions());
         SessionInfo sessionInfo = null;
         try {
             sessionInfo = session.update(updateQuery, file1);
@@ -442,7 +442,7 @@ public class SessionController {
                 }
             } else {
                 try {
-                    Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseConfig());
+                    Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions());
                     result = session.previewDoc(query);
                     if(session.docCache()) {
                         try(OutputStream os = new FileOutputStream(file)) {
@@ -496,7 +496,7 @@ public class SessionController {
                 } catch (IOException ignored) {
                 }
             }
-            Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseConfig());
+            Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions());
             try (FileOutputStream fileOutputStream = new FileOutputStream(file)) {
                 IoUtils.write(session.previewDoc(query), fileOutputStream);
             }
@@ -524,7 +524,7 @@ public class SessionController {
         if (StringUtils.isEmpty(sysGen.getGenType())) {
             return ResponseEntity.notFound().build();
         }
-        Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseConfig());
+        Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions());
         byte[] result = null;
         try {
             result = session.previewDoc(query);

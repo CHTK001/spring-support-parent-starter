@@ -131,7 +131,7 @@ public class ShellWebSocketHandler {
         HandlerItem(Session session, SysGen sysGen) throws IOException {
             this.session = session;
             this.sysGen = sysGen;
-            this.sshSession = new SshSession(sysGen.newDatabaseConfig());
+            this.sshSession = new SshSession(sysGen.newDatabaseOptions());
             this.sshSession.setListen(s -> {
                 if(session.isOpen()) {
                     try {

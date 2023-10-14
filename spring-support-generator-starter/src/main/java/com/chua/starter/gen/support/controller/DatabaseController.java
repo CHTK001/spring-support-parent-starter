@@ -1,6 +1,7 @@
 package com.chua.starter.gen.support.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.chua.common.support.backup.Backup;
 import com.chua.common.support.database.sqldialect.Dialect;
 import com.chua.common.support.session.Session;
 import com.chua.common.support.spi.ServiceProvider;
@@ -27,6 +28,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 生成器控制器
@@ -76,15 +78,21 @@ public class DatabaseController {
                                          @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
 
         String username = RequestUtils.getUsername();
-        return PageResultUtils.<SysGen>ok(sysGenService.page(
+        Page<SysGen> genType = sysGenService.page(
                 new Page<>(pageNum, pageSize),
                 new MPJLambdaWrapper<SysGen>()
                         .selectAll(SysGenConfig.class)
                         .selectAll(SysGen.class)
                         .selectAs(SysGenConfig::getDbcType, "genType")
+                        .selectAs(SysGenConfig::getDbcName, "dbcName")
                         .eq(SysGen::getCreateBy, username)
                         .innerJoin(SysGenConfig.class, SysGenConfig::getDbcId, SysGen::getDbcId)
-        ));
+        );
+        Map<String, Class<Backup>> stringClassMap = ServiceProvider.of(Backup.class).listType();
+        for (SysGen record : genType.getRecords()) {
+            record.setBackup(stringClassMap.containsKey(record.getDbcName()));
+        }
+        return PageResultUtils.<SysGen>ok(genType);
     }
 
     /**
@@ -102,7 +110,7 @@ public class DatabaseController {
         sysGen.setCreateBy(RequestUtils.getUsername());
         Dialect dialect = Dialect.createDriver(sysGen.getGenDriver());
         if(null != dialect) {
-            sysGen.setGenUrl(dialect.getUrl(sysGen.newDatabaseConfig()));
+            sysGen.setGenUrl(dialect.getUrl(sysGen.newDatabaseOptions()));
         }
         sysGenService.save(sysGen);
         return ReturnResult.ok(sysGen);
@@ -121,7 +129,7 @@ public class DatabaseController {
         }
         Dialect dialect = Dialect.createDriver(sysGen.getGenDriver());
         if(null != dialect) {
-            sysGen.setGenUrl(dialect.getUrl(sysGen.newDatabaseConfig()));
+            sysGen.setGenUrl(dialect.getUrl(sysGen.newDatabaseOptions()));
         }
         sysGen.setCreateBy(RequestUtils.getUsername());
         ServiceProvider.of(Session.class).closeKeepExtension(sysGen.getGenId() + "");
@@ -146,7 +154,7 @@ public class DatabaseController {
             sysGen.setGenDatabaseFile(driver.getData().toString());
             Dialect dialect = Dialect.createDriver(sysGen.getGenDriver());
             if(null != dialect) {
-                sysGen.setGenUrl(dialect.getUrl(sysGen.newDatabaseConfig()));
+                sysGen.setGenUrl(dialect.getUrl(sysGen.newDatabaseOptions()));
             }
         }
 
