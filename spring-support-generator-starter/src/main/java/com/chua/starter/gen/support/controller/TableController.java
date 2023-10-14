@@ -8,7 +8,6 @@ import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.constant.NameConstant;
 import com.chua.common.support.database.DatabaseHandler;
 import com.chua.common.support.database.entity.ColumnResult;
-import com.chua.common.support.database.entity.DatabaseResult;
 import com.chua.common.support.database.entity.TableResult;
 import com.chua.common.support.database.sqldialect.Dialect;
 import com.chua.common.support.eventbus.StandardEventbusEvent;
@@ -41,7 +40,6 @@ import com.chua.starter.mybatis.utils.PageResultUtils;
 import com.chua.starter.sse.support.Emitter;
 import com.chua.starter.sse.support.SseMessage;
 import com.chua.starter.sse.support.SseTemplate;
-import com.github.yulichang.query.MPJLambdaQueryWrapper;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.Data;
 import org.springframework.beans.factory.InitializingBean;
@@ -153,7 +151,7 @@ public class TableController implements InitializingBean {
         }
         String database = sysGen.getGenDatabase();
         List<TableResult> results = null;
-        try (DatabaseHandler handler = new DatabaseHandler(sysGen.newDatabaseConfig())) {
+        try (DatabaseHandler handler = new DatabaseHandler(sysGen.newDatabaseOptions())) {
             results = handler.getTables(database, "%");
         } catch (Exception e) {
             e.printStackTrace();
@@ -240,7 +238,7 @@ public class TableController implements InitializingBean {
                 .leftJoin(SysGenTable.class, SysGenTable::getGenId, SysGen::getGenId)
                 .eq(SysGenTable::getTabId, tabId)
         );
-        try (DatabaseHandler handler = new DatabaseHandler(sysGen.newDatabaseConfig())) {
+        try (DatabaseHandler handler = new DatabaseHandler(sysGen.newDatabaseOptions())) {
             List<SysGenColumn> sysGenColumns = sysGenColumnService.list(Wrappers.<SysGenColumn>lambdaQuery().eq(SysGenColumn::getTabId, tabId));
             TableResult tableResult = new TableResult();
             tableResult.setDatabase(sysGen.getGenDatabase());
@@ -277,7 +275,7 @@ public class TableController implements InitializingBean {
             return ReturnResult.error(null, "表不存在");
         }
         SysGen sysGen = getSysGen(query);
-        try (DatabaseHandler handler = new DatabaseHandler(sysGen.newDatabaseConfig())) {
+        try (DatabaseHandler handler = new DatabaseHandler(sysGen.newDatabaseOptions())) {
             Dialect dialect = handler.guessDialect();
             for (String s : tableName) {
                 List<TableResult> tables = handler.getTables(null, s);

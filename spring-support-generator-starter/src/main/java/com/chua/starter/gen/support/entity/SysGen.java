@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.chua.common.support.database.DatabaseConfig;
+import com.chua.common.support.database.DatabaseOptions;
 import com.chua.common.support.utils.StringUtils;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
@@ -14,7 +14,7 @@ import java.util.Date;
 
 @Data
 @TableName(value = "sys_gen")
-@JsonIgnoreProperties({"genPassowrd", "dbcDriverUrl"})
+@JsonIgnoreProperties({"genPassword", "dbcDriverUrl"})
 public class SysGen implements Serializable {
     /**
      * 主键
@@ -113,6 +113,19 @@ public class SysGen implements Serializable {
     @TableField(exist = false)
     private String dbcLog;
 
+
+    /**
+     * 是否有日志
+     */
+    @TableField(exist = false)
+    private String dbcName;
+
+    /**
+     * 是否有备份
+     */
+    @TableField(exist = false)
+    private Boolean backup;
+
     /**
      * 驱动文件地址,服务器生成
      */
@@ -132,20 +145,20 @@ public class SysGen implements Serializable {
     /**
      * 新数据库配置
      *
-     * @return {@link DatabaseConfig}
+     * @return {@link DatabaseOptions}
      */
-    public DatabaseConfig newDatabaseConfig() {
-        DatabaseConfig databaseConfig = new DatabaseConfig();
-        databaseConfig.setDatabase(genDatabase);
-        databaseConfig.setDriver(genDriver);
-        databaseConfig.setDatabaseFile(genDatabaseFile);
-        databaseConfig.setUser(genUser);
-        databaseConfig.setDriverPath(dbcDriverUrl);
-        databaseConfig.setPassword(genPassword);
-        databaseConfig.setGenType(genType);
+    public DatabaseOptions newDatabaseOptions() {
+        DatabaseOptions databaseOptions = new DatabaseOptions();
+        databaseOptions.setDatabase(genDatabase);
+        databaseOptions.setDriver(genDriver);
+        databaseOptions.setDatabaseFile(genDatabaseFile);
+        databaseOptions.setUser(genUser);
+        databaseOptions.setDriverPath(dbcDriverUrl);
+        databaseOptions.setPassword(genPassword);
+        databaseOptions.setGenType(genType);
         if (StringUtils.isNotEmpty(genUrl)) {
-            databaseConfig.setUrl(genUrl);
+            databaseOptions.setUrl(genUrl);
         }
-        return databaseConfig;
+        return databaseOptions;
     }
 }

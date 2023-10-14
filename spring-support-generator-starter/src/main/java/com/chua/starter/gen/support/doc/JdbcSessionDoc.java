@@ -5,9 +5,8 @@ import cn.smallbun.screw.core.engine.*;
 import cn.smallbun.screw.core.metadata.model.DataModel;
 import cn.smallbun.screw.core.process.DataModelProcess;
 import cn.smallbun.screw.core.process.ProcessConfig;
-import cn.smallbun.screw.core.util.ExceptionUtils;
 import com.chua.common.support.annotations.Spi;
-import com.chua.common.support.database.DatabaseConfig;
+import com.chua.common.support.database.DatabaseOptions;
 import com.chua.common.support.function.Splitter;
 import com.chua.common.support.session.doc.SessionDoc;
 import com.chua.common.support.session.query.DocQuery;
@@ -29,10 +28,10 @@ import static cn.smallbun.screw.core.constant.DefaultConstants.DESCRIPTION;
 @Spi("JDBC")
 public class JdbcSessionDoc implements SessionDoc {
 
-    private final DatabaseConfig databaseConfig;
+    private final DatabaseOptions databaseOptions;
 
-    public JdbcSessionDoc(DatabaseConfig databaseConfig) {
-        this.databaseConfig = databaseConfig;
+    public JdbcSessionDoc(DatabaseOptions databaseOptions) {
+        this.databaseOptions = databaseOptions;
     }
 
 
@@ -64,10 +63,10 @@ public class JdbcSessionDoc implements SessionDoc {
                 .ignoreTableName(Splitter.on(',').trimResults().omitEmptyStrings().splitToList(query.getIgnoreTableName())).build();
         // 配置
         HikariDataSource hikariDataSource = new HikariDataSource();
-        hikariDataSource.setUsername(databaseConfig.getUser());
-        hikariDataSource.setPassword(databaseConfig.getPassword());
-        hikariDataSource.setJdbcUrl(databaseConfig.getUrl());
-        hikariDataSource.setDriverClassName(databaseConfig.getDriver());
+        hikariDataSource.setUsername(databaseOptions.getUser());
+        hikariDataSource.setPassword(databaseOptions.getPassword());
+        hikariDataSource.setJdbcUrl(databaseOptions.getUrl());
+        hikariDataSource.setDriverClassName(databaseOptions.getDriver());
         Configuration config = Configuration.builder()
                 // 版本
                 .version("1.0.0")

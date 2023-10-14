@@ -9,13 +9,15 @@
     <result column="backup_status" jdbcType="INTEGER" property="backupStatus" />
     <result column="backup_period" jdbcType="INTEGER" property="backupPeriod" />
     <result column="backup_strategy" jdbcType="VARCHAR" property="backupStrategy" />
+    <result column="backup_action" jdbcType="VARCHAR" property="backupAction" />
+    <result column="backup_ignore" jdbcType="VARCHAR" property="backupIgnore" />
     <result column="backup_path" jdbcType="VARCHAR" property="backupPath" />
     <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
     <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
-    backup_id, gen_id, backup_status, backup_period, backup_strategy, backup_path, create_time, 
-    update_time
+    backup_id, gen_id, backup_status, backup_period, backup_strategy, backup_action, 
+    backup_ignore, backup_path, create_time, update_time
   </sql>
 </mapper>

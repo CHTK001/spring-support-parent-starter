@@ -89,6 +89,6 @@ public class ${ClassName}Controller {
         if(null == ${pkColumn.colJavaField}s) {
             return Result.illegal(false, "数据不存在");
         }
-        return Result.success(${className}Service.removeByIds(Arrays.asList(${pkColumn.colJavaField}s.split(","));
+        return Result.success(${className}Service.removeByIds(Arrays.asList(${pkColumn.colJavaField}s.split(","))));
     }
 }
