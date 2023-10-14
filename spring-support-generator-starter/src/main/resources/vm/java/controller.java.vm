@@ -34,9 +34,9 @@ import java.util.Arrays;
  */
 @RestController
     #if($version)
-@RequestMapping("/${version}/${businessName}")
+    @RequestMapping("/${version}/${businessName}")
     #else
-@RequestMapping("/${moduleName}/${businessName}")
+    @RequestMapping("/${moduleName}/${businessName}")
     #end
 public class ${ClassName}Controller {
 
@@ -57,17 +57,17 @@ public class ${ClassName}Controller {
      *
      * @param ${pkColumn.colJavaField} 主键
      */
-    @GetMapping(value = "/{${pkColumn.colJavaField}}")
-    public ReturnResult<${ClassName}> getInfo(@PathVariable("${pkColumn.colJavaField}") ${pkColumn.colJavaType} ${pkColumn.colJavaField}) {
+    @GetMapping(value = "/info")
+    public ReturnResult<${ClassName}> getInfo(${pkColumn.colJavaType} ${pkColumn.colJavaField}) {
         return Result.success(${className}Service.getById(${pkColumn.colJavaField}));
     }
 
     /**
      * 新增${functionName}
      */
-    @PostMapping("/add")
-    public Result<${ClassName}> add(@Validated(AddGroup.class) @RequestBody ${ClassName} ${className}) {
-        ${className}Service.save(${className});
+    @PostMapping("/save")
+    public Result<${ClassName}> save(@Validated(AddGroup.class) @RequestBody ${ClassName} ${className}) {
+            ${className}Service.save(${className});
         return Result.success(${className});
     }
 
