@@ -20,6 +20,7 @@ public class TemplateResult {
      * 名称
      */
     private String name;
+    private String path;
     /**
      * 类型
      */

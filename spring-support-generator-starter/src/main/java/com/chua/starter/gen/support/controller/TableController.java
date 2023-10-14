@@ -69,11 +69,7 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("v1/table")
-public class TableController implements InitializingBean {
-    private final ScheduledExecutorService scheduledExecutorUpdateService = ThreadUtils.newScheduledThreadPoolExecutor(
-            "update-table-log-heart");
-
-    private static final String NAME_TABLE = "TABLE";
+public class TableController {
     @Resource
     private SysGenService sysGenService;
 
@@ -82,14 +78,11 @@ public class TableController implements InitializingBean {
 
     @Resource
     private SysGenColumnService sysGenColumnService;
-    @Resource
-    private ApplicationContext applicationContext;
 
     @Resource
     private GenProperties genProperties;
     @Resource
     private SseTemplate sseTemplate;
-    private static final Map<String, SubscribeInfo> SUBSCRIBE_INFO_MAP = new ConcurrentHashMap<>();
 
     /**
      * 注册监听
@@ -100,40 +93,8 @@ public class TableController implements InitializingBean {
     @Permission(role = {"ADMIN", "OPS"})
     @GetMapping(value = "subscribe/{id}/{mode}")
     public SseEmitter subscribe(@PathVariable String id, @PathVariable String mode, HttpServletRequest request) throws IOException {
-        if (StringUtils.isBlank(mode)) {
-            throw new RuntimeException("订阅的任务不存在");
-        }
-        SysGen sysGen = null;
-        String name = "*";
-        if (NAME_TABLE.equalsIgnoreCase(mode) && !NameConstant.UNDEFINED.equalsIgnoreCase(id)) {
-            sysGen = sysGenService.getOne(new MPJLambdaWrapper<SysGen>()
-                    .selectAll(SysGen.class)
-                    .select(SysGenTable::getTabName)
-                    .select(SysGenTable::getTabDesc)
-                    .leftJoin(SysGenTable.class, SysGenTable::getGenId, SysGen::getGenId)
-                    .eq(SysGenTable::getTabId, id)
-            );
-            name = sysGen.getTabName();
-        } else {
-            sysGen = sysGenService.getById(id);
-        }
-        String clientId = RequestUtils.getIpAddress(request) + sysGen.getGenDatabase() + "." + StringUtils.defaultString(sysGen.getTabName(), "*");
-
-        NetAddress netAddress = NetAddress.of(sysGen.getGenUrl());
-        SubscribeEventbus subscribeEventbus = ServiceProvider.of(SubscribeEventbus.class)
-                .getNewExtension(netAddress.getProtocol(), netAddress.getAddress(), sysGen.getGenUser(), sysGen.getGenPassword());
-        if (null == subscribeEventbus) {
-            throw new RuntimeException("暂不支持日志");
-        }
-        subscribeEventbus.register(new StandardEventbusEvent(maps -> {
-            for (Map<String, Object> map : maps) {
-                sseTemplate.emit(SseMessage.builder()
-                        .message(Json.toJson(map)).event(mode).build(), clientId);
-            }
-        }).setName(StringUtils.defaultString(sysGen.getTabName(), "*")).setAction(Action.NONE));
-        Emitter emitter = Emitter.builder().clientId(clientId)
-                .event(mode)
-                .entity(subscribeEventbus)
+        Emitter emitter = Emitter.builder().clientId(id)
+                .event(id)
                 .build();
         return sseTemplate.createSseEmitter(emitter);
     }
@@ -432,40 +393,5 @@ public class TableController implements InitializingBean {
         );
     }
 
-    @Data
-    class SubscribeInfo {
-        private SubscribeEventbus eventbus;
-
-        private long createTime;
-
-        private SseEmitter emitter;
-
-        public void updateTime() {
-            this.createTime = System.nanoTime();
-        }
-    }
-
-    @Override
-    public void afterPropertiesSet() throws Exception {
-        long toMillis = TimeUnit.SECONDS.toNanos(30);
-        scheduledExecutorUpdateService.scheduleAtFixedRate(() -> {
-            List<String> deleteKey = new LinkedList<>();
-            for (Map.Entry<String, SubscribeInfo> entry : SUBSCRIBE_INFO_MAP.entrySet()) {
-                SubscribeInfo sse = entry.getValue();
-                if (System.nanoTime() - sse.getCreateTime() < toMillis) {
-                    try {
-                        sse.getEventbus().close();
-                        deleteKey.add(entry.getKey());
-                    } catch (Exception ignored) {
-                    }
-                }
-            }
-
-            for (String s : deleteKey) {
-                SUBSCRIBE_INFO_MAP.remove(s);
-            }
-
-        }, 0, 10, TimeUnit.MINUTES);
-    }
 
 }

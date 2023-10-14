@@ -1,9 +1,11 @@
 package com.chua.starter.gen.support.util;
 
+import com.chua.common.support.lang.Ascii;
 import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.gen.support.entity.SysGenColumn;
 import com.chua.starter.gen.support.entity.SysGenTable;
+import com.chua.starter.gen.support.entity.SysGenTemplate;
 import com.chua.starter.gen.support.query.Download;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -45,6 +47,7 @@ public class VelocityUtils {
      * 默认上级菜单，系统工具
      */
     private static final String DEFAULT_PARENT_MENU_ID = "3";
+    private static final String VUE = "vue";
 
     /**
      * 设置模板变量信息
@@ -118,6 +121,34 @@ public class VelocityUtils {
             throw new RuntimeException(e);
         }
         return templates;
+    }
+
+    /**
+     * 获取文件名
+     */
+    public static String getFileName(SysGenTable genTable, Download download, SysGenTemplate sysGenTemplate) {
+        // 文件名称
+        String fileName = "";
+        String moduleName =  StringUtils.defaultString(download.getModuleName(), EMPTY);
+        String packageName = StringUtils.defaultString(download.getPackageName(), genTable.getTabPackageName());
+        // 大写类名
+        String className = genTable.getTabClassName();
+        String mybatisPath = MYBATIS_PATH + "/" + moduleName;
+        String vuePath = "vue";
+
+        String javaPath = PROJECT_PATH + "/" + StringUtils.replace(packageName, ".", "/");
+        if(StringUtils.isEmpty(sysGenTemplate.getTemplatePath()) || !sysGenTemplate.getTemplatePath().contains("{}")) {
+            return fileName;
+        }
+
+        String path = javaPath;
+        if(XML.equalsIgnoreCase(sysGenTemplate.getTemplateType())) {
+            path = mybatisPath;
+        }
+        if(VUE.equalsIgnoreCase(sysGenTemplate.getTemplateType())) {
+            path = vuePath;
+        }
+        return StringUtils.format(sysGenTemplate.getTemplatePath(), path, className);
     }
 
     /**

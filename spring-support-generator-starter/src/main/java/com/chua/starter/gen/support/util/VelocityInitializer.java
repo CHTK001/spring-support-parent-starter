@@ -23,7 +23,7 @@ public class VelocityInitializer {
         Properties p = new Properties();
         try {
             // 加载classpath目录下的vm文件
-            p.setProperty("resource.loader.file.class", "com.chua.starter.gen.support.loader.CustomResourceLoader");
+            p.setProperty("resource.loader.file.class", "com.chua.starter.gen.support.loader.StringCustomResourceLoader");
             p.setProperty("root", "");
             // 定义字符集
             p.setProperty(Velocity.INPUT_ENCODING, UTF_8);
