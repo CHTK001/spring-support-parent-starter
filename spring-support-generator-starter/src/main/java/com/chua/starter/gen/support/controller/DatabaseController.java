@@ -90,6 +90,7 @@ public class DatabaseController {
         );
         Map<String, Class<Backup>> stringClassMap = ServiceProvider.of(Backup.class).listType();
         for (SysGen record : genType.getRecords()) {
+            record.setGenPassword("");
             record.setBackup(stringClassMap.containsKey(record.getDbcName()));
         }
         return PageResultUtils.<SysGen>ok(genType);

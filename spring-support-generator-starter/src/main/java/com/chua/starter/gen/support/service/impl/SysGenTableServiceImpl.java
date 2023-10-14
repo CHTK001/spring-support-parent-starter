@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.incrementer.DefaultIdentifierGenerator;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.chua.common.support.function.Splitter;
 import com.chua.common.support.net.NetUtils;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.FileUtils;
@@ -12,12 +11,14 @@ import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.gen.support.entity.SysGenColumn;
 import com.chua.starter.gen.support.entity.SysGenTable;
+import com.chua.starter.gen.support.entity.SysGenTemplate;
 import com.chua.starter.gen.support.mapper.SysGenTableMapper;
 import com.chua.starter.gen.support.properties.GenProperties;
 import com.chua.starter.gen.support.query.Download;
 import com.chua.starter.gen.support.result.TemplateResult;
 import com.chua.starter.gen.support.service.SysGenColumnService;
 import com.chua.starter.gen.support.service.SysGenTableService;
+import com.chua.starter.gen.support.service.SysGenTemplateService;
 import com.chua.starter.gen.support.util.VelocityInitializer;
 import com.chua.starter.gen.support.util.VelocityUtils;
 import org.apache.velocity.Template;
@@ -47,6 +48,8 @@ public class SysGenTableServiceImpl extends ServiceImpl<SysGenTableMapper, SysGe
     private SysGenColumnService sysGenColumnService;
 
     @Resource
+    private SysGenTemplateService sysGenTemplateService;
+    @Resource
     private GenProperties genProperties;
 
     @Override
@@ -66,20 +69,32 @@ public class SysGenTableServiceImpl extends ServiceImpl<SysGenTableMapper, SysGe
         SysGenTable sysGenTable = baseMapper.selectById(tabId);
         List<SysGenColumn> sysGenColumns = sysGenColumnService.list(Wrappers.<SysGenColumn>lambdaQuery().eq(SysGenColumn::getTabId, tabId));
 
-        Download download = new Download();
-        for (String template : templates) {
-            temp.add(createTemplateResult(template, sysGenTable, sysGenColumns, download));
-        }
-        String tabTplCategory = sysGenTable.getTabTplCategory();
-        if (StringUtils.isNotEmpty(tabTplCategory)) {
-            Set<String> strings = Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(tabTplCategory);
-            for (String template : strings) {
-                temp.add(createTemplateResult(template, sysGenTable, sysGenColumns, download));
+//        Download download = new Download();
+//        for (String template : templates) {
+//            temp.add(createTemplateResult(template, sysGenTable, sysGenColumns, download));
+//        }
+//        String tabTplCategory = sysGenTable.getTabTplCategory();
+//        if (StringUtils.isNotEmpty(tabTplCategory)) {
+//            Set<String> strings = Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(tabTplCategory);
+//            for (String template : strings) {
+//                temp.add(createTemplateResult(template, sysGenTable, sysGenColumns, download));
+//            }
+//        }
+
+        List<SysGenTemplate> list = sysGenTemplateService.list(Wrappers.<SysGenTemplate>lambdaQuery().eq(SysGenTemplate::getGenId, sysGenTable.getGenId()).or().isNull(SysGenTemplate::getGenId));
+        for (SysGenTemplate sysGenTemplate : list) {
+            String fileName = sysGenTemplate.getTemplateName();
+            if(StringUtils.isEmpty(fileName)) {
+                continue;
             }
+            temp.add(createTemplateResult(sysGenTable, sysGenColumns, sysGenTemplate));
+
         }
 
         return temp;
     }
+
+
 
     /**
      * 创建模板结果
@@ -109,7 +124,27 @@ public class SysGenTableServiceImpl extends ServiceImpl<SysGenTableMapper, SysGe
         }
         return item;
     }
+    private TemplateResult createTemplateResult(SysGenTable sysGenTable, List<SysGenColumn> sysGenColumns, SysGenTemplate sysGenTemplate) {
+        TemplateResult item = new TemplateResult();
+        VelocityInitializer.initVelocity();
+        setPkColumn(sysGenTable, sysGenColumns);
+        VelocityContext context = VelocityUtils.prepareContext(sysGenTable, sysGenColumns, new Download());
 
+        // 设置主键列信息
+
+        item.setName(sysGenTemplate.getTemplateName() + "." + sysGenTemplate.getTemplateType());
+        item.setPath(VelocityUtils.getFileName(sysGenTable, new Download(), sysGenTemplate));
+        item.setType(FileUtils.getExtension(sysGenTemplate.getTemplateName()));
+        try (StringWriter sw = new StringWriter()) {
+            Template tpl = Velocity.getTemplate(sysGenTemplate.getTemplateContent(), UTF_8);
+            tpl.merge(context, sw);
+            item.setContent(sw.toString());
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return item;
+    }
     /**
      * 生成器代码
      *
@@ -128,16 +163,16 @@ public class SysGenTableServiceImpl extends ServiceImpl<SysGenTableMapper, SysGe
         VelocityContext context = VelocityUtils.prepareContext(sysGenTable, sysGenColumns, download);
 
         // 获取模板列表
-        List<String> templates = VelocityUtils.getTemplateList(genProperties.getTemplatePath());
-        for (String template : templates) {
-            String fileName = VelocityUtils.getFileName(template, sysGenTable, download);
+        List<SysGenTemplate> list = sysGenTemplateService.list(Wrappers.<SysGenTemplate>lambdaQuery().eq(SysGenTemplate::getGenId, sysGenTable.getGenId()).or().isNull(SysGenTemplate::getGenId));
+        for (SysGenTemplate sysGenTemplate : list) {
+            String fileName = VelocityUtils.getFileName(sysGenTable, download, sysGenTemplate);
             if(StringUtils.isEmpty(fileName)) {
                 continue;
             }
             // 渲染模板
             try {
                 StringWriter sw = new StringWriter();
-                Template tpl = Velocity.getTemplate(template, UTF_8);
+                Template tpl = Velocity.getTemplate(sysGenTemplate.getTemplateContent(), UTF_8);
                 tpl.merge(context, sw);
                 // 添加到zip
                 zip.putNextEntry(new ZipEntry(fileName));
@@ -149,6 +184,28 @@ public class SysGenTableServiceImpl extends ServiceImpl<SysGenTableMapper, SysGe
                 log.error("渲染模板失败，表名：" + sysGenTable.getTabName(), e);
             }
         }
+
+//        List<String> templates = VelocityUtils.getTemplateList(genProperties.getTemplatePath());
+//        for (String template : templates) {
+//            String fileName = VelocityUtils.getFileName(template, sysGenTable, download);
+//            if(StringUtils.isEmpty(fileName)) {
+//                continue;
+//            }
+//            // 渲染模板
+//            try {
+//                StringWriter sw = new StringWriter();
+//                Template tpl = Velocity.getTemplate(template, UTF_8);
+//                tpl.merge(context, sw);
+//                // 添加到zip
+//                zip.putNextEntry(new ZipEntry(fileName));
+//                IoUtils.write(zip, StandardCharsets.UTF_8, false, sw.toString());
+//                IoUtils.closeQuietly(sw);
+//                zip.flush();
+//                zip.closeEntry();
+//            } catch (IOException e) {
+//                log.error("渲染模板失败，表名：" + sysGenTable.getTabName(), e);
+//            }
+//        }
     }
 
     /**

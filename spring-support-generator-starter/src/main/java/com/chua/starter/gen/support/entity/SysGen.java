@@ -14,7 +14,7 @@ import java.util.Date;
 
 @Data
 @TableName(value = "sys_gen")
-@JsonIgnoreProperties({"genPassword", "dbcDriverUrl"})
+@JsonIgnoreProperties({ "dbcDriverUrl"})
 public class SysGen implements Serializable {
     /**
      * 主键

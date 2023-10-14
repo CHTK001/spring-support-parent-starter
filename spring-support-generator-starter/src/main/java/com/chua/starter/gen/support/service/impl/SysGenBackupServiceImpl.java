@@ -1,9 +1,16 @@
 package com.chua.starter.gen.support.service.impl;
 
+import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.common.support.backup.Backup;
+import com.chua.common.support.backup.listener.SimpleBackupListener;
 import com.chua.common.support.backup.strategy.BackupStrategy;
+import com.chua.common.support.constant.Action;
+import com.chua.common.support.json.Json;
+import com.chua.common.support.lang.formatter.DdlFormatter;
+import com.chua.common.support.lang.formatter.HighlightingFormatter;
+import com.chua.common.support.lang.formatter.SqlFormatter;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.common.support.result.ReturnResult;
@@ -12,6 +19,8 @@ import com.chua.starter.gen.support.entity.SysGenBackup;
 import com.chua.starter.gen.support.mapper.SysGenBackupMapper;
 import com.chua.starter.gen.support.service.SysGenBackupService;
 import com.chua.starter.gen.support.service.SysGenService;
+import com.chua.starter.sse.support.SseMessage;
+import com.chua.starter.sse.support.SseTemplate;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
@@ -19,6 +28,7 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -34,6 +44,8 @@ public class SysGenBackupServiceImpl extends ServiceImpl<SysGenBackupMapper, Sys
     private static final ExecutorService SERVICE = ThreadUtils.newStaticThreadPool();
     @Resource
     private SysGenService sysGenService;
+    @Resource
+    private SseTemplate sseTemplate;
 
     @Override
     public ReturnResult<Boolean> stop(Integer genId) {
@@ -61,6 +73,7 @@ public class SysGenBackupServiceImpl extends ServiceImpl<SysGenBackupMapper, Sys
         sysGen.setGenBackupStatus(0);
         sysGenService.updateById(sysGen);
         BACKUP_MAP.remove(genId);
+        log.info("{}停止成功", sysGen.getGenName());
         return ReturnResult.ok(true);
     }
 
@@ -94,7 +107,16 @@ public class SysGenBackupServiceImpl extends ServiceImpl<SysGenBackupMapper, Sys
             BackupStrategy backupStrategy = ServiceProvider.of(BackupStrategy.class).getNewExtension(sysGenBackup.getBackupStrategy(),
                     sysGenBackup.getBackupAction(), sysGenBackup.getBackupPath(), sysGenBackup.getBackupPeriod());
             backup.addEvent(backupStrategy);
+            backup.addListener(new SimpleBackupListener() {
+                @Override
+                public void listen(Action action, String from, String message, Serializable[] newValue, Serializable[] oldValue) {
+                    sseTemplate.emit(SseMessage.builder().event(sysGenBackup.getGenId() + "")
+                                    .message(Json.toJson(new JSONObject().fluentPut("action", action.name().toLowerCase()).fluentPut("message", message)))
+                            .build(), sysGenBackup.getGenId() + "");
+                }
+            });
             backup.start();
+            log.info("{}({})启动成功", sysGenBackup.getBackupId(), sysGen.getGenName());
         } catch (IOException e) {
             return ReturnResult.illegal("备份服务启动失败");
         }

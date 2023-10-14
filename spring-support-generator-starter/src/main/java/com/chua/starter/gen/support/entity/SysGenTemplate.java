@@ -24,6 +24,9 @@ public class SysGenTemplate implements Serializable {
     @Size(max = 255, message = "模板名称最大长度要小于 255")
     private String templateName;
 
+
+    @TableField("template_type")
+    private String templateType;
     /**
      * 工具ID
      */
