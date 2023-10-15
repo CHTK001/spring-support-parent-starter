@@ -25,4 +25,12 @@ public interface SysGenBackupService extends IService<SysGenBackup> {
      * @return {@link ReturnResult}<{@link SysGenBackup}>
      */
     ReturnResult<SysGenBackup> start(Integer genId);
+
+    /**
+     * 使现代化
+     *
+     * @param sysGenBackup sys gen备份
+     * @return {@link ReturnResult}<{@link Boolean}>
+     */
+    ReturnResult<Boolean> update(SysGenBackup sysGenBackup);
 }

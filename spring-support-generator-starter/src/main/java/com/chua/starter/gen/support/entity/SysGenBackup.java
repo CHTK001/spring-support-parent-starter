@@ -30,6 +30,12 @@ public class SysGenBackup implements Serializable {
     private Integer backupStatus;
 
     /**
+     * 过滤
+     */
+    @TableField(value = "backup_filter")
+    private String backupFilter;
+
+    /**
      * 保存周期, 天
      */
     @TableField(value = "backup_period")
@@ -86,6 +92,7 @@ public class SysGenBackup implements Serializable {
         return BackupOptions.builder()
                 .backupPath(backupPath)
                 .backupIgnore(backupIgnore)
+                .backupFilter(backupFilter)
                 .backupPeriod(backupPeriod)
                 .backupStrategy(backupStrategy)
                 .build();
