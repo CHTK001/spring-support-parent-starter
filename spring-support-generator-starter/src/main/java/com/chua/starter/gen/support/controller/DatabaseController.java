@@ -135,6 +135,10 @@ public class DatabaseController {
         if("".equalsIgnoreCase(sysGen.getGenPassword())){
             sysGen.setGenPassword(null);
         }
+
+        if(null == sysGen.getGenPassword()) {
+            sysGen.setGenPassword("");
+        }
         sysGen.setCreateBy(RequestUtils.getUsername());
         ServiceProvider.of(Session.class).closeKeepExtension(sysGen.getGenId() + "");
 
