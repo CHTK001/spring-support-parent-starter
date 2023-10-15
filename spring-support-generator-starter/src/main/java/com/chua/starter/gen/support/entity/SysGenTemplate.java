@@ -47,6 +47,12 @@ public class SysGenTemplate implements Serializable {
     private Date createTime;
 
     /**
+     * 创建人
+     */
+    @TableField(value = "create_by")
+    private String createBy;
+
+    /**
      * 更新时间
      */
     @TableField(value = "update_time")
