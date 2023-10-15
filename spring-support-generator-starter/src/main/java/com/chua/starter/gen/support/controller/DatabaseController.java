@@ -132,6 +132,9 @@ public class DatabaseController {
         if(null != dialect) {
             sysGen.setGenUrl(dialect.getUrl(sysGen.newDatabaseOptions()));
         }
+        if(StringUtils.isEmpty(sysGen.getGenPassword())){
+            sysGen.setGenPassword(null);
+        }
         sysGen.setCreateBy(RequestUtils.getUsername());
         ServiceProvider.of(Session.class).closeKeepExtension(sysGen.getGenId() + "");
 
