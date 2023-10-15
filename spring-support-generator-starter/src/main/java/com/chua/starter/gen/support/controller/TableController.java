@@ -12,16 +12,15 @@ import com.chua.common.support.database.entity.TableResult;
 import com.chua.common.support.database.sqldialect.Dialect;
 import com.chua.common.support.eventbus.StandardEventbusEvent;
 import com.chua.common.support.eventbus.SubscribeEventbus;
+import com.chua.common.support.file.univocity.parsers.conversions.Validator;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.lang.date.constant.DateFormatConstant;
 import com.chua.common.support.net.NetAddress;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.utils.ArrayUtils;
-import com.chua.common.support.utils.CollectionUtils;
-import com.chua.common.support.utils.StringUtils;
-import com.chua.common.support.utils.ThreadUtils;
+import com.chua.common.support.utils.*;
 import com.chua.starter.common.support.result.PageResult;
+import com.chua.starter.common.support.result.Result;
 import com.chua.starter.common.support.result.ReturnPageResult;
 import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.common.support.utils.RequestUtils;
@@ -218,6 +217,9 @@ public class TableController {
                 return columnResult;
             }).collect(Collectors.toSet()));
         } catch (Exception e) {
+            if(Validator.hasChinese(e.getMessage())) {
+                return Result.failed(e);
+            }
             throw new RuntimeException("同步失败");
         }
         return ReturnResult.ok();
