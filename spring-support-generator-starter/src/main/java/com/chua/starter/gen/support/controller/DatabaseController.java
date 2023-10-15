@@ -132,7 +132,7 @@ public class DatabaseController {
         if(null != dialect) {
             sysGen.setGenUrl(dialect.getUrl(sysGen.newDatabaseOptions()));
         }
-        if(StringUtils.isEmpty(sysGen.getGenPassword())){
+        if("".equalsIgnoreCase(sysGen.getGenPassword())){
             sysGen.setGenPassword(null);
         }
         sysGen.setCreateBy(RequestUtils.getUsername());
