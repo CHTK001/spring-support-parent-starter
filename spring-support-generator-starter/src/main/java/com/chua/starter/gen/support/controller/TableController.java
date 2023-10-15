@@ -218,7 +218,7 @@ public class TableController {
             }).collect(Collectors.toSet()));
         } catch (Exception e) {
             if(Validator.hasChinese(e.getMessage())) {
-                return Result.failed(e);
+                throw new RuntimeException(e);
             }
             throw new RuntimeException("同步失败");
         }
