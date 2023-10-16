@@ -4,15 +4,14 @@ import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.common.support.backup.Backup;
+import com.chua.common.support.backup.BackupDriver;
 import com.chua.common.support.backup.listener.SimpleBackupListener;
 import com.chua.common.support.backup.strategy.BackupStrategy;
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.constant.Action;
 import com.chua.common.support.json.Json;
-import com.chua.common.support.lang.formatter.DdlFormatter;
-import com.chua.common.support.lang.formatter.HighlightingFormatter;
-import com.chua.common.support.lang.formatter.SqlFormatter;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.ObjectUtils;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.common.support.result.Result;
 import com.chua.starter.common.support.result.ReturnCode;
@@ -115,6 +114,25 @@ public class SysGenBackupServiceImpl extends ServiceImpl<SysGenBackupMapper, Sys
         return Result.success(updateById(genBackup));
     }
 
+    @Override
+    public ReturnResult<List<BackupDriver>> driver(Integer genId) {
+        SysGen sysGen = sysGenService.getByIdWithType(genId);
+        if(null == sysGen) {
+            return ReturnResult.illegal("配置不存在");
+        }
+
+        SysGenBackup sysGenBackup = getOne(Wrappers.<SysGenBackup>lambdaQuery().eq(SysGenBackup::getGenId, sysGen.getGenId()));
+        if (null == sysGenBackup) {
+            return ReturnResult.illegal("配置信息不存在");
+        }
+        Backup backup = ObjectUtils.defaultIfNull(BACKUP_MAP.get(sysGen.getGenId()), ServiceProvider.of(Backup.class).getNewExtension(sysGen.getDbcName(), sysGen.newDatabaseOptions(), sysGenBackup.newBackupOption()));
+        if (null == backup) {
+            return ReturnResult.illegal("无法开启备份功能(当前系统不支持备份)");
+        }
+
+        return ReturnResult.ok(backup.getDriver());
+    }
+
     private ReturnResult<SysGenBackup> startSync(SysGen sysGen) {
         SysGenBackup sysGenBackup = getOne(Wrappers.<SysGenBackup>lambdaQuery().eq(SysGenBackup::getGenId, sysGen.getGenId()));
         if (null == sysGenBackup) {
@@ -173,7 +191,7 @@ public class SysGenBackupServiceImpl extends ServiceImpl<SysGenBackupMapper, Sys
                         }
                         ReturnResult<SysGenBackup> sync = startSync(sysGen);
                         if(sync.getCode().equalsIgnoreCase(ReturnCode.OK.getCode())) {
-                            log.info("{}({})启动成功", sysGenBackup.getBackupId(), sysGen.getGenName());
+//                            log.info("{}({})启动成功", sysGenBackup.getBackupId(), sysGen.getGenName());
                             return;
                         }
                     } catch (Exception e) {

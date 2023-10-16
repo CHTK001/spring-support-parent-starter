@@ -4,11 +4,13 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import java.io.Serializable;
-import java.util.Date;
+import com.chua.common.support.backup.BackupOptions;
+import lombok.Data;
+
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
-import com.chua.common.support.backup.BackupOptions;import lombok.Data;
+import java.io.Serializable;
+import java.util.Date;
 
 @Data
 @TableName(value = "sys_gen_backup")
@@ -70,6 +72,13 @@ public class SysGenBackup implements Serializable {
     private String backupPath;
 
     /**
+     * 备份驱动名称
+     */
+    @TableField(value = "backup_driver")
+    @Size(max = 255, message = "备份驱动名称")
+    private String backupDriver;
+
+    /**
      * 创建时间
      */
     @TableField(value = "create_time")
@@ -93,6 +102,7 @@ public class SysGenBackup implements Serializable {
                 .backupPath(backupPath)
                 .backupIgnore(backupIgnore)
                 .backupFilter(backupFilter)
+                .backupDriver(backupDriver)
                 .backupPeriod(backupPeriod)
                 .backupStrategy(backupStrategy)
                 .build();
