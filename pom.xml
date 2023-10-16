@@ -31,7 +31,6 @@
         <module>spring-support-oss-starter</module>
         <module>spring-support-mqtt-starter</module>
         <module>spring-support-minio-starter</module>
-        <module>spring-support-task-starter</module>
         <module>spring-support-socketio-starter</module>
         <module>spring-support-sse-starter</module>
         <module>spring-support-elasticsearch-starter</module>
