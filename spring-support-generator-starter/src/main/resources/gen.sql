@@ -1,17 +1,17 @@
 /*
  Navicat Premium Data Transfer
 
- Source Server         : 127.0.0.1
+ Source Server         : 172.16.2.226
  Source Server Type    : MySQL
- Source Server Version : 80033
- Source Host           : 127.0.0.1:3306
+ Source Server Version : 80033 (8.0.33)
+ Source Host           : 172.16.2.226:3306
  Source Schema         : gen
 
  Target Server Type    : MySQL
- Target Server Version : 80033
+ Target Server Version : 80033 (8.0.33)
  File Encoding         : 65001
 
- Date: 13/10/2023 16:46:43
+ Date: 16/10/2023 20:33:26
 */
 
 SET NAMES utf8mb4;
@@ -30,21 +30,23 @@ CREATE TABLE `sys_gen`  (
   `gen_driver` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '驱动包',
   `gen_database` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '数据库',
   `dbc_id` int NULL DEFAULT NULL COMMENT '配置ID',
+  `gen_backup_status` int NULL DEFAULT NULL COMMENT '0:未启动',
   `gen_database_file` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '数据库文件目录',
   `create_by` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
   `create_time` datetime NULL DEFAULT NULL COMMENT '创建时间',
   `update_time` datetime NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`gen_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of sys_gen
 -- ----------------------------
-INSERT INTO `sys_gen` VALUES (1, '本地数据库', 'jdbc:mysql://127.0.0.1:3306/config?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true', 'root', 'root', 'com.mysql.cj.jdbc.Driver', 'config', 1, NULL, 'guest', '2023-09-28 21:56:40', '2023-10-09 15:20:20');
-INSERT INTO `sys_gen` VALUES (2, '本地redis', '172.16.2.226:6379', '', '', NULL, NULL, 4, NULL, 'guest', '2023-09-30 18:45:34', '2023-10-09 13:11:18');
-INSERT INTO `sys_gen` VALUES (3, '本地zk', '127.0.0.1:2181', '', '', NULL, NULL, 8, NULL, 'guest', '2023-10-10 09:11:31', NULL);
-INSERT INTO `sys_gen` VALUES (4, 'nginx', '192.168.110.100:22', 'root', 'boren1818', NULL, NULL, 9, NULL, 'guest', '2023-10-10 20:33:22', '2023-10-10 20:33:22');
-INSERT INTO `sys_gen` VALUES (5, 'es', 'http://172.16.1.112:9200', '', '', NULL, NULL, 10, NULL, 'guest', '2023-10-11 13:17:19', '2023-10-11 13:17:21');
+INSERT INTO `sys_gen` VALUES (1, 'MYSQL数据库', 'jdbc:mysql://172.16.2.226:3306/config?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true', 'root', 'root', 'com.mysql.cj.jdbc.Driver', 'config', 1, 0, NULL, 'guest', '2023-09-28 21:56:40', '2023-10-09 13:11:17');
+INSERT INTO `sys_gen` VALUES (2, 'redis', '172.16.2.226:6379', NULL, NULL, NULL, NULL, 4, NULL, NULL, 'guest', '2023-09-30 18:45:34', '2023-10-15 10:07:25');
+INSERT INTO `sys_gen` VALUES (3, 'zookeeper', '127.0.0.1:2181', NULL, NULL, NULL, NULL, 8, NULL, NULL, 'guest', '2023-10-10 08:58:54', '2023-10-15 10:06:25');
+INSERT INTO `sys_gen` VALUES (4, 'nginx', '192.168.110.100:22', 'root', 'boren1818', NULL, NULL, 9, NULL, NULL, 'guest', '2023-10-10 20:33:22', '2023-10-15 10:06:25');
+INSERT INTO `sys_gen` VALUES (5, 'elasticsearch', 'http://172.16.1.112:9200', NULL, NULL, NULL, NULL, 10, NULL, NULL, 'guest', '2023-10-11 13:17:19', '2023-10-15 10:06:25');
+INSERT INTO `sys_gen` VALUES (7, '服务器本地数据包', NULL, 'root', '', NULL, NULL, 11, 1, NULL, 'guest', '2023-10-15 13:49:51', '2023-10-15 13:49:54');
 
 -- ----------------------------
 -- Table structure for sys_gen_backup
@@ -53,17 +55,24 @@ DROP TABLE IF EXISTS `sys_gen_backup`;
 CREATE TABLE `sys_gen_backup`  (
   `backup_id` int NOT NULL AUTO_INCREMENT,
   `gen_id` int NULL DEFAULT NULL COMMENT '工具ID',
-  `backup_status` int NULL DEFAULT NULL COMMENT '是否开启; 1:开启; 0:暂停',
+  `backup_status` int NULL DEFAULT 1 COMMENT '是否开启; 1:开启; 0:暂停',
   `backup_period` int NULL DEFAULT NULL COMMENT '保存周期, 天',
+  `backup_strategy` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '策略',
+  `backup_action` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '动作多个,分隔; CREATE, UPDATE,DELETE',
+  `backup_ignore` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '忽略',
   `backup_path` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '备份目录',
+  `backup_driver` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '备份驱动名称',
+  `backup_filter` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '过滤条件',
   `create_time` datetime NULL DEFAULT NULL COMMENT '创建时间',
   `update_time` datetime NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`backup_id`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of sys_gen_backup
 -- ----------------------------
+INSERT INTO `sys_gen_backup` VALUES (1, 1, 1, 7, 'day', NULL, '', './', NULL, NULL, '2023-10-14 19:31:10', '2023-10-15 14:16:16');
+INSERT INTO `sys_gen_backup` VALUES (2, 7, 1, 3, 'day', NULL, '', './', '\\Device\\NPF_{C2FCFFBF-F55B-442E-AFCE-434D23C48DE5}', '', '2023-10-15 14:36:59', '2023-10-15 14:44:37');
 
 -- ----------------------------
 -- Table structure for sys_gen_column
@@ -92,30 +101,27 @@ CREATE TABLE `sys_gen_column`  (
   `col_sort` int NULL DEFAULT NULL COMMENT '排序',
   PRIMARY KEY (`col_id`) USING BTREE,
   INDEX `index_tab_id`(`tab_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 19 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 38 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of sys_gen_column
 -- ----------------------------
-INSERT INTO `sys_gen_column` VALUES (1, 1, 'col_id', '主键', 'INT', 0, 10, 'Integer', 'colId', NULL, '0', '0', '1', '1', '1', '1', 'EQ', 'input', '', NULL);
-INSERT INTO `sys_gen_column` VALUES (2, 1, 'tab_id', '表ID', 'INT', 0, 10, 'Integer', 'tabId', NULL, '0', '1', '1', '1', '1', '1', 'EQ', 'input', '', NULL);
-INSERT INTO `sys_gen_column` VALUES (3, 1, 'col_column_name', '列名称', 'VARCHAR', 0, 250, 'String', 'colColumnName', NULL, '0', '1', '1', '1', '1', '1', 'LIKE', 'input', '', NULL);
-INSERT INTO `sys_gen_column` VALUES (4, 1, 'col_column_comment', '列描述', 'VARCHAR', 0, 260, 'String', 'colColumnComment', NULL, '0', '1', '1', '1', '1', '1', 'EQ', 'input', '', NULL);
-INSERT INTO `sys_gen_column` VALUES (5, 1, 'col_column_type', '列类型', 'VARCHAR', 0, 100, 'String', 'colColumnType', NULL, '0', '1', '1', '1', '1', '1', 'EQ', 'select', '', NULL);
-INSERT INTO `sys_gen_column` VALUES (6, 1, 'col_java_type', 'JAVA类型', 'VARCHAR', 0, 500, 'String', 'colJavaType', NULL, '0', '1', '1', '1', '1', '1', 'EQ', 'select', '', NULL);
-INSERT INTO `sys_gen_column` VALUES (7, 1, 'col_java_field', 'JAVA字段名', 'VARCHAR', 0, 200, 'String', 'colJavaField', NULL, '0', '1', '1', '1', '1', '1', 'EQ', 'input', '', NULL);
-INSERT INTO `sys_gen_column` VALUES (8, 1, 'col_is_pk', '是否主键（1是）', 'CHAR', 0, 1, 'String', 'colIsPk', NULL, '0', '1', '1', '1', '1', '1', 'EQ', 'input', '', NULL);
-INSERT INTO `sys_gen_column` VALUES (9, 1, 'col_is_increment', '是否自增（1是）', 'CHAR', 0, 1, 'String', 'colIsIncrement', NULL, '0', '1', '1', '1', '1', '1', 'EQ', 'input', '', NULL);
-INSERT INTO `sys_gen_column` VALUES (10, 1, 'col_is_required', '是否必填（1是）', 'CHAR', 0, 1, 'String', 'colIsRequired', NULL, '0', '1', '1', '1', '1', '1', 'EQ', 'input', '', NULL);
-INSERT INTO `sys_gen_column` VALUES (11, 1, 'col_is_insert', '是否为插入字段（1是）', 'CHAR', 0, 1, 'String', 'colIsInsert', NULL, '0', '1', '1', '1', '1', '1', 'EQ', 'input', '', NULL);
-INSERT INTO `sys_gen_column` VALUES (12, 1, 'col_is_edit', '是否编辑字段（1是）', 'CHAR', 0, 1, 'String', 'colIsEdit', NULL, '0', '1', '1', '1', '1', '1', 'EQ', 'input', '', NULL);
-INSERT INTO `sys_gen_column` VALUES (13, 1, 'col_is_list', '是否列表字段（1是）', 'CHAR', 0, 1, 'String', 'colIsList', NULL, '0', '1', '1', '1', '1', '1', 'EQ', 'input', '', NULL);
-INSERT INTO `sys_gen_column` VALUES (14, 1, 'col_is_query', '是否查询字段（1是）', 'CHAR', 0, 1, 'String', 'colIsQuery', NULL, '0', '1', '1', '1', '1', '1', 'EQ', 'input', '', NULL);
-INSERT INTO `sys_gen_column` VALUES (15, 1, 'col_query_type', '查询方式（等于、不等于、大于、小于、范围）', 'VARCHAR', 0, 200, 'String', 'colQueryType', NULL, '0', '1', '1', '1', '1', '1', 'EQ', 'select', '', NULL);
-INSERT INTO `sys_gen_column` VALUES (16, 1, 'col_html_type', '显示类型（文本框、文本域、下拉框、复选框、单选框、日期控件）', 'VARCHAR', 0, 200, 'String', 'colHtmlType', NULL, '0', '1', '1', '1', '1', '1', 'EQ', 'select', '', NULL);
-INSERT INTO `sys_gen_column` VALUES (17, 1, 'col_dict_type', '字典类型', 'VARCHAR', 0, 200, 'String', 'colDictType', NULL, '0', '1', '1', '1', '1', '1', 'EQ', 'select', '', NULL);
-INSERT INTO `sys_gen_column` VALUES (18, 1, 'col_sort', '排序', 'INT', 0, 10, 'Integer', 'colSort', NULL, '0', '1', '1', '1', '1', '1', 'EQ', 'input', '', NULL);
-INSERT INTO `sys_gen_column` VALUES (19, 1, 'test', '测试', 'VARCHAR', 0, 255, 'String', 'test', NULL, '0', '1', '1', '1', '1', '1', 'EQ', 'input', '', NULL);
+INSERT INTO `sys_gen_column` VALUES (20, 2, 'backup_id', '主键', 'INT', 0, 10, 'Integer', 'backupId', '1', '1', '0', NULL, '1', '1', NULL, 'EQ', 'input', '', NULL);
+INSERT INTO `sys_gen_column` VALUES (21, 2, 'gen_id', '工具ID', 'INT', 0, 10, 'Integer', 'genId', NULL, '0', '1', '1', '1', '1', '1', 'EQ', 'input', '', NULL);
+INSERT INTO `sys_gen_column` VALUES (22, 2, 'backup_status', '是否开启; 1:开启; 0:暂停', 'INT', 0, 10, 'Integer', 'backupStatus', NULL, '0', '1', '1', '1', '1', '1', 'EQ', 'radio', '', NULL);
+INSERT INTO `sys_gen_column` VALUES (23, 2, 'backup_period', '保存周期, 天', 'INT', 0, 10, 'Integer', 'backupPeriod', NULL, '0', '1', '1', '1', '1', '1', 'EQ', 'input', '', NULL);
+INSERT INTO `sys_gen_column` VALUES (24, 2, 'backup_strategy', '策略', 'VARCHAR', 0, 255, 'String', 'backupStrategy', NULL, '0', '1', '1', '1', '1', '1', 'EQ', 'input', '', NULL);
+INSERT INTO `sys_gen_column` VALUES (25, 2, 'backup_ignore', '忽略', 'VARCHAR', 0, 255, 'String', 'backupIgnore', NULL, '0', '1', '1', '1', '1', '1', 'EQ', 'input', '', NULL);
+INSERT INTO `sys_gen_column` VALUES (26, 2, 'backup_path', '备份目录', 'VARCHAR', 0, 255, 'String', 'backupPath', NULL, '0', '1', '1', '1', '1', '1', 'EQ', 'input', '', NULL);
+INSERT INTO `sys_gen_column` VALUES (27, 2, 'create_time', '创建时间', 'DATETIME', 0, 19, 'LocalDateTime', 'createTime', NULL, '0', '1', NULL, NULL, NULL, NULL, 'EQ', 'datetime', '', NULL);
+INSERT INTO `sys_gen_column` VALUES (28, 2, 'update_time', '更新时间', 'DATETIME', 0, 19, 'LocalDateTime', 'updateTime', NULL, '0', '1', NULL, NULL, NULL, NULL, 'EQ', 'datetime', '', NULL);
+INSERT INTO `sys_gen_column` VALUES (29, 3, 'gen_id', '主键1', 'INT', 0, 10, 'Integer', 'genId', '1', '1', '0', NULL, '1', '1', NULL, 'EQ', 'input', '', NULL);
+INSERT INTO `sys_gen_column` VALUES (30, 3, 'gen_name', '名称', 'VARCHAR', 0, 255, 'String', 'genName', NULL, '0', '1', '1', '1', '1', '1', 'LIKE', 'input', '', NULL);
+INSERT INTO `sys_gen_column` VALUES (31, 3, 'gen_url', 'url', 'VARCHAR', 0, 255, 'String', 'genUrl', NULL, '0', '1', '1', '1', '1', '1', 'EQ', 'input', '', NULL);
+INSERT INTO `sys_gen_column` VALUES (32, 3, 'gen_user', '用户名', 'VARCHAR', 0, 255, 'String', 'genUser', NULL, '0', '1', '1', '1', '1', '1', 'EQ', 'input', '', NULL);
+INSERT INTO `sys_gen_column` VALUES (33, 3, 'gen_password', '密码', 'VARCHAR', 0, 255, 'String', 'genPassword', NULL, '0', '1', '1', '1', '1', '1', 'EQ', 'input', '', NULL);
+INSERT INTO `sys_gen_column` VALUES (34, 3, 'gen_driver', '驱动包', 'VARCHAR', 0, 255, 'String', 'genDriver', NULL, '0', '1', '1', '1', '1', '1', 'EQ', 'input', '', NULL);
+INSERT INTO `sys_gen_column` VALUES (37, 3, 'jjjjjjj', '', 'VARCHAR', NULL, 255, 'String', '', NULL, NULL, '0', '1', '1', '1', '1', 'EQ', 'input', '', NULL);
 
 -- ----------------------------
 -- Table structure for sys_gen_config
@@ -135,13 +141,13 @@ CREATE TABLE `sys_gen_config`  (
   `create_time` datetime NULL DEFAULT NULL COMMENT '创建时间',
   `update_time` datetime NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`dbc_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 11 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 12 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of sys_gen_config
 -- ----------------------------
-INSERT INTO `sys_gen_config` VALUES (1, 'false', 'JDBC', 'NONE', 'https://archiva-maven-storage-prod.oss-cn-beijing.aliyuncs.com/repository/central/mysql/mysql-connector-java/8.0.30/mysql-connector-java-8.0.30.jar?Expires=1695912654&OSSAccessKeyId=LTAIfU51SusnnfCC&Signature=rZ7nYH3oWgUa6phzVnKdB%2FiKxuU%3D', 'com.mysql.cj.jdbc.Driver', '', '[{\"name\":\"控制台\",\"url\":\"/ext/jdbc/console\"},{\"name\":\"日志\",\"url\":\"/ext/jdbc/log\"},{\"name\":\"UI\",\"url\":\"/ext/jdbc/board\"},{\"name\":\"文档\",\"url\":\"/ext/jdbc/doc\"}]', 'MYSQL', 1, '2023-09-28 21:56:40', '2023-10-09 13:11:17');
-INSERT INTO `sys_gen_config` VALUES (2, 'false', 'JDBC', 'FILE', 'https://archiva-maven-storage-prod.oss-cn-beijing.aliyuncs.com/repository/gradle-plugin/org/xerial/sqlite-jdbc/3.8.9.1/sqlite-jdbc-3.8.9.1.jar?Expires=1695966895&OSSAccessKeyId=LTAIfU51SusnnfCC&Signature=TO%2BwBB7FbGbhS7uJ%2Fkj8Xjn9zPQ%3D', 'org.sqlite.JDBC', 'Z:\\works\\utils-support-parent-starter\\gen\\3\\driver\\sqlite-jdbc-3.8.9.1.jar', '[{\"name\":\"控制台\",\"url\":\"/ext/jdbc/console\"},{\"name\":\"文档\",\"url\":\"/ext/jdbc/doc\"}]', 'SQLITE', 1, '2023-09-29 12:52:55', '2023-10-09 13:11:18');
+INSERT INTO `sys_gen_config` VALUES (1, 'false', 'JDBC', 'NONE', 'https://archiva-maven-storage-prod.oss-cn-beijing.aliyuncs.com/repository/central/mysql/mysql-connector-java/8.0.30/mysql-connector-java-8.0.30.jar?Expires=1695912654&OSSAccessKeyId=LTAIfU51SusnnfCC&Signature=rZ7nYH3oWgUa6phzVnKdB%2FiKxuU%3D', 'com.mysql.cj.jdbc.Driver', '', '[{\"name\":\"控制台\",\"url\":\"/ext/jdbc/console\"},{\"name\":\"日志\",\"url\":\"/ext/jdbc/log\"},{\"name\":\"UI\",\"url\":\"/ext/jdbc/board\"},{\"name\":\"文档\",\"url\":\"/ext/jdbc/doc\"},{\"name\":\"模板\",\"url\":\"/ext/jdbc/template\"}]', 'MYSQL', 1, '2023-09-28 21:56:40', '2023-10-09 13:11:17');
+INSERT INTO `sys_gen_config` VALUES (2, 'false', 'JDBC', 'FILE', 'https://archiva-maven-storage-prod.oss-cn-beijing.aliyuncs.com/repository/gradle-plugin/org/xerial/sqlite-jdbc/3.8.9.1/sqlite-jdbc-3.8.9.1.jar?Expires=1695966895&OSSAccessKeyId=LTAIfU51SusnnfCC&Signature=TO%2BwBB7FbGbhS7uJ%2Fkj8Xjn9zPQ%3D', 'org.sqlite.JDBC', 'Z:\\works\\utils-support-parent-starter\\gen\\3\\driver\\sqlite-jdbc-3.8.9.1.jar', '[{\"name\":\"控制台\",\"url\":\"/ext/jdbc/console\"},{\"name\":\"文档\",\"url\":\"/ext/jdbc/doc\"},{\"name\":\"模板\",\"url\":\"/ext/jdbc/template\"}]', 'SQLITE', 1, '2023-09-29 12:52:55', '2023-10-09 13:11:18');
 INSERT INTO `sys_gen_config` VALUES (3, 'false', 'CALCITE', 'NONE', NULL, NULL, NULL, '[{\"name\":\"控制台\",\"url\":\"/ext/jdbc/console\"}]', 'CALCITE', 1, '2023-09-29 18:39:50', '2023-10-09 13:11:18');
 INSERT INTO `sys_gen_config` VALUES (4, 'false', 'REDIS', 'REMOTE', NULL, NULL, NULL, '[{\"name\":\"UI\",\"url\":\"/ext/redis/console\"}]', 'REDIS', 1, '2023-09-30 18:45:34', '2023-10-09 13:11:18');
 INSERT INTO `sys_gen_config` VALUES (5, 'false', 'FTP', 'REMOTE', NULL, NULL, NULL, '[{\"name\":\"UI\",\"url\":\"/ext/ftp/console\"}]', 'FTP', 1, '2023-10-02 15:18:19', '2023-10-09 13:11:19');
@@ -150,6 +156,7 @@ INSERT INTO `sys_gen_config` VALUES (7, 'false', 'SSH', 'REMOTE', NULL, NULL, NU
 INSERT INTO `sys_gen_config` VALUES (8, 'false', 'ZOOKEEPER', 'REMOTE', NULL, NULL, NULL, '[{\"name\":\"UI\",\"url\":\"/ext/zk/console\"}]', 'ZOOKEEPER', 1, '2023-10-10 08:58:54', '2023-10-10 09:03:08');
 INSERT INTO `sys_gen_config` VALUES (9, NULL, 'NGINX', 'REMOTE', NULL, NULL, NULL, '[{\"name\":\"UI\",\"url\":\"/ext/nginx/console\"}]', 'NGINX', 1, '2023-10-10 20:33:22', '2023-10-10 20:33:22');
 INSERT INTO `sys_gen_config` VALUES (10, NULL, 'ELASTICSEARCH', 'REMOTE', NULL, NULL, NULL, '[{\"name\":\"UI\",\"url\":\"/ext/es/console\"}]', 'ELASTICSEARCH', 1, '2023-10-11 13:17:19', '2023-10-11 13:17:21');
+INSERT INTO `sys_gen_config` VALUES (11, NULL, 'PCAP', 'NONE', NULL, NULL, NULL, '[{\"name\":\"控制台\",\"url\":\"/ext/pcap/console\"}]', 'PCAP', 1, '2023-10-15 13:49:51', '2023-10-15 13:49:54');
 
 -- ----------------------------
 -- Table structure for sys_gen_nginx_http_config
@@ -183,7 +190,7 @@ CREATE TABLE `sys_gen_nginx_server`  (
   `upstream_id` int NULL DEFAULT NULL COMMENT '负载均衡方式； tcp使用',
   `gen_id` int NULL DEFAULT NULL,
   PRIMARY KEY (`server_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of sys_gen_nginx_server
@@ -221,7 +228,7 @@ CREATE TABLE `sys_gen_nginx_upstream`  (
   `upstream_strategy` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '策略; least_conn',
   `gen_id` int NULL DEFAULT NULL,
   PRIMARY KEY (`upstream_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of sys_gen_nginx_upstream
@@ -268,11 +275,40 @@ CREATE TABLE `sys_gen_table`  (
   `tab_remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '备注',
   `tab_tpl_category` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '使用的模板（crud单表操作 tree树表操作 sub主子表操作）',
   PRIMARY KEY (`tab_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of sys_gen_table
 -- ----------------------------
-INSERT INTO `sys_gen_table` VALUES (1, 'sys_gen_column', '字段信息表', '本地数据库', 1, 'SysGenColumn', NULL, 'com', 'genColumn', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `sys_gen_table` VALUES (2, 'sys_gen_backup', '', '本地数据库', 1, 'SysGenBackup', NULL, 'com', 'genBackup', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `sys_gen_table` VALUES (3, 'sys_gen', '工具表', 'MYSQL数据库', 1, 'SysGen', NULL, 'com', 'gen', NULL, NULL, NULL, NULL, NULL, NULL);
+
+-- ----------------------------
+-- Table structure for sys_gen_template
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_gen_template`;
+CREATE TABLE `sys_gen_template`  (
+  `template_id` int NOT NULL AUTO_INCREMENT,
+  `template_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '模板名称',
+  `gen_id` int NULL DEFAULT NULL COMMENT '工具ID',
+  `template_content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '模板',
+  `template_path` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '目录',
+  `template_type` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '模板类型',
+  `create_time` datetime NULL DEFAULT NULL COMMENT '创建时间',
+  `create_by` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '创建人',
+  `update_time` datetime NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`template_id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 11 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of sys_gen_template
+-- ----------------------------
+INSERT INTO `sys_gen_template` VALUES (1, 'controller', NULL, 'package ${packageName}.controller;\n\nimport java.util.List;\n\nimport com.baomidou.mybatisplus.extension.plugins.pagination.Page;\nimport com.baomidou.mybatisplus.core.toolkit.Wrappers;\nimport lombok.RequiredArgsConstructor;\nimport org.springframework.beans.factory.annotation.Autowired;\nimport org.springframework.web.bind.annotation.GetMapping;\nimport org.springframework.validation.annotation.Validated;\nimport org.springframework.web.bind.annotation.PostMapping;\nimport org.springframework.web.bind.annotation.PutMapping;\nimport org.springframework.web.bind.annotation.DeleteMapping;\nimport org.springframework.web.bind.annotation.PathVariable;\nimport org.springframework.web.bind.annotation.RequestBody;\nimport org.springframework.web.bind.annotation.RequestMapping;\nimport org.springframework.web.bind.annotation.RestController;\nimport ${packageName}.entity.${ClassName};\nimport ${packageName}.query.PageQuery;\nimport ${packageName}.service.${ClassName}Service;\nimport com.chua.starter.common.support.result.ReturnResult;\nimport com.chua.starter.common.support.result.ReturnPageResult;\nimport com.chua.starter.mybatis.utils.PageResultUtils;\nimport com.chua.starter.common.support.result.Result;\nimport com.chua.starter.gen.support.validator.group.AddGroup;\n\nimport javax.annotation.Resource;\nimport java.util.Arrays;\n/**\n * ${functionName}\n *\n * @author ${author}\n * @since  ${datetime}\n */\n@RestController\n#if($version)\n@RequestMapping(\"/${version}/${businessName}\")\n#else\n@RequestMapping(\"/${moduleName}/${businessName}\")\n#end\npublic class ${ClassName}Controller {\n\n    @Resource\n    private ${ClassName}Service ${className}Service;\n\n    /**\n     * 分页查询${functionName}列表\n     * @param query 查询条件\n     */\n    @GetMapping(\"/page\")\n    public ReturnPageResult<${Entity}> queryPage(@RequestParam(value = \"page\", defaultValue = \"1\") Integer pageNum,\n                                         @RequestParam(value = \"pageSize\", defaultValue = \"10\") Integer pageSize) {\n        return PageResultUtils.ok(${className}Service.page(new Page<${Entity}>(pageNum, pageSize)));\n    }\n\n    /**\n     * 获取${functionName}详细信息\n     *\n     * @param ${pkColumn.colJavaField} 主键\n     */\n    @GetMapping(value = \"/info\")\n    public ReturnResult<${ClassName}> getInfo(${pkColumn.colJavaType} ${pkColumn.colJavaField}) {\n        return Result.success(${className}Service.getById(${pkColumn.colJavaField}));\n    }\n\n    /**\n     * 新增${functionName}\n     */\n    @PostMapping(\"/save\")\n    public Result<${ClassName}> save(@Validated(AddGroup.class) @RequestBody ${ClassName} ${className}) {\n        ${className}Service.save(${className});\n        return Result.success(${className});\n    }\n\n    /**\n     * 修改${functionName}\n     */\n    @PutMapping(\"/update\")\n    public Result<Boolean> update(@RequestBody ${ClassName} ${className}) {\n        return Result.success(${className}Service.updateById(${className}));\n    }\n\n    /**\n     * 删除${functionName}\n     *\n     * @param ${pkColumn.colJavaField}s 主键串\n     */\n    @DeleteMapping(\"/delete\")\n    public ReturnResult<Boolean> delete(String ${pkColumn.colJavaField}s) {\n        if(null == ${pkColumn.colJavaField}s) {\n            return Result.illegal(false, \"数据不存在\");\n        }\n        return Result.success(${className}Service.removeByIds(Arrays.asList(${pkColumn.colJavaField}s.split(\",\"))));\n    }\n}\n', '{}/controller/{}Controller.java', 'java', '2023-10-15 00:50:55', 'guest', '2023-10-15 00:59:12');
+INSERT INTO `sys_gen_template` VALUES (2, 'entity', NULL, 'package ${packageName}.entity;\r\n\r\nimport com.baomidou.mybatisplus.annotation.*;\r\nimport lombok.Data;\r\nimport lombok.EqualsAndHashCode;\r\nimport java.time.LocalDateTime;\r\nimport java.io.Serializable;\r\nimport java.math.BigDecimal;\r\n\r\n#foreach ($import in $importList)\r\nimport ${import};\r\n#end\r\n#if($table.crud || $table.sub)\r\nimport com.tduck.cloud.common.entity.BaseEntity;\r\n#elseif($table.tree)\r\nimport com.tduck.cloud.common.entity.TreeEntity;\r\n#end\r\n\r\n/**\r\n * ${functionName}对象 ${tableName}\r\n *\r\n * @author ${author}\r\n * @since ${datetime}\r\n */\r\n#if($table.crud || $table.sub)\r\n    #set($Entity=\"BaseEntity\")\r\n#elseif($table.tree)\r\n    #set($Entity=\"TreeEntity<${ClassName}>\")\r\n#end\r\n@Data\r\n@EqualsAndHashCode(callSuper = false)\r\n@TableName(\"${tableName}\")\r\npublic class ${Entity} {\r\n\r\n    private static final long serialVersionUID = 1L;\r\n\r\n#foreach ($column in $columns)\r\n    #if(!$table.isSuperColumn($column.javaField))\r\n    /**\r\n    * $column.colColumnComment\r\n    */\r\n    #if($column.colJavaType==\'delFlag\')\r\n    @TableLogic\r\n    #end\r\n    #if($column.colJavaType==\'version\')\r\n    @Version\r\n    #end\r\n    #if($column.colIsPk)\r\n    @TableId(value = \"$column.colColumnName\")\r\n    #else\r\n    @TableField(value = \"$column.colColumnName\") \r\n    #end\r\n    #if($openSwagger)\r\n    @ApiModelProperty(\"$column.colColumnComment\")\r\n    #end\r\n    private $column.colJavaType $column.colJavaField;\r\n    #end\r\n#end\r\n\r\n}\r\n', '{}/entity/{}.java', 'java', NULL, NULL, NULL);
+INSERT INTO `sys_gen_template` VALUES (3, 'mapper', NULL, 'package ${packageName}.mapper;\r\n\r\nimport com.baomidou.mybatisplus.core.mapper.BaseMapper;\r\nimport ${packageName}.entity.${ClassName};\r\n\r\n/**\r\n * ${functionName}Mapper接口\r\n *\r\n * @author ${author}\r\n * @since ${datetime}\r\n */\r\npublic interface ${ClassName}Mapper extends BaseMapper<${ClassName}> {\r\n\r\n}\r\n', '{}/mapper/{}Mapper.java', 'java', NULL, NULL, NULL);
+INSERT INTO `sys_gen_template` VALUES (4, 'query', NULL, 'package ${packageName}.query;\n\nimport com.baomidou.mybatisplus.extension.plugins.pagination.Page;\n#if($openSwagger)\nimport io.swagger.v3.oas.annotations.media.Schema;\n#end\nimport lombok.Data;\n\n/**\n* 基础分页请求对象\n*\n* @author ${author}\n* @since ${datetime}\n*/\n@Data\n#if($openSwagger)\n@Schema\n#end\npublic class PageQuery<T> {\n    /**\n     * 页码\n     */\n    #if($openSwagger)\n    @Schema(description = \"页码\", example = \"1\")\n    #end\n    private int pageNum = 1;\n    /**\n     * 每页记录数\n    */\n    #if($openSwagger)\n    @Schema(description = \"每页记录数\", example = \"10\")\n    #end\n    private int pageSize = 10;\n	/**\n	 * mybatis分页\n	 */\n    public Page<T> page() {\n        return new Page<>(pageNum, pageSize);\n    }\n}\n', '{}/query/PageQuery.java', 'java', NULL, 'guest', '2023-10-15 10:15:11');
+INSERT INTO `sys_gen_template` VALUES (5, 'service', NULL, 'package ${packageName}.service;\r\n\r\nimport java.util.List;\r\n\r\nimport ${packageName}.entity.${ClassName};\r\nimport com.baomidou.mybatisplus.extension.service.IService;\r\n\r\n/**\r\n * ${functionName}Service接口\r\n *\r\n * @author ${author}\r\n * @since ${datetime}\r\n */\r\npublic interface ${ClassName}Service extends IService<${ClassName}> {\r\n\r\n}\r\n', '{}/service/{}Service.java', 'java', NULL, NULL, NULL);
+INSERT INTO `sys_gen_template` VALUES (6, 'serviceImpl', NULL, 'package ${packageName}.service.impl;\n\nimport lombok.RequiredArgsConstructor;\nimport org.springframework.beans.factory.annotation.Autowired;\nimport org.springframework.stereotype.Service;\n#if($table.sub)\nimport java.util.ArrayList;\n\nimport org.springframework.transaction.annotation.Transactional;\nimport ${packageName}.entity.${subClassName};\n#end\nimport com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;\nimport ${packageName}.mapper.${ClassName}Mapper;\nimport ${packageName}.entity.${ClassName};\nimport ${packageName}.service.${ClassName}Service;\n\n/**\n * ${functionName}Service业务层处理\n *\n * @author ${author}\n * @since ${datetime}\n */\n@Service\npublic class ${ClassName}ServiceImpl extends ServiceImpl< ${ClassName}Mapper, ${ClassName}> implements ${ClassName}Service {\n\n}\n', '{}/service/impl/{}ServiceImpl.java', 'java', NULL, 'guest', '2023-10-15 09:47:43');
+INSERT INTO `sys_gen_template` VALUES (7, 'mapper', NULL, '<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n<!DOCTYPE mapper\n        PUBLIC \"-//mybatis.org//DTD Mapper 3.0//EN\"\n        \"http://mybatis.org/dtd/mybatis-3-mapper.dtd\">\n<mapper namespace=\"${packageName}.mapper.${ClassName}Mapper\">\n\n</mapper>\n', '{}/{}Mapper.xml', 'xml', NULL, 'guest', '2023-10-15 09:47:25');
 
 SET FOREIGN_KEY_CHECKS = 1;
