@@ -156,7 +156,9 @@ public class SysGenBackupServiceImpl extends ServiceImpl<SysGenBackupMapper, Sys
             });
             backup.start();
             log.info("{}({})启动成功", sysGenBackup.getBackupId(), sysGen.getGenName());
-        } catch (IOException e) {
+        } catch (Exception e) {
+            sysGen.setGenBackupStatus(0);
+            sysGenService.updateById(sysGen);
             return ReturnResult.illegal("备份服务启动失败");
         }
         sysGen.setGenBackupStatus(1);

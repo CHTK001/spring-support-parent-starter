@@ -93,7 +93,7 @@ public class TemplateController {
      *
      * @return {@link ReturnResult}<{@link List}<{@link DataSourceResult}>>
      */
-    @GetMapping("delete")
+    @DeleteMapping("delete")
     public ReturnResult<Boolean> delete(String id) {
         sysGenTemplateService.removeById(id);
         return ReturnResult.ok(true);
