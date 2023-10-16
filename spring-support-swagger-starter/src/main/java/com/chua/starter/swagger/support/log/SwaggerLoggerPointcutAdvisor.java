@@ -18,6 +18,8 @@ import javax.servlet.http.HttpServletResponse;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 
+import static com.chua.common.support.constant.NameConstant.*;
+
 /**
  * 切面
  *
@@ -52,16 +54,16 @@ public class SwaggerLoggerPointcutAdvisor extends LoggerPointcutAdvisor {
     @Override
     protected String getAction(Method method) {
         String name = method.getName().toUpperCase();
-        if (name.contains("SAVE") || name.contains("INSERT") || name.contains("ADD")) {
+        if (name.contains(SAVE) || name.contains(INSERT) || name.contains(ADD)) {
             return "添加";
         }
-        if (name.contains("UPDATE") || name.contains("MODIFY")) {
+        if (name.contains(UPDATE) || name.contains(MODIFY)) {
             return "修改";
         }
-        if (name.contains("DELETE") || name.contains("DROP") || name.contains("REMOVE")) {
+        if (name.contains(DELETE) || name.contains(DROP) || name.contains(REMOVE)) {
             return "删除";
         }
-        if (name.contains("RESET")) {
+        if (name.contains(RESET)) {
             return "重置";
         }
         return "查询";
