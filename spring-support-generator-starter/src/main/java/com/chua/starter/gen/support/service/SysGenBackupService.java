@@ -1,8 +1,11 @@
 package com.chua.starter.gen.support.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.chua.common.support.backup.BackupDriver;
 import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.gen.support.entity.SysGenBackup;
+
+import java.util.List;
 
 /**
  * @author CH
@@ -33,4 +36,12 @@ public interface SysGenBackupService extends IService<SysGenBackup> {
      * @return {@link ReturnResult}<{@link Boolean}>
      */
     ReturnResult<Boolean> update(SysGenBackup sysGenBackup);
+
+    /**
+     * 驾驶员
+     *
+     * @param genId gen id
+     * @return {@link List}<{@link String}>
+     */
+    ReturnResult<List<BackupDriver>> driver(Integer genId);
 }
