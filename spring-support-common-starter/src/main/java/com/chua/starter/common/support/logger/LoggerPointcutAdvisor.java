@@ -13,7 +13,6 @@ import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.aop.support.StaticMethodMatcherPointcutAdvisor;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.expression.BeanFactoryAccessor;
@@ -24,6 +23,7 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
@@ -33,8 +33,6 @@ import java.lang.reflect.Proxy;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-import static com.chua.starter.common.support.logger.LogGuidAspect.GuidhreadLocal;
-
 /**
  * 切面
  *
@@ -43,9 +41,9 @@ import static com.chua.starter.common.support.logger.LogGuidAspect.GuidhreadLoca
 @Lazy
 public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor implements InitializingBean {
 
-    @Autowired(required = false)
+    @Resource
     HttpServletRequest request;
-    @Autowired(required = false)
+    @Resource
     HttpServletResponse response;
     private LoggerService loggerService;
     private ApplicationContext applicationContext;
@@ -156,14 +154,6 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
      * @param startTime  开始时间(ns)
      */
     protected void saveLog(Object proceed, MethodInvocation invocation, int status, long startTime) {
-        String key = GuidhreadLocal.get();
-        Boolean ifPresent = CACHE.getIfPresent(key);
-        if (null != ifPresent) {
-            return;
-        }
-
-        CACHE.put(key, true);
-
         Method method = invocation.getMethod();
         String address = RequestUtils.getIpAddress(request);
         DateTime now = DateTime.now();
@@ -185,7 +175,6 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
         sysLog.setClassName(method.getDeclaringClass().getName());
         sysLog.setLogName(getName(method));
         sysLog.setLogAction(getAction(method));
-        sysLog.setLogCode(GuidhreadLocal.get());
         sysLog.setLogParam(analysisParam(invocation));
         sysLog.setLogAddress(address);
         if (StringUtils.isEmpty(sysLog.getLogName()) || StringUtils.isEmpty(sysLog.getLogAction())) {

@@ -5,8 +5,6 @@ import com.chua.starter.common.support.converter.FastJsonHttpMessageConverter;
 import com.chua.starter.common.support.converter.ResultDataHttpMessageConverter;
 import com.chua.starter.common.support.filter.ParamLogFilter;
 import com.chua.starter.common.support.limit.LimitAspect;
-import com.chua.starter.common.support.logger.LogGuidAspect;
-import com.chua.starter.common.support.logger.WatchGuidAspect;
 import com.chua.starter.common.support.processor.ResponseModelViewMethodProcessor;
 import com.chua.starter.common.support.properties.*;
 import com.chua.starter.common.support.provider.OptionsProvider;
@@ -164,16 +162,6 @@ public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAw
         return new WatchPointcutAdvisor();
     }
 
-    @Bean
-    @ConditionalOnMissingBean
-    public LogGuidAspect logGuidAspect() {
-        return new LogGuidAspect();
-    }
-    @Bean
-    @ConditionalOnMissingBean
-    public WatchGuidAspect watchGuidAspect() {
-        return new WatchGuidAspect();
-    }
 
     /**
      * 跨域
@@ -187,7 +175,7 @@ public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAw
         //1. 添加 CORS配置信息
         org.springframework.web.cors.CorsConfiguration config = new org.springframework.web.cors.CorsConfiguration();
         //放行哪些原始域
-        config.addAllowedOrigin("*");
+        config.addAllowedOriginPattern("*");
         //是否发送 Cookie
 //        config.setAllowCredentials(true);
         //放行哪些请求方式

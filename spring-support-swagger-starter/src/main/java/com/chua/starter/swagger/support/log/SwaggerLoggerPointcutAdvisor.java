@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.lang.reflect.Method;
@@ -25,9 +26,9 @@ import java.lang.reflect.Proxy;
 @Lazy
 public class SwaggerLoggerPointcutAdvisor extends LoggerPointcutAdvisor {
 
-    @Autowired(required = false)
+    @Resource
     HttpServletRequest request;
-    @Autowired(required = false)
+    @Resource
     HttpServletResponse response;
 
     public SwaggerLoggerPointcutAdvisor(LoggerService loggerService) {
