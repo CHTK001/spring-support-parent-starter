@@ -2,7 +2,7 @@ package com.chua.starter.gen.support.controller;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.chua.common.support.bean.BeanUtils;
+import com.chua.common.support.backup.BackupDriver;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.starter.common.support.result.Result;
 import com.chua.starter.common.support.result.ReturnPageResult;
@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.annotation.Resource;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 
 /**
  * 备份控制器
@@ -54,7 +55,7 @@ public class BackupController {
 
     /**
      * 查询页面
-     * 查询【请填写功能名称】列表
+     * 查询列表
      *
      * @param pageNum  书籍页码
      * @param pageSize 页面大小
@@ -67,7 +68,7 @@ public class BackupController {
     }
 
     /**
-     * 获取【请填写功能名称】详细信息
+     * 获取详细信息
      *
      * @param genId 主键
      */
@@ -75,9 +76,18 @@ public class BackupController {
     public ReturnResult<SysGenBackup> getInfo(Integer genId) {
         return ReturnResult.ok(sysGenBackupService.getOne(Wrappers.<SysGenBackup>lambdaQuery().eq(SysGenBackup::getGenId, genId)));
     }
+    /**
+     * 驱动
+     *
+     * @param genId 主键
+     */
+    @GetMapping(value = "/driver")
+    public ReturnResult<List<BackupDriver>> driver(Integer genId) {
+        return sysGenBackupService.driver(genId);
+    }
 
     /**
-     * 新增【请填写功能名称】
+     * 新增
      */
     @PostMapping("/save")
     public ReturnResult<SysGenBackup> save(@Validated(AddGroup.class) @RequestBody SysGenBackup sysGenBackup) {
@@ -95,7 +105,7 @@ public class BackupController {
     }
 
     /**
-     * 修改【请填写功能名称】
+     * 修改
      */
     @PutMapping("/update")
     public ReturnResult<Boolean> update(@RequestBody SysGenBackup sysGenBackup) {
@@ -103,7 +113,7 @@ public class BackupController {
     }
 
     /**
-     * 删除【请填写功能名称】
+     * 删除
      *
      * @param backupIds 主键串
      */
