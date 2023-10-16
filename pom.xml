@@ -868,7 +868,7 @@
                     <skip>${skipTests}</skip>
                 </configuration>
             </plugin>
-            <plugin>
+          <!--  <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>${maven-javadoc-plugin.version}</version>
@@ -885,7 +885,7 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin>
+            </plugin>-->
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -935,85 +935,85 @@
                 </executions>
             </plugin>-->
 
-<!--            <plugin>-->
-<!--                <groupId>org.jacoco</groupId>-->
-<!--                <artifactId>jacoco-maven-plugin</artifactId>-->
-<!--                <version>${jacoco-maven-plugin.version}</version>-->
-<!--                <executions>-->
-<!--                    <execution>-->
-<!--                        <goals>-->
-<!--                            <goal>prepare-agent</goal>-->
-<!--                        </goals>-->
-<!--                    </execution>-->
-<!--                    <execution>-->
-<!--                        <id>report</id>-->
-<!--                        <phase>test</phase>-->
-<!--                        <goals>-->
-<!--                            <goal>report</goal>-->
-<!--                        </goals>-->
-<!--                    </execution>-->
-<!--                </executions>-->
-<!--            </plugin>-->
+            <!--<plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
 
-<!--            <plugin>-->
-<!--                <groupId>org.apache.rat</groupId>-->
-<!--                <artifactId>apache-rat-plugin</artifactId>-->
-<!--                <version>${apache-rat-plugin.version}</version>-->
-<!--                <configuration>-->
-<!--                    <excludes>-->
-<!--                        <exclude>**/target/**</exclude>-->
-<!--                        <exclude>**/logs/**</exclude>-->
-<!--                        <exclude>**/*.log</exclude>-->
-<!--                        <exclude>**/*.tar.gz</exclude>-->
-<!--                        <exclude>**/spring.factories</exclude>-->
-<!--                        <exclude>**/spring.provides</exclude>-->
-<!--                        <exclude>/script/**</exclude>-->
-<!--                        <exclude>**/*.json</exclude>-->
-<!--                        &lt;!&ndash; IDE files &ndash;&gt;-->
-<!--                        <exclude>**/*.iml</exclude>-->
-<!--                        <exclude>**/.idea/**</exclude>-->
-<!--                        <exclude>**/*.classpath</exclude>-->
-<!--                        <exclude>**/.project</exclude>-->
-<!--                        <exclude>**/.settings/**</exclude>-->
-<!--                        <exclude>**/dependency-reduced-pom.xml</exclude>-->
-<!--                        &lt;!&ndash; git files &ndash;&gt;-->
-<!--                        <exclude>**/.gitignore</exclude>-->
-<!--                        <exclude>**/.gitmodules</exclude>-->
-<!--                        <exclude>**/.git/**</exclude>-->
-<!--                        &lt;!&ndash; CI files &ndash;&gt;-->
-<!--                        <exclude>**/.travis.yml</exclude>-->
-<!--                        <exclude>**/.codecov.yml</exclude>-->
-<!--                        <exclude>**/.mvn/jvm.config</exclude>-->
-<!--                        <exclude>**/.mvn/wrapper/maven-wrapper.properties</exclude>-->
-<!--                        &lt;!&ndash; GitHub files &ndash;&gt;-->
-<!--                        <exclude>**/.github/**</exclude>-->
-<!--                        &lt;!&ndash; document files &ndash;&gt;-->
-<!--                        <exclude>**/*.md</exclude>-->
-<!--                        <excldue>**/*.MD</excldue>-->
-<!--                        <exclude>**/*.txt</exclude>-->
-<!--                        <exclude>**/docs/**</exclude>-->
-<!--                        &lt;!&ndash; UI files &ndash;&gt;-->
-<!--                        <exclude>**/.babelrc</exclude>-->
-<!--                        <exclude>**/.editorconfig</exclude>-->
-<!--                        <exclude>**/.eslintignore</exclude>-->
-<!--                        <exclude>**/assets/**</exclude>-->
-<!--                        <exclude>**/dist/**</exclude>-->
-<!--                        <exclude>**/etc/**</exclude>-->
-<!--                        <exclude>**/node/**</exclude>-->
-<!--                        <exclude>**/node_modules/**</exclude>-->
-<!--                        <exclude>**/test/coverage/**</exclude>-->
-<!--                        <exclude>**/resources/static/</exclude>-->
-<!--                    </excludes>-->
-<!--                </configuration>-->
-<!--                <executions>-->
-<!--                    <execution>-->
-<!--                        <phase>verify</phase>-->
-<!--                        <goals>-->
-<!--                            <goal>check</goal>-->
-<!--                        </goals>-->
-<!--                    </execution>-->
-<!--                </executions>-->
-<!--            </plugin>-->
+            <plugin>
+                <groupId>org.apache.rat</groupId>
+                <artifactId>apache-rat-plugin</artifactId>
+                <version>${apache-rat-plugin.version}</version>
+                <configuration>
+                    <excludes>
+                        <exclude>**/target/**</exclude>
+                        <exclude>**/logs/**</exclude>
+                        <exclude>**/*.log</exclude>
+                        <exclude>**/*.tar.gz</exclude>
+                        <exclude>**/spring.factories</exclude>
+                        <exclude>**/spring.provides</exclude>
+                        <exclude>/script/**</exclude>
+                        <exclude>**/*.json</exclude>
+                        &lt;!&ndash; IDE files &ndash;&gt;
+                        <exclude>**/*.iml</exclude>
+                        <exclude>**/.idea/**</exclude>
+                        <exclude>**/*.classpath</exclude>
+                        <exclude>**/.project</exclude>
+                        <exclude>**/.settings/**</exclude>
+                        <exclude>**/dependency-reduced-pom.xml</exclude>
+                        &lt;!&ndash; git files &ndash;&gt;
+                        <exclude>**/.gitignore</exclude>
+                        <exclude>**/.gitmodules</exclude>
+                        <exclude>**/.git/**</exclude>
+                        &lt;!&ndash; CI files &ndash;&gt;
+                        <exclude>**/.travis.yml</exclude>
+                        <exclude>**/.codecov.yml</exclude>
+                        <exclude>**/.mvn/jvm.config</exclude>
+                        <exclude>**/.mvn/wrapper/maven-wrapper.properties</exclude>
+                        &lt;!&ndash; GitHub files &ndash;&gt;
+                        <exclude>**/.github/**</exclude>
+                        &lt;!&ndash; document files &ndash;&gt;
+                        <exclude>**/*.md</exclude>
+                        <excldue>**/*.MD</excldue>
+                        <exclude>**/*.txt</exclude>
+                        <exclude>**/docs/**</exclude>
+                        &lt;!&ndash; UI files &ndash;&gt;
+                        <exclude>**/.babelrc</exclude>
+                        <exclude>**/.editorconfig</exclude>
+                        <exclude>**/.eslintignore</exclude>
+                        <exclude>**/assets/**</exclude>
+                        <exclude>**/dist/**</exclude>
+                        <exclude>**/etc/**</exclude>
+                        <exclude>**/node/**</exclude>
+                        <exclude>**/node_modules/**</exclude>
+                        <exclude>**/test/coverage/**</exclude>
+                        <exclude>**/resources/static/</exclude>
+                    </excludes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>-->
         </plugins>
     </build>
 
