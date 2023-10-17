@@ -5,6 +5,7 @@ import com.chua.common.support.database.entity.DatabaseResult;
 import com.chua.common.support.database.entity.TableResult;
 import com.chua.common.support.lang.formatter.HighlightingFormatter;
 import com.chua.common.support.lang.formatter.SqlFormatter;
+import com.chua.common.support.media.MediaTypeFactory;
 import com.chua.common.support.session.Session;
 import com.chua.common.support.session.query.*;
 import com.chua.common.support.session.result.SessionInfo;
@@ -464,7 +465,7 @@ public class SessionController {
         }
         return ResponseEntity
                 .ok()
-                .contentType(MediaType.TEXT_HTML)
+                .contentType(MediaType.valueOf(MediaTypeFactory.getMediaType(query.getDataId()).get().toString()))
                 .contentLength(result.length)
                 .body(result);
     }
