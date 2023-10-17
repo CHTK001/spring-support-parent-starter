@@ -134,9 +134,7 @@ public class DatabaseController {
         }
         if("".equalsIgnoreCase(sysGen.getGenPassword())){
             sysGen.setGenPassword(null);
-        }
-
-        if(null == sysGen.getGenPassword()) {
+        } else if(null == sysGen.getGenPassword()) {
             sysGen.setGenPassword("");
         }
         sysGen.setCreateBy(RequestUtils.getUsername());
