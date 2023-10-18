@@ -1,6 +1,8 @@
 package com.chua.starter.gen.support.query;
 
 import com.chua.common.support.bean.BeanUtils;
+import com.chua.common.support.constant.FileType;
+import com.chua.common.support.constant.OptCode;
 import com.chua.common.support.session.query.SessionQuery;
 import com.chua.starter.mybatis.entity.RequestPage;
 import lombok.Data;
@@ -33,6 +35,16 @@ public class TableQuery extends RequestPage<TableQuery> {
      * 关键字
      */
     private String keyword;
+
+    /**
+     * 操作类型
+     */
+    private OptCode type;
+
+    /**
+     * 文件类型
+     */
+    private FileType fileType;
 
 
     public SessionQuery createSessionQuery() {
