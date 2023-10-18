@@ -1,5 +1,6 @@
 package com.chua.starter.gen.support.controller;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.constant.FileType;
 import com.chua.common.support.database.entity.ColumnResult;
 import com.chua.common.support.database.entity.DatabaseResult;
@@ -7,6 +8,7 @@ import com.chua.common.support.database.entity.TableResult;
 import com.chua.common.support.lang.formatter.HighlightingFormatter;
 import com.chua.common.support.lang.formatter.SqlFormatter;
 import com.chua.common.support.media.MediaTypeFactory;
+import com.chua.common.support.protocol.server.entity.Wrapper;
 import com.chua.common.support.session.Session;
 import com.chua.common.support.session.query.*;
 import com.chua.common.support.session.result.SessionInfo;
@@ -21,8 +23,10 @@ import com.chua.starter.common.support.result.ReturnPageResult;
 import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.common.support.utils.MultipartFileUtils;
 import com.chua.starter.gen.support.entity.SysGen;
+import com.chua.starter.gen.support.entity.SysGenRemark;
 import com.chua.starter.gen.support.properties.GenProperties;
 import com.chua.starter.gen.support.query.TableQuery;
+import com.chua.starter.gen.support.service.SysGenRemarkService;
 import com.chua.starter.gen.support.service.SysGenService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -32,10 +36,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.annotation.Resource;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 import static com.chua.common.support.constant.NameConstant.SYMBOL_EXCEPTION;
@@ -54,6 +55,9 @@ public class SessionController {
 
     @Resource
     private GenProperties genProperties;
+
+    @Resource
+    private SysGenRemarkService sysGenRemarkService;
     /**
      * 表格列表
      *
@@ -71,7 +75,23 @@ public class SessionController {
                 return ReturnResult.ok(session.getTables(query.getDatabaseId(), "%", query.createSessionQuery()));
             }
 
-            return ReturnResult.ok(session.getColumns(null, query.getDatabaseId()));
+            List<SysGenRemark> list = sysGenRemarkService.list(Wrappers.<SysGenRemark>lambdaQuery()
+                    .eq(SysGenRemark::getGenId, query.getGenId())
+                    .eq(SysGenRemark::getRemarkTable, query.getDatabaseId())
+            );
+            Map<String, SysGenRemark> tpl = new HashMap<>(list.size());
+            for (SysGenRemark sysGenRemark : list) {
+                tpl.put(sysGenRemark.getRemarkColumn(), sysGenRemark);
+            }
+            List<ColumnResult> columns = session.getColumns(query.getDatabase(), query.getDatabaseId());
+            for (ColumnResult column : columns) {
+                String columnName = column.getColumnName();
+                SysGenRemark sysGenRemark = tpl.get(columnName);
+                if(null != sysGenRemark) {
+                    column.setRemarks(sysGenRemark.getRemarkName());
+                }
+            }
+            return ReturnResult.ok(columns);
         } catch (Exception e) {
             e.printStackTrace();
             return ReturnResult.ok(Collections.emptyList());
@@ -470,7 +490,7 @@ public class SessionController {
         }
         return ResponseEntity
                 .ok()
-                .contentType(MediaType.valueOf(MediaTypeFactory.getMediaType(query.getDataId()).get().toString()))
+                .contentType(MediaType.valueOf(MediaTypeFactory.getMediaType(query.getDataId()).orElse(com.chua.common.support.media.MediaType.parse("text/html")).toString()))
                 .contentLength(result.length)
                 .body(result);
     }
