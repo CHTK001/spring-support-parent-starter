@@ -28,6 +28,11 @@ public class TableQuery extends RequestPage<TableQuery> {
     private String databaseId;
 
     /**
+     * database
+     */
+    private String database;
+
+    /**
      * 表名称
      */
     private String[] tableName;
