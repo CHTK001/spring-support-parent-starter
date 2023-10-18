@@ -1,5 +1,6 @@
 package com.chua.starter.gen.support.controller;
 
+import com.chua.common.support.constant.FileType;
 import com.chua.common.support.database.entity.ColumnResult;
 import com.chua.common.support.database.entity.DatabaseResult;
 import com.chua.common.support.database.entity.TableResult;
@@ -59,14 +60,18 @@ public class SessionController {
      * @return {@link ReturnPageResult}<{@link TableResult}>
      */
     @GetMapping("children")
-    public ReturnResult<List<TableResult>> children(TableQuery query) {
+    public ReturnResult<List<?>> children(TableQuery query) {
         SysGen sysGen = sysGenService.getByIdWithType(query.getGenId());
         if(null == sysGen) {
             return ReturnResult.illegal("表不存在");
         }
 
         try (Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions());) {
-            return ReturnResult.ok(session.getTables(query.getDatabaseId(), "%", query.createSessionQuery()));
+            if(query.getFileType() == FileType.DATABASE) {
+                return ReturnResult.ok(session.getTables(query.getDatabaseId(), "%", query.createSessionQuery()));
+            }
+
+            return ReturnResult.ok(session.getColumns(null, query.getDatabaseId()));
         } catch (Exception e) {
             e.printStackTrace();
             return ReturnResult.ok(Collections.emptyList());
