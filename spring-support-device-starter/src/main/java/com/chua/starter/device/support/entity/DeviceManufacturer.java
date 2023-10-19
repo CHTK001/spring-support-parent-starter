@@ -47,13 +47,18 @@ public class DeviceManufacturer implements Serializable {
     @Size(max = 255, message = "厂家类型最大长度要小于 255")
     @NotBlank(message = "厂家类型不能为空")
     private String manufacturerType;
+    /**
+     * 厂家照片
+     */
+    @TableField(value = "manufacturer_photo")
+    @Schema(description = "厂家照片")
+    private String manufacturerPhoto;
 
     /**
-     * 厂家地址
+     * 厂家官网
      */
     @TableField(value = "manufacturer_address")
-    @Schema(description = "厂家地址")
-    @Size(max = 255, message = "厂家地址最大长度要小于 255")
+    @Schema(description = "厂家官网")
     private String manufacturerAddress;
 
     /**
