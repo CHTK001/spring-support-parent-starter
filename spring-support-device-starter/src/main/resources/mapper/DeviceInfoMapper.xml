@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.device.support.mapper.DeviceInfoMapper">
+  <resultMap id="BaseResultMap" type="com.chua.starter.device.support.entity.DeviceInfo">
+    <!--@mbg.generated-->
+    <!--@Table device_info-->
+    <id column="device_id" jdbcType="INTEGER" property="deviceId" />
+    <result column="device_imsi" jdbcType="VARCHAR" property="deviceImsi" />
+    <result column="device_name" jdbcType="VARCHAR" property="deviceName" />
+    <result column="device_status" jdbcType="INTEGER" property="deviceStatus" />
+    <result column="device_longitude" jdbcType="VARCHAR" property="deviceLongitude" />
+    <result column="device_latitude" jdbcType="VARCHAR" property="deviceLatitude" />
+    <result column="device_address" jdbcType="VARCHAR" property="deviceAddress" />
+    <result column="device_category" jdbcType="VARCHAR" property="deviceCategory" />
+    <result column="device_version" jdbcType="VARCHAR" property="deviceVersion" />
+    <result column="device_model" jdbcType="VARCHAR" property="deviceModel" />
+    <result column="device_serial" jdbcType="VARCHAR" property="deviceSerial" />
+    <result column="device_treaty_type_label" jdbcType="VARCHAR" property="deviceTreatyTypeLabel" />
+    <result column="device_treaty_type" jdbcType="VARCHAR" property="deviceTreatyType" />
+    <result column="device_tag" jdbcType="VARCHAR" property="deviceTag" />
+    <result column="device_remark" jdbcType="LONGVARCHAR" property="deviceRemark" />
+    <result column="device_org_code" jdbcType="VARCHAR" property="deviceOrgCode" />
+    <result column="device_connector" jdbcType="VARCHAR" property="deviceConnector" />
+    <result column="device_delete" jdbcType="INTEGER" property="deviceDelete" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    device_id, device_imsi, device_name, device_status, device_longitude, device_latitude, 
+    device_address, device_category, device_version, device_model, device_serial, device_treaty_type_label, 
+    device_treaty_type, device_tag, device_remark, device_org_code, device_connector, 
+    device_delete, create_time, update_time
+  </sql>
+</mapper>

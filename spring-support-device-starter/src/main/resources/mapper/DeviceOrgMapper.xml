@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.device.support.mapper.DeviceOrgMapper">
+  <resultMap id="BaseResultMap" type="com.chua.starter.device.support.entity.DeviceOrg">
+    <!--@mbg.generated-->
+    <!--@Table device_org-->
+    <id column="device_org_id" jdbcType="INTEGER" property="deviceOrgId" />
+    <result column="device_org_code" jdbcType="VARCHAR" property="deviceOrgCode" />
+    <result column="device_org_name" jdbcType="VARCHAR" property="deviceOrgName" />
+    <result column="device_org_path" jdbcType="VARCHAR" property="deviceOrgPath" />
+    <result column="device_org_parent_code" jdbcType="VARCHAR" property="deviceOrgParentCode" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    device_org_id, device_org_code, device_org_name, device_org_path, device_org_parent_code, 
+    create_time, update_time
+  </sql>
+</mapper>

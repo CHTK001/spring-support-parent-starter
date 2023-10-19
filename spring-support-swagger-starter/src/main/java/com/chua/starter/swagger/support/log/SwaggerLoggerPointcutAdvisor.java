@@ -5,9 +5,7 @@ import com.chua.starter.common.support.logger.Logger;
 import com.chua.starter.common.support.logger.LoggerIgnore;
 import com.chua.starter.common.support.logger.LoggerPointcutAdvisor;
 import com.chua.starter.common.support.logger.LoggerService;
-import io.swagger.annotations.ApiOperation;
 import io.swagger.v3.oas.annotations.Operation;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
@@ -45,8 +43,7 @@ public class SwaggerLoggerPointcutAdvisor extends LoggerPointcutAdvisor {
         return (!AnnotatedElementUtils.hasAnnotation(method, LoggerIgnore.class)
                 && AnnotatedElementUtils.hasAnnotation(method, Logger.class))
                 &&
-                (AnnotatedElementUtils.hasAnnotation(method, ApiOperation.class) ||
-                AnnotatedElementUtils.hasAnnotation(method, Operation.class));
+                AnnotatedElementUtils.hasAnnotation(method, Operation.class);
 
 
     }
@@ -71,10 +68,6 @@ public class SwaggerLoggerPointcutAdvisor extends LoggerPointcutAdvisor {
 
     @Override
     protected String getName(Method method) {
-        ApiOperation apiOperation = method.getDeclaredAnnotation(ApiOperation.class);
-        if (null != apiOperation) {
-            return apiOperation.value();
-        }
         Operation operation = method.getDeclaredAnnotation(Operation.class);
         return operation.summary();
     }

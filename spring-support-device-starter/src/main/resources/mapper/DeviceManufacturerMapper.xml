@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.device.support.mapper.DeviceManufacturerMapper">
+  <resultMap id="BaseResultMap" type="com.chua.starter.device.support.entity.DeviceManufacturer">
+    <!--@mbg.generated-->
+    <!--@Table device_manufacturer-->
+    <id column="manufacturer_id" jdbcType="INTEGER" property="manufacturerId" />
+    <result column="manufacturer_name" jdbcType="VARCHAR" property="manufacturerName" />
+    <result column="manufacturer_type" jdbcType="VARCHAR" property="manufacturerType" />
+    <result column="manufacturer_address" jdbcType="VARCHAR" property="manufacturerAddress" />
+    <result column="manufacturer_contact" jdbcType="VARCHAR" property="manufacturerContact" />
+    <result column="manufacturer_phone" jdbcType="VARCHAR" property="manufacturerPhone" />
+    <result column="manufacturer_email" jdbcType="VARCHAR" property="manufacturerEmail" />
+    <result column="manufacturer_code" jdbcType="VARCHAR" property="manufacturerCode" />
+    <result column="manufacturer_remark" jdbcType="VARCHAR" property="manufacturerRemark" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    manufacturer_id, manufacturer_name, manufacturer_type, manufacturer_address, manufacturer_contact, 
+    manufacturer_phone, manufacturer_email, manufacturer_code, manufacturer_remark, create_time, 
+    update_time
+  </sql>
+</mapper>
