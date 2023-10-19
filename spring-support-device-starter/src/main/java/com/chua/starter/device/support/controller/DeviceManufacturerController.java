@@ -1,5 +1,6 @@
 package com.chua.starter.device.support.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -18,6 +19,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * 厂家信息控制器
@@ -61,6 +63,12 @@ public class DeviceManufacturerController {
             return ReturnResult.illegal(bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
 
+        if(deviceManufacturerService.count(Wrappers.<DeviceManufacturer>lambdaQuery()
+                .eq(DeviceManufacturer::getManufacturerName, deviceManufacturer.getManufacturerName())
+                .or().eq(DeviceManufacturer::getManufacturerCode, deviceManufacturer.getManufacturerCode())
+        ) > 0 ) {
+            return ReturnResult.illegal("厂商名称/编号已存在");
+        }
         deviceManufacturerService.save(deviceManufacturer);
         return ReturnResult.ok(deviceManufacturer);
     }
@@ -74,7 +82,14 @@ public class DeviceManufacturerController {
         if(bindingResult.hasErrors()) {
             return ReturnResult.illegal(bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
+        if(deviceManufacturerService.count(Wrappers.<DeviceManufacturer>lambdaQuery()
+                        .ne(DeviceManufacturer::getManufacturerId, deviceManufacturer.getManufacturerId())
+                        .and(deviceManufacturerLambdaQueryWrapper -> deviceManufacturerLambdaQueryWrapper.eq(DeviceManufacturer::getManufacturerName, deviceManufacturer.getManufacturerName())
+                                .or().eq(DeviceManufacturer::getManufacturerCode, deviceManufacturer.getManufacturerCode()))
 
+        ) > 0 ) {
+            return ReturnResult.illegal("厂商名称/编号已存在");
+        }
         deviceManufacturerService.updateById(deviceManufacturer);
         return ReturnResult.ok(deviceManufacturer);
     }
