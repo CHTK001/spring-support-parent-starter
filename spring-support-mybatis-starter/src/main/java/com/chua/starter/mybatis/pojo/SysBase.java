@@ -8,7 +8,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
-import io.swagger.annotations.ApiModelProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -18,16 +18,16 @@ import java.time.LocalDateTime;
 public class SysBase implements Serializable {
     private static final long serialVersionUID = 1L;
     @TableField(fill = FieldFill.INSERT)
-    @ApiModelProperty("创建人")
+    @Schema(description = "创建人")
     @JsonInclude(value = JsonInclude.Include.NON_NULL)
     private String createName;
     @TableField(fill = FieldFill.INSERT)
-    @ApiModelProperty("创建人")
+    @Schema(description = "创建人")
     @JsonInclude(value = JsonInclude.Include.NON_NULL)
     private String createBy;
 
     @TableField(fill = FieldFill.INSERT)
-    @ApiModelProperty("创建时间")
+    @Schema(description = "创建时间")
     @JsonInclude(value = JsonInclude.Include.NON_NULL)
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     @JsonSerialize(using = LocalDateTimeSerializer.class)
@@ -38,18 +38,18 @@ public class SysBase implements Serializable {
     @JsonInclude(value = JsonInclude.Include.NON_NULL)
     @JsonDeserialize(using = LocalDateTimeDeserializer.class)
     @JsonSerialize(using = LocalDateTimeSerializer.class)
-    @ApiModelProperty("更新时间")
+    @Schema(description = "更新时间")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private LocalDateTime updateTime;
 
 
     @TableField(fill = FieldFill.UPDATE)
     @JsonInclude(value = JsonInclude.Include.NON_NULL)
-    @ApiModelProperty("更新人")
+    @Schema(description = "更新人")
     private String updateName;
 
     @TableField(fill = FieldFill.UPDATE)
     @JsonInclude(value = JsonInclude.Include.NON_NULL)
-    @ApiModelProperty("更新人")
+    @Schema(description = "更新人")
     private String updateBy;
 }

@@ -2,6 +2,8 @@ package com.chua.starter.swagger.support;
 
 import com.github.xiaoymin.knife4j.spring.annotations.EnableKnife4j;
 import com.google.common.collect.Lists;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
@@ -21,18 +23,8 @@ import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 import org.springframework.core.env.Environment;
 import org.springframework.util.StringUtils;
-import springfox.bean.validators.configuration.BeanValidatorPluginsConfiguration;
-import springfox.documentation.builders.ApiInfoBuilder;
-import springfox.documentation.builders.PathSelectors;
-import springfox.documentation.builders.RequestHandlerSelectors;
-import springfox.documentation.builders.RequestParameterBuilder;
-import springfox.documentation.service.ParameterType;
-import springfox.documentation.spi.DocumentationType;
-import springfox.documentation.spring.web.plugins.Docket;
-import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -43,10 +35,9 @@ import java.util.Optional;
  * @author CH
  */
 @Slf4j
-@EnableSwagger2
 @EnableKnife4j
 @EnableConfigurationProperties(Knife4jProperties.class)
-@Import(BeanValidatorPluginsConfiguration.class)
+//@Import(BeanValidatorPluginsConfiguration.class)
 public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware {
 
     Knife4jProperties knife4jProperties;
@@ -70,41 +61,11 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
             if (autowireCapableBeanFactory instanceof ConfigurableListableBeanFactory) {
                 ((ConfigurableListableBeanFactory) autowireCapableBeanFactory).registerSingleton(
                         knife4j.getGroupName(),
-                        new Docket(DocumentationType.SWAGGER_2)
-                                .apiInfo(new ApiInfoBuilder()
+                        new OpenAPI()
+                                .info(new Info()
                                         .description(knife4j.getDescription())
                                         .version(knife4j.getVersion())
-                                        .build())
-                                //分组名称
-                                .groupName(knife4j.getGroupName())
-                                .select()
-                                //这里指定Controller扫描包路径
-                                .apis(RequestHandlerSelectors.basePackage(knife4j.getBasePackage()))
-                                .paths(PathSelectors.any())
-                                .build()
-                                .globalRequestParameters(Lists.newArrayList(
-                                        new RequestParameterBuilder()
-                                                .name("x-oauth-token")
-                                                .description("token")
-                                                .required(true)
-                                                .parameterIndex(1)
-                                                .in(ParameterType.HEADER)
-                                                .build(),
-                                        new RequestParameterBuilder()
-                                                .name("x-header-from")
-                                                .description("from")
-                                                .required(false)
-                                                .parameterIndex(2)
-                                                .in(ParameterType.HEADER)
-                                                .build(),
-                                        new RequestParameterBuilder()
-                                                .name("x-header-timestamp")
-                                                .description("timestamp")
-                                                .required(false)
-                                                .parameterIndex(3)
-                                                .in(ParameterType.HEADER)
-                                                .build()
-                                ))
+                                )
                 );
             }
         }
