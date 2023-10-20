@@ -2,3 +2,5 @@ org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
   com.chua.starter.gen.support.configuration.GenConfiguration,\
   com.chua.starter.gen.support.configuration.ResourceConfiguration,\
   com.chua.starter.gen.support.configuration.ShellWebSocketConfiguration
+org.springframework.boot.env.EnvironmentPostProcessor=\
+  com.chua.starter.gen.support.configuration.GenResourceConfiguration
