@@ -55,10 +55,10 @@ public class DeviceCloudPlatform implements Serializable {
     /**
      * 云平台地址
      */
-    @TableField(value = "device_platform_adress")
+    @TableField(value = "device_platform_address")
     @Schema(description = "云平台地址")
     @Size(max = 255, message = "云平台地址最大长度要小于 255")
-    private String devicePlatformAdress;
+    private String devicePlatformAddress;
 
     /**
      * 厂家ID
