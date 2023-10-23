@@ -66,6 +66,18 @@ public class DeviceCloudPlatform implements Serializable {
     @TableField(value = "manufacturer_id")
     @Schema(description = "厂家ID")
     private Integer manufacturerId;
+    /**
+     * 厂家名称
+     */
+    @TableField(exist = false)
+    @Schema(description = "厂家名称")
+    private String manufacturerName;
+    /**
+     * 存在实现接口
+     */
+    @TableField(exist = false)
+    @Schema(description = "存在实现接口")
+    private Boolean existImplInterface;
 
     private static final long serialVersionUID = 1L;
 }

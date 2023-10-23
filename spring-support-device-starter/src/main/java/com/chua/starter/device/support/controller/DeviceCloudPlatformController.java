@@ -1,23 +1,27 @@
 package com.chua.starter.device.support.controller;
 
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.function.Splitter;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.common.support.validator.group.UpdateGroup;
 import com.chua.starter.common.support.result.ReturnPageResult;
 import com.chua.starter.common.support.result.ReturnResult;
+import com.chua.starter.device.support.adaptor.Adaptor;
 import com.chua.starter.device.support.entity.DeviceCloudPlatform;
 import com.chua.starter.device.support.entity.DeviceDict;
+import com.chua.starter.device.support.entity.DeviceManufacturer;
 import com.chua.starter.device.support.service.DeviceCloudPlatformService;
 import com.chua.starter.mybatis.utils.PageResultUtils;
+import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.AllArgsConstructor;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 厂家信息控制器
@@ -48,7 +52,18 @@ public class DeviceCloudPlatformController {
     public ReturnPageResult<DeviceCloudPlatform> page(
                                                    @RequestParam(value = "page", defaultValue = "1") Integer pageNum,
                                                    @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
-        return PageResultUtils.ok(cloudPlatformService.page(new Page<DeviceCloudPlatform>(pageNum, pageSize), Wrappers.<DeviceCloudPlatform>lambdaQuery()));
+        ReturnPageResult<DeviceCloudPlatform> manufacturerName = PageResultUtils.ok(cloudPlatformService.page(new Page<DeviceCloudPlatform>(pageNum, pageSize),
+                new MPJLambdaWrapper<DeviceCloudPlatform>()
+                        .selectAll(DeviceCloudPlatform.class)
+                        .selectAs(DeviceManufacturer::getManufacturerName, "manufacturerName")
+                        .innerJoin(DeviceManufacturer.class, DeviceManufacturer::getManufacturerId, DeviceCloudPlatform::getManufacturerId)
+        ));
+
+        Map<String, Class<Adaptor>> stringClassMap = ServiceProvider.of(Adaptor.class).listType();
+        for (DeviceCloudPlatform datum : manufacturerName.getData().getData()) {
+            datum.setExistImplInterface(stringClassMap.containsKey(datum.getDevicePlatformCode()));
+        }
+        return manufacturerName;
     }
     /**
      * 保存

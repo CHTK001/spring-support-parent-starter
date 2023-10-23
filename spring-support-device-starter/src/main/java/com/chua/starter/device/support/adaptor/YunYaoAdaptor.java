@@ -9,7 +9,7 @@ import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
  * a云耀
  * @author CH
  */
-public abstract class YunYaoAdaptor {
+public abstract class YunYaoAdaptor implements Adaptor{
 
     protected DeviceCloudPlatformConnector deviceCloudPlatformConnector;
     protected YunYaoClient yunYaoClient;
