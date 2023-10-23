@@ -53,7 +53,7 @@ public class DeviceCloudPlatformConnectorController {
                                                    @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
         return PageResultUtils.ok(deviceCloudPlatformConnectorService.page(new Page<DeviceCloudPlatformConnector>(pageNum, pageSize),
                 Wrappers.<DeviceCloudPlatformConnector>lambdaQuery()
-                        .eq(DeviceCloudPlatformConnector::getDevicePlatformId, devicePlatformId)
+                        .eq(StringUtils.isNotEmpty(devicePlatformId), DeviceCloudPlatformConnector::getDevicePlatformId, devicePlatformId)
         ));
     }
     /**
