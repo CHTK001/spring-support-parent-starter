@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * @author CH
  */
-@Spi("hk_yun_yao")
+@Spi("hai_kang_yun_yao")
 public class HikYunYaoDeviceAdaptor extends YunYaoAdaptor implements DeviceAdaptor {
 
 

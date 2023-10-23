@@ -8,7 +8,7 @@ import com.chua.starter.device.support.entity.DeviceOrg;
 /**
  * @author CH
  */
-@Spi("hk_yun_yao")
+@Spi("hai_kang_yun_yao")
 public class HikYunYaoOrgAdaptor extends YunYaoAdaptor implements OrgAdaptor {
 
     public HikYunYaoOrgAdaptor(DeviceCloudPlatformConnector deviceCloudPlatformConnector) {
