@@ -31,6 +31,12 @@ public class DeviceCloudPlatformConnector implements Serializable {
     /**
      * 厂家appKey
      */
+    @TableField(value = "device_connector_name")
+    @Schema(description = "服务名称")
+    private String deviceConnectorName;
+    /**
+     * 厂家appKey
+     */
     @TableField(value = "device_connector_app_key")
     @Schema(description = "厂家appKey")
     @Size(max = 255, message = "厂家appKey最大长度要小于 255")
