@@ -72,7 +72,12 @@ public class DeviceCloudPlatformConnector implements Serializable {
     @Schema(description = "厂家项目编码")
     @Size(max = 255, message = "厂家项目编码最大长度要小于 255")
     private String deviceConnectorProjectCode;
-
+    /**
+     * 厂家协议配置地址
+     */
+    @TableField(value = "device_Connector_address")
+    @Schema(description = "服务器Api地址")
+    private String deviceConnectorApiAddress;
     /**
      * 对应的平台ID
      */
@@ -82,9 +87,10 @@ public class DeviceCloudPlatformConnector implements Serializable {
     private String devicePlatformId;
 
     private static final long serialVersionUID = 1L;
+
     /**
      * 厂家协议配置地址
      */
     @TableField(exist = false)
-    private String deviceConnectorAddress;
+    private String devicePlatformName;
 }
