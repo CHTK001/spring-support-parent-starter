@@ -75,9 +75,9 @@ public class DeviceCloudPlatformConnector implements Serializable {
     /**
      * 厂家协议配置地址
      */
-    @TableField(value = "device_Connector_address")
+    @TableField(value = "device_connector_address")
     @Schema(description = "服务器Api地址")
-    private String deviceConnectorApiAddress;
+    private String deviceConnectorAddress;
     /**
      * 对应的平台ID
      */
