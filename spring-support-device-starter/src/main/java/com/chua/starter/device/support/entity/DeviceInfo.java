@@ -38,6 +38,12 @@ public class DeviceInfo implements Serializable {
     private String deviceImsi;
 
     /**
+     * 设备类型
+     */
+    @TableField(value = "device_type_id")
+    @Schema(description = "设备类型")
+    private String deviceTypeId;
+    /**
      * 设备名称
      */
     @TableField(value = "device_name")
