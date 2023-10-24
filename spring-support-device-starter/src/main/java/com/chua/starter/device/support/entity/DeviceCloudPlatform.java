@@ -45,14 +45,6 @@ public class DeviceCloudPlatform implements Serializable {
     private String devicePlatformCode;
 
     /**
-     * 云平台API地址
-     */
-    @TableField(value = "device_platform_api_address")
-    @Schema(description = "云平台API地址")
-    @Size(max = 255, message = "云平台API地址最大长度要小于 255")
-    private String devicePlatformApiAddress;
-
-    /**
      * 云平台地址
      */
     @TableField(value = "device_platform_address")

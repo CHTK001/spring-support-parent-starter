@@ -8,10 +8,13 @@ import com.chua.common.support.validator.group.AddGroup;
 import com.chua.common.support.validator.group.UpdateGroup;
 import com.chua.starter.common.support.result.ReturnPageResult;
 import com.chua.starter.common.support.result.ReturnResult;
+import com.chua.starter.device.support.entity.DeviceCloudPlatform;
 import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
 import com.chua.starter.device.support.entity.DeviceDict;
 import com.chua.starter.device.support.service.DeviceCloudPlatformConnectorService;
 import com.chua.starter.mybatis.utils.PageResultUtils;
+import com.github.yulichang.query.MPJLambdaQueryWrapper;
+import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.AllArgsConstructor;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
@@ -52,7 +55,10 @@ public class DeviceCloudPlatformConnectorController {
                                                    @RequestParam(value = "page", defaultValue = "1") Integer pageNum,
                                                    @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
         return PageResultUtils.ok(deviceCloudPlatformConnectorService.page(new Page<DeviceCloudPlatformConnector>(pageNum, pageSize),
-                Wrappers.<DeviceCloudPlatformConnector>lambdaQuery()
+                new MPJLambdaWrapper<DeviceCloudPlatformConnector>()
+                        .selectAll(DeviceCloudPlatformConnector.class)
+                        .selectAs(DeviceCloudPlatform::getDevicePlatformName, "devicePlatformName")
+                        .innerJoin(DeviceCloudPlatform.class, DeviceCloudPlatform::getDevicePlatformId, DeviceCloudPlatformConnector::getDevicePlatformId)
                         .eq(StringUtils.isNotEmpty(devicePlatformId), DeviceCloudPlatformConnector::getDevicePlatformId, devicePlatformId)
         ));
     }
