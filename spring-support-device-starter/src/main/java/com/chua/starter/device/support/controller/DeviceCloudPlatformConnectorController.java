@@ -41,7 +41,7 @@ public class DeviceCloudPlatformConnectorController {
     @GetMapping("list")
     public ReturnResult<List<DeviceCloudPlatformConnector>> list(String devicePlatformId) {
         return ReturnResult.ok(deviceCloudPlatformConnectorService.list(Wrappers.<DeviceCloudPlatformConnector>lambdaQuery()
-                .eq(DeviceCloudPlatformConnector::getDevicePlatformId, devicePlatformId)
+                .eq(StringUtils.isNotEmpty(devicePlatformId), DeviceCloudPlatformConnector::getDevicePlatformId, devicePlatformId)
         ));
     }
     /**

@@ -1,9 +1,6 @@
 package com.chua.starter.device.support.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -43,6 +40,32 @@ public class DeviceInfo implements Serializable {
     @TableField(value = "device_type_id")
     @Schema(description = "设备类型")
     private String deviceTypeId;
+
+    /**
+     * 设备云服务
+     */
+    @TableField(value = "device_connector_id")
+    @Schema(description = "设备云服务")
+    private String deviceConnectorId;
+    /**
+     * 设备云服务名称
+     */
+    @TableField(exist = false)
+    @Schema(description = "设备云服务名称")
+    private String deviceServiceName;
+
+    /**
+     * 设备类型名称
+     */
+    @TableField(exist = false)
+    @Schema(description = "设备类型名称")
+    private String deviceTypeName;
+    /**
+     * 设备类型编号
+     */
+    @TableField(exist = false)
+    @Schema(description = "设备类型编号")
+    private String deviceTypeCode;
     /**
      * 设备名称
      */
@@ -52,11 +75,11 @@ public class DeviceInfo implements Serializable {
     private String deviceName;
 
     /**
-     * 设备状态; 0:离线
+     * 设备状态; offline: 离线, online: 在线
      */
     @TableField(value = "device_status")
-    @Schema(description = "设备状态; 0:离线")
-    private Integer deviceStatus;
+    @Schema(description = "设备状态; offline: 离线, online: 在线")
+    private String deviceStatus;
 
     /**
      * 经度
@@ -164,8 +187,9 @@ public class DeviceInfo implements Serializable {
     /**
      * 删除状态;0:删除
      */
+    @TableLogic(value = "0", delval = "1")
     @TableField(value = "device_delete")
-    @Schema(description = "删除状态;0:删除")
+    @Schema(description = "删除状态;1:删除")
     private Integer deviceDelete;
 
     /**

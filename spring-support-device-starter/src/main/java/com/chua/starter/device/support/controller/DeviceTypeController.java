@@ -100,7 +100,6 @@ public class DeviceTypeController {
         if(bindingResult.hasErrors()) {
             return ReturnResult.illegal(bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
-
         deviceTypeService.updateById(deviceType);
         return ReturnResult.ok(deviceType);
     }
