@@ -4,11 +4,13 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import java.io.Serializable;
-import java.util.Date;
+import lombok.Data;
+
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
-import lombok.Data;
+import java.io.Serializable;
+import java.util.Date;
+import java.util.List;
 
 /**
  * 设备类型
@@ -42,6 +44,12 @@ public class DeviceType implements Serializable {
     private String deviceTypeParent;
 
     /**
+     * 优先级
+     */
+    @TableField(value = "device_type_sort")
+    private Integer deviceTypeSort;
+
+    /**
      * 备注
      */
     @TableField(value = "device_type_remark")
@@ -61,5 +69,8 @@ public class DeviceType implements Serializable {
     @Size(max = 255, message = "节点路径最大长度要小于 255")
     private String deviceTypePath;
 
+
+    @TableField(exist = false)
+    private List<DeviceType> children;
     private static final long serialVersionUID = 1L;
 }

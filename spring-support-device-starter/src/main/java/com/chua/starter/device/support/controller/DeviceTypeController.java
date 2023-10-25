@@ -4,12 +4,12 @@ import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.function.Splitter;
+import com.chua.common.support.lang.treenode.TreeNode;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.common.support.validator.group.UpdateGroup;
 import com.chua.starter.common.support.result.ReturnPageResult;
 import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.device.support.entity.DeviceDict;
-import com.chua.starter.device.support.entity.DeviceInfo;
 import com.chua.starter.device.support.entity.DeviceType;
 import com.chua.starter.device.support.service.DeviceTypeService;
 import com.chua.starter.mybatis.utils.PageResultUtils;
@@ -19,6 +19,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * 厂家信息控制器
@@ -39,6 +40,31 @@ public class DeviceTypeController {
     @GetMapping("list")
     public ReturnResult<List<DeviceType>> list() {
         return ReturnResult.ok(deviceTypeService.list());
+    }
+
+    /**
+     * 列表
+     *
+     * @return {@link ReturnResult}<{@link DeviceDict}>
+     */
+    @GetMapping("tree")
+    public ReturnResult<TreeNode<DeviceType>> tree() {
+        TreeNode<DeviceType> treeNode= new TreeNode<>();
+        List<TreeNode<DeviceType>> treeNodes = TreeNode.convertFrom(deviceTypeService.list(), new Function<DeviceType, TreeNode>() {
+            @Override
+            public TreeNode<DeviceType> apply(DeviceType deviceType) {
+                TreeNode<DeviceType> objectTreeNode = new TreeNode<>();
+                objectTreeNode.setPid(deviceType.getDeviceTypeParent());
+                objectTreeNode.setId(deviceType.getDeviceTypeId() + "");
+                objectTreeNode.setValue(deviceType.getDeviceTypeName());
+                objectTreeNode.setExt(deviceType);
+                return objectTreeNode;
+            }
+        });
+        treeNode.setId("0");
+        treeNode.setLabel("根目录");
+        treeNode.setChildren(treeNodes);
+        return ReturnResult.ok(treeNode);
     }
     /**
      * 分页
