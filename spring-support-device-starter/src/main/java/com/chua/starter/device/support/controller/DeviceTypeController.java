@@ -50,7 +50,7 @@ public class DeviceTypeController {
      */
     @GetMapping("tree")
     public ReturnResult<TreeNode<DeviceType>> tree() {
-        TreeNode<DeviceType> treeNode= new TreeNode<>();
+
         TreeNode<DeviceType> treeNodes = TreeNode.transfer(deviceTypeService.list(), new Function<DeviceType, TreeNode>() {
             @Override
             public TreeNode<DeviceType> apply(DeviceType deviceType) {
