@@ -18,6 +18,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Date;
 import java.util.List;
 import java.util.function.Function;
 
@@ -50,7 +51,7 @@ public class DeviceTypeController {
     @GetMapping("tree")
     public ReturnResult<TreeNode<DeviceType>> tree() {
         TreeNode<DeviceType> treeNode= new TreeNode<>();
-        List<TreeNode<DeviceType>> treeNodes = TreeNode.convertFrom(deviceTypeService.list(), new Function<DeviceType, TreeNode>() {
+        TreeNode<DeviceType> treeNodes = TreeNode.transfer(deviceTypeService.list(), new Function<DeviceType, TreeNode>() {
             @Override
             public TreeNode<DeviceType> apply(DeviceType deviceType) {
                 TreeNode<DeviceType> objectTreeNode = new TreeNode<>();
@@ -61,10 +62,7 @@ public class DeviceTypeController {
                 return objectTreeNode;
             }
         });
-        treeNode.setId("0");
-        treeNode.setLabel("根目录");
-        treeNode.setChildren(treeNodes);
-        return ReturnResult.ok(treeNode);
+        return ReturnResult.ok(treeNodes);
     }
     /**
      * 分页
@@ -88,6 +86,7 @@ public class DeviceTypeController {
             return ReturnResult.illegal(bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
 
+        deviceType.setCreateTime(new Date());
         deviceTypeService.save(deviceType);
         return ReturnResult.ok(deviceType);
     }
