@@ -52,7 +52,7 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
     @ExceptionHandler(BindException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> processException(BindException e) {
-        log.error("BindException:{}", e);
+        log.error("BindException:{}", e.getMessage());
         String msg = e.getAllErrors().stream().map(DefaultMessageSourceResolvable::getDefaultMessage).collect(Collectors.joining("；"));
         return Result.failed(PARAM_ERROR, msg);
     }
@@ -67,7 +67,7 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
     @ExceptionHandler(ConstraintViolationException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> processException(javax.validation.ConstraintViolationException e) {
-        log.error("ConstraintViolationException:{}", e);
+        log.error("ConstraintViolationException:{}", e.getMessage());
         String msg = e.getConstraintViolations().stream().map(ConstraintViolation::getMessage).collect(Collectors.joining("；"));
         return Result.failed(PARAM_ERROR, msg);
     }
@@ -82,7 +82,7 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> processException(MethodArgumentNotValidException e) {
-        log.error("MethodArgumentNotValidException:{}", e);
+        log.error("MethodArgumentNotValidException:{}", e.getMessage());
         String msg = e.getBindingResult().getAllErrors().stream().map(DefaultMessageSourceResolvable::getDefaultMessage).collect(Collectors.joining("；"));
         return Result.failed(PARAM_ERROR, msg);
     }
@@ -211,7 +211,7 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> handleException(Exception e) {
-        log.error("unknown exception: {}", e);
+        log.error("unknown exception: {}", e.getMessage());
         return Result.failed("请求失败,请稍后重试");
     }
     @ExceptionHandler(RuntimeException.class)
