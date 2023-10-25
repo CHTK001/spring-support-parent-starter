@@ -35,6 +35,11 @@ public class DeviceType implements Serializable {
     @TableField(value = "device_type_name")
     @Size(max = 255, message = "类型名称最大长度要小于 255")
     private String deviceTypeName;
+    /**
+     * 是否系统数据; 0:非系统
+     */
+    @TableField(value = "device_type_system")
+    private String deviceTypeSystem;
 
     /**
      * 父节点
