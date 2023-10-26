@@ -83,11 +83,18 @@ public class DeviceInfo implements Serializable {
     private String deviceName;
 
     /**
-     * 设备状态; offline: 离线, online: 在线
+     * 设备状态; offline: 离线, online: 在线, disable: 禁用
      */
     @TableField(value = "device_status")
-    @Schema(description = "设备状态; offline: 离线, online: 在线")
+    @Schema(description = "设备状态; offline: 离线, online: 在线, disable: 禁用")
     private String deviceStatus;
+
+    /**
+     * 设备是否挂载到云服务； cloud: 以挂载到云；none: 无挂载
+     */
+    @TableField(value = "device_in_cloud")
+    @Schema(description = "设备是否挂载到云服务； cloud: 以挂载到云；none: 无挂载")
+    private String deviceInCloud;
 
     /**
      * 经度
