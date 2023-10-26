@@ -4,12 +4,14 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.common.support.spi.ServiceGroup;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import java.io.Serializable;
+import java.util.List;
 
 /**
  *    
@@ -93,4 +95,15 @@ public class DeviceCloudPlatformConnector implements Serializable {
      */
     @TableField(exist = false)
     private String devicePlatformName;
+    /**
+     * 厂家协议配置Code
+     */
+    @TableField(exist = false)
+    private String devicePlatformCode;
+
+    /**
+     * 组
+     */
+    @TableField(exist = false)
+    private List<ServiceGroup.GroupInfo> group;
 }

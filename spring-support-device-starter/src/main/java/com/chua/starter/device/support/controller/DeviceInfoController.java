@@ -1,17 +1,15 @@
 package com.chua.starter.device.support.controller;
 
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.function.Splitter;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.common.support.validator.group.UpdateGroup;
 import com.chua.starter.common.support.result.ReturnPageResult;
 import com.chua.starter.common.support.result.ReturnResult;
-import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
-import com.chua.starter.device.support.entity.DeviceDict;
-import com.chua.starter.device.support.entity.DeviceInfo;
-import com.chua.starter.device.support.entity.DeviceType;
+import com.chua.starter.device.support.adaptor.Adaptor;
+import com.chua.starter.device.support.entity.*;
 import com.chua.starter.device.support.service.DeviceInfoService;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
@@ -55,18 +53,33 @@ public class DeviceInfoController {
             String keyword,
             @RequestParam(value = "page", defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
-        return PageResultUtils.ok(deviceInfoService.page(new Page<DeviceInfo>(pageNum, pageSize),
+
+        Page<DeviceInfo> page = deviceInfoService.page(new Page<DeviceInfo>(pageNum, pageSize),
                 new MPJLambdaWrapper<DeviceInfo>()
                         .selectAll(DeviceInfo.class)
                         .selectAs(DeviceType::getDeviceTypeName, "deviceTypeName")
                         .selectAs(DeviceType::getDeviceTypeCode, "deviceTypeCode")
+                        .selectAs(DeviceOrg::getDeviceOrgName, "deviceOrgName")
                         .selectAs(DeviceCloudPlatformConnector::getDeviceConnectorName, "deviceServiceName")
+                        .selectAs(DeviceCloudPlatform::getDevicePlatformCode, "devicePlatformCode")
                         .leftJoin(DeviceType.class, DeviceType::getDeviceTypeId, DeviceInfo::getDeviceTypeId)
                         .leftJoin(DeviceCloudPlatformConnector.class, DeviceCloudPlatformConnector::getDeviceConnectorId, DeviceInfo::getDeviceConnectorId)
+                        .leftJoin(DeviceCloudPlatform.class, DeviceCloudPlatform::getDevicePlatformId, DeviceCloudPlatformConnector::getDevicePlatformId)
+                        .leftJoin(DeviceOrg.class, DeviceOrg::getDeviceOrgTreeId, DeviceInfo::getDeviceOrgCode)
                         .like(StringUtils.isNotEmpty(keyword), DeviceInfo::getDeviceName, keyword)
                         .or(StringUtils.isNotEmpty(keyword))
                         .like(StringUtils.isNotEmpty(keyword), DeviceType::getDeviceTypeName, keyword)
-        ));
+        );
+
+        for (DeviceInfo record : page.getRecords()) {
+            String devicePlatformCode = record.getDevicePlatformCode();
+            if(StringUtils.isBlank(devicePlatformCode)) {
+                continue;
+            }
+            record.setGroup(ServiceProvider.of(Adaptor.class).group(devicePlatformCode).getGroupInfo("device"));
+        }
+
+        return PageResultUtils.ok(page);
     }
 
     /**

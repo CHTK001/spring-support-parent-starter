@@ -11,6 +11,7 @@ import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 
 /**
  *    
@@ -30,12 +31,19 @@ public class DeviceOrg implements Serializable {
     private Integer deviceOrgId;
 
     /**
+     * 所属服务
+     */
+    @TableField(value = "device_connector_id")
+    @Schema(description = "所属服务")
+    private String deviceConnectorId;
+
+    /**
      * 组织编码
      */
-    @TableField(value = "device_org_code")
+    @TableField(value = "device_org_tree_id")
     @Schema(description = "组织编码")
     @Size(max = 255, message = "组织编码最大长度要小于 255")
-    private String deviceOrgCode;
+    private String deviceOrgTreeId;
 
     /**
      * 组织名称
@@ -56,10 +64,10 @@ public class DeviceOrg implements Serializable {
     /**
      * 父组织编码
      */
-    @TableField(value = "device_org_parent_code")
+    @TableField(value = "device_org_pid")
     @Schema(description = "父组织编码")
     @Size(max = 255, message = "父组织编码最大长度要小于 255")
-    private String deviceOrgParentCode;
+    private String deviceOrgPid;
 
     /**
      * 创建时间
@@ -74,6 +82,9 @@ public class DeviceOrg implements Serializable {
     @TableField(value = "update_time")
     @Schema(description = "更新时间")
     private Date updateTime;
+
+    @TableField(exist = false)
+    private List<DeviceOrg> children;
 
     private static final long serialVersionUID = 1L;
 }

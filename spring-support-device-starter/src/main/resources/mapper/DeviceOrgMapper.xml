@@ -5,16 +5,16 @@
     <!--@mbg.generated-->
     <!--@Table device_org-->
     <id column="device_org_id" jdbcType="INTEGER" property="deviceOrgId" />
-    <result column="device_org_code" jdbcType="VARCHAR" property="deviceOrgCode" />
+    <result column="device_org_tree_id" jdbcType="VARCHAR" property="deviceOrgTreeId" />
     <result column="device_org_name" jdbcType="VARCHAR" property="deviceOrgName" />
     <result column="device_org_path" jdbcType="VARCHAR" property="deviceOrgPath" />
-    <result column="device_org_parent_code" jdbcType="VARCHAR" property="deviceOrgParentCode" />
+    <result column="device_org_pid" jdbcType="VARCHAR" property="deviceOrgPid" />
     <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
     <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
-    device_org_id, device_org_code, device_org_name, device_org_path, device_org_parent_code, 
+    device_org_id, device_org_tree_id, device_org_name, device_org_path, device_org_pid, 
     create_time, update_time
   </sql>
 </mapper>
