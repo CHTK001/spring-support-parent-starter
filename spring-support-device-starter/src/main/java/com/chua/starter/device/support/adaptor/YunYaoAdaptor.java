@@ -22,6 +22,7 @@ public abstract class YunYaoAdaptor implements Adaptor{
                         MappingConfig.builder()
                                 .host(deviceCloudPlatformConnector.getDeviceConnectorAddress())
                                 .path("/artemis")
+                                .productId(deviceCloudPlatformConnector.getDeviceConnectorProjectId())
                                 .appKey(deviceCloudPlatformConnector.getDeviceConnectorAppKey())
                                 .secretAccessKey(deviceCloudPlatformConnector.getDeviceConnectorAppSecret())
                                 .build()).get();

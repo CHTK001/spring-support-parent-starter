@@ -37,6 +37,14 @@ public class DeviceInfo implements Serializable {
     private String deviceImsi;
 
     /**
+     * 识别码(每台设备唯一)
+     */
+    @TableField(value = "device_validate_code")
+    @Schema(description = "校验码")
+    @Size(max = 255, message = "校验码")
+    private String deviceValidateCode;
+
+    /**
      * 设备类型
      */
     @TableField(value = "device_type_id")
@@ -75,7 +83,13 @@ public class DeviceInfo implements Serializable {
     @Schema(description = "设备类型编号")
     private String deviceTypeCode;
     /**
-     * 设备名称
+     * 设备网络地址
+     */
+    @TableField(value = "device_netaddress")
+    @Schema(description = "设备网络地址")
+    private String deviceNetAddress;
+    /**
+     * 设备IP
      */
     @TableField(value = "device_name")
     @Schema(description = "设备名称")
