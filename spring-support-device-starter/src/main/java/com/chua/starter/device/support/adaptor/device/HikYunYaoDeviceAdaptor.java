@@ -25,7 +25,7 @@ import java.util.List;
 public class HikYunYaoDeviceAdaptor extends
         YunYaoAdaptor implements DeviceAdaptor, DeviceUploadAdaptor, DeviceDownloadAdaptor {
 
-    private static final SimpleDateFormat FORMATTER  = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS+0800");
+    private static final SimpleDateFormat FORMATTER  = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS+08:00");
 
     public HikYunYaoDeviceAdaptor(DeviceCloudPlatformConnector deviceCloudPlatformConnector) {
         super(deviceCloudPlatformConnector);
