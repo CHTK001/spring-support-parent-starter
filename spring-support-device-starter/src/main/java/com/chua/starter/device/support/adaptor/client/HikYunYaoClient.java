@@ -1,7 +1,11 @@
 package com.chua.starter.device.support.adaptor.client;
 
+import com.alibaba.fastjson2.JSONArray;
+import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.mapping.annotations.MappingAddress;
+import com.chua.common.support.mapping.annotations.MappingBody;
 import com.chua.common.support.mapping.annotations.MappingRequest;
+import com.chua.starter.device.support.adaptor.client.pojo.DeviceListResult;
 import com.chua.starter.device.support.adaptor.client.pojo.OrgListResult;
 
 /**
@@ -25,4 +29,49 @@ public interface HikYunYaoClient {
      */
     @MappingRequest(value = "POST /api/resource/v2/org/advance/orgList", jsonPath = "$.data")
     OrgListResult orgList(int pageNo, int pageSize);
+
+    /**
+     * 设备分页查询
+     * @param json json
+     *  <code>
+     *      [
+     *        {
+     * 		"key":"pageSize",
+     * 		"option":"eq",
+     * 		"value":300
+     *    },{
+     * 		"key":"pageNo",
+     * 		"option":"eq",
+     * 		"value":1
+     *    },{
+     * 		"key":"deviceCategory",
+     * 		"option":"eq",
+     * 		"value":"DecodeStitchControl"
+     *    },{
+     *                 "key":"projectId",
+     * 		"option":"eq",
+     * 		"value":1688929979961872
+     *     }
+     * ]
+     *             </code>
+     * @return
+     */
+    @MappingRequest(value = "POST /api/eits/v2/global/device/page", jsonPath = "$.data")
+    DeviceListResult devicePage(@MappingBody String json);
+
+    /**
+     * 设备页面
+     *
+     * @param pageNo   页码(1)
+     * @param pageSize 分页数量 (1000)
+     * @return {@link DeviceListResult}
+     */
+    default DeviceListResult devicePage(int pageNo, int pageSize) {
+        JSONArray jsonArray = new JSONArray();
+        jsonArray.add(new JSONObject().fluentPut("key", "pageSize").fluentPut("option", "eq").fluentPut("value", pageSize));
+        jsonArray.add(new JSONObject().fluentPut("key", "pageNo").fluentPut("option", "eq").fluentPut("value", pageNo));
+        return devicePage(jsonArray.toJSONString());
+    }
+
+
 }

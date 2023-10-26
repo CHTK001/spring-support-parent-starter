@@ -3,6 +3,7 @@ package com.chua.starter.device.support.adaptor.device;
 import com.chua.common.support.annotations.Group;
 import com.chua.common.support.annotations.Spi;
 import com.chua.starter.device.support.adaptor.YunYaoAdaptor;
+import com.chua.starter.device.support.adaptor.client.pojo.DeviceListResult;
 import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
 import com.chua.starter.device.support.entity.DeviceInfo;
 import com.chua.starter.device.support.pojo.UploadResult;
@@ -25,6 +26,7 @@ public class HikYunYaoDeviceAdaptor extends
 
     @Override
     public List<DeviceInfo> downloadFromCloud(int page, int pageSize) {
+        DeviceListResult deviceListResult = hikYunYaoClient.devicePage(page, pageSize);
         return null;
     }
 
