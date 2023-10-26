@@ -5,13 +5,14 @@ import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.mapping.annotations.MappingAddress;
 import com.chua.common.support.mapping.annotations.MappingBody;
 import com.chua.common.support.mapping.annotations.MappingRequest;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.device.support.adaptor.client.pojo.DeviceListResult;
 import com.chua.starter.device.support.adaptor.client.pojo.OrgListResult;
 
 /**
  * @author CH
  */
-@MappingAddress(invokeType = "hik")
+@MappingAddress(invokeType = "hai_kang_yun_yao")
 public interface HikYunYaoClient {
     /**
      * 查询组织列表v2
@@ -62,14 +63,19 @@ public interface HikYunYaoClient {
     /**
      * 设备页面
      *
-     * @param pageNo   页码(1)
-     * @param pageSize 分页数量 (1000)
+     * @param pageNo    页码(1)
+     * @param pageSize  分页数量 (1000)
+     * @param projectId 项目id
      * @return {@link DeviceListResult}
      */
-    default DeviceListResult devicePage(int pageNo, int pageSize) {
+    default DeviceListResult devicePage(int pageNo, int pageSize, String projectId) {
+        if(StringUtils.isEmpty(projectId)) {
+            return null;
+        }
         JSONArray jsonArray = new JSONArray();
         jsonArray.add(new JSONObject().fluentPut("key", "pageSize").fluentPut("option", "eq").fluentPut("value", pageSize));
         jsonArray.add(new JSONObject().fluentPut("key", "pageNo").fluentPut("option", "eq").fluentPut("value", pageNo));
+        jsonArray.add(new JSONObject().fluentPut("key", "projectId").fluentPut("option", "eq").fluentPut("value", Long.valueOf(projectId)));
         return devicePage(jsonArray.toJSONString());
     }
 
