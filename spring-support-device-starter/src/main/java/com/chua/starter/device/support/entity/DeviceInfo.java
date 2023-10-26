@@ -1,6 +1,7 @@
 package com.chua.starter.device.support.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.chua.common.support.spi.ServiceGroup;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -8,6 +9,7 @@ import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 
 /**
  *    
@@ -53,6 +55,12 @@ public class DeviceInfo implements Serializable {
     @TableField(exist = false)
     @Schema(description = "设备云服务名称")
     private String deviceServiceName;
+    /**
+     * 设备云平台编码
+     */
+    @TableField(exist = false)
+    @Schema(description = "设备云平台编码")
+    private String devicePlatformCode;
 
     /**
      * 设备类型名称
@@ -104,14 +112,6 @@ public class DeviceInfo implements Serializable {
     @Schema(description = "设备所在的详细地址")
     @Size(max = 255, message = "设备所在的详细地址最大长度要小于 255")
     private String deviceAddress;
-
-    /**
-     * 设备类型; 门禁: ACCESS_CONTROL 视频: VIDEO 其它: OTHER
-     */
-    @TableField(value = "device_category")
-    @Schema(description = "设备类型; 门禁: ACCESS_CONTROL 视频: VIDEO 其它: OTHER")
-    @Size(max = 255, message = "设备类型; 门禁: ACCESS_CONTROL 视频: VIDEO 其它: OTHER最大长度要小于 255")
-    private String deviceCategory;
 
     /**
      * 设备版本
@@ -175,14 +175,12 @@ public class DeviceInfo implements Serializable {
     @Schema(description = "所属组织")
     @Size(max = 255, message = "所属组织最大长度要小于 255")
     private String deviceOrgCode;
-
     /**
-     * 采集方式
+     * 所属组织
      */
-    @TableField(value = "device_connector")
-    @Schema(description = "采集方式")
-    @Size(max = 255, message = "采集方式最大长度要小于 255")
-    private String deviceConnector;
+    @TableField(exist = false)
+    @Schema(description = "所属组织")
+    private String deviceOrgName;
 
     /**
      * 删除状态;0:删除
@@ -205,6 +203,12 @@ public class DeviceInfo implements Serializable {
     @TableField(value = "update_time")
     @Schema(description = "更新时间")
     private Date updateTime;
+
+    /**
+     * 组
+     */
+    @TableField(exist = false)
+    private List<ServiceGroup.GroupInfo> group;
 
     private static final long serialVersionUID = 1L;
 }
