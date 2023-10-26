@@ -4,16 +4,17 @@ import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.function.Splitter;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.common.support.validator.group.UpdateGroup;
 import com.chua.starter.common.support.result.ReturnPageResult;
 import com.chua.starter.common.support.result.ReturnResult;
+import com.chua.starter.device.support.adaptor.Adaptor;
 import com.chua.starter.device.support.entity.DeviceCloudPlatform;
 import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
 import com.chua.starter.device.support.entity.DeviceDict;
 import com.chua.starter.device.support.service.DeviceCloudPlatformConnectorService;
 import com.chua.starter.mybatis.utils.PageResultUtils;
-import com.github.yulichang.query.MPJLambdaQueryWrapper;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.AllArgsConstructor;
 import org.springframework.validation.BindingResult;
@@ -54,13 +55,22 @@ public class DeviceCloudPlatformConnectorController {
                                                 String devicePlatformId,
                                                    @RequestParam(value = "page", defaultValue = "1") Integer pageNum,
                                                    @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
-        return PageResultUtils.ok(deviceCloudPlatformConnectorService.page(new Page<DeviceCloudPlatformConnector>(pageNum, pageSize),
+        Page<DeviceCloudPlatformConnector> devicePlatformName = deviceCloudPlatformConnectorService.page(new Page<DeviceCloudPlatformConnector>(pageNum, pageSize),
                 new MPJLambdaWrapper<DeviceCloudPlatformConnector>()
                         .selectAll(DeviceCloudPlatformConnector.class)
                         .selectAs(DeviceCloudPlatform::getDevicePlatformName, "devicePlatformName")
+                        .selectAs(DeviceCloudPlatform::getDevicePlatformCode, "devicePlatformCode")
                         .innerJoin(DeviceCloudPlatform.class, DeviceCloudPlatform::getDevicePlatformId, DeviceCloudPlatformConnector::getDevicePlatformId)
                         .eq(StringUtils.isNotEmpty(devicePlatformId), DeviceCloudPlatformConnector::getDevicePlatformId, devicePlatformId)
-        ));
+        );
+        for (DeviceCloudPlatformConnector record : devicePlatformName.getRecords()) {
+            if(StringUtils.isBlank(record.getDevicePlatformCode())) {
+                continue;
+            }
+            record.setGroup(ServiceProvider.of(Adaptor.class).group(record.getDevicePlatformCode()).getGroupInfo("service"));
+        }
+        return PageResultUtils.ok(devicePlatformName);
+
     }
     /**
      * 保存
