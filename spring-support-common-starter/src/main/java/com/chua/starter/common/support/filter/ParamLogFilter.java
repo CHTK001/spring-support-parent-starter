@@ -31,15 +31,37 @@ public class ParamLogFilter implements Filter {
         }
 
         HttpServletRequest request = (HttpServletRequest) servletRequest;
+        hook(request);
         String header = request.getHeader(HTTP_HEADER_CONTENT_TYPE);
         if(StringUtils.contains(header, "form-data")) {
             filterChain.doFilter(servletRequest, servletResponse);
             return;
         }
 
+        if(StringUtils.isEmpty(header) && GET.equals(request.getMethod())) {
+            printLog(request);
+            filterChain.doFilter(request, servletResponse);
+            return;
+        }
+
         CustomHttpServletRequestWrapper requestWrapper = new CustomHttpServletRequestWrapper((HttpServletRequest) servletRequest);
         printLog(requestWrapper);
         filterChain.doFilter(requestWrapper, servletResponse);
+    }
+
+    private void hook(HttpServletRequest request) {
+        request.getParameterNames();
+        request.getHeaderNames();
+        request.getAttributeNames();
+        request.getLocales();
+    }
+
+    private void printLog(HttpServletRequest request) throws IOException {
+        log.info("请求URL: {}", request.getRequestURL());
+        String body = request.getQueryString();
+        if(StringUtils.isNotEmpty(body) && body.length() < NumberConstant.ONE_THOUSAND) {
+            log.info("请求参数: {}", body);
+        }
     }
 
     private void printLog(CustomHttpServletRequestWrapper requestWrapper) throws IOException {

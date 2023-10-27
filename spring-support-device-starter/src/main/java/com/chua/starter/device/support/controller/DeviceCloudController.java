@@ -6,6 +6,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.device.support.adaptor.device.DeviceDownloadAdaptor;
 import com.chua.starter.device.support.adaptor.org.OrgDownloadAdaptor;
+import com.chua.starter.device.support.entity.DeviceCloudPlatform;
 import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
 import com.chua.starter.device.support.entity.DeviceInfo;
 import com.chua.starter.device.support.entity.DeviceOrg;
@@ -13,6 +14,7 @@ import com.chua.starter.device.support.pojo.StaticResult;
 import com.chua.starter.device.support.service.DeviceCloudPlatformConnectorService;
 import com.chua.starter.device.support.service.DeviceInfoService;
 import com.chua.starter.device.support.service.DeviceOrgService;
+import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -50,7 +52,13 @@ public class DeviceCloudController {
             return ReturnResult.illegal("服务不存在");
         }
 
-        DeviceCloudPlatformConnector platformConnector = deviceCloudPlatformConnectorService.getById(deviceConnectorId);
+        DeviceCloudPlatformConnector platformConnector = deviceCloudPlatformConnectorService.getOne(new MPJLambdaWrapper<DeviceCloudPlatformConnector>()
+                .selectAll(DeviceCloudPlatformConnector.class)
+                .selectAs(DeviceCloudPlatform::getDevicePlatformCode, "devicePlatformCode")
+                .selectAs(DeviceCloudPlatform::getDevicePlatformName, "devicePlatformName")
+                .innerJoin(DeviceCloudPlatform.class, DeviceCloudPlatform::getDevicePlatformId, DeviceCloudPlatformConnector::getDevicePlatformId)
+                .eq(DeviceCloudPlatformConnector::getDeviceConnectorId, deviceConnectorId)
+        );
         if(null == platformConnector) {
             return ReturnResult.illegal("服务不存在");
         }
