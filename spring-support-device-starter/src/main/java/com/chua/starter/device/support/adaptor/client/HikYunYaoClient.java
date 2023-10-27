@@ -2,6 +2,11 @@ package com.chua.starter.device.support.adaptor.client;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.chua.common.support.bean.BeanMap;
+import com.chua.common.support.bean.BeanUtils;
+import com.chua.common.support.json.Json;
+import com.chua.common.support.lang.date.DateUtils;
+import com.chua.common.support.lang.date.constant.DateFormatConstant;
 import com.chua.common.support.mapping.annotations.MappingAddress;
 import com.chua.common.support.mapping.annotations.MappingBody;
 import com.chua.common.support.mapping.annotations.MappingParam;
@@ -9,6 +14,12 @@ import com.chua.common.support.mapping.annotations.MappingRequest;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.device.support.adaptor.client.pojo.HikAnFangOrgListResult;
 import com.chua.starter.device.support.adaptor.client.pojo.HikYunYaoDeviceListResult;
+import com.chua.starter.device.support.adaptor.pojo.AccessEventRequest;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author CH
@@ -107,5 +118,27 @@ public interface HikYunYaoClient {
      */
     default String getLiveAddress(String projectId, String deviceImsi ) {
         return getLiveAddress(projectId, deviceImsi, 1, 60, 2);
+    }
+
+    /**
+     * 获取事件
+     *
+     * @param request 要求
+     * @return {@link String}
+     */
+    @MappingRequest("POST /api/eits/aceventcs/v1/event/acs/person/page")
+    String getEvent(@MappingBody String request);
+
+    /**
+     * 获取事件
+     *
+     * @param request 要求
+     * @return {@link String}
+     */
+    default String getEvent(AccessEventRequest request) {
+        Map<String, Object> beanMap = new HashMap<>(BeanMap.create(request));
+        beanMap.put("eventStartTime", DateUtils.format(request.getStartTime(), DateFormatConstant.ISO8601));
+        beanMap.put("eventEndTime", DateUtils.format(request.getEndTime(), DateFormatConstant.ISO8601));
+        return getEvent(Json.toJson(beanMap));
     }
 }

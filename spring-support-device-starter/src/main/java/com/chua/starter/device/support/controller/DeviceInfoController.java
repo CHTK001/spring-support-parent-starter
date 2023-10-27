@@ -71,6 +71,7 @@ public class DeviceInfoController {
                         .like(StringUtils.isNotEmpty(keyword), DeviceType::getDeviceTypeName, keyword)
                         .or(StringUtils.isNotEmpty(keyword))
                         .like(StringUtils.isNotEmpty(keyword), DeviceInfo::getDeviceImsi, keyword)
+                        .orderByDesc(DeviceInfo::getCreateTime, DeviceInfo::getDeviceTypeId)
         );
 
         for (DeviceInfo record : page.getRecords()) {
