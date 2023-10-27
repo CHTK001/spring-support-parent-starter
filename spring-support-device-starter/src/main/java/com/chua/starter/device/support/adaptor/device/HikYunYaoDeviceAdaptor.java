@@ -1,11 +1,14 @@
 package com.chua.starter.device.support.adaptor.device;
 
+import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.annotations.Group;
 import com.chua.common.support.annotations.Spi;
+import com.chua.common.support.json.Json;
 import com.chua.starter.device.support.adaptor.HikYunYaoAdaptor;
 import com.chua.starter.device.support.adaptor.client.pojo.HikYunYaoDeviceListResult;
 import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
 import com.chua.starter.device.support.entity.DeviceInfo;
+import com.chua.starter.device.support.pojo.LiveResult;
 import com.chua.starter.device.support.pojo.UploadResult;
 
 import java.text.ParseException;
@@ -20,9 +23,11 @@ import java.util.List;
  */
 @Group(value = "device", desc = "同步设备到云服务器", group = "device")
 @Group(value = "device", desc = "设备同步", group = "service")
+@Group(value = "camera", desc = "设备监控", group = "device")
 @Spi("hai_kang_yun_yao")
-public class HikYunYaoDeviceAdaptor extends
-        HikYunYaoAdaptor implements DeviceAdaptor, DeviceUploadAdaptor, DeviceDownloadAdaptor {
+public class HikYunYaoDeviceAdaptor
+        extends HikYunYaoAdaptor
+        implements DeviceAdaptor, DeviceUploadAdaptor, DeviceDownloadAdaptor, CameraDeviceAdaptor {
 
     public static final SimpleDateFormat FORMATTER  = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS+08:00");
 
@@ -66,4 +71,21 @@ public class HikYunYaoDeviceAdaptor extends
     public UploadResult uploadToCloud(DeviceInfo deviceInfo) {
         return null;
     }
+
+    @Override
+    public LiveResult getLiveAddress(String deviceImsi) {
+        JSONObject jsonObject = Json.fromJson(hikYunYaoClient.getLiveAddress(deviceCloudPlatformConnector.getDeviceConnectorProjectCode(), deviceImsi), JSONObject.class);
+        if(null == jsonObject) {
+            return new LiveResult();
+        }
+        LiveResult result = new LiveResult();
+        result.setMsg(jsonObject.getString("msg"));
+        JSONObject data = jsonObject.getJSONObject("data");
+        if(null != data) {
+            result.setUrl(data.getString("url"));
+        }
+
+        return result;
+    }
+
 }
