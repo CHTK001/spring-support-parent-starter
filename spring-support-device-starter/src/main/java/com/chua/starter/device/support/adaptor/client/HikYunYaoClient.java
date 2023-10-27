@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.mapping.annotations.MappingAddress;
 import com.chua.common.support.mapping.annotations.MappingBody;
+import com.chua.common.support.mapping.annotations.MappingParam;
 import com.chua.common.support.mapping.annotations.MappingRequest;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.device.support.adaptor.client.pojo.HikAnFangOrgListResult;
@@ -80,4 +81,31 @@ public interface HikYunYaoClient {
     }
 
 
+    /**
+     * 获取实时地址
+     *
+     * @param deviceImsi 设备imsi
+     * @param projectId  项目id
+     * @param channelNo  通道编号
+     * @param expireTime 过期时间
+     * @param protocol   协议
+     * @return {@link String}
+     */
+    @MappingRequest("POST /api/eits/v1/global/live/address/get/by/deviceSerial")
+    String getLiveAddress(String projectId, String deviceImsi,
+                          @MappingParam(value = "channelNo", defaultValue = "1") int channelNo,
+                          @MappingParam(value = "expireTime", defaultValue = "60") int expireTime,
+                          @MappingParam(value = "protocol", defaultValue = "2") int protocol
+    );
+
+    /**
+     * 获取实时地址
+     *
+     * @param deviceImsi 设备imsi
+     * @param projectId  项目id
+     * @return {@link String}
+     */
+    default String getLiveAddress(String projectId, String deviceImsi ) {
+        return getLiveAddress(projectId, deviceImsi, 1, 60, 2);
+    }
 }
