@@ -9,18 +9,16 @@ import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
 import com.chua.starter.device.support.entity.DeviceLog;
 import com.chua.starter.device.support.entity.DeviceOrg;
 import com.chua.starter.device.support.mapper.DeviceOrgMapper;
+import com.chua.starter.device.support.pojo.StaticResult;
 import com.chua.starter.device.support.service.DeviceLogService;
 import com.chua.starter.device.support.service.DeviceOrgService;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.annotation.Resource;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-import java.util.function.Function;
 
 /**
  *    
@@ -34,46 +32,41 @@ public class DeviceOrgServiceImpl extends ServiceImpl<DeviceOrgMapper, DeviceOrg
     @Resource
     private TransactionTemplate transactionTemplate;
     @Override
-    public void registerOrg(List<DeviceOrg> deviceOrgs, DeviceCloudPlatformConnector platformConnector) {
+    public void registerOrg(List<DeviceOrg> deviceOrgs, DeviceCloudPlatformConnector platformConnector, StaticResult result) {
         if(CollectionUtils.isEmpty(deviceOrgs)) {
             return;
         }
 
-        STATIC_EXECUTOR_SERVICE.execute(() -> {
-            transactionTemplate.execute(new TransactionCallback<Boolean>() {
-                @Override
-                public Boolean doInTransaction(TransactionStatus status) {
-                    remove(Wrappers.<DeviceOrg>lambdaQuery().eq(DeviceOrg::getDeviceConnectorId, platformConnector.getDeviceConnectorId()));
-                    TreeNode<DeviceOrg> treeNode = TreeNode.transfer(deviceOrgs, new Function<DeviceOrg, TreeNode>() {
-                        @Override
-                        public TreeNode<DeviceOrg> apply(DeviceOrg deviceOrg) {
-                            deviceOrg.setDeviceConnectorId(platformConnector.getDeviceConnectorId() + "");
-                            TreeNode<DeviceOrg>  item = new TreeNode<>();
-                            item.setId(deviceOrg.getDeviceOrgTreeId());
-                            item.setPid(deviceOrg.getDeviceOrgPid());
-                            item.setValue(deviceOrg.getDeviceOrgName());
-                            item.setExt(deviceOrg);
-                            return item;
-                        }
-                    });
-                    List<TreeNode<DeviceOrg>> children = treeNode.getChildren();
-                    for (TreeNode<DeviceOrg> child : children) {
-                        DeviceLog deviceLog = new DeviceLog();
-                        deviceLog.setDeviceLogFrom("同步组织接口(页面)");
-                        deviceLog.setCreateTime(new Date());
-                        deviceLog.setDeviceLogType("SYNC("+ platformConnector.getDeviceConnectorId() +")");
-                        try {
-                            DeviceOrg childExt = child.getExt();
-//                            save(childExt);
-                        } catch (Exception e) {
-                            deviceLog.setDeviceLogError(e.getLocalizedMessage());
-                        }
-//                        deviceLogService.save(deviceLog);
-                    }
-                    return true;
-                }
+        result.addTotal(deviceOrgs.size());
+        transactionTemplate.execute(status -> {
+            remove(Wrappers.<DeviceOrg>lambdaQuery().eq(DeviceOrg::getDeviceConnectorId, platformConnector.getDeviceConnectorId()));
+            TreeNode<DeviceOrg> treeNode = TreeNode.transfer(deviceOrgs, deviceOrg -> {
+                deviceOrg.setDeviceConnectorId(platformConnector.getDeviceConnectorId() + "");
+                TreeNode<DeviceOrg>  item = new TreeNode<>();
+                item.setId(deviceOrg.getDeviceOrgTreeId());
+                item.setPid(deviceOrg.getDeviceOrgPid());
+                item.setValue(deviceOrg.getDeviceOrgName());
+                item.setExt(deviceOrg);
+                return item;
             });
-
+            List<TreeNode<DeviceOrg>> children = treeNode.getChildren();
+            for (TreeNode<DeviceOrg> child : children) {
+                DeviceLog deviceLog = new DeviceLog();
+                deviceLog.setDeviceLogFrom("同步组织接口(页面)");
+                deviceLog.setCreateTime(new Date());
+                deviceLog.setDeviceLogType("SYNC("+ platformConnector.getDeviceConnectorId() +")");
+                try {
+                    DeviceOrg childExt = child.getExt();
+//                            save(childExt);
+                    result.addSuccessTotal(1);
+                } catch (Exception e) {
+                    result.addFailureTotal(1);
+                    deviceLog.setDeviceLogError(e.getLocalizedMessage());
+                }
+//                        deviceLogService.save(deviceLog);
+            }
+            return true;
         });
+
     }
 }
