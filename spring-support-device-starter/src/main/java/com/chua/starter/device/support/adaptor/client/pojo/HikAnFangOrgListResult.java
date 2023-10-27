@@ -11,7 +11,7 @@ import java.util.List;
  */
 @NoArgsConstructor
 @Data
-public class OrgListResult {
+public class HikAnFangOrgListResult {
 
     @JsonProperty("total")
     private Integer total;

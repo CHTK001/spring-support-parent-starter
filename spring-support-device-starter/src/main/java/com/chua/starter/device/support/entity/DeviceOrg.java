@@ -60,6 +60,12 @@ public class DeviceOrg implements Serializable {
     @Schema(description = "路径")
     @Size(max = 255, message = "路径最大长度要小于 255")
     private String deviceOrgPath;
+    /**
+     * 排序
+     */
+    @TableField(value = "device_sort")
+    @Schema(description = "排序")
+    private Integer deviceSort;
 
     /**
      * 父组织编码

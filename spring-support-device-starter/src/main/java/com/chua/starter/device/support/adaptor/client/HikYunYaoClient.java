@@ -6,8 +6,8 @@ import com.chua.common.support.mapping.annotations.MappingAddress;
 import com.chua.common.support.mapping.annotations.MappingBody;
 import com.chua.common.support.mapping.annotations.MappingRequest;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.device.support.adaptor.client.pojo.DeviceListResult;
-import com.chua.starter.device.support.adaptor.client.pojo.OrgListResult;
+import com.chua.starter.device.support.adaptor.client.pojo.HikAnFangOrgListResult;
+import com.chua.starter.device.support.adaptor.client.pojo.HikYunYaoDeviceListResult;
 
 /**
  * @author CH
@@ -29,7 +29,7 @@ public interface HikYunYaoClient {
      * @return 组织机构
      */
     @MappingRequest(value = "POST /api/resource/v2/org/advance/orgList", jsonPath = "$.data")
-    OrgListResult orgList(int pageNo, int pageSize);
+    HikAnFangOrgListResult orgList(int pageNo, int pageSize);
 
     /**
      * 设备分页查询
@@ -58,7 +58,7 @@ public interface HikYunYaoClient {
      * @return
      */
     @MappingRequest(value = "POST /api/eits/v2/global/device/page", jsonPath = "$.data")
-    DeviceListResult devicePage(@MappingBody String json);
+    HikYunYaoDeviceListResult devicePage(@MappingBody String json);
 
     /**
      * 设备页面
@@ -66,9 +66,9 @@ public interface HikYunYaoClient {
      * @param pageNo    页码(1)
      * @param pageSize  分页数量 (1000)
      * @param projectId 项目id
-     * @return {@link DeviceListResult}
+     * @return {@link HikYunYaoDeviceListResult}
      */
-    default DeviceListResult devicePage(int pageNo, int pageSize, String projectId) {
+    default HikYunYaoDeviceListResult devicePage(int pageNo, int pageSize, String projectId) {
         if(StringUtils.isEmpty(projectId)) {
             return null;
         }
