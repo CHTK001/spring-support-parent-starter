@@ -69,6 +69,8 @@ public class DeviceInfoController {
                         .like(StringUtils.isNotEmpty(keyword), DeviceInfo::getDeviceName, keyword)
                         .or(StringUtils.isNotEmpty(keyword))
                         .like(StringUtils.isNotEmpty(keyword), DeviceType::getDeviceTypeName, keyword)
+                        .or(StringUtils.isNotEmpty(keyword))
+                        .like(StringUtils.isNotEmpty(keyword), DeviceInfo::getDeviceImsi, keyword)
         );
 
         for (DeviceInfo record : page.getRecords()) {

@@ -2,23 +2,22 @@ package com.chua.starter.device.support.adaptor;
 
 import com.chua.common.support.mapping.Mapping;
 import com.chua.common.support.mapping.MappingConfig;
-import com.chua.common.support.mapping.MappingExecutor;
-import com.chua.starter.device.support.adaptor.client.HikYunYaoClient;
+import com.chua.starter.device.support.adaptor.client.HikAnFangClient;
 import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
 
 /**
  * a云耀
  * @author CH
  */
-public abstract class YunYaoAdaptor implements Adaptor{
+public abstract class HikAnFangAdaptor implements Adaptor{
 
     protected DeviceCloudPlatformConnector deviceCloudPlatformConnector;
-    protected HikYunYaoClient hikYunYaoClient;
+    protected HikAnFangClient hikAnFangClient;
 
-    public YunYaoAdaptor(DeviceCloudPlatformConnector deviceCloudPlatformConnector) {
+    public HikAnFangAdaptor(DeviceCloudPlatformConnector deviceCloudPlatformConnector) {
         this.deviceCloudPlatformConnector = deviceCloudPlatformConnector;
-        hikYunYaoClient =
-                Mapping.of(HikYunYaoClient.class,
+        hikAnFangClient =
+                Mapping.of(HikAnFangClient.class,
                         MappingConfig.builder()
                                 .host(deviceCloudPlatformConnector.getDeviceConnectorAddress())
                                 .path("/artemis")
@@ -29,7 +28,4 @@ public abstract class YunYaoAdaptor implements Adaptor{
     }
 
 
-    interface YunYaoClient extends MappingExecutor {
-
-    }
 }
