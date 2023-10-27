@@ -8,7 +8,7 @@ import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
 import com.chua.starter.device.support.entity.DeviceLog;
 import com.chua.starter.device.support.entity.DeviceOrg;
 import com.chua.starter.device.support.mapper.DeviceOrgMapper;
-import com.chua.starter.device.support.pojo.StaticResult;
+import com.chua.starter.device.support.adaptor.pojo.StaticResult;
 import com.chua.starter.device.support.service.DeviceLogService;
 import com.chua.starter.device.support.service.DeviceOrgService;
 import org.springframework.stereotype.Service;
