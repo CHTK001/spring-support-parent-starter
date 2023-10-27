@@ -9,6 +9,7 @@ import com.chua.starter.device.support.adaptor.org.OrgDownloadAdaptor;
 import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
 import com.chua.starter.device.support.entity.DeviceInfo;
 import com.chua.starter.device.support.entity.DeviceOrg;
+import com.chua.starter.device.support.pojo.StaticResult;
 import com.chua.starter.device.support.service.DeviceCloudPlatformConnectorService;
 import com.chua.starter.device.support.service.DeviceInfoService;
 import com.chua.starter.device.support.service.DeviceOrgService;
@@ -43,7 +44,7 @@ public class DeviceCloudController {
      * @return {@link ReturnResult}<{@link Boolean}>
      */
     @PostMapping("/syncDevice")
-    public ReturnResult<Boolean> syncDevice(@RequestBody DeviceCloudPlatformConnector deviceCloudPlatformConnector) {
+    public ReturnResult<StaticResult> syncDevice(@RequestBody DeviceCloudPlatformConnector deviceCloudPlatformConnector) {
         Integer deviceConnectorId = deviceCloudPlatformConnector.getDeviceConnectorId();
         if(null == deviceConnectorId) {
             return ReturnResult.illegal("服务不存在");
@@ -60,13 +61,14 @@ public class DeviceCloudController {
         }
 
         int page = 1;
+        StaticResult result = new StaticResult();
         List<DeviceInfo> deviceInfos = downloadAdaptor.downloadFromCloud(page, 1000);
         while (CollectionUtils.isNotEmpty(deviceInfos)) {
-            deviceInfoService.registerDevice(deviceInfos, platformConnector);
+            deviceInfoService.registerDevice(deviceInfos, platformConnector, result);
             deviceInfos = downloadAdaptor.downloadFromCloud(++ page, 1000);
         }
 
-        return ReturnResult.ok(true);
+        return ReturnResult.ok(result);
     }
     /**
      * 同步组织
@@ -75,7 +77,7 @@ public class DeviceCloudController {
      * @return {@link ReturnResult}<{@link Boolean}>
      */
     @PostMapping("/syncOrg")
-    public ReturnResult<Boolean> syncOrg(@RequestBody DeviceCloudPlatformConnector deviceCloudPlatformConnector) {
+    public ReturnResult<StaticResult> syncOrg(@RequestBody DeviceCloudPlatformConnector deviceCloudPlatformConnector) {
         Integer deviceConnectorId = deviceCloudPlatformConnector.getDeviceConnectorId();
         if(null == deviceConnectorId) {
             return ReturnResult.illegal("服务不存在");
@@ -92,13 +94,14 @@ public class DeviceCloudController {
         }
 
         int page = 1;
+        StaticResult result = new StaticResult();
         List<DeviceOrg> deviceInfos = downloadAdaptor.downloadFromCloud(page, 1000);
         while (CollectionUtils.isNotEmpty(deviceInfos)) {
-            deviceOrgService.registerOrg(deviceInfos, platformConnector);
+            deviceOrgService.registerOrg(deviceInfos, platformConnector, result);
             deviceInfos = downloadAdaptor.downloadFromCloud(++ page, 1000);
         }
 
-        return ReturnResult.ok(true);
+        return ReturnResult.ok(result);
     }
 
 }
