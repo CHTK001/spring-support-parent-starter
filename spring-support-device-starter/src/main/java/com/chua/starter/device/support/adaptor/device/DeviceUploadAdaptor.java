@@ -1,7 +1,7 @@
 package com.chua.starter.device.support.adaptor.device;
 
 import com.chua.starter.device.support.entity.DeviceInfo;
-import com.chua.starter.device.support.pojo.UploadResult;
+import com.chua.starter.device.support.adaptor.pojo.UploadResult;
 
 /**
  * 上传到云服务

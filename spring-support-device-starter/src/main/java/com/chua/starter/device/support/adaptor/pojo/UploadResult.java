@@ -1,4 +1,4 @@
-package com.chua.starter.device.support.pojo;
+package com.chua.starter.device.support.adaptor.pojo;
 
 import lombok.Data;
 

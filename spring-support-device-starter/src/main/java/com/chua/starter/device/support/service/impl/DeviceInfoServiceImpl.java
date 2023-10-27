@@ -10,7 +10,7 @@ import com.chua.starter.device.support.entity.DeviceInfo;
 import com.chua.starter.device.support.entity.DeviceLog;
 import com.chua.starter.device.support.entity.DeviceType;
 import com.chua.starter.device.support.mapper.DeviceInfoMapper;
-import com.chua.starter.device.support.pojo.StaticResult;
+import com.chua.starter.device.support.adaptor.pojo.StaticResult;
 import com.chua.starter.device.support.service.DeviceInfoService;
 import com.chua.starter.device.support.service.DeviceLogService;
 import com.chua.starter.device.support.service.DeviceTypeService;

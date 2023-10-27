@@ -8,8 +8,8 @@ import com.chua.starter.device.support.adaptor.HikYunYaoAdaptor;
 import com.chua.starter.device.support.adaptor.client.pojo.HikYunYaoDeviceListResult;
 import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
 import com.chua.starter.device.support.entity.DeviceInfo;
-import com.chua.starter.device.support.pojo.LiveResult;
-import com.chua.starter.device.support.pojo.UploadResult;
+import com.chua.starter.device.support.adaptor.pojo.LiveResult;
+import com.chua.starter.device.support.adaptor.pojo.UploadResult;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;

@@ -3,7 +3,7 @@ package com.chua.starter.device.support.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
 import com.chua.starter.device.support.entity.DeviceInfo;
-import com.chua.starter.device.support.pojo.StaticResult;
+import com.chua.starter.device.support.adaptor.pojo.StaticResult;
 
 import java.util.List;
 

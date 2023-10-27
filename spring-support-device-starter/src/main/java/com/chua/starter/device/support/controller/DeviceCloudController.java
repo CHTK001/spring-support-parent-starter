@@ -6,14 +6,15 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.device.support.adaptor.device.CameraDeviceAdaptor;
 import com.chua.starter.device.support.adaptor.device.DeviceDownloadAdaptor;
+import com.chua.starter.device.support.adaptor.event.AccessEventAdaptor;
 import com.chua.starter.device.support.adaptor.org.OrgDownloadAdaptor;
-import com.chua.starter.device.support.entity.DeviceCloudPlatform;
-import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
-import com.chua.starter.device.support.entity.DeviceInfo;
-import com.chua.starter.device.support.entity.DeviceOrg;
-import com.chua.starter.device.support.pojo.LiveResult;
-import com.chua.starter.device.support.pojo.StaticResult;
+import com.chua.starter.device.support.adaptor.pojo.AccessEventRequest;
+import com.chua.starter.device.support.entity.*;
+import com.chua.starter.device.support.adaptor.pojo.LiveResult;
+import com.chua.starter.device.support.adaptor.pojo.StaticResult;
+import com.chua.starter.device.support.request.ServletAccessEventRequest;
 import com.chua.starter.device.support.service.DeviceCloudPlatformConnectorService;
+import com.chua.starter.device.support.service.DeviceDataAccessEventService;
 import com.chua.starter.device.support.service.DeviceInfoService;
 import com.chua.starter.device.support.service.DeviceOrgService;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
@@ -41,6 +42,46 @@ public class DeviceCloudController {
     private final DeviceInfoService deviceInfoService;
     private final DeviceOrgService deviceOrgService;
 
+    private final DeviceDataAccessEventService deviceDataAccessEventService;
+
+    /**
+     * 同步查询门禁
+     *
+     * @param accessEventRequest 设备连接器
+     * @return {@link ReturnResult}<{@link Boolean}>
+     */
+    @PostMapping("/accessEvent")
+    public ReturnResult<StaticResult> accessEvent(@RequestBody ServletAccessEventRequest accessEventRequest) {
+        Integer deviceConnectorId = accessEventRequest.getDeviceConnectorId();
+        if(null == deviceConnectorId) {
+            return ReturnResult.illegal("服务不存在");
+        }
+
+        DeviceCloudPlatformConnector platformConnector = deviceCloudPlatformConnectorService.getById(deviceConnectorId);
+        if(null == platformConnector) {
+            return ReturnResult.illegal("服务不存在");
+        }
+
+        AccessEventAdaptor accessEventAdaptor = ServiceProvider.of(AccessEventAdaptor.class).getNewExtension(platformConnector.getDevicePlatformCode(), platformConnector);
+        if(null == accessEventAdaptor) {
+            return ReturnResult.illegal(StringUtils.format("暂不支持从{}同步数据", platformConnector.getDeviceConnectorName()));
+        }
+
+        int page = 1;
+        StaticResult result = new StaticResult();
+        List<DeviceDataAccessEvent> event = accessEventAdaptor.getEvent(AccessEventRequest.builder()
+                .pageNo(page)
+                .startTime(accessEventRequest.getStartTime())
+                .endTime(accessEventRequest.getEndTime())
+                .build());
+        while (CollectionUtils.isNotEmpty(event)) {
+            deviceDataAccessEventService.registerEvent(event, platformConnector, result);
+            event = accessEventAdaptor.getEvent(AccessEventRequest.builder().pageNo(++ page) .startTime(accessEventRequest.getStartTime())
+                    .endTime(accessEventRequest.getEndTime()).build());
+        }
+
+        return ReturnResult.ok(result);
+    }
     /**
      * 视频监控
      *

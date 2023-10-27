@@ -1,6 +1,6 @@
 package com.chua.starter.device.support.adaptor.device;
 
-import com.chua.starter.device.support.pojo.LiveResult;
+import com.chua.starter.device.support.adaptor.pojo.LiveResult;
 
 /**
  * 摄像头
