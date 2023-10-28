@@ -117,11 +117,5 @@ public class DeviceDataAccessEvent extends DeviceDataEvent implements Serializab
     @Size(max = 255, message = "人体温度最大长度要小于 255")
     private String deviceDataTemperature;
 
-    /**
-     * 通用设备数据表ID
-     */
-    @TableField(value = "device_data_data_id")
-    private Integer deviceDataDataId;
-
     private static final long serialVersionUID = 1L;
 }
