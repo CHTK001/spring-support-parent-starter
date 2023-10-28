@@ -59,6 +59,7 @@ public class DeviceInfoController {
                         .selectAll(DeviceInfo.class)
                         .selectAs(DeviceType::getDeviceTypeName, "deviceTypeName")
                         .selectAs(DeviceType::getDeviceTypeCode, "deviceTypeCode")
+                        .select("(select count(*) from device_channel where device_channel.device_id = t.device_id) deviceChannelCount")
                         .selectAs(DeviceOrg::getDeviceOrgName, "deviceOrgName")
                         .selectAs(DeviceCloudPlatformConnector::getDeviceConnectorName, "deviceServiceName")
                         .selectAs(DeviceCloudPlatform::getDevicePlatformCode, "devicePlatformCode")
