@@ -2,6 +2,7 @@ package com.chua.starter.device.support.adaptor.pojo;
 
 import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.lang.date.DateUtils;
+import com.chua.starter.device.support.request.EventType;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NonNull;
@@ -67,6 +68,11 @@ public class AccessEventRequest {
      * 人员关键字(姓名、编号、证件号、手机号)模糊搜索，查询效率偏低
      */
     private String personKey;
+    /**
+     * 事件类型
+     * ACCESS: 门禁
+     */
+    private EventType eventType;
 
     /**
      * 第页
