@@ -77,12 +77,6 @@ public class DeviceInfo implements Serializable {
     @Schema(description = "设备类型名称")
     private String deviceTypeName;
     /**
-     * 设备管道数
-     */
-    @TableField(exist = false)
-    @Schema(description = "设备管道数")
-    private Integer deviceChannelCount;
-    /**
      * 设备类型编号
      */
     @TableField(exist = false)
@@ -208,6 +202,12 @@ public class DeviceInfo implements Serializable {
     @TableField(exist = false)
     @Schema(description = "所属组织")
     private String deviceOrgName;
+    /**
+     * 当前管道
+     */
+    @TableField(exist = false)
+    @Schema(description = "当前管道")
+    private String deviceChannel;
 
     /**
      * 删除状态;0:删除
@@ -236,6 +236,11 @@ public class DeviceInfo implements Serializable {
      */
     @TableField(exist = false)
     private List<ServiceGroup.GroupInfo> group;
+    /**
+     * channels
+     */
+    @TableField(exist = false)
+    private List<DeviceChannel> channels;
 
     private static final long serialVersionUID = 1L;
 }

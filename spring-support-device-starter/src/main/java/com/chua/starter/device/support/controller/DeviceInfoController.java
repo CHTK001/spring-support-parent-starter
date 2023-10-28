@@ -19,6 +19,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -54,36 +55,7 @@ public class DeviceInfoController {
             @RequestParam(value = "page", defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
 
-        Page<DeviceInfo> page = deviceInfoService.page(new Page<DeviceInfo>(pageNum, pageSize),
-                new MPJLambdaWrapper<DeviceInfo>()
-                        .selectAll(DeviceInfo.class)
-                        .selectAs(DeviceType::getDeviceTypeName, "deviceTypeName")
-                        .selectAs(DeviceType::getDeviceTypeCode, "deviceTypeCode")
-                        .select("(select count(*) from device_channel where device_channel.device_id = t.device_id) deviceChannelCount")
-                        .selectAs(DeviceOrg::getDeviceOrgName, "deviceOrgName")
-                        .selectAs(DeviceCloudPlatformConnector::getDeviceConnectorName, "deviceServiceName")
-                        .selectAs(DeviceCloudPlatform::getDevicePlatformCode, "devicePlatformCode")
-                        .leftJoin(DeviceType.class, DeviceType::getDeviceTypeId, DeviceInfo::getDeviceTypeId)
-                        .leftJoin(DeviceCloudPlatformConnector.class, DeviceCloudPlatformConnector::getDeviceConnectorId, DeviceInfo::getDeviceConnectorId)
-                        .leftJoin(DeviceCloudPlatform.class, DeviceCloudPlatform::getDevicePlatformId, DeviceCloudPlatformConnector::getDevicePlatformId)
-                        .leftJoin(DeviceOrg.class, DeviceOrg::getDeviceOrgTreeId, DeviceInfo::getDeviceOrgCode)
-                        .like(StringUtils.isNotEmpty(keyword), DeviceInfo::getDeviceName, keyword)
-                        .or(StringUtils.isNotEmpty(keyword))
-                        .like(StringUtils.isNotEmpty(keyword), DeviceType::getDeviceTypeName, keyword)
-                        .or(StringUtils.isNotEmpty(keyword))
-                        .like(StringUtils.isNotEmpty(keyword), DeviceInfo::getDeviceImsi, keyword)
-                        .orderByDesc(DeviceInfo::getCreateTime, DeviceInfo::getDeviceTypeId)
-        );
-
-        for (DeviceInfo record : page.getRecords()) {
-            String devicePlatformCode = record.getDevicePlatformCode();
-            if(StringUtils.isBlank(devicePlatformCode)) {
-                continue;
-            }
-            record.setGroup(ServiceProvider.of(Adaptor.class).group(devicePlatformCode).getGroupInfo("device"));
-        }
-
-        return PageResultUtils.ok(page);
+        return PageResultUtils.ok(deviceInfoService.page(pageNum, pageSize, keyword));
     }
 
     /**

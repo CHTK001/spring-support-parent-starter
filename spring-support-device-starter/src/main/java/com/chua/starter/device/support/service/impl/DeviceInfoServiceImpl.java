@@ -2,25 +2,24 @@ package com.chua.starter.device.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
-import com.chua.starter.device.support.entity.DeviceInfo;
-import com.chua.starter.device.support.entity.DeviceLog;
-import com.chua.starter.device.support.entity.DeviceType;
+import com.chua.starter.device.support.adaptor.Adaptor;
+import com.chua.starter.device.support.entity.*;
 import com.chua.starter.device.support.mapper.DeviceInfoMapper;
 import com.chua.starter.device.support.adaptor.pojo.StaticResult;
+import com.chua.starter.device.support.service.DeviceChannelService;
 import com.chua.starter.device.support.service.DeviceInfoService;
 import com.chua.starter.device.support.service.DeviceLogService;
 import com.chua.starter.device.support.service.DeviceTypeService;
+import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
-import java.util.Date;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  *    
@@ -36,6 +35,9 @@ public class DeviceInfoServiceImpl extends ServiceImpl<DeviceInfoMapper, DeviceI
     @Resource
     private DeviceTypeService deviceTypeService;
 
+    @Resource
+    private DeviceChannelService deviceChannelService;
+
     @Override
     public void registerDevice(List<DeviceInfo> deviceInfos, DeviceCloudPlatformConnector cloudPlatformConnector, StaticResult result) {
         if(CollectionUtils.isEmpty(deviceInfos)) {
@@ -45,6 +47,51 @@ public class DeviceInfoServiceImpl extends ServiceImpl<DeviceInfoMapper, DeviceI
         result.addTotal(deviceInfos.size());
         Map<String, String> typeIds = findType();
         registerDevice(deviceInfos,cloudPlatformConnector, result, typeIds);
+    }
+
+    @Override
+    @SuppressWarnings("ALL")
+    public Page<DeviceInfo> page(Integer pageNum, Integer pageSize, String keyword) {
+        Page<DeviceInfo> page = page(new Page<DeviceInfo>(pageNum, pageSize),
+                new MPJLambdaWrapper<DeviceInfo>()
+                        .selectAll(DeviceInfo.class)
+                        .selectAs(DeviceType::getDeviceTypeName, "deviceTypeName")
+                        .selectAs(DeviceType::getDeviceTypeCode, "deviceTypeCode")
+                        .selectAs(DeviceOrg::getDeviceOrgName, "deviceOrgName")
+                        .selectAs(DeviceCloudPlatformConnector::getDeviceConnectorName, "deviceServiceName")
+                        .selectAs(DeviceCloudPlatform::getDevicePlatformCode, "devicePlatformCode")
+                        .leftJoin(DeviceType.class, DeviceType::getDeviceTypeId, DeviceInfo::getDeviceTypeId)
+                        .leftJoin(DeviceCloudPlatformConnector.class, DeviceCloudPlatformConnector::getDeviceConnectorId, DeviceInfo::getDeviceConnectorId)
+                        .leftJoin(DeviceCloudPlatform.class, DeviceCloudPlatform::getDevicePlatformId, DeviceCloudPlatformConnector::getDevicePlatformId)
+                        .leftJoin(DeviceOrg.class, DeviceOrg::getDeviceOrgTreeId, DeviceInfo::getDeviceOrgCode)
+                        .like(com.baomidou.mybatisplus.core.toolkit.StringUtils.isNotEmpty(keyword), DeviceInfo::getDeviceName, keyword)
+                        .or(com.baomidou.mybatisplus.core.toolkit.StringUtils.isNotEmpty(keyword))
+                        .like(com.baomidou.mybatisplus.core.toolkit.StringUtils.isNotEmpty(keyword), DeviceType::getDeviceTypeName, keyword)
+                        .or(com.baomidou.mybatisplus.core.toolkit.StringUtils.isNotEmpty(keyword))
+                        .like(com.baomidou.mybatisplus.core.toolkit.StringUtils.isNotEmpty(keyword), DeviceInfo::getDeviceImsi, keyword)
+                        .orderByDesc(DeviceInfo::getCreateTime, DeviceInfo::getDeviceTypeId)
+        );
+
+        List<Integer> deviceIds = new LinkedList<>();
+        for (DeviceInfo record : page.getRecords()) {
+            String devicePlatformCode = record.getDevicePlatformCode();
+            if(com.baomidou.mybatisplus.core.toolkit.StringUtils.isBlank(devicePlatformCode)) {
+                continue;
+            }
+            deviceIds.add(record.getDeviceId());
+            record.setGroup(ServiceProvider.of(Adaptor.class).group(devicePlatformCode).getGroupInfo("device"));
+        }
+
+        List<DeviceChannel> list = deviceChannelService.list(Wrappers.<DeviceChannel>lambdaQuery().in(DeviceChannel::getDeviceId, deviceIds));
+        Map<Integer, List<DeviceChannel>> tpl = new HashMap<>(list.size());
+        for (DeviceChannel channel : list) {
+            tpl.computeIfAbsent(channel.getDeviceId(), it -> new LinkedList<>()).add(channel);
+        }
+        for (DeviceInfo record : page.getRecords()) {
+            record.setChannels(tpl.get(record.getDeviceId()));
+        }
+
+        return page;
     }
 
     /**
