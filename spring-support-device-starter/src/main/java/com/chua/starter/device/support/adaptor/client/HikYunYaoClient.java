@@ -139,6 +139,7 @@ public interface HikYunYaoClient {
         Map<String, Object> beanMap = new HashMap<>(BeanMap.create(request));
         beanMap.put("eventStartTime", DateUtils.format(request.getStartTime(), DateFormatConstant.ISO8601));
         beanMap.put("eventEndTime", DateUtils.format(request.getEndTime(), DateFormatConstant.ISO8601));
+        beanMap.remove("eventType");
         return getEvent(Json.toJson(beanMap));
     }
 }
