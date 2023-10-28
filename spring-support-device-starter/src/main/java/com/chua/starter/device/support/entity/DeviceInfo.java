@@ -77,6 +77,12 @@ public class DeviceInfo implements Serializable {
     @Schema(description = "设备类型名称")
     private String deviceTypeName;
     /**
+     * 设备管道数
+     */
+    @TableField(exist = false)
+    @Schema(description = "设备管道数")
+    private Integer deviceChannelCount;
+    /**
      * 设备类型编号
      */
     @TableField(exist = false)
