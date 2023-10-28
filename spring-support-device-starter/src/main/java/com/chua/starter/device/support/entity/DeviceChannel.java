@@ -43,6 +43,12 @@ public class DeviceChannel implements Serializable {
     @Schema(description = "通道号")
     @Size(max = 10, message = "通道号最大长度要小于 10")
     private String channelNo;
+    /**
+     * 图标
+     */
+    @TableField(value = "channel_icon")
+    @Schema(description = "图标")
+    private String channelIcon;
 
     /**
      * 通道名称
