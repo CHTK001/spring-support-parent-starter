@@ -76,7 +76,7 @@ public class DeviceCloudController {
         while (CollectionUtils.isNotEmpty(event)) {
             deviceDataEventService.registerEvent(event, platformConnector, result, accessEventRequest);
             event = accessEventAdaptor.getEvent(AccessEventRequest.builder().pageNo(++ page) .startTime(accessEventRequest.getStartTime())
-                    .endTime(accessEventRequest.getEndTime()).build());
+                    .eventType(accessEventRequest.getEventType()).endTime(accessEventRequest.getEndTime()).build());
         }
 
         return ReturnResult.ok(result);
