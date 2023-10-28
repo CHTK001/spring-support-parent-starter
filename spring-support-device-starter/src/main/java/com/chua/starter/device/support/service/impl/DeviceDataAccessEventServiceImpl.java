@@ -35,7 +35,7 @@ public class DeviceDataAccessEventServiceImpl extends ServiceImpl<DeviceDataAcce
                 saveOrUpdate(deviceDataAccessEvent, Wrappers.<DeviceDataAccessEvent>lambdaUpdate()
                         .eq(DeviceDataAccessEvent::getDeviceDataDataId, deviceDataAccessEvent.getDeviceDataDataId())
                         .eq(DeviceDataAccessEvent::getDeviceDataEventTime, deviceDataAccessEvent.getDeviceDataEventTime())
-                        .eq(DeviceDataAccessEvent::getDeviceId, deviceDataAccessEvent.getDeviceDataId())
+                        .eq(DeviceDataAccessEvent::getDeviceIsmi, deviceDataAccessEvent.getDeviceIsmi())
                 );
                 result.addSuccessTotal(1);
             } catch (Exception e) {

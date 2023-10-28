@@ -2,6 +2,7 @@ package com.chua.starter.device.support.adaptor.event;
 
 import com.chua.starter.device.support.adaptor.pojo.AccessEventRequest;
 import com.chua.starter.device.support.entity.DeviceDataAccessEvent;
+import com.chua.starter.device.support.entity.DeviceDataEvent;
 
 import java.util.List;
 
@@ -20,5 +21,5 @@ public interface AccessEventAdaptor {
      * @param request 要求
      * @return {@link DeviceDataAccessEvent}
      */
-    List<DeviceDataAccessEvent> getEvent(AccessEventRequest request);
+    List<? extends DeviceDataEvent> getEvent(AccessEventRequest request);
 }

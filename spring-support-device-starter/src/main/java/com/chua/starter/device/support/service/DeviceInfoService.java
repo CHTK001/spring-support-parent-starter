@@ -32,4 +32,13 @@ public interface DeviceInfoService extends IService<DeviceInfo> {
      * @return {@link Page}<{@link DeviceInfo}>
      */
     Page<DeviceInfo> page(Integer pageNum, Integer pageSize, String keyword);
+
+    /**
+     * 获取装置信息
+     *
+     * @param deviceId   设备id
+     * @param deviceIsmi 处女主义
+     * @return {@link DeviceInfo}
+     */
+    DeviceInfo getDeviceInfo(String deviceId, String deviceIsmi);
 }

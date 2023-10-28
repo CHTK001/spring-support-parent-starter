@@ -12,11 +12,8 @@ import com.chua.starter.device.support.adaptor.pojo.AccessEventRequest;
 import com.chua.starter.device.support.entity.*;
 import com.chua.starter.device.support.adaptor.pojo.LiveResult;
 import com.chua.starter.device.support.adaptor.pojo.StaticResult;
-import com.chua.starter.device.support.request.ServletAccessEventRequest;
-import com.chua.starter.device.support.service.DeviceCloudPlatformConnectorService;
-import com.chua.starter.device.support.service.DeviceDataAccessEventService;
-import com.chua.starter.device.support.service.DeviceInfoService;
-import com.chua.starter.device.support.service.DeviceOrgService;
+import com.chua.starter.device.support.request.ServletEventRequest;
+import com.chua.starter.device.support.service.*;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -43,15 +40,16 @@ public class DeviceCloudController {
     private final DeviceOrgService deviceOrgService;
 
     private final DeviceDataAccessEventService deviceDataAccessEventService;
+    private final DeviceDataEventService deviceDataEventService;
 
     /**
-     * 同步查询门禁
+     * 同步查询设备数据
      *
      * @param accessEventRequest 设备连接器
      * @return {@link ReturnResult}<{@link Boolean}>
      */
-    @PostMapping("/accessEvent")
-    public ReturnResult<StaticResult> accessEvent(@RequestBody ServletAccessEventRequest accessEventRequest) {
+    @PostMapping("/event")
+    public ReturnResult<StaticResult> accessEvent(@RequestBody ServletEventRequest accessEventRequest) {
         Integer deviceConnectorId = accessEventRequest.getDeviceConnectorId();
         if(null == deviceConnectorId) {
             return ReturnResult.illegal("服务不存在");
@@ -69,13 +67,14 @@ public class DeviceCloudController {
 
         int page = 1;
         StaticResult result = new StaticResult();
-        List<DeviceDataAccessEvent> event = accessEventAdaptor.getEvent(AccessEventRequest.builder()
+        List<?extends DeviceDataEvent> event = accessEventAdaptor.getEvent(AccessEventRequest.builder()
                 .pageNo(page)
+                .eventType(accessEventRequest.getEventType())
                 .startTime(accessEventRequest.getStartTime())
                 .endTime(accessEventRequest.getEndTime())
                 .build());
         while (CollectionUtils.isNotEmpty(event)) {
-            deviceDataAccessEventService.registerEvent(event, platformConnector, result);
+            deviceDataEventService.registerEvent(event, platformConnector, result, accessEventRequest);
             event = accessEventAdaptor.getEvent(AccessEventRequest.builder().pageNo(++ page) .startTime(accessEventRequest.getStartTime())
                     .endTime(accessEventRequest.getEndTime()).build());
         }

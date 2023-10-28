@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.result.ReturnPageResult;
 import com.chua.starter.device.support.adaptor.Adaptor;
 import com.chua.starter.device.support.entity.*;
 import com.chua.starter.device.support.mapper.DeviceInfoMapper;
@@ -92,6 +93,24 @@ public class DeviceInfoServiceImpl extends ServiceImpl<DeviceInfoMapper, DeviceI
         }
 
         return page;
+    }
+
+    @Override
+    public DeviceInfo getDeviceInfo(String deviceId, String deviceIsmi) {
+        if(StringUtils.isNotEmpty(deviceId) || StringUtils.isNotBlank(deviceIsmi)) {
+            DeviceInfo serviceById = null;
+            if(StringUtils.isNotBlank(deviceId))  {
+                serviceById = getById(deviceId);
+            } else {
+                serviceById = getOne(Wrappers.<DeviceInfo>lambdaQuery().eq(DeviceInfo::getDeviceImsi, deviceIsmi));
+            }
+            if(null == serviceById) {
+                throw new RuntimeException("设备不存在");
+            }
+
+            return serviceById;
+        }
+        return null;
     }
 
     /**
