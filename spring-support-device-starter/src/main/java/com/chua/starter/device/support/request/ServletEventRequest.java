@@ -12,10 +12,13 @@ import java.util.Date;
  * @since 2023/10/27
  */
 @Data
-public class ServletAccessEventRequest {
+public class ServletEventRequest {
 
     private Date startTime = DateTime.now().minusHours(1).toDate();
     private Date endTime = new Date();;
 
     private Integer deviceConnectorId;
+
+    private EventType eventType = EventType.ACCESS;
+
 }
