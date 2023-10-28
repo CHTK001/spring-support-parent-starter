@@ -37,10 +37,11 @@ public class DeviceDataEventServiceImpl extends ServiceImpl<DeviceDataEventMappe
 
     @Override
     public ReturnPageResult<? extends DeviceDataEvent> page(EventType eventType, Integer pageNum, Integer pageSize, DeviceInfo deviceInfo) {
+        String ismi = null != deviceInfo && StringUtils.isNotEmpty(deviceInfo.getDeviceImsi()) ? deviceInfo.getDeviceImsi() : null;
         if(eventType == EventType.ACCESS) {
             Page<DeviceDataAccessEvent> deviceChannelPage = new Page<>(pageNum, pageSize);
             return PageResultUtils.ok(deviceDataAccessEventService.page(deviceChannelPage, Wrappers.<DeviceDataAccessEvent>lambdaQuery()
-                    .eq(StringUtils.isNotEmpty(deviceInfo.getDeviceImsi()), DeviceDataAccessEvent::getDeviceIsmi, deviceInfo.getDeviceImsi())));
+                    .eq(null != ismi , DeviceDataAccessEvent::getDeviceIsmi, ismi)));
         }
         return null;
     }
