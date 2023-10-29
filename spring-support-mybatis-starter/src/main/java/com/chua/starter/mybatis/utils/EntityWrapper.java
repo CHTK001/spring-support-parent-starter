@@ -80,7 +80,7 @@ public class EntityWrapper<T> implements InitializingAware {
         OptOption option = itemFilter.getOption();
         ServiceProvider.of(OptHandler.class)
                 .getNewExtension(option)
-                .doInject(key, value1, fields, wrapper);
+                .doInject(key.replaceAll("~", ""), value1, fields, wrapper);
 
     }
 
