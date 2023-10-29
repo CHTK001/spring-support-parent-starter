@@ -6,6 +6,7 @@ import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
 import com.chua.starter.device.support.entity.DeviceDataEvent;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.starter.device.support.entity.DeviceInfo;
+import com.chua.starter.device.support.request.EventRequest;
 import com.chua.starter.device.support.request.EventType;
 import com.chua.starter.device.support.request.ServletEventRequest;
 
@@ -26,11 +27,9 @@ public interface DeviceDataEventService extends IService<DeviceDataEvent>{
     /**
      * 页
      *
-     * @param eventType  事件类型
-     * @param pageNum    书籍页码
-     * @param pageSize   页面大小
+     * @param request  事件类型
      * @param deviceInfo 设备信息
      * @return {@link ReturnPageResult}<{@link DeviceDataEvent}>
      */
-    ReturnPageResult<? extends DeviceDataEvent> page(EventType eventType, Integer pageNum, Integer pageSize, DeviceInfo deviceInfo);
+    ReturnPageResult<? extends DeviceDataEvent> page(EventRequest request, DeviceInfo deviceInfo);
 }

@@ -10,6 +10,7 @@ import com.chua.common.support.validator.group.UpdateGroup;
 import com.chua.starter.common.support.result.ReturnPageResult;
 import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.device.support.entity.*;
+import com.chua.starter.device.support.request.EventRequest;
 import com.chua.starter.device.support.request.EventType;
 import com.chua.starter.device.support.service.DeviceDataAccessEventService;
 import com.chua.starter.device.support.service.DeviceDataEventService;
@@ -46,20 +47,14 @@ public class DeviceDataController {
      *
      * @return {@link ReturnResult}<{@link DeviceDict}>
      */
-    @GetMapping("page")
-    public ReturnPageResult<? extends DeviceDataEvent> page(
-            String deviceId,
-            String deviceIsmi,
-            EventType eventType,
-            @RequestParam(value = "page", defaultValue = "1") Integer pageNum,
-            @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
+    @PostMapping("page")
+    public ReturnPageResult<? extends DeviceDataEvent> page(@RequestBody EventRequest request) {
 
-        if(null == eventType) {
+        if(null == request.getEventType()) {
             return ReturnPageResult.ok(Collections.emptyList());
         }
 
-        DeviceInfo deviceInfo = deviceInfoService.getDeviceInfo(deviceId, deviceIsmi);
-        return deviceDataEventService.page(eventType, pageNum, pageSize, deviceInfo);
+        return deviceDataEventService.page(request, null);
     }
 
 
