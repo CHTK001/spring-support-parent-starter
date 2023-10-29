@@ -64,7 +64,7 @@ public class AccessEventHandler implements EventHandler{
             deviceDataAccessEvent.setDeviceDataPicUrl(listDTO.getPicUrl());
             deviceDataAccessEvent.setDeviceDataTemperature(listDTO.getTemperatureStr());
             deviceDataAccessEvent.setDeviceName(listDTO.getDevName());
-            deviceDataAccessEvent.setDeviceIsmi(listDTO.getDevId());
+            deviceDataAccessEvent.setDeviceImsi(listDTO.getDevId());
 
             rs.add(deviceDataAccessEvent);
         }
