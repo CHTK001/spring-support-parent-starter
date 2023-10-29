@@ -1,17 +1,18 @@
 package com.chua.starter.device.support.controller;
 
-import com.baomidou.mybatisplus.core.toolkit.StringUtils;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.function.Splitter;
-import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.common.support.validator.group.UpdateGroup;
 import com.chua.starter.common.support.result.ReturnPageResult;
 import com.chua.starter.common.support.result.ReturnResult;
-import com.chua.starter.device.support.adaptor.Adaptor;
-import com.chua.starter.device.support.entity.*;
+import com.chua.starter.device.support.entity.DeviceDict;
+import com.chua.starter.device.support.entity.DeviceInfo;
+import com.chua.starter.device.support.entity.DeviceType;
 import com.chua.starter.device.support.service.DeviceInfoService;
 import com.chua.starter.mybatis.utils.PageResultUtils;
+import com.github.yulichang.query.MPJLambdaQueryWrapper;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.AllArgsConstructor;
 import org.springframework.validation.BindingResult;
@@ -19,7 +20,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Date;
-import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -40,8 +40,13 @@ public class DeviceInfoController {
      * @return {@link ReturnResult}<{@link DeviceDict}>
      */
     @GetMapping("list")
-    public ReturnResult<List<DeviceInfo>> list() {
-        return ReturnResult.ok(deviceInfoService.list());
+    public ReturnResult<List<DeviceInfo>> list(String deviceTypeId, String deviceTypeCode) {
+        return ReturnResult.ok(deviceInfoService.list(new MPJLambdaWrapper<DeviceInfo>()
+                        .selectAll(DeviceInfo.class)
+                        .leftJoin(DeviceType.class, DeviceType::getDeviceTypeId, DeviceInfo::getDeviceTypeId)
+                .eq(StringUtils.isNotBlank(deviceTypeId), DeviceInfo::getDeviceTypeId, deviceTypeId)
+                .eq(StringUtils.isNotBlank(deviceTypeCode), DeviceType::getDeviceTypeCode, deviceTypeCode)
+        ));
     }
 
     /**

@@ -57,9 +57,9 @@ public class DeviceDataEvent implements Serializable {
     /**
      * 设备ID
      */
-    @TableField(value = "device_ismi")
+    @TableField(value = "device_imsi")
     @Size(max = 255, message = "设备ID最大长度要小于 255")
-    private String deviceIsmi;
+    private String deviceImsi;
 
     /**
      * 设备名称
