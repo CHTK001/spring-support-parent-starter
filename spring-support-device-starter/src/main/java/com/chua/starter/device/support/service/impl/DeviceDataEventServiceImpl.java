@@ -1,9 +1,11 @@
 package com.chua.starter.device.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.request.DataFilter;
 import com.chua.common.support.request.ItemFilter;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.result.ReturnPageResult;
 import com.chua.starter.device.support.adaptor.pojo.StaticResult;
 import com.chua.starter.device.support.entity.*;
@@ -46,8 +48,9 @@ public class DeviceDataEventServiceImpl extends ServiceImpl<DeviceDataEventMappe
         DataFilter dataFilter = DataFilter.of(request.getFilter());
         if(eventType == EventType.ACCESS) {
             Page<DeviceDataAccessEvent> deviceChannelPage = new Page<>(pageNum, pageSize);
-            Wrapper<DeviceDataAccessEvent> wrapper = EntityWrapper.of(DeviceDataAccessEvent.class, dataFilter).getWrapper();
-            return PageResultUtils.ok(deviceDataAccessEventService.page(deviceChannelPage, wrapper
+            QueryWrapper<DeviceDataAccessEvent> wrapper = EntityWrapper.of(DeviceDataAccessEvent.class, dataFilter).getWrapper();
+            return PageResultUtils.ok(deviceDataAccessEventService.page(deviceChannelPage, wrapper.lambda()
+                    .eq(StringUtils.isNotEmpty(request.getDeviceDataEventInOrOut()), DeviceDataAccessEvent::getDeviceDataEventInOrOut, request.getDeviceDataEventInOrOut())
             ));
 //                    Wrappers.<DeviceDataAccessEvent>lambdaQuery()
 //                        .eq(StringUtils.isNotEmpty(request.getDeviceImsi()) , DeviceDataAccessEvent::getDeviceIsmi, request.getDeviceImsi())

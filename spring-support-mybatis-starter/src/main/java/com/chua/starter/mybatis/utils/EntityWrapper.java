@@ -51,7 +51,7 @@ public class EntityWrapper<T> implements InitializingAware {
      *
      * @return {@link Wrapper}<{@link T}>
      */
-    public Wrapper<T> getWrapper() {
+    public QueryWrapper<T> getWrapper() {
         QueryWrapper<T> tLambdaQueryWrapper = Wrappers.<T>query();
         for (ItemFilter itemFilter : dataFilter.getFilter()) {
             register(tLambdaQueryWrapper, itemFilter);
