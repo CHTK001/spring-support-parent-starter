@@ -11,6 +11,9 @@ import lombok.Data;
 
 /**
  * 门禁设备数据
+ *
+ * @author CH
+ * @since 2023/10/30
  */
 @Data
 @TableName(value = "device_data_access_event")

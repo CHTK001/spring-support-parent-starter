@@ -13,6 +13,7 @@ import com.chua.starter.device.support.adaptor.pojo.LiveResult;
 import com.chua.starter.device.support.adaptor.pojo.StaticResult;
 import com.chua.starter.device.support.entity.*;
 import com.chua.starter.device.support.request.ServletEventRequest;
+import com.chua.starter.device.support.request.SynDeviceRequest;
 import com.chua.starter.device.support.service.*;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.AllArgsConstructor;
@@ -55,7 +56,12 @@ public class DeviceCloudController {
             return ReturnResult.illegal("服务不存在");
         }
 
-        DeviceCloudPlatformConnector platformConnector = deviceCloudPlatformConnectorService.getById(deviceConnectorId);
+        DeviceCloudPlatformConnector platformConnector = deviceCloudPlatformConnectorService.getOne(new MPJLambdaWrapper<DeviceCloudPlatformConnector>()
+                .selectAll(DeviceCloudPlatformConnector.class)
+                .selectAs(DeviceCloudPlatform::getDevicePlatformCode, "devicePlatformCode")
+                .innerJoin(DeviceCloudPlatform.class, DeviceCloudPlatform::getDevicePlatformId, DeviceCloudPlatformConnector::getDevicePlatformId)
+                .eq(DeviceCloudPlatformConnector::getDeviceConnectorId, deviceConnectorId)
+        );
         if(null == platformConnector) {
             return ReturnResult.illegal("服务不存在");
         }
@@ -72,10 +78,12 @@ public class DeviceCloudController {
                 .eventType(accessEventRequest.getEventType())
                 .startTime(accessEventRequest.getStartTime())
                 .endTime(accessEventRequest.getEndTime())
+                .deviceSerials(accessEventRequest.getDeviceImsi())
                 .build());
         while (CollectionUtils.isNotEmpty(event)) {
             deviceDataEventService.registerEvent(event, platformConnector, result, accessEventRequest);
             event = accessEventAdaptor.getEvent(AccessEventRequest.builder().pageNo(++ page) .startTime(accessEventRequest.getStartTime())
+                    .deviceSerials(accessEventRequest.getDeviceImsi())
                     .eventType(accessEventRequest.getEventType()).endTime(accessEventRequest.getEndTime()).build());
         }
 
@@ -125,12 +133,12 @@ public class DeviceCloudController {
     /**
      * 同步设备
      *
-     * @param deviceCloudPlatformConnector 设备连接器id
+     * @param request 设备连接器id
      * @return {@link ReturnResult}<{@link Boolean}>
      */
     @PostMapping("/syncDevice")
-    public ReturnResult<StaticResult> syncDevice(@RequestBody DeviceCloudPlatformConnector deviceCloudPlatformConnector) {
-        Integer deviceConnectorId = deviceCloudPlatformConnector.getDeviceConnectorId();
+    public ReturnResult<StaticResult> syncDevice(@RequestBody SynDeviceRequest request) {
+        Integer deviceConnectorId = request.getDeviceConnectorId();
         if(null == deviceConnectorId) {
             return ReturnResult.illegal("服务不存在");
         }
@@ -146,7 +154,8 @@ public class DeviceCloudController {
             return ReturnResult.illegal("服务不存在");
         }
 
-        DeviceDownloadAdaptor downloadAdaptor = ServiceProvider.of(DeviceDownloadAdaptor.class).getNewExtension(platformConnector.getDevicePlatformCode(), platformConnector);
+        DeviceDownloadAdaptor downloadAdaptor = ServiceProvider.of(DeviceDownloadAdaptor.class)
+                .getNewExtension(platformConnector.getDevicePlatformCode(), platformConnector, request.getDeviceImsi());
         if(null == downloadAdaptor) {
             return ReturnResult.illegal(StringUtils.format("暂不支持从{}同步数据", platformConnector.getDeviceConnectorName()));
         }
