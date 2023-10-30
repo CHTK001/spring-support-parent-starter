@@ -4,18 +4,23 @@ import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.annotations.Group;
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.device.support.adaptor.HikYunYaoAdaptor;
 import com.chua.starter.device.support.adaptor.client.pojo.HikYunYaoDeviceListResult;
-import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
-import com.chua.starter.device.support.entity.DeviceInfo;
 import com.chua.starter.device.support.adaptor.pojo.LiveResult;
 import com.chua.starter.device.support.adaptor.pojo.UploadResult;
+import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
+import com.chua.starter.device.support.entity.DeviceInfo;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import static com.chua.common.support.constant.NameConstant.STATUS;
+import static com.chua.common.support.constant.NumberConstant.NUM_200;
+import static com.chua.common.support.constant.NumberConstant.NUM_500;
 
 /**
  * 海康云曜
@@ -73,13 +78,15 @@ public class HikYunYaoDeviceAdaptor
     }
 
     @Override
-    public LiveResult getLiveAddress(String deviceImsi) {
-        JSONObject jsonObject = Json.fromJson(hikYunYaoClient.getLiveAddress(deviceCloudPlatformConnector.getDeviceConnectorProjectCode(), deviceImsi), JSONObject.class);
+    public LiveResult getLiveAddress(String deviceImsi, String deviceChannel) {
+        JSONObject jsonObject = Json.fromJson(hikYunYaoClient.getLiveAddress(deviceCloudPlatformConnector.getDeviceConnectorProjectCode(), deviceImsi, Integer.valueOf(StringUtils.defaultString(deviceChannel, "1"))), JSONObject.class);
         if(null == jsonObject) {
             return new LiveResult();
         }
         LiveResult result = new LiveResult();
-        result.setMsg(jsonObject.getString("msg"));
+        if(NUM_200 == jsonObject.getIntValue(STATUS, NUM_500)) {
+            result.setMsg(jsonObject.getString("msg"));
+        }
         JSONObject data = jsonObject.getJSONObject("data");
         if(null != data) {
             result.setUrl(data.getString("url"));

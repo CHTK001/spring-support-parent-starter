@@ -3,7 +3,6 @@ package com.chua.starter.device.support.adaptor.client;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.bean.BeanMap;
-import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.date.DateUtils;
 import com.chua.common.support.lang.date.constant.DateFormatConstant;
@@ -16,9 +15,7 @@ import com.chua.starter.device.support.adaptor.client.pojo.HikAnFangOrgListResul
 import com.chua.starter.device.support.adaptor.client.pojo.HikYunYaoDeviceListResult;
 import com.chua.starter.device.support.adaptor.pojo.AccessEventRequest;
 
-import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -103,7 +100,7 @@ public interface HikYunYaoClient {
      * @return {@link String}
      */
     @MappingRequest("POST /api/eits/v1/global/live/address/get/by/deviceSerial")
-    String getLiveAddress(String projectId, String deviceImsi,
+    String getLiveAddress(String projectId, String deviceSerial,
                           @MappingParam(value = "channelNo", defaultValue = "1") int channelNo,
                           @MappingParam(value = "expireTime", defaultValue = "60") int expireTime,
                           @MappingParam(value = "protocol", defaultValue = "2") int protocol
@@ -112,12 +109,23 @@ public interface HikYunYaoClient {
     /**
      * 获取实时地址
      *
-     * @param deviceImsi 设备imsi
+     * @param deviceSerial 设备imsi
      * @param projectId  项目id
      * @return {@link String}
      */
-    default String getLiveAddress(String projectId, String deviceImsi ) {
-        return getLiveAddress(projectId, deviceImsi, 1, 60, 2);
+    default String getLiveAddress(String projectId, String deviceSerial ) {
+        return getLiveAddress(projectId, deviceSerial, 1, 60, 2);
+    }
+
+    /**
+     * 获取实时地址
+     *
+     * @param deviceSerial 设备imsi
+     * @param projectId  项目id
+     * @return {@link String}
+     */
+    default String getLiveAddress(String projectId, String deviceSerial , Integer channelNo) {
+        return getLiveAddress(projectId, deviceSerial, channelNo, 43200, 2);
     }
 
     /**
