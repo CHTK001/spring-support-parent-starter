@@ -19,6 +19,7 @@ public class ServletEventRequest {
 
     private Integer deviceConnectorId;
 
+    private String deviceImsi;
     private EventType eventType = EventType.ACCESS;
 
 }
