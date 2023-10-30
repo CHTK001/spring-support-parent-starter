@@ -100,6 +100,11 @@ public class DeviceCloudPlatformConnector implements Serializable {
      */
     @TableField(exist = false)
     private String devicePlatformCode;
+    /**
+     * 厂家协议配置logo
+     */
+    @TableField(exist = false)
+    private String devicePlatformLogo;
 
     /**
      * 组

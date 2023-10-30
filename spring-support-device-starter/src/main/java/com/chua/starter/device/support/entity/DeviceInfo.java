@@ -190,6 +190,13 @@ public class DeviceInfo implements Serializable {
     private String deviceRemark;
 
     /**
+     * 设备图片
+     */
+    @TableField(value = "device_pic")
+    @Schema(description = "设备图片")
+    private String devicePic;
+
+    /**
      * 所属组织
      */
     @TableField(value = "device_org_code")

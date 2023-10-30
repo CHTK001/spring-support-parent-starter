@@ -51,6 +51,12 @@ public class DeviceCloudPlatform implements Serializable {
     @Schema(description = "云平台地址")
     @Size(max = 255, message = "云平台地址最大长度要小于 255")
     private String devicePlatformAddress;
+    /**
+     * 云平台logo
+     */
+    @TableField(value = "device_platform_logo")
+    @Schema(description = "云平台logo")
+    private String devicePlatformLogo;
 
     /**
      * 厂家ID

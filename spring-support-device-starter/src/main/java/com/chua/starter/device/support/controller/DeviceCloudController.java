@@ -9,9 +9,9 @@ import com.chua.starter.device.support.adaptor.device.DeviceDownloadAdaptor;
 import com.chua.starter.device.support.adaptor.event.AccessEventAdaptor;
 import com.chua.starter.device.support.adaptor.org.OrgDownloadAdaptor;
 import com.chua.starter.device.support.adaptor.pojo.AccessEventRequest;
-import com.chua.starter.device.support.entity.*;
 import com.chua.starter.device.support.adaptor.pojo.LiveResult;
 import com.chua.starter.device.support.adaptor.pojo.StaticResult;
+import com.chua.starter.device.support.entity.*;
 import com.chua.starter.device.support.request.ServletEventRequest;
 import com.chua.starter.device.support.service.*;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
@@ -116,7 +116,7 @@ public class DeviceCloudController {
         }
 
         int page = 1;
-        LiveResult liveAddress = cameraDeviceAdaptor.getLiveAddress(deviceInfo.getDeviceImsi());
+        LiveResult liveAddress = cameraDeviceAdaptor.getLiveAddress(deviceInfo.getDeviceImsi(), deviceInfo.getDeviceChannel());
         if(StringUtils.isNotBlank(liveAddress.getMsg())) {
             return ReturnResult.illegal(liveAddress.getMsg());
         }

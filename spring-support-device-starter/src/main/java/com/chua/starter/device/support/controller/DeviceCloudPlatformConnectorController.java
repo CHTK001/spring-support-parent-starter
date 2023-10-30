@@ -59,6 +59,7 @@ public class DeviceCloudPlatformConnectorController {
                 new MPJLambdaWrapper<DeviceCloudPlatformConnector>()
                         .selectAll(DeviceCloudPlatformConnector.class)
                         .selectAs(DeviceCloudPlatform::getDevicePlatformName, "devicePlatformName")
+                        .selectAs(DeviceCloudPlatform::getDevicePlatformLogo, "devicePlatformLogo")
                         .selectAs(DeviceCloudPlatform::getDevicePlatformCode, "devicePlatformCode")
                         .innerJoin(DeviceCloudPlatform.class, DeviceCloudPlatform::getDevicePlatformId, DeviceCloudPlatformConnector::getDevicePlatformId)
                         .eq(StringUtils.isNotEmpty(devicePlatformId), DeviceCloudPlatformConnector::getDevicePlatformId, devicePlatformId)
