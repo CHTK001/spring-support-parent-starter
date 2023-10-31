@@ -50,6 +50,16 @@ public class DeviceMeteorologicalStationServiceImpl implements DeviceMeteorologi
                     .execute();
         } catch (Exception ignored) {
         }
+        try {
+            influxClient.create("createRetentionPolicy")
+                    .with("retention")
+                    .with(influxProperties.getDatabase())
+                    .with("180d")
+                    .with(1, int.class)
+                    .with(true, boolean.class)
+                    .execute();
+        } catch (Exception ignored) {
+        }
     }
 
     @Override
@@ -65,7 +75,7 @@ public class DeviceMeteorologicalStationServiceImpl implements DeviceMeteorologi
         deviceLog.setDeviceLogType("SYNC(" + connectorId + ")");
         for (DeviceMeteorologicalStationEvent deviceMeteorologicalStationEvent : event) {
             try {
-                influxClient.write(deviceMeteorologicalStationEvent.getDeviceImsi(), deviceMeteorologicalStationEvent,
+                influxClient.write(influxProperties.getDatabase(), deviceMeteorologicalStationEvent,
                         ImmutableBuilder.builderOfStringMap(String.class)
                                 .put("sensor", deviceMeteorologicalStationEvent.getSensor())
                                 .build()
