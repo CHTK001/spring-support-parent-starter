@@ -57,10 +57,11 @@ public class DeviceInfoController {
     @GetMapping("page")
     public ReturnPageResult<DeviceInfo> page(
             String keyword,
+            String deviceType,
             @RequestParam(value = "page", defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
 
-        return PageResultUtils.ok(deviceInfoService.page(pageNum, pageSize, keyword));
+        return PageResultUtils.ok(deviceInfoService.page(pageNum, pageSize, keyword, deviceType));
     }
 
     /**
