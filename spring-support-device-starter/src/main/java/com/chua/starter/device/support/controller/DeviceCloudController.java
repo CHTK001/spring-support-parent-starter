@@ -78,12 +78,12 @@ public class DeviceCloudController {
                 .eventType(accessEventRequest.getEventType())
                 .startTime(accessEventRequest.getStartTime())
                 .endTime(accessEventRequest.getEndTime())
-                .deviceSerials(accessEventRequest.getDeviceImsi())
+                .deviceSerial(accessEventRequest.getDeviceImsi())
                 .build());
         while (CollectionUtils.isNotEmpty(event)) {
             deviceDataEventService.registerEvent(event, platformConnector, result, accessEventRequest);
             event = accessEventAdaptor.getEvent(AccessEventRequest.builder().pageNo(++ page) .startTime(accessEventRequest.getStartTime())
-                    .deviceSerials(accessEventRequest.getDeviceImsi())
+                    .deviceSerial(accessEventRequest.getDeviceImsi())
                     .eventType(accessEventRequest.getEventType()).endTime(accessEventRequest.getEndTime()).build());
         }
 
