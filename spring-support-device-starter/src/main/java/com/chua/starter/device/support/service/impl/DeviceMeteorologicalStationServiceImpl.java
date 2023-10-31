@@ -52,7 +52,7 @@ public class DeviceMeteorologicalStationServiceImpl implements DeviceMeteorologi
         }
         try {
             influxClient.create("createRetentionPolicy")
-                    .with("retention")
+                    .with(influxProperties.getRetentionPolicy())
                     .with(influxProperties.getDatabase())
                     .with("180d")
                     .with(1, int.class)
