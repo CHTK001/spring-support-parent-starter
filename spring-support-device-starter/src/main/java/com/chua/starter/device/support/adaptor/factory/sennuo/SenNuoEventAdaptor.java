@@ -1,4 +1,4 @@
-package com.chua.starter.device.support.adaptor.event.sennuo;
+package com.chua.starter.device.support.adaptor.factory.sennuo;
 
 import com.alibaba.fastjson2.JSON;
 import com.chua.common.support.annotations.Group;
@@ -7,7 +7,7 @@ import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.lang.date.DateUtils;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.device.support.adaptor.event.AccessEventAdaptor;
+import com.chua.starter.device.support.adaptor.AccessEventAdaptor;
 import com.chua.starter.device.support.adaptor.factory.sennuo.SenNuoAdaptor;
 import com.chua.starter.device.support.adaptor.pojo.AccessEventRequest;
 import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;

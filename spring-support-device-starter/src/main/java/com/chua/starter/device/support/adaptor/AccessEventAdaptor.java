@@ -1,4 +1,4 @@
-package com.chua.starter.device.support.adaptor.event;
+package com.chua.starter.device.support.adaptor;
 
 import com.chua.starter.device.support.adaptor.pojo.AccessEventRequest;
 import com.chua.starter.device.support.entity.DeviceDataAccessEvent;

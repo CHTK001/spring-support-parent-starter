@@ -1,4 +1,4 @@
-package com.chua.starter.device.support.adaptor.client.pojo;
+package com.chua.starter.device.support.adaptor.factory.client.pojo;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;

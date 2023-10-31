@@ -3,7 +3,7 @@ package com.chua.starter.device.support.adaptor.factory.haikang;
 import com.chua.common.support.mapping.Mapping;
 import com.chua.common.support.mapping.MappingConfig;
 import com.chua.starter.device.support.adaptor.Adaptor;
-import com.chua.starter.device.support.adaptor.client.HikAnFangClient;
+import com.chua.starter.device.support.adaptor.factory.client.HikAnFangClient;
 import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
 
 /**

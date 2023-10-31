@@ -1,6 +1,6 @@
-package com.chua.starter.device.support.adaptor.event.haikang;
+package com.chua.starter.device.support.adaptor.factory.haikang;
 
-import com.chua.starter.device.support.adaptor.client.HikYunYaoClient;
+import com.chua.starter.device.support.adaptor.factory.client.HikYunYaoClient;
 import com.chua.starter.device.support.adaptor.pojo.AccessEventRequest;
 import com.chua.starter.device.support.entity.DeviceDataEvent;
 

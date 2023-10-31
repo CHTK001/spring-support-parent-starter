@@ -1,4 +1,4 @@
-package com.chua.starter.device.support.adaptor.org;
+package com.chua.starter.device.support.adaptor;
 
 import com.chua.starter.device.support.entity.DeviceOrg;
 
@@ -7,7 +7,7 @@ import java.util.List;
 /**
  * @author CH
  */
-public interface OrgDownloadAdaptor {
+public interface OrgSyncAdaptor {
 
     /**
      * 查询组织列表v2
@@ -15,5 +15,5 @@ public interface OrgDownloadAdaptor {
      * @param pageSize 分页数量 (1000)
      * @return 组织机构
      */
-    List<DeviceOrg> downloadFromCloud(int pageNo, int pageSize);
+    List<DeviceOrg> syncFromCloud(int pageNo, int pageSize);
 }
