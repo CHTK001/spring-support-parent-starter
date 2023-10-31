@@ -1,9 +1,9 @@
-package com.chua.starter.device.support.adaptor.event.haikang;
+package com.chua.starter.device.support.adaptor.factory.haikang;
 
 import com.alibaba.fastjson2.JSON;
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.lang.date.DateUtils;
-import com.chua.starter.device.support.adaptor.client.HikYunYaoClient;
+import com.chua.starter.device.support.adaptor.factory.client.HikYunYaoClient;
 import com.chua.starter.device.support.adaptor.pojo.AccessEventRequest;
 import com.chua.starter.device.support.adaptor.transit.AccessEventYunYaoTransit;
 import com.chua.starter.device.support.entity.DeviceDataAccessEvent;

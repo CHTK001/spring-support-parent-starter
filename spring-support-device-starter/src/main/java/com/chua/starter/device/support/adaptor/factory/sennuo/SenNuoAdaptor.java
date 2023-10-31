@@ -3,7 +3,7 @@ package com.chua.starter.device.support.adaptor.factory.sennuo;
 import com.chua.common.support.mapping.Mapping;
 import com.chua.common.support.mapping.MappingConfig;
 import com.chua.starter.device.support.adaptor.Adaptor;
-import com.chua.starter.device.support.adaptor.client.SnNuoClient;
+import com.chua.starter.device.support.adaptor.factory.client.SnNuoClient;
 import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
 
 import java.util.LinkedHashMap;

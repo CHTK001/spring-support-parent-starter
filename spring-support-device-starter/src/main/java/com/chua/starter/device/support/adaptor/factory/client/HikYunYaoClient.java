@@ -1,4 +1,4 @@
-package com.chua.starter.device.support.adaptor.client;
+package com.chua.starter.device.support.adaptor.factory.client;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
@@ -11,8 +11,8 @@ import com.chua.common.support.mapping.annotations.MappingBody;
 import com.chua.common.support.mapping.annotations.MappingParam;
 import com.chua.common.support.mapping.annotations.MappingRequest;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.device.support.adaptor.client.pojo.HikAnFangOrgListResult;
-import com.chua.starter.device.support.adaptor.client.pojo.HikYunYaoDeviceListResult;
+import com.chua.starter.device.support.adaptor.factory.client.pojo.HikAnFangOrgListResult;
+import com.chua.starter.device.support.adaptor.factory.client.pojo.HikYunYaoDeviceListResult;
 import com.chua.starter.device.support.adaptor.pojo.AccessEventRequest;
 
 import java.util.HashMap;

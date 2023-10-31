@@ -1,10 +1,10 @@
-package com.chua.starter.device.support.adaptor.client;
+package com.chua.starter.device.support.adaptor.factory.client;
 
 import com.chua.common.support.mapping.annotations.MappingAddress;
 import com.chua.common.support.mapping.annotations.MappingRequest;
-import com.chua.starter.device.support.adaptor.client.pojo.HikAnFangDeviceListResult;
-import com.chua.starter.device.support.adaptor.client.pojo.HikAnFangOrgListResult;
-import com.chua.starter.device.support.adaptor.client.pojo.HikYunYaoDeviceListResult;
+import com.chua.starter.device.support.adaptor.factory.client.pojo.HikAnFangDeviceListResult;
+import com.chua.starter.device.support.adaptor.factory.client.pojo.HikAnFangOrgListResult;
+import com.chua.starter.device.support.adaptor.factory.client.pojo.HikYunYaoDeviceListResult;
 
 /**
  * @author CH
