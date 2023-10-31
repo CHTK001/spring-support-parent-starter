@@ -2,6 +2,7 @@ package com.chua.starter.device.support.entity;
 
 import com.influxdb.annotations.Column;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.Instant;
 
@@ -11,6 +12,7 @@ import java.time.Instant;
  * @author CH
  * @since 2023/10/30
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
 public class DeviceMeteorologicalStationEvent extends DeviceDataAccessEvent{
 
@@ -26,11 +28,18 @@ public class DeviceMeteorologicalStationEvent extends DeviceDataAccessEvent{
      * 水质ec
      */
     private Double ecForWaterQuality;
-
+    /**
+     * 液位计
+     */
+    private Double levelInstrumentationNozzle;
     /**
      * 溶解氧
      */
     private Double dissolvedOxygen;
+    /**
+     * 电导率
+     */
+    private Double specificConductance;
 
     /**
      * 浊度

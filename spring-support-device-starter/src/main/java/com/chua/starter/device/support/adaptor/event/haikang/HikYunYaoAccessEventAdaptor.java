@@ -1,22 +1,14 @@
-package com.chua.starter.device.support.adaptor.event;
+package com.chua.starter.device.support.adaptor.event.haikang;
 
-import com.alibaba.fastjson2.JSON;
 import com.chua.common.support.annotations.Group;
 import com.chua.common.support.annotations.Spi;
-import com.chua.common.support.lang.date.DateUtils;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.starter.device.support.adaptor.HikYunYaoAdaptor;
-import com.chua.starter.device.support.adaptor.event.yunyao.EventHandler;
+import com.chua.starter.device.support.adaptor.event.AccessEventAdaptor;
+import com.chua.starter.device.support.adaptor.factory.haikang.HikYunYaoAdaptor;
 import com.chua.starter.device.support.adaptor.pojo.AccessEventRequest;
-import com.chua.starter.device.support.adaptor.transit.AccessEventYunYaoTransit;
 import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
-import com.chua.starter.device.support.entity.DeviceDataAccessEvent;
 import com.chua.starter.device.support.entity.DeviceDataEvent;
 
-import java.text.ParseException;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 
 /**

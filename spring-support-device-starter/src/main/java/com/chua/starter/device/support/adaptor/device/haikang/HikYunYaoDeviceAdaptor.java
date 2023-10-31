@@ -1,12 +1,16 @@
-package com.chua.starter.device.support.adaptor.device;
+package com.chua.starter.device.support.adaptor.device.haikang;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.annotations.Group;
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.device.support.adaptor.HikYunYaoAdaptor;
 import com.chua.starter.device.support.adaptor.client.pojo.HikYunYaoDeviceListResult;
+import com.chua.starter.device.support.adaptor.device.CameraDeviceAdaptor;
+import com.chua.starter.device.support.adaptor.device.DeviceAdaptor;
+import com.chua.starter.device.support.adaptor.device.DeviceDownloadAdaptor;
+import com.chua.starter.device.support.adaptor.device.DeviceUploadAdaptor;
+import com.chua.starter.device.support.adaptor.factory.haikang.HikYunYaoAdaptor;
 import com.chua.starter.device.support.adaptor.pojo.LiveResult;
 import com.chua.starter.device.support.adaptor.pojo.UploadResult;
 import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;

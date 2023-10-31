@@ -1,15 +1,12 @@
 package com.chua.starter.device.support.adaptor.pojo;
 
 import com.chua.common.support.lang.date.DateTime;
-import com.chua.common.support.lang.date.DateUtils;
 import com.chua.starter.device.support.request.EventType;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NonNull;
-import lombok.Singular;
 
 import java.util.Date;
-import java.util.List;
 
 /**
  * 访问事件请求
@@ -50,8 +47,7 @@ public class AccessEventRequest {
     /**
      * 设备序列
      */
-    @Singular("deviceSerials")
-    private List<String> deviceSerials;
+    private String deviceSerial;
 
     /**
      * 设备名称

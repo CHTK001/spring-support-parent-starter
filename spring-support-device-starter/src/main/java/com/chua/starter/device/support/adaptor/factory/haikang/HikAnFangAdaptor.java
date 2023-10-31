@@ -1,7 +1,8 @@
-package com.chua.starter.device.support.adaptor;
+package com.chua.starter.device.support.adaptor.factory.haikang;
 
 import com.chua.common.support.mapping.Mapping;
 import com.chua.common.support.mapping.MappingConfig;
+import com.chua.starter.device.support.adaptor.Adaptor;
 import com.chua.starter.device.support.adaptor.client.HikAnFangClient;
 import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
 
@@ -9,7 +10,7 @@ import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
  * a云耀
  * @author CH
  */
-public abstract class HikAnFangAdaptor implements Adaptor{
+public abstract class HikAnFangAdaptor implements Adaptor {
 
     protected DeviceCloudPlatformConnector deviceCloudPlatformConnector;
     protected HikAnFangClient hikAnFangClient;

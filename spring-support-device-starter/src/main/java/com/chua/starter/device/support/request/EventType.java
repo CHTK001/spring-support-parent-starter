@@ -9,7 +9,11 @@ package com.chua.starter.device.support.request;
 public enum EventType {
 
     /**
-     * 通道
+     * 门禁
      */
-    ACCESS
+    ACCESS,
+    /**
+     * 气象站
+     */
+    QI_XIANG_ZHAN
 }

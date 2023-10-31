@@ -1,4 +1,4 @@
-package com.chua.starter.device.support.adaptor.event.yunyao;
+package com.chua.starter.device.support.adaptor.event.haikang;
 
 import com.chua.starter.device.support.adaptor.client.HikYunYaoClient;
 import com.chua.starter.device.support.adaptor.pojo.AccessEventRequest;
