@@ -18,10 +18,9 @@ public class InfluxProperties {
 
     private String url = "http://127.0.0.1:8086";
 
-    private String token = "lgl6T843dsLGTFmOtEo_J_o9mrHXmLxSmC1SWuWSfUXyCTK0tS4KcSQBYPFzpdaAY-vdkzmLq4p5JLT25yzo3w==";
-    private String username;
-    private String password ;
+    private String username = "root";
+    private String password = "root1234";
 
-    private String bucket = "device";
+    private String database = "device";
 
 }

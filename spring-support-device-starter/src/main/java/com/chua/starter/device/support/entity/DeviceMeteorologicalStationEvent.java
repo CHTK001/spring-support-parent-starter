@@ -1,6 +1,5 @@
 package com.chua.starter.device.support.entity;
 
-import com.influxdb.annotations.Column;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -16,7 +15,6 @@ import java.time.Instant;
 @Data
 public class DeviceMeteorologicalStationEvent extends DeviceDataAccessEvent{
 
-    @Column(timestamp = true)
     private Instant time;
 
     /**

@@ -3,10 +3,11 @@ package com.chua.starter.device.support.service.impl;
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.collection.ImmutableBuilder;
 import com.chua.common.support.protocol.client.ClientOption;
+import com.chua.common.support.protocol.client.ClientProvider;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.IoUtils;
+import com.chua.influxdb.support.InfluxClient;
 import com.chua.influxdb.support.InfluxClientProvider;
-import com.chua.influxdb.support.InfluxV3Client;
 import com.chua.starter.device.support.adaptor.pojo.StaticResult;
 import com.chua.starter.device.support.adaptor.properties.InfluxProperties;
 import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
@@ -33,7 +34,7 @@ import java.util.List;
 @EnableConfigurationProperties(InfluxProperties.class)
 public class DeviceMeteorologicalStationServiceImpl implements DeviceMeteorologicalStationService, InitializingBean, DisposableBean {
 
-    private InfluxV3Client influxClient;
+    private InfluxClient influxClient;
     @Resource
     private InfluxProperties influxProperties;
     @Resource
@@ -41,7 +42,14 @@ public class DeviceMeteorologicalStationServiceImpl implements DeviceMeteorologi
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        influxClient = (InfluxV3Client) new InfluxClientProvider(BeanUtils.copyProperties(influxProperties, ClientOption.class)).create();
+        influxClient = (InfluxClient) ClientProvider.newProvider("influx", BeanUtils.copyProperties(influxProperties, ClientOption.class)).create();
+        influxClient.connect(influxProperties.getUrl());
+        try {
+            influxClient.create("createDatabase")
+                    .with(influxProperties.getDatabase())
+                    .execute();
+        } catch (Exception ignored) {
+        }
     }
 
     @Override
