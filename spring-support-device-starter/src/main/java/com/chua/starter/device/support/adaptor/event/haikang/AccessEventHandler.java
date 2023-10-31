@@ -1,4 +1,4 @@
-package com.chua.starter.device.support.adaptor.event.yunyao;
+package com.chua.starter.device.support.adaptor.event.haikang;
 
 import com.alibaba.fastjson2.JSON;
 import com.chua.common.support.annotations.Spi;

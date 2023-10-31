@@ -1,11 +1,13 @@
-package com.chua.starter.device.support.adaptor.org;
+package com.chua.starter.device.support.adaptor.org.haikang;
 
 import com.chua.common.support.annotations.Group;
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.device.support.adaptor.HikAnFangAdaptor;
 import com.chua.starter.device.support.adaptor.client.pojo.HikAnFangOrgListResult;
+import com.chua.starter.device.support.adaptor.factory.haikang.HikAnFangAdaptor;
+import com.chua.starter.device.support.adaptor.org.OrgAdaptor;
+import com.chua.starter.device.support.adaptor.org.OrgDownloadAdaptor;
 import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
 import com.chua.starter.device.support.entity.DeviceOrg;
 

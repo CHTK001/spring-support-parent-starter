@@ -1,12 +1,15 @@
-package com.chua.starter.device.support.adaptor.device;
+package com.chua.starter.device.support.adaptor.device.haikang;
 
 import com.chua.common.support.annotations.Group;
 import com.chua.common.support.annotations.Spi;
-import com.chua.starter.device.support.adaptor.HikAnFangAdaptor;
 import com.chua.starter.device.support.adaptor.client.pojo.HikAnFangDeviceListResult;
+import com.chua.starter.device.support.adaptor.device.DeviceAdaptor;
+import com.chua.starter.device.support.adaptor.device.DeviceDownloadAdaptor;
+import com.chua.starter.device.support.adaptor.device.DeviceUploadAdaptor;
+import com.chua.starter.device.support.adaptor.factory.haikang.HikAnFangAdaptor;
+import com.chua.starter.device.support.adaptor.pojo.UploadResult;
 import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
 import com.chua.starter.device.support.entity.DeviceInfo;
-import com.chua.starter.device.support.adaptor.pojo.UploadResult;
 
 import java.util.Collections;
 import java.util.List;

@@ -1,6 +1,7 @@
-package com.chua.starter.device.support.adaptor.device;
+package com.chua.starter.device.support.adaptor.device.jingxun;
 
 import com.chua.common.support.annotations.Spi;
+import com.chua.starter.device.support.adaptor.device.DeviceDownloadAdaptor;
 import com.chua.starter.device.support.entity.DeviceInfo;
 
 import java.util.List;

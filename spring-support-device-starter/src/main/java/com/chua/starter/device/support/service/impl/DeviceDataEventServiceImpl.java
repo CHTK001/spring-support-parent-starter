@@ -7,16 +7,14 @@ import com.chua.common.support.request.DataFilter;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.result.ReturnPageResult;
 import com.chua.starter.device.support.adaptor.pojo.StaticResult;
-import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
-import com.chua.starter.device.support.entity.DeviceDataAccessEvent;
-import com.chua.starter.device.support.entity.DeviceDataEvent;
-import com.chua.starter.device.support.entity.DeviceInfo;
+import com.chua.starter.device.support.entity.*;
 import com.chua.starter.device.support.mapper.DeviceDataEventMapper;
 import com.chua.starter.device.support.request.EventRequest;
 import com.chua.starter.device.support.request.EventType;
 import com.chua.starter.device.support.request.ServletEventRequest;
 import com.chua.starter.device.support.service.DeviceDataAccessEventService;
 import com.chua.starter.device.support.service.DeviceDataEventService;
+import com.chua.starter.device.support.service.DeviceMeteorologicalStationService;
 import com.chua.starter.mybatis.utils.EntityWrapper;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import org.springframework.stereotype.Service;
@@ -30,12 +28,20 @@ public class DeviceDataEventServiceImpl extends ServiceImpl<DeviceDataEventMappe
     @Resource
     private DeviceDataAccessEventService deviceDataAccessEventService;
 
+    @Resource
+    private DeviceMeteorologicalStationService deviceMeteorologicalStationService;
+
     @Override
     @SuppressWarnings("ALL")
     public void registerEvent(List<? extends DeviceDataEvent> event, DeviceCloudPlatformConnector platformConnector, StaticResult result, ServletEventRequest accessEventRequest) {
         EventType eventType = accessEventRequest.getEventType();
         if(eventType == EventType.ACCESS) {
             deviceDataAccessEventService.registerEvent((List<DeviceDataAccessEvent>) event, platformConnector, result);
+            return;
+        }
+
+        if(eventType == EventType.QI_XIANG_ZHAN) {
+            deviceMeteorologicalStationService.registerEvent((List<DeviceMeteorologicalStationEvent>) event, platformConnector, result);
             return;
         }
     }
