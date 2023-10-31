@@ -75,7 +75,7 @@ public class DeviceMeteorologicalStationServiceImpl implements DeviceMeteorologi
         deviceLog.setDeviceLogType("SYNC(" + connectorId + ")");
         for (DeviceMeteorologicalStationEvent deviceMeteorologicalStationEvent : event) {
             try {
-                influxClient.write(influxProperties.getDatabase(), deviceMeteorologicalStationEvent,
+                influxClient.write(deviceMeteorologicalStationEvent.getDeviceImsi(), deviceMeteorologicalStationEvent,
                         ImmutableBuilder.builderOfStringMap(String.class)
                                 .put("sensor", deviceMeteorologicalStationEvent.getSensor())
                                 .build()
