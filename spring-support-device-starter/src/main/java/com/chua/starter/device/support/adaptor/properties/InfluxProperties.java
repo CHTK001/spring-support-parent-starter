@@ -22,5 +22,6 @@ public class InfluxProperties {
     private String password = "root1234";
 
     private String database = "device";
+    private String retentionPolicy = "retention";
 
 }
