@@ -4,10 +4,10 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.result.ReturnResult;
-import com.chua.starter.device.support.adaptor.device.CameraDeviceAdaptor;
-import com.chua.starter.device.support.adaptor.device.DeviceDownloadAdaptor;
-import com.chua.starter.device.support.adaptor.event.AccessEventAdaptor;
-import com.chua.starter.device.support.adaptor.org.OrgDownloadAdaptor;
+import com.chua.starter.device.support.adaptor.CameraDeviceAdaptor;
+import com.chua.starter.device.support.adaptor.DeviceDownloadAdaptor;
+import com.chua.starter.device.support.adaptor.AccessEventAdaptor;
+import com.chua.starter.device.support.adaptor.OrgSyncAdaptor;
 import com.chua.starter.device.support.adaptor.pojo.AccessEventRequest;
 import com.chua.starter.device.support.adaptor.pojo.LiveResult;
 import com.chua.starter.device.support.adaptor.pojo.StaticResult;
@@ -188,17 +188,17 @@ public class DeviceCloudController {
             return ReturnResult.illegal("服务不存在");
         }
 
-        OrgDownloadAdaptor downloadAdaptor = ServiceProvider.of(OrgDownloadAdaptor.class).getNewExtension(platformConnector.getDevicePlatformCode(), platformConnector);
+        OrgSyncAdaptor downloadAdaptor = ServiceProvider.of(OrgSyncAdaptor.class).getNewExtension(platformConnector.getDevicePlatformCode(), platformConnector);
         if(null == downloadAdaptor) {
             return ReturnResult.illegal(StringUtils.format("暂不支持从{}同步数据", platformConnector.getDeviceConnectorName()));
         }
 
         int page = 1;
         StaticResult result = new StaticResult();
-        List<DeviceOrg> deviceInfos = downloadAdaptor.downloadFromCloud(page, 1000);
+        List<DeviceOrg> deviceInfos = downloadAdaptor.syncFromCloud(page, 1000);
         while (CollectionUtils.isNotEmpty(deviceInfos)) {
             deviceOrgService.registerOrg(deviceInfos, platformConnector, result);
-            deviceInfos = downloadAdaptor.downloadFromCloud(++ page, 1000);
+            deviceInfos = downloadAdaptor.syncFromCloud(++ page, 1000);
         }
 
         return ReturnResult.ok(result);

@@ -1,4 +1,4 @@
-package com.chua.starter.device.support.adaptor.device;
+package com.chua.starter.device.support.adaptor;
 
 /**
  * @author CH

@@ -1,13 +1,13 @@
-package com.chua.starter.device.support.adaptor.org.haikang;
+package com.chua.starter.device.support.adaptor.factory.haikang;
 
 import com.chua.common.support.annotations.Group;
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.device.support.adaptor.client.pojo.HikAnFangOrgListResult;
+import com.chua.starter.device.support.adaptor.factory.client.pojo.HikAnFangOrgListResult;
 import com.chua.starter.device.support.adaptor.factory.haikang.HikAnFangAdaptor;
-import com.chua.starter.device.support.adaptor.org.OrgAdaptor;
-import com.chua.starter.device.support.adaptor.org.OrgDownloadAdaptor;
+import com.chua.starter.device.support.adaptor.OrgAdaptor;
+import com.chua.starter.device.support.adaptor.OrgSyncAdaptor;
 import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
 import com.chua.starter.device.support.entity.DeviceOrg;
 
@@ -20,13 +20,13 @@ import java.util.List;
  */
 @Group(value = "org", desc = "组织机构同步", group = "service")
 @Spi("hai_kang_an_fang")
-public class HikAnFangOrgAdaptor extends HikAnFangAdaptor implements OrgDownloadAdaptor, OrgAdaptor {
+public class HikAnFangOrgAdaptor extends HikAnFangAdaptor implements OrgSyncAdaptor, OrgAdaptor {
     public HikAnFangOrgAdaptor(DeviceCloudPlatformConnector deviceCloudPlatformConnector) {
         super(deviceCloudPlatformConnector);
     }
 
     @Override
-    public List<DeviceOrg> downloadFromCloud(int pageNo, int pageSize) {
+    public List<DeviceOrg> syncFromCloud(int pageNo, int pageSize) {
         HikAnFangOrgListResult hikAnFangOrgListResult = hikAnFangClient.orgList(pageNo, pageSize);
         if(null == hikAnFangOrgListResult) {
             return Collections.emptyList();

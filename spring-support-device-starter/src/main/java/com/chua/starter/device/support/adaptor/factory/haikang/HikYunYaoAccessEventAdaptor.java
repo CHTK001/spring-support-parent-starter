@@ -1,10 +1,9 @@
-package com.chua.starter.device.support.adaptor.event.haikang;
+package com.chua.starter.device.support.adaptor.factory.haikang;
 
 import com.chua.common.support.annotations.Group;
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.starter.device.support.adaptor.event.AccessEventAdaptor;
-import com.chua.starter.device.support.adaptor.factory.haikang.HikYunYaoAdaptor;
+import com.chua.starter.device.support.adaptor.AccessEventAdaptor;
 import com.chua.starter.device.support.adaptor.pojo.AccessEventRequest;
 import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
 import com.chua.starter.device.support.entity.DeviceDataEvent;

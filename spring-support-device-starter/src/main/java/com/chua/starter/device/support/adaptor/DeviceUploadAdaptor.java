@@ -1,4 +1,4 @@
-package com.chua.starter.device.support.adaptor.device;
+package com.chua.starter.device.support.adaptor;
 
 import com.chua.starter.device.support.entity.DeviceInfo;
 import com.chua.starter.device.support.adaptor.pojo.UploadResult;
