@@ -26,12 +26,13 @@ public interface DeviceInfoService extends IService<DeviceInfo> {
     /**
      * 页
      *
-     * @param keyword  关键字
-     * @param pageNum  书籍页码
-     * @param pageSize 页面大小
+     * @param pageNum    书籍页码
+     * @param pageSize   页面大小
+     * @param keyword    关键字
+     * @param deviceType
      * @return {@link Page}<{@link DeviceInfo}>
      */
-    Page<DeviceInfo> page(Integer pageNum, Integer pageSize, String keyword);
+    Page<DeviceInfo> page(Integer pageNum, Integer pageSize, String keyword, String deviceType);
 
     /**
      * 获取装置信息

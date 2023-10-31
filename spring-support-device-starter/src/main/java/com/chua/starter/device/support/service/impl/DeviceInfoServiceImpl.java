@@ -7,7 +7,6 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.common.support.result.ReturnPageResult;
 import com.chua.starter.device.support.adaptor.Adaptor;
 import com.chua.starter.device.support.entity.*;
 import com.chua.starter.device.support.mapper.DeviceInfoMapper;
@@ -52,7 +51,7 @@ public class DeviceInfoServiceImpl extends ServiceImpl<DeviceInfoMapper, DeviceI
 
     @Override
     @SuppressWarnings("ALL")
-    public Page<DeviceInfo> page(Integer pageNum, Integer pageSize, String keyword) {
+    public Page<DeviceInfo> page(Integer pageNum, Integer pageSize, String keyword, String deviceType) {
         Page<DeviceInfo> page = page(new Page<DeviceInfo>(pageNum, pageSize),
                 new MPJLambdaWrapper<DeviceInfo>()
                         .selectAll(DeviceInfo.class)
@@ -65,6 +64,7 @@ public class DeviceInfoServiceImpl extends ServiceImpl<DeviceInfoMapper, DeviceI
                         .leftJoin(DeviceCloudPlatformConnector.class, DeviceCloudPlatformConnector::getDeviceConnectorId, DeviceInfo::getDeviceConnectorId)
                         .leftJoin(DeviceCloudPlatform.class, DeviceCloudPlatform::getDevicePlatformId, DeviceCloudPlatformConnector::getDevicePlatformId)
                         .leftJoin(DeviceOrg.class, DeviceOrg::getDeviceOrgTreeId, DeviceInfo::getDeviceOrgCode)
+                        .eq(StringUtils.isNotBlank(deviceType), DeviceType::getDeviceTypeCode, deviceType)
                         .like(com.baomidou.mybatisplus.core.toolkit.StringUtils.isNotEmpty(keyword), DeviceInfo::getDeviceName, keyword)
                         .or(com.baomidou.mybatisplus.core.toolkit.StringUtils.isNotEmpty(keyword))
                         .like(com.baomidou.mybatisplus.core.toolkit.StringUtils.isNotEmpty(keyword), DeviceType::getDeviceTypeName, keyword)
