@@ -1,13 +1,14 @@
 package com.chua.starter.device.support.service.impl;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.collection.ImmutableBuilder;
 import com.chua.common.support.protocol.client.ClientOption;
 import com.chua.common.support.protocol.client.ClientProvider;
+import com.chua.common.support.request.DataFilter;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.influxdb.support.InfluxClient;
-import com.chua.influxdb.support.InfluxClientProvider;
 import com.chua.starter.device.support.adaptor.pojo.StaticResult;
 import com.chua.starter.device.support.adaptor.properties.InfluxProperties;
 import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
@@ -87,6 +88,13 @@ public class DeviceMeteorologicalStationServiceImpl implements DeviceMeteorologi
             }
         }
         deviceLogService.save(deviceLog);
+    }
+
+    @Override
+    public Page<DeviceMeteorologicalStationEvent> page(Page<DeviceMeteorologicalStationEvent> deviceChannelPage, DataFilter dataFilter) {
+        StringBuilder stringBuilder = new StringBuilder();
+        String toSql = dataFilter.toSql("deviceImsi");
+        return null;
     }
 
     @Override

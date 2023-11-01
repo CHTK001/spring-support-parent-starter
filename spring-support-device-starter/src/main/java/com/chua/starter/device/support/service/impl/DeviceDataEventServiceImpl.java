@@ -58,14 +58,11 @@ public class DeviceDataEventServiceImpl extends ServiceImpl<DeviceDataEventMappe
             return PageResultUtils.ok(deviceDataAccessEventService.page(deviceChannelPage, wrapper.lambda()
                     .eq(StringUtils.isNotEmpty(request.getDeviceDataEventInOrOut()), DeviceDataAccessEvent::getDeviceDataEventInOrOut, request.getDeviceDataEventInOrOut())
             ));
-//                    Wrappers.<DeviceDataAccessEvent>lambdaQuery()
-//                        .eq(StringUtils.isNotEmpty(request.getDeviceImsi()) , DeviceDataAccessEvent::getDeviceIsmi, request.getDeviceImsi())
-//                        .eq(StringUtils.isNotEmpty(request.getDeviceDataEventInOrOut()), DeviceDataAccessEvent::getDeviceDataEventInOrOut, request.getDeviceDataEventInOrOut())
-//                        .ge(null != request.getStartTime(), DeviceDataAccessEvent::getDeviceDataEventTime, request.getStartTime())
-//                        .le(null != request.getEndTime(), DeviceDataAccessEvent::getDeviceDataEventTime, request.getEndTime())
-//                        .like(StringUtils.isNotEmpty(keyword), DeviceDataAccessEvent::getDeviceDataPersonNum, keyword)
-//                        .or().like(StringUtils.isNotEmpty(keyword), DeviceDataAccessEvent::getDeviceDataPersonNum, keyword)
-//                        .orderByDesc(DeviceDataAccessEvent::getDeviceDataEventTime)
+        }
+
+        if(eventType == EventType.QI_XIANG_ZHAN) {
+            Page<DeviceMeteorologicalStationEvent> deviceChannelPage = new Page<>(pageNum, pageSize);
+            return PageResultUtils.ok(deviceMeteorologicalStationService.page(deviceChannelPage, dataFilter));
         }
         return null;
     }
