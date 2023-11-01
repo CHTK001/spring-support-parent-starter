@@ -37,7 +37,7 @@ public class SummaryWrapperHandler {
                 registerItemValue(column, (ItemValue)value, wrapper, optHandler);
             }
 
-            registerItemFilter(column, value, wrapper, optHandler);
+            registerItemFilter(column, value, wrapper);
             return;
         }
         if(linkOption == LinkOption.AND) {
@@ -48,12 +48,12 @@ public class SummaryWrapperHandler {
 
     }
 
-    private <T> void registerItemFilter(String column, ItemExpression value, QueryWrapper<T> wrapper, OptHandler optHandler) {
+    private <T> void registerItemFilter(String column, ItemExpression value, QueryWrapper<T> wrapper) {
         if (linkOption == LinkOption.AND) {
-            wrapper.and(t -> new SummaryLinkWrapperHandler(column, option, linkOption, (ItemFilter) value, fields).doInject(t));
+            wrapper.and(t -> new SummaryLinkWrapperHandler(column, linkOption, (ItemFilter) value, fields).doInject(t));
             return;
         }
-        wrapper.or(w -> optHandler.doInject(column, ((ItemValue) value).getFilterValue().toString(), fields, w));
+        wrapper.or(w -> new SummaryLinkWrapperHandler(column, linkOption, (ItemFilter) value, fields).doInject(w));
     }
 
     /**
@@ -66,9 +66,9 @@ public class SummaryWrapperHandler {
      */
     private <T> void registerItemValue(String column, ItemValue value, QueryWrapper<T> wrapper, OptHandler optHandler) {
         if (linkOption == LinkOption.AND) {
-            wrapper.and(tQueryWrapper -> optHandler.doInject(column, ((ItemValue) value).getFilterValue().toString(), fields, tQueryWrapper));
+            wrapper.and(tQueryWrapper -> optHandler.doInject(column, value.getFilterValue().toString(), fields, tQueryWrapper));
             return;
         }
-        wrapper.or(w -> optHandler.doInject(column, ((ItemValue) value).getFilterValue().toString(), fields, w));
+        wrapper.or(w -> optHandler.doInject(column, value.getFilterValue().toString(), fields, w));
     }
 }
