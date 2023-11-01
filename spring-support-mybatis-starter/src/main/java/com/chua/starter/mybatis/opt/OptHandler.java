@@ -22,7 +22,7 @@ public interface OptHandler {
      * @param key 钥匙
      * @return boolean
      */
-    default  boolean isMultiKey(String key) {
+    default boolean isMultiKey(String key) {
         return key.contains(SYMBOL_COMMA);
     }
 

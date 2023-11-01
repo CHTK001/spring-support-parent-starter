@@ -11,14 +11,13 @@ import com.baomidou.mybatisplus.core.toolkit.support.ColumnCache;
 import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.function.InitializingAware;
 import com.chua.common.support.function.Splitter;
-import com.chua.common.support.request.DataFilter;
-import com.chua.common.support.request.ItemFilter;
-import com.chua.common.support.request.OptOption;
+import com.chua.common.support.request.*;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.unit.name.NamingCase;
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.mybatis.opt.OptHandler;
+import com.chua.starter.mybatis.opt.SummaryWrapperHandler;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -35,14 +34,20 @@ public class EntityWrapper<T> implements InitializingAware {
     private final Class<T> type;
     private final DataFilter dataFilter;
 
+    private final LinkOption linkOption;
+
     private final Map<String, String> fields = new HashMap<>();
 
     private final List<ItemFilter> notFields = new LinkedList<>();
     private Map<String, ColumnCache> columnMap;
 
     public EntityWrapper(Class<T> type, DataFilter dataFilter) {
+        this(type, dataFilter, LinkOption.AND);
+    }
+    public EntityWrapper(Class<T> type, DataFilter dataFilter, LinkOption linkOption) {
         this.type = type;
         this.dataFilter = dataFilter;
+        this.linkOption = linkOption;
         afterPropertiesSet();
     }
 
@@ -67,8 +72,8 @@ public class EntityWrapper<T> implements InitializingAware {
      * @param itemFilter          项目筛选器
      */
     private void register(QueryWrapper<T> wrapper, ItemFilter itemFilter) {
-        String value1 = itemFilter.getValue();
-        if(StringUtils.isBlank(value1)) {
+        Object value1 = itemFilter.getValue();
+        if(null == value1) {
             return;
         }
 
@@ -76,12 +81,7 @@ public class EntityWrapper<T> implements InitializingAware {
             notFields.add(itemFilter);
             return;
         }
-        String key = itemFilter.getKey();
-        OptOption option = itemFilter.getOption();
-        ServiceProvider.of(OptHandler.class)
-                .getNewExtension(option)
-                .doInject(key.replaceAll("~", ""), value1, fields, wrapper);
-
+        new SummaryWrapperHandler(itemFilter, linkOption).doInject(wrapper);
     }
 
 
@@ -92,16 +92,8 @@ public class EntityWrapper<T> implements InitializingAware {
      * @return boolean
      */
     private boolean isField(ItemFilter itemFilter) {
-        String key = itemFilter.getKey();
-        if(key.contains(SYMBOL_COMMA)) {
-            for (String s : Splitter.on(SYMBOL_COMMA).omitEmptyStrings().trimResults().splitToSet(key)) {
-                if(!fields.containsKey(s)) {
-                    return false;
-                }
-            }
-            return true;
-        }
-        return fields.containsKey(itemFilter.getKey().toUpperCase());
+        ItemExpression key = itemFilter.getKey();
+        return fields.containsKey(((ItemValue)key).getFilterValue().toString());
     }
 
     /**
