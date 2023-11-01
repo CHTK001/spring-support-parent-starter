@@ -81,7 +81,7 @@ public class EntityWrapper<T> implements InitializingAware {
             notFields.add(itemFilter);
             return;
         }
-        new SummaryWrapperHandler(itemFilter, linkOption).doInject(wrapper);
+        new SummaryWrapperHandler(itemFilter, linkOption, fields).doInject(wrapper);
     }
 
 
@@ -93,7 +93,7 @@ public class EntityWrapper<T> implements InitializingAware {
      */
     private boolean isField(ItemFilter itemFilter) {
         ItemExpression key = itemFilter.getKey();
-        return fields.containsKey(((ItemValue)key).getFilterValue().toString());
+        return fields.containsKey(((ItemValue)key).getFilterValue().toString().toUpperCase());
     }
 
     /**
