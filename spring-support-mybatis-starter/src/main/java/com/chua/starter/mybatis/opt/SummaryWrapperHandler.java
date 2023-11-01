@@ -14,7 +14,7 @@ import java.util.Map;
  */
 public class SummaryWrapperHandler {
     private final ItemFilter itemFilter;
-    private final String key;
+    private final ItemExpression key;
     private final ItemExpression value;
     private final OptOption option;
     private final LinkOption linkOption;
@@ -22,7 +22,7 @@ public class SummaryWrapperHandler {
 
     public SummaryWrapperHandler(ItemFilter itemFilter, LinkOption linkOption, Map<String, String> fields) {
         this.itemFilter = itemFilter;
-        this.key = ((ItemValue)itemFilter.getKey()).getFilterValue().toString();
+        this.key = itemFilter.getKey();
         this.value = itemFilter.getValue();
         this.option = itemFilter.getOption();
         this.linkOption = linkOption;
@@ -31,12 +31,13 @@ public class SummaryWrapperHandler {
 
     public <T> void doInject(QueryWrapper<T> wrapper) {
         OptHandler optHandler = ServiceProvider.of(OptHandler.class).getNewExtension(option);
-        if(value instanceof ItemValue) {
-            if(linkOption == LinkOption.AND) {
-                wrapper.and(tQueryWrapper -> optHandler.doInject(key, ((ItemValue) value).getFilterValue().toString(), fields, tQueryWrapper));
-                return;
+        if(key instanceof ItemValue) {
+            String column = ((ItemValue) key).getFilterValue().toString().toUpperCase();
+            if (value instanceof ItemValue) {
+                registerItemValue(column, (ItemValue)value, wrapper, optHandler);
             }
-            wrapper.or(w -> optHandler.doInject(key, ((ItemValue) value).getFilterValue().toString(), fields, w));
+
+            registerItemFilter(column, value, wrapper, optHandler);
             return;
         }
         if(linkOption == LinkOption.AND) {
@@ -45,5 +46,29 @@ public class SummaryWrapperHandler {
         }
         wrapper.or(t -> new SummaryWrapperHandler((ItemFilter) value, linkOption, fields).doInject(t));
 
+    }
+
+    private <T> void registerItemFilter(String column, ItemExpression value, QueryWrapper<T> wrapper, OptHandler optHandler) {
+        if (linkOption == LinkOption.AND) {
+            wrapper.and(t -> new SummaryLinkWrapperHandler(column, option, linkOption, (ItemFilter) value, fields).doInject(t));
+            return;
+        }
+        wrapper.or(w -> optHandler.doInject(column, ((ItemValue) value).getFilterValue().toString(), fields, w));
+    }
+
+    /**
+     * 注册项目值
+     *
+     * @param column     柱
+     * @param value      值
+     * @param wrapper    包装物
+     * @param optHandler opt处理程序
+     */
+    private <T> void registerItemValue(String column, ItemValue value, QueryWrapper<T> wrapper, OptHandler optHandler) {
+        if (linkOption == LinkOption.AND) {
+            wrapper.and(tQueryWrapper -> optHandler.doInject(column, ((ItemValue) value).getFilterValue().toString(), fields, tQueryWrapper));
+            return;
+        }
+        wrapper.or(w -> optHandler.doInject(column, ((ItemValue) value).getFilterValue().toString(), fields, w));
     }
 }
