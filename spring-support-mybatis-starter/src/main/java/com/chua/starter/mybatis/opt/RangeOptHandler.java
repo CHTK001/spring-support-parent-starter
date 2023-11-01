@@ -23,6 +23,5 @@ public class RangeOptHandler implements OptHandler{
         JSONArray jsonArray = JSONArray.parse(value1);
         wrapper.between(StringUtils.isNotBlank(value1),
                 fields.get(key), jsonArray.get(0), jsonArray.get(1));
-        return;
     }
 }
