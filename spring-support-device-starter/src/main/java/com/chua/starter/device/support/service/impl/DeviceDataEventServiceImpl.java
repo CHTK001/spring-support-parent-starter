@@ -49,7 +49,7 @@ public class DeviceDataEventServiceImpl extends ServiceImpl<DeviceDataEventMappe
     @Override
     public ReturnPageResult<? extends DeviceDataEvent> page(EventRequest request, DeviceInfo deviceInfo) {
         Integer pageSize = request.getPageSize();
-        Integer pageNum = request.getPageNum();
+        Integer pageNum = request.getPage();
         EventType eventType = request.getEventType();
         DataFilter dataFilter = DataFilter.of(request.getFilter());
         if(eventType == EventType.ACCESS) {
