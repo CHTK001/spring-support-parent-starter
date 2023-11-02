@@ -16,6 +16,7 @@ import com.chua.starter.device.support.entity.DeviceLog;
 import com.chua.starter.device.support.entity.DeviceMeteorologicalStationEvent;
 import com.chua.starter.device.support.service.DeviceLogService;
 import com.chua.starter.device.support.service.DeviceMeteorologicalStationService;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -91,10 +92,17 @@ public class DeviceMeteorologicalStationServiceImpl implements DeviceMeteorologi
     }
 
     @Override
-    public Page<DeviceMeteorologicalStationEvent> page(Page<DeviceMeteorologicalStationEvent> deviceChannelPage, DataFilter dataFilter) {
-        StringBuilder stringBuilder = new StringBuilder();
-        String toSql = dataFilter.toSql("deviceImsi");
-        return null;
+    public Page<DeviceMeteorologicalStationEvent> page(Page<DeviceMeteorologicalStationEvent> deviceChannelPage, @NotNull DataFilter dataFilter) {
+        String toSql = dataFilter.toSql("deviceImsi", true);
+        if(null == toSql) {
+            throw new RuntimeException("请选择指定设备");
+        }
+        StringBuilder stringBuilder = new StringBuilder(toSql);
+        stringBuilder.append(" ORDER BY time desc LIMIT ").append(deviceChannelPage.getSize()).append(" OFFSET ").append((deviceChannelPage.getCurrent() - 1) * deviceChannelPage.getSize());
+
+        List<DeviceMeteorologicalStationEvent> query = influxClient.query(stringBuilder.toString(), DeviceMeteorologicalStationEvent.class);
+        deviceChannelPage.setRecords(query);
+        return deviceChannelPage;
     }
 
     @Override
