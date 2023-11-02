@@ -57,6 +57,7 @@ public class DeviceDataEventServiceImpl extends ServiceImpl<DeviceDataEventMappe
             QueryWrapper<DeviceDataAccessEvent> wrapper = EntityWrapper.of(DeviceDataAccessEvent.class, dataFilter).getWrapper();
             return PageResultUtils.ok(deviceDataAccessEventService.page(deviceChannelPage, wrapper.lambda()
                     .eq(StringUtils.isNotEmpty(request.getDeviceDataEventInOrOut()), DeviceDataAccessEvent::getDeviceDataEventInOrOut, request.getDeviceDataEventInOrOut())
+                    .orderByDesc(DeviceDataAccessEvent::getDeviceDataEventTime)
             ));
         }
 
