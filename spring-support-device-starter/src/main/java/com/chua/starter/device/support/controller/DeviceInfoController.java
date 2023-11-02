@@ -1,6 +1,5 @@
 package com.chua.starter.device.support.controller;
 
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.function.Splitter;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.validator.group.AddGroup;
@@ -12,7 +11,6 @@ import com.chua.starter.device.support.entity.DeviceInfo;
 import com.chua.starter.device.support.entity.DeviceType;
 import com.chua.starter.device.support.service.DeviceInfoService;
 import com.chua.starter.mybatis.utils.PageResultUtils;
-import com.github.yulichang.query.MPJLambdaQueryWrapper;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.AllArgsConstructor;
 import org.springframework.validation.BindingResult;
@@ -40,12 +38,13 @@ public class DeviceInfoController {
      * @return {@link ReturnResult}<{@link DeviceDict}>
      */
     @GetMapping("list")
-    public ReturnResult<List<DeviceInfo>> list(String deviceTypeId, String deviceTypeCode) {
+    public ReturnResult<List<DeviceInfo>> list(String deviceTypeId, String deviceTypeCode, String keyword) {
         return ReturnResult.ok(deviceInfoService.list(new MPJLambdaWrapper<DeviceInfo>()
                         .selectAll(DeviceInfo.class)
                         .leftJoin(DeviceType.class, DeviceType::getDeviceTypeId, DeviceInfo::getDeviceTypeId)
                 .eq(StringUtils.isNotBlank(deviceTypeId), DeviceInfo::getDeviceTypeId, deviceTypeId)
                 .eq(StringUtils.isNotBlank(deviceTypeCode), DeviceType::getDeviceTypeCode, deviceTypeCode)
+                .like(StringUtils.isNotBlank(keyword), DeviceInfo::getDeviceName, keyword)
         ));
     }
 

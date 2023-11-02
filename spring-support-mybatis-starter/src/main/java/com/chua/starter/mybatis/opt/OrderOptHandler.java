@@ -1,13 +1,9 @@
 package com.chua.starter.mybatis.opt;
 
 
-import com.alibaba.fastjson2.JSONArray;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.chua.common.support.annotations.Spi;
-import com.chua.common.support.lang.Ascii;
-import com.chua.common.support.utils.StringUtils;
 
-import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -23,10 +19,18 @@ public class OrderOptHandler implements OptHandler{
 
     @Override
     public <T> void doInject(String key, String value1, Map<String, String> fields, QueryWrapper<T> wrapper) {
-        if(DESC.equalsIgnoreCase(value1)) {
-            wrapper.orderByDesc(fields.get(key));
+        if(isMultiKey(key)) {
+            if(DESC.equalsIgnoreCase(value1)) {
+                wrapper.orderByDesc(getMultiKey(key).stream().map(fields::get).collect(Collectors.toList()));
+                return;
+            }
+            wrapper.orderByAsc(getMultiKey(key).stream().map(fields::get).collect(Collectors.toList()));
             return;
         }
-        wrapper.orderByAsc(fields.get(key));
+        if(DESC.equalsIgnoreCase(value1)) {
+            wrapper.orderByDesc(key);
+            return;
+        }
+        wrapper.orderByAsc(key);
     }
 }

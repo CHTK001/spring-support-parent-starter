@@ -17,6 +17,9 @@ public class PageResultUtils {
      * @param <T> 类型
      */
     public static <T> PageResult<T> transfer(IPage<T> result) {
+        if(null == result) {
+            return PageResult.empty();
+        }
         return PageResult.<T>builder()
                 .pageSize((int) result.getSize())
                 .total(result.getTotal())

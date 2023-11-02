@@ -3,9 +3,7 @@ package com.chua.starter.mybatis.opt;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.chua.common.support.annotations.Spi;
-import com.chua.common.support.utils.StringUtils;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -18,6 +16,15 @@ import java.util.Map;
 public class EqOptHandler implements OptHandler{
     @Override
     public <T> void doInject(String key, String value1, Map<String, String> fields, QueryWrapper<T> wrapper) {
-        wrapper.eq(fields.get(key), value1);
+        if(isMultiKey(key)) {
+            wrapper.and(t -> {
+                QueryWrapper<T> tQueryWrapper = t;
+                for (String s : getMultiKey(key)) {
+                    tQueryWrapper = tQueryWrapper.eq(fields.get(s), value1).or();
+                }
+            });
+            return;
+        }
+        wrapper.eq(key, value1);
     }
 }
