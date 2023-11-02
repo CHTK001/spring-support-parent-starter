@@ -3,6 +3,7 @@ package com.chua.starter.mybatis.opt;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.chua.common.support.request.*;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.unit.name.NamingCase;
 
 import java.util.Map;
 
@@ -33,19 +34,71 @@ public class SummaryWrapperHandler {
         OptHandler optHandler = ServiceProvider.of(OptHandler.class).getNewExtension(option);
         if(key instanceof ItemValue) {
             String column = ((ItemValue) key).getFilterValue().toString().toUpperCase();
+            column = fields.getOrDefault(column, NamingCase.toCamelUnderscore(column));
             if (value instanceof ItemValue) {
                 registerItemValue(column, (ItemValue)value, wrapper, optHandler);
+                return;
             }
 
             registerItemFilter(column, value, wrapper);
             return;
         }
-        if(linkOption == LinkOption.AND) {
-            wrapper.and(t -> new SummaryWrapperHandler((ItemFilter) value, linkOption, fields).doInject(t));
+
+        if (value instanceof ItemValue) {
+            registerItemKeyValue((ItemFilter) key, (ItemValue)value, wrapper);
             return;
         }
-        wrapper.or(t -> new SummaryWrapperHandler((ItemFilter) value, linkOption, fields).doInject(t));
+        registerItemKeyValueItemFilter((ItemFilter) key, (ItemFilter)value, wrapper);
+    }
 
+    /**
+     * 注册项目钥匙值项目滤器
+     *
+     * @param key        钥匙
+     * @param value      值
+     * @param wrapper    包装物
+     */
+    private <T> void registerItemKeyValueItemFilter(ItemFilter key, ItemFilter value, QueryWrapper<T> wrapper) {
+        if(linkOption == LinkOption.AND) {
+            wrapper.and(t -> {
+                new SummaryWrapperHandler(key, linkOption, fields).doInject(t);
+                if(option == OptOption.AND) {
+                    t.and(t1 ->  new SummaryWrapperHandler(value, linkOption, fields).doInject(t1));
+                    return;
+                }
+                t.or(t1 ->  new SummaryWrapperHandler(value, linkOption, fields).doInject(t1));
+            });
+            return;
+        }
+
+        wrapper.or(t -> {
+            new SummaryWrapperHandler(key, linkOption, fields).doInject(t);
+            if(option == OptOption.AND) {
+                t.and(t1 ->  new SummaryWrapperHandler(value, linkOption, fields).doInject(t1));
+                return;
+            }
+            t.or(t1 ->  new SummaryWrapperHandler(value, linkOption, fields).doInject(t1));
+        });
+    }
+
+    /**
+     * 注册项目钥匙值
+     *
+     * @param key        钥匙
+     * @param value      值
+     * @param wrapper    包装物
+     */
+    private <T> void registerItemKeyValue(ItemFilter key, ItemValue value, QueryWrapper<T> wrapper) {
+        if(linkOption == LinkOption.AND) {
+            wrapper.and(t -> {
+                new SummaryWrapperHandler(key, linkOption, fields).doInject(t);
+            });
+            return;
+        }
+
+        wrapper.or(t -> {
+            new SummaryWrapperHandler(key, linkOption, fields).doInject(t);
+        });
     }
 
     private <T> void registerItemFilter(String column, ItemExpression value, QueryWrapper<T> wrapper) {

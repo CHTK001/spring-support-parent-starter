@@ -27,6 +27,9 @@ public class SpringServiceAutowire implements ServiceAutowire {
             return null;
         }
         ApplicationContext applicationContext = SpringBeanUtils.getApplicationContext();
+        if(null == applicationContext) {
+            return object;
+        }
         AutowireCapableBeanFactory autowireCapableBeanFactory = applicationContext.getAutowireCapableBeanFactory();
         autowireCapableBeanFactory.autowireBean(object);
         Class<?> aClass = object.getClass();

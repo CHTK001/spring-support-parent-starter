@@ -1,28 +1,19 @@
 package com.chua.starter.mybatis.utils;
 
-import com.alibaba.fastjson2.JSONArray;
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.LambdaUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.toolkit.support.ColumnCache;
 import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.function.InitializingAware;
-import com.chua.common.support.function.Splitter;
 import com.chua.common.support.request.*;
-import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.unit.name.NamingCase;
-import com.chua.common.support.utils.ClassUtils;
-import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.mybatis.opt.OptHandler;
 import com.chua.starter.mybatis.opt.SummaryWrapperHandler;
 
-import java.util.*;
-import java.util.function.Consumer;
-
-import static com.chua.common.support.constant.CommonConstant.SYMBOL_COMMA;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 包装工具
@@ -92,8 +83,20 @@ public class EntityWrapper<T> implements InitializingAware {
      * @return boolean
      */
     private boolean isField(ItemFilter itemFilter) {
+        if(fields.isEmpty()) {
+            return true;
+        }
         ItemExpression key = itemFilter.getKey();
-        return fields.containsKey(((ItemValue)key).getFilterValue().toString().toUpperCase());
+        String toUpperCase = ((ItemValue) key).getFilterValue().toString().toUpperCase();
+        if(toUpperCase.contains(CommonConstant.SYMBOL_COMMA)) {
+            for (String s : toUpperCase.split(CommonConstant.SYMBOL_COMMA)) {
+                if(fields.containsKey(s.trim())) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return fields.containsKey(toUpperCase);
     }
 
     /**
@@ -110,6 +113,9 @@ public class EntityWrapper<T> implements InitializingAware {
     @Override
     public void afterPropertiesSet() {
         this.columnMap = LambdaUtils.getColumnMap(type);
+        if(null == this.columnMap) {
+            return;
+        }
         for (Map.Entry<String, ColumnCache> entry : columnMap.entrySet()) {
             fields.put(entry.getKey(), entry.getValue().getColumn());
         }
