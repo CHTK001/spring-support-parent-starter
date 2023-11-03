@@ -40,6 +40,9 @@ public class SpringApplicationContextTypeDefinitionSource implements TypeDefinit
     public SortedList<TypeDefinition> getBean(Class<?> targetType) {
         SortedList<TypeDefinition> rs = new SortedArrayList<>(COMPARABLE);
         ApplicationContext applicationContext = SpringBeanUtils.getApplicationContext();
+        if(null == applicationContext) {
+            return rs;
+        }
         String[] beanNamesForType = applicationContext.getBeanNamesForType(targetType);
         for (String s : beanNamesForType) {
             rs.add(new ObjectTypeDefinition(s, applicationContext.getBean(s, targetType)));
