@@ -5,7 +5,6 @@ import com.xxl.job.admin.core.model.XxlJobUser;
 import com.xxl.job.admin.core.util.I18nUtil;
 import com.xxl.job.admin.properties.SchedulerProperties;
 import com.xxl.job.admin.service.LoginService;
-import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.AsyncHandlerInterceptor;
 
@@ -19,7 +18,6 @@ import java.util.regex.Pattern;
  *
  * @author xuxueli 2015-12-12 18:09:04
  */
-@Component
 public class PermissionInterceptor implements AsyncHandlerInterceptor {
 
 	@Resource
