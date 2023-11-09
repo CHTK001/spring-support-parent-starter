@@ -44,13 +44,19 @@ public class IndexController {
 		return "index";
 	}
 
+    @RequestMapping("/info")
+	@ResponseBody
+	public ReturnT<Map<String, Object>> info() {
+        return new ReturnT<>(xxlJobService.dashboardInfo());
+    }
+
     @RequestMapping("/chartInfo")
 	@ResponseBody
 	public ReturnT<Map<String, Object>> chartInfo(Date startDate, Date endDate) {
         ReturnT<Map<String, Object>> chartInfo = xxlJobService.chartInfo(startDate, endDate);
         return chartInfo;
     }
-	
+
 	@RequestMapping("/toLogin")
 	@PermissionLimit(limit=false)
 	public ModelAndView toLogin(HttpServletRequest request, HttpServletResponse response,ModelAndView modelAndView) {
