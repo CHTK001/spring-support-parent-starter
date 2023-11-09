@@ -11,6 +11,11 @@ import com.chua.starter.common.support.provider.OptionsProvider;
 import com.chua.starter.common.support.result.ResponseAdvice;
 import com.chua.starter.common.support.version.ApiVersionRequestMappingHandlerMapping;
 import com.chua.starter.common.support.watch.WatchPointcutAdvisor;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import lombok.extern.slf4j.Slf4j;
@@ -97,7 +102,18 @@ public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAw
 //        messageConverter.setObjectMapper(objectMapper);
 //        converters.add(0, messageConverter);
         if (coreProperties.isUniformParameter()) {
-            converters.add(0, new ResultDataHttpMessageConverter());
+            ResultDataHttpMessageConverter resultDataHttpMessageConverter = new ResultDataHttpMessageConverter();
+            ObjectMapper objectMapper = resultDataHttpMessageConverter.getObjectMapper();
+            // 不显示为null的字段
+            objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+            SimpleModule simpleModule = new SimpleModule();
+            simpleModule.addSerializer(Long.class, ToStringSerializer.instance);
+            simpleModule.addSerializer(Long.TYPE, ToStringSerializer.instance);
+            objectMapper.registerModule(simpleModule);
+            objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+            resultDataHttpMessageConverter.setObjectMapper(objectMapper);
+            // 放到第一个
+            converters.add(0, resultDataHttpMessageConverter);
         }
     }
 
