@@ -1,12 +1,12 @@
 package com.chua.starter.common.support.converter;
 
 
-import org.springframework.data.web.ProjectingJackson2HttpMessageConverter;
 import org.springframework.http.HttpOutputMessage;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.AbstractHttpMessageConverter;
 import org.springframework.http.converter.GenericHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageNotWritableException;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
@@ -23,7 +23,7 @@ import java.lang.reflect.Type;
  */
 
 public class ResultDataHttpMessageConverter
-        extends ProjectingJackson2HttpMessageConverter {
+        extends MappingJackson2HttpMessageConverter {
     @Override
     public boolean canWrite(Class<?> clazz, MediaType mediaType) {
         if(
