@@ -131,7 +131,7 @@ public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAw
 
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(name = "plugin.core.uniform-parameter", havingValue = "true", matchIfMissing = true)
+    @ConditionalOnProperty(name = "plugin.core.uniform-parameter", havingValue = "true", matchIfMissing = false)
     public ResponseAdvice responseAdvice() {
         return new ResponseAdvice();
     }
