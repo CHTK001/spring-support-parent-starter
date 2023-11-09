@@ -182,6 +182,7 @@ public class JobSpringExecutor extends XxlJobSpringExecutor {
             }
         }
 
+        log.info("注册任务: {} ", job.value());
         // registry jobhandler
         registJobHandler(name, new MethodJobHandler(bean, executeMethod, initMethod, destroyMethod));
 
