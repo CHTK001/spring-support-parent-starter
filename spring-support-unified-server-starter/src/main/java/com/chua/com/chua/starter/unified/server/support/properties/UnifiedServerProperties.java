@@ -13,4 +13,14 @@ import static com.chua.com.chua.starter.unified.server.support.properties.Unifie
 public class UnifiedServerProperties {
 
     public static final String PRE = "plugin.unified.server";
+
+    /**
+     * 加密模式
+     */
+    private String encryptionSchema = "aes";
+
+    /**
+     * 加密密钥
+     */
+    private String encryptionKey = "123456";
 }

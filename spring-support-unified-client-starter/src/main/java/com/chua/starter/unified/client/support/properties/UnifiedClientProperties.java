@@ -26,7 +26,7 @@ public class UnifiedClientProperties {
     /**
      * 打开
      */
-    private boolean open = true;
+    private boolean open = false;
 
     /**
      * 统一服务端地址
