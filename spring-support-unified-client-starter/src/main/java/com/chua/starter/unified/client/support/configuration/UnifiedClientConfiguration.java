@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSONObject;
 import com.alibaba.fastjson2.JSONWriter;
 import com.chua.common.support.bean.BeanMap;
 import com.chua.common.support.protocol.boot.*;
+import com.chua.common.support.protocol.server.ServerOption;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.unified.client.support.properties.UnifiedClientProperties;
 import lombok.extern.slf4j.Slf4j;
@@ -42,11 +43,13 @@ public class UnifiedClientConfiguration implements BeanDefinitionRegistryPostPro
             return;
         }
 
+        UnifiedClientProperties.UnifiedExecuter executer = unifiedClientProperties.getExecuter();
         String protocol = unifiedClientProperties.getProtocol();
         BootOption bootOption = BootOption.builder()
                 .encryptionSchema(unifiedClientProperties.getEncryptionSchema())
                 .encryptionKey(unifiedClientProperties.getEncryptionKey())
                 .address(unifiedClientProperties.getAddress())
+                .serverOption(ServerOption.builder().port(executer.getPort()).host(executer.getHost()).build())
                 .build();
         Protocol protocol1 = ServiceProvider.of(Protocol.class).getNewExtension(protocol, bootOption);
 
