@@ -41,6 +41,8 @@
         <module>spring-support-subscribe-starter</module>
         <module>spring-support-generator-starter</module>
         <module>spring-support-device-starter</module>
+        <module>spring-support-unified-client-starter</module>
+        <module>spring-support-unified-server-starter</module>
         <!--        <module>spring-support-proxy-starter</module>-->
     </modules>
 
@@ -264,6 +266,25 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-groovy-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-vertx-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-unified-client-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-unified-server-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
 

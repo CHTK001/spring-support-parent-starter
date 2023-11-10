@@ -3,6 +3,9 @@ package com.chua.starter.common.support.configuration;
 import com.chua.common.support.converter.definition.EnumTypeConverter;
 import com.chua.common.support.converter.definition.TypeConverter;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.starter.common.support.converter.StringToDateTypeConverter;
+import com.chua.starter.common.support.converter.StringToLocalDateTimeTypeConverter;
+import com.chua.starter.common.support.converter.StringToLocalTimeTypeConverter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.convert.TypeDescriptor;
@@ -31,6 +34,12 @@ public class ConverterConfiguration {
 
         @SuppressWarnings("ALL")
         public TypeConverterRegistry(ConverterRegistry converterRegistry) {
+            converterRegistry.addConverter(new StringToDateTypeConverter());
+            converterRegistry.addConverter(new StringToLocalTimeTypeConverter());
+            converterRegistry.addConverter(new StringToLocalDateTimeTypeConverter());
+            converterRegistry.addConverter(new StringToDateTypeConverter());
+
+
             Map<String, TypeConverter> list = ServiceProvider.of(TypeConverter.class).list();
             for (TypeConverter converter : list.values()) {
                 converterRegistry.addConverter(Object.class, converter.getType(), new Converter<Object, Object>() {

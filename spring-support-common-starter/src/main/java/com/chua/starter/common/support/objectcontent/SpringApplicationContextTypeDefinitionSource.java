@@ -6,6 +6,7 @@ import com.chua.common.support.objects.definition.ObjectTypeDefinition;
 import com.chua.common.support.objects.definition.TypeDefinition;
 import com.chua.common.support.objects.source.TypeDefinitionSource;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 
 import java.lang.annotation.Annotation;
@@ -25,14 +26,30 @@ public class SpringApplicationContextTypeDefinitionSource implements TypeDefinit
     @Override
     public SortedList<TypeDefinition> getBean(String name, Class<?> targetType) {
         ApplicationContext applicationContext = SpringBeanUtils.getApplicationContext();
-        Object bean = applicationContext.getBean(name, targetType);
+        if(null == applicationContext) {
+            return SortedList.emptyList();
+        }
+        Object bean = null;
+        try {
+            bean = applicationContext.getBean(name, targetType);
+        } catch (BeansException e) {
+            return SortedList.emptyList();
+        }
         return new SortedArrayList<>(new ObjectTypeDefinition(name, bean), COMPARABLE);
     }
 
     @Override
     public SortedList<TypeDefinition> getBean(String name) {
         ApplicationContext applicationContext = SpringBeanUtils.getApplicationContext();
-        Object bean = applicationContext.getBean(name);
+        if(null == applicationContext) {
+            return SortedList.emptyList();
+        }
+        Object bean = null;
+        try {
+            bean = applicationContext.getBean(name);
+        } catch (BeansException ignored) {
+            return SortedList.emptyList();
+        }
         return new SortedArrayList<>(new ObjectTypeDefinition(name, bean), COMPARABLE);
     }
 
