@@ -9,6 +9,7 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.unified.client.support.properties.UnifiedClientProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -32,6 +33,9 @@ public class UnifiedClientConfiguration implements BeanDefinitionRegistryPostPro
     @Resource
     private UnifiedClientProperties unifiedClientProperties;
 
+    @Value("${spring.servlet.application:")
+    private String appName;
+
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         //注册协议
@@ -49,6 +53,7 @@ public class UnifiedClientConfiguration implements BeanDefinitionRegistryPostPro
                 .encryptionSchema(unifiedClientProperties.getEncryptionSchema())
                 .encryptionKey(unifiedClientProperties.getEncryptionKey())
                 .address(unifiedClientProperties.getAddress())
+                .appName(appName)
                 .serverOption(ServerOption.builder().port(executer.getPort()).host(executer.getHost()).build())
                 .build();
         Protocol protocol1 = ServiceProvider.of(Protocol.class).getNewExtension(protocol, bootOption);
@@ -79,7 +84,7 @@ public class UnifiedClientConfiguration implements BeanDefinitionRegistryPostPro
         JSONObject jsonObject = new JSONObject();
         BeanMap beanMap = BeanMap.create(unifiedClientProperties.getExecuter());
         jsonObject.putAll(beanMap);
-
+        request.setAppName(appName);
         request.setContent(jsonObject.toJSONString(JSONWriter.Feature.WriteEnumsUsingName));
         BootResponse bootResponse = protocolClient.send(request);
         log.info("注册结果: {}", bootResponse);
