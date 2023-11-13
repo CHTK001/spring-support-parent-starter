@@ -1,5 +1,7 @@
 package com.chua.starter.unified.client.support.configuration;
 
+import com.chua.common.support.protocol.boot.BootRequest;
+import com.chua.common.support.protocol.boot.ProtocolClient;
 import com.chua.common.support.protocol.boot.ProtocolServer;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.Md5Utils;
@@ -64,6 +66,7 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
     private static final String VALUE_SEPARATOR = ":";
 
     private ProtocolServer protocolServer;
+    private ProtocolClient protocolClient;
 
     /**
      * placeholder, ConfigValueTarget
@@ -115,6 +118,9 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
             return;
         }
         this.protocolServer = this.beanFactory.getBean(ProtocolServer.class);
+//        this.protocolServer.addListen();
+        this.protocolClient = this.beanFactory.getBean(ProtocolClient.class);
+        this.unifiedClientProperties = this.beanFactory.getBean(UnifiedClientProperties.class);
     }
 
     @Override
@@ -139,10 +145,6 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
     }
 
     public void register(ConfigurableEnvironment environment, MutablePropertySources propertySources) {
-        if (null == unifiedClientProperties) {
-            unifiedClientProperties = Binder.get(environment).bindOrCreate(UnifiedClientProperties.PRE, UnifiedClientProperties.class);
-        }
-
         Map<String, Object> req = new HashMap<>(12);
 
         renderData(req);
