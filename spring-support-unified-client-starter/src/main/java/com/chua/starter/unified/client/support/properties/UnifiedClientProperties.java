@@ -5,6 +5,9 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
+import java.util.List;
+import java.util.Map;
+
 import static com.chua.starter.unified.client.support.properties.UnifiedClientProperties.PRE;
 
 /**
@@ -48,6 +51,26 @@ public class UnifiedClientProperties {
     public UnifiedExecuter executer = new UnifiedExecuter();
 
 
+    private Map<SubscribeType, SubscribeOption> subscribe;
+
+    public static enum SubscribeType {
+
+        /**
+         * 配置
+         */
+        CONFIG,
+    }
+
+    public static class SubscribeOption {
+        /**
+         * 订阅列表
+         */
+        private List<String> subscribe;
+        /**
+         * 自动全部上报
+         */
+        private boolean autoSend;
+    }
     @Data
     public static class UnifiedExecuter {
 
