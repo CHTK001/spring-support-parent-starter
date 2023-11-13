@@ -1,2 +1,2 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-  com.chua.com.chua.starter.unified.server.support.configuration.UnifiedServerConfiguration
+  com.chua.starter.unified.server.support.configuration.UnifiedServerConfiguration

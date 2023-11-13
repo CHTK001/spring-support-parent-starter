@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.unified.server.support.mapper.UnifiedExecuterItemMapper">
+  <resultMap id="BaseResultMap" type="com.chua.starter.unified.server.support.entity.UnifiedExecuterItem">
+    <!--@mbg.generated-->
+    <!--@Table unified_executer_item-->
+    <id column="unified_executer_item_id" jdbcType="INTEGER" property="unifiedExecuterItemId" />
+    <result column="unified_executer_id" jdbcType="VARCHAR" property="unifiedExecuterId" />
+    <result column="unified_executer_item_host" jdbcType="VARCHAR" property="unifiedExecuterItemHost" />
+    <result column="unified_executer_item_port" jdbcType="VARCHAR" property="unifiedExecuterItemPort" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    unified_executer_item_id, unified_executer_id, unified_executer_item_host, unified_executer_item_port, 
+    create_time, update_time
+  </sql>
+</mapper>

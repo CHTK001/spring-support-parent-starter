@@ -1,8 +1,7 @@
-package com.chua.com.chua.starter.unified.server.support.controller;
+package com.chua.starter.unified.server.support.controller;
 
-import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
-import com.chua.com.chua.starter.unified.server.support.properties.UnifiedServerProperties;
+import com.chua.starter.unified.server.support.properties.UnifiedServerProperties;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.protocol.boot.BootRequest;
 import com.chua.common.support.protocol.boot.BootResponse;
