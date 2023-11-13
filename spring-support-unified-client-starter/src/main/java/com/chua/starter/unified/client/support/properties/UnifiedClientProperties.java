@@ -34,6 +34,11 @@ public class UnifiedClientProperties {
     private String address;
 
     /**
+     * i18n
+     */
+    private String i18n = "CN";
+
+    /**
      * 协议
      */
     private String protocol = "http";
