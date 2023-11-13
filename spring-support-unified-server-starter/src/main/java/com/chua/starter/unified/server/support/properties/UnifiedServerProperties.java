@@ -1,9 +1,9 @@
-package com.chua.com.chua.starter.unified.server.support.properties;
+package com.chua.starter.unified.server.support.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import static com.chua.com.chua.starter.unified.server.support.properties.UnifiedServerProperties.PRE;
+import static com.chua.starter.unified.server.support.properties.UnifiedServerProperties.PRE;
 
 /**
  * @author CH
