@@ -6,4 +6,5 @@ package com.chua.starter.unified.server.support.adator;
  * @author CH
  */
 public interface ExecutorCommandAdaptor extends CommandAdaptor{
+
 }
