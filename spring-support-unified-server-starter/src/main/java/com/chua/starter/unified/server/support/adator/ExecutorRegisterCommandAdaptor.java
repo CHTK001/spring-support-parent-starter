@@ -1,5 +1,6 @@
 package com.chua.starter.unified.server.support.adator;
 
+import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.protocol.boot.BootRequest;
 import com.chua.common.support.protocol.boot.BootResponse;
@@ -31,12 +32,10 @@ public class ExecutorRegisterCommandAdaptor implements ExecutorCommandAdaptor{
     @Override
     public BootResponse resolve(BootRequest request) {
         String appName = request.getAppName();
-        if(StringUtils.isBlank(appName)) {
-            return BootResponse.builder().commandType(RESPONSE).content("appName不能为空").build();
-        }
         unifiedExecuterService.createExecutor(request);
+        JSONObject jsonObject = JSONObject.parseObject(request.getContent());
         redisTemplate.opsForValue()
-                .set(EXECUTOR_NAME + appName, request, unifiedServerProperties.getKeepAliveTimeout(), TimeUnit.SECONDS);
+                .set(EXECUTOR_NAME + appName + ":" + jsonObject.getString("host") + "_" + jsonObject.getString("port"), request, unifiedServerProperties.getKeepAliveTimeout(), TimeUnit.SECONDS);
 
         return BootResponse.builder().commandType(RESPONSE).build();
     }
