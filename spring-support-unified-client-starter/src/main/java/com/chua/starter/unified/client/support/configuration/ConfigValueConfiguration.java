@@ -157,7 +157,7 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
     }
 
     private void doSendSubscribe(UnifiedClientProperties.SubscribeOption subscribeOption) {
-        boolean autoSend = subscribeOption.isAutoSend();
+        boolean autoSend = subscribeOption.isAutoConfig();
         if(!autoSend) {
             return;
         }
@@ -168,6 +168,7 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
         protocolClient.send(BootRequest.builder()
                         .moduleType(ModuleType.CONFIG)
                         .commandType(CommandType.REGISTER)
+                        .appName(environment.getProperty("spring.application.name"))
                         .content(Json.toJson(req))
                 .build()
         );
@@ -270,8 +271,7 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
                     Map<String, Object> stringObjectMap = rs.computeIfAbsent(it.getName(), new Function<String, Map<String, Object>>() {
                         @Override
                         public @Nullable Map<String, Object> apply(@Nullable String input) {
-                            Map<String, Object> rs = new HashMap<>();
-                            return rs;
+                            return new HashMap<>();
                         }
                     });
 
