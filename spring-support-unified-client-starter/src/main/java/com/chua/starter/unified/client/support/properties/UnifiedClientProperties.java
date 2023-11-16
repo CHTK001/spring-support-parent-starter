@@ -98,5 +98,9 @@ public class UnifiedClientProperties {
             }
             return port;
         }
+
+        public String getAddress() {
+            return getHost() + ":" + getPort();
+        }
     }
 }

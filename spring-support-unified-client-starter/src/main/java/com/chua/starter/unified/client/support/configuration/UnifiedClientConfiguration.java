@@ -86,8 +86,8 @@ public class UnifiedClientConfiguration implements BeanDefinitionRegistryPostPro
         request.setModuleType(ModuleType.EXECUTOR);
         request.setCommandType(CommandType.REGISTER);
         JSONObject jsonObject = new JSONObject();
-        BeanMap beanMap = BeanMap.create(unifiedClientProperties.getExecuter());
-        jsonObject.putAll(beanMap);
+        UnifiedClientProperties.UnifiedExecuter executer = unifiedClientProperties.getExecuter();
+        jsonObject.putAll(BeanMap.create(executer));
         request.setAppName(appName);
         request.setContent(jsonObject.toJSONString(JSONWriter.Feature.WriteEnumsUsingName));
         BootResponse bootResponse = protocolClient.send(request);

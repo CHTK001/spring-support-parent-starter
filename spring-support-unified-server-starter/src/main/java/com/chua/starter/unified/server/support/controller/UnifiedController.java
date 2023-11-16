@@ -6,6 +6,7 @@ import com.chua.common.support.protocol.boot.CommandType;
 import com.chua.common.support.protocol.boot.ModuleType;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.IoUtils;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.unified.server.support.entity.RemoteRequest;
 import com.chua.starter.unified.server.support.properties.UnifiedServerProperties;
@@ -20,6 +21,8 @@ import javax.annotation.Resource;
 import java.util.Optional;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
+import static com.chua.common.support.protocol.boot.CommandType.RESPONSE;
 
 /**
  * @author CH
@@ -55,6 +58,11 @@ public class UnifiedController implements InitializingBean, DisposableBean, Runn
         ModuleType moduleType = request.getModuleType();
         if(null == moduleType) {
             return BootResponse.notSupport();
+        }
+
+        String appName = request.getAppName();
+        if(StringUtils.isBlank(appName)) {
+            return BootResponse.builder().commandType(RESPONSE).content("appName不能为空").build();
         }
 
         return Optional.ofNullable(ServiceProvider.of(ModuleResolver.class).getNewExtension(moduleType)
