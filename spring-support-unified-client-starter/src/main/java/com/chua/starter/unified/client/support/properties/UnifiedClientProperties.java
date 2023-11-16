@@ -1,6 +1,7 @@
 package com.chua.starter.unified.client.support.properties;
 
 import com.chua.common.support.net.NetUtils;
+import com.chua.common.support.protocol.boot.ModuleType;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
@@ -51,16 +52,24 @@ public class UnifiedClientProperties {
     public UnifiedExecuter executer = new UnifiedExecuter();
 
 
-    private Map<SubscribeType, SubscribeOption> subscribe;
+    private Map<ModuleType, SubscribeOption> subscribe;
 
-    public static enum SubscribeType {
+    /**
+     * 获取订阅
+     *
+     * @param moduleType 模块类型
+     * @return {@link SubscribeOption}
+     */
+    public SubscribeOption getSubscribeOption(ModuleType moduleType) {
+        if(null == subscribe) {
+            return null;
+        }
 
-        /**
-         * 配置
-         */
-        CONFIG,
+        return subscribe.get(moduleType);
     }
 
+
+    @Data
     public static class SubscribeOption {
         /**
          * 订阅列表

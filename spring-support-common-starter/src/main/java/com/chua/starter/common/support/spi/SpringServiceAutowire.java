@@ -31,7 +31,10 @@ public class SpringServiceAutowire implements ServiceAutowire {
             return object;
         }
         AutowireCapableBeanFactory autowireCapableBeanFactory = applicationContext.getAutowireCapableBeanFactory();
-        autowireCapableBeanFactory.autowireBean(object);
+        try {
+            autowireCapableBeanFactory.autowireBean(object);
+        } catch (Exception ignored) {
+        }
         Class<?> aClass = object.getClass();
         ReflectionUtils.doWithFields(aClass, field -> {
             set(doInject(field, object, applicationContext), field, object);

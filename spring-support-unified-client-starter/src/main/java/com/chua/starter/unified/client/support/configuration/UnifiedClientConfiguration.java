@@ -9,7 +9,6 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.unified.client.support.properties.UnifiedClientProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -18,6 +17,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.EnvironmentAware;
+import org.springframework.core.env.Environment;
 
 import javax.annotation.Resource;
 
@@ -28,13 +29,13 @@ import javax.annotation.Resource;
  */
 @Slf4j
 @EnableConfigurationProperties(UnifiedClientProperties.class)
-public class UnifiedClientConfiguration implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware {
+public class UnifiedClientConfiguration implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware, EnvironmentAware {
 
     @Resource
     private UnifiedClientProperties unifiedClientProperties;
 
-    @Value("${spring.servlet.application:")
     private String appName;
+    private Environment environment;
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
@@ -46,6 +47,8 @@ public class UnifiedClientConfiguration implements BeanDefinitionRegistryPostPro
         if(!unifiedClientProperties.isOpen()) {
             return;
         }
+
+        this.appName = environment.getProperty("spring.application.name");
 
         UnifiedClientProperties.UnifiedExecuter executer = unifiedClientProperties.getExecuter();
         String protocol = unifiedClientProperties.getProtocol();
@@ -80,6 +83,7 @@ public class UnifiedClientConfiguration implements BeanDefinitionRegistryPostPro
     private void registryEnv(Protocol protocol1) {
         ProtocolClient protocolClient = protocol1.createClient();
         BootRequest request = new BootRequest();
+        request.setModuleType(ModuleType.EXECUTOR);
         request.setCommandType(CommandType.REGISTER);
         JSONObject jsonObject = new JSONObject();
         BeanMap beanMap = BeanMap.create(unifiedClientProperties.getExecuter());
@@ -99,5 +103,10 @@ public class UnifiedClientConfiguration implements BeanDefinitionRegistryPostPro
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         unifiedClientProperties = Binder.get(applicationContext.getEnvironment())
                 .bindOrCreate(UnifiedClientProperties.PRE, UnifiedClientProperties.class);
+    }
+
+    @Override
+    public void setEnvironment(Environment environment) {
+        this.environment = environment;
     }
 }

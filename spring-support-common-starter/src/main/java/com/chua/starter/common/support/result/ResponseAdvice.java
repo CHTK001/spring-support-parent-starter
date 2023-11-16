@@ -8,7 +8,6 @@ import com.chua.starter.common.support.exception.BusinessException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.core.MethodParameter;
@@ -31,7 +30,6 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
 import javax.servlet.ServletException;
-import javax.validation.ConstraintViolation;
 import java.sql.SQLSyntaxErrorException;
 import java.text.DecimalFormat;
 import java.util.concurrent.Callable;
@@ -57,20 +55,20 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
         return Result.failed(PARAM_ERROR, msg);
     }
 
-    /**
-     * RequestParam参数的校验
-     *
-     * @param e ConstraintViolationException
-     * @param <T> Result
-     * @return
-     */
-    @ExceptionHandler(ConstraintViolationException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public <T> Result<T> processException(javax.validation.ConstraintViolationException e) {
-        log.error("ConstraintViolationException:{}", e.getMessage());
-        String msg = e.getConstraintViolations().stream().map(ConstraintViolation::getMessage).collect(Collectors.joining("；"));
-        return Result.failed(PARAM_ERROR, msg);
-    }
+//    /**
+//     * RequestParam参数的校验
+//     *
+//     * @param e ConstraintViolationException
+//     * @param <T> Result
+//     * @return
+//     */
+//    @ExceptionHandler(ConstraintViolationException.class)
+//    @ResponseStatus(HttpStatus.BAD_REQUEST)
+//    public <T> Result<T> processException(javax.validation.ConstraintViolationException e) {
+//        log.error("ConstraintViolationException:{}", e.getMessage());
+//        String msg = e.getConstraintViolations().stream().map(ConstraintViolation::getMessage).collect(Collectors.joining("；"));
+//        return Result.failed(PARAM_ERROR, msg);
+//    }
 
     /**
      * RequestBody参数的校验

@@ -1,37 +1,34 @@
 package com.chua.starter.unified.server.support.controller;
 
-import com.alibaba.fastjson2.JSONObject;
-import com.chua.starter.unified.server.support.properties.UnifiedServerProperties;
-import com.chua.common.support.json.Json;
 import com.chua.common.support.protocol.boot.BootRequest;
 import com.chua.common.support.protocol.boot.BootResponse;
 import com.chua.common.support.protocol.boot.CommandType;
+import com.chua.common.support.protocol.boot.ModuleType;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.ThreadUtils;
+import com.chua.starter.unified.server.support.entity.RemoteRequest;
+import com.chua.starter.unified.server.support.properties.UnifiedServerProperties;
+import com.chua.starter.unified.server.support.resolver.ModuleResolver;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.Optional;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
-import static com.chua.common.support.constant.CommonConstant.EMPTY;
 
 /**
  * @author CH
  */
 @RestController
-@RequestMapping("/")
 public class UnifiedController implements InitializingBean, DisposableBean, Runnable {
 
     private ScheduledExecutorService executorService;
-    private List<String> ipPool = new CopyOnWriteArrayList<>();
+
 
     @Resource
     private UnifiedServerProperties unifiedServerProperties;
@@ -40,39 +37,28 @@ public class UnifiedController implements InitializingBean, DisposableBean, Runn
     /**
      * 注册
      *
-     * @param request 要求
+     * @param remoteRequest 请求
      * @return {@link BootResponse}
      */
-    @PostMapping("register")
-    public BootResponse register(@RequestBody BootRequest request) {
-        return new BootResponse();
-    }
-
-    /**
-     * 注册
-     *
-     * @param request 要求
-     * @return {@link BootResponse}
-     */
-    @PostMapping("unregister")
-    public BootResponse unregister(@RequestBody BootRequest request) {
-        return new BootResponse();
-    }
-
-    /**
-     * 心跳
-     *
-     * @param request 要求
-     * @return {@link BootResponse}
-     */
-    @PostMapping({"heart", "ping"})
-    public BootResponse heart(@RequestBody BootRequest request) {
-        if(request.getCommandType() == CommandType.PING) {
-            JSONObject jsonObject = Json.fromJson(request.getContent(), JSONObject.class);
-            ipPool.add(jsonObject.getString("host") + ":" + jsonObject.getString("port"));
-            return new BootResponse(CommandType.PONG, EMPTY);
+    @PostMapping
+    public BootResponse home(@RequestBody RemoteRequest remoteRequest) {
+        BootRequest request = remoteRequest.getRequest(unifiedServerProperties);
+        if(null == request) {
+            return BootResponse.notSupport();
         }
-        return new BootResponse();
+
+        CommandType commandType = request.getCommandType();
+        if(null == commandType) {
+            return BootResponse.notSupport();
+        }
+
+        ModuleType moduleType = request.getModuleType();
+        if(null == moduleType) {
+            return BootResponse.notSupport();
+        }
+
+        return Optional.ofNullable(ServiceProvider.of(ModuleResolver.class).getNewExtension(moduleType)
+                .resolve(request)).orElse(BootResponse.notSupport());
     }
 
     @Override
