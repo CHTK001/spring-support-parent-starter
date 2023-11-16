@@ -1,9 +1,9 @@
 package com.chua.starter.unified.client.support.configuration;
 
-import com.chua.common.support.protocol.boot.BootRequest;
-import com.chua.common.support.protocol.boot.ProtocolClient;
-import com.chua.common.support.protocol.boot.ProtocolServer;
-import com.chua.common.support.utils.MapUtils;
+import com.chua.common.support.function.Joiner;
+import com.chua.common.support.json.Json;
+import com.chua.common.support.protocol.boot.*;
+import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.Md5Utils;
 import com.chua.starter.common.support.processor.AnnotationInjectedBeanPostProcessor;
 import com.chua.starter.unified.client.support.annotation.ConfigValue;
@@ -11,7 +11,6 @@ import com.chua.starter.unified.client.support.entity.KeyValue;
 import com.chua.starter.unified.client.support.event.ConfigValueReceivedEvent;
 import com.chua.starter.unified.client.support.properties.UnifiedClientProperties;
 import com.google.common.base.Function;
-import com.google.common.base.Strings;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -21,17 +20,14 @@ import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.annotation.InjectionMetadata;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.origin.OriginTrackedValue;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ApplicationListener;
-import org.springframework.context.EnvironmentAware;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.MutablePropertySources;
-import org.springframework.core.env.PropertiesPropertySource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.util.ReflectionUtils;
 
@@ -132,6 +128,10 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
         if (!(environment instanceof ConfigurableEnvironment)) {
             return;
         }
+
+        if(!unifiedClientProperties.isOpen()) {
+            return;
+        }
         postProcessEnvironment((ConfigurableEnvironment) environment);
     }
 
@@ -145,28 +145,40 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
     }
 
     public void register(ConfigurableEnvironment environment, MutablePropertySources propertySources) {
-        Map<String, Object> req = new HashMap<>(12);
+        UnifiedClientProperties.SubscribeOption subscribeOption = unifiedClientProperties.getSubscribeOption(ModuleType.CONFIG);
+        doInjectSubscribe(subscribeOption, propertySources);
+        doSendSubscribe(subscribeOption);
+    }
 
+    private void doSendSubscribe(UnifiedClientProperties.SubscribeOption subscribeOption) {
+        boolean autoSend = subscribeOption.isAutoSend();
+        if(!autoSend) {
+            return;
+        }
+
+        Map<String, Object> req = new HashMap<>(12);
         renderData(req);
         renderI18n(req);
-//        protocolProvider.subscribe(subscribeName, dataType, req, value -> {
-//            log.info(">>>>>>>> 已从配置中心拉取订阅配置");
-//            List<PropertiesPropertySource> rs = new ArrayList<>();
-//            value.forEach((k, v) -> {
-//                PropertiesPropertySource propertiesPropertySource = new PropertiesPropertySource(k, MapUtils.asProp(v));
-//                rs.add(propertiesPropertySource);
-//            });
-//
-//            rs.sort((o1, o2) -> {
-//                int intValue1 = MapUtils.getIntValue(o1.getSource(), PluginMeta.ORDER, 0);
-//                int intValue2 = MapUtils.getIntValue(o2.getSource(), PluginMeta.ORDER, 0);
-//                return intValue2 - intValue1;
-//            });
-//
-//            for (PropertiesPropertySource propertiesPropertySource : rs) {
-//                propertySources.addFirst(propertiesPropertySource);
-//            }
-//        });
+        protocolClient.send(BootRequest.builder()
+                        .moduleType(ModuleType.CONFIG)
+                        .commandType(CommandType.REGISTER)
+                        .content(Json.toJson(req))
+                .build()
+        );
+
+    }
+
+    private void doInjectSubscribe(UnifiedClientProperties.SubscribeOption subscribeOption, MutablePropertySources propertySources) {
+        List<String> subscribe = subscribeOption.getSubscribe();
+        if(CollectionUtils.isEmpty(subscribe)) {
+            return;
+        }
+        BootResponse response = protocolClient.get(BootRequest.builder()
+                        .moduleType(ModuleType.CONFIG)
+                        .commandType(CommandType.SUBSCRIBE)
+                        .content(Joiner.on(",").join(subscribe))
+                .build()
+        );
     }
 
     /**
