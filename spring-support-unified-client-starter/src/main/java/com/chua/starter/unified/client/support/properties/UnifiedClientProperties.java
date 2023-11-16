@@ -78,7 +78,7 @@ public class UnifiedClientProperties {
         /**
          * 自动全部上报
          */
-        private boolean autoSend;
+        private boolean autoConfig;
     }
     @Data
     public static class UnifiedExecuter {
