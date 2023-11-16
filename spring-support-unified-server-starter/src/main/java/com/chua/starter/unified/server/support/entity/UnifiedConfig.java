@@ -23,6 +23,12 @@ public class UnifiedConfig implements Serializable {
     @TableField(value = "unified_config_name")
     @Size(max = 255,message = "配置名称最大长度要小于 255")
     private String unifiedConfigName;
+    /**
+     * 配置名称
+     */
+    @TableField(value = "unified_config_desc")
+    @Size(max = 255,message = "配置名称最大长度要小于 255")
+    private String unifiedConfigDesc;
 
     /**
      * 配置值
