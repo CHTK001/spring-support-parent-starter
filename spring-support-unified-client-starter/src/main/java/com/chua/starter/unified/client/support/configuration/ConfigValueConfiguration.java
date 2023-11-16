@@ -1,5 +1,8 @@
 package com.chua.starter.unified.client.support.configuration;
 
+import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONArray;
+import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.function.Joiner;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.protocol.boot.*;
@@ -20,14 +23,13 @@ import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.annotation.InjectionMetadata;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.origin.OriginTrackedValue;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ApplicationListener;
 import org.springframework.core.MethodParameter;
-import org.springframework.core.env.ConfigurableEnvironment;
-import org.springframework.core.env.Environment;
-import org.springframework.core.env.MutablePropertySources;
+import org.springframework.core.env.*;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.util.ReflectionUtils;
 
@@ -116,7 +118,8 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
         this.protocolServer = this.beanFactory.getBean(ProtocolServer.class);
 //        this.protocolServer.addListen();
         this.protocolClient = this.beanFactory.getBean(ProtocolClient.class);
-        this.unifiedClientProperties = this.beanFactory.getBean(UnifiedClientProperties.class);
+        unifiedClientProperties = Binder.get(this.beanFactory.getBean(Environment.class))
+                .bindOrCreate(UnifiedClientProperties.PRE, UnifiedClientProperties.class);
     }
 
     @Override
@@ -146,6 +149,9 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
 
     public void register(ConfigurableEnvironment environment, MutablePropertySources propertySources) {
         UnifiedClientProperties.SubscribeOption subscribeOption = unifiedClientProperties.getSubscribeOption(ModuleType.CONFIG);
+        if(null == subscribeOption) {
+            return;
+        }
         doInjectSubscribe(subscribeOption, propertySources);
         doSendSubscribe(subscribeOption);
     }
@@ -176,9 +182,33 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
         BootResponse response = protocolClient.get(BootRequest.builder()
                         .moduleType(ModuleType.CONFIG)
                         .commandType(CommandType.SUBSCRIBE)
+                        .appName(environment.getProperty("spring.application.name"))
                         .content(Joiner.on(",").join(subscribe))
                 .build()
         );
+        if(response.getCommandType() != CommandType.RESPONSE) {
+            log.error("订阅: {}失败 => {}", subscribe, response.getContent());
+            return;
+        }
+
+        log.info("订阅: {} 成功", subscribe);
+        JSONArray jsonArray = JSON.parseArray(response.getContent());
+        int size = jsonArray.size();
+        for (int i = 0; i < size; i++) {
+            register((JSONObject)jsonArray.get(i), propertySources);
+        }
+    }
+
+    /**
+     * 注册
+     *
+     * @param item               o
+     * @param propertySources 财产来源
+     */
+    private void register(JSONObject item, MutablePropertySources propertySources) {
+        String unifiedAppname = item.getString("unifiedAppname");
+        PropertySource propertySource = new MapPropertySource(unifiedAppname, item);
+        propertySources.addFirst(propertySource);
     }
 
     /**

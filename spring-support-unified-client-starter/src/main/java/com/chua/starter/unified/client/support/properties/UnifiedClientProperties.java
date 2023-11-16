@@ -90,7 +90,7 @@ public class UnifiedClientProperties {
         /**
          * 客户端绑定的端口
          */
-        private int port = -1;
+        private int port = 18765;
 
         public int getPort() {
             if(port < 1) {
