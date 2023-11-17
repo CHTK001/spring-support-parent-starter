@@ -27,6 +27,7 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
+import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
 
@@ -129,8 +130,8 @@ public class TempProvider {
         userInfoVO.setUserSex(MapUtils.getInteger(userLoginInfo.getExt(), "userGender"));
         userInfoVO.setUserMarker(MapUtils.getString(userLoginInfo.getExt(), "userMarker"));
         userInfoVO.setAvatar(MapUtils.getString(userLoginInfo.getExt(), "userAvatar"));
-        userInfoVO.setRoles(userLoginInfo.getRoles());
-        userInfoVO.setPerms(userLoginInfo.getPermission());
+        userInfoVO.setRoles(Optional.ofNullable(userLoginInfo.getRoles()).orElse(Collections.emptySet()));
+        userInfoVO.setPerms(Optional.ofNullable(userLoginInfo.getPermission()).orElse(Collections.emptySet()));
         return userInfoVO;
     }
 

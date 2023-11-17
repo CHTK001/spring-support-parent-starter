@@ -53,8 +53,8 @@ public class UnifiedConfigController {
      * @return 分页结果
      */
     @ResponseBody
-    @GetMapping("delete/{id}")
-    public ResultData<Boolean> delete(@PathVariable("id") String id) {
+    @GetMapping("delete")
+    public ResultData<Boolean> delete(String id) {
         if (null == id) {
             return ResultData.failure(PARAM_ERROR, "主键不能为空");
         }
@@ -87,6 +87,10 @@ public class UnifiedConfigController {
     public ResultData<Boolean> save(@Valid @RequestBody UnifiedConfig t, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+        }
+
+        if(null != t.getUnifiedConfigId()) {
+            return ResultData.success(unifiedConfigService.updateById(t));
         }
         return ResultData.success(unifiedConfigService.save(t));
     }

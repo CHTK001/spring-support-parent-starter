@@ -43,6 +43,12 @@ public class UnifiedConfig implements Serializable {
     private String unifiedConfigDesc;
 
     /**
+     * 状态: 0： 禁用
+     */
+    @TableField(value = "unified_config_status")
+    private Integer unifiedConfigStatus;
+
+    /**
      * 配置环境
      */
     @TableField(value = "unified_config_profile")
