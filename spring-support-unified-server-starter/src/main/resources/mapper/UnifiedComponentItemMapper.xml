@@ -6,13 +6,12 @@
     <!--@Table unified_component_item-->
     <id column="unified_component_item_id" jdbcType="INTEGER" property="unifiedComponentItemId" />
     <result column="unified_component_id" jdbcType="VARCHAR" property="unifiedComponentId" />
-    <result column="unified_component_item_appname" jdbcType="VARCHAR" property="unifiedComponentItemAppname" />
+    <result column="unified_appname" jdbcType="VARCHAR" property="unifiedAppname" />
     <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
     <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
-    unified_component_item_id, unified_component_id, unified_component_item_appname, 
-    create_time, update_time
+    unified_component_item_id, unified_component_id, unified_appname, create_time, update_time
   </sql>
 </mapper>

@@ -7,13 +7,13 @@
     <id column="unified_executer_id" jdbcType="INTEGER" property="unifiedExecuterId" />
     <result column="unified_executer_name" jdbcType="VARCHAR" property="unifiedExecuterName" />
     <result column="unified_executer_type" jdbcType="VARCHAR" property="unifiedExecuterType" />
-    <result column="unified_executer_appname" jdbcType="VARCHAR" property="unifiedExecuterAppname" />
+    <result column="unified_appname" jdbcType="VARCHAR" property="unifiedAppname" />
     <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
     <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
-    unified_executer_id, unified_executer_name, unified_executer_type, unified_executer_appname, 
+    unified_executer_id, unified_executer_name, unified_executer_type, unified_appname, 
     create_time, update_time
   </sql>
 </mapper>
