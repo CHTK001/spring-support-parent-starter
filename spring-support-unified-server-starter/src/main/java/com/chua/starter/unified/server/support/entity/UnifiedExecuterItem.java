@@ -4,15 +4,21 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import java.io.Serializable;
-import java.util.Date;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Size;
 import lombok.Data;
 
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+import java.io.Serializable;
+import java.util.Date;
+
 /**
-    * 执行器子项
-    */
+ *    
+ * @author CH
+ */
+
+/**
+ * 执行器子项
+ */
 @Data
 @TableName(value = "unified_executer_item")
 public class UnifiedExecuterItem implements Serializable {
@@ -24,21 +30,21 @@ public class UnifiedExecuterItem implements Serializable {
      * 执行器ID
      */
     @TableField(value = "unified_executer_id")
-    @Size(max = 255,message = "执行器ID最大长度要小于 255")
+    @Size(max = 255, message = "执行器ID最大长度要小于 255")
     private String unifiedExecuterId;
 
     /**
      * 地址
      */
     @TableField(value = "unified_executer_item_host")
-    @Size(max = 255,message = "地址最大长度要小于 255")
+    @Size(max = 255, message = "地址最大长度要小于 255")
     private String unifiedExecuterItemHost;
 
     /**
      * 端口
      */
     @TableField(value = "unified_executer_item_port")
-    @Size(max = 255,message = "端口最大长度要小于 255")
+    @Size(max = 255, message = "端口最大长度要小于 255")
     private String unifiedExecuterItemPort;
 
     /**

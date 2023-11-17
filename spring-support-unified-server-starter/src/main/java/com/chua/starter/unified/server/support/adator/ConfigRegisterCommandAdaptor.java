@@ -10,8 +10,6 @@ import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.ObjectUtils;
 import com.chua.starter.unified.server.support.entity.UnifiedConfig;
 import com.chua.starter.unified.server.support.service.UnifiedConfigService;
-import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.annotation.Resource;
@@ -47,6 +45,7 @@ public class ConfigRegisterCommandAdaptor implements ConfigCommandAdaptor{
                     UnifiedConfig item = new UnifiedConfig();
                     item.setCreateTime(new Date());
                     item.setUnifiedAppname(request.getAppName());
+                    item.setUnifiedConfigProfile(request.getProfile());
                     item.setUnifiedConfigName(ObjectUtils.defaultIfNull(k, ""));
                     item.setUnifiedConfigValue(ObjectUtils.defaultIfNull(v, "").toString());
                     item.setUnifiedConfigDesc(MapUtils.getString(transfer, item.getUnifiedConfigName()));

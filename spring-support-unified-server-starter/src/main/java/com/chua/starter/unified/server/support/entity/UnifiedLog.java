@@ -4,12 +4,16 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import java.io.Serializable;
-import java.util.Date;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Size;
 import lombok.Data;
 
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+import java.io.Serializable;
+import java.util.Date;
+
+/**
+ * @author CH
+ */
 @Data
 @TableName(value = "unified_log")
 public class UnifiedLog implements Serializable {
@@ -21,21 +25,21 @@ public class UnifiedLog implements Serializable {
      * 模块类型
      */
     @TableField(value = "unified_log_type")
-    @Size(max = 255,message = "模块类型最大长度要小于 255")
+    @Size(max = 255, message = "模块类型最大长度要小于 255")
     private String unifiedLogType;
 
     /**
      * 日志信息
      */
     @TableField(value = "unified_log_msg")
-    @Size(max = 255,message = "日志信息最大长度要小于 255")
+    @Size(max = 255, message = "日志信息最大长度要小于 255")
     private String unifiedLogMsg;
 
     /**
      * 状态
      */
     @TableField(value = "unified_log_code")
-    @Size(max = 255,message = "状态最大长度要小于 255")
+    @Size(max = 255, message = "状态最大长度要小于 255")
     private String unifiedLogCode;
 
     /**
