@@ -35,6 +35,7 @@ public class ConfigSubscribeCommandAdaptor implements ConfigCommandAdaptor{
         }
         List<UnifiedConfig> list = unifiedConfigService.list(Wrappers.<UnifiedConfig>lambdaQuery()
                 .eq(UnifiedConfig::getUnifiedConfigProfile, request.getProfile())
+                .eq(UnifiedConfig::getUnifiedConfigStatus, 1)
                 .in(UnifiedConfig::getUnifiedAppname, Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(content))
         );
         return BootResponse.builder()
