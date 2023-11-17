@@ -44,6 +44,7 @@ public class ConfigRegisterCommandAdaptor implements ConfigCommandAdaptor{
                 .forEach((k, v) -> {
                     UnifiedConfig item = new UnifiedConfig();
                     item.setCreateTime(new Date());
+                    item.setUnifiedConfigStatus(1);
                     item.setUnifiedAppname(request.getAppName());
                     item.setUnifiedConfigProfile(request.getProfile());
                     item.setUnifiedConfigName(ObjectUtils.defaultIfNull(k, ""));
