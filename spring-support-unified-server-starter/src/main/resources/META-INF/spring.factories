@@ -1,2 +1,4 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
   com.chua.starter.unified.server.support.configuration.UnifiedServerConfiguration
+org.springframework.boot.env.EnvironmentPostProcessor=\
+  com.chua.starter.unified.server.support.configuration.UnifiedEnvironmentPostProcessor
