@@ -17,7 +17,7 @@ import static com.chua.starter.common.support.result.ReturnCode.PARAM_ERROR;
  *
  * @author CH
  */
-public abstract class AbstractBaseController<S extends IService<T>, T> {
+public abstract class BaseController<S extends IService<T>, T> {
 
     /**
      * 分页查询数据
