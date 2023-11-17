@@ -169,6 +169,7 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
                         .moduleType(ModuleType.CONFIG)
                         .commandType(CommandType.REGISTER)
                         .appName(environment.getProperty("spring.application.name"))
+                        .profile(environment.getProperty("spring.profiles.active", "default"))
                         .content(Json.toJson(req))
                 .build()
         );
@@ -184,6 +185,7 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
                         .moduleType(ModuleType.CONFIG)
                         .commandType(CommandType.SUBSCRIBE)
                         .appName(environment.getProperty("spring.application.name"))
+                        .profile(environment.getProperty("spring.profiles.active", "default"))
                         .content(Joiner.on(",").join(subscribe))
                 .build()
         );

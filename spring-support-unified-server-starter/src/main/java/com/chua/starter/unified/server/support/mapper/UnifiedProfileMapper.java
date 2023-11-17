@@ -5,9 +5,8 @@ import com.chua.starter.unified.server.support.entity.UnifiedProfile;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- *    
  * @author CH
- */     
+ */
 @Mapper
 public interface UnifiedProfileMapper extends BaseMapper<UnifiedProfile> {
 }

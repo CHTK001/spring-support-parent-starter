@@ -89,6 +89,7 @@ public class UnifiedClientConfiguration implements BeanDefinitionRegistryPostPro
         UnifiedClientProperties.UnifiedExecuter executer = unifiedClientProperties.getExecuter();
         jsonObject.putAll(BeanMap.create(executer));
         request.setAppName(appName);
+        request.setProfile(environment.getProperty("spring.profiles.active", "default"));
         request.setContent(jsonObject.toJSONString(JSONWriter.Feature.WriteEnumsUsingName));
         BootResponse bootResponse = protocolClient.send(request);
         log.info("注册结果: {}", bootResponse);

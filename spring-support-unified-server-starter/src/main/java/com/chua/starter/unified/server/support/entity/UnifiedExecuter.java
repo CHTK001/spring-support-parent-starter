@@ -4,15 +4,21 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import java.io.Serializable;
-import java.util.Date;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Size;
 import lombok.Data;
 
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+import java.io.Serializable;
+import java.util.Date;
+
 /**
-    * 执行器
-    */
+ *    
+ * @author CH
+ */
+
+/**
+ * 执行器
+ */
 @Data
 @TableName(value = "unified_executer")
 public class UnifiedExecuter implements Serializable {
@@ -24,22 +30,22 @@ public class UnifiedExecuter implements Serializable {
      * 执行器名称
      */
     @TableField(value = "unified_executer_name")
-    @Size(max = 255,message = "执行器名称最大长度要小于 255")
+    @Size(max = 255, message = "执行器名称最大长度要小于 255")
     private String unifiedExecuterName;
 
     /**
      * 执行器地址类型：0=自动注册、1=手动录入
      */
     @TableField(value = "unified_executer_type")
-    @Size(max = 255,message = "执行器地址类型：0=自动注册、1=手动录入最大长度要小于 255")
+    @Size(max = 255, message = "执行器地址类型：0=自动注册、1=手动录入最大长度要小于 255")
     private String unifiedExecuterType;
 
     /**
      * 执行器应用名称
      */
-    @TableField(value = "unified_executer_appname")
-    @Size(max = 255,message = "执行器应用名称最大长度要小于 255")
-    private String unifiedExecuterAppname;
+    @TableField(value = "unified_appname")
+    @Size(max = 255, message = "执行器应用名称最大长度要小于 255")
+    private String unifiedAppname;
 
     /**
      * 创建时间

@@ -4,6 +4,9 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.chua.starter.unified.server.support.entity.UnifiedServiceItem;
 import org.apache.ibatis.annotations.Mapper;
 
+/**
+ * @author CH
+ */
 @Mapper
 public interface UnifiedServiceItemMapper extends BaseMapper<UnifiedServiceItem> {
 }

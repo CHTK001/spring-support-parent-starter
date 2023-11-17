@@ -7,13 +7,15 @@
     <id column="unified_config_id" jdbcType="INTEGER" property="unifiedConfigId" />
     <result column="unified_config_name" jdbcType="VARCHAR" property="unifiedConfigName" />
     <result column="unified_config_value" jdbcType="VARCHAR" property="unifiedConfigValue" />
+    <result column="unified_config_desc" jdbcType="VARCHAR" property="unifiedConfigDesc" />
+    <result column="unified_config_profile" jdbcType="VARCHAR" property="unifiedConfigProfile" />
     <result column="unified_appname" jdbcType="VARCHAR" property="unifiedAppname" />
     <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
     <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
-    unified_config_id, unified_config_name, unified_config_value, unified_appname, create_time, 
-    update_time
+    unified_config_id, unified_config_name, unified_config_value, unified_config_desc, 
+    unified_config_profile, unified_appname, create_time, update_time
   </sql>
 </mapper>

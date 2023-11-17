@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.result;
 
+import com.chua.common.support.lang.code.ResultCode;
 import com.chua.common.support.lang.page.Page;
 import com.chua.common.support.objects.definition.element.TypeDescribe;
 import com.chua.common.support.utils.ClassUtils;
@@ -10,6 +11,7 @@ import lombok.NoArgsConstructor;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import static com.chua.starter.common.support.result.ReturnCode.*;
 
@@ -128,11 +130,11 @@ public class ReturnPageResult<T> {
         if (ClassUtils.isAssignableFrom(data, "com.baomidou.mybatisplus.core.metadata.IPage")) {
             TypeDescribe typeDescribe = TypeDescribe.create(data);
             return ok(PageResult.<T>builder()
-                    .page(typeDescribe.getMethodDescribe("getCurrent").executeSelf(int.class))
-                    .pageSize(typeDescribe.getMethodDescribe("getSize").executeSelf(int.class))
+                    .page(Optional.ofNullable(typeDescribe.getMethodDescribe("getCurrent").executeSelf(int.class)).orElse(1))
+                    .pageSize(Optional.ofNullable(typeDescribe.getMethodDescribe("getSize").executeSelf(int.class)).orElse(10))
                     .data((List<T>) typeDescribe.getMethodDescribe("getRecords").executeSelf())
-                    .total(typeDescribe.getMethodDescribe("getTotal").executeSelf(long.class))
-                    .totalPages(typeDescribe.getMethodDescribe("getPages").executeSelf(int.class))
+                    .total(Optional.ofNullable(typeDescribe.getMethodDescribe("getTotal").executeSelf(long.class)).orElse(0L))
+                    .totalPages(Optional.ofNullable(typeDescribe.getMethodDescribe("getPages").executeSelf(int.class)).orElse(0))
                     .build());
         }
         return ok(null, "");
@@ -200,8 +202,8 @@ public class ReturnPageResult<T> {
      * @param <T>  类型
      * @return 结果
      */
-    public static <T> ReturnPageResult<T> illegal(PageResult<T> data, String msg) {
-        return new ReturnPageResult<>(PARAM_ERROR.getCode(), null, msg);
+    public static <T> ReturnPageResult<T> illegal(ResultCode data, String msg) {
+        return new ReturnPageResult<>(data.getCode(), null, msg);
     }
 
     /**
@@ -212,7 +214,7 @@ public class ReturnPageResult<T> {
      * @return 结果
      */
     public static <T> ReturnPageResult<T> illegal(PageResult<T> data) {
-        return illegal(data, "");
+        return illegal(PARAM_ERROR, "");
     }
 
     /**
@@ -223,7 +225,7 @@ public class ReturnPageResult<T> {
      * @return 结果
      */
     public static <T> ReturnPageResult<T> illegal(String message) {
-        return illegal(null, message);
+        return new ReturnPageResult<>(PARAM_ERROR.getCode(), null, message);
     }
 
     /**
@@ -233,7 +235,7 @@ public class ReturnPageResult<T> {
      * @return 结果
      */
     public static <T> ReturnPageResult<T> illegal() {
-        return illegal(null, null);
+        return new ReturnPageResult<>(PARAM_ERROR.getCode(), null, "");
     }
 
     /**

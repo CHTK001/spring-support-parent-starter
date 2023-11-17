@@ -39,7 +39,7 @@ public class UnifiedExecuterServiceImpl extends ServiceImpl<UnifiedExecuterMappe
             return;
         }
         unifiedExecuter.setUnifiedExecuterName(request.getAppName());
-        unifiedExecuter.setUnifiedExecuterAppname(request.getAppName());
+        unifiedExecuter.setUnifiedAppname(request.getAppName());
         unifiedExecuter.setUpdateTime(new Date());
         Integer unifiedExecuterId = unifiedExecuter.getUnifiedExecuterId();
         if(null == unifiedExecuterId) {

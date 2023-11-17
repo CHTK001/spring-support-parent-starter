@@ -4,12 +4,16 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import java.io.Serializable;
-import java.util.Date;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Size;
 import lombok.Data;
 
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+import java.io.Serializable;
+import java.util.Date;
+
+/**
+ * @author CH
+ */
 @Data
 @TableName(value = "unified_service_item")
 public class UnifiedServiceItem implements Serializable {
@@ -21,14 +25,14 @@ public class UnifiedServiceItem implements Serializable {
      * SPIID
      */
     @TableField(value = "unified_service_id")
-    @Size(max = 255,message = "SPIID最大长度要小于 255")
+    @Size(max = 255, message = "SPIID最大长度要小于 255")
     private String unifiedServiceId;
 
     /**
      * 安装的应用
      */
     @TableField(value = "unified_service_item_appname")
-    @Size(max = 255,message = "安装的应用最大长度要小于 255")
+    @Size(max = 255, message = "安装的应用最大长度要小于 255")
     private String unifiedServiceItemAppname;
 
     /**
