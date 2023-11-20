@@ -6,14 +6,19 @@
     <!--@Table unified_mybatis-->
     <id column="unified_mybatis_id" jdbcType="INTEGER" property="unifiedMybatisId" />
     <result column="unified_mybatis_name" jdbcType="VARCHAR" property="unifiedMybatisName" />
-    <result column="unified_mybatis_value" jdbcType="VARCHAR" property="unifiedMybatisValue" />
+    <result column="unified_mybatis_sql" jdbcType="VARCHAR" property="unifiedMybatisSql" />
+    <result column="unified_mybatis_sql_type" jdbcType="VARCHAR" property="unifiedMybatisSqlType" />
+    <result column="unified_mybatic_model_type" jdbcType="VARCHAR" property="unifiedMybaticModelType" />
+    <result column="unified_mybatic_mapper_type" jdbcType="VARCHAR" property="unifiedMybaticMapperType" />
+    <result column="unified_mybatis_profile" jdbcType="VARCHAR" property="unifiedMybatisProfile" />
     <result column="unified_appname" jdbcType="VARCHAR" property="unifiedAppname" />
     <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
     <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
-    unified_mybatis_id, unified_mybatis_name, unified_mybatis_value, unified_appname, 
-    create_time, update_time
+    unified_mybatis_id, unified_mybatis_name, unified_mybatis_sql, unified_mybatis_sql_type, 
+    unified_mybatic_model_type, unified_mybatic_mapper_type, unified_mybatis_profile, 
+    unified_appname, create_time, update_time
   </sql>
 </mapper>
