@@ -54,11 +54,16 @@ public class UnifiedClientConfiguration implements BeanDefinitionRegistryPostPro
 
         UnifiedClientProperties.UnifiedExecuter executer = unifiedClientProperties.getExecuter();
         String protocol = unifiedClientProperties.getProtocol();
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.putAll(BeanMap.create(executer));
+        jsonObject.put(SUBSCRIBE, unifiedClientProperties.getSubscribe());
         BootOption bootOption = BootOption.builder()
                 .encryptionSchema(unifiedClientProperties.getEncryptionSchema())
                 .encryptionKey(unifiedClientProperties.getEncryptionKey())
                 .address(unifiedClientProperties.getAddress())
                 .appName(appName)
+                .ext(jsonObject)
+                .profile(environment.getProperty("spring.profiles.active", "default"))
                 .serverOption(ServerOption.builder().port(executer.getPort()).host(executer.getHost()).build())
                 .build();
         Protocol protocol1 = ServiceProvider.of(Protocol.class).getNewExtension(protocol, bootOption);
@@ -89,8 +94,8 @@ public class UnifiedClientConfiguration implements BeanDefinitionRegistryPostPro
         BootRequest request = new BootRequest();
         request.setModuleType(ModuleType.EXECUTOR);
         request.setCommandType(CommandType.REGISTER);
-        JSONObject jsonObject = new JSONObject();
         UnifiedClientProperties.UnifiedExecuter executer = unifiedClientProperties.getExecuter();
+        JSONObject jsonObject = new JSONObject();
         jsonObject.putAll(BeanMap.create(executer));
         jsonObject.put(SUBSCRIBE, unifiedClientProperties.getSubscribe());
         request.setAppName(appName);

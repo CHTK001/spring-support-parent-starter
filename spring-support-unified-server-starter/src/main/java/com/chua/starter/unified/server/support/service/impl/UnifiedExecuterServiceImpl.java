@@ -116,6 +116,12 @@ public class UnifiedExecuterServiceImpl extends ServiceImpl<UnifiedExecuterMappe
         return unifiedExecuterPage;
     }
 
+    @Override
+    public Integer getIdByName(String appName) {
+        UnifiedExecuter unifiedExecuter = getOne(Wrappers.<UnifiedExecuter>lambdaQuery().eq(UnifiedExecuter::getUnifiedAppname, appName));
+        return null == unifiedExecuter ? null : unifiedExecuter.getUnifiedExecuterId();
+    }
+
     private void checkItem(UnifiedExecuter t) {
         List<UnifiedExecuterItem> item = t.getItem();
         if(ONE_STR.equalsIgnoreCase(t.getUnifiedExecuterType()) && CollectionUtils.isNotEmpty(item)) {
