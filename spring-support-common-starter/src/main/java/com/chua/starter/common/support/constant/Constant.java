@@ -15,6 +15,7 @@ public interface Constant {
 
     String ADMIN = "ADMIN";
     String SYSTEM = "system";
+    String EXECUTER = "executer";
     String PARAM = "param";
     String CONNECT = "connect";
     String DISCONNECT = "disconnect";
