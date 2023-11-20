@@ -8,6 +8,7 @@ import com.chua.common.support.protocol.boot.BootRequest;
 import com.chua.common.support.protocol.boot.BootResponse;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.ObjectUtils;
+import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.unified.server.support.entity.UnifiedConfig;
 import com.chua.starter.unified.server.support.service.UnifiedConfigService;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -35,30 +36,47 @@ public class ConfigRegisterCommandAdaptor implements ConfigCommandAdaptor{
 
     @Override
     public BootResponse resolve(BootRequest request) {
-        String content = request.getContent();
-        JSONObject jsonObject = JSON.parseObject(content);
-        List<UnifiedConfig> configList = new LinkedList<>();
+        ThreadUtils.newStaticThreadPool()
+                .execute(() -> {
+                    try {
+                        String content = request.getContent();
+                        JSONObject jsonObject = JSON.parseObject(content);
+                        List<UnifiedConfig> configList = new LinkedList<>();
 
-        JSONObject transfer = jsonObject.getJSONObject("transfer");
-        Optional.ofNullable(jsonObject.getJSONObject("data")).orElse(new JSONObject())
-                .forEach((k, v) -> {
-                    UnifiedConfig item = new UnifiedConfig();
-                    item.setCreateTime(new Date());
-                    item.setUnifiedConfigStatus(1);
-                    item.setUnifiedAppname(request.getAppName());
-                    item.setUnifiedConfigProfile(request.getProfile());
-                    item.setUnifiedConfigName(ObjectUtils.defaultIfNull(k, ""));
-                    item.setUnifiedConfigValue(ObjectUtils.defaultIfNull(v, "").toString());
-                    item.setUnifiedConfigDesc(MapUtils.getString(transfer, item.getUnifiedConfigName()));
-                    configList.add(item);
+                        JSONObject transfer = jsonObject.getJSONObject("transfer");
+                        Optional.ofNullable(jsonObject.getJSONObject("data")).orElse(new JSONObject())
+                                .forEach((k, v) -> {
+                                    if(v instanceof JSONObject) {
+                                        ((JSONObject) v).forEach((k1 , v1) -> {
+                                            UnifiedConfig item = new UnifiedConfig();
+                                            if(null != k) {
+                                                item.setUnfiedConfigFrom(k.length() > 500 ? k.substring(0, 490) : k);
+                                            }
+                                            item.setCreateTime(new Date());
+                                            item.setUnifiedConfigStatus(1);
+                                            item.setUnifiedAppname(request.getAppName());
+                                            item.setUnifiedConfigProfile(request.getProfile());
+                                            item.setUnifiedConfigName(ObjectUtils.defaultIfNull(k1, ""));
+                                            item.setUnifiedConfigValue(ObjectUtils.defaultIfNull(v1, "").toString());
+                                            item.setUnifiedConfigDesc(MapUtils.getString(transfer, item.getUnifiedConfigName()));
+                                            configList.add(item);
+                                        });
+                                    }
+                                });
+
+                        transactionTemplate.execute(status -> {
+                            unifiedConfigService.remove(Wrappers.<UnifiedConfig>lambdaQuery()
+                                    .eq(UnifiedConfig::getUnifiedAppname, request.getAppName())
+                                    .eq(UnifiedConfig::getUnifiedConfigProfile, request.getProfile())
+                            );
+                            unifiedConfigService.saveBatch(configList );
+                            return true;
+                        });
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
                 });
-
-        transactionTemplate.execute(status -> {
-            unifiedConfigService.remove(Wrappers.<UnifiedConfig>lambdaQuery().eq(UnifiedConfig::getUnifiedAppname, request.getAppName()));
-            unifiedConfigService.saveBatch(configList );
-            return true;
-        });
-
         return BootResponse.empty();
     }
 }

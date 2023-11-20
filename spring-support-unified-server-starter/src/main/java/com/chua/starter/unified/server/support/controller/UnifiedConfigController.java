@@ -3,8 +3,10 @@ package com.chua.starter.unified.server.support.controller;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.chua.common.support.function.Splitter;
 import com.chua.starter.common.support.result.ResultData;
 import com.chua.starter.common.support.result.ReturnPageResult;
+import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.mybatis.entity.DelegatePage;
 import com.chua.starter.unified.server.support.entity.UnifiedConfig;
 import com.chua.starter.unified.server.support.service.UnifiedConfigService;
@@ -13,6 +15,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.Date;
 
 import static com.chua.starter.common.support.result.ReturnCode.PARAM_ERROR;
 
@@ -53,12 +56,12 @@ public class UnifiedConfigController {
      * @return 分页结果
      */
     @ResponseBody
-    @GetMapping("delete")
+    @DeleteMapping("delete")
     public ResultData<Boolean> delete(String id) {
         if (null == id) {
             return ResultData.failure(PARAM_ERROR, "主键不能为空");
         }
-        return ResultData.success(unifiedConfigService.removeById(id));
+        return ResultData.success(unifiedConfigService.removeBatchByIds(Splitter.on(",").trimResults().omitEmptyStrings().splitToSet(id)));
     }
 
     /**
@@ -69,11 +72,19 @@ public class UnifiedConfigController {
      */
     @PostMapping("update")
     @ResponseBody
-    public ResultData<Boolean> updateById(@Valid @RequestBody UnifiedConfig t, BindingResult bindingResult) {
+    public ReturnResult<Boolean> updateById(@Valid @RequestBody UnifiedConfig t, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnResult.illegal(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
-        return ResultData.success(unifiedConfigService.updateById(t));
+        t.setUpdateTime(new Date());
+        boolean b = unifiedConfigService.updateById(t);
+        if(!b) {
+            return ReturnResult.illegal("更新失败, 请稍后重试");
+        }
+        if(t.getUnifiedConfigStatus().equals(1)) {
+            unifiedConfigService.notifyConfig(t);
+        }
+        return ReturnResult.ok(true);
     }
 
     /**
@@ -89,9 +100,6 @@ public class UnifiedConfigController {
             return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
 
-        if(null != t.getUnifiedConfigId()) {
-            return ResultData.success(unifiedConfigService.updateById(t));
-        }
-        return ResultData.success(unifiedConfigService.save(t));
+        return unifiedConfigService.saveOrUpdateConfig(t);
     }
 }

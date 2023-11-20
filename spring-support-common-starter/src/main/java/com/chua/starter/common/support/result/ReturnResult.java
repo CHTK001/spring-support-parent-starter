@@ -210,6 +210,17 @@ public class ReturnResult<T> {
     /**
      * 初始化
      *
+     * @param resultCode 数据
+     * @param msg  消息
+     * @param <T>  类型
+     * @return 结果
+     */
+    public static <T> ReturnResult<T> illegal(ResultCode resultCode, String msg) {
+        return new ReturnResult<>(resultCode.getCode(), null, msg);
+    }
+    /**
+     * 初始化
+     *
      * @param msg  消息
      * @param <T>  类型
      * @return 结果

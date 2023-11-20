@@ -22,6 +22,13 @@ public class UnifiedConfig implements Serializable {
     private Integer unifiedConfigId;
 
     /**
+     * 配置数据来源
+     */
+    @TableField(value = "unfied_config_from")
+    @Size(max = 500, message = "配置数据来源最大长度要小于 500")
+    private String unfiedConfigFrom;
+
+    /**
      * 配置名称
      */
     @TableField(value = "unified_config_name")
