@@ -5,11 +5,7 @@ import com.chua.common.support.protocol.boot.BootRequest;
 import com.chua.common.support.protocol.boot.BootResponse;
 import com.chua.common.support.protocol.boot.CommandType;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.starter.unified.server.support.adator.ConfigCommandAdaptor;
-import com.chua.starter.unified.server.support.adator.ExecutorCommandAdaptor;
-import com.chua.starter.unified.server.support.service.UnifiedConfigService;
-
-import javax.annotation.Resource;
+import com.chua.starter.unified.server.support.resolver.adator.ConfigCommandAdaptor;
 
 /**
  * 配置模块解析器
