@@ -4,16 +4,12 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import lombok.Data;
-
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.Date;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+import lombok.Data;
 
-/**
- * @author CH
- */
 @Data
 @TableName(value = "unified_mybatis")
 public class UnifiedMybatis implements Serializable {
@@ -29,18 +25,46 @@ public class UnifiedMybatis implements Serializable {
     private String unifiedMybatisName;
 
     /**
+     * 配置名称
+     */
+    @TableField(value = "unified_mybatis_desc")
+    @Size(max = 255, message = "描述")
+    private String unifiedMybatisDesc;
+
+    /**
+     * 配置SQL
+     */
+    @TableField(value = "unified_mybatis_sql")
+    @Size(max = 255, message = "配置SQL最大长度要小于 255")
+    private String unifiedMybatisSql;
+
+    /**
+     * SQL类型； sql, xml
+     */
+    @TableField(value = "unified_mybatis_sql_type")
+    @Size(max = 255, message = "SQL类型； sql, xml最大长度要小于 255")
+    private String unifiedMybatisSqlType;
+
+    /**
+     * 实体类
+     */
+    @TableField(value = "unified_mybatic_model_type")
+    @Size(max = 255, message = "实体类最大长度要小于 255")
+    private String unifiedMybaticModelType;
+
+    /**
+     * Mapper类型
+     */
+    @TableField(value = "unified_mybatic_mapper_type")
+    @Size(max = 255, message = "Mapper类型最大长度要小于 255")
+    private String unifiedMybaticMapperType;
+
+    /**
      * 环境
      */
     @TableField(value = "unified_mybatis_profile")
-    @Size(max = 255, message = "环境")
+    @Size(max = 255, message = "环境最大长度要小于 255")
     private String unifiedMybatisProfile;
-
-    /**
-     * 配置值
-     */
-    @TableField(value = "unified_mybatis_value")
-    @Size(max = 255, message = "配置值最大长度要小于 255")
-    private String unifiedMybatisValue;
 
     /**
      * 应用名称

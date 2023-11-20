@@ -4,9 +4,6 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.chua.starter.unified.server.support.entity.UnifiedMybatis;
 import org.apache.ibatis.annotations.Mapper;
 
-/**
- * @author CH
- */
 @Mapper
 public interface UnifiedMybatisMapper extends BaseMapper<UnifiedMybatis> {
 }
