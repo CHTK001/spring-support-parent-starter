@@ -10,6 +10,7 @@ import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 
 /**
  *    
@@ -58,6 +59,9 @@ public class UnifiedExecuter implements Serializable {
      */
     @TableField(value = "update_time")
     private Date updateTime;
+
+    @TableField(exist = false)
+    private List<UnifiedExecuterItem> item;
 
     private static final long serialVersionUID = 1L;
 }

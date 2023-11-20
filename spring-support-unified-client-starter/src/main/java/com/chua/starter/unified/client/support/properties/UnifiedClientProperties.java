@@ -35,7 +35,7 @@ public class UnifiedClientProperties {
     /**
      * 统一服务端地址
      */
-    private String address;
+    private String address = "http://127.0.0.1:31111/report";
 
     /**
      * i18n

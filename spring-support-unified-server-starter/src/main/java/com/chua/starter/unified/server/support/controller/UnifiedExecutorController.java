@@ -1,7 +1,5 @@
 package com.chua.starter.unified.server.support.controller;
 
-import com.baomidou.mybatisplus.core.toolkit.StringUtils;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.starter.common.support.result.ResultData;
 import com.chua.starter.common.support.result.ReturnPageResult;
@@ -28,6 +26,7 @@ public class UnifiedExecutorController {
 
     private final UnifiedExecuterService unifiedExecuterService;
 
+
     /**
      * 分页查询数据
      *
@@ -41,9 +40,7 @@ public class UnifiedExecutorController {
         if (bindingResult.hasErrors()) {
             return ReturnPageResult.illegal(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
-        return ReturnPageResult.ok(unifiedExecuterService.page(page.createPage(), Wrappers.<UnifiedExecuter>lambdaQuery()
-                .like(StringUtils.isNotBlank(entity.getUnifiedAppname()), UnifiedExecuter::getUnifiedAppname, entity.getUnifiedAppname())
-        ));
+        return ReturnPageResult.ok(unifiedExecuterService.pageExecuter(page, entity));
     }
 
     /**
@@ -53,12 +50,12 @@ public class UnifiedExecutorController {
      * @return 分页结果
      */
     @ResponseBody
-    @GetMapping("delete")
+    @DeleteMapping("delete")
     public ResultData<Boolean> delete(String id) {
         if (null == id) {
             return ResultData.failure(PARAM_ERROR, "主键不能为空");
         }
-        return ResultData.success(unifiedExecuterService.removeById(id));
+        return ResultData.success(unifiedExecuterService.removeByIdExecuter(id));
     }
 
     /**
@@ -73,7 +70,7 @@ public class UnifiedExecutorController {
         if (bindingResult.hasErrors()) {
             return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
-        return ResultData.success(unifiedExecuterService.updateById(t));
+        return ResultData.success(unifiedExecuterService.updateByIdExecuter(t));
     }
 
     /**
@@ -88,10 +85,7 @@ public class UnifiedExecutorController {
         if (bindingResult.hasErrors()) {
             return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
-
-        if(null != t.getUnifiedExecuterId()) {
-            return ResultData.success(unifiedExecuterService.updateById(t));
-        }
-        return ResultData.success(unifiedExecuterService.save(t));
+        return ResultData.success(unifiedExecuterService.saveOrUpdateExecuter(t));
     }
+
 }

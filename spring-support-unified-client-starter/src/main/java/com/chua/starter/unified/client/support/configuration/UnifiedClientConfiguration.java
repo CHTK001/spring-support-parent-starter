@@ -22,6 +22,8 @@ import org.springframework.core.env.Environment;
 
 import javax.annotation.Resource;
 
+import static com.chua.common.support.discovery.Constants.SUBSCRIBE;
+
 /**
  * 统一客户端配置
  *
@@ -64,6 +66,8 @@ public class UnifiedClientConfiguration implements BeanDefinitionRegistryPostPro
         registry.registerBeanDefinition(protocol + "server", BeanDefinitionBuilder
                 .rootBeanDefinition(protocol1.serverType())
                 .addConstructorArgValue(bootOption)
+                .setDestroyMethodName("close")
+                .setInitMethodName("start")
                 .getBeanDefinition()
         );
         registry.registerBeanDefinition(protocol + "client", BeanDefinitionBuilder
@@ -88,6 +92,7 @@ public class UnifiedClientConfiguration implements BeanDefinitionRegistryPostPro
         JSONObject jsonObject = new JSONObject();
         UnifiedClientProperties.UnifiedExecuter executer = unifiedClientProperties.getExecuter();
         jsonObject.putAll(BeanMap.create(executer));
+        jsonObject.put(SUBSCRIBE, unifiedClientProperties.getSubscribe());
         request.setAppName(appName);
         request.setProfile(environment.getProperty("spring.profiles.active", "default"));
         request.setContent(jsonObject.toJSONString(JSONWriter.Feature.WriteEnumsUsingName));

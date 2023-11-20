@@ -34,7 +34,7 @@ public class HeartModuleResolver implements ModuleResolver{
             JSONObject jsonObject = JSONObject.parseObject(request.getContent());
             redisTemplate.opsForValue()
                     .set(EXECUTOR_NAME + appName + ":" + jsonObject.getString("host") + "_" + jsonObject.getString("port"), request, unifiedServerProperties.getKeepAliveTimeout(), TimeUnit.SECONDS);
-            return BootResponse.builder().commandType(CommandType.PONG).build();
+            return BootResponse.builder().data(BootResponse.DataDTO.builder().commandType(CommandType.PONG).build()).build();
         }
         return null;
     }

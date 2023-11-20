@@ -43,7 +43,7 @@ public class UnifiedController implements InitializingBean, DisposableBean, Runn
      * @param remoteRequest 请求
      * @return {@link BootResponse}
      */
-    @PostMapping
+    @PostMapping("/report")
     public BootResponse home(@RequestBody RemoteRequest remoteRequest) {
         BootRequest request = remoteRequest.getRequest(unifiedServerProperties);
         if(null == request) {
@@ -62,7 +62,11 @@ public class UnifiedController implements InitializingBean, DisposableBean, Runn
 
         String appName = request.getAppName();
         if(StringUtils.isBlank(appName)) {
-            return BootResponse.builder().commandType(RESPONSE).content("appName不能为空").build();
+            return BootResponse.builder()
+                    .data(BootResponse.DataDTO.builder()
+                            .commandType(RESPONSE).content("appName不能为空")
+                            .build())
+                    .build();
         }
 
         return Optional.ofNullable(ServiceProvider.of(ModuleResolver.class).getNewExtension(moduleType)

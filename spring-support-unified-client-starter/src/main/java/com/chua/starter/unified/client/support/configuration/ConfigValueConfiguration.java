@@ -6,6 +6,7 @@ import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.function.Joiner;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.protocol.boot.*;
+import com.chua.common.support.protocol.server.annotations.ServiceMapping;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.Md5Utils;
 import com.chua.starter.common.support.processor.AnnotationInjectedBeanPostProcessor;
@@ -116,7 +117,6 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
             return;
         }
         this.protocolServer = this.beanFactory.getBean(ProtocolServer.class);
-//        this.protocolServer.addListen();
         this.protocolClient = this.beanFactory.getBean(ProtocolClient.class);
         unifiedClientProperties = Binder.get(this.beanFactory.getBean(Environment.class))
                 .bindOrCreate(UnifiedClientProperties.PRE, UnifiedClientProperties.class);
@@ -161,7 +161,6 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
         if(!autoSend) {
             return;
         }
-
         Map<String, Object> req = new HashMap<>(12);
         renderData(req);
         renderI18n(req);
@@ -176,11 +175,27 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
 
     }
 
+    @ServiceMapping("config")
+    public String listen(BootRequest request) {
+        if(request.getCommandType() != CommandType.REGISTER) {
+            return null;
+        }
+
+        KeyValue keyValue = new KeyValue();
+        JSONObject jsonObject = JSON.parseObject(request.getContent());
+        keyValue.setDataId(jsonObject.getString("unifiedConfigName"));
+        keyValue.setData(jsonObject.getString("unifiedConfigValue"));
+        onListener(keyValue);
+        return "";
+    }
+
     private void doInjectSubscribe(UnifiedClientProperties.SubscribeOption subscribeOption, MutablePropertySources propertySources) {
         List<String> subscribe = subscribeOption.getSubscribe();
         if(CollectionUtils.isEmpty(subscribe)) {
             return;
         }
+
+        this.protocolServer.addListen(this);
         BootResponse response = protocolClient.get(BootRequest.builder()
                         .moduleType(ModuleType.CONFIG)
                         .commandType(CommandType.SUBSCRIBE)
@@ -197,21 +212,17 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
         log.info("订阅: {} 成功", subscribe);
         JSONArray jsonArray = JSON.parseArray(response.getContent());
         int size = jsonArray.size();
+        Map<String, Object> map = new LinkedHashMap<>();
         for (int i = 0; i < size; i++) {
-            register((JSONObject)jsonArray.get(i), propertySources);
+            register((JSONObject)jsonArray.get(i), map);
         }
+        PropertySource propertySource = new MapPropertySource(Joiner.on(",").join(subscribe), map);
+        propertySources.addFirst(propertySource);
+
     }
 
-    /**
-     * 注册
-     *
-     * @param item               o
-     * @param propertySources 财产来源
-     */
-    private void register(JSONObject item, MutablePropertySources propertySources) {
-        String unifiedAppname = item.getString("unifiedAppname");
-        PropertySource propertySource = new MapPropertySource(unifiedAppname, item);
-        propertySources.addFirst(propertySource);
+    private void register(JSONObject jsonObject, Map<String, Object> map) {
+        map.put(jsonObject.getString("unifiedConfigName"), jsonObject.get("unifiedConfigValue"));
     }
 
     /**
@@ -491,7 +502,7 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
     }
 
 //    @Override
-    public void onListener(KeyValue keyValue, Object response) {
+    public void onListener(KeyValue keyValue) {
         onChange(keyValue);
     }
 

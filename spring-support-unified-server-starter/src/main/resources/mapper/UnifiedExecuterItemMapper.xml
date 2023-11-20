@@ -5,15 +5,19 @@
     <!--@mbg.generated-->
     <!--@Table unified_executer_item-->
     <id column="unified_executer_item_id" jdbcType="INTEGER" property="unifiedExecuterItemId" />
-    <result column="unified_executer_id" jdbcType="VARCHAR" property="unifiedExecuterId" />
+    <result column="unified_executer_id" jdbcType="INTEGER" property="unifiedExecuterId" />
     <result column="unified_executer_item_host" jdbcType="VARCHAR" property="unifiedExecuterItemHost" />
     <result column="unified_executer_item_port" jdbcType="VARCHAR" property="unifiedExecuterItemPort" />
+    <result column="unified_executer_item_profile" jdbcType="VARCHAR" property="unifiedExecuterItemProfile" />
+    <result column="unified_executer_item_protocol" jdbcType="VARCHAR" property="unifiedExecuterItemProtocol" />
+    <result column="unified_executer_item_subscribe" jdbcType="VARCHAR" property="unifiedExecuterItemSubscribe" />
     <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
     <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
     unified_executer_item_id, unified_executer_id, unified_executer_item_host, unified_executer_item_port, 
+    unified_executer_item_profile, unified_executer_item_protocol, unified_executer_item_subscribe, 
     create_time, update_time
   </sql>
 </mapper>
