@@ -5,7 +5,7 @@ import com.chua.common.support.protocol.boot.BootRequest;
 import com.chua.common.support.protocol.boot.BootResponse;
 import com.chua.common.support.protocol.boot.CommandType;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.starter.unified.server.support.adator.ExecutorCommandAdaptor;
+import com.chua.starter.unified.server.support.resolver.adator.ExecutorCommandAdaptor;
 
 /**
  * 心脏模块分解器
