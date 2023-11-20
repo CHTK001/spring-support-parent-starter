@@ -29,6 +29,13 @@ public class UnifiedMybatis implements Serializable {
     private String unifiedMybatisName;
 
     /**
+     * 环境
+     */
+    @TableField(value = "unified_mybatis_profile")
+    @Size(max = 255, message = "环境")
+    private String unifiedMybatisProfile;
+
+    /**
      * 配置值
      */
     @TableField(value = "unified_mybatis_value")
