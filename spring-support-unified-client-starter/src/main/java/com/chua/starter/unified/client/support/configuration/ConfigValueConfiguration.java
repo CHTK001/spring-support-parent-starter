@@ -176,9 +176,9 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
     }
 
     @ServiceMapping("config")
-    public String listen(BootRequest request) {
+    public BootResponse listen(BootRequest request) {
         if(request.getCommandType() != CommandType.REGISTER) {
-            return null;
+            return BootResponse.notSupport("The non-register command is not supported");
         }
 
         KeyValue keyValue = new KeyValue();
@@ -186,7 +186,7 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
         keyValue.setDataId(jsonObject.getString("unifiedConfigName"));
         keyValue.setData(jsonObject.getString("unifiedConfigValue"));
         onListener(keyValue);
-        return "";
+        return BootResponse.ok();
     }
 
     private void doInjectSubscribe(UnifiedClientProperties.SubscribeOption subscribeOption, MutablePropertySources propertySources) {

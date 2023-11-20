@@ -31,6 +31,11 @@ public class UnifiedExecuterItem implements Serializable {
      */
     @TableField(value = "unified_executer_id")
     private Integer unifiedExecuterId;
+    /**
+     * 执行器ID
+     */
+    @TableField(exist = false)
+    private String unifiedExecuterName;
 
     /**
      * 地址
