@@ -75,7 +75,10 @@ public class UnifiedExecuterItemServiceImpl extends ServiceImpl<UnifiedExecuterI
     @Override
     @CacheEvict(cacheManager = DEFAULT_CACHE_MANAGER, cacheNames = EXECUTER, allEntries = true)
     public boolean saveOrUpdate(UnifiedExecuterItem entity) {
-        return super.saveOrUpdate(entity, );
+        return super.saveOrUpdate(entity, Wrappers.<UnifiedExecuterItem>lambdaUpdate()
+                .eq(UnifiedExecuterItem::getUnifiedExecuterId, entity.getUnifiedExecuterId())
+                .eq(UnifiedExecuterItem::getUnifiedExecuterItemHost, entity.getUnifiedExecuterItemHost())
+        );
     }
 
     @Override
