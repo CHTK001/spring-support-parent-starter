@@ -44,8 +44,8 @@ public class MybatisConfiguration {
      *
      * @return SupportInjector
      */
-    @Bean
-    @ConditionalOnMissingBean
+//    @Bean
+//    @ConditionalOnMissingBean
     public SupportInjector supportInjector(MybatisProperties mybatisProperties) {
         return new SupportInjector(mybatisProperties);
     }
