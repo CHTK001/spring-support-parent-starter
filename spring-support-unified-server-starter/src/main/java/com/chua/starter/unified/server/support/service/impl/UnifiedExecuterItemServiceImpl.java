@@ -2,6 +2,7 @@ package com.chua.starter.unified.server.support.service.impl;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.common.support.protocol.boot.BootRequest;
@@ -75,10 +76,16 @@ public class UnifiedExecuterItemServiceImpl extends ServiceImpl<UnifiedExecuterI
     @Override
     @CacheEvict(cacheManager = DEFAULT_CACHE_MANAGER, cacheNames = EXECUTER, allEntries = true)
     public boolean saveOrUpdate(UnifiedExecuterItem entity) {
-        return super.saveOrUpdate(entity, Wrappers.<UnifiedExecuterItem>lambdaUpdate()
+        LambdaQueryWrapper<UnifiedExecuterItem> wrapper = Wrappers.<UnifiedExecuterItem>lambdaQuery()
                 .eq(UnifiedExecuterItem::getUnifiedExecuterId, entity.getUnifiedExecuterId())
-                .eq(UnifiedExecuterItem::getUnifiedExecuterItemHost, entity.getUnifiedExecuterItemHost())
-        );
+                .eq(UnifiedExecuterItem::getUnifiedExecuterItemHost, entity.getUnifiedExecuterItemHost());
+        Long aLong = baseMapper.selectCount(wrapper);
+        if(aLong > 0L) {
+            baseMapper.update(entity, wrapper);
+            return true;
+        }
+        baseMapper.insert(entity);
+        return true;
     }
 
     @Override
