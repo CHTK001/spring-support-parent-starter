@@ -13,15 +13,15 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.common.support.result.ResultData;
 import com.chua.starter.unified.server.support.entity.UnifiedExecuterItem;
-import com.chua.starter.unified.server.support.entity.UnifiedMybatis;
+import com.chua.starter.unified.server.support.entity.UnifiedLog;
 import com.chua.starter.unified.server.support.properties.UnifiedServerProperties;
 import com.chua.starter.unified.server.support.service.NotifyService;
 import com.chua.starter.unified.server.support.service.UnifiedExecuterItemService;
+import com.chua.starter.unified.server.support.service.UnifiedLogService;
 import lombok.Setter;
 
 import javax.annotation.Resource;
 import java.io.Serializable;
-import java.util.Date;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -40,6 +40,8 @@ public class NotifyServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M
     private UnifiedExecuterItemService unifiedExecuterItemService;
     @Resource
     private UnifiedServerProperties unifiedServerProperties;
+    @Resource
+    private UnifiedLogService unifiedLogService;
     @Setter
     private Function<T, ? extends Serializable> getUnifiedId;
     @Setter
@@ -101,6 +103,8 @@ public class NotifyServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M
     }
 
     private void notifyClient(UnifiedExecuterItem unifiedExecuterItem, T t) {
+        UnifiedLog unifiedLog = new UnifiedLog();
+        long startTime = System.currentTimeMillis();
         BootOption bootOption = BootOption.builder()
                 .encryptionSchema(unifiedServerProperties.getEncryptionSchema())
                 .encryptionKey(unifiedServerProperties.getEncryptionKey())
@@ -110,6 +114,8 @@ public class NotifyServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M
                 .serverOption(ServerOption.builder()
                         .port(Integer.parseInt(unifiedExecuterItem.getUnifiedExecuterItemPort())).host(unifiedExecuterItem.getUnifiedExecuterItemHost()).build())
                 .build();
+
+        unifiedLog.setUnifiedLogModuleType(moduleType.name());
         Protocol protocol = ServiceProvider.of(Protocol.class).getNewExtension(unifiedExecuterItem.getUnifiedExecuterItemProtocol(), bootOption);
         ProtocolClient protocolClient = protocol.createClient();
         BootRequest bootRequest = BootRequest.builder()
@@ -120,7 +126,17 @@ public class NotifyServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M
                 .profile(getProfile.apply(t))
                 .appName(getAppName.apply(t))
                 .build();
+
         BootResponse bootResponse = protocolClient.send(bootRequest);
+        unifiedLog.setUnifiedLogCode(bootResponse.getCode());
+        unifiedLog.setUnifiedLogMsg(bootResponse.getMsg());
+        unifiedLog.setUnifiedLogReq(Json.toJson(bootRequest));
+        unifiedLog.setUnifiedLogRes(Json.toJson(bootResponse));
+        unifiedLog.setUnifiedLogCost(System.currentTimeMillis() - startTime);
+        try {
+            unifiedLogService.save(unifiedLog);
+        } catch (Exception ignored) {
+        }
         responseConsumer.accept(bootResponse);
     }
 }
