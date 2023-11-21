@@ -15,13 +15,18 @@ import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.unified.client.support.properties.UnifiedClientProperties;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.ibatis.mapping.MappedStatement;
+import org.apache.ibatis.session.Configuration;
+import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.beans.BeansException;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.core.env.Environment;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -33,7 +38,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @since 2023/11/20
  */
 @Slf4j
-public class SupportInjector extends DefaultSqlInjector implements EnvironmentAware, ApplicationContextAware {
+public class SupportInjector extends DefaultSqlInjector implements EnvironmentAware, ApplicationContextAware, CommandLineRunner {
 
     private final ProtocolClient protocolClient;
     private final ProtocolServer protocolServer;
@@ -41,6 +46,9 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
     private final UnifiedClientProperties unifiedClientProperties;
 
     private final Map<String, DynamicSqlMethod> methodMap = new ConcurrentHashMap<>();
+    private final Map<String, MappedStatement> statementMap = new ConcurrentHashMap<>();
+    private ApplicationContext applicationContext;
+    private Configuration configuration;
 
     public SupportInjector(ProtocolClient protocolClient, ProtocolServer protocolServer, UnifiedClientProperties unifiedClientProperties) {
         this.protocolClient = protocolClient;
@@ -68,12 +76,19 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
 
         log.info("监听到Mybatis推送数据");
         JSONObject jsonObject = JSON.parseObject(content);
-        register(jsonObject);
+        try {
+            register(jsonObject);
+        } catch (Exception e) {
+            return BootResponse.notSupport(e.getMessage());
+        }
         return BootResponse.ok();
     }
 
     @Override
     public void setEnvironment(Environment environment) {
+        if(!unifiedClientProperties.isOpen()) {
+            return;
+        }
         UnifiedClientProperties.SubscribeOption subscribeOption = unifiedClientProperties.getSubscribeOption(ModuleType.MYBATIS);
         List<String> subscribe = null == subscribeOption ? null : subscribeOption.getSubscribe();
         if(CollectionUtils.isEmpty(subscribe)) {
@@ -145,25 +160,69 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
         String sqlType = MapUtils.getString(jsonObject, "unifiedMybatisSqlType", "XML");
 
         SqlType sqlType1 = SqlType.valueOf(sqlType.toUpperCase());
-        DynamicSqlMethod dynamicSqlMethod = methodMap.get(unifiedMybatisName);
-        if(null == dynamicSqlMethod) {
-            register(unifiedMybatisName, new DynamicSqlMethod(unifiedMybatisName, unifiedMybatisSql, sqlType1, modelType, mapperType));
+        refreshStatement(unifiedMybatisName, unifiedMybatisSql, sqlType1, mapperType, modelType, jsonObject);
+    }
+
+    private void refreshStatement(String unifiedMybatisName, String unifiedMybatisSql, SqlType sqlType, Class<?> mapperType, Class<?> modelType, JSONObject jsonObject) {
+        refreshSqlMethod(methodMap.get(unifiedMybatisName), unifiedMybatisName, unifiedMybatisSql, sqlType, modelType, mapperType, jsonObject);
+        refreshStatement(statementMap.get(unifiedMybatisName), unifiedMybatisSql, sqlType, mapperType, modelType);
+    }
+
+    private void refreshStatement(MappedStatement mappedStatement, String unifiedMybatisSql, SqlType sqlType1, Class<?> mapperType, Class<?> modelType) {
+        if(null == mappedStatement) {
             return;
         }
 
-        update(dynamicSqlMethod, unifiedMybatisSql, sqlType1);
+        try {
+            MybatisStatementUtils.refresh(configuration, mappedStatement, unifiedMybatisSql, sqlType1, mapperType, modelType);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    private void update(DynamicSqlMethod dynamicSqlMethod, String unifiedMybatisSql, SqlType sqlType1) {
-        dynamicSqlMethod.refresh(unifiedMybatisSql, sqlType1);
-    }
+    private void refreshSqlMethod(DynamicSqlMethod dynamicSqlMethod, String unifiedMybatisName, String unifiedMybatisSql, SqlType sqlType, Class<?> modelType, Class<?> mapperType, JSONObject jsonObject) {
+        if(null == dynamicSqlMethod) {
+            methodMap.put(unifiedMybatisName, new DynamicSqlMethod(unifiedMybatisName, unifiedMybatisSql, sqlType, modelType, mapperType, jsonObject));
+            return;
+        }
 
-    private void register(String unifiedMybatisName, DynamicSqlMethod dynamicSqlMethod) {
-        methodMap.put(unifiedMybatisName, dynamicSqlMethod);
+        dynamicSqlMethod.refresh(unifiedMybatisSql, sqlType);
     }
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.applicationContext = applicationContext;
+    }
 
+    @Override
+    public void run(String... args) throws Exception {
+        if(!unifiedClientProperties.isOpen()) {
+            return;
+        }
+        this.configuration = applicationContext.getBean(SqlSessionFactory.class).getConfiguration();
+        Collection<String> mappedStatementNames = configuration.getMappedStatementNames();
+        for (String mappedStatementName : mappedStatementNames) {
+            if(methodMap.containsKey(mappedStatementName)) {
+                continue;
+            }
+
+            MappedStatement mappedStatement = null;
+            try {
+                mappedStatement = configuration.getMappedStatement(mappedStatementName, false);
+            } catch (Exception e) {
+                continue;
+            }
+            statementMap.put(mappedStatementName, mappedStatement);
+        }
+
+        UnifiedClientProperties.SubscribeOption subscribeOption = unifiedClientProperties.getSubscribeOption(ModuleType.MYBATIS);
+
+        if(null == subscribeOption || !subscribeOption.isAutoConfig()) {
+            return;
+        }
+
+        for (Map.Entry<String, DynamicSqlMethod> entry : methodMap.entrySet()) {
+            register(entry.getValue().getConfig());
+        }
     }
 }

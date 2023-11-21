@@ -22,6 +22,7 @@ import lombok.Setter;
 
 import javax.annotation.Resource;
 import java.io.Serializable;
+import java.util.Date;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -133,6 +134,7 @@ public class NotifyServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M
         unifiedLog.setUnifiedLogReq(Json.toJson(bootRequest));
         unifiedLog.setUnifiedLogRes(Json.toJson(bootResponse));
         unifiedLog.setUnifiedLogCost(System.currentTimeMillis() - startTime);
+        unifiedLog.setCreateTime(new Date());
         try {
             unifiedLogService.save(unifiedLog);
         } catch (Exception ignored) {
