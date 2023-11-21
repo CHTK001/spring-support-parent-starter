@@ -205,11 +205,11 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
                 .build()
         );
         if(response.getCommandType() != CommandType.RESPONSE) {
-            log.error("订阅: {}失败 => {}", subscribe, response.getContent());
+            log.error("CONFIG 订阅: {}失败 => {}", subscribe, response.getContent());
             return;
         }
 
-        log.info("订阅: {} 成功", subscribe);
+        log.info("CONFIG 订阅: {} 成功", subscribe);
         JSONArray jsonArray = JSON.parseArray(response.getContent());
         int size = jsonArray.size();
         Map<String, Object> map = new LinkedHashMap<>();
