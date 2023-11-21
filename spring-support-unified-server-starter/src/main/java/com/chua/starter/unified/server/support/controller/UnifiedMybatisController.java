@@ -8,7 +8,6 @@ import com.chua.starter.common.support.result.ResultData;
 import com.chua.starter.common.support.result.ReturnPageResult;
 import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.mybatis.entity.DelegatePage;
-import com.chua.starter.unified.server.support.entity.UnifiedConfig;
 import com.chua.starter.unified.server.support.entity.UnifiedMybatis;
 import com.chua.starter.unified.server.support.service.UnifiedMybatisService;
 import lombok.AllArgsConstructor;
@@ -40,8 +39,7 @@ public class UnifiedMybatisController {
      * @return 分页结果
      */
     @GetMapping("page")
-    @ResponseBody
-    public ReturnPageResult<Page<UnifiedConfig>> page(DelegatePage<UnifiedMybatis> page, @Valid UnifiedMybatis entity, BindingResult bindingResult) {
+    public ReturnPageResult<Page<UnifiedMybatis>> page(DelegatePage<UnifiedMybatis> page, @Valid UnifiedMybatis entity, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ReturnPageResult.illegal(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
@@ -56,7 +54,6 @@ public class UnifiedMybatisController {
      * @param id 页码
      * @return 分页结果
      */
-    @ResponseBody
     @DeleteMapping("delete")
     public ResultData<Boolean> delete(String id) {
         if (null == id) {
@@ -72,7 +69,6 @@ public class UnifiedMybatisController {
      * @return 分页结果
      */
     @PostMapping("update")
-    @ResponseBody
     public ReturnResult<Boolean> updateById(@Valid @RequestBody UnifiedMybatis t, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ReturnResult.illegal(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
@@ -82,7 +78,6 @@ public class UnifiedMybatisController {
         if(!b) {
             return ReturnResult.illegal("更新失败, 请稍后重试");
         }
-        unifiedMybatisService.notifyConfig(t);
         return ReturnResult.ok(true);
     }
 
@@ -93,12 +88,32 @@ public class UnifiedMybatisController {
      * @return 分页结果
      */
     @PostMapping("save")
-    @ResponseBody
     public ResultData<Boolean> save(@Valid @RequestBody UnifiedMybatis t, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
 
-        return unifiedMybatisService.saveOrUpdateConfig(t);
+        unifiedMybatisService.saveOrUpdate(t);
+        return ResultData.success(true);
+    }
+
+    /**
+     * 通知
+     *
+     * @param id id
+     * @return 分页结果
+     */
+    @GetMapping("notify")
+    public ResultData<Boolean> notify(String id) {
+        if (null == id) {
+            return ResultData.failure(PARAM_ERROR, "主键不能为空");
+        }
+        UnifiedMybatis unifiedMybatis = unifiedMybatisService.getById(id);
+        if (null == unifiedMybatis) {
+            return ResultData.failure(PARAM_ERROR, "信息不存在");
+        }
+
+        unifiedMybatisService.notifyConfig(unifiedMybatis);
+        return ResultData.success(true);
     }
 }

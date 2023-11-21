@@ -5,7 +5,7 @@
     <!--@mbg.generated-->
     <!--@Table unified_log-->
     <id column="unified_log_id" jdbcType="INTEGER" property="unifiedLogId" />
-    <result column="unified_log_type" jdbcType="VARCHAR" property="unifiedLogType" />
+    <result column="unified_log_type" jdbcType="VARCHAR" property="unifiedLogModuleType" />
     <result column="unified_log_msg" jdbcType="VARCHAR" property="unifiedLogMsg" />
     <result column="unified_log_code" jdbcType="VARCHAR" property="unifiedLogCode" />
     <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />

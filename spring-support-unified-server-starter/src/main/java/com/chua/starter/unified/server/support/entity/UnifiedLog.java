@@ -24,9 +24,25 @@ public class UnifiedLog implements Serializable {
     /**
      * 模块类型
      */
-    @TableField(value = "unified_log_type")
+    @TableField(value = "unified_log_module_type")
     @Size(max = 255, message = "模块类型最大长度要小于 255")
-    private String unifiedLogType;
+    private String unifiedLogModuleType;
+
+    /**
+     * 响应
+     */
+    @TableField(value = "unified_log_res")
+    private String unifiedLogRes;
+    /**
+     * 请求
+     */
+    @TableField(value = "unified_log_req")
+    private String unifiedLogReq;
+    /**
+     * 耗时(ms)
+     */
+    @TableField(value = "unified_log_cost")
+    private Long unifiedLogCost;
 
     /**
      * 日志信息

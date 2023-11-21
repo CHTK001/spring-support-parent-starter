@@ -6,6 +6,8 @@ import com.chua.common.support.bean.BeanMap;
 import com.chua.common.support.protocol.boot.*;
 import com.chua.common.support.protocol.server.ServerOption;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.ClassUtils;
+import com.chua.starter.unified.client.support.mybatis.SupportInjector;
 import com.chua.starter.unified.client.support.properties.UnifiedClientProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
@@ -80,6 +82,17 @@ public class UnifiedClientConfiguration implements BeanDefinitionRegistryPostPro
                 .addConstructorArgValue(bootOption)
                 .getBeanDefinition()
         );
+
+        if(ClassUtils.isPresent("com.baomidou.mybatisplus.core.injector.DefaultSqlInjector")) {
+            registry.registerBeanDefinition(SupportInjector.class.getTypeName(), BeanDefinitionBuilder
+                    .rootBeanDefinition(SupportInjector.class)
+                    .setPrimary(true)
+                    .addConstructorArgReference(protocol + "client")
+                    .addConstructorArgReference(protocol + "server")
+                    .addConstructorArgValue(unifiedClientProperties)
+                    .getBeanDefinition()
+            );
+        }
 
         registryEnv(protocol1);
     }
