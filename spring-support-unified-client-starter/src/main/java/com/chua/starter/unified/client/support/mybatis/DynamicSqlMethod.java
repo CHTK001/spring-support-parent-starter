@@ -1,5 +1,6 @@
 package com.chua.starter.unified.client.support.mybatis;
 
+import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.injector.AbstractMethod;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import lombok.extern.slf4j.Slf4j;
@@ -26,18 +27,21 @@ public class DynamicSqlMethod extends AbstractMethod {
     protected SqlType sqlType;
     private Class<?> modelType;
     private Class<?> mapperType;
+    private JSONObject jsonObject;
     private MappedStatement mappedStatement;
 
     /**
      * @param methodName 方法名
+     * @param jsonObject
      * @since 3.5.0
      */
-    protected DynamicSqlMethod(String methodName, String sql, SqlType sqlType, Class<?> modelType, Class<?> mapperType) {
+    protected DynamicSqlMethod(String methodName, String sql, SqlType sqlType, Class<?> modelType, Class<?> mapperType, JSONObject jsonObject) {
         super(methodName);
         this.sql = sql;
         this.sqlType = sqlType;
         this.modelType = modelType;
         this.mapperType = mapperType;
+        this.jsonObject = jsonObject;
         this.sqlSource = ReflectionUtils.findField(MappedStatement.class, "sqlSource");
         if(null != sqlSource) {
             ReflectionUtils.makeAccessible(sqlSource);
@@ -82,5 +86,14 @@ public class DynamicSqlMethod extends AbstractMethod {
             sqlSource = languageDriver.createSqlSource(configuration, parser.evalNodes("*").get(0), modelType);
         }
         ReflectionUtils.setField(this.sqlSource, mappedStatement, sqlSource);
+    }
+
+    /**
+     * 获取配置
+     *
+     * @return {@link JSONObject}
+     */
+    public JSONObject getConfig() {
+        return jsonObject;
     }
 }

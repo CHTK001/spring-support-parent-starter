@@ -43,7 +43,9 @@ public class UnifiedLogController {
         if (bindingResult.hasErrors()) {
             return ReturnPageResult.illegal(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
-        return ReturnPageResult.ok(unifiedLogService.page(page.createPage(), Wrappers.lambdaQuery(entity)));
+        return ReturnPageResult.ok(unifiedLogService.page(page.createPage(), Wrappers.lambdaQuery(entity)
+                .orderByDesc(UnifiedLog::getCreateTime, UnifiedLog::getUnifiedLogId)
+        ));
     }
 
 
