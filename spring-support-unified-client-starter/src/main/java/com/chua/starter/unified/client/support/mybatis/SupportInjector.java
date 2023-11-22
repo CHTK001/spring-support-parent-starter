@@ -165,14 +165,17 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
 
     private void refreshStatement(String unifiedMybatisName, String unifiedMybatisSql, SqlType sqlType, Class<?> mapperType, Class<?> modelType, JSONObject jsonObject) {
         refreshSqlMethod(methodMap.get(unifiedMybatisName), unifiedMybatisName, unifiedMybatisSql, sqlType, modelType, mapperType, jsonObject);
-        refreshStatement(statementMap.get(unifiedMybatisName), unifiedMybatisSql, sqlType, mapperType, modelType);
+        refreshStatement(statementMap.getOrDefault(unifiedMybatisName,
+                statementMap.get(mapperType.getTypeName() + "." + unifiedMybatisName)), unifiedMybatisSql, sqlType, mapperType, modelType);
     }
 
     private void refreshStatement(MappedStatement mappedStatement, String unifiedMybatisSql, SqlType sqlType1, Class<?> mapperType, Class<?> modelType) {
         if(null == mappedStatement) {
             return;
         }
-
+        if(log.isDebugEnabled()) {
+            log.debug("sql => {}", unifiedMybatisSql);
+        }
         try {
             MybatisStatementUtils.refresh(configuration, mappedStatement, unifiedMybatisSql, sqlType1, mapperType, modelType);
         } catch (Exception e) {

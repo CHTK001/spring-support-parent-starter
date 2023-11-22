@@ -47,7 +47,7 @@ public class MybatisStatementUtils {
        }
 
         LanguageDriver languageDriver = configuration.getDefaultScriptingLanguageInstance();
-        log.info("动态刷新Mapper语句[{}]", mapperType.getTypeName() + "." + mappedStatement.getId());
+        log.info("动态刷新Mapper语句[{}]",  mappedStatement.getId());
         SqlSource sqlSource = null;
         if (sqlType == SqlType.SQL) {
             sqlSource = languageDriver.createSqlSource(configuration, sql, modelType);

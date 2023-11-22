@@ -49,9 +49,12 @@ public class UnifiedClientProperties {
 
 
     @NestedConfigurationProperty
-    public UnifiedExecuter executer = new UnifiedExecuter();
+    private UnifiedExecuter executer = new UnifiedExecuter();
 
-
+    /**
+     * 实时数据传输配置
+     */
+    private EndpointOption endpoint = new EndpointOption();
     private Map<ModuleType, SubscribeOption> subscribe;
 
     /**
@@ -69,6 +72,17 @@ public class UnifiedClientProperties {
     }
 
 
+    @Data
+    public static class EndpointOption {
+        /**
+         * 实时数据服务器地址
+         */
+        private String url;
+        /**
+         * attach jar 路径
+         */
+        private String attach;
+    }
     @Data
     public static class SubscribeOption {
         /**

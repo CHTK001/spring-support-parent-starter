@@ -12,6 +12,7 @@ import com.chua.starter.mybatis.entity.DelegatePage;
 import com.chua.starter.unified.server.support.entity.UnifiedExecuter;
 import com.chua.starter.unified.server.support.entity.UnifiedExecuterItem;
 import com.chua.starter.unified.server.support.mapper.UnifiedExecuterMapper;
+import com.chua.starter.unified.server.support.properties.UnifiedServerProperties;
 import com.chua.starter.unified.server.support.service.UnifiedExecuterItemService;
 import com.chua.starter.unified.server.support.service.UnifiedExecuterService;
 import org.springframework.stereotype.Service;
@@ -39,6 +40,8 @@ public class UnifiedExecuterServiceImpl extends ServiceImpl<UnifiedExecuterMappe
 
     @Resource
     private UnifiedExecuterItemService unifiedExecuterItemService;
+    @Resource
+    private UnifiedServerProperties unifiedServerProperties;
 
     @Override
     public void createExecutor(BootRequest request) {
@@ -97,6 +100,12 @@ public class UnifiedExecuterServiceImpl extends ServiceImpl<UnifiedExecuterMappe
         Page<UnifiedExecuter> unifiedExecuterPage = baseMapper.selectPage(page.createPage(), Wrappers.<UnifiedExecuter>lambdaQuery()
                 .like(StringUtils.isNotBlank(entity.getUnifiedAppname()), UnifiedExecuter::getUnifiedAppname, entity.getUnifiedAppname())
         );
+
+        UnifiedServerProperties.EndpointOption endpoint = unifiedServerProperties.getEndpoint();
+        String url = endpoint.getHost();
+        Integer port = endpoint.getPort();
+
+
         List<UnifiedExecuter> records = unifiedExecuterPage.getRecords();
         if(!records.isEmpty()) {
             List<UnifiedExecuterItem> list = unifiedExecuterItemService
@@ -109,6 +118,7 @@ public class UnifiedExecuterServiceImpl extends ServiceImpl<UnifiedExecuterMappe
 
             for (UnifiedExecuter record : records) {
                 record.setItem(tpl.get(record.getUnifiedExecuterId()));
+                record.setOpenLogBtn(StringUtils.isNotBlank(url) && null != port);
             }
         }
 
