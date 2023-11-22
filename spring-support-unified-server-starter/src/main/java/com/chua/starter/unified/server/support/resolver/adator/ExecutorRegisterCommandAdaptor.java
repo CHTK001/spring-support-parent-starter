@@ -1,6 +1,7 @@
 package com.chua.starter.unified.server.support.resolver.adator;
 
 import com.chua.common.support.annotations.Spi;
+import com.chua.common.support.json.Json;
 import com.chua.common.support.protocol.boot.BootRequest;
 import com.chua.common.support.protocol.boot.BootResponse;
 import com.chua.common.support.utils.ThreadUtils;
@@ -37,7 +38,10 @@ public class ExecutorRegisterCommandAdaptor implements ExecutorCommandAdaptor{
                             }
                         });
         return BootResponse.builder()
-                .data(BootResponse.DataDTO.builder().commandType(RESPONSE).build())
+                .data(BootResponse.DataDTO.builder()
+                        .commandType(RESPONSE)
+                        .content(Json.toJson(unifiedServerProperties.getEndpoint()))
+                        .build())
                 .build();
     }
 }
