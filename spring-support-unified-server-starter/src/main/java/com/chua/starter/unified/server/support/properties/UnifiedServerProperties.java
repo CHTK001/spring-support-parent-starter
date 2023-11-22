@@ -32,7 +32,17 @@ public class UnifiedServerProperties {
      * 保持活动超时(s)
      */
     private int keepAliveTimeout = 60;
+    /**
+     * 实时数据传输配置
+     */
+    private EndpointOption endpoint = new EndpointOption();
 
+    @Data
+    public static class EndpointOption {
+
+        private String host = "127.0.0.1";
+        private Integer port = 15556;
+    }
     /**
      * 获取编码
      *

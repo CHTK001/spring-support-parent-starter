@@ -1,20 +1,18 @@
 package com.chua.starter.unified.client.support.configuration;
 
-import com.alibaba.fastjson2.JSONObject;
-import com.alibaba.fastjson2.JSONWriter;
-import com.chua.common.support.bean.BeanMap;
-import com.chua.common.support.protocol.boot.*;
-import com.chua.common.support.protocol.server.ServerOption;
-import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.utils.ClassUtils;
-import com.chua.starter.unified.client.support.mybatis.SupportInjector;
+import com.chua.common.support.protocol.boot.BootResponse;
+import com.chua.common.support.protocol.boot.Protocol;
+import com.chua.common.support.utils.ThreadUtils;
+import com.chua.starter.unified.client.support.factory.EndPointFactory;
+import com.chua.starter.unified.client.support.factory.ExecutorFactory;
+import com.chua.starter.unified.client.support.factory.ProtocolFactory;
 import com.chua.starter.unified.client.support.properties.UnifiedClientProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
@@ -24,8 +22,6 @@ import org.springframework.core.env.Environment;
 
 import javax.annotation.Resource;
 
-import static com.chua.common.support.discovery.Constants.SUBSCRIBE;
-
 /**
  * 统一客户端配置
  *
@@ -33,13 +29,15 @@ import static com.chua.common.support.discovery.Constants.SUBSCRIBE;
  */
 @Slf4j
 @EnableConfigurationProperties(UnifiedClientProperties.class)
-public class UnifiedClientConfiguration implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware, EnvironmentAware {
+public class UnifiedClientConfiguration implements BeanDefinitionRegistryPostProcessor,
+        ApplicationContextAware, EnvironmentAware, CommandLineRunner {
 
     @Resource
     private UnifiedClientProperties unifiedClientProperties;
 
     private String appName;
     private Environment environment;
+    private ExecutorFactory executorFactory;
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
@@ -54,69 +52,14 @@ public class UnifiedClientConfiguration implements BeanDefinitionRegistryPostPro
 
         this.appName = environment.getProperty("spring.application.name");
 
-        UnifiedClientProperties.UnifiedExecuter executer = unifiedClientProperties.getExecuter();
-        String protocol = unifiedClientProperties.getProtocol();
-        JSONObject jsonObject = new JSONObject();
-        jsonObject.putAll(BeanMap.create(executer));
-        jsonObject.put(SUBSCRIBE, unifiedClientProperties.getSubscribe());
-        BootOption bootOption = BootOption.builder()
-                .encryptionSchema(unifiedClientProperties.getEncryptionSchema())
-                .encryptionKey(unifiedClientProperties.getEncryptionKey())
-                .address(unifiedClientProperties.getAddress())
-                .appName(appName)
-                .ext(jsonObject)
-                .profile(environment.getProperty("spring.profiles.active", "default"))
-                .serverOption(ServerOption.builder().port(executer.getPort()).host(executer.getHost()).build())
-                .build();
-        Protocol protocol1 = ServiceProvider.of(Protocol.class).getNewExtension(protocol, bootOption);
-
-        registry.registerBeanDefinition(protocol + "server", BeanDefinitionBuilder
-                .rootBeanDefinition(protocol1.serverType())
-                .addConstructorArgValue(bootOption)
-                .setDestroyMethodName("close")
-                .setInitMethodName("start")
-                .getBeanDefinition()
-        );
-        registry.registerBeanDefinition(protocol + "client", BeanDefinitionBuilder
-                .rootBeanDefinition(protocol1.clientType())
-                .addConstructorArgValue(bootOption)
-                .getBeanDefinition()
-        );
-
-        if(ClassUtils.isPresent("com.baomidou.mybatisplus.core.injector.DefaultSqlInjector")) {
-            registry.registerBeanDefinition(SupportInjector.class.getTypeName(), BeanDefinitionBuilder
-                    .rootBeanDefinition(SupportInjector.class)
-                    .setPrimary(true)
-                    .addConstructorArgReference(protocol + "client")
-                    .addConstructorArgReference(protocol + "server")
-                    .addConstructorArgValue(unifiedClientProperties)
-                    .getBeanDefinition()
-            );
-        }
-
-        registryEnv(protocol1);
+        ProtocolFactory protocolFactory = new ProtocolFactory(unifiedClientProperties, appName, environment, registry);
+        protocolFactory.afterPropertiesSet();
+        Protocol protocol = protocolFactory.getProtocol();
+        this.executorFactory = new ExecutorFactory(protocol, unifiedClientProperties, appName, environment);
+        executorFactory.afterPropertiesSet();
     }
 
-    /**
-     * 注册表环境
-     *
-     * @param protocol1 protocol1
-     */
-    private void registryEnv(Protocol protocol1) {
-        ProtocolClient protocolClient = protocol1.createClient();
-        BootRequest request = new BootRequest();
-        request.setModuleType(ModuleType.EXECUTOR);
-        request.setCommandType(CommandType.REGISTER);
-        UnifiedClientProperties.UnifiedExecuter executer = unifiedClientProperties.getExecuter();
-        JSONObject jsonObject = new JSONObject();
-        jsonObject.putAll(BeanMap.create(executer));
-        jsonObject.put(SUBSCRIBE, unifiedClientProperties.getSubscribe());
-        request.setAppName(appName);
-        request.setProfile(environment.getProperty("spring.profiles.active", "default"));
-        request.setContent(jsonObject.toJSONString(JSONWriter.Feature.WriteEnumsUsingName));
-        BootResponse bootResponse = protocolClient.send(request);
-        log.info("注册结果: {}", bootResponse);
-    }
+
 
     @Override
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
@@ -132,5 +75,20 @@ public class UnifiedClientConfiguration implements BeanDefinitionRegistryPostPro
     @Override
     public void setEnvironment(Environment environment) {
         this.environment = environment;
+    }
+
+    @Override
+    public void run(String... args) throws Exception {
+        if(null == executorFactory) {
+            return;
+        }
+        ThreadUtils.newStaticThreadPool().execute(() -> {
+            registryEndpoint(executorFactory.getResponse());
+        });
+    }
+
+    private void registryEndpoint(BootResponse bootResponse) {
+        EndPointFactory endPointFactory = new EndPointFactory(bootResponse, unifiedClientProperties, appName, environment);
+        endPointFactory.afterPropertiesSet();
     }
 }

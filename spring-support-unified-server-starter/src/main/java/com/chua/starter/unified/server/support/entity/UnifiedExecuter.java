@@ -63,5 +63,8 @@ public class UnifiedExecuter implements Serializable {
     @TableField(exist = false)
     private List<UnifiedExecuterItem> item;
 
+    @TableField(exist = false)
+    private Boolean openLogBtn;
+
     private static final long serialVersionUID = 1L;
 }
