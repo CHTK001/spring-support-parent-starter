@@ -51,6 +51,7 @@ public class AuthResponseBodyAdvice implements ResponseBodyAdvice<Object> {
      */
     @ExceptionHandler(value = HttpRequestMethodNotSupportedException.class)
     public Object httpRequestMethodNotSupportedException(HttpServletRequest request, HttpServletResponse response, Throwable error) {
+        error.printStackTrace();
         return ReturnResult.of(SYSTEM_REQUEST_METHOD_NO_MATCH, null);
     }
 
@@ -63,6 +64,7 @@ public class AuthResponseBodyAdvice implements ResponseBodyAdvice<Object> {
      */
     @ExceptionHandler(value = ServletException.class)
     public Object servletException(HttpServletRequest request, HttpServletResponse response, ServletException error) {
+        error.printStackTrace();
         return ReturnResult.of(SYSTEM_REQUEST_METHOD_NO_MATCH, null);
     }
 
