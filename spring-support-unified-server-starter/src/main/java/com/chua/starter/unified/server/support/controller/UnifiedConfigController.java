@@ -4,9 +4,9 @@ import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.function.Splitter;
+import com.chua.common.support.lang.code.ReturnPageResult;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.common.support.result.ResultData;
-import com.chua.starter.common.support.result.ReturnPageResult;
-import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.mybatis.entity.DelegatePage;
 import com.chua.starter.unified.server.support.entity.UnifiedConfig;
 import com.chua.starter.unified.server.support.service.UnifiedConfigService;
@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 import java.util.Date;
 
-import static com.chua.starter.common.support.result.ReturnCode.PARAM_ERROR;
+import static com.chua.common.support.lang.code.ReturnCode.PARAM_ERROR;
 
 /**
  * 配置中心接口

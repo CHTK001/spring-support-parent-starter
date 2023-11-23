@@ -10,6 +10,8 @@ import com.chua.starter.unified.server.support.service.UnifiedExecuterItemServic
 
 import javax.annotation.Resource;
 
+import static com.chua.common.support.lang.code.ReturnCode.OK;
+
 /**
  * 心脏模块分解器
  *
@@ -36,9 +38,10 @@ public class HeartModuleResolver implements ModuleResolver{
                 }
             });
             return BootResponse.builder()
+                    .code(OK.getCode())
                     .data(BootResponse.DataDTO.builder().commandType(CommandType.PONG).build()).build();
         }
-        return null;
+        return BootResponse.empty();
     }
 
 

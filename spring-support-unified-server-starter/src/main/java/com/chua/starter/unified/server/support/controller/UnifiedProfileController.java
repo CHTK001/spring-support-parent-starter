@@ -1,7 +1,7 @@
 package com.chua.starter.unified.server.support.controller;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.chua.starter.common.support.result.ReturnResult;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.unified.server.support.entity.UnifiedExecuter;
 import com.chua.starter.unified.server.support.entity.UnifiedProfile;
 import com.chua.starter.unified.server.support.service.UnifiedExecuterService;

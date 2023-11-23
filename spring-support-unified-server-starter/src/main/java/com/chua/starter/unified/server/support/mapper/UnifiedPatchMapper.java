@@ -1,12 +1,12 @@
 package com.chua.starter.unified.server.support.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.chua.starter.unified.server.support.entity.UnifiedService;
+import com.chua.starter.unified.server.support.entity.UnifiedPatch;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
  * @author CH
  */
 @Mapper
-public interface UnifiedServiceMapper extends BaseMapper<UnifiedService> {
+public interface UnifiedPatchMapper extends BaseMapper<UnifiedPatch> {
 }
