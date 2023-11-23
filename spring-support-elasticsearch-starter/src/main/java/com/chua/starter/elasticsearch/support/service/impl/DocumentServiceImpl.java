@@ -3,7 +3,7 @@ package com.chua.starter.elasticsearch.support.service.impl;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.bean.BeanUtils;
-import com.chua.starter.common.support.result.PageResult;
+import com.chua.common.support.lang.code.PageResult;
 import com.chua.starter.common.support.result.Result;
 import com.chua.starter.elasticsearch.support.pojo.Mapping;
 import com.chua.starter.elasticsearch.support.service.DocumentService;

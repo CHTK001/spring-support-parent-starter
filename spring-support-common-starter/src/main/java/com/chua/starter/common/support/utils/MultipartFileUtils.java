@@ -96,4 +96,19 @@ public class MultipartFileUtils {
         file.transferTo(file1.toPath());
         return file1;
     }
+
+    /**
+     * 转移到
+     *
+     * @param multipartFile 多部件文件
+     * @param patchFile     修补程序文件
+     * @throws IOException IOException
+     */
+    public static void transferTo(MultipartFile multipartFile, File patchFile) throws IOException{
+        try (InputStream inputStream = multipartFile.getInputStream();
+             FileOutputStream fileOutputStream = new FileOutputStream(patchFile)
+        ) {
+            IoUtils.copy(inputStream, fileOutputStream);
+        }
+    }
 }
