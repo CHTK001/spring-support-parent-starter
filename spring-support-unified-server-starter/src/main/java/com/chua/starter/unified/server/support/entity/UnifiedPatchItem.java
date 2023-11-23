@@ -7,17 +7,17 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.Date;
 
 /**
  *    
  * @author CH
- */     
+ */
+
 /**
-    * 补丁管理
-    */
+ * 补丁管理
+ */
 @Data
 @TableName(value = "unified_patch_item")
 public class UnifiedPatchItem implements Serializable {
@@ -26,10 +26,18 @@ public class UnifiedPatchItem implements Serializable {
     private Integer unifiedPatchItemId;
 
     /**
-     * 安装的应用
+     * 执行器ID
      */
-    @TableField(value = "unified_appname")
-    @Size(max = 255,message = "安装的应用最大长度要小于 255")
+    @TableField(value = "unified_executer_id")
+    private Integer unifiedExecuterId;
+
+    /**
+     * 修补程序文件
+     */
+    @TableField(exist = false)
+    private String patchFile;
+
+    @TableField(exist = false)
     private String unifiedAppname;
 
     /**

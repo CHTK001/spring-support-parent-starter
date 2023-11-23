@@ -1,9 +1,6 @@
 package com.chua.starter.unified.server.support.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 
 import javax.validation.constraints.NotNull;
@@ -44,7 +41,7 @@ public class UnifiedPatch implements Serializable {
     /**
      * 补丁包名称
      */
-    @TableField(value = "unified_patch_pack")
+    @TableField(value = "unified_patch_pack", updateStrategy = FieldStrategy.IGNORED)
     @Size(max = 255, message = "补丁包名称最大长度要小于 255")
     private String unifiedPatchPack;
 
@@ -73,8 +70,10 @@ public class UnifiedPatch implements Serializable {
      */
     @TableField(value = "update_time")
     private Date updateTime;
+
+
     /**
-     * 执行器ID
+     * 执行器名称
      */
     @TableField(exist = false)
     private List<Integer> executorIds;

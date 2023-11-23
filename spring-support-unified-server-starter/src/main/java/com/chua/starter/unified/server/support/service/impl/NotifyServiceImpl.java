@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import static com.chua.common.support.constant.NumberConstant.NUM_1000;
 import static com.chua.common.support.discovery.Constants.SUBSCRIBE;
 
 /**
@@ -103,7 +104,8 @@ public class NotifyServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M
         }
     }
 
-    private void notifyClient(UnifiedExecuterItem unifiedExecuterItem, T t) {
+    @Override
+    public Boolean notifyClient(UnifiedExecuterItem unifiedExecuterItem, T t) {
         UnifiedLog unifiedLog = new UnifiedLog();
         long startTime = System.currentTimeMillis();
         BootOption bootOption = BootOption.builder()
@@ -131,7 +133,12 @@ public class NotifyServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M
         BootResponse bootResponse = protocolClient.send(bootRequest);
         unifiedLog.setUnifiedLogCode(bootResponse.getCode());
         unifiedLog.setUnifiedLogMsg(bootResponse.getMsg());
-        unifiedLog.setUnifiedLogReq(Json.toJson(bootRequest));
+        String content = bootRequest.getContent();
+        if(StringUtils.isBlank(content) && content.length() < NUM_1000) {
+            unifiedLog.setUnifiedLogReq(Json.toJson(bootRequest));
+        } else {
+            unifiedLog.setUnifiedLogReq("请求过长");
+        }
         unifiedLog.setUnifiedLogRes(Json.toJson(bootResponse));
         unifiedLog.setUnifiedLogCost(System.currentTimeMillis() - startTime);
         unifiedLog.setCreateTime(new Date());
@@ -140,5 +147,6 @@ public class NotifyServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M
         } catch (Exception ignored) {
         }
         responseConsumer.accept(bootResponse);
+        return true;
     }
 }
