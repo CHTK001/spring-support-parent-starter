@@ -1,6 +1,5 @@
 package com.chua.starter.unified.server.support.controller;
 
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.lang.code.ErrorResult;
 import com.chua.common.support.lang.code.ReturnPageResult;
@@ -45,7 +44,7 @@ public class UnifiedPatchController {
         if (bindingResult.hasErrors()) {
             return ReturnPageResult.illegal(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
-        return ReturnPageResult.ok(unifiedPatchService.page(page.createPage(), Wrappers.lambdaQuery(entity)));
+        return ReturnPageResult.ok(unifiedPatchService.pageItems(page.createPage(), entity));
     }
     /**
      * 根据主键删除数据
@@ -78,14 +77,14 @@ public class UnifiedPatchController {
     }
 
     /**
-     * 上传补丁
+     * 上传补丁到各个客户端
      *
      * @param t 实体
      * @return 分页结果
      */
     @PostMapping("upload")
     @ResponseBody
-    public ReturnResult<ErrorResult> upload(UnifiedPatch t){
+    public ReturnResult<ErrorResult> upload(@RequestBody UnifiedPatch t){
         if(CollectionUtils.isEmpty(t.getExecutorIds())) {
             return ReturnResult.failure(PARAM_ERROR, "请选择执行器");
         }
@@ -103,15 +102,15 @@ public class UnifiedPatchController {
      */
     @PostMapping("loadPatch")
     @ResponseBody
-    public ResultData<Boolean> loadPatch(UnifiedPatch t, @RequestParam("file") MultipartFile multipartFile){
+    public ReturnResult<ErrorResult> loadPatch(UnifiedPatch t, @RequestParam("file") MultipartFile multipartFile){
         if(null == multipartFile) {
-            return ResultData.failure(PARAM_ERROR, "补丁不能为空");
+            return ReturnResult.failure(PARAM_ERROR, "补丁不能为空");
         }
 
         if(null == t.getUnifiedPatchId()) {
-            return ResultData.failure(PARAM_ERROR, "补丁编号不能为空");
+            return ReturnResult.failure(PARAM_ERROR, "补丁编号不能为空");
         }
-        return ResultData.success(unifiedPatchService.uploadPatch(t, multipartFile));
+        return ReturnResult.success(unifiedPatchService.uploadPatch(t, multipartFile));
     }
     /**
      * 卸载补丁
@@ -121,7 +120,7 @@ public class UnifiedPatchController {
      */
     @PostMapping("unloadPatch")
     @ResponseBody
-    public ResultData<Boolean> unloadPatch(UnifiedPatch t ) {
+    public ResultData<Boolean> unloadPatch(@RequestBody UnifiedPatch t ) {
 
         if(null == t.getUnifiedPatchId()) {
             return ResultData.failure(PARAM_ERROR, "补丁编号不能为空");

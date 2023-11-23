@@ -36,6 +36,11 @@ public class UnifiedExecuterItem implements Serializable {
      */
     @TableField(exist = false)
     private String unifiedExecuterName;
+    /**
+     * appname
+     */
+    @TableField(exist = false)
+    private String unifiedAppname;
 
     /**
      * 地址
