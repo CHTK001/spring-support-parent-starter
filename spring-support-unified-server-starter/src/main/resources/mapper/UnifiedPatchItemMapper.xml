@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.unified.server.support.mapper.UnifiedPatchItemMapper">
+  <resultMap id="BaseResultMap" type="com.chua.starter.unified.server.support.entity.UnifiedPatchItem">
+    <!--@mbg.generated-->
+    <!--@Table unified_patch_item-->
+    <id column="unified_patch_item_id" jdbcType="INTEGER" property="unifiedPatchItemId" />
+    <result column="unified_appname" jdbcType="VARCHAR" property="unifiedAppname" />
+    <result column="unified_patch_id" jdbcType="INTEGER" property="unifiedPatchId" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    unified_patch_item_id, unified_appname, unified_patch_id, create_time, update_time
+  </sql>
+</mapper>
