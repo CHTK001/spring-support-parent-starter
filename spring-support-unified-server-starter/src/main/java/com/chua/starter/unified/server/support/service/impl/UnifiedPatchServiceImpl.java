@@ -61,7 +61,8 @@ public class UnifiedPatchServiceImpl extends ServiceImpl<UnifiedPatchMapper, Uni
 
     @Override
     public ErrorResult uploadPatch(UnifiedPatch t, MultipartFile multipartFile) {
-        File file = getPatchFile(t);
+        UnifiedPatch byId = getById(t.getUnifiedPatchId());
+        File file = getPatchFile(byId);
         try {
             FileUtils.forceDeleteDirectory(file);
             FileUtils.forceMkdir(file);

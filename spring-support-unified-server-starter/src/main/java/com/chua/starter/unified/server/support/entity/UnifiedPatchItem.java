@@ -37,6 +37,12 @@ public class UnifiedPatchItem implements Serializable {
     @TableField(exist = false)
     private String patchFile;
 
+    /**
+     * 修补程序文件
+     */
+    @TableField(exist = false)
+    private String patchFileName;
+
     @TableField(exist = false)
     private String unifiedAppname;
 
