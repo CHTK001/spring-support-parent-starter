@@ -1,11 +1,11 @@
 package com.chua.starter.device.support.controller;
 
 import com.chua.common.support.function.Splitter;
+import com.chua.common.support.lang.code.ReturnPageResult;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.common.support.validator.group.UpdateGroup;
-import com.chua.starter.common.support.result.ReturnPageResult;
-import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.device.support.entity.DeviceDict;
 import com.chua.starter.device.support.entity.DeviceInfo;
 import com.chua.starter.device.support.entity.DeviceType;

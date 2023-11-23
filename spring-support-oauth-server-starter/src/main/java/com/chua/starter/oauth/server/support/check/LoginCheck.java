@@ -1,8 +1,8 @@
 package com.chua.starter.oauth.server.support.check;
 
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.Md5Utils;
-import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.oauth.client.support.annotation.UserLoginType;
 import com.chua.starter.oauth.client.support.user.LoginResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
@@ -16,7 +16,7 @@ import org.springframework.util.ClassUtils;
 import javax.annotation.Resource;
 import java.util.Map;
 
-import static com.chua.starter.common.support.result.ReturnCode.OK;
+import static com.chua.common.support.lang.code.ReturnCode.OK;
 
 /**
  * 登录检测

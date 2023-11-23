@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 
-import static com.chua.starter.common.support.result.ReturnCode.PARAM_ERROR;
+import static com.chua.common.support.lang.code.ReturnCode.PARAM_ERROR;
 
 /**
  * 超类

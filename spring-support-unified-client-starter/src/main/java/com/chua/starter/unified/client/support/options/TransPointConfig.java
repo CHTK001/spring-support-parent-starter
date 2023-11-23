@@ -12,8 +12,13 @@ public class TransPointConfig {
     private String appName;
 
     private String port;
-
+    /**
+     * attach目录
+     */
     private String path;
-
+    /**
+     * 热重载目录
+     */
+    private String hotspot;
     private String endpoint = "unified";
 }

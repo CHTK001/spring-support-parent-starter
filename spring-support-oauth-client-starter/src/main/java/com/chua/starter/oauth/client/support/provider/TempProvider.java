@@ -32,9 +32,9 @@ import java.util.Optional;
 import java.util.Set;
 
 import static com.chua.common.support.discovery.Constants.CAPTCHA_SESSION_KEY;
+import static com.chua.common.support.lang.code.ReturnCode.PARAM_ERROR;
+import static com.chua.common.support.lang.code.ReturnCode.PARAM_IS_NULL;
 import static com.chua.starter.common.support.constant.Constant.ADMIN;
-import static com.chua.starter.common.support.result.ReturnCode.PARAM_ERROR;
-import static com.chua.starter.common.support.result.ReturnCode.PARAM_IS_NULL;
 import static com.chua.starter.common.support.utils.RequestUtils.getIpAddress;
 
 /**

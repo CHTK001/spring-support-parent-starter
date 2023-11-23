@@ -2,7 +2,7 @@ package com.chua.starter.oauth.client.support.advice;
 
 import com.chua.common.support.file.xml.Xml;
 import com.chua.common.support.lang.code.ResultCode;
-import com.chua.starter.common.support.result.ReturnResult;
+import com.chua.common.support.lang.code.ReturnResult;
 import org.springframework.http.MediaType;
 
 import javax.servlet.ServletOutputStream;

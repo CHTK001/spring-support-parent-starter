@@ -6,6 +6,8 @@ import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.function.strategy.name.OssNamedStrategy;
 import com.chua.common.support.function.strategy.name.RejectStrategy;
 import com.chua.common.support.image.filter.ImageFilter;
+import com.chua.common.support.lang.code.ReturnCode;
+import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.page.Page;
 import com.chua.common.support.media.MediaTypeFactory;
 import com.chua.common.support.oss.adaptor.AbstractOssResolver;
@@ -23,8 +25,6 @@ import com.chua.common.support.value.Value;
 import com.chua.starter.common.support.configuration.CacheConfiguration;
 import com.chua.starter.common.support.result.Result;
 import com.chua.starter.common.support.result.ResultData;
-import com.chua.starter.common.support.result.ReturnCode;
-import com.chua.starter.common.support.result.ReturnPageResult;
 import com.chua.starter.common.support.view.ResponseHandler;
 import com.chua.starter.mybatis.entity.DelegatePage;
 import com.chua.starter.oss.support.pojo.SysOss;
@@ -55,7 +55,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-import static com.chua.starter.common.support.result.ReturnCode.PARAM_ERROR;
+import static com.chua.common.support.lang.code.ReturnCode.PARAM_ERROR;
 
 /**
  * oss

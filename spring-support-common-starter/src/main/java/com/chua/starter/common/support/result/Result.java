@@ -1,12 +1,14 @@
 package com.chua.starter.common.support.result;
 
 import com.chua.common.support.lang.code.ResultCode;
+import com.chua.common.support.lang.code.ReturnCode;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.StringUtils;
 import lombok.Data;
 
 import static com.chua.common.support.constant.CommonConstant.SYMBOL_EXCEPTION;
-import static com.chua.starter.common.support.result.ReturnCode.SUCCESS;
-import static com.chua.starter.common.support.result.ReturnCode.SYSTEM_EXECUTION_ERROR;
+import static com.chua.common.support.lang.code.ReturnCode.SUCCESS;
+import static com.chua.common.support.lang.code.ReturnCode.SYSTEM_EXECUTION_ERROR;
 
 /**
  * 统一响应结构体

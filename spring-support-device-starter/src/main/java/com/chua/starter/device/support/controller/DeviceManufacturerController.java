@@ -1,14 +1,13 @@
 package com.chua.starter.device.support.controller;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.function.Splitter;
+import com.chua.common.support.lang.code.ReturnPageResult;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.common.support.validator.group.UpdateGroup;
-import com.chua.starter.common.support.result.ReturnPageResult;
-import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.device.support.entity.DeviceDict;
 import com.chua.starter.device.support.entity.DeviceManufacturer;
 import com.chua.starter.device.support.service.DeviceManufacturerService;
@@ -19,7 +18,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.function.Consumer;
 
 /**
  * 厂家信息控制器

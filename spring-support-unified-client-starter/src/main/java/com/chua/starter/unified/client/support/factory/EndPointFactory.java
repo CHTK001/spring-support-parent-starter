@@ -1,12 +1,15 @@
 package com.chua.starter.unified.client.support.factory;
 
 import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.function.InitializingAware;
 import com.chua.common.support.protocol.boot.BootResponse;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.unified.client.support.options.TransPointConfig;
 import com.chua.starter.unified.client.support.properties.UnifiedClientProperties;
 import org.springframework.core.env.Environment;
+
+import static com.chua.starter.common.support.constant.Constant.HOST;
 
 /**
  * 端点工厂
@@ -33,8 +36,19 @@ public class EndPointFactory implements InitializingAware {
 
     @Override
     public void afterPropertiesSet() {
-        UnifiedClientProperties.EndpointOption endpointOption = JSON.parseObject(content, UnifiedClientProperties.EndpointOption.class);
+        JSONObject jsonObject = JSON.parseObject(content);
+        UnifiedClientProperties.EndpointOption endpointOption = new UnifiedClientProperties.EndpointOption();
+        endpointOption.setHotspot(unifiedClientProperties.getEnhance().getHotspot());
+        endpointOption.setAttach(unifiedClientProperties.getEnhance().getAttach());
+        if(StringUtils.isNotBlank(jsonObject.getString(HOST)) && null != jsonObject.getInteger("port")) {
+            endpointOption.setUrl(jsonObject.getString(HOST) + ":" + jsonObject.getString("port"));
+        }
         TransPointConfig transPointConfig = openEndPoint(endpointOption);
+        transPointConfig.setHotspot(endpointOption.getHotspot());
+        transPointConfig.setPath(endpointOption.getAttach());
+        if(StringUtils.isBlank(transPointConfig.getPath())) {
+            return;
+        }
         openAttach(transPointConfig);
     }
 
@@ -59,11 +73,12 @@ public class EndPointFactory implements InitializingAware {
      */
     private TransPointConfig openEndPoint(UnifiedClientProperties.EndpointOption endpointOption) {
         if(null == endpointOption || StringUtils.isEmpty(endpointOption.getUrl())) {
-            return openLocalEndPoint(unifiedClientProperties.getEndpoint());
+            return openLocalEndPoint(unifiedClientProperties.getEnhance());
         }
 
         TransPointConfig transPointConfig = new TransPointConfig();
         transPointConfig.setUrl(endpointOption.getUrl());
+        transPointConfig.setPath(endpointOption.getAttach());
 
         return transPointConfig;
     }

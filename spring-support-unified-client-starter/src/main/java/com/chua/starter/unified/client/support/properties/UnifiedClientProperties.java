@@ -53,8 +53,11 @@ public class UnifiedClientProperties {
 
     /**
      * 实时数据传输配置
+     * 1、或使用attach 搭配 DECVM 获取客户端日志等
+     * 2、或使用attach 搭配 DECVM 获取热重载文件
+     * 3、或使用 utils-support-agent-starter 获取客户端日志, 链路
      */
-    private EndpointOption endpoint = new EndpointOption();
+    private EndpointOption enhance = new EndpointOption();
     private Map<ModuleType, SubscribeOption> subscribe;
 
     /**
@@ -76,12 +79,18 @@ public class UnifiedClientProperties {
     public static class EndpointOption {
         /**
          * 实时数据服务器地址
+         * 1、成功连接到unified服务端无需填写,由服务端返回
          */
         private String url;
         /**
          * attach jar 路径
          */
         private String attach;
+        /**
+         * 监听的重载目录 <br />
+         * 默认: 运行目录
+         */
+        private String hotspot;
     }
     @Data
     public static class SubscribeOption {
