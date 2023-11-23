@@ -42,6 +42,10 @@ public class UnifiedServerProperties {
 
         private String host = "127.0.0.1";
         private Integer port = 15556;
+        /**
+         * 补丁存放目录
+         */
+        private String patch;
     }
     /**
      * 获取编码
