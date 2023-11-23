@@ -50,7 +50,9 @@ public class ExecutorFactory implements InitializingAware {
      * @param protocol1 protocol1
      */
     private void registryEnv(Protocol protocol1) {
-        ProtocolClient protocolClient = protocol1.createClient();
+        BootOption bootOption = protocol1.copyBootOption();
+        bootOption.setKeepAlive(false);
+        ProtocolClient protocolClient = protocol1.createClient(bootOption);
         BootRequest request = createRequest();
         this.bootResponse = protocolClient.send(request);
         log.info("注册结果: {}", bootResponse);

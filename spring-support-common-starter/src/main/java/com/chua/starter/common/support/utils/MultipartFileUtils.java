@@ -1,13 +1,11 @@
 package com.chua.starter.common.support.utils;
 
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.FileUtils;
 import com.chua.common.support.utils.IoUtils;
-import com.chua.starter.common.support.result.ReturnResult;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 /**
  * 多部分文件实用程序

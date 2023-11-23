@@ -1,9 +1,9 @@
 package com.chua.starter.oauth.client.support.configuration;
 
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.NumberUtils;
 import com.chua.starter.common.support.converter.ResultDataHttpMessageConverter;
 import com.chua.starter.common.support.result.ResultData;
-import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.oauth.client.support.advice.Advice;
 import com.chua.starter.oauth.client.support.advice.AdviceResolver;
 import com.chua.starter.oauth.client.support.advice.HtmlAdviceResolver;
@@ -27,7 +27,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Map;
 
-import static com.chua.starter.common.support.result.ReturnCode.*;
+import static com.chua.common.support.lang.code.ReturnCode.*;
 
 /**
  * auth 统一响应

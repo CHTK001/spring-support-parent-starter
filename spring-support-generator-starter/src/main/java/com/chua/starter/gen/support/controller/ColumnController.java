@@ -2,9 +2,9 @@ package com.chua.starter.gen.support.controller;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.chua.common.support.lang.code.ReturnPageResult;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.common.support.result.ReturnPageResult;
-import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.gen.support.entity.SysGenColumn;
 import com.chua.starter.gen.support.entity.SysGenTable;
 import com.chua.starter.gen.support.query.SysGenColumnUpdate;

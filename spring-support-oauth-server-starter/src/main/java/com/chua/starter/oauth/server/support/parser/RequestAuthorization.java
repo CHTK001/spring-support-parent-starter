@@ -1,9 +1,9 @@
 package com.chua.starter.oauth.server.support.parser;
 
 import com.chua.common.support.json.Json;
+import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.lang.code.ReturnResultBuilder;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.starter.common.support.result.ReturnResult;
-import com.chua.starter.common.support.result.ReturnResultBuilder;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.server.support.check.LoginCheck;
 import com.chua.starter.oauth.server.support.information.AuthInformation;
@@ -14,7 +14,7 @@ import org.springframework.context.ApplicationContext;
 import javax.annotation.Resource;
 import javax.servlet.http.Cookie;
 
-import static com.chua.starter.common.support.result.ReturnCode.OK;
+import static com.chua.common.support.lang.code.ReturnCode.OK;
 
 /**
  * 鉴权信息

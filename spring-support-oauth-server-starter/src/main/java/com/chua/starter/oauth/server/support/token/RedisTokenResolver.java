@@ -2,10 +2,10 @@ package com.chua.starter.oauth.server.support.token;
 
 import com.chua.common.support.annotations.Extension;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.IdUtils;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.user.LoginResult;

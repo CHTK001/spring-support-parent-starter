@@ -1,7 +1,7 @@
 package com.chua.starter.device.support.controller;
 
-import com.chua.starter.common.support.result.ReturnPageResult;
-import com.chua.starter.common.support.result.ReturnResult;
+import com.chua.common.support.lang.code.ReturnPageResult;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.device.support.entity.DeviceDataEvent;
 import com.chua.starter.device.support.entity.DeviceDict;
 import com.chua.starter.device.support.request.EventRequest;

@@ -6,11 +6,11 @@ import com.chua.common.support.crypto.decode.KeyDecode;
 import com.chua.common.support.crypto.encode.KeyEncode;
 import com.chua.common.support.crypto.utils.DigestUtils;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.lang.code.ReturnCode;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.common.support.result.ReturnCode;
-import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.entity.AuthRequest;
@@ -44,7 +44,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import static com.chua.starter.common.support.result.ReturnCode.*;
+import static com.chua.common.support.lang.code.ReturnCode.*;
 import static com.chua.starter.oauth.client.support.contants.AuthConstant.*;
 
 /**

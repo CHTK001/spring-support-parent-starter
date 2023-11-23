@@ -2,7 +2,7 @@ package com.chua.starter.gen.support.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.common.support.backup.BackupDriver;
-import com.chua.starter.common.support.result.ReturnResult;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.gen.support.entity.SysGenBackup;
 
 import java.util.List;
