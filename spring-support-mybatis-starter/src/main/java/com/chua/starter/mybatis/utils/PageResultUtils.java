@@ -1,8 +1,8 @@
 package com.chua.starter.mybatis.utils;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.starter.common.support.result.PageResult;
-import com.chua.starter.common.support.result.ReturnPageResult;
 
 /**
  * 分页工具类

@@ -1,6 +1,6 @@
 package com.chua.starter.config.server.support.command;
 
-import com.chua.starter.common.support.result.ReturnResult;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.config.server.support.manager.DataManager;
 
 import javax.servlet.http.HttpServletRequest;

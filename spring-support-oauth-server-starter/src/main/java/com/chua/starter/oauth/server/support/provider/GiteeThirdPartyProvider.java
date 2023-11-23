@@ -1,7 +1,7 @@
 package com.chua.starter.oauth.server.support.provider;
 
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.oauth.client.support.user.LoginResult;
 import com.chua.starter.oauth.server.support.check.LoginCheck;
@@ -31,8 +31,8 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 
-import static com.chua.starter.common.support.result.ReturnCode.OK;
-import static com.chua.starter.common.support.result.ReturnCode.SYSTEM_NO_OAUTH;
+import static com.chua.common.support.lang.code.ReturnCode.OK;
+import static com.chua.common.support.lang.code.ReturnCode.SYSTEM_NO_OAUTH;
 
 /**
  * 三方地址

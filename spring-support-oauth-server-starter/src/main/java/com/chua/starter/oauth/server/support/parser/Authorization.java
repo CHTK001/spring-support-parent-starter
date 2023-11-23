@@ -1,6 +1,6 @@
 package com.chua.starter.oauth.server.support.parser;
 
-import com.chua.starter.common.support.result.ReturnResult;
+import com.chua.common.support.lang.code.ReturnResult;
 
 /**
  * 鉴权信息

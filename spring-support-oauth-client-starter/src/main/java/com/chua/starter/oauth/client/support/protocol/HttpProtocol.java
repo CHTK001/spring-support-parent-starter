@@ -6,6 +6,8 @@ import com.chua.common.support.crypto.decode.KeyDecode;
 import com.chua.common.support.crypto.encode.KeyEncode;
 import com.chua.common.support.crypto.utils.DigestUtils;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.lang.code.ReturnCode;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.robin.Node;
 import com.chua.common.support.lang.robin.Robin;
 import com.chua.common.support.spi.ServiceProvider;
@@ -16,8 +18,6 @@ import com.chua.common.support.utils.Md5Utils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.value.Value;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
-import com.chua.starter.common.support.result.ReturnCode;
-import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.common.support.utils.ResponseUtils;
@@ -39,7 +39,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.*;
 
 import static com.chua.common.support.http.HttpClientUtils.APPLICATION_JSON;
-import static com.chua.starter.common.support.result.ReturnCode.SYSTEM_NO_OAUTH;
+import static com.chua.common.support.lang.code.ReturnCode.SYSTEM_NO_OAUTH;
 import static com.chua.starter.oauth.client.support.infomation.Information.*;
 
 /**

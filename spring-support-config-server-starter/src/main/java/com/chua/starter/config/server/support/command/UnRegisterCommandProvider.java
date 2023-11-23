@@ -2,9 +2,9 @@ package com.chua.starter.config.server.support.command;
 
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.crypto.Codec;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.common.support.key.KeyManagerProvider;
-import com.chua.starter.common.support.result.ReturnResult;
 import com.chua.starter.config.server.support.manager.DataManager;
 import com.chua.starter.config.server.support.properties.ConfigServerProperties;
 

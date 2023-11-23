@@ -1,25 +1,19 @@
 package ${packageName}.controller;
 
-import java.util.List;
-
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import ${packageName}.entity.${ClassName};
 import ${packageName}.query.PageQuery;
 import ${packageName}.service.${ClassName}Service;
-import com.chua.starter.common.support.result.ReturnResult;
-import com.chua.starter.common.support.result.ReturnPageResult;
+import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import com.chua.starter.common.support.result.Result;
 import com.chua.starter.gen.support.validator.group.AddGroup;

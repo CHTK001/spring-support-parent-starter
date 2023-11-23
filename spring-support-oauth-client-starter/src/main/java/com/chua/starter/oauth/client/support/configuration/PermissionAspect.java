@@ -1,6 +1,6 @@
 package com.chua.starter.oauth.client.support.configuration;
 
-import com.chua.starter.common.support.result.ReturnResult;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.oauth.client.support.annotation.UserPermission;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;

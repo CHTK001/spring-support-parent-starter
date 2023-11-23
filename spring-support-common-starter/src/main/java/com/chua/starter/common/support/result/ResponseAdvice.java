@@ -1,6 +1,8 @@
 package com.chua.starter.common.support.result;
 
 import com.chua.common.support.file.univocity.parsers.conversions.Validator;
+import com.chua.common.support.lang.code.ReturnPageResult;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.exception.AuthenticationException;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.annotations.Ignore;
@@ -37,7 +39,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static com.chua.starter.common.support.result.ReturnCode.*;
+import static com.chua.common.support.lang.code.ReturnCode.*;
 
 /**
  * @author CH

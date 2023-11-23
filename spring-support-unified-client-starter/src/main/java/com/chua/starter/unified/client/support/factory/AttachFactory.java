@@ -13,6 +13,7 @@ import com.sun.tools.attach.AgentInitializationException;
 import com.sun.tools.attach.AgentLoadException;
 import com.sun.tools.attach.AttachNotSupportedException;
 import com.sun.tools.attach.VirtualMachine;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.FileSystemResource;
 
 import java.io.File;
@@ -28,6 +29,7 @@ import static com.chua.common.support.http.HttpConstant.HTTP;
  *
  * @author CH
  */
+@Slf4j
 public class AttachFactory implements InitializingAware {
     private final TransPointConfig transPointConfig;
     private final String appName;
@@ -91,6 +93,7 @@ public class AttachFactory implements InitializingAware {
         }
         try {
             FileUtils.delete(file);
+            log.info("开始升级Attach组件");
         } catch (IOException e) {
             e.printStackTrace();
         }
