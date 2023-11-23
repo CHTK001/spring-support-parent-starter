@@ -71,6 +71,7 @@ public class UnifiedPatchItemServiceImpl extends NotifyServiceImpl<UnifiedPatchI
                 item.setUnifiedExecuterId(unifiedExecuterItem.getUnifiedExecuterId());
                 item.setUnifiedAppname(unifiedExecuterItem.getUnifiedAppname());
                 item.setPatchFile(base64);
+                item.setPatchFileName(file.getName());
 
                 notifyClient(unifiedExecuterItem,  item);
 
