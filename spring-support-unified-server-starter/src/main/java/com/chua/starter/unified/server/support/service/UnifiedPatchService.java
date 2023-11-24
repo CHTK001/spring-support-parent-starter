@@ -64,4 +64,12 @@ public interface UnifiedPatchService extends IService<UnifiedPatch> {
      * @return {@link File}
      */
     File getPatchFile(UnifiedPatch unifiedPatch);
+
+    /**
+     * 下载补丁
+     *
+     * @param unifiedPatch 统一补丁
+     * @return {@link byte[]}
+     */
+    byte[] downloadPatch(UnifiedPatch unifiedPatch);
 }

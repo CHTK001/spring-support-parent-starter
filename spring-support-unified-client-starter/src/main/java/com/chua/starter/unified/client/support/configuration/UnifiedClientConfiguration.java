@@ -2,7 +2,6 @@ package com.chua.starter.unified.client.support.configuration;
 
 import com.chua.common.support.protocol.boot.BootResponse;
 import com.chua.common.support.protocol.boot.Protocol;
-import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.unified.client.support.factory.EnhanceFactory;
 import com.chua.starter.unified.client.support.factory.ExecutorFactory;
 import com.chua.starter.unified.client.support.factory.ProtocolFactory;
@@ -79,12 +78,12 @@ public class UnifiedClientConfiguration implements BeanDefinitionRegistryPostPro
 
     @Override
     public void run(String... args) throws Exception {
-        if(null == executorFactory) {
-            return;
-        }
-        ThreadUtils.newStaticThreadPool().execute(() -> {
-            registryEndpoint(executorFactory.getResponse());
-        });
+//        if(null == executorFactory) {
+//            return;
+//        }
+//        ThreadUtils.newStaticThreadPool().execute(() -> {
+//            registryEndpoint(executorFactory.getResponse());
+//        });
     }
 
     private void registryEndpoint(BootResponse bootResponse) {

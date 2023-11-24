@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.common.support.lang.code.ErrorResult;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.FileUtils;
+import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.utils.MultipartFileUtils;
 import com.chua.starter.unified.server.support.entity.UnifiedPatch;
@@ -22,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -143,5 +145,19 @@ public class UnifiedPatchServiceImpl extends ServiceImpl<UnifiedPatchMapper, Uni
         }
         File rs = new File(file, unifiedPatchPack);
         return rs.exists() ? rs : null;
+    }
+
+    @Override
+    public byte[] downloadPatch(UnifiedPatch unifiedPatch) {
+        File patchFile = getPatchFile(unifiedPatch);
+        if(null == patchFile) {
+            throw new RuntimeException("补丁不存在");
+        }
+
+        try (FileInputStream fileInputStream = new FileInputStream(patchFile)) {
+            return IoUtils.toByteArray(fileInputStream);
+        } catch (IOException e) {
+            throw new RuntimeException("补丁暂不支持下载");
+        }
     }
 }

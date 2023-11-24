@@ -61,7 +61,8 @@ public class EnhanceFactory implements InitializingAware {
      * @param transPointConfig 转换点配置
      */
     private void openAttach(TransPointConfig transPointConfig) {
-        AttachFactory attachFactory = new AttachFactory(transPointConfig, appName, environment.resolvePlaceholders("${server.port:}"));
+        AttachFactory attachFactory = new AttachFactory(transPointConfig, appName,
+                environment.resolvePlaceholders("${server.port:}"));
         attachFactory.afterPropertiesSet();
 
     }
