@@ -10,6 +10,10 @@ import com.chua.starter.mybatis.entity.DelegatePage;
 import com.chua.starter.unified.server.support.entity.UnifiedPatch;
 import com.chua.starter.unified.server.support.service.UnifiedPatchService;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -25,11 +29,11 @@ import static com.chua.common.support.lang.code.ReturnCode.PARAM_ERROR;
 @RestController
 @RequestMapping("v1/patch")
 @AllArgsConstructor
+@Slf4j
 public class UnifiedPatchController {
 
 
     private final UnifiedPatchService unifiedPatchService;
-
 
     /**
      * 分页查询数据
@@ -41,6 +45,7 @@ public class UnifiedPatchController {
     @GetMapping("page")
     @ResponseBody
     public ReturnPageResult<Page<UnifiedPatch>> page(DelegatePage<UnifiedPatch> page, @Valid UnifiedPatch entity, BindingResult bindingResult) {
+        log.info("1");
         if (bindingResult.hasErrors()) {
             return ReturnPageResult.illegal(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
@@ -127,20 +132,27 @@ public class UnifiedPatchController {
         }
         return ResultData.success(unifiedPatchService.unloadPatch(t));
     }
+
     /**
      * 卸载补丁
      *
      * @param t 实体
      * @return 分页结果
      */
-//    @PostMapping("downloadPatch")
-//    @ResponseBody
-//    public ReturnMedia unloadPatch(@RequestBody UnifiedPatch t ) {
-//
-//        if(null == t.getUnifiedPatchId()) {
-//            return ReturnMedia.failure(PARAM_ERROR, "补丁编号不能为空");
-//        }
-//        return ResultData.success(unifiedPatchService.unloadPatch(t));
-//    }
+    @PostMapping("downloadPatch")
+    public ResponseEntity<byte[]> downloadPatch(@RequestBody UnifiedPatch t ) {
+
+        if(null == t.getUnifiedPatchId()) {
+            throw new RuntimeException("补丁编号不能为空");
+        }
+
+        UnifiedPatch unifiedPatch = unifiedPatchService.getById(t.getUnifiedPatchId());
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + unifiedPatch.getUnifiedPatchPack()+ "\"")
+                .body(unifiedPatchService.downloadPatch(unifiedPatch))
+                ;
+    }
 
 }
