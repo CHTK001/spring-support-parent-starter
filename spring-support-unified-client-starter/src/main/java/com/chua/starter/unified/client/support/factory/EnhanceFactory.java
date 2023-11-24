@@ -10,23 +10,24 @@ import com.chua.starter.unified.client.support.properties.UnifiedClientPropertie
 import org.springframework.core.env.Environment;
 
 import static com.chua.starter.common.support.constant.Constant.HOST;
+import static com.chua.starter.common.support.constant.Constant.PORT;
 
 /**
- * 端点工厂
+ * 增强功能工厂
  *
  * @author CH
  */
-public class EndPointFactory implements InitializingAware {
+public class EnhanceFactory implements InitializingAware {
     private final BootResponse bootResponse;
     private final UnifiedClientProperties unifiedClientProperties;
     private final String content;
     private final String appName;
     private final Environment environment;
 
-    public EndPointFactory(BootResponse bootResponse,
-                           UnifiedClientProperties unifiedClientProperties,
-                           String appName,
-                           Environment environment) {
+    public EnhanceFactory(BootResponse bootResponse,
+                          UnifiedClientProperties unifiedClientProperties,
+                          String appName,
+                          Environment environment) {
         this.bootResponse = bootResponse;
         this.unifiedClientProperties = unifiedClientProperties;
         this.content = bootResponse.getContent();
@@ -40,8 +41,8 @@ public class EndPointFactory implements InitializingAware {
         UnifiedClientProperties.EndpointOption endpointOption = new UnifiedClientProperties.EndpointOption();
         endpointOption.setHotspot(unifiedClientProperties.getEnhance().getHotspot());
         endpointOption.setAttach(unifiedClientProperties.getEnhance().getAttach());
-        if(StringUtils.isNotBlank(jsonObject.getString(HOST)) && null != jsonObject.getInteger("port")) {
-            endpointOption.setUrl(jsonObject.getString(HOST) + ":" + jsonObject.getString("port"));
+        if(StringUtils.isNotBlank(jsonObject.getString(HOST)) && null != jsonObject.getInteger(PORT)) {
+            endpointOption.setUrl(jsonObject.getString(HOST) + ":" + jsonObject.getString(PORT));
         }
         TransPointConfig transPointConfig = openEndPoint(endpointOption);
         transPointConfig.setHotspot(endpointOption.getHotspot());
