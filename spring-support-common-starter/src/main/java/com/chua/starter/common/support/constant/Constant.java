@@ -22,6 +22,7 @@ public interface Constant {
     String ERROR = "error";
     String HEAD = "head";
     String HOST = "host";
+    String PORT = "port";
     String PATH = "path";
     String QUERY = "query";
     String URI = "uri";
