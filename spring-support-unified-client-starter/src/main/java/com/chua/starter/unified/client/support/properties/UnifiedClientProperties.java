@@ -78,7 +78,7 @@ public class UnifiedClientProperties {
     @Data
     public static class EndpointOption {
 
-        public static final String PRE= "system/patch/";
+        public static final String PRE= "patch/client/";
         /**
          * 实时数据服务器地址
          * 1、成功连接到unified服务端无需填写,由服务端返回
@@ -92,7 +92,7 @@ public class UnifiedClientProperties {
          * 监听的重载目录 <br />
          * 默认: 运行目录
          */
-        private String hotspot;
+        private String hotspot = PRE;
     }
     @Data
     public static class SubscribeOption {

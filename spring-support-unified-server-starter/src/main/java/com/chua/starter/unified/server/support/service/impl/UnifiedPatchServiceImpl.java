@@ -136,7 +136,7 @@ public class UnifiedPatchServiceImpl extends ServiceImpl<UnifiedPatchMapper, Uni
     @Override
     public File getPatchFile(UnifiedPatch unifiedPatch) {
         String patchPath = StringUtils.defaultString(unifiedServerProperties.getEndpoint().getPatch(), ".");
-        File file = new File(patchPath, "patch/" + unifiedPatch.getUnifiedPatchId() + "");
+        File file = new File(patchPath, UnifiedServerProperties.EndpointOption.PRE + unifiedPatch.getUnifiedPatchId() + "");
         String unifiedPatchPack = unifiedPatch.getUnifiedPatchPack();
         if(StringUtils.isBlank(unifiedPatchPack)) {
             return file;

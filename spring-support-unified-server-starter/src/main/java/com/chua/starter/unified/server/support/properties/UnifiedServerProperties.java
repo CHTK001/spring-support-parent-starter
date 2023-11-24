@@ -39,6 +39,7 @@ public class UnifiedServerProperties {
 
     @Data
     public static class EndpointOption {
+        public static final String PRE= "patch/server/";
 
         private String host = "127.0.0.1";
         private Integer port = 15556;

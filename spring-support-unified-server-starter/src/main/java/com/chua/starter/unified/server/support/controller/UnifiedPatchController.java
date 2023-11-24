@@ -127,5 +127,20 @@ public class UnifiedPatchController {
         }
         return ResultData.success(unifiedPatchService.unloadPatch(t));
     }
+    /**
+     * 卸载补丁
+     *
+     * @param t 实体
+     * @return 分页结果
+     */
+//    @PostMapping("downloadPatch")
+//    @ResponseBody
+//    public ReturnMedia unloadPatch(@RequestBody UnifiedPatch t ) {
+//
+//        if(null == t.getUnifiedPatchId()) {
+//            return ReturnMedia.failure(PARAM_ERROR, "补丁编号不能为空");
+//        }
+//        return ResultData.success(unifiedPatchService.unloadPatch(t));
+//    }
 
 }

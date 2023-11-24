@@ -3,7 +3,7 @@ package com.chua.starter.unified.client.support.configuration;
 import com.chua.common.support.protocol.boot.BootResponse;
 import com.chua.common.support.protocol.boot.Protocol;
 import com.chua.common.support.utils.ThreadUtils;
-import com.chua.starter.unified.client.support.factory.EndPointFactory;
+import com.chua.starter.unified.client.support.factory.EnhanceFactory;
 import com.chua.starter.unified.client.support.factory.ExecutorFactory;
 import com.chua.starter.unified.client.support.factory.ProtocolFactory;
 import com.chua.starter.unified.client.support.properties.UnifiedClientProperties;
@@ -88,7 +88,7 @@ public class UnifiedClientConfiguration implements BeanDefinitionRegistryPostPro
     }
 
     private void registryEndpoint(BootResponse bootResponse) {
-        EndPointFactory endPointFactory = new EndPointFactory(bootResponse, unifiedClientProperties, appName, environment);
+        EnhanceFactory endPointFactory = new EnhanceFactory(bootResponse, unifiedClientProperties, appName, environment);
         endPointFactory.afterPropertiesSet();
     }
 }
