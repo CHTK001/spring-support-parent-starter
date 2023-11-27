@@ -84,6 +84,11 @@ public class UnifiedClientProperties {
          * 1、成功连接到unified服务端无需填写,由服务端返回
          */
         private String url;
+
+        /**
+         * 实时数据服务器端点
+         */
+        private String endpoint = "unified";
         /**
          * attach jar 路径
          */
