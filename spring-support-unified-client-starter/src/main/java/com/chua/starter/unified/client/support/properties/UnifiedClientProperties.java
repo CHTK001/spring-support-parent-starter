@@ -90,10 +90,6 @@ public class UnifiedClientProperties {
          */
         private String endpoint = "unified";
         /**
-         * attach jar 路径
-         */
-        private String attach;
-        /**
          * 监听的重载目录 <br />
          * 默认: 运行目录
          */
