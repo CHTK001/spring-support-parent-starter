@@ -78,7 +78,7 @@ public class UnifiedClientProperties {
     @Data
     public static class EndpointOption {
 
-        public static final String PRE= "patch/client/";
+        public static final String PRE= "./patch/client/";
         /**
          * 实时数据服务器地址
          * 1、成功连接到unified服务端无需填写,由服务端返回
