@@ -12,9 +12,7 @@ import java.lang.annotation.Target;
 
 
 /**
- * @description: 自定义数据脱敏注解
- * @author: xiaYZ
- * @createDate: 2022/6/21
+ * 自定义数据脱敏注解
  */
 
 @Target(ElementType.FIELD) // 作用在字段上
