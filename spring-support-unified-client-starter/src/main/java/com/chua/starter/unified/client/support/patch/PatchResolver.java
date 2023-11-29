@@ -34,7 +34,7 @@ public class PatchResolver {
     }
 
     private File createPatchPath(String patchPath) {
-        File file = new File(patchPath, UnifiedClientProperties.EndpointOption.PRE);
+        File file = new File(StringUtils.defaultString(patchPath, UnifiedClientProperties.EndpointOption.PRE));
         FileUtils.mkdir(file);
         return file;
     }
