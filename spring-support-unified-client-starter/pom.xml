@@ -39,6 +39,12 @@
             <groupId>com.chua</groupId>
             <artifactId>spring-support-mybatis-starter</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.benf</groupId>
+            <artifactId>cfr</artifactId>
+            <version>0.152</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 
 </project>

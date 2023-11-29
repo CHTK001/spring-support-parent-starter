@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.common.support.protocol.boot.BootRequest;
 import com.chua.starter.unified.server.support.entity.UnifiedExecuter;
 import com.chua.starter.unified.server.support.entity.UnifiedExecuterItem;
+import com.chua.starter.unified.server.support.pojo.ActuatorQuery;
 
 import java.io.Serializable;
 import java.util.List;
@@ -34,6 +35,14 @@ public interface UnifiedExecuterItemService extends IService<UnifiedExecuterItem
     void remove(Serializable unifiedExecuterId);
 
     /**
+     * 通过ID查询数据
+     *
+     * @param unifiedExecuterItemId id
+     * @return UnifiedExecuterItem
+     */
+    UnifiedExecuterItem get(Serializable unifiedExecuterItemId);
+
+    /**
      * 保存或更新
      *
      * @param unifiedExecuterItem 统一执行器项目
@@ -47,4 +56,12 @@ public interface UnifiedExecuterItemService extends IService<UnifiedExecuterItem
      * @param request 请求
      */
     void checkHeart(BootRequest request);
+
+    /**
+     * 获取执行器查询
+     *
+     * @param dataId 数据id
+     * @return {@link ActuatorQuery}
+     */
+    ActuatorQuery getActuatorQuery(String dataId);
 }
