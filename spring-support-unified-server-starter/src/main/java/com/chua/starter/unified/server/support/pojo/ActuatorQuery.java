@@ -11,7 +11,11 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class ActuatorQuery {
+
+    private String host;
     private String port;
+
+    private String contextPath;
 
     private String endpointsUrl;
 }

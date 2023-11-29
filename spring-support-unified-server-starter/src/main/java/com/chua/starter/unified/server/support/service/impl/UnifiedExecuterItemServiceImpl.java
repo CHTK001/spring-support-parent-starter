@@ -147,7 +147,9 @@ public class UnifiedExecuterItemServiceImpl extends ServiceImpl<UnifiedExecuterI
         if(StringUtils.isEmpty(port)) {
             return null;
         }
-        return new ActuatorQuery(port, MapUtils.getString(ext, "endpointsUrl", "/actuator"));
+        return new ActuatorQuery(unifiedExecuterItem.getUnifiedExecuterItemHost(), port,
+                MapUtils.getString(ext, "contextPath", ""),
+                MapUtils.getString(ext, "endpointsUrl", "/actuator"));
     }
 
     private void register(BootRequest request) {
