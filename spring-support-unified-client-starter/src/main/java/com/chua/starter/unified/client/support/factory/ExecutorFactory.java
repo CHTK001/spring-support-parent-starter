@@ -9,6 +9,8 @@ import com.chua.starter.unified.client.support.properties.UnifiedClientPropertie
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.env.Environment;
 
+import java.util.Map;
+
 import static com.chua.common.support.discovery.Constants.SUBSCRIBE;
 
 /**
@@ -65,7 +67,13 @@ public class ExecutorFactory implements InitializingAware {
         UnifiedClientProperties.UnifiedExecuter executer = unifiedClientProperties.getExecuter();
         JSONObject jsonObject = new JSONObject();
         jsonObject.putAll(BeanMap.create(executer));
-        jsonObject.put(SUBSCRIBE, unifiedClientProperties.getSubscribe());
+        Map<ModuleType, UnifiedClientProperties.SubscribeOption> subscribe = unifiedClientProperties.getSubscribe();
+        UnifiedClientProperties.SubscribeOption subscribeOption = new UnifiedClientProperties.SubscribeOption();
+        subscribeOption.setExt(new JSONObject()
+                .fluentPut("port", environment.resolvePlaceholders("${server.port:8080}"))
+                .fluentPut("endpointsUrl", environment.resolvePlaceholders("${management.endpoints.web.base-path:/actuator}")));
+        subscribe.put(ModuleType.ACTUATOR, subscribeOption);
+        jsonObject.put(SUBSCRIBE, subscribe);
         request.setAppName(appName);
         request.setProfile(environment.getProperty("spring.profiles.active", "default"));
         request.setContent(jsonObject.toJSONString(JSONWriter.Feature.WriteEnumsUsingName));

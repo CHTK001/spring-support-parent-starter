@@ -105,6 +105,11 @@ public class UnifiedClientProperties {
          * 自动全部上报
          */
         private boolean autoConfig;
+
+        /**
+         * ext
+         */
+        private Map<String, Object> ext;
     }
     @Data
     public static class UnifiedExecuter {
