@@ -10,9 +10,7 @@
       <configuration>
         <setting name="validation-enabled" value="true" />
         <setting name="provider-name" value="Hibernate" />
-        <datasource-mapping>
-          <factory-entry name="entityManagerFactory" />
-        </datasource-mapping>
+        <datasource-mapping />
         <naming-strategy-map />
       </configuration>
     </facet>
@@ -30,36 +28,7 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module" module-name="spring-support-common-starter" />
-    <orderEntry type="module" module-name="utils-support-httpclient-starter" />
-    <orderEntry type="module" module-name="utils-support-hibernate-starter" />
-    <orderEntry type="module" module-name="utils-support-vertx-starter" />
-    <orderEntry type="module" module-name="utils-support-groovy-starter" />
-    <orderEntry type="module" module-name="utils-support-oshi-starter" />
-    <orderEntry type="module" module-name="utils-support-common-starter" />
-    <orderEntry type="module" module-name="spring-support-sse-starter" />
-    <orderEntry type="module" module-name="spring-support-mybatis-starter" />
-    <orderEntry type="module" module-name="spring-support-oauth-client-starter" />
-    <orderEntry type="module" module-name="spring-support-common-starter" />
-    <orderEntry type="module" module-name="utils-support-httpclient-starter" />
-    <orderEntry type="module" module-name="utils-support-hibernate-starter" />
-    <orderEntry type="module" module-name="utils-support-vertx-starter" />
-    <orderEntry type="module" module-name="utils-support-groovy-starter" />
-    <orderEntry type="module" module-name="utils-support-oshi-starter" />
-    <orderEntry type="module" module-name="utils-support-common-starter" />
-    <orderEntry type="module" module-name="spring-support-sse-starter" />
-    <orderEntry type="module" module-name="spring-support-mybatis-starter" />
-    <orderEntry type="module" module-name="spring-support-oauth-client-starter" />
-    <orderEntry type="module" module-name="spring-support-unified-client-starter" />
-    <orderEntry type="module-library">
-      <library name="Maven: com.sun:tools:1.8.0">
-        <CLASSES>
-          <root url="jar://D:/Program Files/Java/jdk-1.8/lib/tools.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
+    <orderEntry type="module" module-name="spring-support-config-client-starter" />
     <orderEntry type="module" module-name="spring-support-common-starter" />
     <orderEntry type="library" name="Maven: com.jayway.jsonpath:json-path:2.7.0" level="project" />
     <orderEntry type="library" name="Maven: net.minidev:json-smart:2.4.8" level="project" />
@@ -129,8 +98,39 @@
     <orderEntry type="library" name="Maven: com.github.oshi:oshi-core:6.4.0" level="project" />
     <orderEntry type="library" name="Maven: net.java.dev.jna:jna:5.12.1" level="project" />
     <orderEntry type="library" name="Maven: net.java.dev.jna:jna-platform:5.12.1" level="project" />
-    <orderEntry type="library" name="Maven: org.benf:cfr:0.152" level="project" />
-    <orderEntry type="module" module-name="utils-support-zbus-starter" />
+    <orderEntry type="library" name="Maven: org.springframework.boot:spring-boot-starter-websocket:2.7.8" level="project" />
+    <orderEntry type="library" name="Maven: org.springframework:spring-messaging:5.3.28" level="project" />
+    <orderEntry type="library" name="Maven: org.springframework:spring-beans:5.3.28" level="project" />
+    <orderEntry type="library" name="Maven: org.springframework:spring-core:5.3.28" level="project" />
+    <orderEntry type="library" name="Maven: org.springframework:spring-jcl:5.3.28" level="project" />
+    <orderEntry type="library" name="Maven: org.springframework:spring-websocket:5.3.28" level="project" />
+    <orderEntry type="library" name="Maven: org.springframework:spring-context:5.3.28" level="project" />
+    <orderEntry type="module" module-name="spring-support-mybatis-starter" />
+    <orderEntry type="library" name="Maven: org.springframework.boot:spring-boot-starter-freemarker:2.7.8" level="project" />
+    <orderEntry type="library" name="Maven: org.freemarker:freemarker:2.3.32" level="project" />
+    <orderEntry type="library" name="Maven: org.springframework:spring-context-support:5.3.28" level="project" />
+    <orderEntry type="library" name="Maven: com.baomidou:mybatis-plus-generator:3.5.3.1" level="project" />
+    <orderEntry type="library" name="Maven: com.github.yulichang:mybatis-plus-join-boot-starter:1.4.4.2" level="project" />
+    <orderEntry type="library" name="Maven: com.github.yulichang:mybatis-plus-join-core:1.4.4.2" level="project" />
+    <orderEntry type="library" name="Maven: com.github.yulichang:mybatis-plus-join-annotation:1.4.4.2" level="project" />
+    <orderEntry type="library" name="Maven: com.github.yulichang:mybatis-plus-join-adapter-v33x:1.4.4.2" level="project" />
+    <orderEntry type="library" name="Maven: com.github.yulichang:mybatis-plus-join-adapter-base:1.4.4.2" level="project" />
+    <orderEntry type="library" name="Maven: com.github.yulichang:mybatis-plus-join-adapter-v3431:1.4.4.2" level="project" />
+    <orderEntry type="library" name="Maven: com.github.yulichang:mybatis-plus-join-adapter-v352:1.4.4.2" level="project" />
+    <orderEntry type="library" name="Maven: com.baomidou:mybatis-plus-boot-starter:3.5.3.1" level="project" />
+    <orderEntry type="library" name="Maven: com.baomidou:mybatis-plus:3.5.3.1" level="project" />
+    <orderEntry type="library" name="Maven: com.baomidou:mybatis-plus-extension:3.5.3.1" level="project" />
+    <orderEntry type="library" name="Maven: com.baomidou:mybatis-plus-core:3.5.3.1" level="project" />
+    <orderEntry type="library" name="Maven: com.baomidou:mybatis-plus-annotation:3.5.3.1" level="project" />
+    <orderEntry type="library" name="Maven: com.github.jsqlparser:jsqlparser:4.4" level="project" />
+    <orderEntry type="library" name="Maven: org.mybatis:mybatis:3.5.10" level="project" />
+    <orderEntry type="library" name="Maven: org.mybatis:mybatis-spring:2.0.7" level="project" />
+    <orderEntry type="library" name="Maven: org.springframework.boot:spring-boot-autoconfigure:2.7.8" level="project" />
+    <orderEntry type="library" name="Maven: org.springframework.boot:spring-boot-starter-jdbc:2.7.8" level="project" />
+    <orderEntry type="library" name="Maven: com.zaxxer:HikariCP:4.0.3" level="project" />
+    <orderEntry type="library" name="Maven: org.springframework:spring-jdbc:5.3.28" level="project" />
+    <orderEntry type="library" name="Maven: commons-dbutils:commons-dbutils:1.7" level="project" />
+    <orderEntry type="library" name="Maven: commons-io:commons-io:2.11.0" level="project" />
     <orderEntry type="library" name="Maven: org.zbus:zbus:7.2.2" level="project" />
     <orderEntry type="library" name="Maven: io.netty:netty-all:4.1.94.Final" level="project" />
     <orderEntry type="library" name="Maven: io.netty:netty-buffer:4.1.94.Final" level="project" />
@@ -166,6 +166,9 @@
     <orderEntry type="library" scope="RUNTIME" name="Maven: io.netty:netty-transport-native-kqueue:osx-aarch_64:4.1.94.Final" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Maven: io.netty:netty-resolver-dns-native-macos:osx-x86_64:4.1.94.Final" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Maven: io.netty:netty-resolver-dns-native-macos:osx-aarch_64:4.1.94.Final" level="project" />
+    <orderEntry type="module" module-name="spring-support-sse-starter" />
+    <orderEntry type="library" name="Maven: ch.rasc:sse-eventbus:1.1.9" level="project" />
+    <orderEntry type="library" name="Maven: javax.annotation:javax.annotation-api:1.3.2" level="project" />
     <orderEntry type="module" module-name="utils-support-common-starter" />
     <orderEntry type="library" name="Maven: org.slf4j:slf4j-api:1.7.36" level="project" />
     <orderEntry type="library" name="Maven: org.javassist:javassist:3.29.2-GA" level="project" />
@@ -180,39 +183,16 @@
     <orderEntry type="library" name="Maven: com.github.luben:zstd-jni:1.5.5-3" level="project" />
     <orderEntry type="library" name="Maven: org.xerial:sqlite-jdbc:3.36.0.3" level="project" />
     <orderEntry type="library" name="Maven: com.googlecode.aviator:aviator:5.3.3" level="project" />
-    <orderEntry type="module" module-name="spring-support-sse-starter" />
-    <orderEntry type="library" name="Maven: ch.rasc:sse-eventbus:1.1.9" level="project" />
-    <orderEntry type="library" name="Maven: javax.annotation:javax.annotation-api:1.3.2" level="project" />
-    <orderEntry type="module" module-name="spring-support-mybatis-starter" />
-    <orderEntry type="library" name="Maven: org.springframework.boot:spring-boot-starter-freemarker:2.7.8" level="project" />
-    <orderEntry type="library" name="Maven: org.freemarker:freemarker:2.3.32" level="project" />
-    <orderEntry type="library" name="Maven: org.springframework:spring-context-support:5.3.28" level="project" />
-    <orderEntry type="library" name="Maven: com.baomidou:mybatis-plus-generator:3.5.3.1" level="project" />
-    <orderEntry type="library" name="Maven: com.github.yulichang:mybatis-plus-join-boot-starter:1.4.4.2" level="project" />
-    <orderEntry type="library" name="Maven: com.github.yulichang:mybatis-plus-join-core:1.4.4.2" level="project" />
-    <orderEntry type="library" name="Maven: com.github.yulichang:mybatis-plus-join-annotation:1.4.4.2" level="project" />
-    <orderEntry type="library" name="Maven: com.github.yulichang:mybatis-plus-join-adapter-v33x:1.4.4.2" level="project" />
-    <orderEntry type="library" name="Maven: com.github.yulichang:mybatis-plus-join-adapter-base:1.4.4.2" level="project" />
-    <orderEntry type="library" name="Maven: com.github.yulichang:mybatis-plus-join-adapter-v3431:1.4.4.2" level="project" />
-    <orderEntry type="library" name="Maven: com.github.yulichang:mybatis-plus-join-adapter-v352:1.4.4.2" level="project" />
-    <orderEntry type="library" name="Maven: com.baomidou:mybatis-plus-boot-starter:3.5.3.1" level="project" />
-    <orderEntry type="library" name="Maven: com.baomidou:mybatis-plus:3.5.3.1" level="project" />
-    <orderEntry type="library" name="Maven: com.baomidou:mybatis-plus-extension:3.5.3.1" level="project" />
-    <orderEntry type="library" name="Maven: com.baomidou:mybatis-plus-core:3.5.3.1" level="project" />
-    <orderEntry type="library" name="Maven: com.baomidou:mybatis-plus-annotation:3.5.3.1" level="project" />
-    <orderEntry type="library" name="Maven: com.github.jsqlparser:jsqlparser:4.4" level="project" />
-    <orderEntry type="library" name="Maven: org.mybatis:mybatis:3.5.10" level="project" />
-    <orderEntry type="library" name="Maven: org.mybatis:mybatis-spring:2.0.7" level="project" />
-    <orderEntry type="library" name="Maven: org.springframework.boot:spring-boot-autoconfigure:2.7.8" level="project" />
-    <orderEntry type="library" name="Maven: org.springframework.boot:spring-boot-starter-jdbc:2.7.8" level="project" />
-    <orderEntry type="library" name="Maven: com.zaxxer:HikariCP:4.0.3" level="project" />
-    <orderEntry type="library" name="Maven: org.springframework:spring-jdbc:5.3.28" level="project" />
-    <orderEntry type="library" name="Maven: commons-dbutils:commons-dbutils:1.7" level="project" />
-    <orderEntry type="library" name="Maven: commons-io:commons-io:2.11.0" level="project" />
-    <orderEntry type="module" module-name="spring-support-oauth-client-starter" />
-    <orderEntry type="library" name="Maven: me.zhyd.oauth:JustAuth:1.16.5" level="project" />
-    <orderEntry type="library" name="Maven: com.xkcoding.http:simple-http:1.0.5" level="project" />
-    <orderEntry type="library" name="Maven: com.alibaba:fastjson:1.2.78" level="project" />
+    <orderEntry type="module" module-name="utils-support-lucene-starter" />
+    <orderEntry type="library" name="Maven: org.apache.lucene:lucene-core:8.9.0" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.lucene:lucene-analyzers-common:8.9.0" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.lucene:lucene-analyzers-smartcn:8.9.0" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.lucene:lucene-queryparser:8.9.0" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.lucene:lucene-queries:8.9.0" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.lucene:lucene-sandbox:8.9.0" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.lucene:lucene-highlighter:8.9.0" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.lucene:lucene-memory:8.9.0" level="project" />
+    <orderEntry type="library" name="Maven: com.janeluo:ikanalyzer:2012_u6" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: org.projectlombok:lombok:1.18.20" level="project" />
     <orderEntry type="library" name="Maven: org.springframework.boot:spring-boot-starter-web:2.7.8" level="project" />
     <orderEntry type="library" name="Maven: org.springframework.boot:spring-boot-starter:2.7.8" level="project" />
@@ -224,8 +204,6 @@
     <orderEntry type="library" name="Maven: org.apache.logging.log4j:log4j-api:2.17.2" level="project" />
     <orderEntry type="library" name="Maven: org.slf4j:jul-to-slf4j:1.7.36" level="project" />
     <orderEntry type="library" name="Maven: jakarta.annotation:jakarta.annotation-api:1.3.5" level="project" />
-    <orderEntry type="library" name="Maven: org.springframework:spring-core:5.3.28" level="project" />
-    <orderEntry type="library" name="Maven: org.springframework:spring-jcl:5.3.28" level="project" />
     <orderEntry type="library" name="Maven: org.yaml:snakeyaml:1.30" level="project" />
     <orderEntry type="library" name="Maven: org.springframework.boot:spring-boot-starter-json:2.7.8" level="project" />
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-databind:2.13.5" level="project" />
@@ -236,9 +214,7 @@
     <orderEntry type="library" name="Maven: org.apache.tomcat.embed:tomcat-embed-el:9.0.71" level="project" />
     <orderEntry type="library" name="Maven: org.apache.tomcat.embed:tomcat-embed-websocket:9.0.71" level="project" />
     <orderEntry type="library" name="Maven: org.springframework:spring-web:5.3.28" level="project" />
-    <orderEntry type="library" name="Maven: org.springframework:spring-beans:5.3.28" level="project" />
     <orderEntry type="library" name="Maven: org.springframework:spring-webmvc:5.3.28" level="project" />
-    <orderEntry type="library" name="Maven: org.springframework:spring-context:5.3.28" level="project" />
     <orderEntry type="library" name="Maven: org.springframework:spring-expression:5.3.28" level="project" />
     <orderEntry type="library" name="Maven: org.springframework.boot:spring-boot-starter-aop:2.7.8" level="project" />
     <orderEntry type="library" name="Maven: org.springframework:spring-aop:5.3.28" level="project" />
