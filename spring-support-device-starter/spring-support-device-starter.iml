@@ -30,18 +30,10 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module" module-name="spring-support-common-starter" />
-    <orderEntry type="module" module-name="utils-support-httpclient-starter" />
-    <orderEntry type="module" module-name="utils-support-hibernate-starter" />
-    <orderEntry type="module" module-name="utils-support-vertx-starter" />
-    <orderEntry type="module" module-name="utils-support-groovy-starter" />
-    <orderEntry type="module" module-name="spring-support-oauth-client-starter" />
-    <orderEntry type="module" module-name="spring-support-redis-starter" />
-    <orderEntry type="module" module-name="utils-support-redis-starter" />
     <orderEntry type="module" module-name="spring-support-mybatis-starter" />
     <orderEntry type="module" module-name="spring-support-swagger-starter" />
-    <orderEntry type="module" module-name="utils-support-influxdb-starter" />
-    <orderEntry type="module" module-name="utils-support-common-starter" />
+    <orderEntry type="module" module-name="spring-support-mybatis-starter" />
+    <orderEntry type="module" module-name="spring-support-swagger-starter" />
     <orderEntry type="module" module-name="spring-support-common-starter" />
     <orderEntry type="library" name="Maven: com.jayway.jsonpath:json-path:2.7.0" level="project" />
     <orderEntry type="library" name="Maven: net.minidev:json-smart:2.4.8" level="project" />

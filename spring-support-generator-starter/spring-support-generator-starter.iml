@@ -30,25 +30,8 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module" module-name="utils-support-neo4j-starter" />
-    <orderEntry type="module" module-name="utils-support-common-starter" />
-    <orderEntry type="module" module-name="utils-support-minio-starter" />
-    <orderEntry type="module" module-name="utils-support-pcap-starter" />
-    <orderEntry type="module" module-name="spring-support-oauth-client-starter" />
-    <orderEntry type="module" module-name="spring-support-common-starter" />
-    <orderEntry type="module" module-name="utils-support-httpclient-starter" />
-    <orderEntry type="module" module-name="utils-support-hibernate-starter" />
-    <orderEntry type="module" module-name="utils-support-vertx-starter" />
-    <orderEntry type="module" module-name="utils-support-groovy-starter" />
-    <orderEntry type="module" module-name="utils-support-influxdb-starter" />
-    <orderEntry type="module" module-name="utils-support-datasource-starter" />
-    <orderEntry type="module" module-name="utils-support-poi-starter" />
-    <orderEntry type="module" module-name="utils-support-zookeeper-starter" />
-    <orderEntry type="module" module-name="utils-support-elasticsearch-starter" />
-    <orderEntry type="module" module-name="utils-support-redis-starter" />
-    <orderEntry type="module" module-name="spring-support-sse-starter" />
     <orderEntry type="module" module-name="spring-support-mybatis-starter" />
-    <orderEntry type="module" module-name="utils-support-sftp-starter" />
+    <orderEntry type="module" module-name="spring-support-mybatis-starter" />
     <orderEntry type="library" name="Maven: org.apache.velocity:velocity-engine-core:2.3" level="project" />
     <orderEntry type="library" name="Maven: org.apache.commons:commons-lang3:3.12.0" level="project" />
     <orderEntry type="library" name="Maven: org.slf4j:slf4j-api:1.7.36" level="project" />
