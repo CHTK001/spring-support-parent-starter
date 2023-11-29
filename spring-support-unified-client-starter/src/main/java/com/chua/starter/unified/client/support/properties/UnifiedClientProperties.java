@@ -117,7 +117,7 @@ public class UnifiedClientProperties {
         /**
          * 客户端绑定的IP
          */
-        private String host = "127.0.0.1";
+        private String host = NetUtils.getLocalHost();
         /**
          * 客户端绑定的端口
          */
