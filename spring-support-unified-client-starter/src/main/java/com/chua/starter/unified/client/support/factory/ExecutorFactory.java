@@ -71,7 +71,8 @@ public class ExecutorFactory implements InitializingAware {
         UnifiedClientProperties.SubscribeOption subscribeOption = new UnifiedClientProperties.SubscribeOption();
         subscribeOption.setExt(new JSONObject()
                 .fluentPut("port", environment.resolvePlaceholders("${server.port:8080}"))
-                .fluentPut("endpointsUrl", environment.resolvePlaceholders("${management.endpoints.web.base-path:/actuator}")));
+                .fluentPut("endpointsUrl", environment.resolvePlaceholders("${management.endpoints.web.base-path:/actuator}"))
+                .fluentPut("contextPath", environment.resolvePlaceholders("${server.servlet.context-path:}")));
         subscribe.put(ModuleType.ACTUATOR, subscribeOption);
         jsonObject.put(SUBSCRIBE, subscribe);
         request.setAppName(appName);

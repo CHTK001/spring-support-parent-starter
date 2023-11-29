@@ -38,6 +38,14 @@
     <orderEntry type="module" module-name="utils-support-oshi-starter" />
     <orderEntry type="module" module-name="utils-support-common-starter" />
     <orderEntry type="module" module-name="spring-support-mybatis-starter" />
+    <orderEntry type="module" module-name="spring-support-common-starter" />
+    <orderEntry type="module" module-name="utils-support-httpclient-starter" />
+    <orderEntry type="module" module-name="utils-support-hibernate-starter" />
+    <orderEntry type="module" module-name="utils-support-vertx-starter" />
+    <orderEntry type="module" module-name="utils-support-groovy-starter" />
+    <orderEntry type="module" module-name="utils-support-oshi-starter" />
+    <orderEntry type="module" module-name="utils-support-common-starter" />
+    <orderEntry type="module" module-name="spring-support-mybatis-starter" />
     <orderEntry type="module-library">
       <library name="Maven: com.sun:tools:1.8.0">
         <CLASSES>
@@ -171,6 +179,7 @@
     <orderEntry type="library" name="Maven: org.springframework.boot:spring-boot-autoconfigure:2.7.8" level="project" />
     <orderEntry type="library" name="Maven: commons-dbutils:commons-dbutils:1.7" level="project" />
     <orderEntry type="library" name="Maven: commons-io:commons-io:2.11.0" level="project" />
+    <orderEntry type="library" name="Maven: org.benf:cfr:0.152" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: org.projectlombok:lombok:1.18.20" level="project" />
     <orderEntry type="library" name="Maven: org.springframework.boot:spring-boot-starter-web:2.7.8" level="project" />
     <orderEntry type="library" name="Maven: org.springframework.boot:spring-boot-starter:2.7.8" level="project" />
