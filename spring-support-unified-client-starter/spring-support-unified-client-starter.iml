@@ -30,21 +30,8 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module" module-name="spring-support-common-starter" />
-    <orderEntry type="module" module-name="utils-support-httpclient-starter" />
-    <orderEntry type="module" module-name="utils-support-hibernate-starter" />
-    <orderEntry type="module" module-name="utils-support-vertx-starter" />
-    <orderEntry type="module" module-name="utils-support-groovy-starter" />
-    <orderEntry type="module" module-name="utils-support-oshi-starter" />
-    <orderEntry type="module" module-name="utils-support-common-starter" />
     <orderEntry type="module" module-name="spring-support-mybatis-starter" />
-    <orderEntry type="module" module-name="spring-support-common-starter" />
-    <orderEntry type="module" module-name="utils-support-httpclient-starter" />
-    <orderEntry type="module" module-name="utils-support-hibernate-starter" />
-    <orderEntry type="module" module-name="utils-support-vertx-starter" />
-    <orderEntry type="module" module-name="utils-support-groovy-starter" />
-    <orderEntry type="module" module-name="utils-support-oshi-starter" />
-    <orderEntry type="module" module-name="utils-support-common-starter" />
+    <orderEntry type="module" module-name="spring-support-mybatis-starter" />
     <orderEntry type="module" module-name="spring-support-mybatis-starter" />
     <orderEntry type="module-library">
       <library name="Maven: com.sun:tools:1.8.0">
