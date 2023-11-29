@@ -6,11 +6,15 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.common.support.protocol.boot.BootRequest;
+import com.chua.common.support.protocol.boot.ModuleType;
+import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.utils.ThreadUtils;
+import com.chua.starter.unified.client.support.properties.UnifiedClientProperties;
 import com.chua.starter.unified.server.support.entity.UnifiedExecuter;
 import com.chua.starter.unified.server.support.entity.UnifiedExecuterItem;
 import com.chua.starter.unified.server.support.mapper.UnifiedExecuterItemMapper;
+import com.chua.starter.unified.server.support.pojo.ActuatorQuery;
 import com.chua.starter.unified.server.support.properties.UnifiedServerProperties;
 import com.chua.starter.unified.server.support.service.UnifiedExecuterItemService;
 import com.chua.starter.unified.server.support.service.UnifiedExecuterService;
@@ -28,6 +32,7 @@ import javax.annotation.Resource;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static com.chua.common.support.discovery.Constants.SUBSCRIBE;
@@ -74,6 +79,12 @@ public class UnifiedExecuterItemServiceImpl extends ServiceImpl<UnifiedExecuterI
     }
 
     @Override
+    @Cacheable(cacheManager = DEFAULT_CACHE_MANAGER, cacheNames = EXECUTER, key = "#unifiedExecuterItemId")
+    public UnifiedExecuterItem get(Serializable unifiedExecuterItemId) {
+        return baseMapper.selectById(unifiedExecuterItemId);
+    }
+
+    @Override
     @CacheEvict(cacheManager = DEFAULT_CACHE_MANAGER, cacheNames = EXECUTER, allEntries = true)
     public boolean saveOrUpdate(UnifiedExecuterItem entity) {
         LambdaQueryWrapper<UnifiedExecuterItem> wrapper = Wrappers.<UnifiedExecuterItem>lambdaQuery()
@@ -107,6 +118,36 @@ public class UnifiedExecuterItemServiceImpl extends ServiceImpl<UnifiedExecuterI
             return;
         }
         register(request);
+    }
+
+    @Override
+    public ActuatorQuery getActuatorQuery(String dataId) {
+        UnifiedExecuterItem unifiedExecuterItem = get(dataId);
+        if (null == unifiedExecuterItem) {
+            return null;
+        }
+        String unifiedExecuterItemSubscribe = unifiedExecuterItem.getUnifiedExecuterItemSubscribe();
+        if(StringUtils.isEmpty(unifiedExecuterItemSubscribe)) {
+            return null;
+        }
+
+        com.alibaba.fastjson.JSONObject jsonObject = com.alibaba.fastjson.JSON.parseObject(unifiedExecuterItemSubscribe);
+        UnifiedClientProperties.SubscribeOption subscribeOption = jsonObject.getObject(ModuleType.ACTUATOR.name(), UnifiedClientProperties.SubscribeOption.class);
+        if(null == subscribeOption) {
+            return null;
+        }
+
+        Map<String, Object> ext = subscribeOption.getExt();
+        if(null == ext) {
+            return null;
+        }
+
+
+        String port = MapUtils.getString(ext, "port");
+        if(StringUtils.isEmpty(port)) {
+            return null;
+        }
+        return new ActuatorQuery(port, MapUtils.getString(ext, "endpointsUrl", "/actuator"));
     }
 
     private void register(BootRequest request) {
