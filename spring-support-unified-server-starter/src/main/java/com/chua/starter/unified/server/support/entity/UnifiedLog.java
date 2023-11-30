@@ -54,9 +54,19 @@ public class UnifiedLog implements Serializable {
     /**
      * 状态
      */
-    @TableField(value = "unified_log_code")
+    @TableField(value = "unified_log_app_name")
     @Size(max = 255, message = "状态最大长度要小于 255")
     private String unifiedLogCode;
+    /**
+     * 应用名称
+     */
+    @TableField(value = "unified_log_app_name")
+    private String unifiedLogAppName;
+    /**
+     * 应用环境
+     */
+    @TableField(value = "unified_log_profile")
+    private String unifiedLogProfile;
 
     /**
      * 创建时间
