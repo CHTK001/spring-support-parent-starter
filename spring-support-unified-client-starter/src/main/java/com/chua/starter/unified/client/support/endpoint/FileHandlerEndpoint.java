@@ -1,12 +1,14 @@
 package com.chua.starter.unified.client.support.endpoint;
 
+import com.alibaba.fastjson2.JSONObject;
+import com.alibaba.fastjson2.JSONWriter;
 import com.chua.common.support.utils.ClassUtils;
 import org.springframework.boot.actuate.endpoint.annotation.ReadOperation;
 import org.springframework.boot.actuate.endpoint.web.annotation.WebEndpoint;
 
 import java.lang.reflect.Method;
-import java.util.Collection;
-import java.util.Collections;
+
+import static com.chua.common.support.constant.CommonConstant.EMPTY_JSON;
 
 /**
  * 文件处理程序终结点
@@ -38,15 +40,15 @@ public class FileHandlerEndpoint {
      * @return 结果
      */
     @ReadOperation
-    public Collection<String> list() {
+    public String list() {
         if(null == method) {
-            return Collections.emptyList();
+            return EMPTY_JSON;
         }
 
         try {
-            return Collections.singletonList(method.invoke(null).toString());
+            return new JSONObject().fluentPut("data", method.invoke(null).toString()).toJSONString(JSONWriter.Feature.LargeObject);
         } catch (Exception ignored) {
         }
-        return Collections.emptyList();
+        return EMPTY_JSON;
     }
 }
