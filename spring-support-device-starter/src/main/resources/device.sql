@@ -11,7 +11,7 @@
  Target Server Version : 80033
  File Encoding         : 65001
 
- Date: 02/11/2023 16:22:21
+ Date: 30/11/2023 09:54:04
 */
 
 SET NAMES utf8mb4;
@@ -31,7 +31,7 @@ CREATE TABLE `device_channel`  (
   `create_time` datetime NULL DEFAULT NULL COMMENT '更新时间',
   `update_time` datetime NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`channel_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '设备通道' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '设备通道' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of device_channel
@@ -53,7 +53,7 @@ CREATE TABLE `device_cloud_platform`  (
   `device_platform_logo` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '云平台logo',
   `manufacturer_id` int NULL DEFAULT NULL COMMENT '厂家ID',
   PRIMARY KEY (`device_platform_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '云平台信息表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '云平台信息表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of device_cloud_platform
@@ -78,7 +78,7 @@ CREATE TABLE `device_cloud_platform_connector`  (
   `device_connector_address` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '接口地址',
   `device_platform_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '对应的平台ID',
   PRIMARY KEY (`device_connector_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '设备厂家配置信息表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '设备厂家配置信息表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of device_cloud_platform_connector
@@ -121,7 +121,7 @@ CREATE TABLE `device_data_access_event`  (
   INDEX `device_data_org_id_index`(`device_data_org_id` ASC) USING BTREE,
   INDEX `device_data_event_time_index`(`device_data_event_time` DESC) USING BTREE,
   INDEX `device_ismi_index`(`device_imsi` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1682 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '门禁设备数据' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1681 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '门禁设备数据' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of device_data_access_event
@@ -1827,7 +1827,7 @@ CREATE TABLE `device_data_event`  (
   PRIMARY KEY (`device_data_id`) USING BTREE,
   INDEX `device_id_index`(`device_imsi` ASC) USING BTREE,
   INDEX `device_data_event_time_index`(`device_data_event_time` DESC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '门禁设备数据' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '门禁设备数据' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of device_data_event
@@ -1846,8 +1846,8 @@ CREATE TABLE `device_info`  (
   `device_connector_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '云服务',
   `device_netaddress` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '网络地址',
   `device_status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT 'offline' COMMENT '设备状态; offline: 离线, online: 在线, disable: 禁用',
-  `device_longitude` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '经度',
-  `device_latitude` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '维度',
+  `device_longitude` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '经度',
+  `device_latitude` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '维度',
   `device_type_id` int NULL DEFAULT NULL COMMENT '设备类型ID',
   `device_address` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '设备所在的详细地址',
   `device_version` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '设备版本',
@@ -1863,7 +1863,7 @@ CREATE TABLE `device_info`  (
   `update_time` datetime NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `device_in_cloud` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT 'none' COMMENT '设备是否挂载到云服务； cloud: 以挂载到云；none: 无挂载',
   PRIMARY KEY (`device_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 16 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '设备信息表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 15 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '设备信息表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of device_info
@@ -1897,7 +1897,7 @@ CREATE TABLE `device_log`  (
   `create_time` datetime NULL DEFAULT NULL,
   `update_time` datetime NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`device_log_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of device_log
@@ -1921,7 +1921,7 @@ CREATE TABLE `device_manufacturer`  (
   `create_time` datetime NULL DEFAULT NULL COMMENT '更新时间',
   `update_time` datetime NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`manufacturer_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '厂家表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '厂家表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of device_manufacturer
@@ -1945,7 +1945,7 @@ CREATE TABLE `device_org`  (
   `create_time` datetime NULL DEFAULT NULL COMMENT '创建时间',
   `update_time` datetime NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`device_org_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 43 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '厂家组织编码' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 42 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '厂家组织编码' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of device_org
@@ -1972,7 +1972,7 @@ CREATE TABLE `device_type`  (
   `create_time` datetime NULL DEFAULT NULL COMMENT '创建时间',
   `update_time` datetime NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`device_type_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '设备类型' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '设备类型' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of device_type
