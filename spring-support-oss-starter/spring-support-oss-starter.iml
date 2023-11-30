@@ -36,7 +36,6 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="spring-support-mybatis-starter" />
-    <orderEntry type="module" module-name="spring-support-mybatis-starter" />
     <orderEntry type="module" module-name="spring-support-common-starter" />
     <orderEntry type="library" name="Maven: com.jayway.jsonpath:json-path:2.7.0" level="project" />
     <orderEntry type="library" name="Maven: net.minidev:json-smart:2.4.8" level="project" />
