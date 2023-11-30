@@ -10,6 +10,7 @@ import com.chua.common.support.protocol.boot.ModuleType;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.utils.ThreadUtils;
+import com.chua.common.support.value.TimeValue;
 import com.chua.starter.unified.client.support.properties.UnifiedClientProperties;
 import com.chua.starter.unified.server.support.entity.UnifiedExecuter;
 import com.chua.starter.unified.server.support.entity.UnifiedExecuterItem;
@@ -19,7 +20,6 @@ import com.chua.starter.unified.server.support.properties.UnifiedServerPropertie
 import com.chua.starter.unified.server.support.service.UnifiedExecuterItemService;
 import com.chua.starter.unified.server.support.service.UnifiedExecuterService;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
-import com.google.common.cache.*;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +33,8 @@ import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import static com.chua.common.support.discovery.Constants.SUBSCRIBE;
@@ -42,10 +44,10 @@ import static com.chua.starter.common.support.constant.Constant.EXECUTER;
 @Service
 @Slf4j
 public class UnifiedExecuterItemServiceImpl extends ServiceImpl<UnifiedExecuterItemMapper, UnifiedExecuterItem>
-        implements UnifiedExecuterItemService, RemovalListener<String, UnifiedExecuterItem>, InitializingBean {
+        implements UnifiedExecuterItemService, InitializingBean {
 
 
-    private Cache<String, UnifiedExecuterItem> cache;
+    private Map<String, TimeValue<UnifiedExecuterItem>> cache = new ConcurrentHashMap<>();
     @Resource
     private UnifiedServerProperties unifiedServerProperties;
 
@@ -54,6 +56,8 @@ public class UnifiedExecuterItemServiceImpl extends ServiceImpl<UnifiedExecuterI
 
     @Resource
     private UnifiedExecuterService unifiedExecuterService;
+
+    private ScheduledExecutorService scheduledExecutorService;
 
     @Override
     @Cacheable(cacheManager = DEFAULT_CACHE_MANAGER, cacheNames = EXECUTER, key = "'all'")
@@ -89,9 +93,12 @@ public class UnifiedExecuterItemServiceImpl extends ServiceImpl<UnifiedExecuterI
     public boolean saveOrUpdate(UnifiedExecuterItem entity) {
         LambdaQueryWrapper<UnifiedExecuterItem> wrapper = Wrappers.<UnifiedExecuterItem>lambdaQuery()
                 .eq(UnifiedExecuterItem::getUnifiedExecuterId, entity.getUnifiedExecuterId())
-                .eq(UnifiedExecuterItem::getUnifiedExecuterItemHost, entity.getUnifiedExecuterItemHost());
-        Long aLong = baseMapper.selectCount(wrapper);
-        if(aLong > 0L) {
+                .eq(UnifiedExecuterItem::getUnifiedExecuterItemHost, entity.getUnifiedExecuterItemHost())
+                .eq(UnifiedExecuterItem::getUnifiedExecuterItemPort, entity.getUnifiedExecuterItemPort()
+                );
+        UnifiedExecuterItem unifiedExecuterItem = baseMapper.selectOne(wrapper);
+        if(unifiedExecuterItem != null) {
+            entity.setUnifiedExecuterId(unifiedExecuterItem.getUnifiedExecuterId());
             baseMapper.update(entity, wrapper);
             return true;
         }
@@ -167,6 +174,8 @@ public class UnifiedExecuterItemServiceImpl extends ServiceImpl<UnifiedExecuterI
         item.setCreateTime(new Date());
         item.setUnifiedExecuterId(appNameAndId.get(appName));
         saveOrUpdate(item);
+        String key = appName + "" + item.getUnifiedExecuterItemHost() + item.getUnifiedExecuterItemPort();
+        cache.put(key, TimeValue.of(item, unifiedServerProperties.getKeepAliveTimeout()));
     }
 
     private boolean checkHaveItem(BootRequest request) {
@@ -174,26 +183,37 @@ public class UnifiedExecuterItemServiceImpl extends ServiceImpl<UnifiedExecuterI
         String appName = request.getAppName();
         JSONObject jsonObject = JSON.parseObject(content);
         String host = jsonObject.getString("host");
-        String key = appName + "" + host;
-        UnifiedExecuterItem ifPresent = cache.getIfPresent(key);
-        if(null == ifPresent) {
+        String port = jsonObject.getString("port");
+        String key = appName + "" + host + port;
+        TimeValue<UnifiedExecuterItem> timeValue = cache.get(key);
+        if(null == timeValue) {
             return false;
         }
-        cache.put(key, ifPresent);
+        timeValue.refresh();
         return true;
     }
 
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        if(null != cache) {
-            return;
-        }
-        cache = CacheBuilder.newBuilder()
-                .expireAfterWrite(unifiedServerProperties.getKeepAliveTimeout(), TimeUnit.SECONDS)
-                .removalListener(this)
-                .build();
-
+        scheduledExecutorService = ThreadUtils.newScheduledThreadPoolExecutor(1);
+        scheduledExecutorService.scheduleAtFixedRate(() -> {
+            for (Map.Entry<String, TimeValue<UnifiedExecuterItem>> entry : cache.entrySet()) {
+                TimeValue<UnifiedExecuterItem> entryValue = entry.getValue();
+                if(entryValue.isTimeout()) {
+                    UnifiedExecuterItem executerItem = entryValue.getOrigin();
+                    if(null == executerItem) {
+                        continue;
+                    }
+                    log.warn("{}:{}({})心跳过期", executerItem.getUnifiedExecuterItemHost(), executerItem.getUnifiedExecuterItemPort(), executerItem.getUnifiedExecuterItemId());
+                    try {
+                        remove(executerItem.getUnifiedExecuterItemId());
+                        cache.remove(entry.getKey());
+                    } catch (Exception ignored) {
+                    }
+                }
+            }
+        }, 0, unifiedServerProperties.getKeepAliveTimeout() + 10, TimeUnit.SECONDS);
         ThreadUtils.newStaticThreadPool().execute(() -> {
             try {
                 List<UnifiedExecuter> list = unifiedExecuterService.list();
@@ -201,31 +221,13 @@ public class UnifiedExecuterItemServiceImpl extends ServiceImpl<UnifiedExecuterI
                     appNameAndId.put(unifiedExecuter.getUnifiedExecuterName(), unifiedExecuter.getUnifiedExecuterId());
                 }
 
-                List<UnifiedExecuterItem> list1 = list();
-                BiMap<Integer, String> inverse = appNameAndId.inverse();
-                for (UnifiedExecuterItem unifiedExecuter : list1) {
-                    String key = inverse.get(unifiedExecuter.getUnifiedExecuterId()) + "" + unifiedExecuter.getUnifiedExecuterItemHost();
-                    cache.put(key, unifiedExecuter);
-                }
+                remove(new MPJLambdaWrapper<UnifiedExecuterItem>()
+                        .selectAll(UnifiedExecuterItem.class)
+                        .innerJoin(UnifiedExecuter.class, UnifiedExecuter::getUnifiedExecuterId, UnifiedExecuterItem::getUnifiedExecuterId)
+                        .eq(UnifiedExecuter::getUnifiedExecuterType, 0)
+                );
             } catch (Exception ignored) {
             }
         });
-    }
-
-    @Override
-    public void onRemoval(RemovalNotification<String, UnifiedExecuterItem> notification) {
-        UnifiedExecuterItem value = notification.getValue();
-        if(null == value) {
-            return;
-        }
-
-        if(notification.getCause() != RemovalCause.EXPIRED) {
-            return;
-        }
-        log.warn("{}:{}({})心跳过期", value.getUnifiedExecuterItemHost(), value.getUnifiedExecuterItemPort(), value.getUnifiedExecuterItemId());
-        try {
-            remove(value.getUnifiedExecuterId());
-        } catch (Exception ignored) {
-        }
     }
 }

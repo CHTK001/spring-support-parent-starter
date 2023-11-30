@@ -132,6 +132,8 @@ public class NotifyServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M
 
         BootResponse bootResponse = protocolClient.send(bootRequest);
         unifiedLog.setUnifiedLogCode(bootResponse.getCode());
+        unifiedLog.setUnifiedLogAppName(getAppName.apply(t));
+        unifiedLog.setUnifiedLogProfile(getProfile.apply(t));
         unifiedLog.setUnifiedLogMsg(bootResponse.getMsg());
         String content = bootRequest.getContent();
         if(StringUtils.isBlank(content) && content.length() < NUM_1000) {

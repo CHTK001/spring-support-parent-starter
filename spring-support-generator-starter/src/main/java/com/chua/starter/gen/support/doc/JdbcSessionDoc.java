@@ -12,10 +12,11 @@ import com.chua.common.support.session.doc.SessionDoc;
 import com.chua.common.support.session.query.DocQuery;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;
+import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
 import java.io.File;
-import java.io.FileInputStream;
+import java.nio.file.Files;
 
 import static cn.smallbun.screw.core.constant.DefaultConstants.DESCRIPTION;
 
@@ -62,11 +63,12 @@ public class JdbcSessionDoc implements SessionDoc {
                 // 忽略表名
                 .ignoreTableName(Splitter.on(',').trimResults().omitEmptyStrings().splitToList(query.getIgnoreTableName())).build();
         // 配置
-        HikariDataSource hikariDataSource = new HikariDataSource();
-        hikariDataSource.setUsername(databaseOptions.getUser());
-        hikariDataSource.setPassword(databaseOptions.getPassword());
-        hikariDataSource.setJdbcUrl(databaseOptions.getUrl());
-        hikariDataSource.setDriverClassName(databaseOptions.getDriver());
+        HikariConfig hikariConfig = new HikariConfig();
+        hikariConfig.setUsername(databaseOptions.getUser());
+        hikariConfig.setPassword(databaseOptions.getPassword());
+        hikariConfig.setJdbcUrl(databaseOptions.getUrl());
+        hikariConfig.setDriverClassName(databaseOptions.getDriver());
+        HikariDataSource hikariDataSource = new HikariDataSource(hikariConfig);
         Configuration config = Configuration.builder()
                 // 版本
                 .version("1.0.0")
@@ -90,7 +92,7 @@ public class JdbcSessionDoc implements SessionDoc {
             produce.produce(dataModel, docName);
             File file = new File("./doc", docName + "." + engineFileType.name().toLowerCase());
 
-            return IoUtils.toByteArray(new FileInputStream(file));
+            return IoUtils.toByteArray(Files.newInputStream(file.toPath()));
         } catch (Exception ignored) {
         }
         return new byte[0];
