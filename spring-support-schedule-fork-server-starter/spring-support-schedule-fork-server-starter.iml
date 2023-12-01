@@ -6,16 +6,6 @@
         <webroots />
       </configuration>
     </facet>
-    <facet type="jpa" name="JPA">
-      <configuration>
-        <setting name="validation-enabled" value="true" />
-        <setting name="provider-name" value="Hibernate" />
-        <datasource-mapping>
-          <factory-entry name="entityManagerFactory" />
-        </datasource-mapping>
-        <naming-strategy-map />
-      </configuration>
-    </facet>
     <facet type="Spring" name="Spring">
       <configuration />
     </facet>
@@ -173,7 +163,7 @@
     <orderEntry type="library" name="Maven: io.netty:netty-codec-http2:4.1.89.Final" level="project" />
     <orderEntry type="library" name="Maven: io.netty:netty-resolver-dns:4.1.89.Final" level="project" />
     <orderEntry type="library" name="Maven: io.netty:netty-codec-dns:4.1.89.Final" level="project" />
-    <orderEntry type="module" module-name="utils-support-groovy-starter" />
+    <orderEntry type="library" name="Maven: com.chua:utils-support-groovy-starter:3.1.0" level="project" />
     <orderEntry type="library" name="Maven: org.apache.groovy:groovy-xml:4.0.13" level="project" />
     <orderEntry type="library" name="Maven: org.apache.groovy:groovy-json:4.0.13" level="project" />
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.13.5" level="project" />

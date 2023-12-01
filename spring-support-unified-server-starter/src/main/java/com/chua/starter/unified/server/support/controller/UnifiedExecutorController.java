@@ -5,6 +5,7 @@ import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.starter.common.support.result.ResultData;
 import com.chua.starter.mybatis.entity.DelegatePage;
 import com.chua.starter.unified.server.support.entity.UnifiedExecuter;
+import com.chua.starter.unified.server.support.service.UnifiedExecuterItemService;
 import com.chua.starter.unified.server.support.service.UnifiedExecuterService;
 import lombok.AllArgsConstructor;
 import org.springframework.validation.BindingResult;
@@ -27,6 +28,7 @@ public class UnifiedExecutorController {
     private final UnifiedExecuterService unifiedExecuterService;
 
 
+    private final UnifiedExecuterItemService unifiedExecuterItemService;
     /**
      * 分页查询数据
      *
@@ -56,6 +58,20 @@ public class UnifiedExecutorController {
             return ResultData.failure(PARAM_ERROR, "主键不能为空");
         }
         return ResultData.success(unifiedExecuterService.removeByIdExecuter(id));
+    }
+    /**
+     * 根据主键删除子项数据
+     *
+     * @param id 页码
+     * @return 分页结果
+     */
+    @ResponseBody
+    @DeleteMapping("deleteItem")
+    public ResultData<Boolean> deleteItem(String id) {
+        if (null == id) {
+            return ResultData.failure(PARAM_ERROR, "主键不能为空");
+        }
+        return ResultData.success(unifiedExecuterItemService.removeById(id));
     }
 
     /**

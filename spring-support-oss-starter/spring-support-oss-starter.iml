@@ -4,20 +4,6 @@
     <facet type="web" name="Web">
       <configuration>
         <webroots />
-        <sourceRoots>
-          <root url="file://$MODULE_DIR$/src/main/java" />
-          <root url="file://$MODULE_DIR$/src/main/resources" />
-        </sourceRoots>
-      </configuration>
-    </facet>
-    <facet type="jpa" name="JPA">
-      <configuration>
-        <setting name="validation-enabled" value="true" />
-        <setting name="provider-name" value="Hibernate" />
-        <datasource-mapping>
-          <factory-entry name="entityManagerFactory" />
-        </datasource-mapping>
-        <naming-strategy-map />
       </configuration>
     </facet>
     <facet type="Spring" name="Spring">
@@ -30,7 +16,6 @@
     <content url="file://$MODULE_DIR$">
       <sourceFolder url="file://$MODULE_DIR$/src/main/java" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/main/resources" type="java-resource" />
-      <sourceFolder url="file://$MODULE_DIR$/src/test/java" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />
@@ -93,7 +78,7 @@
     <orderEntry type="library" name="Maven: io.netty:netty-codec-http2:4.1.94.Final" level="project" />
     <orderEntry type="library" name="Maven: io.netty:netty-resolver-dns:4.1.94.Final" level="project" />
     <orderEntry type="library" name="Maven: io.netty:netty-codec-dns:4.1.94.Final" level="project" />
-    <orderEntry type="module" module-name="utils-support-groovy-starter" />
+    <orderEntry type="library" name="Maven: com.chua:utils-support-groovy-starter:3.1.0" level="project" />
     <orderEntry type="library" name="Maven: org.apache.groovy:groovy-xml:4.0.13" level="project" />
     <orderEntry type="library" name="Maven: org.apache.groovy:groovy:4.0.13" level="project" />
     <orderEntry type="library" name="Maven: org.apache.groovy:groovy-json:4.0.13" level="project" />
