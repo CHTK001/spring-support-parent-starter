@@ -2,6 +2,7 @@ package com.chua.starter.unified.client.support.configuration;
 
 import com.chua.common.support.protocol.boot.Protocol;
 import com.chua.starter.unified.client.support.endpoint.FileHandlerEndpoint;
+import com.chua.starter.unified.client.support.endpoint.ThreadEndpoint;
 import com.chua.starter.unified.client.support.factory.ExecutorFactory;
 import com.chua.starter.unified.client.support.factory.ProtocolFactory;
 import com.chua.starter.unified.client.support.properties.UnifiedClientProperties;
@@ -91,6 +92,17 @@ public class UnifiedClientConfiguration implements BeanDefinitionRegistryPostPro
     @ConditionalOnMissingBean
     public FileHandlerEndpoint fileHandlerEndpoint() {
         return new FileHandlerEndpoint();
+    }
+
+    /**
+     * 线程端点
+     *
+     * @return {@link ThreadEndpoint}
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public ThreadEndpoint threadEndpoint() {
+        return new ThreadEndpoint();
     }
 
 }
