@@ -55,7 +55,13 @@ public class NotifyServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M
     private Consumer<BootResponse> responseConsumer;
 
     @Setter
+    private Consumer<BootRequest> requestConsumer;
+    @Setter
     private ModuleType moduleType;
+
+    @Setter
+    private boolean inLog = true;
+
 
     @Override
     public Boolean notifyConfig(T t) {
@@ -106,7 +112,6 @@ public class NotifyServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M
 
     @Override
     public Boolean notifyClient(UnifiedExecuterItem unifiedExecuterItem, T t) {
-        UnifiedLog unifiedLog = new UnifiedLog();
         long startTime = System.currentTimeMillis();
         BootOption bootOption = BootOption.builder()
                 .encryptionSchema(unifiedServerProperties.getEncryptionSchema())
@@ -118,7 +123,6 @@ public class NotifyServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M
                         .port(Integer.parseInt(unifiedExecuterItem.getUnifiedExecuterItemPort())).host(unifiedExecuterItem.getUnifiedExecuterItemHost()).build())
                 .build();
 
-        unifiedLog.setUnifiedLogModuleType(moduleType.name());
         Protocol protocol = ServiceProvider.of(Protocol.class).getNewExtension(unifiedExecuterItem.getUnifiedExecuterItemProtocol(), bootOption);
         ProtocolClient protocolClient = protocol.createClient();
         BootRequest bootRequest = BootRequest.builder()
@@ -130,23 +134,30 @@ public class NotifyServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M
                 .appName(getAppName.apply(t))
                 .build();
 
-        BootResponse bootResponse = protocolClient.send(bootRequest);
-        unifiedLog.setUnifiedLogCode(bootResponse.getCode());
-        unifiedLog.setUnifiedLogAppName(getAppName.apply(t));
-        unifiedLog.setUnifiedLogProfile(getProfile.apply(t));
-        unifiedLog.setUnifiedLogMsg(bootResponse.getMsg());
-        String content = bootRequest.getContent();
-        if(StringUtils.isBlank(content) && content.length() < NUM_1000) {
-            unifiedLog.setUnifiedLogReq(Json.toJson(bootRequest));
-        } else {
-            unifiedLog.setUnifiedLogReq("请求过长");
+        if(null != requestConsumer) {
+            requestConsumer.accept(bootRequest);
         }
-        unifiedLog.setUnifiedLogRes(Json.toJson(bootResponse));
-        unifiedLog.setUnifiedLogCost(System.currentTimeMillis() - startTime);
-        unifiedLog.setCreateTime(new Date());
-        try {
-            unifiedLogService.save(unifiedLog);
-        } catch (Exception ignored) {
+        BootResponse bootResponse = protocolClient.send(bootRequest);
+        if(inLog) {
+            UnifiedLog unifiedLog = new UnifiedLog();
+            unifiedLog.setUnifiedLogModuleType(moduleType.name());
+            unifiedLog.setUnifiedLogCode(bootResponse.getCode());
+            unifiedLog.setUnifiedLogAppName(getAppName.apply(t));
+            unifiedLog.setUnifiedLogProfile(getProfile.apply(t));
+            unifiedLog.setUnifiedLogMsg(bootResponse.getMsg());
+            String content = bootRequest.getContent();
+            if(StringUtils.isBlank(content) && content.length() < NUM_1000) {
+                unifiedLog.setUnifiedLogReq(Json.toJson(bootRequest));
+            } else {
+                unifiedLog.setUnifiedLogReq("请求过长");
+            }
+            unifiedLog.setUnifiedLogRes(Json.toJson(bootResponse));
+            unifiedLog.setUnifiedLogCost(System.currentTimeMillis() - startTime);
+            unifiedLog.setCreateTime(new Date());
+            try {
+                unifiedLogService.save(unifiedLog);
+            } catch (Exception ignored) {
+            }
         }
         responseConsumer.accept(bootResponse);
         return true;

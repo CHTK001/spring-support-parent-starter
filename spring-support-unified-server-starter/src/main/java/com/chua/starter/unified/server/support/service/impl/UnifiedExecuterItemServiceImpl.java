@@ -4,7 +4,7 @@ import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.chua.common.support.lang.page.Page;
 import com.chua.common.support.protocol.boot.BootRequest;
 import com.chua.common.support.protocol.boot.ModuleType;
 import com.chua.common.support.utils.MapUtils;
@@ -23,6 +23,7 @@ import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -43,7 +44,7 @@ import static com.chua.starter.common.support.constant.Constant.EXECUTER;
 
 @Service
 @Slf4j
-public class UnifiedExecuterItemServiceImpl extends ServiceImpl<UnifiedExecuterItemMapper, UnifiedExecuterItem>
+public class UnifiedExecuterItemServiceImpl extends NotifyServiceImpl<UnifiedExecuterItemMapper, UnifiedExecuterItem>
         implements UnifiedExecuterItemService, InitializingBean {
 
 
@@ -59,6 +60,13 @@ public class UnifiedExecuterItemServiceImpl extends ServiceImpl<UnifiedExecuterI
 
     private ScheduledExecutorService scheduledExecutorService;
 
+    public UnifiedExecuterItemServiceImpl() {
+        setGetUnifiedId(UnifiedExecuterItem::getUnifiedExecuterId);
+        setGetProfile(UnifiedExecuterItem::getUnifiedExecuterItemProfile);
+        setGetAppName(UnifiedExecuterItem::getUnifiedAppname);
+        setModuleType(ModuleType.OSHI);
+    }
+
     @Override
     @Cacheable(cacheManager = DEFAULT_CACHE_MANAGER, cacheNames = EXECUTER, key = "'all'")
     public List<UnifiedExecuterItem> getAll() {
@@ -67,6 +75,47 @@ public class UnifiedExecuterItemServiceImpl extends ServiceImpl<UnifiedExecuterI
                 .select(UnifiedExecuter::getUnifiedExecuterName)
                 .innerJoin(UnifiedExecuter.class, UnifiedExecuter::getUnifiedExecuterId, UnifiedExecuterItem::getUnifiedExecuterId)
         );
+    }
+
+    @Override
+    public JSONObject getOshi(String dataId) {
+        UnifiedExecuterItem unifiedExecuterItem = ((UnifiedExecuterItemService) AopContext.currentProxy()).get(dataId);
+        if(null == unifiedExecuterItem) {
+            return new JSONObject();
+        }
+
+        JSONObject rs = new JSONObject();
+        setInLog(false);
+        setModuleType(ModuleType.OSHI);
+        setResponseConsumer(response -> rs.putAll(JSON.parseObject(response.getContent())));
+        setRequestConsumer(request -> {
+            request.setContent(null);
+        });
+        notifyClient(unifiedExecuterItem, unifiedExecuterItem);
+        return rs;
+    }
+
+
+    @Override
+    public Page<JSONObject> getProcess(String dataId, String status, String keyword, Integer page, Integer pageSize) {
+        UnifiedExecuterItem unifiedExecuterItem = ((UnifiedExecuterItemService) AopContext.currentProxy()).get(dataId);
+        if(null == unifiedExecuterItem) {
+            return new Page<>();
+        }
+
+        JSONObject rs = new JSONObject();
+        setInLog(false);
+        setModuleType(ModuleType.PROCESS);
+        setResponseConsumer(response -> rs.putAll(JSON.parseObject(response.getContent())));
+        setRequestConsumer(request -> {
+            request.addParam("status", status);
+            request.addParam("keyword", keyword);
+            request.addParam("page", page);
+            request.addParam("pageSize", pageSize);
+            request.setContent(null);
+        });
+        notifyClient(unifiedExecuterItem, unifiedExecuterItem);
+        return rs.getObject("process", Page.class);
     }
 
     @Override

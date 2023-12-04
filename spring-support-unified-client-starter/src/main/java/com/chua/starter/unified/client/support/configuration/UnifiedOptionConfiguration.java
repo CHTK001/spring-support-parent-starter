@@ -2,6 +2,7 @@ package com.chua.starter.unified.client.support.configuration;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
+import com.chua.common.support.constant.Projects;
 import com.chua.common.support.lang.code.ReturnResultCode;
 import com.chua.common.support.lang.compile.Decompiler;
 import com.chua.common.support.protocol.boot.BootRequest;
@@ -11,6 +12,7 @@ import com.chua.common.support.protocol.server.annotations.ServiceMapping;
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.utils.FileUtils;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.oshi.support.Oshi;
 import com.chua.starter.unified.client.support.cfr.CfrDecompiler;
 import com.chua.starter.unified.client.support.patch.PatchResolver;
 import com.chua.starter.unified.client.support.properties.UnifiedClientProperties;
@@ -25,6 +27,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 
+import static com.chua.common.support.lang.code.ReturnCode.OK;
+
 /**
  * OSHI配置
  *
@@ -38,8 +42,11 @@ public class UnifiedOptionConfiguration implements ApplicationContextAware {
     @Resource
     private UnifiedClientProperties unifiedClientProperties;
 
+    private ApplicationContext applicationContext;
+
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.applicationContext = applicationContext;
         try {
             protocolServer = applicationContext.getBean(ProtocolServer.class);
             protocolServer.addMapping(this);
@@ -49,14 +56,50 @@ public class UnifiedOptionConfiguration implements ApplicationContextAware {
 
 
     /**
+     * 获取当前服务端进程
+     *
+     * @param request 请求
+     * @return {@link BootResponse}
+     */
+    @ServiceMapping("process")
+    public BootResponse process(BootRequest request) {
+        return BootResponse.builder()
+                .data(BootResponse.DataDTO.builder()
+                        .content(new JSONObject()
+                            .fluentPut("process", Oshi.newProcess(request.getParams()))
+                            .toString())
+                        .build())
+                .code(OK.getCode())
+                .build()
+                ;
+    }
+
+    /**
      * 获取当前服务端配置
      *
      * @param request 请求
      * @return {@link BootResponse}
      */
     @ServiceMapping("oshi")
-    public BootResponse oshi(BootRequest request ) {
-        return BootResponse.ok();
+    public BootResponse oshi(BootRequest request) {
+        return BootResponse.builder()
+                .data(BootResponse.DataDTO.builder()
+                        .content(new JSONObject()
+                                .fluentPut("mem", Oshi.newMem())
+                                .fluentPut("jvm", Oshi.newJvm())
+                                .fluentPut("sysFile", Oshi.newSysFile())
+                                .fluentPut("network", Oshi.newNetwork())
+                                .fluentPut("time", System.currentTimeMillis() / 1000)
+//                .fluentPut("process", Oshi.newProcess())
+                                .fluentPut("startupTime", StartupTimeListener.startupTime)
+                                .fluentPut("pid", Projects.getPid())
+                                .fluentPut("sys", Oshi.newSys())
+                                .fluentPut("cpu", Oshi.newCpu(1000))
+                                .toString())
+                        .build())
+                .code(OK.getCode())
+                .build()
+                ;
     }
 
     /**

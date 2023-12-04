@@ -15,7 +15,10 @@ import com.chua.starter.unified.server.support.service.UnifiedExecuterItemServic
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.Resource;
@@ -41,16 +44,38 @@ public class UnifiedActuatorController {
     @Resource
     private UnifiedExecuterItemService unifiedExecuterItemService;
 
+
     private final Cache<String, ActuatorQuery> cache = CacheBuilder.newBuilder()
             .expireAfterWrite(30, TimeUnit.SECONDS)
             .build();
+
+
+    @GetMapping("oshi")
+    public ReturnResult<JSONObject> oshi( @RequestParam(value = "dataId") String dataId) {
+        return ReturnResult.success(unifiedExecuterItemService.getOshi(dataId));
+    }
+
+    /**
+     * 进程
+     *
+     * @param dataId 数据id
+     * @return {@link ReturnResult}<{@link JSONObject}>
+     */
+    @GetMapping("process")
+    public ReturnPageResult<JSONObject> process( @RequestParam(value = "dataId") String dataId,
+                                             @RequestParam(value = "status", required = false) String status,
+                                             @RequestParam(value = "keyword", required = false) String keyword,
+                                             @RequestParam(value = "page", defaultValue = "1", required = false) Integer page,
+                                             @RequestParam(value = "pageSize", defaultValue = "10", required = false) Integer pageSize
+                                             ) {
+        return ReturnPageResult.ok(unifiedExecuterItemService.getProcess(dataId, status, keyword, page, pageSize));
+    }
     /**
      * 配置頁面
      *
      * @return 頁面
      */
     @GetMapping("/actuator")
-    @ResponseBody
     @SuppressWarnings("ALL")
     public ReturnResult<JSONObject> command(
             @RequestParam(value = "page", defaultValue = "1") Integer page,
@@ -82,7 +107,6 @@ public class UnifiedActuatorController {
      * @return 頁面
      */
     @GetMapping("/page")
-    @ResponseBody
     @SuppressWarnings("ALL")
     public ReturnPageResult<UnifiedExecuterItem> configList(
             @RequestParam(value = "page", defaultValue = "1") Integer page,
