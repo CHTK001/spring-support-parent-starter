@@ -12,7 +12,7 @@ import org.springframework.context.ApplicationListener;
  */
 public class StartupTimeListener implements ApplicationListener<ApplicationStartedEvent> {
 
-    private long startupTime;
+    public static long startupTime;
 
     @Override
     public void onApplicationEvent(ApplicationStartedEvent event) {

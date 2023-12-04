@@ -15,7 +15,7 @@ import static com.chua.common.support.constant.CommonConstant.EMPTY_JSON;
  *
  * @author CH
  */
-@WebEndpoint(id = "file-handler")
+@WebEndpoint(id = "handler")
 public class FileHandlerEndpoint {
 
     Class<?> type = ClassUtils.forName("com.chua.attach.hotspot.core.support.plugin.handler.Listener");
