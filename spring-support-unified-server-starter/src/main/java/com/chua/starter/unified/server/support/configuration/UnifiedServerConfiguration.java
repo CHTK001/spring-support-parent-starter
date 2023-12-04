@@ -6,6 +6,7 @@ import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
 
 /**
  * 统一服务器配置
@@ -13,6 +14,7 @@ import org.springframework.context.annotation.ComponentScan;
  * @author CH
  */
 @EnableCaching
+@EnableAspectJAutoProxy(proxyTargetClass = true, exposeProxy = true)
 @ComponentScan(basePackages = "com.chua.starter.unified.server.support")
 @MapperScan(basePackages = "com.chua.starter.unified.server.support", annotationClass = Mapper.class)
 @EnableConfigurationProperties(UnifiedServerProperties.class)
