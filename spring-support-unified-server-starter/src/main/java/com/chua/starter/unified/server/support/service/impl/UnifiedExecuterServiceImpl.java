@@ -134,8 +134,8 @@ public class UnifiedExecuterServiceImpl extends ServiceImpl<UnifiedExecuterMappe
 
     private void checkItem(UnifiedExecuter t) {
         List<UnifiedExecuterItem> item = t.getItem();
+        unifiedExecuterItemService.remove(Wrappers.<UnifiedExecuterItem>lambdaUpdate().eq(UnifiedExecuterItem::getUnifiedExecuterId, t.getUnifiedExecuterId()));
         if(ONE_STR.equalsIgnoreCase(t.getUnifiedExecuterType()) && CollectionUtils.isNotEmpty(item)) {
-            unifiedExecuterItemService.remove(Wrappers.<UnifiedExecuterItem>lambdaUpdate().eq(UnifiedExecuterItem::getUnifiedExecuterId, t.getUnifiedExecuterId()));
             for (UnifiedExecuterItem unifiedExecuterItem : item) {
                 unifiedExecuterItem.setUnifiedExecuterId(t.getUnifiedExecuterId());
             }
