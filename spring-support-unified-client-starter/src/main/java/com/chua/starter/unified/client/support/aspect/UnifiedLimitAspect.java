@@ -4,6 +4,7 @@ import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.task.limit.RateLimitMappingFactory;
 import com.chua.common.support.task.limit.resolver.RateLimitResolver;
 import com.chua.common.support.utils.MapUtils;
+import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.common.support.utils.RequestUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.aopalliance.intercept.MethodInvocation;
@@ -53,11 +54,15 @@ public class UnifiedLimitAspect {
             return methodInvocation.proceed();
         }
 
-        if(resolver.resolve(request.getRemoteAddr())) {
-            return methodInvocation.proceed();
+        try {
+            if(resolver.resolve(request.getRemoteAddr())) {
+                return methodInvocation.proceed();
+            }
+        } catch (Throwable e) {
+            e.printStackTrace();
         }
 
-        throw new RuntimeException(ReturnCode.SYSTEM_SERVER_BUSINESS.getMsg());
+        throw new BusinessException(ReturnCode.SYSTEM_SERVER_BUSINESS.getMsg());
     }
 
     /**
