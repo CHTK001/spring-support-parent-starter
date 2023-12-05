@@ -3,6 +3,7 @@ package com.chua.starter.unified.client.support.configuration;
 import com.chua.common.support.protocol.boot.Protocol;
 import com.chua.starter.unified.client.support.endpoint.FileHandlerEndpoint;
 import com.chua.starter.unified.client.support.endpoint.ThreadEndpoint;
+import com.chua.starter.unified.client.support.event.UnifiedEvent;
 import com.chua.starter.unified.client.support.factory.ExecutorFactory;
 import com.chua.starter.unified.client.support.factory.ProtocolFactory;
 import com.chua.starter.unified.client.support.properties.UnifiedClientProperties;
@@ -17,6 +18,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.ApplicationListener;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
@@ -31,7 +33,7 @@ import javax.annotation.Resource;
 @Slf4j
 @EnableConfigurationProperties(UnifiedClientProperties.class)
 public class UnifiedClientConfiguration implements BeanDefinitionRegistryPostProcessor,
-        ApplicationContextAware, EnvironmentAware, CommandLineRunner {
+        ApplicationContextAware, EnvironmentAware, CommandLineRunner, ApplicationListener<UnifiedEvent> {
 
     @Resource
     private UnifiedClientProperties unifiedClientProperties;
@@ -105,4 +107,8 @@ public class UnifiedClientConfiguration implements BeanDefinitionRegistryPostPro
         return new ThreadEndpoint();
     }
 
+    @Override
+    public void onApplicationEvent(UnifiedEvent event) {
+        executorFactory.onApplicationEvent(event);
+    }
 }

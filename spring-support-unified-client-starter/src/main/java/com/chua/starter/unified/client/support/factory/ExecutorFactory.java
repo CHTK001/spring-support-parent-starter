@@ -131,7 +131,8 @@ public class ExecutorFactory implements InitializingAware, DisposableBean, Appli
             Message msg = new Message();
             msg.setBody(new JSONObject()
                     .fluentPut("applicationName", appName)
-                    .fluentPut("mode", event.getType())
+                    .fluentPut("mode", event.getMode())
+                    .fluentPut("type", event.getType())
                     .fluentPut("message", event.getSource())
                     .toString()
             );

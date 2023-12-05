@@ -2,11 +2,15 @@ package com.chua.starter.unified.server.support.service.uniform;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
+import com.chua.common.support.constant.NameConstant;
 import com.chua.common.support.lang.date.DateTime;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.sse.support.SseMessage;
 import com.chua.starter.sse.support.SseTemplate;
 import com.chua.starter.unified.server.support.properties.UnifiedServerProperties;
+import com.chua.starter.unified.server.support.store.StoreResolver;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.stereotype.Service;
@@ -34,6 +38,7 @@ public class MqUniform implements Uniform, Consumer.ConsumerHandler, Initializin
 
     private static final String UNIFORM_APPLICATION_NAME = "applicationName";
     private static final String UNIFORM_MODE = "mode";
+    private static final String UNIFORM_TYPE = "type";
     private static final String UNIFORM_MESSAGE = "message";
     public static final String SUBSCRIBE_SSE = "unified-sse";
     MqServer mqServer;
@@ -91,10 +96,25 @@ public class MqUniform implements Uniform, Consumer.ConsumerHandler, Initializin
             return;
         }
         String mode = jsonObject.getString(UNIFORM_MODE);
+        String type = jsonObject.getString(UNIFORM_TYPE);
         String message = jsonObject.getString(UNIFORM_MESSAGE);
+        if(NameConstant.STORE.equalsIgnoreCase(mode)) {
+            ThreadUtils.newStaticThreadPool().execute(() -> {
+                try {
+                    StoreResolver storeResolver = ServiceProvider.of(StoreResolver.class).getNewExtension(type);
+                    if(null != storeResolver) {
+                        storeResolver.resolve(message, applicationName);
+                    }
+                } catch (Exception ignored) {
+                }
+            });
+            return;
+        }
         String format = StringUtils.format("[{}] [{}] [{}] {}", DateTime.now().toStandard(), applicationName, mode, message);
         sseTemplate.emit(SseMessage.builder().event(mode).message(format).build(), Duration.ofSeconds(10), applicationName);
     }
+
+
 
     @Override
     public void destroy() throws Exception {

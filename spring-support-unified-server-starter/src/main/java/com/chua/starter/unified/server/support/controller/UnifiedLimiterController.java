@@ -9,6 +9,8 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.common.support.result.ResultData;
 import com.chua.starter.mybatis.entity.DelegatePage;
 import com.chua.starter.unified.server.support.entity.UnifiedLimit;
+import com.chua.starter.unified.server.support.entity.UnifiedLimitLog;
+import com.chua.starter.unified.server.support.service.UnifiedLimitLogService;
 import com.chua.starter.unified.server.support.service.UnifiedLimitService;
 import lombok.AllArgsConstructor;
 import org.springframework.validation.BindingResult;
@@ -30,6 +32,7 @@ import static com.chua.common.support.lang.code.ReturnCode.PARAM_ERROR;
 public class UnifiedLimiterController {
 
     private final UnifiedLimitService unifiedLimitService;
+    private final UnifiedLimitLogService unifiedLimitLogService;
 
     /**
      * 分页查询数据
@@ -47,6 +50,24 @@ public class UnifiedLimiterController {
         return ReturnPageResult.ok(unifiedLimitService.page(page.createPage(), Wrappers.<UnifiedLimit>lambdaQuery()
                 .eq(StringUtils.isNotBlank(entity.getUnifiedLimitProfile()), UnifiedLimit::getUnifiedLimitProfile, entity.getUnifiedLimitProfile())
         ));
+    }
+    /**
+     * 分页查询数据
+     *
+     * @param page   页码
+     * @return 分页结果
+     */
+    @GetMapping("log/page")
+    @ResponseBody
+    public ReturnPageResult<Page<UnifiedLimitLog>> logPage(DelegatePage<UnifiedLimitLog> page,
+                                                           @RequestParam(required = false) Date startTime,
+                                                           @RequestParam(required = false) Date endTime
+                                                           ) {
+        return ReturnPageResult.ok(unifiedLimitLogService.page(page.createPage(),
+                Wrappers.<UnifiedLimitLog>lambdaQuery()
+                        .ge(null != startTime, UnifiedLimitLog::getCreateTime, startTime)
+                        .le(null != endTime, UnifiedLimitLog::getCreateTime, endTime)
+                        .orderByDesc(UnifiedLimitLog::getCreateTime)));
     }
 
     /**

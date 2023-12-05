@@ -2,7 +2,6 @@ package com.chua.starter.unified.server.support.service.impl;
 
 import com.chua.common.support.protocol.boot.ModuleType;
 import com.chua.starter.unified.server.support.entity.UnifiedConfig;
-import com.chua.starter.unified.server.support.entity.UnifiedMybatis;
 import com.chua.starter.unified.server.support.mapper.UnifiedConfigMapper;
 import com.chua.starter.unified.server.support.service.UnifiedConfigService;
 import org.springframework.stereotype.Service;
