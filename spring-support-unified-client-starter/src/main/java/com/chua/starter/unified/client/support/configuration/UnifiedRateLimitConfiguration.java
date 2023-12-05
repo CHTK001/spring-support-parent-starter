@@ -74,7 +74,7 @@ public class UnifiedRateLimitConfiguration implements ApplicationContextAware, R
             public Object invoke(@Nonnull MethodInvocation invocation) throws Throwable {
                 Method method = invocation.getMethod();
                 if (isMapping(method)) {
-                    UnifiedLimitAspect aspect = new UnifiedLimitAspect();
+                    UnifiedLimitAspect aspect = new UnifiedLimitAspect(applicationContext);
                     return aspect.globalControllerLimit(invocation, method);
                 }
                 return invocation.proceed();
@@ -100,11 +100,6 @@ public class UnifiedRateLimitConfiguration implements ApplicationContextAware, R
                         AnnotatedElementUtils.hasAnnotation(method, GetMapping.class) ||
                         AnnotatedElementUtils.hasAnnotation(method, DeleteMapping.class) ||
                         AnnotatedElementUtils.hasAnnotation(method, PutMapping.class);
-    }
-    @Bean
-    @ConditionalOnMissingBean
-    public UnifiedLimitAspect unifiedLimitAspect() {
-        return new UnifiedLimitAspect();
     }
 
     @Override
