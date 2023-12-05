@@ -8,11 +8,11 @@ import com.chua.starter.common.support.utils.RequestUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.core.annotation.AnnotationUtils;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -41,12 +41,11 @@ public class UnifiedLimitAspect {
             return methodInvocation.proceed();
         }
 
-        Annotation annotation = AnnotationUtils.findAnnotation(method, RequestMapping.class);
-        if(null == annotation) {
+        Map<String, Object> annotationAttributes = synthesizeAnnotation(method);
+        if(annotationAttributes.isEmpty()) {
             return methodInvocation.proceed();
         }
 
-        Map<String, Object> annotationAttributes = AnnotationUtils.getAnnotationAttributes(annotation);
         String[] url = MapUtils.getStringArray(annotationAttributes, "value", "path");
 
         RateLimitResolver resolver = rateLimitFactory.getRateLimitResolver(url);
@@ -59,6 +58,38 @@ public class UnifiedLimitAspect {
         }
 
         throw new RuntimeException(ReturnCode.SYSTEM_SERVER_BUSINESS.getMsg());
+    }
+
+    /**
+     * 合成注解
+     *
+     * @param method 方法
+     * @return {@link Map}<{@link String}, {@link Object}>
+     */
+    private Map<String, Object> synthesizeAnnotation(Method method) {
+        if(method.isAnnotationPresent(RequestMapping.class)) {
+            return AnnotationUtils.getAnnotationAttributes(AnnotationUtils.findAnnotation(method, RequestMapping.class));
+        }
+
+        if(method.isAnnotationPresent(GetMapping.class)) {
+            return AnnotationUtils.getAnnotationAttributes(AnnotationUtils.findAnnotation(method, GetMapping.class));
+        }
+
+
+        if(method.isAnnotationPresent(PostMapping.class)) {
+            return AnnotationUtils.getAnnotationAttributes(AnnotationUtils.findAnnotation(method, PostMapping.class));
+        }
+
+        if(method.isAnnotationPresent(PutMapping.class)) {
+            return AnnotationUtils.getAnnotationAttributes(AnnotationUtils.findAnnotation(method, PutMapping.class));
+        }
+
+        if(method.isAnnotationPresent(DeleteMapping.class)) {
+            return AnnotationUtils.getAnnotationAttributes(AnnotationUtils.findAnnotation(method, DeleteMapping.class));
+        }
+
+
+        return Collections.emptyMap();
     }
 
 }
