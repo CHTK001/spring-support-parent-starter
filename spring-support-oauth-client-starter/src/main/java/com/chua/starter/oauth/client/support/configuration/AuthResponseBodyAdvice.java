@@ -14,20 +14,15 @@ import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
-import org.springframework.web.HttpRequestMethodNotSupportedException;
-import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
 import javax.annotation.Resource;
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Map;
-
-import static com.chua.common.support.lang.code.ReturnCode.*;
 
 /**
  * auth 统一响应
@@ -36,71 +31,13 @@ import static com.chua.common.support.lang.code.ReturnCode.*;
  * @since 2022/7/29 9:42
  */
 @Slf4j
+@Deprecated
 @RestControllerAdvice
 public class AuthResponseBodyAdvice implements ResponseBodyAdvice<Object> {
 
     @Resource
     private AuthClientProperties authProperties;
 
-    /**
-     * 鉴权错误
-     *
-     * @param request  请求
-     * @param response 响应
-     * @param error    异常
-     */
-    @ExceptionHandler(value = HttpRequestMethodNotSupportedException.class)
-    public Object httpRequestMethodNotSupportedException(HttpServletRequest request, HttpServletResponse response, Throwable error) {
-        error.printStackTrace();
-        return ReturnResult.of(SYSTEM_REQUEST_METHOD_NO_MATCH, null);
-    }
-
-    /**
-     * 鉴权错误
-     *
-     * @param request  请求
-     * @param response 响应
-     * @param error    异常
-     */
-    @ExceptionHandler(value = ServletException.class)
-    public Object servletException(HttpServletRequest request, HttpServletResponse response, ServletException error) {
-        error.printStackTrace();
-        return ReturnResult.of(SYSTEM_REQUEST_METHOD_NO_MATCH, null);
-    }
-
-    /**
-     * 鉴权错误
-     *
-     * @param request  请求
-     * @param response 响应
-     * @param error    异常
-     */
-    @ExceptionHandler(value = MissingServletRequestParameterException.class)
-    public Object missingServletRequestParameterException(HttpServletRequest request, HttpServletResponse response, MissingServletRequestParameterException error) {
-        log.info("{} -> 参数缺失[{}({})]", request.getRequestURI(), error.getParameterName(), error.getParameterType());
-        return ReturnResult.of(PARAM_ERROR, null);
-    }
-
-    /**
-     * 鉴权错误
-     *
-     * @param error 异常
-     */
-    @ExceptionHandler(value = Exception.class)
-    public Object exception(HttpServletRequest request, Exception error) {
-        return ReturnResult.of(SERVER_ERROR, null, "请联系管理员");
-    }
-
-    /**
-     * 鉴权错误
-     *
-     * @param error 异常
-     */
-    @ExceptionHandler(value = IllegalArgumentException.class)
-    public Object illegalArgumentException(HttpServletRequest request, IllegalArgumentException error) {
-        log.info("{} -> 参数不一致[{}]", request.getRequestURI(), error.getMessage());
-        return ReturnResult.of(SERVER_ERROR, null, "请联系管理员");
-    }
 
     /**
      * 鉴权错误
