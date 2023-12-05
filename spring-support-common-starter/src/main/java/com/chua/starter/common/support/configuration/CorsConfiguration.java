@@ -8,7 +8,8 @@ import com.chua.starter.common.support.limit.LimitAspect;
 import com.chua.starter.common.support.processor.ResponseModelViewMethodProcessor;
 import com.chua.starter.common.support.properties.*;
 import com.chua.starter.common.support.provider.OptionsProvider;
-import com.chua.starter.common.support.result.ResponseAdvice;
+import com.chua.starter.common.support.result.ExceptionAdvice;
+import com.chua.starter.common.support.result.UniformResponseBodyAdvice;
 import com.chua.starter.common.support.version.ApiVersionRequestMappingHandlerMapping;
 import com.chua.starter.common.support.watch.WatchPointcutAdvisor;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -148,16 +149,20 @@ public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAw
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(name = "plugin.core.uniform-parameter", havingValue = "true", matchIfMissing = false)
-    public ResponseAdvice responseAdvice() {
-        return new ResponseAdvice();
+    public UniformResponseBodyAdvice uniformResponseBodyAdvice() {
+        return new UniformResponseBodyAdvice();
     }
 
-//    @Bean
-//    @ConditionalOnMissingBean
-//    @Lazy
-//    public LoggerPointcutAdvisor loggerPointcutAdvisor(@Autowired(required = false) LoggerService loggerService) {
-//        return new LoggerPointcutAdvisor(loggerService);
-//    }
+    /**
+     * 异常建议
+     *
+     * @return {@link ExceptionAdvice}
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public ExceptionAdvice exceptionAdvice() {
+        return new ExceptionAdvice();
+    }
 
     @Bean
     @ConditionalOnMissingBean
@@ -165,13 +170,6 @@ public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAw
     public RestTemplate restTemplate() {
         return new RestTemplate();
     }
-
-//    @Bean
-//    @ConditionalOnMissingBean
-//    @Lazy
-//    public CommonService commonService(CoreProperties coreProperties, @Qualifier(Constant.DEFAULT_EXECUTOR2) Executor executorService) {
-//        return new CommonService(coreProperties, executorService);
-//    }
 
     @Bean
     @ConditionalOnMissingBean
