@@ -1,8 +1,10 @@
 package com.chua.starter.unified.client.support.aspect;
 
+import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.task.limit.RateLimitMappingFactory;
 import com.chua.common.support.task.limit.resolver.RateLimitResolver;
+import com.chua.common.support.utils.ArrayUtils;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.common.support.utils.RequestUtils;
@@ -69,7 +71,9 @@ public class UnifiedLimitAspect {
             e.printStackTrace();
         }
 
-        applicationContext.publishEvent(new UnifiedEvent(ReturnCode.SYSTEM_SERVER_BUSINESS, "LIMIT_LOG"));
+        applicationContext.publishEvent(
+                new UnifiedEvent(new JsonObject().fluentPut("requestAddress", RequestUtils.getIpAddress())
+                .fluentPut("requestUrl", ArrayUtils.toString(url)), "STORE", "LIMIT"));
         throw new BusinessException(ReturnCode.SYSTEM_SERVER_BUSINESS.getMsg());
     }
 
