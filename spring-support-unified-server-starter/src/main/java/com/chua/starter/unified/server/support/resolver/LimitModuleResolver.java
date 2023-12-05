@@ -3,7 +3,7 @@ package com.chua.starter.unified.server.support.resolver;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.function.Splitter;
-import com.chua.common.support.json.Json;
+import com.chua.common.support.json.JsonWriter;
 import com.chua.common.support.protocol.boot.BootRequest;
 import com.chua.common.support.protocol.boot.BootResponse;
 import com.chua.common.support.protocol.boot.CommandType;
@@ -40,7 +40,13 @@ public class LimitModuleResolver implements ModuleResolver{
         return BootResponse.builder()
                 .data(BootResponse.DataDTO.builder()
                         .commandType(CommandType.RESPONSE)
-                        .content(Json.toJson(list))
+                        .content(JsonWriter.builder()
+                                .ignore("unifiedLimitId")
+                                .ignore("unifiedLimitStatus")
+                                .ignore("createTime")
+                                .ignore("updateTime")
+                                .ignore("unifiedAppname")
+                                .toJsonString(list))
                         .build())
                 .build();
     }
