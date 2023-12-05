@@ -71,7 +71,8 @@ public class UnifiedExecutorController {
         if (null == id) {
             return ResultData.failure(PARAM_ERROR, "主键不能为空");
         }
-        return ResultData.success(unifiedExecuterItemService.removeById(id));
+        unifiedExecuterItemService.remove(id);
+        return ResultData.success(true);
     }
 
     /**

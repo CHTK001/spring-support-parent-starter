@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.unified.server.support.mapper.UnifiedLimitMapper">
+  <resultMap id="BaseResultMap" type="com.chua.starter.unified.server.support.entity.UnifiedLimit">
+    <!--@mbg.generated-->
+    <!--@Table unified_limit-->
+    <id column="unified_limit_id" property="unifiedLimitId" />
+    <result column="unified_limit_type" property="unifiedLimitType" />
+    <result column="unified_limit_mapping" property="unifiedLimitMapping" />
+    <result column="unified_limit_permits" property="unifiedLimitPermits" />
+    <result column="unified_limit_resolver" property="unifiedLimitResolver" />
+    <result column="unified_limit_status" property="unifiedLimitStatus" />
+    <result column="unified_limit_profile" property="unifiedLimitProfile" />
+    <result column="unified_appname" property="unifiedAppname" />
+    <result column="create_time" property="createTime" />
+    <result column="update_time" property="updateTime" />
+    <result column="unified_limit_remote_list" property="unifiedLimitRemoteList" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    unified_limit_id, unified_limit_type, unified_limit_mapping, unified_limit_permits, 
+    unified_limit_resolver, unified_limit_status, unified_limit_profile, unified_appname, 
+    create_time, update_time, unified_limit_remote_list
+  </sql>
+</mapper>

@@ -125,16 +125,35 @@ public class UnifiedExecuterItemServiceImpl extends NotifyServiceImpl<UnifiedExe
     }
 
     @Override
-    @CacheEvict(cacheManager = DEFAULT_CACHE_MANAGER, cacheNames = EXECUTER, key = "#unifiedExecuterId")
-    public void remove(Serializable unifiedExecuterId) {
-        baseMapper.delete(Wrappers.<UnifiedExecuterItem>lambdaUpdate()
-                .eq(UnifiedExecuterItem::getUnifiedExecuterId, unifiedExecuterId));
+    @CacheEvict(cacheManager = DEFAULT_CACHE_MANAGER, cacheNames = EXECUTER, key = "#unifiedExecuterItemId")
+    public void remove(Serializable unifiedExecuterItemId) {
+        UnifiedExecuterItem executerItem = get(unifiedExecuterItemId);
+        String key = executerItem.getUnifiedAppname() + "" + executerItem.getUnifiedExecuterItemHost() + executerItem.getUnifiedExecuterItemPort();
+        cache.remove(key);
+        baseMapper.deleteById(unifiedExecuterItemId);
+    }
+
+    @Override
+    @CacheEvict(cacheManager = DEFAULT_CACHE_MANAGER, cacheNames = EXECUTER, allEntries = true)
+    public void removeExecuterId(Serializable unifiedExecuterId) {
+        LambdaQueryWrapper<UnifiedExecuterItem> wrapper = Wrappers.<UnifiedExecuterItem>lambdaQuery().eq(UnifiedExecuterItem::getUnifiedExecuterId, unifiedExecuterId);
+        List<UnifiedExecuterItem> list = list(wrapper);
+        for (UnifiedExecuterItem unifiedExecuterItem : list) {
+            String key = unifiedExecuterItem.getUnifiedAppname() + "" + unifiedExecuterItem.getUnifiedExecuterItemHost() + unifiedExecuterItem.getUnifiedExecuterItemPort();
+            cache.remove(key);
+        }
+        baseMapper.delete(wrapper);
     }
 
     @Override
     @Cacheable(cacheManager = DEFAULT_CACHE_MANAGER, cacheNames = EXECUTER, key = "#unifiedExecuterItemId")
     public UnifiedExecuterItem get(Serializable unifiedExecuterItemId) {
-        return baseMapper.selectById(unifiedExecuterItemId);
+        return baseMapper.selectOne(new MPJLambdaWrapper<UnifiedExecuterItem>()
+                .selectAll(UnifiedExecuterItem.class)
+                .selectAs(UnifiedExecuter::getUnifiedAppname, UnifiedExecuterItem::getUnifiedAppname)
+                .innerJoin(UnifiedExecuter.class, UnifiedExecuter::getUnifiedExecuterId, UnifiedExecuterItem::getUnifiedExecuterId)
+                .eq(UnifiedExecuterItem::getUnifiedExecuterItemId, unifiedExecuterItemId)
+        );
     }
 
     @Override
