@@ -6,8 +6,10 @@ import com.chua.common.support.task.limit.resolver.RateLimitResolver;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.starter.unified.client.support.event.UnifiedEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.aopalliance.intercept.MethodInvocation;
+import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,6 +29,11 @@ public class UnifiedLimitAspect {
      */
 
     private final RateLimitMappingFactory rateLimitFactory = RateLimitMappingFactory.getInstance();
+    private final ApplicationContext applicationContext;
+
+    public UnifiedLimitAspect(ApplicationContext applicationContext) {
+        this.applicationContext = applicationContext;
+    }
 
     /**
      * 全局控制器限制
@@ -62,6 +69,7 @@ public class UnifiedLimitAspect {
             e.printStackTrace();
         }
 
+        applicationContext.publishEvent(new UnifiedEvent(ReturnCode.SYSTEM_SERVER_BUSINESS, "LIMIT_LOG"));
         throw new BusinessException(ReturnCode.SYSTEM_SERVER_BUSINESS.getMsg());
     }
 

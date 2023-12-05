@@ -4,11 +4,24 @@ import com.alibaba.fastjson2.JSONObject;
 import com.alibaba.fastjson2.JSONWriter;
 import com.chua.common.support.bean.BeanMap;
 import com.chua.common.support.function.InitializingAware;
+import com.chua.common.support.json.Json;
+import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.protocol.boot.*;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.unified.client.support.event.UnifiedEvent;
 import com.chua.starter.unified.client.support.properties.UnifiedClientProperties;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.DisposableBean;
+import org.springframework.context.ApplicationListener;
 import org.springframework.core.env.Environment;
+import org.zbus.broker.Broker;
+import org.zbus.broker.BrokerConfig;
+import org.zbus.broker.SingleBroker;
+import org.zbus.mq.MqConfig;
+import org.zbus.mq.Producer;
+import org.zbus.net.http.Message;
 
+import java.io.IOException;
 import java.util.Map;
 
 import static com.chua.common.support.discovery.Constants.SUBSCRIBE;
@@ -19,12 +32,13 @@ import static com.chua.common.support.discovery.Constants.SUBSCRIBE;
  * @author CH
  */
 @Slf4j
-public class ExecutorFactory implements InitializingAware {
+public class ExecutorFactory implements InitializingAware, DisposableBean, ApplicationListener<UnifiedEvent> {
     private final Protocol protocol;
     private final UnifiedClientProperties unifiedClientProperties;
     private final String appName;
     private final Environment environment;
     private BootResponse bootResponse;
+    private Producer producer;
 
     public ExecutorFactory(Protocol protocol,
                            UnifiedClientProperties unifiedClientProperties,
@@ -58,6 +72,31 @@ public class ExecutorFactory implements InitializingAware {
         BootRequest request = createRequest();
         this.bootResponse = protocolClient.send(request);
         log.info("注册结果: {}", bootResponse);
+        connectMq();
+    }
+
+    private void connectMq() {
+        try {
+            JsonObject jsonObject = Json.fromJson(bootResponse.getContent(), JsonObject.class);
+            String host = jsonObject.getString("host");
+            String port = jsonObject.getString("port");
+            if(StringUtils.isBlank(host) || StringUtils.isBlank(port)) {
+                return;
+            }
+            BrokerConfig config = new BrokerConfig();
+            config.setBrokerAddress(host + ":" + port);
+            Broker broker = new SingleBroker(config);
+            MqConfig mqConfig = new MqConfig();
+            mqConfig.setBroker(broker);
+            mqConfig.setMode(org.zbus.mq.Protocol.MqMode.MQ);
+            mqConfig.setMq("unified");
+            this.producer = new Producer(mqConfig);
+            try {
+                producer.createMQ();
+            } catch (Exception ignored) {
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     private BootRequest createRequest() {
@@ -82,5 +121,24 @@ public class ExecutorFactory implements InitializingAware {
     }
 
 
+    @Override
+    public void destroy() throws Exception {
+    }
 
+    @Override
+    public void onApplicationEvent(UnifiedEvent event) {
+        if(null != producer) {
+            Message msg = new Message();
+            msg.setBody(new JSONObject()
+                    .fluentPut("applicationName", appName)
+                    .fluentPut("mode", event.getType())
+                    .fluentPut("message", event.getSource())
+                    .toString()
+            );
+            try {
+                producer.sendAsync(msg);
+            } catch (IOException ignored) {
+            }
+        }
+    }
 }
