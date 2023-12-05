@@ -125,7 +125,7 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
     @Override
     public void setEnvironment(Environment environment) {
         this.environment = environment;
-        if(null ==  this.protocolServer) {
+        if(null == this.protocolServer) {
             return;
         }
         if (!(environment instanceof ConfigurableEnvironment)) {
@@ -190,12 +190,12 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
     }
 
     private void doInjectSubscribe(UnifiedClientProperties.SubscribeOption subscribeOption, MutablePropertySources propertySources) {
+        this.protocolServer.addListen(this);
         List<String> subscribe = subscribeOption.getSubscribe();
         if(CollectionUtils.isEmpty(subscribe)) {
             return;
         }
 
-        this.protocolServer.addListen(this);
         BootResponse response = protocolClient.get(BootRequest.builder()
                         .moduleType(ModuleType.CONFIG)
                         .commandType(CommandType.SUBSCRIBE)

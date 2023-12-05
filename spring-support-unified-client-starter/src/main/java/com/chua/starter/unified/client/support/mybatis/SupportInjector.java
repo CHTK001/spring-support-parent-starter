@@ -86,6 +86,7 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
 
     @Override
     public void setEnvironment(Environment environment) {
+        this.protocolServer.addListen(this);
         if(!unifiedClientProperties.isOpen()) {
             return;
         }
@@ -95,7 +96,6 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
             return;
         }
 
-        this.protocolServer.addListen(this);
         BootResponse response = protocolClient.get(BootRequest.builder()
                 .moduleType(ModuleType.MYBATIS)
                 .commandType(CommandType.SUBSCRIBE)

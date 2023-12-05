@@ -43,9 +43,15 @@ public interface UnifiedExecuterItemService extends NotifyService<UnifiedExecute
     /**
      *删除
      *
+     * @param unifiedExecuterItemId 统一执行器子项id
+     */
+    void remove(Serializable unifiedExecuterItemId);
+    /**
+     *删除
+     *
      * @param unifiedExecuterId 统一执行器id
      */
-    void remove(Serializable unifiedExecuterId);
+    void removeExecuterId(Serializable unifiedExecuterId);
 
     /**
      * 通过ID查询数据

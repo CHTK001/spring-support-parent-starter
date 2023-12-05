@@ -79,7 +79,7 @@ public class UnifiedExecuterServiceImpl extends ServiceImpl<UnifiedExecuterMappe
     public Boolean updateByIdExecuter(UnifiedExecuter t) {
         return transactionTemplate.execute(status -> {
             if(ONE_STR.equalsIgnoreCase(t.getUnifiedExecuterType())) {
-                unifiedExecuterItemService.remove(t.getUnifiedExecuterId());
+                unifiedExecuterItemService.removeExecuterId(t.getUnifiedExecuterId());
             }
             baseMapper.updateById(t);
             return true;
@@ -89,7 +89,7 @@ public class UnifiedExecuterServiceImpl extends ServiceImpl<UnifiedExecuterMappe
     @Override
     public Boolean removeByIdExecuter(String id) {
         return transactionTemplate.execute(status -> {
-            unifiedExecuterItemService.remove(id);
+            unifiedExecuterItemService.removeExecuterId(id);
             baseMapper.deleteById(id);
             return true;
         });
