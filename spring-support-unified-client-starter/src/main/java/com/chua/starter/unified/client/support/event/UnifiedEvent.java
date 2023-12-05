@@ -1,6 +1,6 @@
 package com.chua.starter.unified.client.support.event;
 
-import lombok.Data;
+import lombok.Getter;
 import org.springframework.context.ApplicationEvent;
 
 /**
@@ -8,16 +8,18 @@ import org.springframework.context.ApplicationEvent;
  *
  * @author CH
  */
-@Data
+@Getter
 public class UnifiedEvent extends ApplicationEvent {
 
-    private Object source;
+    private final Object source;
 
-    private String type;
+    private final String mode;
+    private final String type;
 
-    public UnifiedEvent(Object source, String type) {
+    public UnifiedEvent(Object source, String mode,  String type) {
         super(source);
         this.source = source;
+        this.mode = mode;
         this.type = type;
     }
 

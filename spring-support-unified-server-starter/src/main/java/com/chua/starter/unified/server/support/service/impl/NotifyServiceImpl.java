@@ -6,6 +6,7 @@ import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.json.JsonWriter;
 import com.chua.common.support.protocol.boot.*;
 import com.chua.common.support.protocol.server.ServerOption;
 import com.chua.common.support.spi.ServiceProvider;
@@ -128,7 +129,7 @@ public class NotifyServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M
         BootRequest bootRequest = BootRequest.builder()
                 .commandType(CommandType.REGISTER)
                 .moduleType(moduleType)
-                .content(Json.toJson(t))
+                .content(JsonWriter.builder().ignore("createTime", "updateTime").toJsonString(t))
                 .address(bootOption.getAddress() + "/" + moduleType.name())
                 .profile(getProfile.apply(t))
                 .appName(getAppName.apply(t))
