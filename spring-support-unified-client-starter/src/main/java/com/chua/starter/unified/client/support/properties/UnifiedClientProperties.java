@@ -98,7 +98,7 @@ public class UnifiedClientProperties {
     @Data
     public static class SubscribeOption {
         /**
-         * 订阅列表
+         * 订阅列表, 订阅那些应用配置
          */
         private List<String> subscribe;
         /**
