@@ -233,7 +233,7 @@ public class SessionController {
                 stringBuffer.append(localizedMessage);
             }
 
-            return ReturnResult.illegal();
+            return ReturnResult.illegal(stringBuffer.toString());
         }
         long toMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
         stringBuffer.append("\r\n").append("耗时: ").append(toMillis);
@@ -304,7 +304,7 @@ public class SessionController {
             sessionInfo = session.info();
         } catch (Exception e) {
             e.printStackTrace();
-            return ReturnResult.illegal();
+            return ReturnResult.illegal(e);
         }
         if(sessionInfo.hasMessage()) {
             return ReturnResult.illegal(sessionInfo.getMessage());
