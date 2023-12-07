@@ -2,9 +2,9 @@ package com.chua.starter.gen.support.controller;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.constant.FileType;
-import com.chua.common.support.database.entity.ColumnResult;
-import com.chua.common.support.database.entity.DatabaseResult;
-import com.chua.common.support.database.entity.TableResult;
+import com.chua.common.support.datasource.meta.Column;
+import com.chua.common.support.datasource.meta.Database;
+import com.chua.common.support.datasource.meta.Table;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.formatter.HighlightingFormatter;
@@ -60,7 +60,7 @@ public class SessionController {
     /**
      * 表格列表
      *
-     * @return {@link ReturnPageResult}<{@link TableResult}>
+     * @return {@link ReturnPageResult}<{@link Table}>
      */
     @GetMapping("children")
     public ReturnResult<List<?>> children(TableQuery query) {
@@ -82,12 +82,12 @@ public class SessionController {
             for (SysGenRemark sysGenRemark : list) {
                 tpl.put(sysGenRemark.getRemarkColumn(), sysGenRemark);
             }
-            List<ColumnResult> columns = session.getColumns(query.getDatabase(), query.getDatabaseId());
-            for (ColumnResult column : columns) {
-                String columnName = column.getColumnName();
+            List<Column> columns = session.getColumns(query.getDatabase(), query.getDatabaseId());
+            for (Column column : columns) {
+                String columnName = column.getName();
                 SysGenRemark sysGenRemark = tpl.get(columnName);
                 if(null != sysGenRemark) {
-                    column.setRemarks(sysGenRemark.getRemarkName());
+                    column.setComment(sysGenRemark.getRemarkName());
                 }
             }
             return ReturnResult.ok(columns);
@@ -99,41 +99,41 @@ public class SessionController {
     /**
      * 表格列表
      *
-     * @return {@link ReturnPageResult}<{@link TableResult}>
+     * @return {@link ReturnPageResult}<{@link Table}>
      */
     @GetMapping("keyword")
-    public ReturnResult<List<DatabaseResult>> keyword(TableQuery query) {
+    public ReturnResult<List<Database>> keyword(TableQuery query) {
         SysGen sysGen = sysGenService.getByIdWithType(query.getGenId());
         if(null == sysGen) {
             return ReturnResult.illegal("表不存在");
         }
         String database = StringUtils.defaultString(query.getDatabaseId(), sysGen.getGenDatabase());
-        List<DatabaseResult> results1 = new LinkedList<>();
+        List<Database> results1 = new LinkedList<>();
         Session session = ServiceProvider.of(Session.class).getKeepExtension(query.getGenId() + "", sysGen.getGenType(), sysGen.newDatabaseOptions());
         try{
-            List<DatabaseResult> database1 = session.getDatabase(query.getKeyword());
+            List<Database> database1 = session.getDatabase(query.getKeyword());
             if(CollectionUtils.isNotEmpty(database1)) {
                 return ReturnResult.ok(database1);
             }
 
-            List<TableResult> results = session.getTables(database, "%",  query.createSessionQuery());
-            DatabaseResult item = new DatabaseResult();
+            List<Table> results = session.getTables(database, "%",  query.createSessionQuery());
+            Database item = new Database();
             item.setName("table");
             item.setLabel("表");
             item.setChildren(results);
             results1.add(item);
 
-            for (TableResult tableResult : results) {
-                List<ColumnResult> columns = session.getColumns(sysGen.getGenDatabase(), tableResult.getTableName());
+            for (Table tableResult : results) {
+                List<Column> columns = session.getColumns(sysGen.getGenDatabase(), tableResult.getTableName());
                 tableResult.setChildren(columns);
             }
 
-            List<TableResult> viewResult = session.getView(database, "%");
-            DatabaseResult item1 = new DatabaseResult();
+            List<Table> viewResult = session.getView(database, "%");
+            Database item1 = new Database();
             item1.setName("view");
             item1.setLabel("视图");
             item1.setChildren(Optional.ofNullable(viewResult).orElse(Collections.emptyList()));
-            for (TableResult child : item1.getChildren()) {
+            for (Table child : item1.getChildren()) {
                 child.setType("VIEW");
             }
             results1.add(item1);

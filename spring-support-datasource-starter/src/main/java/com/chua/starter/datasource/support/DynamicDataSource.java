@@ -63,7 +63,7 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
             connectionHolder.setConnection(value);
             try {
                 Method method = ClassUtils.getMethod(Class.forName(MYBATIS), "bindResource", Object.class, Object.class);
-                method.setAccessible(true);
+                com.chua.common.support.utils.ClassUtils.setAccessible(method);
                 method.invoke(null, this, connectionHolder);
                 this.binder = true;
                 return;

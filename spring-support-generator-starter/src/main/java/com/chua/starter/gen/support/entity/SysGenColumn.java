@@ -6,8 +6,8 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.constant.NameConstant;
-import com.chua.common.support.database.entity.ColumnResult;
-import com.chua.common.support.database.sqldialect.Dialect;
+import com.chua.common.support.datasource.dialect.Dialect;
+import com.chua.common.support.datasource.meta.Column;
 import com.chua.common.support.unit.name.NamingCase;
 import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
@@ -156,13 +156,13 @@ public class SysGenColumn implements Serializable {
      * @param dialect     dialect
      * @param sysGenTable sys-gen表
      * @param tableName   表名称
-     * @param resultSet   结果集
-     * @return {@link com.chua.starter.gen.support.entity.SysGenColumn}
+     * @param column1     结果集
+     * @return {@link SysGenColumn}
      */
-    public static com.chua.starter.gen.support.entity.SysGenColumn createSysGenColumn(Dialect dialect,
-                                                                                      SysGenTable sysGenTable,
-                                                                                      String tableName,
-                                                                                      ColumnResult resultSet) throws SQLException {
+    public static SysGenColumn createSysGenColumn(Dialect dialect,
+                                                  SysGenTable sysGenTable,
+                                                  String tableName,
+                                                  Column column1) throws SQLException {
         SysGenColumn column = new SysGenColumn();
         column.setTabId(sysGenTable.getTabId());
         column.setColQueryType(NameConstant.QUERY_EQ);
@@ -172,26 +172,26 @@ public class SysGenColumn implements Serializable {
         column.setColJavaType(NameConstant.TYPE_STRING);
         column.setColColumnDecimal(0);
         try {
-            column.setColColumnName(resultSet.getColumnName());
-            column.setColColumnType(resultSet.getTypeName());
-            column.setColColumnComment(resultSet.getRemarks());
-            column.setColIsRequired(!resultSet.isNullable() ? "1" : "0");
-            column.setColIsIncrement(resultSet.isAutoIncrement() ? "1" : "0");
-            if(CommonConstant.ONE_STR.equals(column.getColIsIncrement())) {
+            column.setColColumnName(column1.getName());
+            column.setColColumnType(column1.getJdbcType());
+            column.setColColumnComment(column1.getComment());
+            column.setColIsRequired(!column1.isNullable() ? "1" : "0");
+            column.setColIsIncrement(column1.isPk() ? "1" : "0");
+            if (CommonConstant.ONE_STR.equals(column.getColIsIncrement())) {
                 column.setColIsPk("1");
             }
-            int columnSize = resultSet.getColumnSize();
+            int columnSize = column1.getLength();
             column.setColColumnLength(columnSize);
-            if(columnSize > 0) {
-                Integer decimalDigits = resultSet.getDecimalDigits();
-                if(null != decimalDigits) {
+            if (columnSize > 0) {
+                Integer decimalDigits = column1.getPrecision();
+                if (null != decimalDigits) {
                     column.setColColumnDecimal(decimalDigits);
                 }
             }
             dataType = getDbType(column.getColColumnType());
             columnName = column.getColColumnName();
             column.setColJavaField(NamingCase.toCamelCase(column.getColColumnName()));
-            column.setColJavaType(dialect.toJavaType(dataType).getSimpleName());
+            column.setColJavaType(column.getColJavaType());
         } catch (Exception ignored) {
 
         }
@@ -264,10 +264,10 @@ public class SysGenColumn implements Serializable {
             column.setColHtmlType(HTML_EDITOR);
         }
 
-        if(VERSION.equals(column.getColColumnName())) {
+        if (VERSION.equals(column.getColColumnName())) {
             column.setColJavaType("version");
         }
-        if(IS_DELETE.equalsIgnoreCase(column.getColColumnName())) {
+        if (IS_DELETE.equalsIgnoreCase(column.getColColumnName())) {
             column.setColJavaType("delFlag");
         }
         return column;

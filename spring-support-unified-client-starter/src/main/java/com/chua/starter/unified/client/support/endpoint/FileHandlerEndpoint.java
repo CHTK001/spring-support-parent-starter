@@ -28,7 +28,7 @@ public class FileHandlerEndpoint {
         }
         try {
             Method typeMethod = type.getMethod("dump");
-            typeMethod.setAccessible(true);
+            ClassUtils.setAccessible(typeMethod);
             method = typeMethod;
         } catch (NoSuchMethodException ignored) {
         }

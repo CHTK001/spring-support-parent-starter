@@ -1,5 +1,6 @@
 package com.chua.starter.mqtt.support.template;
 
+import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.utils.IdUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
@@ -141,7 +142,7 @@ public class MqttTemplate extends MqttClient implements DisposableBean, Initiali
 
     public void register(Method method, Object bean) {
         Mqtt mqtt = method.getDeclaredAnnotation(Mqtt.class);
-        method.setAccessible(true);
+        ClassUtils.setAccessible(method);
         String[] topic = mqtt.topic();
         IMqttMessageListener mqttMessageListener = (topic1, message) -> {
             try {

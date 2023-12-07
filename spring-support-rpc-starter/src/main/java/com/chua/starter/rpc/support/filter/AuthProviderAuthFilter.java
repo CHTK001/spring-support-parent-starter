@@ -65,7 +65,7 @@ public class AuthProviderAuthFilter implements Filter, Constant {
             } catch (NoSuchMethodException e) {
                 return null;
             }
-            declaredMethod.setAccessible(true);
+            com.chua.common.support.utils.ClassUtils.setAccessible(declaredMethod);
             return new MethodValue(declaredMethod);
         });
 

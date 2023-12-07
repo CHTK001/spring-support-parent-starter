@@ -1,5 +1,6 @@
 package com.chua.starter.mybatis.reloader;
 
+import com.chua.common.support.utils.ClassUtils;
 import com.chua.starter.mybatis.properties.MybatisProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.monitor.FileAlterationListenerAdaptor;
@@ -185,7 +186,7 @@ public class MapperReload implements Reload, DisposableBean {
      */
     private static Object getFieldValue(Configuration targetConfiguration, Class<?> aClass, String field) throws Exception {
         Field resultMapsField = aClass.getDeclaredField(field);
-        resultMapsField.setAccessible(true);
+        ClassUtils.setAccessible(resultMapsField);
         return resultMapsField.get(targetConfiguration);
     }
 

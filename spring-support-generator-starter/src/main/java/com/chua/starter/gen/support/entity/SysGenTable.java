@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.chua.common.support.database.entity.TableResult;
+import com.chua.common.support.datasource.meta.Table;
 import com.chua.common.support.unit.name.NamingCase;
 import com.chua.starter.gen.support.properties.GenProperties;
 import lombok.Data;
@@ -134,15 +134,15 @@ public class SysGenTable implements Serializable {
      * @param tableName      查询
      * @param tableResultSet 表格结果集
      * @param genProperties
-     * @return {@link com.chua.starter.gen.support.entity.SysGenTable}
+     * @return {@link SysGenTable}
      */
-    public static com.chua.starter.gen.support.entity.SysGenTable createSysGenTable(Integer genId,
-                                                                                    String tableName,
-                                                                                    TableResult tableResultSet,
-                                                                                    GenProperties genProperties) throws SQLException {
-        com.chua.starter.gen.support.entity.SysGenTable sysGenTable = new com.chua.starter.gen.support.entity.SysGenTable();
+    public static SysGenTable createSysGenTable(Integer genId,
+                                                String tableName,
+                                                Table tableResultSet,
+                                                GenProperties genProperties) throws SQLException {
+        SysGenTable sysGenTable = new SysGenTable();
         sysGenTable.setGenId(genId);
-        sysGenTable.setTabDesc(tableResultSet.getRemark());
+        sysGenTable.setTabDesc(tableResultSet.getComment());
         sysGenTable.setTabDb(tableResultSet.getDatabase());
         sysGenTable.setTabName(tableName);
         sysGenTable.setTabClassName(NamingCase.toHyphenUpperCamel(sysGenTable.getTabName()));

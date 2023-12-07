@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.chua.common.support.database.DatabaseOptions;
+import com.chua.common.support.datasource.jdbc.option.DataSourceOptions;
 import com.chua.common.support.utils.StringUtils;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
@@ -145,14 +145,14 @@ public class SysGen implements Serializable {
     /**
      * 新数据库配置
      *
-     * @return {@link DatabaseOptions}
+     * @return {@link DataSourceOptions}
      */
-    public DatabaseOptions newDatabaseOptions() {
-        DatabaseOptions databaseOptions = new DatabaseOptions();
-        databaseOptions.setDatabase(genDatabase);
+    public DataSourceOptions newDatabaseOptions() {
+        DataSourceOptions databaseOptions = new DataSourceOptions();
+        databaseOptions.setName(genDatabase);
         databaseOptions.setDriver(genDriver);
         databaseOptions.setDatabaseFile(genDatabaseFile);
-        databaseOptions.setUser(genUser);
+        databaseOptions.setUrl(genUser);
         databaseOptions.setDriverPath(dbcDriverUrl);
         databaseOptions.setPassword(genPassword);
         databaseOptions.setGenType(genType);

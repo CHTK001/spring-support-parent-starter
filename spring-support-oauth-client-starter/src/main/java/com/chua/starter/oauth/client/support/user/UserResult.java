@@ -1,5 +1,6 @@
 package com.chua.starter.oauth.client.support.user;
 
+import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.common.support.constant.DataFilterTypeEnum;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -138,7 +139,7 @@ public class UserResult {
         Map<String, Object> beanMap = this.ext;
         T finalNewInstance = newInstance;
         ReflectionUtils.doWithFields(target, field -> {
-            field.setAccessible(true);
+            ClassUtils.setAccessible(field);
             Object o = beanMap.get(field.getName());
             if (null == o) {
                 return;

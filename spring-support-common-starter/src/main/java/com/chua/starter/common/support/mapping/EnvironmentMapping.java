@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.mapping;
 
+import com.chua.common.support.utils.ClassUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -50,7 +51,7 @@ public class EnvironmentMapping {
                 return;
             }
 
-            field.setAccessible(true);
+            ClassUtils.setAccessible(field);
             String value1 = value.value();
             String replace = value1.replace("${", "").replace("}", "");
             replace = replace.contains(":") ? replace.substring(0, replace.indexOf(":")) : replace;

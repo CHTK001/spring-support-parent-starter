@@ -6,7 +6,7 @@ import cn.smallbun.screw.core.metadata.model.DataModel;
 import cn.smallbun.screw.core.process.DataModelProcess;
 import cn.smallbun.screw.core.process.ProcessConfig;
 import com.chua.common.support.annotations.Spi;
-import com.chua.common.support.database.DatabaseOptions;
+import com.chua.common.support.datasource.jdbc.option.DataSourceOptions;
 import com.chua.common.support.function.Splitter;
 import com.chua.common.support.session.doc.SessionDoc;
 import com.chua.common.support.session.query.DocQuery;
@@ -29,9 +29,9 @@ import static cn.smallbun.screw.core.constant.DefaultConstants.DESCRIPTION;
 @Spi("JDBC")
 public class JdbcSessionDoc implements SessionDoc {
 
-    private final DatabaseOptions databaseOptions;
+    private final DataSourceOptions databaseOptions;
 
-    public JdbcSessionDoc(DatabaseOptions databaseOptions) {
+    public JdbcSessionDoc(DataSourceOptions databaseOptions) {
         this.databaseOptions = databaseOptions;
     }
 
@@ -64,7 +64,7 @@ public class JdbcSessionDoc implements SessionDoc {
                 .ignoreTableName(Splitter.on(',').trimResults().omitEmptyStrings().splitToList(query.getIgnoreTableName())).build();
         // 配置
         HikariConfig hikariConfig = new HikariConfig();
-        hikariConfig.setUsername(databaseOptions.getUser());
+        hikariConfig.setUsername(databaseOptions.getUsername());
         hikariConfig.setPassword(databaseOptions.getPassword());
         hikariConfig.setJdbcUrl(databaseOptions.getUrl());
         hikariConfig.setDriverClassName(databaseOptions.getDriver());

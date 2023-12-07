@@ -57,7 +57,7 @@ public class InvokeSpring {
             return ShellResult.error(methodName + "(方法)不存在");
         }
 
-        method.setAccessible(true);
+        com.chua.common.support.utils.ClassUtils.setAccessible(method);
         try {
             return ShellResult.text(DefaultConversionService.getSharedInstance().convert(method.invoke(bean, new Object[0]), String.class));
         } catch (Exception ignored) {

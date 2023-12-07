@@ -1,6 +1,7 @@
 package com.chua.starter.rpc.support.resolver;
 
 import com.chua.common.support.bean.BeanUtils;
+import com.chua.common.support.utils.ClassUtils;
 import com.chua.starter.common.support.utils.BeanDefinitionUtils;
 import com.chua.starter.rpc.support.properties.RpcProperties;
 import com.google.common.base.Strings;
@@ -88,7 +89,7 @@ public class DubboBeanDefinitionResolver implements BeanDefinitionResolver{
                 return;
             }
 
-            field.setAccessible(true);
+            ClassUtils.setAccessible(field);
             Object v = field.get(source);
             if (null == v) {
                 return;

@@ -1,6 +1,6 @@
 package com.chua.starter.mybatis.entity;
 
-import com.chua.common.support.database.annotation.ColumnIgnore;
+import com.chua.common.support.datasource.annotation.ColumnIgnore;
 import lombok.Data;
 
 /**
