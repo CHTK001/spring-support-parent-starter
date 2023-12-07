@@ -152,7 +152,7 @@ public class SysGen implements Serializable {
         databaseOptions.setName(genDatabase);
         databaseOptions.setDriver(genDriver);
         databaseOptions.setDatabaseFile(genDatabaseFile);
-        databaseOptions.setUrl(genUser);
+        databaseOptions.setUsername(genUser);
         databaseOptions.setDriverPath(dbcDriverUrl);
         databaseOptions.setPassword(genPassword);
         databaseOptions.setGenType(genType);
