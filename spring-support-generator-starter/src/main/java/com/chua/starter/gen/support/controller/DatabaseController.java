@@ -2,7 +2,8 @@ package com.chua.starter.gen.support.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.backup.Backup;
-import com.chua.common.support.database.sqldialect.Dialect;
+import com.chua.common.support.datasource.dialect.Dialect;
+import com.chua.common.support.datasource.dialect.DialectFactory;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.session.Session;
@@ -109,7 +110,7 @@ public class DatabaseController {
 
         sysGen.setCreateTime(new Date());
         sysGen.setCreateBy(RequestUtils.getUsername());
-        Dialect dialect = Dialect.createDriver(sysGen.getGenDriver());
+        Dialect dialect = DialectFactory.createDriver(sysGen.getGenDriver());
         if(null != dialect) {
             sysGen.setGenUrl(dialect.getUrl(sysGen.newDatabaseOptions()));
         }
@@ -128,7 +129,7 @@ public class DatabaseController {
         if(null == sysGen1) {
             return ReturnResult.illegal("数据不存在");
         }
-        Dialect dialect = Dialect.createDriver(sysGen.getGenDriver());
+        Dialect dialect = DialectFactory.createDriver(sysGen.getGenDriver());
         if(null != dialect) {
             sysGen.setGenUrl(dialect.getUrl(sysGen.newDatabaseOptions()));
         }
@@ -158,7 +159,7 @@ public class DatabaseController {
                 return driver;
             }
             sysGen.setGenDatabaseFile(driver.getData().toString());
-            Dialect dialect = Dialect.createDriver(sysGen.getGenDriver());
+            Dialect dialect = DialectFactory.createDriver(sysGen.getGenDriver());
             if(null != dialect) {
                 sysGen.setGenUrl(dialect.getUrl(sysGen.newDatabaseOptions()));
             }

@@ -1,5 +1,6 @@
 package com.chua.starter.scheduler.client.support.executor;
 
+import com.chua.common.support.utils.ClassUtils;
 import com.chua.starter.common.support.annotations.Job;
 import com.xxl.job.core.executor.impl.XxlJobSpringExecutor;
 import com.xxl.job.core.glue.GlueFactory;
@@ -159,7 +160,7 @@ public class JobSpringExecutor extends XxlJobSpringExecutor {
             throw new RuntimeException("xxl-job jobhandler[" + name + "] naming conflicts.");
         }
 
-        executeMethod.setAccessible(true);
+        ClassUtils.setAccessible(executeMethod);
 
         // init and destroy
         Method initMethod = null;
@@ -168,7 +169,7 @@ public class JobSpringExecutor extends XxlJobSpringExecutor {
         if (job.init().trim().length() > 0) {
             try {
                 initMethod = clazz.getDeclaredMethod(job.init());
-                initMethod.setAccessible(true);
+                ClassUtils.setAccessible(initMethod);
             } catch (NoSuchMethodException e) {
                 throw new RuntimeException("xxl-job method-jobhandler initMethod invalid, for[" + clazz + "#" + methodName + "] .");
             }
@@ -176,7 +177,7 @@ public class JobSpringExecutor extends XxlJobSpringExecutor {
         if (job.destroy().trim().length() > 0) {
             try {
                 destroyMethod = clazz.getDeclaredMethod(job.destroy());
-                destroyMethod.setAccessible(true);
+                ClassUtils.setAccessible(destroyMethod);
             } catch (NoSuchMethodException e) {
                 throw new RuntimeException("xxl-job method-jobhandler destroyMethod invalid, for[" + clazz + "#" + methodName + "] .");
             }

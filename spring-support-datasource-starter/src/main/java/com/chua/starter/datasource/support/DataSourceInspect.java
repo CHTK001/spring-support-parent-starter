@@ -122,7 +122,7 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
                     return;
                 }
 
-                field.setAccessible(true);
+               com.chua.common.support.utils.ClassUtils.setAccessible(field);
                 Object value = ReflectionUtils.getField(field, dataSource);
                 if (null == value) {
                     return;
