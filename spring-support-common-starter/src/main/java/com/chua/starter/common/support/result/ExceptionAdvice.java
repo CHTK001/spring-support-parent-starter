@@ -21,6 +21,7 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
 import javax.servlet.ServletException;
+import java.net.UnknownHostException;
 import java.sql.SQLSyntaxErrorException;
 import java.text.DecimalFormat;
 import java.util.regex.Matcher;
@@ -94,6 +95,15 @@ public class ExceptionAdvice  {
     @ExceptionHandler(ServletException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> processException(ServletException e) {
+        log.error(e.getMessage(), e);
+        return Result.failed(e.getMessage());
+    }
+    /**
+     * ServletException
+     */
+    @ExceptionHandler(UnknownHostException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public <T> Result<T> unknow(UnknownHostException e) {
         log.error(e.getMessage(), e);
         return Result.failed(e.getMessage());
     }
