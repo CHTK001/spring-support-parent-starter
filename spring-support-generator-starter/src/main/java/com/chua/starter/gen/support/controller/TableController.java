@@ -4,10 +4,9 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.annotations.Permission;
 import com.chua.common.support.constant.CommonConstant;
-import com.chua.common.support.database.DatabaseHandler;
-import com.chua.common.support.database.entity.ColumnResult;
-import com.chua.common.support.database.entity.TableResult;
-import com.chua.common.support.database.sqldialect.Dialect;
+import com.chua.common.support.datasource.dialect.Dialect;
+import com.chua.common.support.datasource.meta.Column;
+import com.chua.common.support.datasource.meta.Table;
 import com.chua.common.support.file.univocity.parsers.conversions.Validator;
 import com.chua.common.support.lang.code.PageResult;
 import com.chua.common.support.lang.code.ReturnPageResult;
@@ -28,6 +27,7 @@ import com.chua.starter.gen.support.result.TemplateResult;
 import com.chua.starter.gen.support.service.SysGenColumnService;
 import com.chua.starter.gen.support.service.SysGenService;
 import com.chua.starter.gen.support.service.SysGenTableService;
+import com.chua.starter.gen.support.util.DatabaseHandler;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import com.chua.starter.sse.support.Emitter;
 import com.chua.starter.sse.support.SseTemplate;
@@ -87,16 +87,16 @@ public class TableController {
     /**
      * 表格列表
      *
-     * @return {@link ReturnPageResult}<{@link TableResult}>
+     * @return {@link ReturnPageResult}<{@link Table}>
      */
     @GetMapping("table")
-    public ReturnPageResult<TableResult> tableList(TableQuery query) {
+    public ReturnPageResult<Table> tableList(TableQuery query) {
         SysGen sysGen = getSysGen(query);
         if(null == sysGen) {
             return ReturnPageResult.illegal("表不存在");
         }
         String database = sysGen.getGenDatabase();
-        List<TableResult> results = null;
+        List<Table> results = null;
         try (DatabaseHandler handler = new DatabaseHandler(sysGen.newDatabaseOptions())) {
             results = handler.getTables(database, "%");
         } catch (Exception e) {
@@ -107,9 +107,9 @@ public class TableController {
             return ReturnPageResult.ok(Collections.emptyList());
         }
 
-        Map<String, TableResult> tpl = new HashMap<>(results.size());
-        for (TableResult tableResult : results) {
-            tpl.put(tableResult.getTableName(), tableResult);
+        Map<String, Table> tpl = new HashMap<>(results.size());
+        for (Table Table : results) {
+            tpl.put(Table.getTableName(), Table);
         }
 
         List<SysGenTable> rs = sysGenTableService.list(Wrappers.<SysGenTable>lambdaQuery()
@@ -122,9 +122,9 @@ public class TableController {
 
         results = new LinkedList<>(tpl.values());
 
-        List<TableResult> page = CollectionUtils.page((int) query.getPage(), (int) query.getPageSize(), results);
+        List<Table> page = CollectionUtils.page((int) query.getPage(), (int) query.getPageSize(), results);
         return ReturnPageResult.ok(
-                PageResult.<TableResult>builder()
+                PageResult.<Table>builder()
                         .total(results.size())
                         .data(page)
                         .pageSize((int) query.getPageSize())
@@ -186,21 +186,21 @@ public class TableController {
         );
         try (DatabaseHandler handler = new DatabaseHandler(sysGen.newDatabaseOptions())) {
             List<SysGenColumn> sysGenColumns = sysGenColumnService.list(Wrappers.<SysGenColumn>lambdaQuery().eq(SysGenColumn::getTabId, tabId));
-            TableResult tableResult = new TableResult();
-            tableResult.setDatabase(sysGen.getGenDatabase());
-            tableResult.setTableName(sysGen.getTabName());
-            tableResult.setRemark(sysGen.getTabDesc());
-            handler.updateTable(tableResult);
+            Table Table = new Table();
+            Table.setDatabase(sysGen.getGenDatabase());
+            Table.setTableName(sysGen.getTabName());
+            Table.setComment(sysGen.getTabDesc());
+            handler.updateTable(Table);
             handler.updateColumn(sysGenColumns.stream().map(it -> {
-                ColumnResult columnResult = new ColumnResult();
-                columnResult.setDatabaseName(sysGen.getGenDatabase());
-                columnResult.setDecimalDigits(it.getColColumnDecimal());
-                columnResult.setColumnSize(it.getColColumnLength());
-                columnResult.setColumnName(it.getColColumnName());
-                columnResult.setRemarks(it.getColColumnComment());
-                columnResult.setTypeName(it.getColColumnType());
-                columnResult.setTableName(sysGen.getTabName());
-                return columnResult;
+                Column Column = new Column();
+                Column.setDatabaseName(sysGen.getGenDatabase());
+                Column.setPrecision(it.getColColumnDecimal());
+                Column.setLength(it.getColColumnLength());
+                Column.setName(it.getColColumnName());
+                Column.setComment(it.getColColumnComment());
+                Column.setJdbcType(it.getColColumnType());
+                Column.setTableName(sysGen.getTabName());
+                return Column;
             }).collect(Collectors.toSet()));
         } catch (Exception e) {
             if(Validator.hasChinese(e.getMessage())) {
@@ -214,7 +214,7 @@ public class TableController {
     /**
      * 表格列表
      *
-     * @return {@link ReturnPageResult}<{@link TableResult}>
+     * @return {@link ReturnPageResult}<{@link Table}>
      */
     @PostMapping("importColumn")
     @Transactional(rollbackFor = Exception.class)
@@ -227,7 +227,7 @@ public class TableController {
         try (DatabaseHandler handler = new DatabaseHandler(sysGen.newDatabaseOptions())) {
             Dialect dialect = handler.guessDialect();
             for (String s : tableName) {
-                List<TableResult> tables = handler.getTables(null, s);
+                List<Table> tables = handler.getTables(null, s);
                 SysGenTable sysGenTable = null;
                 if(CollectionUtils.isNotEmpty(tables)) {
                     sysGenTable = SysGenTable.createSysGenTable(query.getGenId(), s, tables.get(0), genProperties);
@@ -235,7 +235,7 @@ public class TableController {
                     sysGenTableService.save(sysGenTable);
                 }
 
-                List<ColumnResult> resultSet = null;
+                List<Column> resultSet = null;
                 try {
                     resultSet = handler.getColumns(sysGen.getGenDatabase(),  s);
                 } catch (Exception e) {
@@ -244,8 +244,8 @@ public class TableController {
 
                 if(CollectionUtils.isNotEmpty(resultSet)) {
                     List<SysGenColumn> rs = new LinkedList<>();
-                    for (ColumnResult columnResult : resultSet) {
-                        rs.add(SysGenColumn.createSysGenColumn(dialect, sysGenTable, s, columnResult));
+                    for (Column Column : resultSet) {
+                        rs.add(SysGenColumn.createSysGenColumn(dialect, sysGenTable, s, Column));
                     }
 
                     sysGenColumnService.saveBatch(rs);
@@ -264,7 +264,7 @@ public class TableController {
     /**
      * 更新表信息
      *
-     * @return {@link ReturnPageResult}<{@link TableResult}>
+     * @return {@link ReturnPageResult}<{@link Table}>
      */
     @GetMapping("page")
     public ReturnPageResult<SysGenTable> page(TableQuery query) {
@@ -283,7 +283,7 @@ public class TableController {
     /**
      * 更新表信息
      *
-     * @return {@link ReturnPageResult}<{@link TableResult}>
+     * @return {@link ReturnPageResult}<{@link Table}>
      */
     @PutMapping("update")
     @Transactional(rollbackFor = Exception.class)
@@ -295,7 +295,7 @@ public class TableController {
     /**
      * 删除表信息
      *
-     * @return {@link ReturnPageResult}<{@link TableResult}>
+     * @return {@link ReturnPageResult}<{@link Table}>
      */
     @GetMapping("delete")
     @Transactional(rollbackFor = Exception.class)
@@ -313,7 +313,7 @@ public class TableController {
     /**
      * 查询表信息
      *
-     * @return {@link ReturnPageResult}<{@link TableResult}>
+     * @return {@link ReturnPageResult}<{@link Table}>
      */
     @GetMapping("info")
     public ReturnResult<SysGenTable> info(String tabId) {

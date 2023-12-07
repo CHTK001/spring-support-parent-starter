@@ -136,7 +136,7 @@ public class SpringBeanUtils {
             //注册Controller
             Method method = ReflectionUtils.findMethod(requestMappingHandlerMapping.getClass(), "detectHandlerMethods", Object.class);
             //将private改为可使用
-            method.setAccessible(true);
+            com.chua.common.support.utils.ClassUtils.setAccessible(method);
             method.invoke(requestMappingHandlerMapping, controllerBeanName);
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -160,7 +160,7 @@ public class SpringBeanUtils {
                 Method specificMethod = ClassUtils.getMostSpecificMethod(method, targetClass);
                 try {
                     Method createMappingMethod = ReflectionUtils.findMethod(requestMappingHandlerMapping.getClass(), "getMappingForMethod", Method.class, Class.class);
-                    createMappingMethod.setAccessible(true);
+                    com.chua.common.support.utils.ClassUtils.setAccessible(createMappingMethod);
                     RequestMappingInfo requestMappingInfo = (RequestMappingInfo)
                             createMappingMethod.invoke(requestMappingHandlerMapping, specificMethod, targetClass);
                     if (requestMappingInfo != null) {
