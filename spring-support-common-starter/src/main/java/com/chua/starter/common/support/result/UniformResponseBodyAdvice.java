@@ -1,8 +1,8 @@
 package com.chua.starter.common.support.result;
 
+import com.chua.common.support.annotations.Ignore;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.starter.common.support.annotations.Ignore;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.MethodParameter;

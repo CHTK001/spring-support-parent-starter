@@ -1,8 +1,8 @@
 package com.chua.starter.oauth.client.support.web;
 
+import com.chua.common.support.annotations.Ignore;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.common.support.annotations.Ignore;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.annotation.AuthIgnore;
@@ -41,9 +41,9 @@ import java.util.Set;
 public class WebRequest {
     @Getter
     private final AuthClientProperties authProperties;
-    private String contextPath;
-    private HttpServletRequest request;
-    private RequestMappingHandlerMapping requestMappingHandlerMapping;
+    private final String contextPath;
+    private final HttpServletRequest request;
+    private final RequestMappingHandlerMapping requestMappingHandlerMapping;
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
 
@@ -145,11 +145,7 @@ public class WebRequest {
 
         String token = getToken();
 
-        if ((null == tokenCookie || tokenCookie.length == 0) && Strings.isNullOrEmpty(token)) {
-            return true;
-        }
-
-        return false;
+        return (null == tokenCookie || tokenCookie.length == 0) && Strings.isNullOrEmpty(token);
     }
 
     /**
