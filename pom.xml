@@ -41,6 +41,7 @@
         <module>spring-support-device-starter</module>
         <module>spring-support-unified-client-starter</module>
         <module>spring-support-unified-server-starter</module>
+        <module>spring-support-gateway-server-starter</module>
         <!--        <module>spring-support-proxy-starter</module>-->
     </modules>
 
