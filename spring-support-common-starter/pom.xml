@@ -48,11 +48,7 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-vertx-starter</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-groovy-starter</artifactId>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
