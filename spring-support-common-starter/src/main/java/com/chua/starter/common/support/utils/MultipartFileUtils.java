@@ -62,16 +62,12 @@ public class MultipartFileUtils {
                 return ReturnResult.illegal("保存驱动清除失败");
             }
         }
-        try {
-            FileUtils.forceMkdir(new File(parent, folder));
-        } catch (IOException e) {
-            return ReturnResult.illegal("保存驱动失败");
-        }
+        FileUtils.forceMkdir(new File(parent, folder));
 
 
         File driverFile = new File(parent, folder + "/" + name);
         try (InputStream is = inputStream;
-             OutputStream os = new FileOutputStream(driverFile);
+             OutputStream os = new FileOutputStream(driverFile)
         ) {
             IoUtils.copy(is, os);
         } catch (IOException e) {
