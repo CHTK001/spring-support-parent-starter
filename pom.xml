@@ -234,11 +234,6 @@
         <dependencies>
             <dependency>
                 <groupId>com.chua</groupId>
-                <artifactId>utils-support-sshd-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.chua</groupId>
                 <artifactId>utils-support-zbus-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
