@@ -5,7 +5,7 @@ import com.chua.common.support.bean.BeanMap;
 import com.chua.common.support.function.InitializingAware;
 import com.chua.common.support.protocol.boot.BootOption;
 import com.chua.common.support.protocol.boot.Protocol;
-import com.chua.common.support.protocol.server.ServerOption;
+import com.chua.common.support.protocol.options.ServerOption;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.starter.unified.client.support.mybatis.SupportInjector;
