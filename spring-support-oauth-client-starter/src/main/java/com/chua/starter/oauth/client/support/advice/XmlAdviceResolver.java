@@ -1,21 +1,22 @@
 package com.chua.starter.oauth.client.support.advice;
 
-import com.chua.common.support.lang.file.adaptor.xml.Xml;
 import com.chua.common.support.lang.code.ResultCode;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import org.springframework.http.MediaType;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
-import java.nio.charset.StandardCharsets;
 
 /**
- * json
+ * xml
  *
  * @author CH
  * @since 2022/7/29 10:24
  */
 public class XmlAdviceResolver implements AdviceResolver {
+
+    static final XmlMapper XML_MAPPER = new XmlMapper();
 
     @Override
     public String type() {
@@ -27,7 +28,7 @@ public class XmlAdviceResolver implements AdviceResolver {
 
         try {
             ServletOutputStream outputStream = response.getOutputStream();
-            outputStream.write(Xml.toString(ReturnResult.newBuilder().code(ResultCode.transferForHttpCodeStatus(status)).msg(message).build()).getBytes(StandardCharsets.UTF_8));
+            outputStream.write(XML_MAPPER.writeValueAsBytes(ReturnResult.newBuilder().code(ResultCode.transferForHttpCodeStatus(status)).msg(message).build()));
         } catch (Exception e) {
             e.printStackTrace();
         }
