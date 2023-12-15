@@ -8,7 +8,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.json.JsonWriter;
 import com.chua.common.support.protocol.boot.*;
-import com.chua.common.support.protocol.server.ServerOption;
+import com.chua.common.support.protocol.options.ServerOption;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.utils.ThreadUtils;
