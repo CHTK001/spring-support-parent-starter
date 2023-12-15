@@ -5,8 +5,8 @@ import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.function.Joiner;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.protocol.annotations.ServiceMapping;
 import com.chua.common.support.protocol.boot.*;
-import com.chua.common.support.protocol.server.annotations.ServiceMapping;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.Md5Utils;
 import com.chua.starter.common.support.processor.AnnotationInjectedBeanPostProcessor;
@@ -70,7 +70,7 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
     /**
      * placeholder, ConfigValueTarget
      */
-    private Map<String, List<ConfigValueTarget>> placeholderConfigValueTargetMap
+    private final Map<String, List<ConfigValueTarget>> placeholderConfigValueTargetMap
             = new HashMap<>();
 
     private ConfigurableListableBeanFactory beanFactory;
