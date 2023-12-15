@@ -32,6 +32,10 @@
             <artifactId>spring-support-mybatis-starter</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-vertx-starter</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>com.chua</groupId>
