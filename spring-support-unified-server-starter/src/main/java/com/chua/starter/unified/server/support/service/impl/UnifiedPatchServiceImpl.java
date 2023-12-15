@@ -65,11 +65,8 @@ public class UnifiedPatchServiceImpl extends ServiceImpl<UnifiedPatchMapper, Uni
     public ErrorResult uploadPatch(UnifiedPatch t, MultipartFile multipartFile) {
         UnifiedPatch byId = getById(t.getUnifiedPatchId());
         File file = getPatchFile(byId);
-        try {
-            FileUtils.forceDeleteDirectory(file);
-            FileUtils.forceMkdir(file);
-        } catch (IOException ignored) {
-        }
+        FileUtils.forceDeleteDirectory(file);
+        FileUtils.forceMkdir(file);
         File patchFile = new File(file, t.getUnifiedPatchName() + "-" + t.getUnifiedPatchVersion() + "." + FileUtils.getExtension(multipartFile.getOriginalFilename()));
         try {
             MultipartFileUtils.transferTo(multipartFile, patchFile);
@@ -91,16 +88,12 @@ public class UnifiedPatchServiceImpl extends ServiceImpl<UnifiedPatchMapper, Uni
         }
         UnifiedPatch byId = getById(t.getUnifiedPatchId());
         File file = getPatchFile(byId);
-        try {
-            if(null != file) {
-                FileUtils.forceDeleteDirectory(file.getParentFile());
-            }
-            t.setUnifiedPatchPack(null);
-            baseMapper.updateById(t);
-            return true;
-        } catch (IOException ignored) {
+        if(null != file) {
+            FileUtils.forceDeleteDirectory(file.getParentFile());
         }
-        return false;
+        t.setUnifiedPatchPack(null);
+        baseMapper.updateById(t);
+        return true;
     }
 
     @Override
