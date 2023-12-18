@@ -1,12 +1,12 @@
 package com.chua.starter.device.support.adaptor.factory.client;
 
-import com.chua.common.support.mapping.annotations.MappingAddress;
-import com.chua.common.support.mapping.annotations.MappingRequest;
+import com.chua.common.support.mapping.annotations.Url;
+import com.chua.common.support.mapping.annotations.Query;
 
 /**
  * @author CH
  */
-@MappingAddress(invokeType = "sen_nuo")
+@Url(invokeType = "sen_nuo")
 public interface SnNuoClient {
 
 
@@ -16,6 +16,6 @@ public interface SnNuoClient {
      * @param deviceImsi 设备imsi
      * @return {@link String}
      */
-    @MappingRequest("GET /json/{deviceImsi}.json")
+    @Query("GET /json/{deviceImsi}.json")
     String getEvent(String deviceImsi);
 }

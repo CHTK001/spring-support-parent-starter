@@ -1,7 +1,7 @@
 package com.chua.starter.device.support.adaptor.factory.client;
 
-import com.chua.common.support.mapping.annotations.MappingAddress;
-import com.chua.common.support.mapping.annotations.MappingRequest;
+import com.chua.common.support.mapping.annotations.Url;
+import com.chua.common.support.mapping.annotations.Query;
 import com.chua.starter.device.support.adaptor.factory.client.pojo.HikAnFangDeviceListResult;
 import com.chua.starter.device.support.adaptor.factory.client.pojo.HikAnFangOrgListResult;
 import com.chua.starter.device.support.adaptor.factory.client.pojo.HikYunYaoDeviceListResult;
@@ -9,7 +9,7 @@ import com.chua.starter.device.support.adaptor.factory.client.pojo.HikYunYaoDevi
 /**
  * @author CH
  */
-@MappingAddress(invokeType = "hai_kang_an_fang")
+@Url(invokeType = "hai_kang_an_fang")
 public interface HikAnFangClient {
     /**
      * 查询组织列表v2
@@ -25,7 +25,7 @@ public interface HikAnFangClient {
      * @param pageSize 分页数量 (1000)
      * @return 组织机构
      */
-    @MappingRequest(value = "POST /api/resource/v2/org/advance/orgList", jsonPath = "$.data")
+    @Query(value = "POST /api/resource/v2/org/advance/orgList", jsonPath = "$.data")
     HikAnFangOrgListResult orgList(int pageNo, int pageSize);
 
 
@@ -36,7 +36,7 @@ public interface HikAnFangClient {
      * @param pageSize  分页数量 (1000)
      * @return {@link HikYunYaoDeviceListResult}
      */
-    @MappingRequest(value = "POST /api/resource/v2/encodeDevice/search", jsonPath = "$.data")
+    @Query(value = "POST /api/resource/v2/encodeDevice/search", jsonPath = "$.data")
     HikAnFangDeviceListResult devicePage(int pageNo, int pageSize);
 
 
