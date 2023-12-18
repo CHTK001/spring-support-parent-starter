@@ -6,10 +6,10 @@ import com.chua.common.support.bean.BeanMap;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.date.DateUtils;
 import com.chua.common.support.lang.date.constant.DateFormatConstant;
-import com.chua.common.support.mapping.annotations.MappingAddress;
-import com.chua.common.support.mapping.annotations.MappingBody;
-import com.chua.common.support.mapping.annotations.MappingParam;
-import com.chua.common.support.mapping.annotations.MappingRequest;
+import com.chua.common.support.mapping.annotations.Url;
+import com.chua.common.support.mapping.annotations.Body;
+import com.chua.common.support.mapping.annotations.Param;
+import com.chua.common.support.mapping.annotations.Query;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.device.support.adaptor.factory.client.pojo.HikAnFangOrgListResult;
 import com.chua.starter.device.support.adaptor.factory.client.pojo.HikYunYaoDeviceListResult;
@@ -21,7 +21,7 @@ import java.util.Map;
 /**
  * @author CH
  */
-@MappingAddress(invokeType = "hai_kang_yun_yao")
+@Url(invokeType = "hai_kang_yun_yao")
 public interface HikYunYaoClient {
     /**
      * 查询组织列表v2
@@ -37,7 +37,7 @@ public interface HikYunYaoClient {
      * @param pageSize 分页数量 (1000)
      * @return 组织机构
      */
-    @MappingRequest(value = "POST /api/resource/v2/org/advance/orgList", jsonPath = "$.data")
+    @Query(value = "POST /api/resource/v2/org/advance/orgList", jsonPath = "$.data")
     HikAnFangOrgListResult orgList(int pageNo, int pageSize);
 
     /**
@@ -66,8 +66,8 @@ public interface HikYunYaoClient {
      *             </code>
      * @return
      */
-    @MappingRequest(value = "POST /api/eits/v2/global/device/page", jsonPath = "$.data")
-    HikYunYaoDeviceListResult devicePage(@MappingBody String json);
+    @Query(value = "POST /api/eits/v2/global/device/page", jsonPath = "$.data")
+    HikYunYaoDeviceListResult devicePage(@Body String json);
 
     /**
      * 设备页面
@@ -99,11 +99,11 @@ public interface HikYunYaoClient {
      * @param protocol   协议
      * @return {@link String}
      */
-    @MappingRequest("POST /api/eits/v1/global/live/address/get/by/deviceSerial")
+    @Query("POST /api/eits/v1/global/live/address/get/by/deviceSerial")
     String getLiveAddress(String projectId, String deviceSerial,
-                          @MappingParam(value = "channelNo", defaultValue = "1") int channelNo,
-                          @MappingParam(value = "expireTime", defaultValue = "60") int expireTime,
-                          @MappingParam(value = "protocol", defaultValue = "2") int protocol
+                          @Param(value = "channelNo", defaultValue = "1") int channelNo,
+                          @Param(value = "expireTime", defaultValue = "60") int expireTime,
+                          @Param(value = "protocol", defaultValue = "2") int protocol
     );
 
     /**
@@ -134,8 +134,8 @@ public interface HikYunYaoClient {
      * @param request 要求
      * @return {@link String}
      */
-    @MappingRequest("POST /api/eits/aceventcs/v1/event/acs/person/page")
-    String getEvent(@MappingBody String request);
+    @Query("POST /api/eits/aceventcs/v1/event/acs/person/page")
+    String getEvent(@Body String request);
 
     /**
      * 获取事件
