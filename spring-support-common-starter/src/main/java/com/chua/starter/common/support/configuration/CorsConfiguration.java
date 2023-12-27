@@ -7,7 +7,6 @@ import com.chua.starter.common.support.filter.ParamLogFilter;
 import com.chua.starter.common.support.limit.LimitAspect;
 import com.chua.starter.common.support.processor.ResponseModelViewMethodProcessor;
 import com.chua.starter.common.support.properties.*;
-import com.chua.starter.common.support.provider.OptionsProvider;
 import com.chua.starter.common.support.result.ExceptionAdvice;
 import com.chua.starter.common.support.result.UniformResponseBodyAdvice;
 import com.chua.starter.common.support.version.ApiVersionRequestMappingHandlerMapping;
@@ -31,7 +30,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.core.env.Environment;
 import org.springframework.format.FormatterRegistry;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
@@ -124,12 +122,6 @@ public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAw
             return new ApiVersionRequestMappingHandlerMapping();
         }
         return new RequestMappingHandlerMapping();
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
-    public OptionsProvider optionsProvider(OptionProperties optionProperties, Environment environment) {
-        return new OptionsProvider(optionProperties, environment);
     }
 
     @Bean
