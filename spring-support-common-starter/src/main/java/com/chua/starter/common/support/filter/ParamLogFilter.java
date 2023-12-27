@@ -8,9 +8,13 @@ import com.chua.common.support.utils.StringUtils;
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.util.Enumeration;
+import java.util.LinkedList;
+import java.util.List;
 
-import static com.chua.common.support.constant.NameConstant.GET;
-import static com.chua.common.support.constant.NameConstant.POST;
+import static com.chua.common.support.constant.NameConstant.*;
 import static com.chua.common.support.http.HttpConstant.HTTP_HEADER_CONTENT_TYPE;
 
 /**
@@ -31,22 +35,33 @@ public class ParamLogFilter implements Filter {
         }
 
         HttpServletRequest request = (HttpServletRequest) servletRequest;
+        log.info("");
+        log.info("======================================");
         hook(request);
         String header = request.getHeader(HTTP_HEADER_CONTENT_TYPE);
         if(StringUtils.contains(header, "form-data")) {
             filterChain.doFilter(servletRequest, servletResponse);
             return;
         }
+        String method = request.getMethod();
 
-        if(StringUtils.isEmpty(header) && GET.equals(request.getMethod())) {
-            printLog(request);
+        if(StringUtils.isEmpty(header) || (GET.equals(method) || PUT.equals(method))) {
+            printQuery(request);
+            printHeader(request);
+            log.info("======================================\r\n");
             filterChain.doFilter(request, servletResponse);
             return;
         }
 
-        CustomHttpServletRequestWrapper requestWrapper = new CustomHttpServletRequestWrapper((HttpServletRequest) servletRequest);
-        printLog(requestWrapper);
-        filterChain.doFilter(requestWrapper, servletResponse);
+        if(POST.equalsIgnoreCase(method) || PUT.equalsIgnoreCase(method)) {
+            CustomHttpServletRequestWrapper requestWrapper = new CustomHttpServletRequestWrapper((HttpServletRequest) servletRequest);
+            printBody(requestWrapper);
+            printHeader(request);
+            log.info("======================================\r\n");
+            filterChain.doFilter(requestWrapper, servletResponse);
+            return;
+        }
+        filterChain.doFilter(request, servletResponse);
     }
 
     private void hook(HttpServletRequest request) {
@@ -56,25 +71,43 @@ public class ParamLogFilter implements Filter {
         request.getLocales();
     }
 
-    private void printLog(HttpServletRequest request) throws IOException {
-        log.info("请求URL: {}", request.getRequestURL());
-        String body = request.getQueryString();
-        if(StringUtils.isNotEmpty(body) && body.length() < NumberConstant.ONE_THOUSAND) {
-            log.info("请求参数: {}", body);
+    private void printHeader(HttpServletRequest request) {
+        Enumeration<String> headerNames = request.getHeaderNames();
+        List<String> headers = new LinkedList<>();
+        while (headerNames.hasMoreElements()) {
+            String headerName = headerNames.nextElement();
+            if(headerName.startsWith("x-")) {
+                headers.add(headerName);
+            }
+        }
+
+        if(headers.isEmpty()) {
+            return;
+        }
+        log.info("请求头");
+        for (String headerName : headers) {
+            log.info("{}: {}", headerName, request.getHeader(headerName));
         }
     }
 
-    private void printLog(CustomHttpServletRequestWrapper requestWrapper) throws IOException {
-        log.info("请求URL: {}", requestWrapper.getRequestURL());
-        String body = null;
-            String method = requestWrapper.getMethod();
-        if (GET.equalsIgnoreCase(method)) {
-            body = requestWrapper.getQueryString();
-        } else if (POST.equalsIgnoreCase(method)) {
-            body = IoUtils.toString(requestWrapper.getInputStream(), requestWrapper.getCharacterEncoding());
-        }
+    private void printQuery(HttpServletRequest request) throws IOException {
+        log.info("请求URL: {}", request.getRequestURL());
+        String body = request.getQueryString();
         if(StringUtils.isNotEmpty(body) && body.length() < NumberConstant.ONE_THOUSAND) {
+            try {
+                body = URLDecoder.decode(body, "UTF-8");
+                log.info("请求参数: {}", body);
+            } catch (UnsupportedEncodingException ignored) {
+            }
+        }
+    }
+
+    private void printBody(CustomHttpServletRequestWrapper requestWrapper) throws IOException {
+        log.info("请求URL: {} -> {}", requestWrapper.getMethod(), requestWrapper.getRequestURL());
+        String body = IoUtils.toString(requestWrapper.getInputStream(), requestWrapper.getCharacterEncoding());
+        if(null != body && body.length() < NumberConstant.TWE_THOUSAND) {
             log.info("请求参数: {}", body);
         }
+
     }
 }
