@@ -57,7 +57,6 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
     @Override
     public ApiVersionCondition getMatchingCondition(HttpServletRequest httpServletRequest) {
         // 通过uri匹配版本号
-        System.out.println(httpServletRequest.getRequestURI());
         Matcher m = VERSION_PREFIX_PATTERN.matcher(httpServletRequest.getRequestURI());
         if (m.find()) {
             // 获得符合匹配条件的ApiVersionCondition
