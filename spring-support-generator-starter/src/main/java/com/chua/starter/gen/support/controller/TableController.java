@@ -7,12 +7,12 @@ import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.datasource.dialect.Dialect;
 import com.chua.common.support.datasource.meta.Column;
 import com.chua.common.support.datasource.meta.Table;
-import com.chua.common.support.lang.file.adaptor.univocity.parsers.conversions.Validator;
 import com.chua.common.support.lang.code.PageResult;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.lang.date.constant.DateFormatConstant;
+import com.chua.common.support.lang.file.adaptor.univocity.parsers.conversions.Validator;
 import com.chua.common.support.utils.ArrayUtils;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.StringUtils;
@@ -128,7 +128,7 @@ public class TableController {
                         .total(results.size())
                         .data(page)
                         .pageSize((int) query.getPageSize())
-                        .page((int) query.getPage()).build()
+                        .pageNo((int) query.getPage()).build()
         );
     }
 

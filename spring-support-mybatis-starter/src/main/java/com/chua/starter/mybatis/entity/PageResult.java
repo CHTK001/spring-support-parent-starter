@@ -16,7 +16,7 @@ import java.util.List;
  */
 @Schema(description = "分页信息")
 @Data
-public class ResultPage<T>{
+public class PageResult<T>{
     /**
      * 每页显示条数，默认 10
      */
@@ -46,8 +46,8 @@ public class ResultPage<T>{
     private List<T> records = Collections.emptyList();
 
 
-    public static <T,O> ResultPage<O> copyList(IPage<T> tiPage, Class<O> oClass){
-        ResultPage<O> oPageDTO = new ResultPage<>();
+    public static <T,O> PageResult<O> copyList(IPage<T> tiPage, Class<O> oClass){
+        PageResult<O> oPageDTO = new PageResult<>();
         oPageDTO.setTotalPage(tiPage.getPages());
         oPageDTO.setCurrent(tiPage.getCurrent());
         oPageDTO.setTotal(tiPage.getTotal());
@@ -59,8 +59,8 @@ public class ResultPage<T>{
     }
 
 
-    public static <T> ResultPage<T> copy(IPage<T> tiPage){
-        ResultPage<T> oPageDTO = new ResultPage<>();
+    public static <T> PageResult<T> copy(IPage<T> tiPage){
+        PageResult<T> oPageDTO = new PageResult<>();
         oPageDTO.setTotalPage(tiPage.getPages());
         oPageDTO.setCurrent(tiPage.getCurrent());
         oPageDTO.setTotal(tiPage.getTotal());
