@@ -74,7 +74,7 @@ public class UnifiedLimitAspect {
         applicationContext.publishEvent(
                 new UnifiedEvent(new JsonObject().fluentPut("requestAddress", RequestUtils.getIpAddress())
                 .fluentPut("requestUrl", ArrayUtils.toString(url)), "STORE", "LIMIT"));
-        throw new BusinessException(ReturnCode.SYSTEM_SERVER_BUSINESS.getMsg());
+        throw new BusinessException(ReturnCode.SYSTEM_SERVER_BUSINESS_ERROR.getMsg());
     }
 
     /**

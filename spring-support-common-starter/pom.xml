@@ -56,12 +56,6 @@
             <artifactId>jackson-dataformat-xml</artifactId>
         </dependency>
 
-        <!-- 验证码 -->
-        <dependency>
-            <groupId>com.github.whvcse</groupId>
-            <artifactId>easy-captcha</artifactId>
-            <version>1.6.2</version>
-        </dependency>
 
         <dependency>
             <groupId>com.github.ben-manes.caffeine</groupId>

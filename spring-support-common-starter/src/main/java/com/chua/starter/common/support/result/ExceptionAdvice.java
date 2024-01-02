@@ -1,7 +1,7 @@
 package com.chua.starter.common.support.result;
 
-import com.chua.common.support.lang.file.adaptor.univocity.parsers.conversions.Validator;
 import com.chua.common.support.lang.exception.AuthenticationException;
+import com.chua.common.support.lang.file.adaptor.univocity.parsers.conversions.Validator;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -43,7 +43,7 @@ public class ExceptionAdvice  {
     public <T> Result<T> processException(BindException e) {
         log.error("BindException:{}", e.getMessage());
         String msg = e.getAllErrors().stream().map(DefaultMessageSourceResolvable::getDefaultMessage).collect(Collectors.joining("；"));
-        return Result.failed(PARAM_ERROR, msg);
+        return Result.failed(REQUEST_PARAM_ERROR, msg);
     }
 
 
@@ -59,7 +59,7 @@ public class ExceptionAdvice  {
     public <T> Result<T> processException(MethodArgumentNotValidException e) {
         log.error("MethodArgumentNotValidException:{}", e.getMessage());
         String msg = e.getBindingResult().getAllErrors().stream().map(DefaultMessageSourceResolvable::getDefaultMessage).collect(Collectors.joining("；"));
-        return Result.failed(PARAM_ERROR, msg);
+        return Result.failed(REQUEST_PARAM_ERROR, msg);
     }
 
     @ExceptionHandler(NoHandlerFoundException.class)
@@ -76,7 +76,7 @@ public class ExceptionAdvice  {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> processException(MissingServletRequestParameterException e) {
         log.error(e.getMessage(), e);
-        return Result.failed(PARAM_IS_NULL);
+        return Result.failed(REQUEST_PARAM_ERROR);
     }
 
     /**
@@ -86,7 +86,7 @@ public class ExceptionAdvice  {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> processException(MethodArgumentTypeMismatchException e) {
         log.error(e.getMessage(), e);
-        return Result.failed(PARAM_ERROR, "类型错误");
+        return Result.failed(REQUEST_PARAM_ERROR, "类型错误");
     }
 
     /**

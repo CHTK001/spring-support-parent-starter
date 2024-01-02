@@ -90,7 +90,7 @@ public class LimitAspect {
             return joinPoint.proceed();
         }
 
-        throw new RuntimeException(ReturnCode.SYSTEM_SERVER_BUSINESS.getMsg());
+        throw new RuntimeException(ReturnCode.SYSTEM_SERVER_BUSINESS_ERROR.getMsg());
     }
 
     private Object doLimit(ProceedingJoinPoint joinPoint, Limit limit) throws Throwable {

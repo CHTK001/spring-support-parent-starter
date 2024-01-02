@@ -4,9 +4,9 @@ import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.http.HttpClient;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.lang.code.ReturnResultCode;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.unified.server.support.entity.UnifiedExecuter;
 import com.chua.starter.unified.server.support.entity.UnifiedExecuterItem;
@@ -98,7 +98,7 @@ public class UnifiedActuatorController {
                     .body(Json.toMapStringObject(param))
                     .newInvoker().execute().content(JSONObject.class));
         } catch (Throwable e) {
-            return ReturnResult.of(ReturnResultCode.SYSTEM_SERVER_NOT_FOUND, null, "操作失败");
+            return ReturnResult.of(ReturnCode.SYSTEM_SERVER_NOT_FOUND, null, "操作失败");
         }
     }
     /**
