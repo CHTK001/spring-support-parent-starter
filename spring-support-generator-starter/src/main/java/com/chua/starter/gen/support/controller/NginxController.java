@@ -8,7 +8,7 @@ import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.gen.support.entity.*;
 import com.chua.starter.gen.support.service.*;
-import com.chua.starter.mybatis.entity.RequestPage;
+import com.chua.starter.mybatis.entity.PageRequest;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import lombok.AllArgsConstructor;
 import org.springframework.transaction.TransactionStatus;
@@ -42,7 +42,7 @@ public class NginxController {
      * @return
      */
     @GetMapping("config/page")
-    public ReturnPageResult<SysGenNginxHttpConfig> configPage(RequestPage<SysGenNginxHttpConfig> page) {
+    public ReturnPageResult<SysGenNginxHttpConfig> configPage(PageRequest<SysGenNginxHttpConfig> page) {
         return PageResultUtils.ok(sysGenNginxHttpConfigService.page(page.createPage()));
     }
 
@@ -87,7 +87,7 @@ public class NginxController {
      * @return
      */
     @GetMapping("server/page")
-    public ReturnPageResult<SysGenNginxServer> serverPage(RequestPage<SysGenNginxServer> page) {
+    public ReturnPageResult<SysGenNginxServer> serverPage(PageRequest<SysGenNginxServer> page) {
         return PageResultUtils.ok(sysGenNginxServerService.page(page.createPage()));
     }
 
@@ -152,7 +152,7 @@ public class NginxController {
      * @return
      */
     @GetMapping("server/item/page")
-    public ReturnPageResult<SysGenNginxServerItem> serverItemPage(RequestPage<SysGenNginxServerItem> page, String serverId) {
+    public ReturnPageResult<SysGenNginxServerItem> serverItemPage(PageRequest<SysGenNginxServerItem> page, String serverId) {
         if(StringUtils.isEmpty(serverId)) {
             return ReturnPageResult.illegal("服务不存在");
         }
@@ -206,7 +206,7 @@ public class NginxController {
      * @return
      */
     @GetMapping("upstream/page")
-    public ReturnPageResult<SysGenNginxUpstream> upstreamPage(RequestPage<SysGenNginxUpstream> page) {
+    public ReturnPageResult<SysGenNginxUpstream> upstreamPage(PageRequest<SysGenNginxUpstream> page) {
         return PageResultUtils.ok(sysGenNginxUpstreamService.page(page.createPage()));
     }
 
@@ -271,7 +271,7 @@ public class NginxController {
      * @return
      */
     @GetMapping("upstream/item/page")
-    public ReturnPageResult<SysGenNginxUpstreamItem> upstreamItemPage(RequestPage<SysGenNginxUpstreamItem> page, String upstreamId) {
+    public ReturnPageResult<SysGenNginxUpstreamItem> upstreamItemPage(PageRequest<SysGenNginxUpstreamItem> page, String upstreamId) {
         if(StringUtils.isEmpty(upstreamId)) {
             return ReturnPageResult.illegal("代理不存在");
         }

@@ -111,7 +111,7 @@ public class DocumentServiceImpl implements DocumentService {
         }
         PageResult.PageResultBuilder<T> builder = PageResult.builder();
         builder.total(totalHits)
-                .page(page)
+                .pageNo(page)
                 .pageSize(pageSize);
         List<T> searchAnswerList = new ArrayList((int) search.getTotalHits());
         for (SearchHit<T> tSearchHit : search) {
@@ -160,7 +160,7 @@ public class DocumentServiceImpl implements DocumentService {
         }
         PageResult.PageResultBuilder<T> builder = PageResult.builder();
         builder.total(totalHits)
-                .page(page)
+                .pageNo(page)
                 .pageSize(pageSize);
         List<T> searchAnswerList = new ArrayList((int) totalHits);
         for (org.elasticsearch.search.SearchHit tSearchHit : hits.getHits()) {

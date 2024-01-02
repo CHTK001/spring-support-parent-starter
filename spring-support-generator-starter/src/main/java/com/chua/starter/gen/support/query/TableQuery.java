@@ -4,7 +4,7 @@ import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.constant.FileType;
 import com.chua.common.support.constant.OptCode;
 import com.chua.common.support.session.query.SessionQuery;
-import com.chua.starter.mybatis.entity.RequestPage;
+import com.chua.starter.mybatis.entity.PageRequest;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -15,7 +15,7 @@ import lombok.EqualsAndHashCode;
  */
 @EqualsAndHashCode(callSuper = true)
 @Data
-public class TableQuery extends RequestPage<TableQuery> {
+public class TableQuery extends PageRequest<TableQuery> {
 
     /**
      * id

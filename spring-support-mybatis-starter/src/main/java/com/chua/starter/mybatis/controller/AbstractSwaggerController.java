@@ -3,8 +3,8 @@ package com.chua.starter.mybatis.controller;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.starter.common.support.result.ResultData;
-import com.chua.starter.mybatis.entity.RequestPage;
-import com.chua.starter.mybatis.entity.ResultPage;
+import com.chua.starter.mybatis.entity.PageRequest;
+import com.chua.starter.mybatis.entity.PageResult;
 import com.github.xiaoymin.knife4j.annotations.Ignore;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -31,11 +31,11 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> {
     @ResponseBody
     @Operation(summary = "分页查询基础数据")
     @GetMapping("page")
-    public ResultData<ResultPage<T>> page(RequestPage<T> page, @Valid T entity, @Ignore BindingResult bindingResult) {
+    public ResultData<PageResult<T>> page(PageRequest<T> page, @Valid T entity, @Ignore BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
             return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
-        return ResultData.success(ResultPage.copy(getService().page(page.createPage(), Wrappers.lambdaQuery(entity))));
+        return ResultData.success(PageResult.copy(getService().page(page.createPage(), Wrappers.lambdaQuery(entity))));
     }
 
     /**
