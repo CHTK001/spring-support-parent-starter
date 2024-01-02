@@ -1,9 +1,15 @@
 package com.chua.starter.mybatis.utils;
 
+import com.baomidou.mybatisplus.core.metadata.OrderItem;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.bean.BeanUtils;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.starter.mybatis.entity.PageRequest;
+import com.chua.starter.mybatis.entity.Sorting;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * tools
@@ -11,6 +17,36 @@ import java.util.List;
  * @author CH
  */
 public class MybatisUtils {
+    private static final String MYSQL_ESCAPE_CHARACTER = "`";
+
+    /**
+     * 构建分页
+     *
+     * @param pageParam 分页参数
+     * @return {@link Page}<{@link T}>
+     */
+    public static <T> Page<T> buildPage(PageRequest pageParam) {
+        return buildPage(pageParam, null);
+    }
+
+    /**
+     * 构建分页
+     *
+     * @param pageParam     分页参数
+     * @param sortingFields 排序字段
+     * @return {@link Page}<{@link T}>
+     */
+    public static <T> Page<T> buildPage(PageRequest pageParam, Collection<Sorting> sortingFields) {
+        // 页码 + 数量
+        Page<T> page = new Page<>(pageParam.getPageNo(), pageParam.getPageSize());
+        // 排序字段
+        if (!CollectionUtils.isEmpty(sortingFields)) {
+            page.addOrder(sortingFields.stream().map(sortingField -> Sorting.ORDER_ASC.equals(sortingField.getOrder()) ?
+                            OrderItem.asc(sortingField.getField()) : OrderItem.desc(sortingField.getField()))
+                    .collect(Collectors.toList()));
+        }
+        return page;
+    }
 
     /**
      * 分页数据拷贝
