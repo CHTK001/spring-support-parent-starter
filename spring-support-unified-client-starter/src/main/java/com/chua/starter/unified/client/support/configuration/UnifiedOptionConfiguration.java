@@ -3,7 +3,7 @@ package com.chua.starter.unified.client.support.configuration;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.constant.Projects;
-import com.chua.common.support.lang.code.ReturnResultCode;
+import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.lang.compile.Decompiler;
 import com.chua.common.support.protocol.annotations.ServiceMapping;
 import com.chua.common.support.protocol.boot.BootRequest;
@@ -128,7 +128,7 @@ public class UnifiedOptionConfiguration implements ApplicationContextAware {
             FileUtils.copyFile(is, file1);
             String decompile = decompiler.decompile(file1.getAbsolutePath(), null, false, true);
             return BootResponse.builder()
-                    .code(ReturnResultCode.OK.getCode())
+                    .code(ReturnCode.OK.getCode())
                         .data(BootResponse.DataDTO.builder().content( decompile.replace("Decompiled with CFR.", "反编译仅供参考")).build())
                     .build();
         } catch (IOException e) {
@@ -136,7 +136,7 @@ public class UnifiedOptionConfiguration implements ApplicationContextAware {
                 FileUtils.copyFile(is, file1);
                 String decompile = decompiler.decompile(file1.getAbsolutePath(), null, false, true);
                 return  BootResponse.builder()
-                        .code(ReturnResultCode.OK.getCode())
+                        .code(ReturnCode.OK.getCode())
                         .data(BootResponse.DataDTO.builder().content(decompile.replace("Decompiled with CFR.", "反编译仅供参考")).build())
                         .build();
             } catch (IOException e1) {

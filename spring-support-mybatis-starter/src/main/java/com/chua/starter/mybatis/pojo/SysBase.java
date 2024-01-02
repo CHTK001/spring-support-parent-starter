@@ -17,15 +17,24 @@ import java.time.LocalDateTime;
 @Data
 public class SysBase implements Serializable {
     private static final long serialVersionUID = 1L;
+    /**
+     * 创建人
+     */
     @TableField(fill = FieldFill.INSERT)
     @Schema(description = "创建人")
     @JsonInclude(value = JsonInclude.Include.NON_NULL)
     private String createName;
+    /**
+     * 创建人
+     */
     @TableField(fill = FieldFill.INSERT)
     @Schema(description = "创建人")
     @JsonInclude(value = JsonInclude.Include.NON_NULL)
-    private String createBy;
+    private Integer createBy;
 
+    /**
+     * 创建时间
+     */
     @TableField(fill = FieldFill.INSERT)
     @Schema(description = "创建时间")
     @JsonInclude(value = JsonInclude.Include.NON_NULL)
@@ -34,6 +43,9 @@ public class SysBase implements Serializable {
     @JsonDeserialize(using = LocalDateTimeDeserializer.class)
     private LocalDateTime createTime;
 
+    /**
+     * 更新时间
+     */
     @TableField(fill = FieldFill.UPDATE)
     @JsonInclude(value = JsonInclude.Include.NON_NULL)
     @JsonDeserialize(using = LocalDateTimeDeserializer.class)
@@ -43,13 +55,19 @@ public class SysBase implements Serializable {
     private LocalDateTime updateTime;
 
 
+    /**
+     * 更新人
+     */
     @TableField(fill = FieldFill.UPDATE)
     @JsonInclude(value = JsonInclude.Include.NON_NULL)
     @Schema(description = "更新人")
     private String updateName;
 
+    /**
+     * 更新人
+     */
     @TableField(fill = FieldFill.UPDATE)
     @JsonInclude(value = JsonInclude.Include.NON_NULL)
     @Schema(description = "更新人")
-    private String updateBy;
+    private Integer updateBy;
 }

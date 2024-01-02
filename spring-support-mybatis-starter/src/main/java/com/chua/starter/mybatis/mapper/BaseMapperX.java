@@ -7,9 +7,9 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.toolkit.Db;
-import com.chua.common.support.lang.code.PageResult;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.starter.mybatis.entity.PageRequest;
+import com.chua.starter.mybatis.entity.PageResult;
 import com.chua.starter.mybatis.utils.MybatisUtils;
 import com.github.yulichang.base.MPJBaseMapper;
 import com.github.yulichang.interfaces.MPJBaseJoin;
@@ -32,7 +32,7 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
         if (PageRequest.PAGE_SIZE_NONE.equals(pageParam.getPageSize())) {
             List<T> list = selectList(queryWrapper);
             return PageResult.<T>builder()
-                    .data(list)
+                    .records(list)
                     .pageSize(pageParam.getPageSize())
                     .pageNo(pageParam.getPageNo())
                     .total(list.size())
@@ -44,7 +44,7 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
         selectPage(mpPage, queryWrapper);
         // 转换返回
         return PageResult.<T>builder()
-                .data(mpPage.getRecords())
+                .records(mpPage.getRecords())
                 .pageSize(pageParam.getPageSize())
                 .pageNo(pageParam.getPageNo())
                 .total(mpPage.getTotal())
@@ -56,7 +56,7 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
         selectJoinPage(mpPage, resultTypeClass, joinQueryWrapper);
         // 转换返回
         return PageResult.<DTO>builder()
-                .data(mpPage.getRecords())
+                .records(mpPage.getRecords())
                 .pageSize(pageParam.getPageSize())
                 .pageNo(pageParam.getPageNo())
                 .total(mpPage.getTotal())

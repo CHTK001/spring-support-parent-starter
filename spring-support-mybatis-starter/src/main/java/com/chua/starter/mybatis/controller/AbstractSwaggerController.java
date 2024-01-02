@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 
-import static com.chua.common.support.lang.code.ReturnCode.PARAM_ERROR;
+import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
 
 /**
  * 超类
@@ -33,7 +33,7 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> {
     @GetMapping("page")
     public ResultData<PageResult<T>> page(PageRequest<T> page, @Valid T entity, @Ignore BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
-            return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ResultData.failure(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
         return ResultData.success(PageResult.copy(getService().page(page.createPage(), Wrappers.lambdaQuery(entity))));
     }
@@ -49,7 +49,7 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> {
     @GetMapping("delete/{id}")
     public ResultData<Boolean> delete(@Parameter(name = "主键") @PathVariable("id") String id) {
         if(null == id) {
-            return ResultData.failure(PARAM_ERROR,  "主键不能为空");
+            return ResultData.failure(REQUEST_PARAM_ERROR,  "主键不能为空");
         }
 
         return ResultData.success(getService().removeById(id));
@@ -66,7 +66,7 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> {
     @PostMapping("update")
     public ResultData<Boolean> updateById(@Valid @RequestBody T t , @Ignore BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
-            return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ResultData.failure(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
         return ResultData.success(getService().updateById(t));
     }
@@ -82,7 +82,7 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> {
     @PostMapping("save")
     public ResultData<Boolean> save(@Valid @RequestBody T t, @Ignore BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
-            return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ResultData.failure(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
         return ResultData.success(getService().save(t));
     }

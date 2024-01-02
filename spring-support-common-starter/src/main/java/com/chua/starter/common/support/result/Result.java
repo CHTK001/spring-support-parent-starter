@@ -73,7 +73,7 @@ public class Result<T> extends ReturnResult<T> {
     }
 
     public static <T> Result<T> failed(String msg, Object... args) {
-        return result(ReturnCode.PARAM_ERROR.getCode(), StringUtils.format(msg, args), null);
+        return result(ReturnCode.REQUEST_PARAM_ERROR.getCode(), StringUtils.format(msg, args), null);
     }
 
     public static <T> Result<T> failed(ResultCode resultCode, String msg) {
