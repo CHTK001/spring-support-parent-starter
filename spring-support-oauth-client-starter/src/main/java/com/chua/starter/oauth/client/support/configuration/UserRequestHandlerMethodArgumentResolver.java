@@ -3,6 +3,7 @@ package com.chua.starter.oauth.client.support.configuration;
 import com.chua.common.support.unit.name.NamingCase;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.annotation.UserValue;
