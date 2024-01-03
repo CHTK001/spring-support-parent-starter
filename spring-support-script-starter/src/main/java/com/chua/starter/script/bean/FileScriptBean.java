@@ -1,6 +1,5 @@
 package com.chua.starter.script.bean;
 
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.script.marker.Marker;
 import com.chua.starter.script.watchdog.DelegateWatchdog;
 import com.chua.starter.script.watchdog.Watchdog;

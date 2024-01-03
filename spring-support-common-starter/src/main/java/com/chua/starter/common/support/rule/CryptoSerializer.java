@@ -6,7 +6,6 @@ import com.chua.common.support.crypto.CryptoType;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.annotations.Crypto;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.JsonMappingException;

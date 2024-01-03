@@ -17,7 +17,6 @@ import com.chua.common.support.task.cache.GuavaCacheable;
 import com.chua.common.support.utils.Md5Utils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.value.Value;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.common.support.utils.ResponseUtils;

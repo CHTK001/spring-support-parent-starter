@@ -7,7 +7,6 @@ import com.chua.common.support.shell.ShellResult;
 import com.chua.common.support.shell.ShellTable;
 import com.chua.common.support.utils.ArrayUtils;
 import com.chua.common.support.utils.ObjectUtils;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.http.MediaType;

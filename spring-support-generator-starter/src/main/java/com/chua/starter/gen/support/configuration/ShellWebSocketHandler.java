@@ -2,7 +2,6 @@ package com.chua.starter.gen.support.configuration;
 
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.IoUtils;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.gen.support.entity.SysGen;
 import com.chua.starter.gen.support.service.SysGenService;

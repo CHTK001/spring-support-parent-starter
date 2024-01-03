@@ -2,7 +2,6 @@ package com.chua.starter.rpc.support.annotation;
 
 import com.alibaba.spring.util.AnnotationUtils;
 import com.chua.rpc.support.annotation.RpcExport;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.rpc.support.properties.RpcProperties;
 import org.apache.dubbo.common.logger.Logger;
 import org.apache.dubbo.common.logger.LoggerFactory;
