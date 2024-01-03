@@ -3,6 +3,7 @@ package com.chua.starter.oauth.client.support.web;
 import com.chua.common.support.annotations.Ignore;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.annotation.AuthIgnore;
 import com.chua.starter.oauth.client.support.execute.AuthClientExecute;
