@@ -5,6 +5,7 @@ import com.chua.common.support.collection.SortedList;
 import com.chua.common.support.objects.definition.ObjectTypeDefinition;
 import com.chua.common.support.objects.definition.TypeDefinition;
 import com.chua.common.support.objects.source.TypeDefinitionSource;
+import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 

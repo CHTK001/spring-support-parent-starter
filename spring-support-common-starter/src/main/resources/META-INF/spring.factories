@@ -9,5 +9,3 @@ org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
 org.springframework.boot.env.EnvironmentPostProcessor=\
   com.chua.starter.common.support.configuration.FreemarkerConfiguration,\
   com.chua.starter.common.support.configuration.CommonConfigurationConfiguration
-org.springframework.context.ApplicationContextInitializer=\
-  com.chua.starter.common.support.configuration.ApplicationAwareApplicationContextInitializer
