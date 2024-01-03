@@ -17,6 +17,7 @@ import com.chua.common.support.task.cache.GuavaCacheable;
 import com.chua.common.support.utils.Md5Utils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.value.Value;
+import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.common.support.utils.ResponseUtils;
@@ -38,7 +39,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.*;
 
 import static com.chua.common.support.http.HttpClientUtils.APPLICATION_JSON;
-import static com.chua.common.support.lang.code.ReturnCode.SYSTEM_NO_OAUTH;
+import static com.chua.common.support.lang.code.ReturnCode.RESOURCE_OAUTH_ERROR;
 import static com.chua.starter.oauth.client.support.infomation.Information.*;
 
 /**
@@ -139,7 +140,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         if (status == 200) {
             ReturnResult returnResult = Json.fromJson(body, ReturnResult.class);
             String code = returnResult.getCode();
-            if (SYSTEM_NO_OAUTH.getCode().equals(code)) {
+            if (RESOURCE_OAUTH_ERROR.getCode().equals(code)) {
                 HttpServletRequest servletRequest = RequestUtils.getRequest();
                 if (null != servletRequest) {
                     CookieUtil.remove(servletRequest, ResponseUtils.getResponse(), "x-oauth-cookie");
@@ -240,7 +241,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         if (status == 200) {
             ReturnResult returnResult = Json.fromJson(body, ReturnResult.class);
             String code = returnResult.getCode();
-            if (SYSTEM_NO_OAUTH.getCode().equals(code)) {
+            if (RESOURCE_OAUTH_ERROR.getCode().equals(code)) {
                 HttpServletRequest servletRequest = RequestUtils.getRequest();
                 if (null != servletRequest) {
                     CookieUtil.remove(servletRequest, ResponseUtils.getResponse(), "x-oauth-cookie");

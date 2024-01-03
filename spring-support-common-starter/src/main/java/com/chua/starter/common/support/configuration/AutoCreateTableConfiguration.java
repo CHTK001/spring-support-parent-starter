@@ -3,9 +3,10 @@ package com.chua.starter.common.support.configuration;
 import com.chua.common.support.datasource.driver.JdbcDriver;
 import com.chua.common.support.datasource.engine.DefaultEngine;
 import com.chua.common.support.datasource.engine.Engine;
+import com.chua.common.support.datasource.enums.ActionType;
+import com.chua.common.support.datasource.executor.DdlExecutor;
 import com.chua.common.support.datasource.jdbc.JdbcEngineDataSource;
 import com.chua.common.support.utils.ArrayUtils;
-import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.common.support.properties.TablePluginProperties;
 import com.chua.starter.common.support.utils.BeanDefinitionUtils;
@@ -21,6 +22,7 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 import javax.sql.DataSource;
 import java.io.IOException;
+import java.util.Map;
 
 /**
  * 自动建表
@@ -33,16 +35,27 @@ import java.io.IOException;
 public class AutoCreateTableConfiguration implements ApplicationContextAware {
 
     TablePluginProperties tablePluginProperties;
-    private ApplicationContext applicationContext;
+    private Map<String, DataSource> dataSources;
+    private DdlExecutor ddlExecutor;
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        this.applicationContext = applicationContext;
         tablePluginProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(TablePluginProperties.PRE, TablePluginProperties.class);
         if(!tablePluginProperties.isOpen() || ArrayUtils.isEmpty(tablePluginProperties.getPackages())) {
             return;
         }
+        this.dataSources = applicationContext.getBeansOfType(DataSource.class);
+        Engine engine = new DefaultEngine();
+        engine.register(new JdbcDriver());
+        for (Map.Entry<String, DataSource> entry : dataSources.entrySet()) {
+            engine.register(JdbcEngineDataSource.builder()
+                    .name(entry.getKey())
+                    .dataSource(entry.getValue())
+                    .build()
+            );
+        }
 
+        this.ddlExecutor = engine.toDdl();
         if(tablePluginProperties.isAsync()) {
             ThreadUtils.newStaticThreadPool().execute(this::doCreateTable);
             return;
@@ -87,12 +100,6 @@ public class AutoCreateTableConfiguration implements ApplicationContextAware {
      * @param type 类型
      */
     private void register(Class<?> type) {
-        Engine engine = new DefaultEngine();
-        engine.register(new JdbcDriver())
-                .register(JdbcEngineDataSource.builder()
-                        .dataSource(applicationContext)
-                        .build()
-                );
-
+       ddlExecutor.execute(type, ActionType.UPDATE);
     }
 }

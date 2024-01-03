@@ -3,6 +3,7 @@ package com.chua.starter.oauth.client.support.provider;
 import com.chua.common.support.collection.ImmutableBuilder;
 import com.chua.common.support.function.Splitter;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.result.Result;
@@ -32,8 +33,8 @@ import java.util.Optional;
 import java.util.Set;
 
 import static com.chua.common.support.discovery.Constants.CAPTCHA_SESSION_KEY;
-import static com.chua.common.support.lang.code.ReturnCode.PARAM_ERROR;
-import static com.chua.common.support.lang.code.ReturnCode.PARAM_IS_NULL;
+import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
+import static com.chua.common.support.lang.code.ReturnCode.USERNAME_OR_PASSWORD_ERROR;
 import static com.chua.starter.common.support.constant.Constant.ADMIN;
 import static com.chua.starter.common.support.utils.RequestUtils.getIpAddress;
 
@@ -64,13 +65,13 @@ public class TempProvider {
                                      HttpServletResponse response,
                                      BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return Result.failed(PARAM_IS_NULL, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return Result.failed(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
 
         String code = loginData.getVerifyCode();
         String sessionKey = Optional.ofNullable(request.getSession().getAttribute(CAPTCHA_SESSION_KEY)).orElse("").toString();
         if (Strings.isNullOrEmpty(code) || !code.equalsIgnoreCase(sessionKey)) {
-            return Result.failed(PARAM_ERROR, "校验码错误");
+            return Result.failed(REQUEST_PARAM_ERROR, "校验码错误");
         }
 
         String address = getIpAddress(request);
@@ -79,11 +80,11 @@ public class TempProvider {
                 ImmutableBuilder.<String, Object>builderOfMap().put("address", address).build()
         );
         if (null == accessToken) {
-            return Result.failed(PARAM_ERROR, "账号或者密码不正确");
+            return Result.failed(USERNAME_OR_PASSWORD_ERROR, "账号或者密码不正确");
         }
 
         if (accessToken.getCode() != 200) {
-            return Result.failed(PARAM_ERROR, accessToken.getMessage());
+            return Result.failed(REQUEST_PARAM_ERROR, accessToken.getMessage());
         }
 
         LoginResult loginResult = LoginResult.builder()
