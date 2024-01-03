@@ -1,6 +1,5 @@
 package com.chua.starter.common.support.application;
 
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
 

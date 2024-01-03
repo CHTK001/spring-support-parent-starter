@@ -1,7 +1,6 @@
 package com.chua.starter.script.adaptor;
 
 import com.chua.common.support.utils.MapUtils;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.script.ScriptExtension;
 import com.chua.starter.script.bean.FileScriptBean;
 import com.chua.starter.script.bean.SourceScriptBean;

@@ -1,7 +1,6 @@
 package com.chua.shell.support.command.spring;
 
 import com.chua.common.support.shell.ShellResult;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.util.ClassUtils;

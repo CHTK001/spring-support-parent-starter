@@ -1,6 +1,5 @@
 package com.chua.starter.rpc.support.filter;
 
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.rpc.support.constant.Constant;
 import com.chua.starter.rpc.support.properties.RpcProperties;
 import com.google.common.base.Strings;

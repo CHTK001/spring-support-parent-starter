@@ -7,7 +7,7 @@ import com.chua.common.support.task.limit.LimiterProvider;
 import com.chua.common.support.task.limit.RateLimitMappingFactory;
 import com.chua.common.support.task.limit.resolver.RateLimitResolver;
 import com.chua.common.support.utils.MapUtils;
-import com.chua.starter.common.support.properties.LimitProperties;
+import com.chua.starter.common.support.properties.LimitPluginProperties;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.google.common.collect.Maps;
 import lombok.extern.slf4j.Slf4j;
@@ -37,15 +37,15 @@ public class LimitAspect {
     private final Map<String, LimiterProvider> limitMap = Maps.newConcurrentMap();
 
     private final RateLimitMappingFactory rateLimitFactory = RateLimitMappingFactory.getInstance();
-    private LimitProperties limitProperties;
+    private LimitPluginProperties limitPluginProperties;
 
-    public LimitAspect(LimitProperties limitProperties) {
-        this.limitProperties = limitProperties;
+    public LimitAspect(LimitPluginProperties limitPluginProperties) {
+        this.limitPluginProperties = limitPluginProperties;
     }
 
     @Around("@annotation(com.chua.common.support.task.limit.Limit)")
     public Object around(ProceedingJoinPoint joinPoint) throws Throwable {
-        if (!limitProperties.isOpenLimit()) {
+        if (!limitPluginProperties.isOpenLimit()) {
             return joinPoint.proceed();
         }
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();

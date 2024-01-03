@@ -12,7 +12,6 @@ import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.shell.support.properties.ShellProperties;
 import com.chua.sshd.support.client.SshClient;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import lombok.extern.slf4j.Slf4j;

@@ -6,7 +6,6 @@ import com.chua.common.support.net.NetUtils;
 import com.chua.common.support.shell.BaseShell;
 import com.chua.common.support.shell.ShellResult;
 import com.chua.shell.support.properties.ShellProperties;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import lombok.extern.slf4j.Slf4j;
