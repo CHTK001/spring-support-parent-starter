@@ -11,7 +11,6 @@ import com.chua.shell.support.command.spring.EnvironmentSpring;
 import com.chua.shell.support.command.spring.InvokeSpring;
 import com.chua.shell.support.command.spring.LoggerSpring;
 import com.chua.shell.support.command.spring.ShowSpring;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
 
 import java.util.List;
 

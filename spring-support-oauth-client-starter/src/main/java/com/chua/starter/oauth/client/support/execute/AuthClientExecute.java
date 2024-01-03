@@ -17,7 +17,6 @@ import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.Md5Utils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.application.Binder;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.common.support.watch.Watch;
 import com.chua.starter.oauth.client.support.advice.def.DefSecret;

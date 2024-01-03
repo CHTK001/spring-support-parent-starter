@@ -2,7 +2,6 @@ package com.chua.shell.support.command.spring;
 
 import com.chua.common.support.shell.ShellResult;
 import com.chua.common.support.shell.ShellTable;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.google.common.base.Strings;
 import org.springframework.boot.logging.LogLevel;
 import org.springframework.boot.logging.LoggerConfiguration;

@@ -2,7 +2,6 @@ package com.chua.starter.common.support.transpond.resolve;
 
 import com.chua.common.support.annotations.Extension;
 import com.chua.common.support.utils.Md5Utils;
-import com.chua.starter.common.support.properties.ProxyProperties;
 import com.chua.starter.common.support.transpond.httpproxy.ProxyServlet;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
 

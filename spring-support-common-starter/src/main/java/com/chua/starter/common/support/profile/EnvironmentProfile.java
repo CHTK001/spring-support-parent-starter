@@ -3,7 +3,6 @@ package com.chua.starter.common.support.profile;
 import com.chua.common.support.converter.Converter;
 import com.chua.common.support.lang.profile.DelegateProfile;
 import com.chua.common.support.lang.profile.value.ProfileValue;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.core.env.Environment;
 

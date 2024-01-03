@@ -10,7 +10,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  */
 @Data
 @ConfigurationProperties(prefix = "plugin.limit", ignoreInvalidFields = true)
-public class LimitProperties {
+public class LimitPluginProperties {
 
     /**
      * 开启限流
