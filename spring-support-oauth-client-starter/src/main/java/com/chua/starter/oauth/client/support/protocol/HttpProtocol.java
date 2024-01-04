@@ -61,6 +61,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
     @Override
     @SuppressWarnings("ALL")
     public AuthenticationInformation approve(Cookie[] cookie, String token) {
+        checkCache();
         String key = UUID.randomUUID().toString();
         Map<String, Object> jsonObject = new HashMap<>(2);
         Cookie[] cookies = Optional.ofNullable(cookie).orElse(new Cookie[0]);
@@ -167,6 +168,10 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
             return inCache(cacheKey, new AuthenticationInformation(OTHER, null));
         }
         return inCache(cacheKey, AuthenticationInformation.authServerNotFound());
+    }
+
+    private void checkCache() {
+        check();
     }
 
     private void check() {
