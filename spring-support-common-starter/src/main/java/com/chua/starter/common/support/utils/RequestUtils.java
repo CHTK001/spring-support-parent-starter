@@ -2,6 +2,7 @@ package com.chua.starter.common.support.utils;
 
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.utils.StringUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -13,6 +14,7 @@ import java.net.InetAddress;
  * @author CH
  * @since 2022/7/25 10:16
  */
+@Slf4j
 public class RequestUtils {
 
 

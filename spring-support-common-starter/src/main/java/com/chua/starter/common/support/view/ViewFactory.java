@@ -10,6 +10,7 @@ import com.chua.starter.common.support.properties.ViewProperties;
 import com.google.common.base.Splitter;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.util.Strings;
 
 import java.io.ByteArrayOutputStream;
@@ -26,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author CH
  * @since 2022/8/11 13:16
  */
+@Slf4j
 public class ViewFactory {
     private final ViewProperties viewProperties;
     private final String bucket;
