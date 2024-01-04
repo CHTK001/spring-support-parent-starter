@@ -100,7 +100,7 @@ public class TableController {
         try (DatabaseHandler handler = new DatabaseHandler(sysGen.newDatabaseOptions())) {
             results = handler.getTables(database, "%");
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("", e);
         }
 
         if(CollectionUtils.isEmpty(results)) {
@@ -239,7 +239,7 @@ public class TableController {
                 try {
                     resultSet = handler.getColumns(sysGen.getGenDatabase(),  s);
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    log.error("", e);
                 }
 
                 if(CollectionUtils.isNotEmpty(resultSet)) {
@@ -254,7 +254,7 @@ public class TableController {
 
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("", e);
             throw new RuntimeException("导入失败");
         }
 

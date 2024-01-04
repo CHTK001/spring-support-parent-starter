@@ -68,7 +68,7 @@ public class UnifiedLimitAspect {
                 return methodInvocation.proceed();
             }
         } catch (Throwable e) {
-            e.printStackTrace();
+            log.error("", e);
         }
 
         applicationContext.publishEvent(

@@ -92,7 +92,7 @@ public class SessionController {
             }
             return ReturnResult.ok(columns);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("", e);
             return ReturnResult.ok(Collections.emptyList());
         }
     }
@@ -140,7 +140,7 @@ public class SessionController {
         } catch (NullPointerException e) {
             throw new RuntimeException("请安装" + sysGen.getGenType() + "依赖");
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("", e);
         }
 
         if(CollectionUtils.isEmpty(results1)) {
@@ -269,7 +269,7 @@ public class SessionController {
         try {
             sessionResultSet = session.log(executeQuery);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("", e);
             return ReturnResult.illegal();
         }
         if(sessionResultSet.hasMessage()) {
@@ -303,7 +303,7 @@ public class SessionController {
         try {
             sessionInfo = session.info();
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("", e);
             return ReturnResult.illegal(e);
         }
         if(sessionInfo.hasMessage()) {
@@ -348,7 +348,7 @@ public class SessionController {
         try {
             sessionInfo = session.save(saveQuery, file1);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("", e);
             return ReturnResult.illegal(e);
         } finally {
             try {
@@ -423,7 +423,7 @@ public class SessionController {
         try {
             sessionInfo = session.update(updateQuery, file1);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("", e);
             return ReturnResult.illegal();
         } finally {
             try {
@@ -484,7 +484,7 @@ public class SessionController {
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("", e);
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity
@@ -527,7 +527,7 @@ public class SessionController {
             }
             return ReturnResult.ok(true);
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("", e);
             return ReturnResult.illegal();
         }
     }
@@ -554,7 +554,7 @@ public class SessionController {
         try {
             result = session.previewDoc(query);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("", e);
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity

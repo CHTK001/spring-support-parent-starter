@@ -68,7 +68,7 @@ public class DocumentServiceImpl implements DocumentService {
             }
             elasticsearchRestTemplate.save(Arrays.asList(document), IndexCoordinates.of(indexName.toLowerCase()));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("", e);
             return false;
         }
         return true;
@@ -87,7 +87,7 @@ public class DocumentServiceImpl implements DocumentService {
                 elasticsearchRestTemplate.delete(o, indexCoordinates);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("", e);
             return false;
         }
         return true;
@@ -221,7 +221,7 @@ public class DocumentServiceImpl implements DocumentService {
             request.source(JSON.parseObject(mapping.getMapping()));
             restHighLevelClient.indices().putMapping(request, RequestOptions.DEFAULT);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("", e);
             return Result.failed("更新失败");
         }
         return Result.success("更新成功");

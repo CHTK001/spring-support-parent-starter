@@ -32,7 +32,7 @@ public class JsonAdviceResolver implements AdviceResolver {
             response.setHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE);
             response.getOutputStream().write(JSON.toJSONBytes(rs));
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("", e);
         }
 
         return null;

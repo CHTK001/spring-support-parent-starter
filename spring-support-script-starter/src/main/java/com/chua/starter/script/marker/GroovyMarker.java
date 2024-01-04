@@ -28,7 +28,7 @@ public class GroovyMarker implements Marker {
             this.aClass = groovyClassLoader.parseClass(source);
             return aClass.newInstance();
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("", e);
         }
         return null;
     }
