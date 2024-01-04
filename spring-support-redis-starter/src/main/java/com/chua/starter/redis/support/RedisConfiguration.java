@@ -1,6 +1,5 @@
 package com.chua.starter.redis.support;
 
-import com.chua.common.support.protocol.server.Constant;
 import com.chua.starter.redis.support.properties.RedisServerProperties;
 import com.chua.starter.redis.support.server.RedisEmbeddedServer;
 import org.springframework.beans.BeansException;
@@ -11,11 +10,8 @@ import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.context.annotation.Primary;
 import org.springframework.core.Ordered;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
@@ -65,7 +61,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
         return container;
     }
 
-    @Bean(Constant.STRING_REDIS)
+    @Bean("stringRedisTemplate")
     public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory factory) {
         StringRedisTemplate template = new StringRedisTemplate();
         template.setConnectionFactory(factory);

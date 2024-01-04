@@ -28,7 +28,7 @@ public class PatchResolver {
         byte[] decode = Base64.getDecoder().decode(patchFile);
         File file = new File(newPatchPath, patchFileName);
         try {
-            FileUtils.write(decode, file);
+            FileUtils.writeToFile(file, decode);
         } catch (IOException ignored) {
         }
     }
