@@ -116,7 +116,7 @@ public class AuthClientExecute {
      */
     public LoginAuthResult logout(String uid, LogoutType logoutType) {
         AuthType authType = null;
-        String oauthUrl = authClientProperties.getAuthAddress();
+        String oauthUrl = authClientProperties.getAddress();
         if(StringUtils.isEmpty(oauthUrl)) {
             authType = AuthType.EMBED;
         }
@@ -159,7 +159,7 @@ public class AuthClientExecute {
         request = encode.encodeHex(Json.toJson(item2), serviceKey);
         Robin robin = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
         Robin robin1 = robin.create();
-        String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(authClientProperties.getAuthAddress()).split(",");
+        String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(authClientProperties.getAddress()).split(",");
         robin1.addNode(split);
         Node node = robin1.selectNode();
         HttpResponse<String> httpResponse = null;
@@ -213,7 +213,7 @@ public class AuthClientExecute {
      */
     @Watch
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
-        String oauthUrl = authClientProperties.getAuthAddress();
+        String oauthUrl = authClientProperties.getAddress();
         if(StringUtils.isEmpty(oauthUrl)) {
             authType = AuthType.EMBED;
         }
@@ -249,7 +249,7 @@ public class AuthClientExecute {
         request = encode.encodeHex(Json.toJson(item2), serviceKey);
         Robin robin1 = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
         Robin balance = robin1.create();
-        String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(authClientProperties.getAuthAddress()).split(",");
+        String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(authClientProperties.getAddress()).split(",");
         balance.addNode(split);
         Node robin = balance.selectNode();
         HttpResponse<String> httpResponse = null;
@@ -464,7 +464,7 @@ public class AuthClientExecute {
     public String getLoginCode(String loginCodeType) {
         Robin robin1 = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
         Robin balance = robin1.create();
-        String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(authClientProperties.getAuthAddress()).split(",");
+        String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(authClientProperties.getAddress()).split(",");
         balance.addNode(split);
         Node robin = balance.selectNode();
         HttpResponse<String> httpResponse = null;
