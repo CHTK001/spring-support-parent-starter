@@ -6,7 +6,10 @@ import com.chua.starter.common.support.converter.ResultDataHttpMessageConverter;
 import com.chua.starter.common.support.filter.ParamLogFilter;
 import com.chua.starter.common.support.limit.LimitAspect;
 import com.chua.starter.common.support.processor.ResponseModelViewMethodProcessor;
-import com.chua.starter.common.support.properties.*;
+import com.chua.starter.common.support.properties.CoreProperties;
+import com.chua.starter.common.support.properties.CorsProperties;
+import com.chua.starter.common.support.properties.LimitProperties;
+import com.chua.starter.common.support.properties.OptionProperties;
 import com.chua.starter.common.support.result.ExceptionAdvice;
 import com.chua.starter.common.support.result.UniformResponseBodyAdvice;
 import com.chua.starter.common.support.version.ApiVersionRequestMappingHandlerMapping;
@@ -59,7 +62,6 @@ import java.util.List;
         OptionProperties.class,
         CorsProperties.class,
         CoreProperties.class,
-        BeanProperties.class,
         LimitProperties.class
 })
 public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAware, WebMvcRegistrations {
