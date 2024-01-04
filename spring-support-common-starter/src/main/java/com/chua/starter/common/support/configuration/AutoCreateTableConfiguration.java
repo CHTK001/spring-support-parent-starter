@@ -8,7 +8,7 @@ import com.chua.common.support.datasource.executor.DdlExecutor;
 import com.chua.common.support.datasource.jdbc.JdbcEngineDataSource;
 import com.chua.common.support.utils.ArrayUtils;
 import com.chua.common.support.utils.ThreadUtils;
-import com.chua.starter.common.support.properties.TablePluginProperties;
+import com.chua.starter.common.support.properties.CreateTableProperties;
 import com.chua.starter.common.support.utils.BeanDefinitionUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
@@ -30,18 +30,18 @@ import java.util.Map;
  * @author CH
  */
 @Slf4j
-@ConditionalOnProperty(prefix = TablePluginProperties.PRE, name = "open", havingValue = "true")
-@EnableConfigurationProperties(TablePluginProperties.class)
+@ConditionalOnProperty(prefix = CreateTableProperties.PRE, name = "open", havingValue = "true")
+@EnableConfigurationProperties(CreateTableProperties.class)
 public class AutoCreateTableConfiguration implements ApplicationContextAware {
 
-    TablePluginProperties tablePluginProperties;
+    CreateTableProperties createTableProperties;
     private Map<String, DataSource> dataSources;
     private DdlExecutor ddlExecutor;
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        tablePluginProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(TablePluginProperties.PRE, TablePluginProperties.class);
-        if(!tablePluginProperties.isOpen() || ArrayUtils.isEmpty(tablePluginProperties.getPackages())) {
+        createTableProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(CreateTableProperties.PRE, CreateTableProperties.class);
+        if(!createTableProperties.isOpen() || ArrayUtils.isEmpty(createTableProperties.getPackages())) {
             return;
         }
         this.dataSources = applicationContext.getBeansOfType(DataSource.class);
@@ -56,7 +56,7 @@ public class AutoCreateTableConfiguration implements ApplicationContextAware {
         }
 
         this.ddlExecutor = engine.toDdl();
-        if(tablePluginProperties.isAsync()) {
+        if(createTableProperties.isAsync()) {
             ThreadUtils.newStaticThreadPool().execute(this::doCreateTable);
             return;
         }
@@ -67,7 +67,7 @@ public class AutoCreateTableConfiguration implements ApplicationContextAware {
 
     void doCreateTable() {
         PathMatchingResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver();
-        String[] packages = tablePluginProperties.getPackages();
+        String[] packages = createTableProperties.getPackages();
         for (String aPackage : packages) {
             Resource[] resources = new Resource[0];
             try {
