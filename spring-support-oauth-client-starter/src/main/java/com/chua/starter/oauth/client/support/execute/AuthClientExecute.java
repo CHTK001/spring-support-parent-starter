@@ -239,7 +239,7 @@ public class AuthClientExecute {
         String asString = Json.toJson(jsonObject);
         String request = encode.encodeHex(asString, DigestUtils.md5Hex(key));
 
-        String uid = UUID.randomUUID().toString();
+        String uid = DigestUtils.md5Hex(UUID.randomUUID().toString());
         Map<String, Object> item2 = new LinkedHashMap<>();
         item2.put("ext", ext);
         item2.put(AuthConstant.OAUTH_VALUE, request);
