@@ -91,8 +91,18 @@ public class AuthClientExecute {
         HttpServletRequest request = attributes.getRequest();
         Object attribute = request.getSession().getAttribute(SESSION_USER_INFO);
         if(null != attribute) {
-            return (UserResult) attribute;
+            if(attribute instanceof UserResult) {
+                return (UserResult) attribute;
+            }
+
+            if(attribute instanceof UserResume) {
+                UserResult userResult = new UserResult();
+                com.chua.common.support.bean.BeanUtils.copyProperties(attribute, userResult);
+                request.getSession().setAttribute(SESSION_USER_INFO, userResult);
+                return userResult;
+            }
         }
+
         WebRequest webRequest1 = new WebRequest(
                 authClientProperties,
                 request, null);
