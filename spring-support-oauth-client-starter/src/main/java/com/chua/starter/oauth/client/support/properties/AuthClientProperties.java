@@ -39,7 +39,7 @@ public class AuthClientProperties {
     /**
      * 鉴权地址
      */
-    private String authAddress;
+    private String address;
     /**
      * 登录地址
      */
