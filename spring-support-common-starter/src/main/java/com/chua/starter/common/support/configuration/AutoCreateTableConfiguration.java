@@ -41,7 +41,7 @@ public class AutoCreateTableConfiguration implements ApplicationContextAware {
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         createTableProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(CreateTableProperties.PRE, CreateTableProperties.class);
-        if(!createTableProperties.isOpen() || ArrayUtils.isEmpty(createTableProperties.getPackages())) {
+        if(!createTableProperties.isEnable() || ArrayUtils.isEmpty(createTableProperties.getPackages())) {
             return;
         }
         this.dataSources = applicationContext.getBeansOfType(DataSource.class);
