@@ -7,6 +7,7 @@ import com.chua.starter.oauth.client.support.advice.HtmlAdviceResolver;
 import com.chua.starter.oauth.client.support.advice.JsonAdviceResolver;
 import com.chua.starter.oauth.client.support.infomation.Information;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.servlet.FilterChain;
 import javax.servlet.http.HttpServletRequest;
@@ -18,6 +19,7 @@ import java.io.IOException;
  *
  * @author CH
  */
+@Slf4j
 public class WebResponse {
     private final AuthClientProperties authProperties;
     private final FilterChain chain;

@@ -6,7 +6,6 @@ import com.chua.common.support.crypto.decode.KeyDecode;
 import com.chua.common.support.crypto.encode.KeyEncode;
 import com.chua.common.support.crypto.utils.DigestUtils;
 import com.chua.common.support.json.Json;
-import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.MapUtils;
@@ -189,7 +188,7 @@ public class LoginProvider implements InitializingBean {
 
         ReturnResult result = loginCheck.doLogin(address, username, passwd, authType, accessSecret.getExt());
         if (!result.getCode().equals(OK.getCode())) {
-            loggerResolver.register("doLogin", SYSTEM_AUTH_SERVER_NO_EXIST.getCode(), "认证服务器离线", address);
+            loggerResolver.register("doLogin", RESOURCE_NOT_FOUND.getCode(), "认证服务器离线", address);
             Object data1 = result.getData();
             if (null != data1) {
                 request.setAttribute(authServerProperties.getTokenName(), ((LoginResult) data1).getToken());
@@ -204,7 +203,7 @@ public class LoginProvider implements InitializingBean {
                 request.setAttribute(authServerProperties.getTokenName(), ((LoginResult) data1).getToken());
             }
             logout(request, response);
-            return ReturnResult.newBuilder().code(ReturnCode.SYSTEM_NO_OAUTH.getCode()).msg("ak/sk无效").build();
+            return ReturnResult.newBuilder().code(RESULT_ACCESS_UNAUTHORIZED.getCode()).msg("ak/sk无效").build();
         }
         if (authServerProperties.isOpenReturnCheckAkSk()) {
             doEncodeReturnValue(result, accessSecret);
@@ -344,7 +343,7 @@ public class LoginProvider implements InitializingBean {
         }
         String sessionKey = Optional.ofNullable(request.getSession().getAttribute("KAPTCHA_SESSION_KEY")).orElse("").toString();
         if (Strings.isNullOrEmpty(code) || !code.equalsIgnoreCase(sessionKey)) {
-            loggerResolver.register("doWebLogin", PARAM_ERROR.getCode(), "[" + sessionKey + "][" + code + "]校验码错误", address);
+            loggerResolver.register("doWebLogin", REQUEST_PARAM_ERROR.getCode(), "[" + sessionKey + "][" + code + "]校验码错误", address);
             modelMap.addFlashAttribute("msg", "校验码错误");
             try {
                 return new AdviceView("redirect:" + contextPath + "/login?redirect_url=" + URLEncoder.encode(url, "UTF-8"));
@@ -394,7 +393,7 @@ public class LoginProvider implements InitializingBean {
         }
 
         if (null == url) {
-            loggerResolver.register("login", SYSTEM_NO_OAUTH.getCode(), "redirect_url不能为空", address);
+            loggerResolver.register("login", RESULT_ACCESS_UNAUTHORIZED.getCode(), "redirect_url不能为空", address);
             return "oauth/login";
         }
 

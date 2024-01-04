@@ -3,6 +3,7 @@ package com.chua.starter.oauth.client.support.advice;
 import com.chua.common.support.lang.code.ResultCode;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 
 import javax.servlet.ServletOutputStream;
@@ -14,6 +15,7 @@ import javax.servlet.http.HttpServletResponse;
  * @author CH
  * @since 2022/7/29 10:24
  */
+@Slf4j
 public class XmlAdviceResolver implements AdviceResolver {
 
     static final XmlMapper XML_MAPPER = new XmlMapper();
