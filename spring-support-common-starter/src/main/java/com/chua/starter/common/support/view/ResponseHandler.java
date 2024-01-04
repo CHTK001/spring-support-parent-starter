@@ -2,6 +2,7 @@ package com.chua.starter.common.support.view;
 
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.common.support.media.MediaTypeHandler;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -21,6 +22,7 @@ import java.util.Map;
  * @author CH
  * @since 2022/8/12 8:40
  */
+@Slf4j
 public class ResponseHandler<T> {
     private static final String APPLICATION_JSON = "application/json";
     private static final String CONTENT_TYPE = "content-type";
