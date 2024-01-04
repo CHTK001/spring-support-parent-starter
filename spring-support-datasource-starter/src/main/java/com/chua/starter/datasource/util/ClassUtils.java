@@ -2,6 +2,7 @@ package com.chua.starter.datasource.util;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 
 import java.lang.reflect.ParameterizedType;
@@ -18,6 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author CH
  * @since 2022-02-18
  */
+@Slf4j
 public class ClassUtils {
 
     protected static final Map<Class<?>, Type[]> ACTUAL = new ConcurrentHashMap<>();
