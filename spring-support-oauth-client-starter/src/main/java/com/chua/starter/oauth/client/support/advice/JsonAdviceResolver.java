@@ -3,6 +3,7 @@ package com.chua.starter.oauth.client.support.advice;
 import com.alibaba.fastjson2.JSON;
 import com.chua.common.support.lang.code.ResultCode;
 import com.chua.common.support.lang.code.ReturnResult;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 
 import javax.servlet.http.HttpServletResponse;
@@ -14,6 +15,7 @@ import java.io.IOException;
  * @author CH
  * @since 2022/7/29 10:24
  */
+@Slf4j
 public class JsonAdviceResolver implements AdviceResolver {
 
     @Override

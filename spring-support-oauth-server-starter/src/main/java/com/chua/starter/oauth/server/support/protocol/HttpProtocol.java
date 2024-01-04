@@ -22,7 +22,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import static com.chua.common.support.lang.code.ReturnCode.OK;
-import static com.chua.common.support.lang.code.ReturnCode.SYSTEM_NO_OAUTH;
+import static com.chua.common.support.lang.code.ReturnCode.RESOURCE_OAUTH_ERROR;
 
 
 /**
@@ -64,20 +64,20 @@ public class HttpProtocol implements Protocol, InitializingBean {
 
         if (!authorization.hasKey()) {
             loginProvider.logout(request, response);
-            loggerResolver.register(AuthConstant.OAUTH, SYSTEM_NO_OAUTH.getCode(), "密钥不存在", address);
+            loggerResolver.register(AuthConstant.OAUTH, RESOURCE_OAUTH_ERROR.getCode(), "密钥不存在", address);
             return ReturnResult.noAuth();
         }
 
         if (!authorization.hasTokenOrCookie()) {
             loginProvider.logout(request, response);
-            loggerResolver.register(AuthConstant.OAUTH, SYSTEM_NO_OAUTH.getCode(), "无权限", address);
+            loggerResolver.register(AuthConstant.OAUTH, RESOURCE_OAUTH_ERROR.getCode(), "无权限", address);
             return ReturnResult.noAuth();
         }
 
         ReturnResult<String> authentication = authorization.authentication();
         if (!OK.getCode().equals(authentication.getCode())) {
             loginProvider.logout(request, response);
-            loggerResolver.register(AuthConstant.OAUTH, SYSTEM_NO_OAUTH.getCode(), "ak,sk限制登录", address);
+            loggerResolver.register(AuthConstant.OAUTH, RESOURCE_OAUTH_ERROR.getCode(), "ak,sk限制登录", address);
             return ReturnResult.noAuth();
         }
 
@@ -98,20 +98,20 @@ public class HttpProtocol implements Protocol, InitializingBean {
 
         if (!authorization.hasKey()) {
             loginProvider.logout(request, response);
-            loggerResolver.register(AuthConstant.OAUTH, SYSTEM_NO_OAUTH.getCode(), "密钥不存在", address);
+            loggerResolver.register(AuthConstant.OAUTH, RESOURCE_OAUTH_ERROR.getCode(), "密钥不存在", address);
             return ReturnResult.noAuth();
         }
 
         if (!authorization.hasTokenOrCookie()) {
             loginProvider.logout(request, response);
-            loggerResolver.register(AuthConstant.OAUTH, SYSTEM_NO_OAUTH.getCode(), "无权限", address);
+            loggerResolver.register(AuthConstant.OAUTH, RESOURCE_OAUTH_ERROR.getCode(), "无权限", address);
             return ReturnResult.noAuth();
         }
 
         ReturnResult<String> authentication = authorization.refresh();
         if (!OK.getCode().equals(authentication.getCode())) {
             loginProvider.logout(request, response);
-            loggerResolver.register(AuthConstant.OAUTH, SYSTEM_NO_OAUTH.getCode(), "ak,sk限制登录", address);
+            loggerResolver.register(AuthConstant.OAUTH, RESOURCE_OAUTH_ERROR.getCode(), "ak,sk限制登录", address);
             return ReturnResult.noAuth();
         }
 
