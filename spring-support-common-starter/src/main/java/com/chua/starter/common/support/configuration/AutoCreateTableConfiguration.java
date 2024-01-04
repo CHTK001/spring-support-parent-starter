@@ -30,7 +30,7 @@ import java.util.Map;
  * @author CH
  */
 @Slf4j
-@ConditionalOnProperty(prefix = CreateTableProperties.PRE, name = "open", havingValue = "true")
+@ConditionalOnProperty(prefix = CreateTableProperties.PRE, name = "enable", havingValue = "true")
 @EnableConfigurationProperties(CreateTableProperties.class)
 public class AutoCreateTableConfiguration implements ApplicationContextAware {
 
