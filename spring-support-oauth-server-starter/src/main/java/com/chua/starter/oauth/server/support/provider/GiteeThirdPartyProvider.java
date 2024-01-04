@@ -32,7 +32,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 
 import static com.chua.common.support.lang.code.ReturnCode.OK;
-import static com.chua.common.support.lang.code.ReturnCode.SYSTEM_NO_OAUTH;
+import static com.chua.common.support.lang.code.ReturnCode.RESOURCE_OAUTH_ERROR;
 
 /**
  * 三方地址
@@ -86,7 +86,7 @@ public class GiteeThirdPartyProvider implements InitializingBean {
         }
         ReturnResult<LoginResult> result = loginCheck.doLogin(data.getLocation(), data.getUsername(), null, "gitee", data);
         loggerResolver.register("gitee", result.getCode(), "认证服务器离线", null);
-        if (SYSTEM_NO_OAUTH.getCode().equals(result.getCode())) {
+        if (RESOURCE_OAUTH_ERROR.getCode().equals(result.getCode())) {
             if (StringUtils.isBlank(casProperties.getNewLoginUrl())) {
                 try {
                     attributes.addAttribute("msg", URLEncoder.encode(result.getMsg(), "UTF-8"));
