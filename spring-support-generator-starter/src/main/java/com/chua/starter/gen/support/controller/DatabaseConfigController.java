@@ -55,7 +55,7 @@ public class DatabaseConfigController {
         try {
             FileUtils.forceDelete(new File(genConfig.getDbcDriverUrl()));
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("", e);
             return ReturnResult.illegal("卸载失败");
         }
         genConfig.setDbcDriverUrl("");
@@ -123,7 +123,7 @@ public class DatabaseConfigController {
         try {
             driver = MultipartFileUtils.transferTo(httpResponse.content(byte[].class), UrlUtils.getFileName(new URL(dbcDriverLink).openConnection()), mkdir, "driver", true);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("", e);
             return ReturnResult.illegal("下载地址无效/不存在");
         }
         if(!driver.isOk()) {

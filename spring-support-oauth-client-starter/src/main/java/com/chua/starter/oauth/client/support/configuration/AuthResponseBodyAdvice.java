@@ -60,7 +60,7 @@ public class AuthResponseBodyAdvice implements ResponseBodyAdvice<Object> {
             try {
                 resolve.resolve(response, 403, "无权限访问");
             } catch (IOException e) {
-                e.printStackTrace();
+                log.error("", e);
             }
             return;
         }

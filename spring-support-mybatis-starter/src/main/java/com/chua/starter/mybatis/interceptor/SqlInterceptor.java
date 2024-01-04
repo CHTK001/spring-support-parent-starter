@@ -98,7 +98,7 @@ public class SqlInterceptor implements Interceptor {
             log.info(sql);
         } catch (Exception e) {
             log.error("拦截sql处理出错，出错原因：" + e.getMessage());
-            e.printStackTrace();
+            log.error("", e);
         }
         return returnValue;
     }

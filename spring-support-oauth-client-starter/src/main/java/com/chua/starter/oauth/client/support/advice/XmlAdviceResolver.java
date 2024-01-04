@@ -30,7 +30,7 @@ public class XmlAdviceResolver implements AdviceResolver {
             ServletOutputStream outputStream = response.getOutputStream();
             outputStream.write(XML_MAPPER.writeValueAsBytes(ReturnResult.newBuilder().code(ResultCode.transferForHttpCodeStatus(status)).msg(message).build()));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("", e);
         }
 
         return null;

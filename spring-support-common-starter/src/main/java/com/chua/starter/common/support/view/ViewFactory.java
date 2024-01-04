@@ -67,7 +67,7 @@ public class ViewFactory {
             ViewPreview preview = viewResolver.preview(bucket, path, mode, stream, Strings.isBlank(viewConfig.getPlugins()) ? Collections.emptySet() : new HashSet<>(Splitter.on(',').omitEmptyStrings().trimResults().splitToList(viewConfig.getPlugins())));
             return new ViewMeta(stream.toByteArray(), preview);
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("", e);
             return new ViewMeta();
         }
     }

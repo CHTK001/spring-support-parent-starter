@@ -198,7 +198,7 @@ public class ClassUtils {
         try {
             return (T) name.newInstance();
         } catch (Throwable e) {
-            e.printStackTrace();
+            log.error("", e);
         }
         return null;
     }

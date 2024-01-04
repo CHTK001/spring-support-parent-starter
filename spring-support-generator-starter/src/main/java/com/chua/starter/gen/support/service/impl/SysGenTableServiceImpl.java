@@ -120,7 +120,7 @@ public class SysGenTableServiceImpl extends ServiceImpl<SysGenTableMapper, SysGe
             item.setContent(sw.toString());
 
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("", e);
         }
         return item;
     }
@@ -141,7 +141,7 @@ public class SysGenTableServiceImpl extends ServiceImpl<SysGenTableMapper, SysGe
             item.setContent(sw.toString());
 
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("", e);
         }
         return item;
     }

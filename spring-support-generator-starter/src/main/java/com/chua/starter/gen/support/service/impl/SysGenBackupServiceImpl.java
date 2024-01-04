@@ -205,7 +205,7 @@ public class SysGenBackupServiceImpl extends ServiceImpl<SysGenBackupMapper, Sys
                     }
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                log.error("", e);
             }
         });
     }

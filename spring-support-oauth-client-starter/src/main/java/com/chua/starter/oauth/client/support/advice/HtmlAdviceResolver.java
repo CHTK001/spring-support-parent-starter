@@ -57,7 +57,7 @@ public class HtmlAdviceResolver implements AdviceResolver {
             try {
                 response.sendRedirect(url1);
             } catch (IOException e) {
-                e.printStackTrace();
+                log.error("", e);
             }
             return;
         }
@@ -88,7 +88,7 @@ public class HtmlAdviceResolver implements AdviceResolver {
             }
             response.sendRedirect(url + url1 + "?redirect_url=" + encode);
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("", e);
         }
     }
 

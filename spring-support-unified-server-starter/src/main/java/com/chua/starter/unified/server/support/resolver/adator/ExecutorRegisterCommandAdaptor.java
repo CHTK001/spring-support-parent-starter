@@ -34,7 +34,7 @@ public class ExecutorRegisterCommandAdaptor implements ExecutorCommandAdaptor{
                             try {
                                 unifiedExecuterService.createExecutor(request);
                             } catch (Exception e) {
-                                e.printStackTrace();
+                                log.error("", e);
                             }
                         });
         return BootResponse.builder()

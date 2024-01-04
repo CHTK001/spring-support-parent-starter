@@ -162,7 +162,7 @@ public class ExceptionAdvice  {
     @ExceptionHandler(BusinessException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> handleBizException(BusinessException e) {
-        e.printStackTrace();
+        log.error("", e);
         if (e.getResultCode() != null) {
             return Result.failed(e.getLocalizedMessage());
         }
@@ -190,7 +190,7 @@ public class ExceptionAdvice  {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> handleRuntimeException(RuntimeException e) {
         log.error("unknown exception: {}", e.getMessage());
-        e.printStackTrace();
+        log.error("", e);
         if(Validator.hasChinese(e.getMessage())) {
             return Result.failed(e);
         }

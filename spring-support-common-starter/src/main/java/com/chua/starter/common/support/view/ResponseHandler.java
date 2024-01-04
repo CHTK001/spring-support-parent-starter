@@ -107,13 +107,13 @@ public class ResponseHandler<T> {
             outputStream = response.getOutputStream();
             write(outputStream);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("", e);
         } finally {
             if (isEnd && null != outputStream) {
                 try {
                     outputStream.close();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    log.error("", e);
                 }
             }
         }

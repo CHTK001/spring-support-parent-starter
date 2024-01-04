@@ -50,7 +50,7 @@ public class WebResponse {
         try {
             resolve.resolve(response, information.getCode(), information.getMessage());
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("", e);
         }
 
     }

@@ -73,7 +73,7 @@ public class ConfigRegisterCommandAdaptor implements ConfigCommandAdaptor{
                             return true;
                         });
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        log.error("", e);
                     }
 
                 });

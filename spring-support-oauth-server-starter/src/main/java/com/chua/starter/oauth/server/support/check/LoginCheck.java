@@ -68,7 +68,7 @@ public class LoginCheck {
             try {
                 userResult = userInfoService.checkLogin(username, passwd, address, ext);
             } catch (Exception e) {
-                e.printStackTrace();
+                log.error("", e);
                 continue;
             }
             if (null != userResult && Strings.isNullOrEmpty(userResult.getMessage())) {
