@@ -70,7 +70,7 @@ public class NotifyServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M
             try {
                 notifyClient(t);
             } catch (Exception e) {
-                e.printStackTrace();
+                log.error("", e);
             }
         });
         return true;

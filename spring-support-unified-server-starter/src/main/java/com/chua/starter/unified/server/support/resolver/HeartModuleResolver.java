@@ -34,7 +34,7 @@ public class HeartModuleResolver implements ModuleResolver{
                 try {
                     unifiedExecuterItemService.checkHeart(request);
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    log.error("", e);
                 }
             });
             return BootResponse.builder()

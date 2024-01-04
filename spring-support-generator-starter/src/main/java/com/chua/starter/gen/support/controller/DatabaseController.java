@@ -61,7 +61,7 @@ public class DatabaseController {
         try {
             FileUtils.forceDelete(new File(sysGen.getGenDatabaseFile()));
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("", e);
             return ReturnResult.illegal("卸载失败");
         }
         sysGen.setGenDatabaseFile("");
