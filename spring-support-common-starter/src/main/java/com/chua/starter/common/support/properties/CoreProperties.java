@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import static com.chua.starter.common.support.properties.CoreProperties.PRE;
 
 /**
- * 跨域
+ * 跨域/版本控制/统一响应
  *
  * @author CH
  */
@@ -28,10 +28,6 @@ public class CoreProperties {
      * 是否开启版本控制
      */
     private boolean openVersion;
-    /**
-     * 开启编排接口
-     */
-    private boolean openArrange = true;
 
     /**
      * geo

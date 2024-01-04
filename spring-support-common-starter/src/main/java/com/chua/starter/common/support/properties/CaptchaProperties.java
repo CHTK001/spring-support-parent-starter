@@ -23,6 +23,10 @@ public class CaptchaProperties {
      */
     private CaptchaTypeEnum type = CaptchaTypeEnum.ARITHMETIC;
 
+    /**
+     *  是否打开
+     */
+    private boolean enable;
 
     /**
      * 验证码缓存过期时间(单位:秒)

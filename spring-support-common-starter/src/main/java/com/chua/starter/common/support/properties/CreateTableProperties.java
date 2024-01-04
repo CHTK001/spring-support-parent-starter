@@ -4,7 +4,7 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * 表插件特性
+ * 自定建表
  *
  * @author CH
  */
@@ -17,7 +17,7 @@ public class CreateTableProperties {
     /**
      * 是否开启
      */
-    private boolean open;
+    private boolean enable;
 
     /**
      * 异步
