@@ -9,8 +9,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @author CH
  */
 @Data
-@ConfigurationProperties(prefix = TablePluginProperties.PRE, ignoreInvalidFields = true)
-public class TablePluginProperties {
+@ConfigurationProperties(prefix = CreateTableProperties.PRE, ignoreInvalidFields = true)
+public class CreateTableProperties {
 
     public static final String PRE = "plugin.table";
 

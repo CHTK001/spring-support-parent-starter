@@ -27,7 +27,7 @@ public class CaptchaProperties {
     /**
      * 验证码缓存过期时间(单位:秒)
      */
-    private long ttl = 120l;
+    private long ttl = 120L;
 
     /**
      * 验证码内容长度

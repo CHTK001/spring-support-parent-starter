@@ -60,7 +60,7 @@ import java.util.List;
         CorsProperties.class,
         CoreProperties.class,
         BeanProperties.class,
-        LimitPluginProperties.class
+        LimitProperties.class
 })
 public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAware, WebMvcRegistrations {
 
@@ -127,8 +127,8 @@ public class CorsConfiguration implements WebMvcConfigurer, ApplicationContextAw
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(name = "plugin.limit.open-limit", havingValue = "true", matchIfMissing = true)
-    public LimitAspect limitAspect(LimitPluginProperties limitPluginProperties) {
-        return new LimitAspect(limitPluginProperties);
+    public LimitAspect limitAspect(LimitProperties limitProperties) {
+        return new LimitAspect(limitProperties);
     }
 
     @Bean
