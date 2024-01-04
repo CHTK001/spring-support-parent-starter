@@ -62,7 +62,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
     @SuppressWarnings("ALL")
     public AuthenticationInformation approve(Cookie[] cookie, String token) {
         checkCache();
-        String key = UUID.randomUUID().toString();
+        String key = DigestUtils.md5Hex(UUID.randomUUID().toString());
         Map<String, Object> jsonObject = new HashMap<>(2);
         Cookie[] cookies = Optional.ofNullable(cookie).orElse(new Cookie[0]);
         String cacheKey = getCacheKey(cookies, token);
@@ -186,7 +186,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
 
     @Override
     public void refreshToken(Cookie[] cookie, String token) {
-        String key = UUID.randomUUID().toString();
+        String key = DigestUtils.md5Hex(UUID.randomUUID().toString());
         Map<String, Object> jsonObject = new HashMap<>(2);
         Cookie[] cookies = Optional.ofNullable(cookie).orElse(new Cookie[0]);
         String cacheKey = getCacheKey(cookies, token);
