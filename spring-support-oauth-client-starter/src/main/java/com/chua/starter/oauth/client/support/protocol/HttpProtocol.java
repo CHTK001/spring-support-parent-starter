@@ -105,7 +105,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
 
         Robin balance = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
         Robin stringRobin = balance.create();
-        String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(authClientProperties.getAuthAddress()).split(",");
+        String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(authClientProperties.getAddress()).split(",");
         stringRobin.addNode(split);
         Node robin = stringRobin.selectNode();
         HttpResponse<String> httpResponse = null;
@@ -209,7 +209,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
 
         Robin balance = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
         Robin stringRobin = balance.create();
-        String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(authClientProperties.getAuthAddress()).split(",");
+        String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(authClientProperties.getAddress()).split(",");
         stringRobin.addNode(split);
         Node robin = stringRobin.selectNode();
         HttpResponse<String> httpResponse = null;

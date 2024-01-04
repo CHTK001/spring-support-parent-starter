@@ -245,7 +245,7 @@ public class WebRequest {
      * @return boolean
      */
     public static boolean isEmbed(AuthClientProperties authProperties) {
-        String oauthUrl = authProperties.getAuthAddress();
+        String oauthUrl = authProperties.getAddress();
         return StringUtils.isEmpty(oauthUrl);
     }
 
