@@ -6,7 +6,8 @@ org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
   com.chua.starter.common.support.configuration.ViewConfiguration,\
   com.chua.starter.common.support.configuration.CacheConfiguration,\
   com.chua.starter.common.support.configuration.CaptchaConfiguration,\
-  com.chua.starter.common.support.configuration.AutoCreateTableConfiguration
+  com.chua.starter.common.support.configuration.AutoCreateTableConfiguration,\
+  com.chua.starter.common.support.configuration.FileStoreConfiguration
 org.springframework.boot.env.EnvironmentPostProcessor=\
   com.chua.starter.common.support.configuration.FreemarkerConfiguration,\
   com.chua.starter.common.support.configuration.CommonConfigurationConfiguration
