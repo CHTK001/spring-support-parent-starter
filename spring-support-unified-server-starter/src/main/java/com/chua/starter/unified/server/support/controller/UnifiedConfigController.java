@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.function.Splitter;
+import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.common.support.result.ResultData;
@@ -17,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 import java.util.Date;
 
-import static com.chua.common.support.lang.code.ReturnCode.PARAM_ERROR;
+import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
 
 /**
  * 配置中心接口
@@ -42,7 +43,7 @@ public class UnifiedConfigController {
     @ResponseBody
     public ReturnPageResult<Page<UnifiedConfig>> page(DelegatePage<UnifiedConfig> page, @Valid UnifiedConfig entity, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ReturnPageResult.illegal(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnPageResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
         return ReturnPageResult.ok(unifiedConfigService.page(page.createPage(), Wrappers.<UnifiedConfig>lambdaQuery()
                 .eq(StringUtils.isNotBlank(entity.getUnifiedConfigProfile()), UnifiedConfig::getUnifiedConfigProfile, entity.getUnifiedConfigProfile())
@@ -59,7 +60,7 @@ public class UnifiedConfigController {
     @DeleteMapping("delete")
     public ResultData<Boolean> delete(String id) {
         if (null == id) {
-            return ResultData.failure(PARAM_ERROR, "主键不能为空");
+            return ResultData.failure(REQUEST_PARAM_ERROR, "主键不能为空");
         }
         return ResultData.success(unifiedConfigService.removeBatchByIds(Splitter.on(",").trimResults().omitEmptyStrings().splitToSet(id)));
     }
@@ -74,7 +75,7 @@ public class UnifiedConfigController {
     @ResponseBody
     public ReturnResult<Boolean> updateById(@Valid @RequestBody UnifiedConfig t, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ReturnResult.illegal(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
         t.setUpdateTime(new Date());
         boolean b = unifiedConfigService.updateById(t);
@@ -97,7 +98,7 @@ public class UnifiedConfigController {
     @ResponseBody
     public ResultData<Boolean> save(@Valid @RequestBody UnifiedConfig t, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ResultData.failure(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
 
         return unifiedConfigService.saveOrUpdateConfig(t);

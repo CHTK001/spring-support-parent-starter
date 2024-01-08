@@ -15,7 +15,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
 
-import static com.chua.common.support.lang.code.ReturnCode.PARAM_ERROR;
+import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
+
 
 /**
  * 配置中心接口
@@ -41,7 +42,7 @@ public class UnifiedLogController {
     @ResponseBody
     public ReturnPageResult<Page<UnifiedLog>> page(DelegatePage<UnifiedLog> page, @Valid UnifiedLog entity, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ReturnPageResult.illegal(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnPageResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
         return ReturnPageResult.ok(unifiedLogService.page(page.createPage(), Wrappers.lambdaQuery(entity)
                 .orderByDesc(UnifiedLog::getCreateTime, UnifiedLog::getUnifiedLogId)

@@ -13,7 +13,8 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 
-import static com.chua.common.support.lang.code.ReturnCode.PARAM_ERROR;
+import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
+
 
 /**
  * 配置中心接口
@@ -40,7 +41,7 @@ public class UnifiedExecutorController {
     @ResponseBody
     public ReturnPageResult<Page<UnifiedExecuter>> page(DelegatePage<UnifiedExecuter> page, @Valid UnifiedExecuter entity, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ReturnPageResult.illegal(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnPageResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
         return ReturnPageResult.ok(unifiedExecuterService.pageExecuter(page, entity));
     }
@@ -55,7 +56,7 @@ public class UnifiedExecutorController {
     @DeleteMapping("delete")
     public ResultData<Boolean> delete(String id) {
         if (null == id) {
-            return ResultData.failure(PARAM_ERROR, "主键不能为空");
+            return ResultData.failure(REQUEST_PARAM_ERROR, "主键不能为空");
         }
         return ResultData.success(unifiedExecuterService.removeByIdExecuter(id));
     }
@@ -69,7 +70,7 @@ public class UnifiedExecutorController {
     @DeleteMapping("deleteItem")
     public ResultData<Boolean> deleteItem(String id) {
         if (null == id) {
-            return ResultData.failure(PARAM_ERROR, "主键不能为空");
+            return ResultData.failure(REQUEST_PARAM_ERROR, "主键不能为空");
         }
         unifiedExecuterItemService.remove(id);
         return ResultData.success(true);
@@ -85,7 +86,7 @@ public class UnifiedExecutorController {
     @ResponseBody
     public ResultData<Boolean> updateById(@Valid @RequestBody UnifiedExecuter t, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ResultData.failure(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
         return ResultData.success(unifiedExecuterService.updateByIdExecuter(t));
     }
@@ -100,7 +101,7 @@ public class UnifiedExecutorController {
     @ResponseBody
     public ResultData<Boolean> save(@Valid @RequestBody UnifiedExecuter t, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ResultData.failure(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
         return ResultData.success(unifiedExecuterService.saveOrUpdateExecuter(t));
     }

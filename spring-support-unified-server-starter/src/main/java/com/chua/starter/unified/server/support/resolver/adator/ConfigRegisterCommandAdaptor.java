@@ -11,6 +11,7 @@ import com.chua.common.support.utils.ObjectUtils;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.unified.server.support.entity.UnifiedConfig;
 import com.chua.starter.unified.server.support.service.UnifiedConfigService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.annotation.Resource;
@@ -26,6 +27,7 @@ import java.util.Optional;
  * @since 2023/11/16
  */
 @Spi("Register")
+@Slf4j
 public class ConfigRegisterCommandAdaptor implements ConfigCommandAdaptor{
 
     @Resource

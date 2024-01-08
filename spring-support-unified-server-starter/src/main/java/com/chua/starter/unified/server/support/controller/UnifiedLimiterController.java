@@ -19,7 +19,8 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 import java.util.Date;
 
-import static com.chua.common.support.lang.code.ReturnCode.PARAM_ERROR;
+import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
+
 
 /**
  * 配置中心接口
@@ -45,7 +46,7 @@ public class UnifiedLimiterController {
     @ResponseBody
     public ReturnPageResult<Page<UnifiedLimit>> page(DelegatePage<UnifiedLimit> page, @Valid UnifiedLimit entity, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ReturnPageResult.illegal(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnPageResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
         return ReturnPageResult.ok(unifiedLimitService.page(page.createPage(), Wrappers.<UnifiedLimit>lambdaQuery()
                 .eq(StringUtils.isNotBlank(entity.getUnifiedLimitProfile()), UnifiedLimit::getUnifiedLimitProfile, entity.getUnifiedLimitProfile())
@@ -80,7 +81,7 @@ public class UnifiedLimiterController {
     @DeleteMapping("delete")
     public ResultData<Boolean> delete(String id) {
         if (null == id) {
-            return ResultData.failure(PARAM_ERROR, "主键不能为空");
+            return ResultData.failure(REQUEST_PARAM_ERROR, "主键不能为空");
         }
         return ResultData.success(unifiedLimitService.removeBatchByIds(Splitter.on(",").trimResults().omitEmptyStrings().splitToSet(id)));
     }
@@ -95,7 +96,7 @@ public class UnifiedLimiterController {
     @ResponseBody
     public ReturnResult<Boolean> updateById(@Valid @RequestBody UnifiedLimit t, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ReturnResult.illegal(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
         t.setUpdateTime(new Date());
         boolean b = unifiedLimitService.updateById(t);
@@ -139,7 +140,7 @@ public class UnifiedLimiterController {
     @ResponseBody
     public ResultData<Boolean> save(@Valid @RequestBody UnifiedLimit t, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ResultData.failure(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
 
         return unifiedLimitService.saveOrUpdateConfig(t);
