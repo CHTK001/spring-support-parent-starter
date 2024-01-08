@@ -3,12 +3,14 @@ package com.chua.starter.device.support.service.impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.collection.ImmutableBuilder;
-import com.chua.common.support.protocol.client.ClientOption;
-import com.chua.common.support.protocol.client.ClientProvider;
+import com.chua.common.support.protocol.Client;
+import com.chua.common.support.protocol.OperateClient;
+import com.chua.common.support.protocol.options.ClientOption;
 import com.chua.common.support.request.DataFilter;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.influxdb.support.InfluxClient;
+import com.chua.influxdb.support.InfluxOperateClient;
 import com.chua.starter.device.support.adaptor.pojo.StaticResult;
 import com.chua.starter.device.support.adaptor.properties.InfluxProperties;
 import com.chua.starter.device.support.entity.DeviceCloudPlatformConnector;
@@ -16,6 +18,7 @@ import com.chua.starter.device.support.entity.DeviceLog;
 import com.chua.starter.device.support.entity.DeviceMeteorologicalStationEvent;
 import com.chua.starter.device.support.service.DeviceLogService;
 import com.chua.starter.device.support.service.DeviceMeteorologicalStationService;
+import org.influxdb.InfluxDB;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
@@ -41,25 +44,21 @@ public class DeviceMeteorologicalStationServiceImpl implements DeviceMeteorologi
     private InfluxProperties influxProperties;
     @Resource
     private DeviceLogService deviceLogService;
+    private InfluxOperateClient operateClient;
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        influxClient = (InfluxClient) ClientProvider.newProvider("influx", BeanUtils.copyProperties(influxProperties, ClientOption.class)).create();
+        influxClient = (InfluxClient) Client
+                .newProvider("influx", BeanUtils.copyProperties(influxProperties, ClientOption.class));
         influxClient.connect(influxProperties.getUrl());
+        this.operateClient = influxClient.createClient();
         try {
-            influxClient.create("createDatabase")
-                    .with(influxProperties.getDatabase())
-                    .execute();
+            operateClient.createDatabase(influxProperties.getDatabase());
         } catch (Exception ignored) {
         }
         try {
-            influxClient.create("createRetentionPolicy")
-                    .with(influxProperties.getRetentionPolicy())
-                    .with(influxProperties.getDatabase())
-                    .with("180d")
-                    .with(1, int.class)
-                    .with(true, boolean.class)
-                    .execute();
+            operateClient.createRetentionPolicy(influxProperties.getDatabase(),
+                    influxProperties.getRetentionPolicy(), 180, 1, true);
         } catch (Exception ignored) {
         }
     }
@@ -77,7 +76,7 @@ public class DeviceMeteorologicalStationServiceImpl implements DeviceMeteorologi
         deviceLog.setDeviceLogType("SYNC(" + connectorId + ")");
         for (DeviceMeteorologicalStationEvent deviceMeteorologicalStationEvent : event) {
             try {
-                influxClient.write(deviceMeteorologicalStationEvent.getDeviceImsi(), deviceMeteorologicalStationEvent,
+                operateClient.insert(deviceMeteorologicalStationEvent.getDeviceImsi(), deviceMeteorologicalStationEvent,
                         ImmutableBuilder.builderOfStringMap(String.class)
                                 .put("sensor", deviceMeteorologicalStationEvent.getSensor())
                                 .build()
@@ -100,7 +99,8 @@ public class DeviceMeteorologicalStationServiceImpl implements DeviceMeteorologi
         StringBuilder stringBuilder = new StringBuilder(toSql);
         stringBuilder.append(" ORDER BY time desc LIMIT ").append(deviceChannelPage.getSize()).append(" OFFSET ").append((deviceChannelPage.getCurrent() - 1) * deviceChannelPage.getSize());
 
-        List<DeviceMeteorologicalStationEvent> query = influxClient.query(stringBuilder.toString(), DeviceMeteorologicalStationEvent.class);
+        List<DeviceMeteorologicalStationEvent> query = operateClient
+                .query(stringBuilder.toString(), DeviceMeteorologicalStationEvent.class);
         deviceChannelPage.setRecords(query);
         return deviceChannelPage;
     }
