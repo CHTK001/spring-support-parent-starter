@@ -2,6 +2,7 @@ package com.chua.starter.unified.server.support.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.lang.code.ErrorResult;
+import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.CollectionUtils;
@@ -20,7 +21,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.validation.Valid;
 
-import static com.chua.common.support.lang.code.ReturnCode.PARAM_ERROR;
+import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
+
 
 /**
  * 当前只支持DECVM
@@ -47,7 +49,7 @@ public class UnifiedPatchController {
     public ReturnPageResult<Page<UnifiedPatch>> page(DelegatePage<UnifiedPatch> page, @Valid UnifiedPatch entity, BindingResult bindingResult) {
         log.info("1");
         if (bindingResult.hasErrors()) {
-            return ReturnPageResult.illegal(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnPageResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
         return ReturnPageResult.ok(unifiedPatchService.pageItems(page.createPage(), entity));
     }
@@ -61,7 +63,7 @@ public class UnifiedPatchController {
     @DeleteMapping("delete")
     public ResultData<Boolean> delete(String id) {
         if (null == id) {
-            return ResultData.failure(PARAM_ERROR, "主键不能为空");
+            return ResultData.failure(REQUEST_PARAM_ERROR, "主键不能为空");
         }
         return ResultData.success(unifiedPatchService.removePatch(id));
     }
@@ -76,7 +78,7 @@ public class UnifiedPatchController {
     @ResponseBody
     public ResultData<Boolean> save(@Valid @RequestBody UnifiedPatch t, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ResultData.failure(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
         return ResultData.success(unifiedPatchService.saveOrUpdate(t));
     }
@@ -91,11 +93,11 @@ public class UnifiedPatchController {
     @ResponseBody
     public ReturnResult<ErrorResult> upload(@RequestBody UnifiedPatch t){
         if(CollectionUtils.isEmpty(t.getExecutorIds())) {
-            return ReturnResult.failure(PARAM_ERROR, "请选择执行器");
+            return ReturnResult.failure(REQUEST_PARAM_ERROR, "请选择执行器");
         }
 
         if(null == t.getUnifiedPatchId()) {
-            return ReturnResult.failure(PARAM_ERROR, "补丁编号不能为空");
+            return ReturnResult.failure(REQUEST_PARAM_ERROR, "补丁编号不能为空");
         }
         return ReturnResult.success(unifiedPatchService.upload(t));
     }
@@ -109,11 +111,11 @@ public class UnifiedPatchController {
     @ResponseBody
     public ReturnResult<ErrorResult> loadPatch(UnifiedPatch t, @RequestParam("file") MultipartFile multipartFile){
         if(null == multipartFile) {
-            return ReturnResult.failure(PARAM_ERROR, "补丁不能为空");
+            return ReturnResult.failure(REQUEST_PARAM_ERROR, "补丁不能为空");
         }
 
         if(null == t.getUnifiedPatchId()) {
-            return ReturnResult.failure(PARAM_ERROR, "补丁编号不能为空");
+            return ReturnResult.failure(REQUEST_PARAM_ERROR, "补丁编号不能为空");
         }
         return ReturnResult.success(unifiedPatchService.uploadPatch(t, multipartFile));
     }
@@ -128,7 +130,7 @@ public class UnifiedPatchController {
     public ResultData<Boolean> unloadPatch(@RequestBody UnifiedPatch t ) {
 
         if(null == t.getUnifiedPatchId()) {
-            return ResultData.failure(PARAM_ERROR, "补丁编号不能为空");
+            return ResultData.failure(REQUEST_PARAM_ERROR, "补丁编号不能为空");
         }
         return ResultData.success(unifiedPatchService.unloadPatch(t));
     }

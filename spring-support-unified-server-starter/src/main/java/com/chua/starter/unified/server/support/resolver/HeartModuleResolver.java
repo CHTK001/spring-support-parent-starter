@@ -7,6 +7,7 @@ import com.chua.common.support.protocol.boot.CommandType;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.unified.server.support.properties.UnifiedServerProperties;
 import com.chua.starter.unified.server.support.service.UnifiedExecuterItemService;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.Resource;
 
@@ -18,6 +19,7 @@ import static com.chua.common.support.lang.code.ReturnCode.OK;
  * @author CH
  */
 @Spi("HEART")
+@Slf4j
 public class HeartModuleResolver implements ModuleResolver{
 
     @Resource

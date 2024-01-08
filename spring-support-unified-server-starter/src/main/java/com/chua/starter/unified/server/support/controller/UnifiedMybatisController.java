@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 import java.util.Date;
 
-import static com.chua.common.support.lang.code.ReturnCode.PARAM_ERROR;
+import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
 
 /**
  * 配置中心接口
@@ -41,7 +41,7 @@ public class UnifiedMybatisController {
     @GetMapping("page")
     public ReturnPageResult<Page<UnifiedMybatis>> page(DelegatePage<UnifiedMybatis> page, @Valid UnifiedMybatis entity, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ReturnPageResult.illegal(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnPageResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
         return ReturnPageResult.ok(unifiedMybatisService.page(page.createPage(), Wrappers.<UnifiedMybatis>lambdaQuery()
                 .eq(StringUtils.isNotBlank(entity.getUnifiedMybatisProfile()), UnifiedMybatis::getUnifiedMybatisProfile, entity.getUnifiedMybatisProfile())
@@ -57,7 +57,7 @@ public class UnifiedMybatisController {
     @DeleteMapping("delete")
     public ResultData<Boolean> delete(String id) {
         if (null == id) {
-            return ResultData.failure(PARAM_ERROR, "主键不能为空");
+            return ResultData.failure(REQUEST_PARAM_ERROR, "主键不能为空");
         }
         return ResultData.success(unifiedMybatisService.removeBatchByIds(Splitter.on(",").trimResults().omitEmptyStrings().splitToSet(id)));
     }
@@ -71,7 +71,7 @@ public class UnifiedMybatisController {
     @PostMapping("update")
     public ReturnResult<Boolean> updateById(@Valid @RequestBody UnifiedMybatis t, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ReturnResult.illegal(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
         t.setUpdateTime(new Date());
         boolean b = unifiedMybatisService.updateById(t);
@@ -90,7 +90,7 @@ public class UnifiedMybatisController {
     @PostMapping("save")
     public ResultData<Boolean> save(@Valid @RequestBody UnifiedMybatis t, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ResultData.failure(PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ResultData.failure(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
 
         unifiedMybatisService.saveOrUpdate(t);
@@ -106,11 +106,11 @@ public class UnifiedMybatisController {
     @GetMapping("notify")
     public ResultData<Boolean> notify(String id) {
         if (null == id) {
-            return ResultData.failure(PARAM_ERROR, "主键不能为空");
+            return ResultData.failure(REQUEST_PARAM_ERROR, "主键不能为空");
         }
         UnifiedMybatis unifiedMybatis = unifiedMybatisService.getById(id);
         if (null == unifiedMybatis) {
-            return ResultData.failure(PARAM_ERROR, "信息不存在");
+            return ResultData.failure(REQUEST_PARAM_ERROR, "信息不存在");
         }
 
         unifiedMybatisService.notifyConfig(unifiedMybatis);

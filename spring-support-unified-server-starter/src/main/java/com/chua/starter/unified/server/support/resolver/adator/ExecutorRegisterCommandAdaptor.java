@@ -8,6 +8,7 @@ import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.unified.server.support.properties.UnifiedServerProperties;
 import com.chua.starter.unified.server.support.service.UnifiedExecuterService;
 import com.chua.starter.unified.server.support.service.UnifiedLogService;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.Resource;
 
@@ -17,6 +18,7 @@ import static com.chua.common.support.protocol.boot.CommandType.RESPONSE;
  * @author CH
  */
 @Spi("register")
+@Slf4j
 public class ExecutorRegisterCommandAdaptor implements ExecutorCommandAdaptor{
 
     @Resource
