@@ -25,7 +25,6 @@
         <module>spring-support-redis-starter</module>
         <module>spring-support-swagger-starter</module>
         <module>spring-support-mail-starter</module>
-        <module>spring-support-oss-starter</module>
         <module>spring-support-mqtt-starter</module>
         <module>spring-support-minio-starter</module>
         <module>spring-support-socketio-starter</module>
@@ -40,7 +39,6 @@
         <module>spring-support-device-starter</module>
         <module>spring-support-unified-client-starter</module>
         <module>spring-support-unified-server-starter</module>
-        <module>spring-support-gateway-server-starter</module>
         <!--        <module>spring-support-proxy-starter</module>-->
     </modules>
 
