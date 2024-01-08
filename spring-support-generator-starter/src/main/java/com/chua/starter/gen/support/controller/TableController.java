@@ -32,6 +32,7 @@ import com.chua.starter.mybatis.utils.PageResultUtils;
 import com.chua.starter.sse.support.Emitter;
 import com.chua.starter.sse.support.SseTemplate;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,6 +54,7 @@ import java.util.stream.Collectors;
  * @author CH
  */
 @RestController
+@Slf4j
 @RequestMapping("v1/table")
 public class TableController {
     @Resource

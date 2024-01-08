@@ -20,6 +20,7 @@ import com.chua.starter.gen.support.service.SysGenService;
 import com.chua.starter.gen.support.vo.DataSourceResult;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -38,6 +39,7 @@ import java.util.Map;
  */
 @RestController
 @SuppressWarnings("ALL")
+@Slf4j
 @RequestMapping("v1/db")
 public class DatabaseController {
 

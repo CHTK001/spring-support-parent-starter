@@ -27,6 +27,7 @@ import com.chua.starter.gen.support.properties.GenProperties;
 import com.chua.starter.gen.support.query.TableQuery;
 import com.chua.starter.gen.support.service.SysGenRemarkService;
 import com.chua.starter.gen.support.service.SysGenService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -46,6 +47,7 @@ import static com.chua.common.support.constant.NameConstant.SYMBOL_EXCEPTION;
  * @author CH
  */
 @RestController
+@Slf4j
 @RequestMapping("v1/session")
 public class SessionController {
 
