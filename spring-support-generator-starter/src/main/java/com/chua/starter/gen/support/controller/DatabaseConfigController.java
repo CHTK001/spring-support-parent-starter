@@ -15,6 +15,7 @@ import com.chua.starter.gen.support.properties.GenProperties;
 import com.chua.starter.gen.support.service.SysGenConfigService;
 import com.chua.starter.gen.support.vo.DataSourceResult;
 import com.chua.starter.mybatis.utils.PageResultUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -33,6 +34,7 @@ import java.util.List;
  */
 @RestController
 @SuppressWarnings("ALL")
+@Slf4j
 @RequestMapping("v1/dbc")
 public class DatabaseConfigController {
 
