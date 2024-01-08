@@ -1,5 +1,6 @@
 package com.chua.starter.rpc.support.filter;
 
+import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.rpc.support.constant.Constant;
 import com.chua.starter.rpc.support.properties.RpcProperties;
 import com.google.common.base.Strings;
@@ -8,6 +9,7 @@ import org.apache.dubbo.common.constants.CommonConstants;
 import org.apache.dubbo.common.extension.Activate;
 import org.apache.dubbo.rpc.*;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.bind.Binder;
 
 /**
  * 权限检验
@@ -19,7 +21,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 @ConditionalOnProperty(prefix = "plugin.rpc", name = "impl", havingValue = "dubbo", matchIfMissing = false)
 public class AuthConsumerAuthFilter implements Filter, Constant {
 
-    private final RpcProperties rpcProperties = SpringBeanUtils.bindOrCreate(RpcProperties.PRE, RpcProperties.class);
+    private final RpcProperties rpcProperties = Binder.get(SpringBeanUtils.getEnvironment()).bindOrCreate(RpcProperties.PRE, RpcProperties.class);
 
     @Override
     public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException {

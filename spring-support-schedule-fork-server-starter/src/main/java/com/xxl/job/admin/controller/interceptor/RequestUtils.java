@@ -21,7 +21,7 @@ public class RequestUtils {
         try {
             inet = InetAddress.getLocalHost();
         } catch (Exception e) {
-            log.error("", e);
+          e.printStackTrace();
         }
         LOCAL = inet.getHostAddress();
     }
