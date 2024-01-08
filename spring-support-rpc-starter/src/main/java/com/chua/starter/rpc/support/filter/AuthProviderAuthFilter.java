@@ -1,6 +1,7 @@
 package com.chua.starter.rpc.support.filter;
 
 import com.chua.rpc.support.annotation.RpcSecret;
+import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.rpc.support.constant.Constant;
 import com.chua.starter.rpc.support.properties.RpcProperties;
 import com.chua.starter.rpc.support.secret.SecretResolver;
@@ -11,6 +12,7 @@ import org.apache.dubbo.common.constants.CommonConstants;
 import org.apache.dubbo.common.extension.Activate;
 import org.apache.dubbo.rpc.*;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.util.ClassUtils;
 
@@ -33,7 +35,7 @@ public class AuthProviderAuthFilter implements Filter, Constant {
 
     @Override
     public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
-        RpcProperties rpcProperties = SpringBeanUtils.bindOrCreate(RpcProperties.PRE, RpcProperties.class);
+        RpcProperties rpcProperties = Binder.get(SpringBeanUtils.getEnvironment()).bindOrCreate(RpcProperties.PRE, RpcProperties.class);
 
         RpcContext context = RpcContext.getContext();
         String serviceKey = context.getAttachment(SERVICE_KEY);
