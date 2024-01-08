@@ -19,7 +19,6 @@
         <module>spring-support-datasource-starter</module>
         <module>spring-support-common-starter</module>
         <module>spring-support-mybatis-starter</module>
-        <module>spring-support-script-starter</module>
         <module>spring-support-shell-starter</module>
         <module>spring-support-oauth-client-starter</module>
         <module>spring-support-oauth-server-starter</module>
