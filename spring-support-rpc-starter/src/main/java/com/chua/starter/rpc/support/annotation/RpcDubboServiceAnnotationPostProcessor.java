@@ -2,6 +2,7 @@ package com.chua.starter.rpc.support.annotation;
 
 import com.alibaba.spring.util.AnnotationUtils;
 import com.chua.rpc.support.annotation.RpcExport;
+import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.rpc.support.properties.RpcProperties;
 import org.apache.dubbo.common.logger.Logger;
 import org.apache.dubbo.common.logger.LoggerFactory;
@@ -29,6 +30,7 @@ import org.springframework.beans.factory.config.SingletonBeanRegistry;
 import org.springframework.beans.factory.support.*;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.EnvironmentAware;
@@ -96,7 +98,7 @@ public class RpcDubboServiceAnnotationPostProcessor implements BeanDefinitionReg
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        RpcProperties remoteProperties = SpringBeanUtils.bindOrCreate(RpcProperties.PRE, RpcProperties.class);
+        RpcProperties remoteProperties = Binder.get(SpringBeanUtils.getEnvironment()).bindOrCreate(RpcProperties.PRE, RpcProperties.class);
         if (null == remoteProperties || CollectionUtils.isEmpty(remoteProperties.getScan())) {
             packagesToScan = Collections.singleton(applicationContext.getBeansWithAnnotation(SpringBootApplication.class).values().iterator().next().getClass().getPackage().getName());
         } else {

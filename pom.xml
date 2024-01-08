@@ -305,12 +305,6 @@
 
             <dependency>
                 <groupId>com.chua</groupId>
-                <artifactId>spring-support-schedule-client-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.chua</groupId>
                 <artifactId>spring-support-common-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
@@ -323,12 +317,6 @@
 
             <dependency>
                 <groupId>com.chua</groupId>
-                <artifactId>spring-support-schedule-server-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.chua</groupId>
                 <artifactId>spring-support-datasource-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
@@ -336,12 +324,6 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-mybatis-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-script-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
 
@@ -402,15 +384,16 @@
 
             <dependency>
                 <groupId>com.chua</groupId>
-                <artifactId>spring-support-minio-starter</artifactId>
+                <artifactId>utils-support-spring-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>com.chua</groupId>
-                <artifactId>spring-support-task-starter</artifactId>
+                <artifactId>spring-support-minio-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
+
 
             <dependency>
                 <groupId>com.chua</groupId>
@@ -570,22 +553,6 @@
 
 
             <dependency>
-                <groupId>com.alibaba</groupId>
-                <artifactId>dubbo</artifactId>
-                <version>${alibaba.dubbo.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>commons-logging</groupId>
-                        <artifactId>commons-logging</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.springframework</groupId>
-                        <artifactId>spring</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-
-            <dependency>
                 <groupId>com.lmax</groupId>
                 <artifactId>disruptor</artifactId>
                 <version>${disruptor.version}</version>
@@ -691,12 +658,6 @@
                 <groupId>io.springfox</groupId>
                 <artifactId>springfox-swagger-ui</artifactId>
                 <version>${swagger.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.tencent.tars</groupId>
-                <artifactId>tars-spring-boot-starter</artifactId>
-                <version>${tars.version}</version>
             </dependency>
 
             <dependency>
@@ -824,12 +785,6 @@
             </dependency>
 
             <dependency>
-                <artifactId>grpc-okhttp</artifactId>
-                <groupId>io.grpc</groupId>
-                <version>${grpc.version}</version>
-            </dependency>
-
-            <dependency>
                 <groupId>com.google.protobuf</groupId>
                 <artifactId>protobuf-java</artifactId>
                 <version>${protobuf-java.version}</version>
@@ -845,12 +800,6 @@
                 <groupId>com.netflix.eureka</groupId>
                 <artifactId>eureka-client</artifactId>
                 <version>${eureka.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.kubernetes</groupId>
-                <artifactId>client-java-spring-integration</artifactId>
-                <version>${k8s-client.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
