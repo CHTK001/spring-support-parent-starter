@@ -48,8 +48,7 @@ public class DeviceMeteorologicalStationServiceImpl implements DeviceMeteorologi
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        influxClient = (InfluxClient) Client
-                .newProvider("influx", BeanUtils.copyProperties(influxProperties, ClientOption.class));
+        influxClient = (InfluxClient) Client.newProvider("influx", BeanUtils.copyProperties(influxProperties, ClientOption.class));
         influxClient.connect(influxProperties.getUrl());
         this.operateClient = influxClient.createClient();
         try {
