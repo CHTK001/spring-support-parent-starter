@@ -3,6 +3,7 @@ package com.chua.starter.mqtt.support.template;
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.utils.IdUtils;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.mqtt.support.annotation.Mqtt;
 import com.chua.starter.mqtt.support.callback.DelegateCallback;
 import com.chua.starter.mqtt.support.properties.MqttProperties;
