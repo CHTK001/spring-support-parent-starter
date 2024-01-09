@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerIntercept
 import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.mybatis.endpoint.MybatisEndpoint;
+import com.chua.starter.mybatis.interceptor.MybatisPlusPermissionHandler;
 import com.chua.starter.mybatis.interceptor.MybatisPlusPermissionInterceptor;
 import com.chua.starter.mybatis.interceptor.SqlInterceptor;
 import com.chua.starter.mybatis.method.SupportInjector;
@@ -80,7 +81,7 @@ public class MybatisPlusConfiguration {
     @ConditionalOnMissingBean
     public MybatisPlusPermissionInterceptor dataPermissionInterceptor(@Autowired(required = false) DataPermissionHandler dataPermissionHandler) {
         if(null == dataPermissionHandler) {
-            dataPermissionHandler = new EmptyDataPermissionHandler();
+            dataPermissionHandler = new MybatisPlusPermissionHandler();
         }
         return new MybatisPlusPermissionInterceptor(dataPermissionHandler);
     }
