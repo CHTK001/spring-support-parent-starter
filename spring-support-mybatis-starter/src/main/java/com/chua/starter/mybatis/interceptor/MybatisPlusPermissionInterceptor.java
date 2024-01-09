@@ -2,7 +2,9 @@ package com.chua.starter.mybatis.interceptor;
 
 import com.baomidou.mybatisplus.core.toolkit.PluginUtils;
 import com.baomidou.mybatisplus.extension.parser.JsqlParserSupport;
+import com.baomidou.mybatisplus.extension.plugins.handler.DataPermissionHandler;
 import com.baomidou.mybatisplus.extension.plugins.inner.InnerInterceptor;
+import com.chua.starter.mybatis.EmptyDataPermissionHandler;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -34,13 +36,17 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = true)
 public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implements InnerInterceptor {
 
-    private MybatisPlusPermissionHandler mybatisPlusPermissionHandler = new MybatisPlusPermissionHandler();
+    private DataPermissionHandler mybatisPlusPermissionHandler;
+
+    public MybatisPlusPermissionInterceptor(DataPermissionHandler mybatisPlusPermissionHandler) {
+        this.mybatisPlusPermissionHandler = mybatisPlusPermissionHandler;
+    }
 
     /**
      * 主要处理查询
      */
     @Override
-    public void beforeQuery(Executor executor, MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) throws SQLException {
+    public void beforeQuery(Executor executor, MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
         // 通过MP插件拿到即将执行的SQL
         PluginUtils.MPBoundSql mp = PluginUtils.mpBoundSql(boundSql);
         // parserSingle方法是JsqlParserSupport父类实现的方法，这里会根据执行的SQL是查询、新增、修改、删除来调用不同的方法，例如：如果是查询，就会调用当前类的processSelect方法
