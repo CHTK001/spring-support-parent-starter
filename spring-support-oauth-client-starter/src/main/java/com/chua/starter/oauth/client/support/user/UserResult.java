@@ -47,14 +47,20 @@ public class UserResult {
      * 角色
      */
     private Set<String> roles;
+
     /**
-     * 权限
+     * 部门id
+     */
+    private String deptId;
+    /**
+     * 权限(按钮)
      */
     private Set<String> permission;
+
     /**
-     * 数据权限
+     * 数据权限(部门)
      */
-    private String dataPermission;
+    private DataFilterTypeEnum dataPermission;
     /**
      * 数据权限规则
      */
@@ -167,12 +173,4 @@ public class UserResult {
         return MapUtils.getString(ext, key);
     }
 
-    public DataFilterTypeEnum getDataPermissionEnum() {
-        for (DataFilterTypeEnum value : DataFilterTypeEnum.values()) {
-            if (value.getCode().equalsIgnoreCase(getDataPermission())) {
-                return value;
-            }
-        }
-        return null;
-    }
 }

@@ -31,7 +31,6 @@ import java.util.List;
  * @author CH
  * @since 2022/7/23 8:51
  */
-@Import({PermissionAspect.class, Permission2Aspect.class})
 @EnableConfigurationProperties({AuthClientProperties.class})
 public class AuthClientConfiguration implements ApplicationContextAware, BeanDefinitionRegistryPostProcessor, WebMvcConfigurer {
 

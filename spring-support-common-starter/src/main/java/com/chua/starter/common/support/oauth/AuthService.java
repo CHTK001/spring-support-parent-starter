@@ -1,4 +1,4 @@
-package com.chua.starter.mybatis.oauth;
+package com.chua.starter.common.support.oauth;
 
 /**
  * 权限服务
