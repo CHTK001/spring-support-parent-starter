@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.properties;
 
+import com.chua.common.support.datasource.enums.ActionType;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -28,4 +29,9 @@ public class CreateTableProperties {
      * 包装
      */
     private String[] packages;
+
+    /**
+     * 类型
+     */
+    private ActionType type = ActionType.UPDATE;
 }
