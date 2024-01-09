@@ -1,7 +1,6 @@
 package com.chua.starter.oauth.server.support.configuration;
 
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.starter.common.support.converter.FastJsonHttpMessageConverter;
 import com.chua.starter.common.support.utils.BeanDefinitionRegistryUtils;
 import com.chua.starter.oauth.server.support.check.LoginCheck;
 import com.chua.starter.oauth.server.support.processor.ResponseAdviceMethodProcessor;
