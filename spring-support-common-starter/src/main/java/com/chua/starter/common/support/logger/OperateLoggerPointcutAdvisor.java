@@ -21,9 +21,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
-import java.util.Date;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 import static com.chua.common.support.constant.NameConstant.*;
 
@@ -104,7 +102,20 @@ public class OperateLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdv
         sysLoggerInfo.setClientIp(RequestUtils.getIpAddress(request));
 
         if(operateLog.logArgs()) {
-            String json = Json.toPrettyFormat(invocation.getArguments());
+            List<Object> params = new LinkedList<>();
+            for (Object argument : invocation.getArguments()) {
+                if(null == argument) {
+                    continue;
+                }
+                Class<?> aClass = argument.getClass();
+                String typeName = aClass.getTypeName();
+                if(typeName.startsWith("org.spring") || typeName.startsWith("javax") || typeName.startsWith("java")) {
+                    continue;
+                }
+
+                params.add(argument);
+            }
+            String json = Json.prettyFormat(params);
             if(json.length() < 1000) {
                 sysLoggerInfo.setLogParam(json);
             }
