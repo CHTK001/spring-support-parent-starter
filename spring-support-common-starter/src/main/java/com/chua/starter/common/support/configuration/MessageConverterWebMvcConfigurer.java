@@ -83,7 +83,8 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
                     JSONReader.Feature.SupportArrayToBean,
                     JSONReader.Feature.IgnoreAutoTypeNotMatch,
                     JSONReader.Feature.IgnoreNullPropertyValue,
-                    JSONReader.Feature.ErrorOnUnknownProperties
+                    JSONReader.Feature.IgnoreSetNullValue,
+                    JSONReader.Feature.IgnoreNoneSerializable
             );
         } else {
             fastJsonConfig.setReaderFeatures(readerFeatures);
