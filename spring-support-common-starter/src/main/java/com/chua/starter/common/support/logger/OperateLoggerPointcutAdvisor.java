@@ -99,7 +99,7 @@ public class OperateLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdv
         sysLoggerInfo.setCreateBy(RequestUtils.getUsername());
         sysLoggerInfo.setCreateTime(new Date());
         sysLoggerInfo.setLogName(name);
-        sysLoggerInfo.setLogModule(Optional.ofNullable(operateLog.module()).orElse(module));
+        sysLoggerInfo.setLogModule(StringUtils.defaultString(operateLog.module(), module));
         sysLoggerInfo.setLogCost((System.currentTimeMillis() - startTime) / 1000D);
         sysLoggerInfo.setClientIp(RequestUtils.getIpAddress(request));
 
