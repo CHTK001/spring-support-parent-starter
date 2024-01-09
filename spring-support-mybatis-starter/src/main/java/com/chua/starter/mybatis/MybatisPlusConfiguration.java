@@ -79,7 +79,8 @@ public class MybatisPlusConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    public MybatisPlusPermissionInterceptor dataPermissionInterceptor(@Autowired(required = false) DataPermissionHandler dataPermissionHandler) {
+    public MybatisPlusPermissionInterceptor dataPermissionInterceptor(
+            @Autowired(required = false) DataPermissionHandler dataPermissionHandler) {
         if(null == dataPermissionHandler) {
             dataPermissionHandler = new MybatisPlusPermissionHandler();
         }
@@ -107,7 +108,7 @@ public class MybatisPlusConfiguration {
     public MybatisPlusInterceptor mybatisPlusInterceptor(
             OptimisticLockerInnerInterceptor optimisticLockerInnerInterceptor,
             PaginationInnerInterceptor paginationInnerInterceptor,
-            DataPermissionInterceptor dataPermissionInterceptor
+            MybatisPlusPermissionInterceptor dataPermissionInterceptor
             ) {
         MybatisPlusInterceptor mybatisPlusInterceptor = new MybatisPlusInterceptor();
         mybatisPlusInterceptor.addInnerInterceptor(optimisticLockerInnerInterceptor);
