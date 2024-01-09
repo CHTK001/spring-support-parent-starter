@@ -10,6 +10,11 @@ import org.springframework.aop.support.StaticMethodMatcherPointcutAdvisor;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.expression.EvaluationContext;
+import org.springframework.expression.Expression;
+import org.springframework.expression.ExpressionParser;
+import org.springframework.expression.spel.standard.SpelExpressionParser;
+import org.springframework.expression.spel.support.StandardEvaluationContext;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -122,10 +127,30 @@ public class OperateLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdv
             }
         }
 
+        String content = operateLog.content();
         sysLoggerInfo.setLogStatus(null == throwable ? 1 : 0);
         sysLoggerInfo.setLogMapping(RequestUtils.getUrl(request));
         sysLoggerInfo.setLogCode(IdUtils.createUlid());
+        sysLoggerInfo.setLogContent(getContent(content, invocation, proceed));
         applicationContext.publishEvent(sysLoggerInfo);
+    }
+
+    private String getContent(String content, MethodInvocation invocation, Object proceed) {
+        ExpressionParser expressionParser = new SpelExpressionParser();
+        EvaluationContext evaluationContext = new StandardEvaluationContext();
+
+        Method method = invocation.getMethod();
+        Object[] arguments = invocation.getArguments();
+        for (int i = 0; i < arguments.length; i++) {
+            Object argument = arguments[i];
+            evaluationContext.setVariable("$arg" + i, argument);
+        }
+
+        evaluationContext.setVariable("$method", method);
+        evaluationContext.setVariable("$result", proceed);
+
+        Expression expression = expressionParser.parseExpression(content);
+        return Optional.ofNullable( expression.getValue(evaluationContext)).orElse(content).toString();
     }
 
     protected String getModule(Method method) {
