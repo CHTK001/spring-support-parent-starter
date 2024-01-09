@@ -36,7 +36,7 @@ public class XmlAdviceResolver implements AdviceResolver {
                      Collections.emptyList(),
                      writer, WriterOption.newDefault()
              );) {
-            xmlFileWriter.writeJson(Json.getJsonObject(Json.toJson(ReturnResult.newBuilder().code(ResultCode.transferForHttpCodeStatus(status))));
+            xmlFileWriter.writeJson(Json.getJsonObject(Json.toJson(ReturnResult.newBuilder().code(ResultCode.transferForHttpCodeStatus(status)))));
         } catch (Exception e) {
             log.error("", e);
         }
