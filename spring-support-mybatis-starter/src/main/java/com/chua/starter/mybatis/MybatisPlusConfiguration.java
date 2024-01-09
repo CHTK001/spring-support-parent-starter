@@ -37,7 +37,7 @@ import java.util.List;
 @AutoConfigureAfter(SqlSessionFactory.class)
 @EnableConfigurationProperties(MybatisProperties.class)
 @AutoConfigureOrder(Ordered.LOWEST_PRECEDENCE + 10)
-public class MybatisConfiguration {
+public class MybatisPlusConfiguration {
 
     /**
      * SupportInjector
