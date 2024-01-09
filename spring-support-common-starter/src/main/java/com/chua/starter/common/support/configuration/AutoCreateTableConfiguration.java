@@ -22,6 +22,7 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 import javax.sql.DataSource;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Map;
 
 /**
@@ -44,6 +45,8 @@ public class AutoCreateTableConfiguration implements ApplicationContextAware {
         if(!createTableProperties.isEnable() || ArrayUtils.isEmpty(createTableProperties.getPackages())) {
             return;
         }
+
+        log.info(">>>>>>> 开启自动建表功能[{}]", Arrays.toString(createTableProperties.getPackages()));
         this.dataSources = applicationContext.getBeansOfType(DataSource.class);
         Engine engine = new DefaultEngine();
         engine.register(new JdbcDriver());

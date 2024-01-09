@@ -4,13 +4,13 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * 限流
+ * 日志
  *
  * @author CH
  */
 @Data
-@ConfigurationProperties(prefix = "plugin.limit", ignoreInvalidFields = true)
-public class LimitProperties {
+@ConfigurationProperties(prefix = "plugin.log", ignoreInvalidFields = true)
+public class LogProperties {
 
     /**
      * 开启限流
