@@ -7,6 +7,9 @@ import com.baomidou.mybatisplus.extension.plugins.inner.DataPermissionIntercepto
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.mybatis.endpoint.MybatisEndpoint;
 import com.chua.starter.mybatis.interceptor.CustomDataPermissionInterceptor;
 import com.chua.starter.mybatis.interceptor.SqlInterceptor;
@@ -121,7 +124,12 @@ public class MybatisPlusConfiguration {
         mybatisPlusInterceptor.addInnerInterceptor(new TenantLineInnerInterceptor(new TenantLineHandler() {
             @Override
             public Expression getTenantId() {
-                return new LongValue(1);
+                Long tenantId = RequestUtils.getTenantId();
+                if(null == tenantId) {
+                    return new LongValue(0);
+                }
+
+                return new LongValue(tenantId);
             }
 
             @Override
