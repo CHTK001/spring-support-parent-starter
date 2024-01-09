@@ -18,13 +18,13 @@ public @interface OperateLog {
     // ========== 模块字段 ==========
 
     /**
-     * 操作模块
+     * 操作模块(e.g.修改, 删除, 更新)
      *
      * 为空时，会尝试读取 {swagger name()} 属性
      */
     String module() default "";
     /**
-     * 操作名
+     * 操作名(xxx查询了)
      *
      * 为空时，会尝试读取 {swagger  summary()} 属性
      */
