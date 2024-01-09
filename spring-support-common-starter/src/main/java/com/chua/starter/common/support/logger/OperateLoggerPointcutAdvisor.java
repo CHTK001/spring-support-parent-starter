@@ -1,13 +1,17 @@
 package com.chua.starter.common.support.logger;
 
 import com.chua.common.support.json.Json;
-import com.chua.common.support.utils.*;
+import com.chua.common.support.utils.AnnotationUtils;
+import com.chua.common.support.utils.ClassUtils;
+import com.chua.common.support.utils.MapUtils;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.annotations.OperateLog;
 import com.chua.starter.common.support.utils.RequestUtils;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.aop.support.StaticMethodMatcherPointcutAdvisor;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Lazy;
 
 import javax.annotation.Nonnull;
@@ -20,7 +24,6 @@ import java.lang.reflect.Method;
 import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ExecutorService;
 
 import static com.chua.common.support.constant.NameConstant.*;
 
@@ -37,7 +40,9 @@ public class OperateLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdv
     @Resource
     HttpServletResponse response;
 
-    private static final ExecutorService EXECUTOR_SERVICE = ThreadUtils.newFixedThreadExecutor(100);
+    @Resource
+    private ApplicationContext applicationContext;
+
     private static final Class<? extends Annotation> OPERATION = (Class<? extends Annotation>) ClassUtils.forName("io.swagger.v3.oas.annotations.Operation");
     private static final Class<? extends Annotation> API_OPERATION = (Class<? extends Annotation>) ClassUtils.forName("io.swagger.annotations.ApiOperation");
 
@@ -107,6 +112,7 @@ public class OperateLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdv
 
         sysLoggerInfo.setLogStatus(null == throwable ? 1 : 0);
         sysLoggerInfo.setLogMapping(RequestUtils.getUrl(request));
+        applicationContext.publishEvent(sysLoggerInfo);
     }
 
     protected String getModule(Method method) {
