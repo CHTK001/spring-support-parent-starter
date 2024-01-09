@@ -136,6 +136,9 @@ public class OperateLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdv
     }
 
     private String getContent(String content, MethodInvocation invocation, Object proceed) {
+        if(null == content) {
+            return EMPTY;
+        }
         ExpressionParser expressionParser = new SpelExpressionParser();
         EvaluationContext evaluationContext = new StandardEvaluationContext();
 
