@@ -23,7 +23,6 @@ import org.springframework.format.FormatterRegistry;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
-import org.springframework.http.converter.xml.MappingJackson2XmlHttpMessageConverter;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandler;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -82,6 +81,7 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
         if(CollectionUtils.isEmpty(readerFeatures)) {
             fastJsonConfig.setReaderFeatures(
                     JSONReader.Feature.SupportArrayToBean,
+                    JSONReader.Feature.IgnoreAutoTypeNotMatch,
                     JSONReader.Feature.IgnoreNullPropertyValue,
                     JSONReader.Feature.ErrorOnUnknownProperties
             );
