@@ -1,10 +1,7 @@
 package com.chua.starter.common.support.logger;
 
 import com.chua.common.support.json.Json;
-import com.chua.common.support.utils.AnnotationUtils;
-import com.chua.common.support.utils.ClassUtils;
-import com.chua.common.support.utils.MapUtils;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.*;
 import com.chua.starter.common.support.annotations.OperateLog;
 import com.chua.starter.common.support.utils.RequestUtils;
 import org.aopalliance.intercept.MethodInterceptor;
@@ -109,7 +106,7 @@ public class OperateLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdv
                 }
                 Class<?> aClass = argument.getClass();
                 String typeName = aClass.getTypeName();
-                if(typeName.startsWith("org.spring") || typeName.startsWith("javax") || typeName.startsWith("java")) {
+                if(HttpServletResponse.class.isAssignableFrom(aClass) || HttpServletRequest.class.isAssignableFrom(aClass) || typeName.startsWith("org.spring") || typeName.startsWith("javax") || typeName.startsWith("java")) {
                     continue;
                 }
 
@@ -127,6 +124,7 @@ public class OperateLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdv
 
         sysLoggerInfo.setLogStatus(null == throwable ? 1 : 0);
         sysLoggerInfo.setLogMapping(RequestUtils.getUrl(request));
+        sysLoggerInfo.setLogCode(IdUtils.createUlid());
         applicationContext.publishEvent(sysLoggerInfo);
     }
 
