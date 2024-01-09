@@ -30,11 +30,13 @@ public @interface OperateLog {
      */
     String name() default "";
     /**
-     * 操作分类
-     *
-     * 实际并不是数组，因为枚举不能设置 null 作为默认值
+     * 访问内容(支持spel)
+     * {username} 当前用户
+     * {$arg1...n} 入参
+     * {$method} 方法
+     * {$result} 返回值
      */
-    String[] type() default {};
+    String content() default "";
 
     // ========== 开关字段 ==========
 
