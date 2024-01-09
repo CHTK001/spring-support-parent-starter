@@ -22,7 +22,7 @@ import java.util.Set;
  *
  * @author CH
  */
-public class ConverterConfiguration {
+public class TypeConverterRegisterConfiguration {
 
     @Bean
     @ConditionalOnMissingBean

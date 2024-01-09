@@ -3,7 +3,7 @@ package com.chua.starter.common.support.properties;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import static com.chua.starter.common.support.properties.AsyncProperties.PRE;
+import static com.chua.starter.common.support.properties.AsyncThreadPoolProperties.PRE;
 
 /**
  * 线程池配置
@@ -11,7 +11,7 @@ import static com.chua.starter.common.support.properties.AsyncProperties.PRE;
  */
 @Data
 @ConfigurationProperties(prefix = PRE, ignoreInvalidFields = true)
-public class AsyncProperties {
+public class AsyncThreadPoolProperties {
 
     public static final String PRE = "plugin.thread";
     /**

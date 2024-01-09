@@ -3,6 +3,7 @@ package com.chua.starter.common.support.configuration;
 import com.chua.starter.common.support.filestorage.FileStorageLoggerService;
 import com.chua.starter.common.support.filestorage.FileStorageProperties;
 import com.chua.starter.common.support.filestorage.FileStorageProvider;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -13,6 +14,7 @@ import org.springframework.context.annotation.Bean;
  *
  * @author CH
  */
+@Slf4j
 @ConditionalOnProperty(prefix = FileStorageProperties.PRE, name = "enable", havingValue = "true")
 public class FileStoreConfiguration {
 
@@ -24,9 +26,9 @@ public class FileStoreConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    public FileStorageProvider fileStorageProvider(FileStorageProperties fileStorageProperties,
-                                                   @Autowired(required = false) FileStorageLoggerService fileStorageLoggerService) {
-        return new FileStorageProvider(fileStorageProperties, fileStorageLoggerService);
+    public FileStorageProvider fileStorageProvider() {
+        log.info(">>>>>>> 开启文件服务器[OSS]");
+        return new FileStorageProvider();
     }
 
 }

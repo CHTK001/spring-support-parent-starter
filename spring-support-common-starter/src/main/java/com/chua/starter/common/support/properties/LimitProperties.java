@@ -15,5 +15,5 @@ public class LimitProperties {
     /**
      * 开启限流
      */
-    private boolean openLimit = true;
+    private boolean enable = true;
 }

@@ -30,7 +30,7 @@ public class FileStorageProperties {
 
 
     /**
-     * 使可能
+     * 是否开启
      */
     private boolean enable;
 

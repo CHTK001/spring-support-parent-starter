@@ -118,7 +118,6 @@ public class EnableAuthServerConfiguration implements BeanDefinitionRegistryPost
         }
         this.messageConverters = new LinkedList<>();
         messageConverters.add(new MappingJackson2HttpMessageConverter());
-        messageConverters.add(new FastJsonHttpMessageConverter());
         messageConverters.add(new MappingJackson2XmlHttpMessageConverter());
         messageConverters.add(new StringHttpMessageConverter());
 
