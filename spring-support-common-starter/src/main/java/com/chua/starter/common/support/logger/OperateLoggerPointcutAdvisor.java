@@ -48,7 +48,7 @@ public class OperateLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdv
 
     @Override
     public boolean matches(Method method, Class<?> targetClass) {
-        return method.isAnnotationPresent(OperateLog.class) && method.isAnnotationPresent(LoggerIgnore.class);
+        return method.isAnnotationPresent(OperateLog.class) && !method.isAnnotationPresent(LoggerIgnore.class);
     }
 
     @Override
