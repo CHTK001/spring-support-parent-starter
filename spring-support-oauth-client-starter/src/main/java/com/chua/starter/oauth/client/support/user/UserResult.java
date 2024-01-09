@@ -38,6 +38,11 @@ public class UserResult {
      * 名称
      */
     private String username;
+
+    /**
+     * 租户id
+     */
+    private Long tenantId;
     /**
      * 角色
      */
