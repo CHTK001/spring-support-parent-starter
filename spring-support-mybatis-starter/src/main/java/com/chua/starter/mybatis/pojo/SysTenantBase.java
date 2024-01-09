@@ -16,6 +16,6 @@ public class SysTenantBase extends SysBase{
     /**
      * 多租户编号
      */
-    @Column(defaultValue = "0", comment = "租户ID")
+    @Column(defaultValue = "0", comment = "租户ID", refresh = true)
     private Long tenantId;
 }
