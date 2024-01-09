@@ -5,8 +5,6 @@ import com.chua.common.support.utils.ClassUtils;
 import com.chua.starter.common.support.annotations.EnumDescribe;
 import org.springframework.util.ReflectionUtils;
 
-import java.lang.reflect.Field;
-
 /**
  * 枚举转换后置处理滤器
  *
@@ -15,36 +13,31 @@ import java.lang.reflect.Field;
 public class EnumConvertAfterFilter extends AfterFilter {
     @Override
     public void writeAfter(Object object) {
-        if(null == object) {
+        if (null == object) {
             return;
         }
         Class<?> objectClass = object.getClass();
         ReflectionUtils.doWithFields(objectClass, field -> {
-
-        });
-            Field[] declaredFields = objectClass.getDeclaredFields();
-            for (Field field : declaredFields) {
-                EnumDescribe annotation = field.getAnnotation(EnumDescribe.class);
-                if (annotation == null) {
-                    return;
-                }
-                ClassUtils.setAccessible(field);
-                Object fieldValue = ClassUtils.getFieldValue(field, object);
-                if(null == fieldValue) {
-                    return;
-                }
-
-                Class<?> aClass = fieldValue.getClass();
-                Class<? extends Enum<?>> clazz = annotation.value();
-                Enum<?>[] enumConstants = clazz.getEnumConstants();
-                Object value = getFieldValue(aClass, fieldValue, enumConstants);
-                if(null == value) {
-                    return;
-                }
-                super.writeKeyValue(field.getName(), value);
+            EnumDescribe annotation = field.getAnnotation(EnumDescribe.class);
+            if (annotation == null) {
+                return;
             }
-        }
+            ClassUtils.setAccessible(field);
+            Object fieldValue = ClassUtils.getFieldValue(field, object);
+            if (null == fieldValue) {
+                return;
+            }
 
+            Class<?> aClass = fieldValue.getClass();
+            Class<? extends Enum<?>> clazz = annotation.value();
+            Enum<?>[] enumConstants = clazz.getEnumConstants();
+            Object value = getFieldValue(aClass, fieldValue, enumConstants);
+            if (null == value) {
+                return;
+            }
+            super.writeKeyValue(field.getName(), value);
+        });
+    }
     /**
      * 收到领域值
      *
