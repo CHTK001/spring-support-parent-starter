@@ -2,7 +2,10 @@ package com.chua.starter.common.support.configuration;
 
 import com.chua.starter.common.support.filter.ParameterLogFilter;
 import com.chua.starter.common.support.limit.LimitAspect;
-import com.chua.starter.common.support.properties.*;
+import com.chua.starter.common.support.logger.OperateLoggerPointcutAdvisor;
+import com.chua.starter.common.support.properties.LimitProperties;
+import com.chua.starter.common.support.properties.LogProperties;
+import com.chua.starter.common.support.properties.ParameterProperties;
 import com.chua.starter.common.support.result.ExceptionAdvice;
 import com.chua.starter.common.support.result.UniformResponseBodyAdvice;
 import com.chua.starter.common.support.watch.WatchPointcutAdvisor;
@@ -44,6 +47,8 @@ public class CommonConfiguration {
         return new UniformResponseBodyAdvice();
     }
 
+
+
     /**
      * 异常建议
      *
@@ -60,6 +65,12 @@ public class CommonConfiguration {
     @Lazy
     public RestTemplate restTemplate() {
         return new RestTemplate();
+    }
+    @Bean
+    @ConditionalOnMissingBean
+    @Lazy
+    public OperateLoggerPointcutAdvisor operateLoggerPointcutAdvisor() {
+        return new OperateLoggerPointcutAdvisor();
     }
 
     @Bean
