@@ -3,7 +3,6 @@ package com.chua.starter.mybatis;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.handler.DataPermissionHandler;
 import com.baomidou.mybatisplus.extension.plugins.handler.TenantLineHandler;
-import com.baomidou.mybatisplus.extension.plugins.inner.DataPermissionInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
@@ -158,7 +157,7 @@ public class MybatisPlusConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = MybatisPlusProperties.PRE, name = "print-sql", havingValue = "true", matchIfMissing = false)
+    @ConditionalOnProperty(prefix = MybatisPlusProperties.PRE, name = "open-sql", havingValue = "true", matchIfMissing = false)
     public SqlInterceptor sqlInterceptor() {
         return new SqlInterceptor();
     }
@@ -170,7 +169,7 @@ public class MybatisPlusConfiguration {
      */
     @Bean("mapper-reload")
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = MybatisPlusProperties.PRE, name = "xml-reload", havingValue = "true", matchIfMissing = false)
+    @ConditionalOnProperty(prefix = MybatisPlusProperties.PRE, name = "open-xml-reload", havingValue = "true", matchIfMissing = false)
     public Reload xmlReload(List<SqlSessionFactory> sqlSessionFactory, MybatisPlusProperties mybatisProperties) {
         return new MapperReload(sqlSessionFactory, mybatisProperties);
     }
