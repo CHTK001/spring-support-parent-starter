@@ -1,6 +1,8 @@
 package com.chua.starter.common.support.logger;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.context.ApplicationEvent;
 
 import java.util.Date;
 
@@ -9,8 +11,9 @@ import java.util.Date;
  *
  * @author CH
  */
-@Data
-public class SysLog {
+@Getter
+@Setter
+public class SysLoggerInfo extends ApplicationEvent {
     /**
      * 方法
      */
@@ -20,11 +23,7 @@ public class SysLog {
      */
     private Date createTime;
     /**
-     * 类
-     */
-    private String className;
-    /**
-     * 模块
+     * 操作名
      */
     private String logName;
     /**
@@ -66,13 +65,17 @@ public class SysLog {
     /**
      * 請求地址
      */
-    private String logAddress;
+    private String clientIp;
     /**
-     * 动作
+     * 操作模块
      */
-    private String logAction;
+    private String logModule;
     /**
-     * 状态
+     * 状态;0失败
      */
-    private String logStatus;
+    private Integer logStatus;
+
+    public SysLoggerInfo(Object source) {
+        super(source);
+    }
 }

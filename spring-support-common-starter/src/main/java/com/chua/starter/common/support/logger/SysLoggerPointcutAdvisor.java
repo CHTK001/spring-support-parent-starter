@@ -39,19 +39,19 @@ import java.util.concurrent.TimeUnit;
  * @author CH
  */
 @Lazy
-public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor implements InitializingBean {
+public class SysLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor implements InitializingBean {
 
     @Resource
     HttpServletRequest request;
     @Resource
     HttpServletResponse response;
-    private LoggerService loggerService;
+    private SysLoggerService loggerService;
     private ApplicationContext applicationContext;
 
     ExpressionParser expressionParser = new org.springframework.expression.spel.standard.SpelExpressionParser();
 
-    public LoggerPointcutAdvisor(LoggerService loggerService) {
-        this.loggerService = Optional.ofNullable(loggerService).orElse(DefaultLoggerService.getInstance());
+    public SysLoggerPointcutAdvisor(SysLoggerService loggerService) {
+        this.loggerService = Optional.ofNullable(loggerService).orElse(DefaultSysLoggerService.getInstance());
     }
 
     @Override
@@ -59,7 +59,7 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
         if (Proxy.isProxyClass(targetClass)) {
             return false;
         }
-        return AnnotatedElementUtils.hasAnnotation(method, Logger.class) && StringUtils.isNotEmpty(method.getDeclaredAnnotation(Logger.class).value());
+        return AnnotatedElementUtils.hasAnnotation(method, SysLogger.class) && StringUtils.isNotEmpty(method.getDeclaredAnnotation(SysLogger.class).value());
 
     }
 
@@ -114,7 +114,7 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
      * @param method 方法
      */
     protected String getAction(Method method) {
-        Logger logger = method.getDeclaredAnnotation(Logger.class);
+        SysLogger logger = method.getDeclaredAnnotation(SysLogger.class);
         return logger.action();
     }
 
@@ -124,7 +124,7 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
      * @param method 方法
      */
     protected String getName(Method method) {
-        Logger logger = method.getDeclaredAnnotation(Logger.class);
+        SysLogger logger = method.getDeclaredAnnotation(SysLogger.class);
         return logger.value();
     }
 
@@ -135,7 +135,7 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
      * @param method                    方法
      */
     protected String getContent(StandardEvaluationContext standardEvaluationContext, Method method) {
-        Logger logger = method.getDeclaredAnnotation(Logger.class);
+        SysLogger logger = method.getDeclaredAnnotation(SysLogger.class);
         try {//+ ' 账号在( '+ #ip + ' )'  + #args[0].username + '登录系统(状态: ' + #result['code'] + '  '   #result['msg'] + ') 登录方式('WEB' ) '
             return expressionParser.parseExpression(
                             logger.content(), new TemplateParserContext())
@@ -153,7 +153,7 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
      * @param status     方法是否异常
      * @param startTime  开始时间(ns)
      */
-    protected void saveLog(Object proceed, MethodInvocation invocation, int status, long startTime) {
+    public void saveLog(Object proceed, MethodInvocation invocation, int status, long startTime, HttpServletRequest request) {
         Method method = invocation.getMethod();
         String address = RequestUtils.getIpAddress(request);
         DateTime now = DateTime.now();
@@ -161,7 +161,7 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
         HttpSession session = request.getSession();
 
 
-        SysLog sysLog = new SysLog();
+        SysLoggerInfo sysLog = new SysLoggerInfo();
         StandardEvaluationContext standardEvaluationContext = new StandardEvaluationContext(applicationContext);
         standardEvaluationContext.addPropertyAccessor(new BeanFactoryAccessor());
         sysLog.setLogMapping(RequestUtils.getUrl(request));
@@ -176,7 +176,7 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
         sysLog.setLogName(getName(method));
         sysLog.setLogAction(getAction(method));
         sysLog.setLogParam(analysisParam(invocation));
-        sysLog.setLogAddress(address);
+        sysLog.setLogRequestAddress(address);
         if (StringUtils.isEmpty(sysLog.getLogName()) || StringUtils.isEmpty(sysLog.getLogAction())) {
             return;
         }
@@ -238,7 +238,7 @@ public class LoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor im
         return null;
     }
 
-    public void recordLog(SysLog sysLog,
+    public void recordLog(SysLoggerInfo sysLog,
                           Object proceed,
                           int status,
                           long startTime,
