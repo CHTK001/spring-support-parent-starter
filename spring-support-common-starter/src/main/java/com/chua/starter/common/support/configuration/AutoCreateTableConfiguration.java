@@ -7,6 +7,7 @@ import com.chua.common.support.datasource.enums.ActionType;
 import com.chua.common.support.datasource.executor.DdlExecutor;
 import com.chua.common.support.datasource.jdbc.JdbcEngineDataSource;
 import com.chua.common.support.utils.ArrayUtils;
+import com.chua.common.support.utils.FileUtils;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.common.support.properties.CreateTableProperties;
 import com.chua.starter.common.support.utils.BeanDefinitionUtils;
@@ -74,7 +75,8 @@ public class AutoCreateTableConfiguration implements ApplicationContextAware {
         for (String aPackage : packages) {
             Resource[] resources = new Resource[0];
             try {
-                resources = resourcePatternResolver.getResources(aPackage);
+                resources = resourcePatternResolver
+                        .getResources(FileUtils.normalize(aPackage.replace(".", "/") + "/**/*.class"));
             } catch (IOException ignored) {
             }
             register(resources);
