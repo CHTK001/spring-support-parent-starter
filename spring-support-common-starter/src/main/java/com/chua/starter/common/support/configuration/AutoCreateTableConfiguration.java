@@ -91,7 +91,7 @@ public class AutoCreateTableConfiguration implements ApplicationContextAware {
             try {
                 register(BeanDefinitionUtils.getType(resource));
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                continue;
             }
 
         }
@@ -103,6 +103,6 @@ public class AutoCreateTableConfiguration implements ApplicationContextAware {
      * @param type 类型
      */
     private void register(Class<?> type) {
-       ddlExecutor.execute(type, ActionType.UPDATE);
+       ddlExecutor.execute(type, createTableProperties.getType());
     }
 }
