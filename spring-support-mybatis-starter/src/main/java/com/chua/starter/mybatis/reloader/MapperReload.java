@@ -1,7 +1,7 @@
 package com.chua.starter.mybatis.reloader;
 
 import com.chua.common.support.utils.ClassUtils;
-import com.chua.starter.mybatis.properties.MybatisProperties;
+import com.chua.starter.mybatis.properties.MybatisPlusProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.monitor.FileAlterationListenerAdaptor;
 import org.apache.commons.io.monitor.FileAlterationMonitor;
@@ -39,11 +39,11 @@ public class MapperReload implements Reload, DisposableBean {
     final PathMatchingResourcePatternResolver patternResolver = new PathMatchingResourcePatternResolver();
     private final Map<String, Resource> fileResources = new LinkedHashMap<>();
     private final List<SqlSessionFactory> sqlSessionFactories;
-    private MybatisProperties mybatisProperties;
+    private MybatisPlusProperties mybatisProperties;
 
     private final Map<String, FileAlterationMonitor> monitorMap = new ConcurrentHashMap<>();
 
-    public MapperReload(List<SqlSessionFactory> sqlSessionFactories, MybatisProperties mybatisProperties) {
+    public MapperReload(List<SqlSessionFactory> sqlSessionFactories, MybatisPlusProperties mybatisProperties) {
         this.sqlSessionFactories = sqlSessionFactories;
         this.mybatisProperties = mybatisProperties;
     }
@@ -58,8 +58,8 @@ public class MapperReload implements Reload, DisposableBean {
             }
         }
 
-        MybatisProperties.ReloadType reloadType = mybatisProperties.getReloadType();
-        if (reloadType == MybatisProperties.ReloadType.AUTO) {
+        MybatisPlusProperties.ReloadType reloadType = mybatisProperties.getReloadType();
+        if (reloadType == MybatisPlusProperties.ReloadType.AUTO) {
             listener();
         }
     }

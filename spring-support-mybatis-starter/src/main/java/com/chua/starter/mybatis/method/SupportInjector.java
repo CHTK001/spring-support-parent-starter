@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.chua.starter.mybatis.marker.MapperSqlMethodMarker;
 import com.chua.starter.mybatis.marker.MysqlSqlMethodMarker;
 import com.chua.starter.mybatis.marker.SqlMethodMarker;
-import com.chua.starter.mybatis.properties.MybatisProperties;
+import com.chua.starter.mybatis.properties.MybatisPlusProperties;
 import org.springframework.beans.factory.DisposableBean;
 
 import java.util.ArrayList;
@@ -21,11 +21,11 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class SupportInjector extends DefaultSqlInjector implements DisposableBean {
 
-    private MybatisProperties mybatisProperties;
-    private final Map<MybatisProperties.SqlMethodProperties, SqlMethodMarker> cache = new ConcurrentHashMap<>();
-    private final Map<MybatisProperties.SqlMethodProperties, List<AbstractMethod>> cacheAbstractMethod = new ConcurrentHashMap<>();
+    private MybatisPlusProperties mybatisProperties;
+    private final Map<MybatisPlusProperties.SqlMethodProperties, SqlMethodMarker> cache = new ConcurrentHashMap<>();
+    private final Map<MybatisPlusProperties.SqlMethodProperties, List<AbstractMethod>> cacheAbstractMethod = new ConcurrentHashMap<>();
 
-    public SupportInjector(MybatisProperties mybatisProperties) {
+    public SupportInjector(MybatisPlusProperties mybatisProperties) {
         this.mybatisProperties = mybatisProperties;
     }
 
@@ -35,12 +35,12 @@ public class SupportInjector extends DefaultSqlInjector implements DisposableBea
 
         List<AbstractMethod> methodList = super.getMethodList(mapperClass, tableInfo);
         list.addAll(methodList);
-        List<MybatisProperties.SqlMethodProperties> sqlMethod = mybatisProperties.getSqlMethod();
+        List<MybatisPlusProperties.SqlMethodProperties> sqlMethod = mybatisProperties.getSqlMethod();
         if (null == sqlMethod) {
             return list;
         }
 
-        for (MybatisProperties.SqlMethodProperties sqlMethodProperties : sqlMethod) {
+        for (MybatisPlusProperties.SqlMethodProperties sqlMethodProperties : sqlMethod) {
             if (cache.containsKey(sqlMethodProperties)) {
                 List<AbstractMethod> abstractMethods = cacheAbstractMethod.get(sqlMethodProperties);
                 list.addAll(abstractMethods);
@@ -60,9 +60,9 @@ public class SupportInjector extends DefaultSqlInjector implements DisposableBea
         return list;
     }
 
-    private SqlMethodMarker getMarker(MybatisProperties.SqlMethodProperties sqlMethodProperties) {
-        MybatisProperties.SqlMethodType type = sqlMethodProperties.getType();
-        return type == MybatisProperties.SqlMethodType.FILE ?
+    private SqlMethodMarker getMarker(MybatisPlusProperties.SqlMethodProperties sqlMethodProperties) {
+        MybatisPlusProperties.SqlMethodType type = sqlMethodProperties.getType();
+        return type == MybatisPlusProperties.SqlMethodType.FILE ?
                 new MapperSqlMethodMarker(sqlMethodProperties.getTimeout(), sqlMethodProperties.isWatchdog()) :
                 new MysqlSqlMethodMarker(sqlMethodProperties.getTimeout(), sqlMethodProperties.isWatchdog());
     }

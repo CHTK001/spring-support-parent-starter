@@ -5,25 +5,42 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.List;
 
-import static com.chua.starter.mybatis.properties.MybatisProperties.PRE;
+import static com.chua.starter.mybatis.properties.MybatisPlusProperties.PRE;
 
 /**
  * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = PRE)
-public class MybatisProperties {
+public class MybatisPlusProperties {
 
 
     public static final String PRE = "plugin.mybatis";
     /**
      * 打印sql
      */
-    private boolean printSql = false;
+    private boolean openSql = true;
+
+    /**
+     * 开启租户
+     */
+    private boolean openTenant = false;
+
+    /**
+     * 租户字段
+     */
+    private String tenantColumn = "tenant_id";
+
+    /**
+     * false 表示所有表都需要拼多租户条件
+     * true 拼接{@link com.chua.starter.mybatis.pojo.SysTenantBase}
+     * @see com.chua.starter.mybatis.pojo.SysTenantBase
+     */
+    private boolean tenantTableIgnore = false;
     /**
      * xml是否可热加载
      */
-    private boolean xmlReload = false;
+    private boolean openXmlReload = false;
 
     /**
      * 可访问的IP
