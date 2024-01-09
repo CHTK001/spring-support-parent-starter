@@ -1,4 +1,4 @@
-package com.chua.starter.common.support.configuration;
+package com.chua.starter.common.support.configuration.environment;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.env.EnvironmentPostProcessor;
@@ -13,7 +13,7 @@ import java.util.Properties;
  *
  * @author CH
  */
-public class FreemarkerConfiguration implements EnvironmentPostProcessor {
+public class FreemarkerEnvironmentPostProcessor implements EnvironmentPostProcessor {
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         Properties properties = new Properties();
@@ -30,12 +30,7 @@ public class FreemarkerConfiguration implements EnvironmentPostProcessor {
         properties.setProperty("spring.mvc.pathmatch.matching-strategy", "ant_path_matcher");
         properties.setProperty("spring.resources.static-locations", "classpath:/static/,classpath:/webjar/");
         properties.setProperty("spring.mvc.static-path-pattern", "/static/**,/webjar/**");
-//        properties.setProperty("knife4j.production", "true");
-        properties.setProperty("knife4j.enable", "true");
-        properties.setProperty("knife4j.basic.enable", "true");
-        properties.setProperty("knife4j.basic.username", "root");
-        properties.setProperty("knife4j.basic.password", "123321");
-        PropertiesPropertySource propertiesPropertySource = new PropertiesPropertySource("freemarker,knife4j", properties);
+        PropertiesPropertySource propertiesPropertySource = new PropertiesPropertySource("knife4j", properties);
         MutablePropertySources propertySources = environment.getPropertySources();
         propertySources.addLast(propertiesPropertySource);
     }

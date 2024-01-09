@@ -23,7 +23,7 @@ import static com.chua.common.support.http.HttpConstant.HTTP_HEADER_CONTENT_TYPE
  * @author CH
  * @since 2023/09/08
  */
-public class ParamLogFilter implements Filter {
+public class ParameterLogFilter implements Filter {
 
     private static final Log log = Log.getLogger(Filter.class);
 

@@ -4,16 +4,14 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * 限流
- *
- * @author CH
+ * 统一参数
  */
 @Data
-@ConfigurationProperties(prefix = "plugin.limit", ignoreInvalidFields = true)
-public class LimitProperties {
+@ConfigurationProperties(prefix = "plugin.paramter", ignoreInvalidFields = true)
+public class ParameterProperties {
 
     /**
      * 开启限流
      */
-    private boolean enable = true;
+    private boolean enable;
 }
