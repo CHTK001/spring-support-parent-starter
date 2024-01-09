@@ -2,17 +2,21 @@ package com.chua.starter.mybatis;
 
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.handler.DataPermissionHandler;
+import com.baomidou.mybatisplus.extension.plugins.handler.TenantLineHandler;
 import com.baomidou.mybatisplus.extension.plugins.inner.DataPermissionInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
 import com.chua.starter.mybatis.endpoint.MybatisEndpoint;
 import com.chua.starter.mybatis.interceptor.CustomDataPermissionInterceptor;
 import com.chua.starter.mybatis.interceptor.SqlInterceptor;
 import com.chua.starter.mybatis.method.SupportInjector;
-import com.chua.starter.mybatis.properties.MybatisProperties;
+import com.chua.starter.mybatis.properties.MybatisPlusProperties;
 import com.chua.starter.mybatis.reloader.MapperReload;
 import com.chua.starter.mybatis.reloader.Reload;
 import lombok.extern.slf4j.Slf4j;
+import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.LongValue;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
@@ -24,6 +28,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.Ordered;
 
+import javax.annotation.Resource;
 import java.util.List;
 
 /**
@@ -35,10 +40,12 @@ import java.util.List;
  */
 @Slf4j
 @AutoConfigureAfter(SqlSessionFactory.class)
-@EnableConfigurationProperties(MybatisProperties.class)
+@EnableConfigurationProperties(MybatisPlusProperties.class)
 @AutoConfigureOrder(Ordered.LOWEST_PRECEDENCE + 10)
 public class MybatisPlusConfiguration {
 
+    @Resource
+    private MybatisPlusProperties mybatisProperties;
     /**
      * SupportInjector
      *
@@ -46,7 +53,7 @@ public class MybatisPlusConfiguration {
      */
 //    @Bean
 //    @ConditionalOnMissingBean
-    public SupportInjector supportInjector(MybatisProperties mybatisProperties) {
+    public SupportInjector supportInjector(MybatisPlusProperties mybatisProperties) {
         return new SupportInjector(mybatisProperties);
     }
 
@@ -104,7 +111,36 @@ public class MybatisPlusConfiguration {
         mybatisPlusInterceptor.addInnerInterceptor(optimisticLockerInnerInterceptor);
         mybatisPlusInterceptor.addInnerInterceptor(paginationInnerInterceptor);
         mybatisPlusInterceptor.addInnerInterceptor(dataPermissionInterceptor);
+        if(mybatisProperties.isOpenTenant()) {
+           registerTenant(mybatisPlusInterceptor);
+        }
         return mybatisPlusInterceptor;
+    }
+
+    private void registerTenant(MybatisPlusInterceptor mybatisPlusInterceptor) {
+        mybatisPlusInterceptor.addInnerInterceptor(new TenantLineInnerInterceptor(new TenantLineHandler() {
+            @Override
+            public Expression getTenantId() {
+                return new LongValue(1);
+            }
+
+            @Override
+            public String getTenantIdColumn() {
+                return mybatisProperties.getTenantColumn();
+            }
+
+            // 这是 default 方法,默认返回 false 表示所有表都需要拼多租户条件
+            @Override
+            public boolean ignoreTable(String tableName) {
+                boolean tenantTableIgnore = mybatisProperties.isTenantTableIgnore();
+                if(!tenantTableIgnore) {
+                    return false;
+                }
+
+                //TODO:
+                return false;
+            }
+        }));
     }
 
     /**
@@ -114,7 +150,7 @@ public class MybatisPlusConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = MybatisProperties.PRE, name = "print-sql", havingValue = "true", matchIfMissing = false)
+    @ConditionalOnProperty(prefix = MybatisPlusProperties.PRE, name = "print-sql", havingValue = "true", matchIfMissing = false)
     public SqlInterceptor sqlInterceptor() {
         return new SqlInterceptor();
     }
@@ -126,8 +162,8 @@ public class MybatisPlusConfiguration {
      */
     @Bean("mapper-reload")
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = MybatisProperties.PRE, name = "xml-reload", havingValue = "true", matchIfMissing = false)
-    public Reload xmlReload(List<SqlSessionFactory> sqlSessionFactory, MybatisProperties mybatisProperties) {
+    @ConditionalOnProperty(prefix = MybatisPlusProperties.PRE, name = "xml-reload", havingValue = "true", matchIfMissing = false)
+    public Reload xmlReload(List<SqlSessionFactory> sqlSessionFactory, MybatisPlusProperties mybatisProperties) {
         return new MapperReload(sqlSessionFactory, mybatisProperties);
     }
 
