@@ -7,7 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * 统一参数
  */
 @Data
-@ConfigurationProperties(prefix = "plugin.paramter", ignoreInvalidFields = true)
+@ConfigurationProperties(prefix = "plugin.parameter", ignoreInvalidFields = true)
 public class ParameterProperties {
 
     /**
