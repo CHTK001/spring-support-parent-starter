@@ -1,6 +1,7 @@
 package com.chua.starter.common.support.properties;
 
 
+import com.alibaba.fastjson2.JSONReader;
 import com.alibaba.fastjson2.JSONWriter;
 import com.google.common.collect.Lists;
 import lombok.Data;
@@ -38,7 +39,11 @@ public class MessageConverterProperties {
     /**
      * 特征
      */
-    private JSONWriter.Feature[] features;
+    private JSONWriter.Feature[] writerFeatures;
+    /**
+     * 特征
+     */
+    private JSONReader.Feature[] readerFeatures;
     /**
      * 媒体类型
      */
