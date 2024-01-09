@@ -45,7 +45,7 @@ public class LimitAspect {
 
     @Around("@annotation(com.chua.common.support.task.limit.Limit)")
     public Object around(ProceedingJoinPoint joinPoint) throws Throwable {
-        if (!limitProperties.isOpenLimit()) {
+        if (!limitProperties.isEnable()) {
             return joinPoint.proceed();
         }
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
