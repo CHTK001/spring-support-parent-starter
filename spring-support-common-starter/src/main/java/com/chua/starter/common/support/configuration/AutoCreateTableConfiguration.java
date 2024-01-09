@@ -3,12 +3,9 @@ package com.chua.starter.common.support.configuration;
 import com.chua.common.support.datasource.driver.JdbcDriver;
 import com.chua.common.support.datasource.engine.DefaultEngine;
 import com.chua.common.support.datasource.engine.Engine;
-import com.chua.common.support.datasource.enums.ActionType;
 import com.chua.common.support.datasource.executor.DdlExecutor;
 import com.chua.common.support.datasource.jdbc.JdbcEngineDataSource;
-import com.chua.common.support.utils.ArrayUtils;
-import com.chua.common.support.utils.FileUtils;
-import com.chua.common.support.utils.ThreadUtils;
+import com.chua.common.support.utils.*;
 import com.chua.starter.common.support.properties.CreateTableProperties;
 import com.chua.starter.common.support.utils.BeanDefinitionUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -79,7 +76,7 @@ public class AutoCreateTableConfiguration implements ApplicationContextAware {
                         .getResources(FileUtils.normalize(aPackage.replace(".", "/") + "/**/*.class"));
             } catch (IOException ignored) {
             }
-            register(resources);
+            register(resources, aPackage);
         }
     }
 
@@ -87,11 +84,14 @@ public class AutoCreateTableConfiguration implements ApplicationContextAware {
      * 注册
      *
      * @param resources 资源
+     * @param aPackage  aPackage
      */
-    private void register(Resource[] resources) {
+    private void register(Resource[] resources, String aPackage) {
         for (Resource resource : resources) {
             try {
-                register(BeanDefinitionUtils.getType(resource));
+                String replace = StringUtils.after(resource.getFile().getAbsolutePath().replace("\\", "/"),
+                        aPackage.replace(".", "/"), 1);
+                register(ClassUtils.forName(aPackage + "."+ replace.substring(1).replace(".class", "")));
             } catch (Exception e) {
                 continue;
             }
@@ -105,6 +105,9 @@ public class AutoCreateTableConfiguration implements ApplicationContextAware {
      * @param type 类型
      */
     private void register(Class<?> type) {
+        if(null == type) {
+            return;
+        }
        ddlExecutor.execute(type, createTableProperties.getType());
     }
 }

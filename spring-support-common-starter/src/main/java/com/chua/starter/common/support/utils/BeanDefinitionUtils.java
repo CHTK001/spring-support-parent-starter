@@ -4,6 +4,7 @@ import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.core.io.Resource;
 
+import java.io.File;
 import java.util.Map;
 
 /**
@@ -28,7 +29,7 @@ public class BeanDefinitionUtils {
         String filePath = resource.getFile().getAbsolutePath();
 
         // 根据文件路径创建Class对象
-        return classLoader.loadClass(getClassNameFromFilePath(filePath));
+        return classLoader.loadClass(getClassNameFromFilePath(filePath.replace(File.separator, "/")));
     }
 
     /**
