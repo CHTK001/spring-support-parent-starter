@@ -99,7 +99,7 @@ public class OperateLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdv
         sysLoggerInfo.setClientIp(RequestUtils.getIpAddress(request));
 
         if(operateLog.logArgs()) {
-            String json = Json.toJson(invocation.getArguments());
+            String json = Json.toPrettyFormat(invocation.getArguments());
             if(json.length() < 1000) {
                 sysLoggerInfo.setLogParam(json);
             }
