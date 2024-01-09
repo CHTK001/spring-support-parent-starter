@@ -1,13 +1,17 @@
 package com.chua.starter.oauth.client.support.advice;
 
+import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.code.ResultCode;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import com.chua.common.support.lang.file.config.WriterOption;
+import com.chua.common.support.lang.file.impl.writer.XmlFileWriter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
+import java.io.OutputStream;
+import java.util.Collections;
 
 /**
  * xml
@@ -18,7 +22,6 @@ import javax.servlet.http.HttpServletResponse;
 @Slf4j
 public class XmlAdviceResolver implements AdviceResolver {
 
-    static final XmlMapper XML_MAPPER = new XmlMapper();
 
     @Override
     public String type() {
@@ -28,9 +31,12 @@ public class XmlAdviceResolver implements AdviceResolver {
     @Override
     public Object resolve(HttpServletResponse response, Integer status, String message) {
 
-        try {
-            ServletOutputStream outputStream = response.getOutputStream();
-            outputStream.write(XML_MAPPER.writeValueAsBytes(ReturnResult.newBuilder().code(ResultCode.transferForHttpCodeStatus(status)).msg(message).build()));
+        try (OutputStream writer = response.getOutputStream();
+             XmlFileWriter xmlFileWriter = new XmlFileWriter(
+                     Collections.emptyList(),
+                     writer, WriterOption.newDefault()
+             );) {
+            xmlFileWriter.writeJson(Json.getJsonObject(Json.toJson(ReturnResult.newBuilder().code(ResultCode.transferForHttpCodeStatus(status))));
         } catch (Exception e) {
             log.error("", e);
         }
