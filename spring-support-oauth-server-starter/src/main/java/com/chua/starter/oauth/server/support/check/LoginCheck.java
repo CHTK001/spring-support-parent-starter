@@ -3,7 +3,7 @@ package com.chua.starter.oauth.server.support.check;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.Md5Utils;
-import com.chua.starter.oauth.client.support.annotation.UserLoginType;
+import com.chua.starter.oauth.client.support.annotation.LoginType;
 import com.chua.starter.oauth.client.support.user.LoginResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.server.support.properties.AuthServerProperties;
@@ -42,7 +42,7 @@ public class LoginCheck {
      */
     private boolean isMatch(UserInfoService userInfoService, String authType) {
         Class<?> aClass = ClassUtils.getUserClass(userInfoService.getClass());
-        UserLoginType userLoginType = aClass.getDeclaredAnnotation(UserLoginType.class);
+        LoginType userLoginType = aClass.getDeclaredAnnotation(LoginType.class);
         if (null == userLoginType) {
             return false;
         }

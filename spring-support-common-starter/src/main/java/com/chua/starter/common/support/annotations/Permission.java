@@ -1,4 +1,4 @@
-package com.chua.starter.oauth.client.support.annotation;
+package com.chua.starter.common.support.annotations;
 
 import java.lang.annotation.*;
 
@@ -11,7 +11,7 @@ import java.lang.annotation.*;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface UserPermission {
+public @interface Permission {
     /**
      * 权限
      *

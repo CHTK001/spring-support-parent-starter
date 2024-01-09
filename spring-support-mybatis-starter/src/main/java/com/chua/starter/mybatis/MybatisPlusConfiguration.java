@@ -7,11 +7,9 @@ import com.baomidou.mybatisplus.extension.plugins.inner.DataPermissionIntercepto
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
-import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.mybatis.endpoint.MybatisEndpoint;
-import com.chua.starter.mybatis.interceptor.CustomDataPermissionInterceptor;
+import com.chua.starter.mybatis.interceptor.MybatisPlusPermissionInterceptor;
 import com.chua.starter.mybatis.interceptor.SqlInterceptor;
 import com.chua.starter.mybatis.method.SupportInjector;
 import com.chua.starter.mybatis.properties.MybatisPlusProperties;
@@ -80,11 +78,11 @@ public class MybatisPlusConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    public CustomDataPermissionInterceptor dataPermissionInterceptor(@Autowired(required = false) DataPermissionHandler dataPermissionHandler) {
+    public MybatisPlusPermissionInterceptor dataPermissionInterceptor(@Autowired(required = false) DataPermissionHandler dataPermissionHandler) {
         if(null == dataPermissionHandler) {
             dataPermissionHandler = new EmptyDataPermissionHandler();
         }
-        return new CustomDataPermissionInterceptor(dataPermissionHandler);
+        return new MybatisPlusPermissionInterceptor(dataPermissionHandler);
     }
 
 

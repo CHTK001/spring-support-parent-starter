@@ -1,4 +1,4 @@
-package com.chua.starter.mybatis.oauth;
+package com.chua.starter.common.support.oauth;
 
 import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.common.support.constant.DataFilterTypeEnum;
@@ -44,11 +44,12 @@ public class CurrentUser {
     /**
      * 数据权限
      */
-    private String dataPermission;
+    private DataFilterTypeEnum dataPermission;
     /**
      * 数据权限规则
+     * {@link  DataFilterTypeEnum#DEPT_SETS}
      */
-    private String dataPermissionRule;
+    private String deptIds;
 
     /**
      * 额外信息
@@ -71,6 +72,10 @@ public class CurrentUser {
      */
     private String sex;
 
+    /**
+     * 部门id
+     */
+    private String deptId;
     /**
      * address
      */
@@ -97,12 +102,12 @@ public class CurrentUser {
         return MapUtils.getString(ext, key);
     }
 
-    public DataFilterTypeEnum getDataPermissionEnum() {
-        for (DataFilterTypeEnum value : DataFilterTypeEnum.values()) {
-            if (value.getCode().equalsIgnoreCase(getDataPermission())) {
-                return value;
-            }
-        }
-        return null;
+    /**
+     * 是管理员
+     *
+     * @return boolean
+     */
+    public boolean isAdmin() {
+        return roles.contains("ADMIN");
     }
 }
