@@ -1,8 +1,15 @@
 package com.chua.starter.oauth.client.support.advice;
 
+import com.chua.common.support.json.Json;
+import com.chua.common.support.lang.code.ReturnCode;
+import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.lang.file.config.WriterOption;
+import com.chua.common.support.lang.file.impl.file.XmlFile;
+import com.chua.common.support.lang.file.impl.writer.XmlFileWriter;
 import com.chua.common.support.lang.robin.Node;
 import com.chua.common.support.lang.robin.Robin;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.IoUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.exception.OauthException;
@@ -14,7 +21,12 @@ import org.springframework.http.MediaType;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Collection;
+import java.util.Collections;
 
 /**
  * html
@@ -81,7 +93,16 @@ public class HtmlAdviceResolver implements AdviceResolver {
             String url = address;
             if (Strings.isNullOrEmpty(url)) {
                 log.error("登录地址不存在");
-                throw new OauthException();
+                try (OutputStream writer = response.getOutputStream();
+                     XmlFileWriter xmlFileWriter = new XmlFileWriter(
+                             Collections.emptyList(),
+                             writer, WriterOption.newDefault()
+                             );) {
+                    xmlFileWriter.writeJson(Json.getJsonObject(Json.toJson(ReturnResult.noAuth())));
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+                return;
             }
             if (!url.startsWith("http")) {
                 url = "http://" + url;
