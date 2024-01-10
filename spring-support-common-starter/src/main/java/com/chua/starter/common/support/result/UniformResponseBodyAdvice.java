@@ -32,7 +32,7 @@ public class UniformResponseBodyAdvice implements ResponseBodyAdvice<Object> {
     @Override
     public Object beforeBodyWrite(Object o, MethodParameter methodParameter, MediaType mediaType, Class<? extends HttpMessageConverter<?>> aClass, ServerHttpRequest serverHttpRequest, ServerHttpResponse serverHttpResponse) {
         Class<?> declaringClass = methodParameter.getDeclaringClass();
-        String typeName = declaringClass.getTypeName();
+        String typeName = declaringClass.getTypeName().toLowerCase();
         if (typeName.contains("swagger")) {
             return o;
         }
