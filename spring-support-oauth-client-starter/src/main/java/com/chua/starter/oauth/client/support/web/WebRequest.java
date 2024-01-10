@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -66,7 +67,7 @@ public class WebRequest {
      * @return 是否通过
      */
     public boolean isPass() {
-        Set<String> whitelist = authProperties.getWhitelist();
+        List<String> whitelist = authProperties.getWhitelist();
         if (null == whitelist) {
             return false;
         }
@@ -74,6 +75,9 @@ public class WebRequest {
 
         String uri = request.getRequestURI();
         uri = StringUtils.isNotBlank(contextPath) ? StringUtils.removeStart(uri, contextPath) : uri;
+        if(isResource(uri)) {
+            return true;
+        }
 
         for (String s : whitelist) {
             if (PATH_MATCHER.match(s, uri)) {
@@ -128,6 +132,12 @@ public class WebRequest {
         }
 
         return false;
+    }
+
+    private boolean isResource(String uri) {
+        return uri.endsWith(".js") ||
+                uri.endsWith(".css") ||
+                uri.endsWith("favicon.ico");
     }
 
     /**

@@ -4,7 +4,8 @@ import com.google.common.collect.Sets;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -20,6 +21,7 @@ public class AuthClientProperties {
         whitelist.add("/**/captcha");
         whitelist.add("/**/login");
         whitelist.add("/**/logout");
+        whitelist.add("/webjars/**");
     }
 
     public static final String PRE = "plugin.oauth";
@@ -69,7 +71,7 @@ public class AuthClientProperties {
     /**
      * 白名单
      */
-    private Set<String> whitelist = new HashSet<>();
+    private List<String> whitelist = new LinkedList<>();
 
     /**
      * 协议
