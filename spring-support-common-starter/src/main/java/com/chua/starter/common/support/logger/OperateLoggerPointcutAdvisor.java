@@ -122,7 +122,7 @@ public class OperateLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdv
                 json = Json.prettyFormat(params);
             } catch (Exception ignored) {
             }
-            if(null != json && json.length() < 1000) {
+            if(null != json && json.length() < 2000) {
                 sysLoggerInfo.setLogParam(json);
             }
         }
