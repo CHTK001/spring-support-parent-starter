@@ -21,7 +21,7 @@ public class SysBase implements Serializable {
      * 创建人
      */
     @TableField(fill = FieldFill.INSERT)
-    @Schema(description = "创建人")
+    @Schema(description = "创建人姓名")
     @JsonInclude(value = JsonInclude.Include.NON_NULL)
     private String createName;
     /**
@@ -60,7 +60,7 @@ public class SysBase implements Serializable {
      */
     @TableField(fill = FieldFill.UPDATE)
     @JsonInclude(value = JsonInclude.Include.NON_NULL)
-    @Schema(description = "更新人")
+    @Schema(description = "更新人姓名")
     private String updateName;
 
     /**
