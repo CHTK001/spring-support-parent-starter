@@ -21,7 +21,10 @@ public class AuthClientProperties {
         whitelist.add("/**/captcha");
         whitelist.add("/**/login");
         whitelist.add("/**/logout");
+        whitelist.add("/doc.html");
+        whitelist.add("/actuator");
         whitelist.add("/webjars/**");
+        whitelist.add("/v3/api-docs/**");
     }
 
     public static final String PRE = "plugin.oauth";
