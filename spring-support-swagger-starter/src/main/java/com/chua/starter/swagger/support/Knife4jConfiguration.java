@@ -2,13 +2,15 @@ package com.chua.starter.swagger.support;
 
 import com.github.xiaoymin.knife4j.spring.annotations.EnableKnife4j;
 import com.google.common.collect.Lists;
+import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.GroupedOpenApi;
+import org.springdoc.webmvc.core.MultipleOpenApiSupportConfiguration;
 import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.boot.actuate.autoconfigure.endpoint.web.CorsEndpointProperties;
@@ -24,6 +26,7 @@ import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.core.env.Environment;
 import org.springframework.util.StringUtils;
 
@@ -39,45 +42,39 @@ import java.util.Optional;
 @EnableKnife4j
 @EnableConfigurationProperties(Knife4jProperties.class)
 //@Import(BeanValidatorPluginsConfiguration.class)
+@Import({MultipleOpenApiSupportConfiguration.class})
 public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware {
 
     Knife4jProperties knife4jProperties;
     private ApplicationContext applicationContext;
-//    @Bean
-//    @ConditionalOnMissingBean
-//    @Lazy
-//    @ConditionalOnProperty(prefix = "plugin.swagger", name = "log", havingValue = "true", matchIfMissing = true)
-//    public SwaggerLoggerPointcutAdvisor swaggerLoggerPointcutAdvisor(@Autowired(required = false) LoggerService loggerService) {
-//        return new SwaggerLoggerPointcutAdvisor(loggerService);
-//    }
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         for (Knife4jProperties.Knife4j knife4j : Optional.ofNullable(knife4jProperties.getKnife4j())
                 .orElse(Lists.newArrayList(new Knife4jProperties.Knife4j()
                         .setGroupName("说明")
-                        .setBasePackage("com.hua.demo.controller")
+                        .setBasePackage(new String[]{"com.hua.demo.controller"})
                 ))) {
-            AutowireCapableBeanFactory autowireCapableBeanFactory = applicationContext.getAutowireCapableBeanFactory();
-            if (autowireCapableBeanFactory instanceof ConfigurableListableBeanFactory) {
-                ((ConfigurableListableBeanFactory) autowireCapableBeanFactory).registerSingleton(
-                        knife4j.getGroupName(),
-                        new OpenAPI()
-                                .info(new Info()
-                                        .description(knife4j.getDescription())
-                                        .version(knife4j.getVersion())
-                                        .termsOfService(knife4j.getTermsOfService())
-                                )
-                );
-                ((ConfigurableListableBeanFactory) autowireCapableBeanFactory).registerSingleton(
-                        knife4j.getGroupName() + "GroupedOpenApi",
-                        GroupedOpenApi.builder()
-                                .group(knife4j.getGroupName())
-                                .packagesToScan(knife4j.getBasePackage())
-                                .pathsToMatch(knife4j.getPathsToMatch())
-                                .build()
-                );
-            }
+            registry.registerBeanDefinition(
+                    knife4j.getGroupName(),
+                    BeanDefinitionBuilder.rootBeanDefinition(OpenAPI.class)
+                            .addPropertyValue("components", new Components())
+                            .addPropertyValue("info", new Info()
+                                    .description(knife4j.getDescription())
+                                    .version(knife4j.getVersion())
+                                    .termsOfService(knife4j.getTermsOfService())).getBeanDefinition()
+            );
+
+            registry.registerBeanDefinition(
+                    knife4j.getGroupName() + "GroupedOpenApi",
+                    BeanDefinitionBuilder.rootBeanDefinition(GroupedOpenApi.class)
+                            .addConstructorArgValue(GroupedOpenApi.builder()
+                                    .group(knife4j.getGroupName())
+                                    .packagesToScan(knife4j.getBasePackage())
+                                    .pathsToMatch(Optional.ofNullable(knife4j.getPathsToMatch()).orElse((new String[]{"/**"}))
+                            ))
+                            .getBeanDefinition()
+            );
         }
     }
 

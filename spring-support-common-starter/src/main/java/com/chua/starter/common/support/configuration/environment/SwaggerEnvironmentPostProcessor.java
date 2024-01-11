@@ -17,6 +17,7 @@ public class SwaggerEnvironmentPostProcessor implements EnvironmentPostProcessor
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         Properties properties = new Properties();
+        properties.setProperty("springdoc.api-docs.enabled", "true");
         properties.setProperty("knife4j.enable", "true");
         properties.setProperty("knife4j.basic.enable", "true");
         properties.setProperty("knife4j.basic.username", "root");
