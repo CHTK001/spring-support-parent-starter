@@ -56,7 +56,7 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
 
     @Override
     public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
-        registerFastjson(converters);
+//        registerFastjson(converters);
     }
 
     private void registerFastjson(List<HttpMessageConverter<?>> converters) {
