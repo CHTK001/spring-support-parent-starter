@@ -41,11 +41,11 @@ public class Knife4jProperties {
         /**
          * 路径 openapi
          */
-        private String pathsToMatch;
+        private String[] pathsToMatch;
         /**
          * basePackage
          */
-        private String basePackage;
+        private String[] basePackage;
 
         /**
          * 条款初始化服务
