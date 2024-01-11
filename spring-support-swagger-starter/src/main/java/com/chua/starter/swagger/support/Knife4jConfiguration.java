@@ -73,6 +73,7 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
                         knife4j.getGroupName() + "GroupedOpenApi",
                         GroupedOpenApi.builder()
                                 .group(knife4j.getGroupName())
+                                .packagesToScan(knife4j.getBasePackage())
                                 .pathsToMatch(knife4j.getPathsToMatch())
                                 .build()
                 );
