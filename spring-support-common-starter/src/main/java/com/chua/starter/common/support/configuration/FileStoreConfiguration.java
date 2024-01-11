@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Bean;
  * @author CH
  */
 @Slf4j
-@ConditionalOnProperty(prefix = FileStorageProperties.PRE, name = "enable", havingValue = "true")
+@ConditionalOnProperty(prefix = FileStorageProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = true)
 public class FileStoreConfiguration {
 
 
