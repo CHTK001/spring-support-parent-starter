@@ -23,11 +23,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.annotation.Resource;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 文件存储提供程序
@@ -41,7 +41,9 @@ public class FileStorageProvider implements ApplicationContextAware {
     private FileStorageProperties fileStorageProperties;
 
     private FileStorageLoggerService fileStorageLoggerService;
-    private static final Map<String, FileStorage> STORAGE_MAP = new ConcurrentHashMap<>();
+
+    @Resource
+    private FileStorageService fileStorageService;
 
 
     /**
@@ -53,10 +55,10 @@ public class FileStorageProvider implements ApplicationContextAware {
      */
     @GetMapping("{bucket}/preview/{url}")
     public ResponseEntity<byte[]> preview(@PathVariable("bucket") String bucket, @PathVariable("fileId")String url) {
-        if(StringUtils.isEmpty(bucket) || STORAGE_MAP.containsKey(bucket)) {
+        if(StringUtils.isEmpty(bucket) || fileStorageService.containsKey(bucket)) {
             throw new RuntimeException("bucket不存在");
         }
-        FileStorage fileStorage = STORAGE_MAP.get(bucket);
+        FileStorage fileStorage = fileStorageService.get(bucket);
         File file = null;
         try {
             GetResult getResult = fileStorage.getObject(url);
@@ -85,10 +87,10 @@ public class FileStorageProvider implements ApplicationContextAware {
      */
     @GetMapping("{bucket}/download/{url}")
     public ResponseEntity<byte[]> download(@PathVariable("bucket") String bucket, @PathVariable("fileId")String url) {
-        if(StringUtils.isEmpty(bucket) || STORAGE_MAP.containsKey(bucket)) {
+        if(StringUtils.isEmpty(bucket) || fileStorageService.containsKey(bucket)) {
             throw new RuntimeException("bucket不存在");
         }
-        FileStorage fileStorage = STORAGE_MAP.get(bucket);
+        FileStorage fileStorage = fileStorageService.get(bucket);
         File file = null;
         try {
             GetResult getResult = fileStorage.getObject(url);
@@ -117,11 +119,11 @@ public class FileStorageProvider implements ApplicationContextAware {
      */
     @PostMapping("{bucket}/upload")
     public ReturnResult<PutResult> upload(@RequestParam("file") MultipartFile multipartFile, @PathVariable("bucket") String bucket) {
-        if(StringUtils.isEmpty(bucket) || STORAGE_MAP.containsKey(bucket)) {
+        if(StringUtils.isEmpty(bucket) || fileStorageService.containsKey(bucket)) {
             return ReturnResult.illegal("bucket不存在");
         }
 
-        FileStorage fileStorage = STORAGE_MAP.get(bucket);
+        FileStorage fileStorage = fileStorageService.get(bucket);
         File file = null;
         try {
             file = MultipartFileUtils.toFile(multipartFile);
