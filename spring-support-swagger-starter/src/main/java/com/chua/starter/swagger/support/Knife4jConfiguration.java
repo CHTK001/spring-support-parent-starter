@@ -5,6 +5,7 @@ import com.google.common.collect.Lists;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import lombok.extern.slf4j.Slf4j;
+import org.springdoc.core.GroupedOpenApi;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
@@ -65,7 +66,15 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
                                 .info(new Info()
                                         .description(knife4j.getDescription())
                                         .version(knife4j.getVersion())
+                                        .termsOfService(knife4j.getTermsOfService())
                                 )
+                );
+                ((ConfigurableListableBeanFactory) autowireCapableBeanFactory).registerSingleton(
+                        knife4j.getGroupName() + "GroupedOpenApi",
+                        GroupedOpenApi.builder()
+                                .group(knife4j.getGroupName())
+                                .pathsToMatch(knife4j.getPathsToMatch())
+                                .build()
                 );
             }
         }
