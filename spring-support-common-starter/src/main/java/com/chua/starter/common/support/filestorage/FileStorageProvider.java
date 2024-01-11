@@ -163,7 +163,7 @@ public class FileStorageProvider implements ApplicationContextAware {
             if(null == fileStorage) {
                 continue;
             }
-            STORAGE_MAP.put(fileStorageConfig.getBucket(), fileStorage);
+            fileStorageService.register(fileStorageConfig.getBucket(), fileStorage);
         }
     }
 }
