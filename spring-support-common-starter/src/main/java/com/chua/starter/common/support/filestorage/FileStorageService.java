@@ -23,4 +23,19 @@ public interface FileStorageService {
      * @return {@link FileStorage}
      */
     FileStorage get(String bucket);
+
+    /**
+     * 注册
+     *
+     * @param bucket      水桶
+     * @param fileStorage 文件存储器
+     */
+    void register(String bucket, FileStorage fileStorage);
+
+    /**
+     * 注销
+     *
+     * @param bucket 水桶
+     */
+    void unregister(String bucket);
 }
