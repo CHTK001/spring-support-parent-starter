@@ -24,6 +24,7 @@ public class AuthClientProperties {
         whitelist.add("/doc.html");
         whitelist.add("/actuator");
         whitelist.add("/webjars/**");
+        whitelist.add("/v1/file/**");
         whitelist.add("/**/users/loginCode");
         whitelist.add("/v3/api-docs/**");
     }

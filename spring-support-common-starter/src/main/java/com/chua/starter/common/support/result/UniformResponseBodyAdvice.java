@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
@@ -32,17 +33,21 @@ public class UniformResponseBodyAdvice implements ResponseBodyAdvice<Object> {
     @Override
     public Object beforeBodyWrite(Object o, MethodParameter methodParameter, MediaType mediaType, Class<? extends HttpMessageConverter<?>> aClass, ServerHttpRequest serverHttpRequest, ServerHttpResponse serverHttpResponse) {
         Class<?> declaringClass = methodParameter.getDeclaringClass();
+        if(ResponseEntity.class.isAssignableFrom(declaringClass)) {
+            return o;
+        }
         String typeName = declaringClass.getTypeName().toLowerCase();
         if (typeName.contains("swagger")) {
             return o;
         }
 
 
-        if(mediaType.getSubtype().contains("spring-boot.actuator")) {
+        String subtype = mediaType.getSubtype();
+        if(subtype.contains("spring-boot.actuator")) {
             return o;
         }
 
-        if(mediaType.getSubtype().contains("event-stream")) {
+        if(subtype.contains("event-stream") || subtype.contains("octet-stream")) {
             return o;
         }
 

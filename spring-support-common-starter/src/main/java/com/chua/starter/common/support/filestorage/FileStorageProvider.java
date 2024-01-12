@@ -54,8 +54,8 @@ public class FileStorageProvider implements ApplicationContextAware {
      * @return {@link ResponseEntity}<{@link byte[]}>
      */
     @GetMapping("{bucket}/preview/{url}")
-    public ResponseEntity<byte[]> preview(@PathVariable("bucket") String bucket, @PathVariable("fileId")String url) {
-        if(StringUtils.isEmpty(bucket) || fileStorageService.containsKey(bucket)) {
+    public ResponseEntity<byte[]> preview(@PathVariable("bucket") String bucket, @PathVariable("url")String url) {
+        if(StringUtils.isEmpty(bucket) || !fileStorageService.containsKey(bucket)) {
             throw new RuntimeException("bucket不存在");
         }
         FileStorage fileStorage = fileStorageService.get(bucket);
@@ -73,7 +73,7 @@ public class FileStorageProvider implements ApplicationContextAware {
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + getResult.getName()+ "\"")
-                    .build();
+                    .body(getResult.getBytes());
         } catch (Exception e) {
             throw new RuntimeException("文件下载失败");
         }
