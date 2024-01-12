@@ -1,8 +1,11 @@
 package com.chua.starter.common.support.filestorage;
 
 import com.chua.common.support.oss.FileStorage;
+import com.chua.common.support.spi.Option;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.IoUtils;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -39,5 +42,10 @@ public class DefaultFileStorageService implements FileStorageService{
         }
 
         storageMap.remove(bucket);
+    }
+
+    @Override
+    public List<Option<String>> getType() {
+        return ServiceProvider.of(FileStorage.class).options();
     }
 }
