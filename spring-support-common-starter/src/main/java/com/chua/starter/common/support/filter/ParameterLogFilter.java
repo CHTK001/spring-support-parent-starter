@@ -4,6 +4,7 @@ import com.chua.common.support.constant.NumberConstant;
 import com.chua.common.support.log.Log;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.utils.RequestUtils;
 
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
@@ -35,6 +36,11 @@ public class ParameterLogFilter implements Filter {
         }
 
         HttpServletRequest request = (HttpServletRequest) servletRequest;
+        String requestURI = request.getRequestURI();
+        if(isPass(requestURI)) {
+            filterChain.doFilter(servletRequest, servletResponse);
+            return;
+        }
         log.info("");
         log.info("======================================");
         hook(request);
@@ -62,6 +68,10 @@ public class ParameterLogFilter implements Filter {
             return;
         }
         filterChain.doFilter(request, servletResponse);
+    }
+
+    private boolean isPass(String requestURI) {
+        return RequestUtils.isResource(requestURI);
     }
 
     private void hook(HttpServletRequest request) {

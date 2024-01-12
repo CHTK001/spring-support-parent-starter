@@ -1,6 +1,10 @@
 package com.chua.starter.common.support.filestorage;
 
 import com.chua.common.support.oss.FileStorage;
+import com.chua.common.support.spi.Option;
+
+import java.util.List;
+import java.util.Set;
 
 /**
  * 文件存储服务
@@ -38,4 +42,11 @@ public interface FileStorageService {
      * @param bucket 水桶
      */
     void unregister(String bucket);
+
+    /**
+     * 获取类型
+     *
+     * @return {@link Set}<{@link String}>
+     */
+    List<Option<String>> getType();
 }
