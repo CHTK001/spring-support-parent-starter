@@ -47,8 +47,6 @@ public class CommonConfiguration {
         return new UniformResponseBodyAdvice();
     }
 
-
-
     /**
      * 异常建议
      *
