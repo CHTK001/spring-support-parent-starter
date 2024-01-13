@@ -49,4 +49,5 @@ public interface FileStorageService {
      * @return {@link Set}<{@link String}>
      */
     List<Option<String>> getType();
+
 }
