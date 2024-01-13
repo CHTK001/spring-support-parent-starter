@@ -7,7 +7,10 @@ import com.chua.common.support.oss.FileStorage;
 import com.chua.common.support.oss.entity.GetResult;
 import com.chua.common.support.oss.entity.PutResult;
 import com.chua.common.support.oss.options.FileStorageOption;
+import com.chua.common.support.oss.view.ViewResult;
+import com.chua.common.support.oss.view.Viewer;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.FileUtils;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
@@ -63,19 +66,20 @@ public class FileStorageProvider implements ApplicationContextAware {
         try {
             GetResult getResult = fileStorage.getObject(url);
             if(null == getResult) {
-                throw new RuntimeException("文件下载失败");
+                throw new RuntimeException("文件解析失败");
             }
 
             if(StringUtils.isNotBlank(getResult.getMessage())) {
                 throw new RuntimeException(getResult.getMessage());
             }
 
+            String type = getResult.getMediaType().type();
+            ViewResult viewResult = ServiceProvider.of(Viewer.class).getNewExtension(type).resolve(getResult);
             return ResponseEntity.ok()
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + getResult.getName()+ "\"")
-                    .body(getResult.getBytes());
+                    .contentType(MediaType.valueOf(viewResult.getMediaType().toString()))
+                    .body(viewResult.getContent());
         } catch (Exception e) {
-            throw new RuntimeException("文件下载失败");
+            throw new RuntimeException("文件解析失败");
         }
     }
     /**
@@ -155,6 +159,9 @@ public class FileStorageProvider implements ApplicationContextAware {
             this.fileStorageLoggerService = MapUtils.getFirstValue(beansOfType);
         }
         List<FileStorageProperties.FileStorageConfig> config = fileStorageProperties.getConfig();
+        if(CollectionUtils.isEmpty(config)) {
+            return;
+        }
         for (FileStorageProperties.FileStorageConfig fileStorageConfig : config) {
             FileStorageOption fileStorageOption = FileStorageOption.builder().build();
             BeanUtils.copyProperties(fileStorageConfig, fileStorageOption);
