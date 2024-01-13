@@ -1,0 +1,4 @@
+com.chua.starter.common.support.view.MarkdownViewer
+com.chua.starter.common.support.view.HighlightViewer
+com.chua.starter.common.support.view.JsonViewer
+com.chua.starter.common.support.view.XmlViewer
