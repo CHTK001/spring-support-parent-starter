@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -56,8 +57,12 @@ public class FileStorageProvider implements ApplicationContextAware {
      * @param url    url
      * @return {@link ResponseEntity}<{@link byte[]}>
      */
-    @GetMapping("{bucket}/preview/{url}")
-    public ResponseEntity<byte[]> preview(@PathVariable("bucket") String bucket, @PathVariable("url")String url) {
+    @GetMapping("{bucket}/preview/**")
+    public ResponseEntity<byte[]> preview(@PathVariable("bucket") String bucket,
+                                          @PathVariable(required = false)String url,
+                                          @RequestParam(value = "format", required = false) String format,
+                                          HttpServletRequest request) {
+        url =  StringUtils.isEmpty(url) ?  StringUtils.after(request.getRequestURI(), "preview", 1): url;
         if(StringUtils.isEmpty(bucket) || !fileStorageService.containsKey(bucket)) {
             throw new RuntimeException("bucket不存在");
         }
@@ -74,9 +79,14 @@ public class FileStorageProvider implements ApplicationContextAware {
             }
 
             String type = getResult.getMediaType().type();
+            getResult = fileStorageService.format(format, getResult);
             ViewResult viewResult = ServiceProvider.of(Viewer.class).getNewExtension(type).resolve(getResult);
+            MediaType mediaType = MediaType.valueOf(viewResult.getMediaType().toString());
+            if(type.contains("*")) {
+                mediaType = MediaType.APPLICATION_OCTET_STREAM;
+            }
             return ResponseEntity.ok()
-                    .contentType(MediaType.valueOf(viewResult.getMediaType().toString()))
+                    .contentType(mediaType)
                     .body(viewResult.getContent());
         } catch (Exception e) {
             throw new RuntimeException("文件解析失败");
@@ -89,9 +99,13 @@ public class FileStorageProvider implements ApplicationContextAware {
      * @param url    url
      * @return {@link ResponseEntity}<{@link byte[]}>
      */
-    @GetMapping("{bucket}/download/{url}")
-    public ResponseEntity<byte[]> download(@PathVariable("bucket") String bucket, @PathVariable("fileId")String url) {
-        if(StringUtils.isEmpty(bucket) || fileStorageService.containsKey(bucket)) {
+    @GetMapping("{bucket}/download/**")
+    public ResponseEntity<byte[]> download(@PathVariable("bucket") String bucket,
+                                           @PathVariable(required = false)String url,
+                                           @RequestParam(value = "format", required = false) String format,
+                                           HttpServletRequest request) {
+        url =  StringUtils.isEmpty(url) ?  StringUtils.after(request.getRequestURI(), "download", 1): url;
+        if(StringUtils.isEmpty(bucket) || !fileStorageService.containsKey(bucket)) {
             throw new RuntimeException("bucket不存在");
         }
         FileStorage fileStorage = fileStorageService.get(bucket);
@@ -106,14 +120,17 @@ public class FileStorageProvider implements ApplicationContextAware {
                 throw new RuntimeException(getResult.getMessage());
             }
 
+            getResult = fileStorageService.format(format, getResult);
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + getResult.getName()+ "\"")
-                    .build();
+                    .body(getResult.getBytes());
         } catch (Exception e) {
             throw new RuntimeException("文件下载失败");
         }
     }
+
+
     /**
      * 上载
      *
