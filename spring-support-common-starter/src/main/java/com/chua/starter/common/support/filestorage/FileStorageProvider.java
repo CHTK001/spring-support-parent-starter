@@ -7,6 +7,7 @@ import com.chua.common.support.oss.FileStorage;
 import com.chua.common.support.oss.entity.GetResult;
 import com.chua.common.support.oss.entity.PutResult;
 import com.chua.common.support.oss.options.FileStorageOption;
+import com.chua.common.support.oss.view.EmptyViewer;
 import com.chua.common.support.oss.view.ViewResult;
 import com.chua.common.support.oss.view.Viewer;
 import com.chua.common.support.spi.ServiceProvider;
@@ -15,6 +16,7 @@ import com.chua.common.support.utils.FileUtils;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.utils.MultipartFileUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.Binder;
@@ -41,6 +43,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("v1/file")
 @EnableConfigurationProperties(FileStorageProperties.class)
+@Slf4j
 public class FileStorageProvider implements ApplicationContextAware {
     private FileStorageProperties fileStorageProperties;
 
@@ -68,28 +71,46 @@ public class FileStorageProvider implements ApplicationContextAware {
         }
         FileStorage fileStorage = fileStorageService.get(bucket);
         File file = null;
+        GetResult getResult1 = GetResult.builder().name(url).build();
+        String type = getResult1.getMediaType().type();
+        ViewResult viewResult = ServiceProvider.of(Viewer.class).getNewExtension(type).resolve(getResult1);
+
+        if(null != viewResult.getContent()) {
+            return ResponseEntity.ok()
+                    .contentType(MediaType.valueOf(viewResult.getMediaType().toString()))
+                    .body(viewResult.getContent());
+        }
         try {
             GetResult getResult = fileStorage.getObject(url);
             if(null == getResult) {
-                throw new RuntimeException("文件解析失败");
+                log.error("文件解析失败");
+                return ResponseEntity.ok()
+                        .contentType(MediaType.TEXT_HTML)
+                        .body(EmptyViewer.getInstance().resolve(getResult1).getContent());
             }
 
             if(StringUtils.isNotBlank(getResult.getMessage())) {
                 throw new RuntimeException(getResult.getMessage());
             }
 
-            String type = getResult.getMediaType().type();
+            type = getResult.getMediaType().type();
             getResult = fileStorageService.format(format, getResult);
-            ViewResult viewResult = ServiceProvider.of(Viewer.class).getNewExtension(type).resolve(getResult);
+            viewResult = ServiceProvider.of(Viewer.class).getNewExtension(type).resolve(getResult);
             MediaType mediaType = MediaType.valueOf(viewResult.getMediaType().toString());
             if(type.contains("*")) {
-                mediaType = MediaType.APPLICATION_OCTET_STREAM;
+                return ResponseEntity.ok()
+                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + getResult.getName()+ "\"")
+                        .body(viewResult.getContent());
             }
             return ResponseEntity.ok()
                     .contentType(mediaType)
                     .body(viewResult.getContent());
         } catch (Exception e) {
-            throw new RuntimeException("文件解析失败");
+            log.error("文件解析失败", e);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.TEXT_HTML)
+                    .body(EmptyViewer.getInstance().resolve(getResult1).getContent());
         }
     }
     /**

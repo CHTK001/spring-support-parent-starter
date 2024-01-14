@@ -32,7 +32,7 @@ public class UniformResponseBodyAdvice implements ResponseBodyAdvice<Object> {
     @SneakyThrows
     @Override
     public Object beforeBodyWrite(Object o, MethodParameter methodParameter, MediaType mediaType, Class<? extends HttpMessageConverter<?>> aClass, ServerHttpRequest serverHttpRequest, ServerHttpResponse serverHttpResponse) {
-        Class<?> declaringClass = methodParameter.getDeclaringClass();
+        Class<?> declaringClass = methodParameter.getMethod().getReturnType();
         if(ResponseEntity.class.isAssignableFrom(declaringClass)) {
             return o;
         }

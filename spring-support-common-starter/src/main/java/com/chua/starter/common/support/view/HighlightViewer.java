@@ -20,7 +20,7 @@ import java.util.Base64;
  *
  * @author CH
  */
-@Spi({"yml", "yaml", "py", "js", "css", "java", "x-python", "x-sql"})
+@Spi({"yml", "yaml", "py", "js", "css", "java", "x-java-source", "x-python", "x-sql"})
 public class HighlightViewer implements Viewer {
     @Override
     public ViewResult resolve(GetResult getResult) {
