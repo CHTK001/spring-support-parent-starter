@@ -20,8 +20,8 @@ import java.util.Base64;
  *
  * @author CH
  */
-@Spi({"yml", "yaml", "py", "js", "css", "java", "x-java-source", "x-python", "x-sql"})
-public class HighlightViewer implements Viewer {
+@Spi({ "csv", "vnd.ms-excel", "vnd.openxmlformats-officedocument.spreadsheetml.sheet"})
+public class ExcelViewer implements Viewer {
     @Override
     public ViewResult resolve(GetResult getResult) {
         int port = SpringBeanUtils.getPort();
@@ -29,7 +29,7 @@ public class HighlightViewer implements Viewer {
         String contextPath = SpringBeanUtils.getContextPath();
         try {
             String html = IoUtils.toString(new URL("http://localhost:" + port  + contextPath +
-                    "/text.html").toURI());
+                    "/excel.html").toURI());
 
             html = html.replace("./assets",  contextPath + "/storage");
             html += "<input style=\"display:none;\" id='fileId' value='"+ Base64.getEncoder().encodeToString(
