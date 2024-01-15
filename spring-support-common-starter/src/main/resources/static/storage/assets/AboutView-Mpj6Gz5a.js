@@ -1,1 +1,0 @@
-import{_ as e,o as s,d as t,s as o}from"./display-yGElD3Oc.js";const r={},a={class:"about"},c=o("h1",null,"This is an about page",-1),_=[c];function n(i,u){return s(),t("div",a,[..._])}const d=e(r,[["render",n],["__file","H:/workspace/vue-support-parent-starter/vue-support-view-starter/src/views/AboutView.vue"]]);export{d as default};
