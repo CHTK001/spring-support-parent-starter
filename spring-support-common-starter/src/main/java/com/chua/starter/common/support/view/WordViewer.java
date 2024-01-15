@@ -20,7 +20,7 @@ import java.util.Base64;
  *
  * @author CH
  */
-@Spi({ "docx"})
+@Spi({ "docx", "vnd.openxmlformats-officedocument.wordprocessingml.document"})
 public class WordViewer implements Viewer {
     @Override
     public ViewResult resolve(GetResult getResult) {

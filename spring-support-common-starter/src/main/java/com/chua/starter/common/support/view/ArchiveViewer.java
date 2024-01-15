@@ -36,7 +36,7 @@ import java.util.function.Function;
  *
  * @author CH
  */
-@Spi({"java-archive"})
+@Spi({"java-archive", "zip", "x-tar-gz"})
 public class ArchiveViewer implements Viewer {
     @Override
     public ViewResult resolve(GetResult getResult) {
