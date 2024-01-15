@@ -56,12 +56,17 @@ public class ArchiveViewer implements Viewer {
                 public Boolean safeApply(Row row) throws Throwable {
                     JsonObject item = new JsonObject();
                     FileMetadata fileMetadata = row.getSource(FileMetadata.class);
-                    item.put("name", fileMetadata.getName());
+                    item.put("name", FileUtils.normalize(new File(fileMetadata.getName()).getName()));
                     item.put("lastModified", fileMetadata.getLastModified());
                     item.put("size", fileMetadata.getSize());
                     item.put("isDirectory", fileMetadata.isDirectory());
-                    item.put("id", FileUtils.normalize(new File(fileMetadata.getName()).getName()));
-                    item.put("pid", FileUtils.normalize(Optional.ofNullable(FileUtils.getName(new File(fileMetadata.getName()).getParent())).orElse("/")));
+                    if("/".equalsIgnoreCase(fileMetadata.getName())) {
+                        item.put("id", "/");
+                        item.put("pid", "-1");
+                    } else {
+                        item.put("id", FileUtils.normalize(fileMetadata.getName()));
+                        item.put("pid", FileUtils.normalize(Optional.ofNullable(new File(fileMetadata.getName()).getParent()).orElse("/")));
+                    }
                     jsonArray.add(item);
                     return null;
                 }
@@ -88,11 +93,10 @@ public class ArchiveViewer implements Viewer {
                     item.setId(jsonObject.getString("id"));
                     item.setPid(Optional.ofNullable(jsonObject.getString("pid")).orElse("/"));
                     item.setValue(jsonObject.getString("name"));
-                    item.setExt(jsonObject);
                     return item;
                 }
             });
-            html += "<div style='display:none' id='data'>"+ Json.toJson(transfer.toNodeList(), "") +"</div>";
+            html += "<div style='display:none' id='data'>"+ Json.toJson(transfer) +"</div>";
             return new ViewResult(
                     MediaType.create("text", "html"),
                     html.getBytes(StandardCharsets.UTF_8)
