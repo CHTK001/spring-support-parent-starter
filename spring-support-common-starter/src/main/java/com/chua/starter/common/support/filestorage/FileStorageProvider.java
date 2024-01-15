@@ -4,7 +4,7 @@ import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.lang.code.ErrorResult;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.lang.file.meta.FileMetadata;
+import com.chua.common.support.lang.file.meta.PathMetadata;
 import com.chua.common.support.oss.FileStorage;
 import com.chua.common.support.oss.entity.GetResult;
 import com.chua.common.support.oss.entity.PutResult;
@@ -62,7 +62,7 @@ public class FileStorageProvider implements ApplicationContextAware {
      * @return {@link ResponseEntity}<{@link byte[]}>
      */
     @GetMapping("{bucket}/list")
-    public ReturnPageResult<FileMetadata> preview(@PathVariable("bucket") String bucket,
+    public ReturnPageResult<PathMetadata> preview(@PathVariable("bucket") String bucket,
                                                   @RequestParam(value = "page", required = false, defaultValue = "1") Integer page,
                                                   @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize,
                                                   @RequestParam(value = "path", required = false) String path,
