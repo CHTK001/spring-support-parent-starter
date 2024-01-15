@@ -41,7 +41,6 @@ public class ParameterLogFilter implements Filter {
             filterChain.doFilter(servletRequest, servletResponse);
             return;
         }
-        log.info("");
         log.info("======================================");
         hook(request);
         String header = request.getHeader(HTTP_HEADER_CONTENT_TYPE);

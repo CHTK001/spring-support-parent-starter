@@ -3,3 +3,4 @@ com.chua.starter.common.support.view.HighlightViewer
 com.chua.starter.common.support.view.JsonViewer
 com.chua.starter.common.support.view.XmlViewer
 com.chua.starter.common.support.view.ExcelViewer
+com.chua.starter.common.support.view.ArchiveViewer

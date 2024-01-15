@@ -41,13 +41,12 @@ public class AuthFilter implements Filter {
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
-        log.info("拦截到请求: {}", request instanceof HttpServletRequest ? ((HttpServletRequest) request).getRequestURI() : request.getRemoteAddr());
         WebRequest webRequest = new WebRequest(this.webRequest.getAuthProperties(), (HttpServletRequest) request, requestMappingHandlerMapping);
         if (webRequest.isPass()) {
             chain.doFilter(request, response);
             return;
         }
-
+        log.info("拦截到请求: {}", request instanceof HttpServletRequest ? ((HttpServletRequest) request).getRequestURI() : request.getRemoteAddr());
         if (webRequest.isFailure()) {
             webRequest.doFailureChain(chain, (HttpServletResponse) response);
             return;
