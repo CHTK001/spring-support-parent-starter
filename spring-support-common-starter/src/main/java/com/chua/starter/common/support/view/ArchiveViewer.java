@@ -2,7 +2,6 @@ package com.chua.starter.common.support.view;
 
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.json.Json;
-import com.chua.common.support.json.JsonArray;
 import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.file.ResourceFile;
 import com.chua.common.support.lang.file.ResourceFileFactory;
@@ -10,6 +9,7 @@ import com.chua.common.support.lang.file.function.ResourceListener;
 import com.chua.common.support.lang.file.impl.function.FileReader;
 import com.chua.common.support.lang.file.meta.FileMetadata;
 import com.chua.common.support.lang.file.meta.Row;
+import com.chua.common.support.lang.treenode.TreeNode;
 import com.chua.common.support.media.MediaType;
 import com.chua.common.support.oss.entity.GetResult;
 import com.chua.common.support.oss.view.ViewResult;
@@ -20,11 +20,16 @@ import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Optional;
+import java.util.function.Function;
 
 /**
  * 档案查看器
@@ -39,7 +44,7 @@ public class ArchiveViewer implements Viewer {
             return ViewResult.EMPTY;
         }
 
-        JsonArray jsonArray  = new JsonArray();
+        List<JsonObject> jsonArray  = new LinkedList<>();
         try (ByteArrayInputStream bais = new ByteArrayInputStream(getResult.getBytes())) {
             ResourceFile resourceFile = ResourceFileFactory.getResourceFile(FileUtils.getSimpleExtension(getResult.getName()), bais);
             if(null == resourceFile) {
@@ -55,6 +60,8 @@ public class ArchiveViewer implements Viewer {
                     item.put("lastModified", fileMetadata.getLastModified());
                     item.put("size", fileMetadata.getSize());
                     item.put("isDirectory", fileMetadata.isDirectory());
+                    item.put("id", FileUtils.normalize(new File(fileMetadata.getName()).getName()));
+                    item.put("pid", FileUtils.normalize(Optional.ofNullable(FileUtils.getName(new File(fileMetadata.getName()).getParent())).orElse("/")));
                     jsonArray.add(item);
                     return null;
                 }
@@ -74,7 +81,18 @@ public class ArchiveViewer implements Viewer {
             html = html.replace("./assets",  contextPath + "/storage");
             html += "<input style=\"display:none;\" id='fileId' value='"+ Base64.getEncoder().encodeToString(
                     requestURI.replace("/preview/", "/download/").getBytes(StandardCharsets.UTF_8))+ "' ></input>";
-            html += "<div id=''>"+ Json.toJson(jsonArray) +"</div>";
+            TreeNode<JsonObject> transfer = TreeNode.transfer(jsonArray, new Function<JsonObject, TreeNode>() {
+                @Override
+                public TreeNode<JsonObject> apply(JsonObject jsonObject) {
+                    TreeNode<JsonObject> item = new TreeNode<>();
+                    item.setId(jsonObject.getString("id"));
+                    item.setPid(Optional.ofNullable(jsonObject.getString("pid")).orElse("/"));
+                    item.setValue(jsonObject.getString("name"));
+                    item.setExt(jsonObject);
+                    return item;
+                }
+            });
+            html += "<div style='display:none' id='data'>"+ Json.toJson(transfer.toNodeList(), "") +"</div>";
             return new ViewResult(
                     MediaType.create("text", "html"),
                     html.getBytes(StandardCharsets.UTF_8)

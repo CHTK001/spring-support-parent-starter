@@ -100,10 +100,13 @@ public class FileStorageProvider implements ApplicationContextAware {
             MediaType mediaType = MediaType.valueOf(viewResult.getMediaType().toString());
             if(type.contains("*")) {
                 mediaType = MediaType.APPLICATION_OCTET_STREAM;
+                return ResponseEntity.ok()
+                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + URLEncoder.encode( getResult.getName(), "UTF-8") + "\"")
+                        .contentType(mediaType)
+                        .body(viewResult.getContent());
             }
 
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + URLEncoder.encode( getResult.getName(), "UTF-8") + "\"")
                     .contentType(mediaType)
                     .body(viewResult.getContent());
         } catch (Exception e) {
