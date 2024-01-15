@@ -2,7 +2,9 @@ package com.chua.starter.common.support.filestorage;
 
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.lang.code.ErrorResult;
+import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.lang.file.meta.FileMetadata;
 import com.chua.common.support.oss.FileStorage;
 import com.chua.common.support.oss.entity.GetResult;
 import com.chua.common.support.oss.entity.PutResult;
@@ -53,7 +55,24 @@ public class FileStorageProvider implements ApplicationContextAware {
     @Resource
     private FileStorageService fileStorageService;
 
-
+    /**
+     * 列表
+     *
+     * @param bucket 水桶
+     * @return {@link ResponseEntity}<{@link byte[]}>
+     */
+    @GetMapping("{bucket}/list")
+    public ReturnPageResult<FileMetadata> preview(@PathVariable("bucket") String bucket,
+                                                  @RequestParam(value = "page", required = false, defaultValue = "1") Integer page,
+                                                  @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize,
+                                                  @RequestParam(value = "path", required = false) String path,
+                                                  HttpServletRequest request) {
+        if (StringUtils.isEmpty(bucket) || !fileStorageService.containsKey(bucket)) {
+            throw new RuntimeException("bucket不存在");
+        }
+        FileStorage fileStorage = fileStorageService.get(bucket);
+        return fileStorage.list(path, page, pageSize);
+    }
     /**
      * 预览
      *
