@@ -32,6 +32,7 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.io.IOException;
+import java.net.URLEncoder;
 import java.util.List;
 import java.util.Map;
 
@@ -98,13 +99,11 @@ public class FileStorageProvider implements ApplicationContextAware {
             viewResult = ServiceProvider.of(Viewer.class).getNewExtension(type).resolve(getResult);
             MediaType mediaType = MediaType.valueOf(viewResult.getMediaType().toString());
             if(type.contains("*")) {
-                return ResponseEntity.ok()
-                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + getResult.getName()+ "\"")
-                        .body(viewResult.getContent());
+                mediaType = MediaType.APPLICATION_OCTET_STREAM;
             }
 
             return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + URLEncoder.encode( getResult.getName(), "UTF-8") + "\"")
                     .contentType(mediaType)
                     .body(viewResult.getContent());
         } catch (Exception e) {
@@ -145,7 +144,7 @@ public class FileStorageProvider implements ApplicationContextAware {
             getResult = fileStorageService.format(format, getResult);
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + getResult.getName()+ "\"")
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" +URLEncoder.encode( getResult.getName(), "UTF-8")+ "\"")
                     .body(getResult.getBytes());
         } catch (Exception e) {
             throw new RuntimeException("文件下载失败");
