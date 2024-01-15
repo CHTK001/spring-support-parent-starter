@@ -103,6 +103,7 @@ public class FileStorageProvider implements ApplicationContextAware {
                         .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + getResult.getName()+ "\"")
                         .body(viewResult.getContent());
             }
+
             return ResponseEntity.ok()
                     .contentType(mediaType)
                     .body(viewResult.getContent());
