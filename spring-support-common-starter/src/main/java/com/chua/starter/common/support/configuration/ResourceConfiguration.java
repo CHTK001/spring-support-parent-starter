@@ -22,6 +22,7 @@ public class ResourceConfiguration implements WebMvcConfigurer {
         registry.addResourceHandler("/json.html").addResourceLocations("classpath:/static/storage/");
         registry.addResourceHandler("/excel.html").addResourceLocations("classpath:/static/storage/");
         registry.addResourceHandler("/word.html").addResourceLocations("classpath:/static/storage/");
+        registry.addResourceHandler("/archive.html").addResourceLocations("classpath:/static/storage/");
     }
 
 }
