@@ -58,6 +58,22 @@ public interface FileStorageService {
     List<Option<String>> getType();
 
     /**
+     * 获取图片滤镜
+     *
+     * @return {@link List}<{@link Option}<{@link String}>>
+     */
+    List<Option<String>> getFilter();
+
+    /**
+     * 获取插件
+     *
+     * @return {@link List}<{@link Option}<{@link String}>>
+     */
+    List<Option<String>> getPlugin();
+
+
+
+    /**
      * 格式化
      *
      * @param format    总体安排
