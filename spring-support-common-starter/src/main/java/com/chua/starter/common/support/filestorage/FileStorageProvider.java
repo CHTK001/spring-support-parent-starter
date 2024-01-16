@@ -191,16 +191,25 @@ public class FileStorageProvider implements ApplicationContextAware {
      * @return {@link ErrorResult}
      */
     @PostMapping("{bucket}/upload")
-    public ReturnResult<PutResult> upload(@RequestParam("file") MultipartFile multipartFile, @PathVariable("bucket") String bucket) {
-        if(StringUtils.isEmpty(bucket) || fileStorageService.containsKey(bucket)) {
+    public ReturnResult<PutResult> upload(@RequestParam("file") MultipartFile multipartFile,
+                                          @PathVariable("bucket") String bucket,
+                                          @RequestParam(value = "path", required = false) String path) {
+        if(StringUtils.isEmpty(bucket) || !fileStorageService.containsKey(bucket)) {
             return ReturnResult.illegal("bucket不存在");
+        }
+
+        if(StringUtils.isNotBlank(path)) {
+            try {
+                path = URLDecoder.decode(path, "UTF-8");
+            } catch (UnsupportedEncodingException ignored) {
+            }
         }
 
         FileStorage fileStorage = fileStorageService.get(bucket);
         File file = null;
         try {
             file = MultipartFileUtils.toFile(multipartFile);
-            PutResult putResult = fileStorage.putObject(file);
+            PutResult putResult = fileStorage.putObject(path, file);
             if(null == putResult) {
                 return ReturnResult.illegal("上传文件失败");
             }
