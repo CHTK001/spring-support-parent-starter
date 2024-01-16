@@ -34,6 +34,8 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.List;
 import java.util.Map;
@@ -69,6 +71,13 @@ public class FileStorageProvider implements ApplicationContextAware {
                                                   HttpServletRequest request) {
         if (StringUtils.isEmpty(bucket) || !fileStorageService.containsKey(bucket)) {
             throw new RuntimeException("bucket不存在");
+        }
+
+        if(StringUtils.isNotBlank(path)) {
+            try {
+                path = URLDecoder.decode(path, "UTF-8");
+            } catch (UnsupportedEncodingException ignored) {
+            }
         }
         FileStorage fileStorage = fileStorageService.get(bucket);
         return fileStorage.list(path, page, pageSize);
