@@ -15,6 +15,7 @@ public interface Constant {
 
     String ADMIN = "ADMIN";
     String SYSTEM = "system";
+    String REDIS_CACHE = "redis-cache";
     String EXECUTER = "executer";
     String PARAM = "param";
     String CONNECT = "connect";
