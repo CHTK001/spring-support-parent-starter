@@ -24,7 +24,12 @@ public class ArrayToJsonStringJsonDeserializer extends JsonDeserializer<Object> 
     @Override
     public Object deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException, JacksonException {
         TreeNode treeNode = jsonParser.getCodec().readTree(jsonParser);
-        return treeNodeToValue(treeNode);
+        Object o = treeNodeToValue(treeNode);
+        if(null == o) {
+            return null;
+        }
+
+        return Json.toJson(o);
     }
 
     /**
@@ -34,12 +39,7 @@ public class ArrayToJsonStringJsonDeserializer extends JsonDeserializer<Object> 
      * @return {@link Object}
      */
     private Object treeNodeToValue(TreeNode treeNode) {
-        Object o = treeNodeToValueValue(treeNode);
-        if(null == o) {
-            return null;
-        }
-
-        return Json.toJson(o);
+        return treeNodeToValueValue(treeNode);
     }
     /**
      * 树节点到值
