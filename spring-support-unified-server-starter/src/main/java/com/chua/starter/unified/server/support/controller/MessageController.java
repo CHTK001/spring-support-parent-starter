@@ -1,7 +1,7 @@
 package com.chua.starter.unified.server.support.controller;
 
-import com.chua.common.support.annotations.Permission;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.sse.support.Emitter;
 import com.chua.starter.sse.support.SseTemplate;
 import com.chua.starter.unified.server.support.service.uniform.Uniform;
