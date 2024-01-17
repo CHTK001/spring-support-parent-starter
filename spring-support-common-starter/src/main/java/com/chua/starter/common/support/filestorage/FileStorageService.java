@@ -71,6 +71,14 @@ public interface FileStorageService {
      */
     List<Option<String>> getPlugin();
 
+    /**
+     * 获得命名
+     *
+     * @return {@link List}<{@link Option}<{@link String}>>
+     */
+    List<Option<String>> getNamed();
+
+
 
 
     /**
