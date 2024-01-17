@@ -2,7 +2,6 @@ package com.chua.starter.gen.support.controller;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.chua.common.support.annotations.Permission;
 import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.datasource.dialect.Dialect;
 import com.chua.common.support.datasource.meta.Column;
@@ -16,6 +15,7 @@ import com.chua.common.support.lang.file.adaptor.univocity.parsers.conversions.V
 import com.chua.common.support.utils.ArrayUtils;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.gen.support.entity.SysGen;
 import com.chua.starter.gen.support.entity.SysGenColumn;
 import com.chua.starter.gen.support.entity.SysGenConfig;
@@ -124,13 +124,13 @@ public class TableController {
 
         results = new LinkedList<>(tpl.values());
 
-        List<Table> page = CollectionUtils.page((int) query.getPage(), (int) query.getPageSize(), results);
+        List<Table> page = CollectionUtils.page((int) query.getPageNo(), (int) query.getPageSize(), results);
         return ReturnPageResult.ok(
                 PageResult.<Table>builder()
                         .total(results.size())
                         .data(page)
                         .pageSize((int) query.getPageSize())
-                        .pageNo((int) query.getPage()).build()
+                        .pageNo((int) query.getPageNo()).build()
         );
     }
 
@@ -275,7 +275,7 @@ public class TableController {
         }
 
         return PageResultUtils.ok(sysGenTableService.page(
-                new Page<>(query.getPage(), query.getPageSize()),
+                new Page<>(query.getPageNo(), query.getPageSize()),
                 Wrappers.<SysGenTable>lambdaQuery()
                         .eq(SysGenTable::getGenId, query.getGenId())
                         .like(StringUtils.isNotBlank(query.getKeyword()), SysGenTable::getTabName, query.getKeyword())
