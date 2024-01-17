@@ -44,6 +44,26 @@ public class ArrayToJsonStringJsonDeserializer extends JsonDeserializer<Object> 
         }
         return null;
     }
+    /**
+     * 树节点到值
+     *
+     * @param treeNode 树节点
+     * @return {@link Object}
+     */
+    private Object treeNodeToValueValue(TreeNode treeNode) {
+        if (treeNode.isArray()) {
+            return treeNodeToArrayValue(treeNode);
+        }
+
+        if (treeNode.isObject()) {
+            return treeNodeToObjectValue(treeNode);
+        }
+
+        if (treeNode.isValueNode()) {
+            return treeNode.toString();
+        }
+        return null;
+    }
 
     private Object treeNodeToObjectValue(TreeNode treeNode) {
         Iterator<String> stringIterator = treeNode.fieldNames();
@@ -57,7 +77,7 @@ public class ArrayToJsonStringJsonDeserializer extends JsonDeserializer<Object> 
         Iterator<String> stringIterator = treeNode.fieldNames();
         Map<String, Object> rs = new LinkedHashMap<>();
         stringIterator.forEachRemaining(it -> {
-            rs.put(it, treeNodeToObjectValue(treeNode.get(it)));
+            rs.put(it, treeNodeToValueValue(treeNode.get(it)));
         });
         return Json.toJson(rs);
     }
@@ -76,7 +96,7 @@ public class ArrayToJsonStringJsonDeserializer extends JsonDeserializer<Object> 
         List<Object> rs = new LinkedList<>();
         for (int i = 0; i < size; i++) {
             TreeNode treeNode1 = treeNode.get(i);
-            rs.add(treeNodeToArrayValue(treeNode1));
+            rs.add(treeNodeToValueValue(treeNode1));
         }
         return Json.toJson(rs);
     }
