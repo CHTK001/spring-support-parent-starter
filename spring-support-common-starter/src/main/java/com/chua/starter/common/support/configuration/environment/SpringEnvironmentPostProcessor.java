@@ -1,6 +1,5 @@
 package com.chua.starter.common.support.configuration.environment;
 
-import com.chua.common.support.function.Joiner;
 import com.chua.common.support.net.NetUtils;
 import com.chua.common.support.utils.StringUtils;
 import org.springframework.boot.SpringApplication;
@@ -9,9 +8,6 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MutablePropertySources;
 import org.springframework.core.env.PropertiesPropertySource;
 
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Properties;
 
 /**
@@ -24,6 +20,7 @@ public class SpringEnvironmentPostProcessor implements EnvironmentPostProcessor 
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         Properties properties = new Properties();
         properties.setProperty("server.compression.enabled", "true");
+        properties.setProperty("server.http2.enabled", "true");
         properties.setProperty("spring.datasource.url", "jdbc:sqlite:./sys");
         properties.setProperty("spring.datasource.driver-class-name", "org.sqlite.JDBC");
         properties.setProperty("spring.datasource.username", "sa");
