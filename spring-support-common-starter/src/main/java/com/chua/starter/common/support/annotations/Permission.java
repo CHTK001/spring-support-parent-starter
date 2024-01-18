@@ -1,5 +1,7 @@
 package com.chua.starter.common.support.annotations;
 
+import org.springframework.core.annotation.AliasFor;
+
 import java.lang.annotation.*;
 
 /**
@@ -17,8 +19,14 @@ public @interface Permission {
      *
      * @return 权限
      */
+    @AliasFor("permission")
     String[] value() default {};
 
+    /**
+     * @return {@link String[]}
+     */
+    @AliasFor("value")
+    String[] permission() default {};
     /**
      * 角色
      *
