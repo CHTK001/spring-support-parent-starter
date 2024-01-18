@@ -13,9 +13,11 @@ import org.springframework.beans.factory.InitializingBean;
  */
 @Slf4j
 public class DelegateSocketIOServer extends SocketIOServer implements InitializingBean, DisposableBean {
+
     public DelegateSocketIOServer(Configuration configuration) {
         super(configuration);
     }
+
 
     @Override
     public void destroy() throws Exception {

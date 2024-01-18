@@ -2,11 +2,14 @@ package com.chua.socketio.support.configuration;
 
 import com.chua.socketio.support.SocketIOListener;
 import com.chua.socketio.support.properties.SocketIoProperties;
+import com.chua.socketio.support.resolver.DefaultSocketSessionResolver;
+import com.chua.socketio.support.resolver.SocketSessionResolver;
 import com.chua.socketio.support.server.DelegateSocketIOServer;
 import com.chua.socketio.support.session.DelegateSocketSessionFactory;
 import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.corundumstudio.socketio.Configuration;
 import com.corundumstudio.socketio.SocketConfig;
+import com.corundumstudio.socketio.SocketIOClient;
 import com.corundumstudio.socketio.listener.ConnectListener;
 import com.corundumstudio.socketio.listener.DisconnectListener;
 import com.corundumstudio.socketio.protocol.JacksonJsonSupport;
@@ -38,21 +41,27 @@ public class SocketConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = SocketIoProperties.PRE, name = "open", havingValue = "true", matchIfMissing = false)
-    public DelegateSocketIOServer socketIOServer(Configuration configuration, List<SocketIOListener> listenerList) {
+    public DelegateSocketIOServer socketIOServer(Configuration configuration, SocketSessionTemplate socketSessionTemplate, List<SocketIOListener> listenerList) {
         DelegateSocketIOServer socketIOServer = new DelegateSocketIOServer(configuration);
-        //添加事件监听器
-        for (SocketIOListener socketIOListener : listenerList) {
-            if(socketIOListener instanceof DisconnectListener) {
-                socketIOServer.addDisconnectListener((DisconnectListener) socketIOListener);
-                continue;
-            }
+        SocketSessionResolver socketSessionResolver = new DefaultSocketSessionResolver(listenerList);
 
-            if(socketIOListener instanceof ConnectListener) {
-                socketIOServer.addConnectListener((ConnectListener) socketIOListener);
-                continue;
+        socketIOServer.addConnectListener(new ConnectListener() {
+           @Override
+           public void onConnect(SocketIOClient client) {
+               socketSessionTemplate.save(client);
+               socketSessionResolver.doConnect(client);
+           }
+       });
+        socketIOServer.addDisconnectListener(new DisconnectListener() {
+            @Override
+            public void onDisconnect(SocketIOClient client) {
+                socketSessionTemplate.remove(client);
+                socketSessionResolver.disConnect(client);
             }
-            socketIOServer.addListeners(socketIOListener);
-        }
+        });
+
+        socketSessionResolver.registerEvent(socketIOServer);
+
         return socketIOServer;
     }
     @Bean
