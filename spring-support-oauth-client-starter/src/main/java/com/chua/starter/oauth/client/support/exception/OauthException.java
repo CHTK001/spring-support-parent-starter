@@ -7,4 +7,11 @@ package com.chua.starter.oauth.client.support.exception;
  * @since 2022/7/29 10:29
  */
 public class OauthException extends IllegalArgumentException {
+
+    public OauthException() {
+    }
+
+    public OauthException(String s) {
+        super(s);
+    }
 }
