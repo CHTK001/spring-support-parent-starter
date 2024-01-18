@@ -27,6 +27,7 @@ import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
+import com.chua.starter.oauth.client.support.protocol.Protocol;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.client.support.user.UserResume;
@@ -49,6 +50,7 @@ import static com.chua.starter.common.support.utils.RequestUtils.SESSION_USERNAM
 import static com.chua.starter.common.support.utils.RequestUtils.SESSION_USER_INFO;
 import static com.chua.starter.oauth.client.support.contants.AuthConstant.ACCESS_KEY;
 import static com.chua.starter.oauth.client.support.contants.AuthConstant.SECRET_KEY;
+import static com.chua.starter.oauth.client.support.web.WebRequest.isEmbed;
 
 /**
  * 鉴权客户端操作
@@ -514,14 +516,16 @@ public class AuthClientExecute {
         if(StringUtils.isEmpty(token) || CommonConstant.NULL.equals(token)) {
             return null;
         }
-        if(WebRequest.isEmbed(authClientProperties)) {
+        if(isEmbed(authClientProperties)) {
             try {
                 return Json.fromJson(AES.decrypt(token), UserResult.class);
             } catch (Exception ignored) {
             }
         }
 
-        return null;
+        Protocol protocol = ServiceProvider.of(Protocol.class).getExtension(authClientProperties.getProtocol());
+        AuthenticationInformation approve = protocol.approve(null, token);
+        return BeanUtils.copyProperties(approve.getReturnResult(), UserResult.class);
     }
 
 
