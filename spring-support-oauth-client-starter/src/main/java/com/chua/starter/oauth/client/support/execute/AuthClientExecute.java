@@ -16,6 +16,7 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.Md5Utils;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.value.Value;
 import com.chua.starter.common.support.application.Binder;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
@@ -33,6 +34,8 @@ import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.chua.starter.oauth.client.support.web.WebRequest;
 import com.google.common.base.Strings;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import kong.unirest.HttpResponse;
 import kong.unirest.Unirest;
 import kong.unirest.UnirestException;
@@ -41,6 +44,8 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 import static com.chua.common.support.constant.NumberConstant.NUM_200;
@@ -505,7 +510,9 @@ public class AuthClientExecute {
 
         return httpResponse.getBody();
     }
-
+    private static final Cache<String, Value<UserResult>> CACHE = CacheBuilder
+            .newBuilder().expireAfterWrite(Duration.of(3, ChronoUnit.MINUTES))
+            .build();
     /**
      * 获取用户结果
      *
@@ -513,19 +520,28 @@ public class AuthClientExecute {
      * @return {@link UserResult}
      */
     public UserResult getUserResult(String token) {
+        Value<UserResult> ifPresent = CACHE.getIfPresent(token);
+        if(null != ifPresent) {
+            return ifPresent.getValue();
+        }
+
         if(StringUtils.isEmpty(token) || CommonConstant.NULL.equals(token)) {
             return null;
         }
         if(isEmbed(authClientProperties)) {
             try {
-                return Json.fromJson(AES.decrypt(token), UserResult.class);
+                UserResult userResult = Json.fromJson(AES.decrypt(token), UserResult.class);
+                CACHE.put(token, Value.of(userResult));
+                return userResult;
             } catch (Exception ignored) {
             }
         }
 
         Protocol protocol = ServiceProvider.of(Protocol.class).getExtension(authClientProperties.getProtocol());
         AuthenticationInformation approve = protocol.approve(null, token);
-        return BeanUtils.copyProperties(approve.getReturnResult(), UserResult.class);
+        UserResult userResult = BeanUtils.copyProperties(approve.getReturnResult(), UserResult.class);
+        CACHE.put(token, Value.of(userResult));
+        return userResult;
     }
 
 
