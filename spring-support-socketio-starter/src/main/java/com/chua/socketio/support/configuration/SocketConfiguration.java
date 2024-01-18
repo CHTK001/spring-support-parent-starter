@@ -1,19 +1,19 @@
 package com.chua.socketio.support.configuration;
 
 import com.chua.socketio.support.SocketIOListener;
+import com.chua.socketio.support.auth.SocketAuthFactory;
 import com.chua.socketio.support.properties.SocketIoProperties;
 import com.chua.socketio.support.resolver.DefaultSocketSessionResolver;
 import com.chua.socketio.support.resolver.SocketSessionResolver;
 import com.chua.socketio.support.server.DelegateSocketIOServer;
 import com.chua.socketio.support.session.DelegateSocketSessionFactory;
 import com.chua.socketio.support.session.SocketSessionTemplate;
-import com.corundumstudio.socketio.Configuration;
-import com.corundumstudio.socketio.SocketConfig;
-import com.corundumstudio.socketio.SocketIOClient;
+import com.corundumstudio.socketio.*;
 import com.corundumstudio.socketio.listener.ConnectListener;
 import com.corundumstudio.socketio.listener.DisconnectListener;
 import com.corundumstudio.socketio.protocol.JacksonJsonSupport;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -41,7 +41,9 @@ public class SocketConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = SocketIoProperties.PRE, name = "open", havingValue = "true", matchIfMissing = false)
-    public DelegateSocketIOServer socketIOServer(Configuration configuration, SocketSessionTemplate socketSessionTemplate, List<SocketIOListener> listenerList) {
+    public DelegateSocketIOServer socketIOServer(Configuration configuration,
+                                                 SocketSessionTemplate socketSessionTemplate,
+                                                 List<SocketIOListener> listenerList) {
         DelegateSocketIOServer socketIOServer = new DelegateSocketIOServer(configuration);
         SocketSessionResolver socketSessionResolver = new DefaultSocketSessionResolver(listenerList);
 
@@ -59,15 +61,14 @@ public class SocketConfiguration {
                 socketSessionResolver.disConnect(client);
             }
         });
-
         socketSessionResolver.registerEvent(socketIOServer);
-
         return socketIOServer;
     }
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = SocketIoProperties.PRE, name = "open", havingValue = "true", matchIfMissing = false)
-    public Configuration configuration(SocketIoProperties properties) {
+    public Configuration configuration(SocketIoProperties properties,
+                                       @Autowired(required = false) SocketAuthFactory socketAuthFactory) {
         SocketConfig socketConfig = new SocketConfig();
         socketConfig.setReuseAddress(true);
         socketConfig.setTcpNoDelay(true);
@@ -92,6 +93,14 @@ public class SocketConfiguration {
         configuration.setPingTimeout(properties.getPingTimeout());
         // Ping消息间隔（毫秒），默认25秒。客户端向服务器发送一条心跳消息间隔
         configuration.setPingInterval(properties.getPingInterval());
+        if(null != socketAuthFactory) {
+            configuration.setAuthorizationListener(new AuthorizationListener() {
+                @Override
+                public boolean isAuthorized(HandshakeData data) {
+                    return socketAuthFactory.isAuthorized(data);
+                }
+            });
+        }
 
         return configuration;
     }
