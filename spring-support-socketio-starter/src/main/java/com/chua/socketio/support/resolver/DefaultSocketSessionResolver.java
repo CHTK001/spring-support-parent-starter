@@ -33,10 +33,10 @@ public class DefaultSocketSessionResolver implements SocketSessionResolver{
     private List<SocketInfo> disconnect = new LinkedList<>();
     private List<SocketInfo> data = new LinkedList<>();
 
-    private ObjectMapper objectMapper = new ObjectMapper();
+    private static ObjectMapper objectMapper = new ObjectMapper();
 
     public DefaultSocketSessionResolver(List<SocketIOListener> listenerList) {
-        this.objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         this.listenerList = listenerList;
         for (SocketIOListener socketIOListener : listenerList) {
             Class<? extends SocketIOListener> aClass = socketIOListener.getClass();
@@ -99,7 +99,7 @@ public class DefaultSocketSessionResolver implements SocketSessionResolver{
     @Data
     @Slf4j
     @AllArgsConstructor
-    private class SocketInfo {
+    private static class SocketInfo {
 
         private Object bean;
 
