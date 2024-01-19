@@ -3,7 +3,6 @@ package com.chua.starter.common.support.rule;
 import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.crypto.CryptoModule;
 import com.chua.common.support.crypto.CryptoType;
-import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.annotations.Crypto;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
@@ -45,12 +44,11 @@ public class CryptoSerializer extends JsonSerializer<String> implements Contextu
                           final SerializerProvider serializerProvider) throws IOException {
 
         if (!Strings.isNullOrEmpty(origin) && null != cryptoType && StringUtils.isNotEmpty(key) && null != cryptoModule) {
-            Codec codec = ServiceProvider.of(Codec.class).getExtension(cryptoModule);
             if(cryptoModule == CryptoModule.DECODE) {
-                jsonGenerator.writeString(codec.encodeHex(origin, key));
+                jsonGenerator.writeString(Codec.build(cryptoModule.name(), key).encodeHex(origin));
                 return;
             }
-            jsonGenerator.writeString(codec.decodeHex(origin, key));
+            jsonGenerator.writeString(Codec.build(cryptoModule.name(), key).decodeHex(origin));
         }
         jsonGenerator.writeString(origin);
     }

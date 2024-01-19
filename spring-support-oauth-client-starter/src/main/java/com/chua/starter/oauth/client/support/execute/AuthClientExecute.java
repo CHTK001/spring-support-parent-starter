@@ -2,10 +2,7 @@ package com.chua.starter.oauth.client.support.execute;
 
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.constant.CommonConstant;
-import com.chua.common.support.crypto.aes.Aes;
-import com.chua.common.support.crypto.decode.KeyDecode;
-import com.chua.common.support.crypto.encode.KeyEncode;
-import com.chua.common.support.crypto.utils.DigestUtils;
+import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.function.Splitter;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.code.ReturnResult;
@@ -14,6 +11,7 @@ import com.chua.common.support.lang.robin.Node;
 import com.chua.common.support.lang.robin.Robin;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.Md5Utils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.value.Value;
@@ -65,12 +63,10 @@ import static com.chua.starter.oauth.client.support.web.WebRequest.isEmbed;
 public class AuthClientExecute {
 
     private final AuthClientProperties authClientProperties;
-    private final KeyEncode encode;
-    private final KeyDecode decode;
-
-    private static final Aes AES = new Aes("1234567890123456");
 
     public static final AuthClientExecute INSTANCE = new AuthClientExecute();
+    private final String encryption;
+    private static final String DEFAULT_KEY = "1234567980123456";
 
     public static AuthClientExecute getInstance() {
         return INSTANCE;
@@ -78,8 +74,7 @@ public class AuthClientExecute {
 
     public AuthClientExecute() {
         this.authClientProperties = Binder.binder(AuthClientProperties.PRE, AuthClientProperties.class);
-        this.encode = ServiceProvider.of(KeyEncode.class).getExtension(authClientProperties.getEncryption());
-        this.decode = ServiceProvider.of(KeyDecode.class).getExtension(authClientProperties.getEncryption());
+        this.encryption = authClientProperties.getEncryption();
     }
 
     /**
@@ -166,14 +161,15 @@ public class AuthClientExecute {
         jsonObject.put(SECRET_KEY, secretKey);
 
         String asString = Json.toJson(jsonObject);
-        String request = encode.encodeHex(asString, DigestUtils.md5Hex(key));
+        String md5Hex = DigestUtils.md5Hex(key);
+        String request = Codec.build(encryption, md5Hex).encodeHex(asString);
 
         String uidKey = UUID.randomUUID().toString();
         Map<String, Object> item2 = new HashMap<>(3);
         item2.put(AuthConstant.OAUTH_VALUE, request);
         item2.put(AuthConstant.OAUTH_KEY, key);
         item2.put("x-oauth-uid", uidKey);
-        request = encode.encodeHex(Json.toJson(item2), serviceKey);
+        request = Codec.build(encryption, serviceKey).encodeHex(Json.toJson(item2);
         Robin robin = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
         Robin robin1 = robin.create();
         String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(authClientProperties.getAddress()).split(",");
@@ -254,7 +250,7 @@ public class AuthClientExecute {
         jsonObject.put(SECRET_KEY, secretKey);
 
         String asString = Json.toJson(jsonObject);
-        String request = encode.encodeHex(asString, DigestUtils.md5Hex(key));
+        String request = Codec.build(encryption, DigestUtils.md5Hex(key)).encodeHex(asString);
 
         String uid = DigestUtils.md5Hex(UUID.randomUUID().toString());
         Map<String, Object> item2 = new LinkedHashMap<>();
@@ -263,7 +259,7 @@ public class AuthClientExecute {
         item2.put(AuthConstant.OAUTH_KEY, key);
         item2.put("x-oauth-uid", uid);
         item2.put("password", password);
-        request = encode.encodeHex(Json.toJson(item2), serviceKey);
+        request = Codec.build(encryption, serviceKey).encodeHex(Json.toJson(item2));
         Robin robin1 = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
         Robin balance = robin1.create();
         String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(authClientProperties.getAddress()).split(",");
@@ -305,7 +301,7 @@ public class AuthClientExecute {
             if (code.equals(OK.getCode())) {
                 LoginAuthResult loginAuthResult = null;
                 try {
-                    loginAuthResult = Json.fromJson(decode.decodeHex(data.toString(), uid), LoginAuthResult.class);
+                    loginAuthResult = Json.fromJson(Codec.build(encryption, uid).decodeHex(data.toString()), LoginAuthResult.class);
                 } catch (Exception ignore) {
                 }
 
@@ -398,7 +394,7 @@ public class AuthClientExecute {
                     userResult.setExpire(System.nanoTime());
                     loginAuthResult.setUserResult(userResult);
                     try {
-                        loginAuthResult.setToken(AES.encrypt(Json.toJson(userResult)));
+                        loginAuthResult.setToken(Codec.build(encryption, DEFAULT_KEY).encodeHex(Json.toJson(userResult)));
                     } catch (Exception ignored) {
                     }
                     userResult.setUid(loginAuthResult.getToken());
