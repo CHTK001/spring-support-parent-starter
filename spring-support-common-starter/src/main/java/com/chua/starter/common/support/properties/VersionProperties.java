@@ -19,4 +19,9 @@ public class VersionProperties {
      * 是否开启版本控制
      */
     private boolean enable;
+
+    /**
+     * 版本号
+     */
+    private String no;
 }

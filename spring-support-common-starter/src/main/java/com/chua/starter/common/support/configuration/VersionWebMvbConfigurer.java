@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.configuration;
 
+import com.chua.starter.common.support.properties.IpProperties;
 import com.chua.starter.common.support.properties.VersionProperties;
 import com.chua.starter.common.support.version.ApiVersionRequestMappingHandlerMapping;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ import javax.annotation.Resource;
  */
 @EnableConfigurationProperties({
         VersionProperties.class,
+        IpProperties.class
 })
 @Slf4j
 public class VersionWebMvbConfigurer implements WebMvcRegistrations {
