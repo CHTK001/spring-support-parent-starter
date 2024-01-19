@@ -72,7 +72,7 @@ public final class RequestAuthorization implements Authorization {
         ReturnResult<UserResult> resolve = tokenResolver.resolve(cookie, token);
         ReturnResultBuilder<String> result = ReturnResult.<String>newBuilder().code(resolve.getCode()).msg(resolve.getMsg());
         if (OK.getCode().equals(resolve.getCode())) {
-            result.setData(authInformation.getEncode().encodeHex(Json.toJson(resolve.getData()), authInformation.getOauthKey()));
+            result.setData(authInformation.getCodec().encodeHex(Json.toJson(resolve.getData())));
         }
         return result.build();
     }
@@ -87,7 +87,7 @@ public final class RequestAuthorization implements Authorization {
         ReturnResult<UserResult> resolve = tokenResolver.refresh(cookie, token);
         ReturnResultBuilder<String> result = ReturnResult.<String>newBuilder().code(resolve.getCode()).msg(resolve.getMsg());
         if (OK.getCode().equals(resolve.getCode())) {
-            result.setData(authInformation.getEncode().encodeHex(Json.toJson(resolve.getData()), authInformation.getOauthKey()));
+            result.setData(authInformation.getCodec().encodeHex(Json.toJson(resolve.getData())));
         }
         return result.build();
     }

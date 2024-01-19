@@ -53,6 +53,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
     @Resource
     private AuthClientProperties authClientProperties;
     private static Cacheable CACHEABLE;
+    private String encryption;
 
     @Override
     @SuppressWarnings("ALL")
@@ -86,14 +87,14 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         }
 
         String asString = Json.toJson(jsonObject);
-        String request = Codec.build(authClientProperties.getEncryption(), Md5Utils.getInstance()
+        String request = Codec.build(encryption, Md5Utils.getInstance()
                 .getMd5String(accessKey + DigestUtils.md5Hex(secretKey + key))).encodeHex(asString);
         Map<String, Object> item2 = new HashMap<>(3);
         item2.put(AuthConstant.ACCESS_KEY, accessKey);
         item2.put(AuthConstant.SECRET_KEY, secretKey);
         item2.put(AuthConstant.OAUTH_VALUE, request);
         item2.put(AuthConstant.OAUTH_KEY, key);
-        request = Codec.build(authClientProperties.getEncryption(),serviceKey).encodeHex(Json.toJson(item2));
+        request = Codec.build(encryption,serviceKey).encodeHex(Json.toJson(item2));
 
 
         Robin balance = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
@@ -148,7 +149,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
             }
 
             if (ReturnCode.OK.getCode().equals(code)) {
-                body = Codec.build(authClientProperties.getEncryption(), key).decodeHex(data.toString());
+                body = Codec.build(encryption, key).decodeHex(data.toString());
 
                 UserResume userResume = Json.fromJson(body, UserResume.class);
                 RequestUtils.setUsername(userResume.getUsername());
@@ -194,14 +195,14 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
 
         String asString = Json.toJson(jsonObject);
 
-        String request = Codec.build(authClientProperties.getEncryption(), Md5Utils.getInstance()
+        String request = Codec.build(encryption, Md5Utils.getInstance()
                 .getMd5String(accessKey + DigestUtils.md5Hex(secretKey + key))).encodeHex(asString);
         Map<String, Object> item2 = new HashMap<>(3);
         item2.put(AuthConstant.ACCESS_KEY, accessKey);
         item2.put(AuthConstant.SECRET_KEY, secretKey);
         item2.put(AuthConstant.OAUTH_VALUE, request);
         item2.put(AuthConstant.OAUTH_KEY, key);
-        request = Codec.build(authClientProperties.getEncryption(), serviceKey).encodeHex(Json.toJson(item2));
+        request = Codec.build(encryption, serviceKey).encodeHex(Json.toJson(item2));
 
 
         Robin balance = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
@@ -257,7 +258,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
             }
 
             if (ReturnCode.OK.getCode().equals(code)) {
-                body = Codec.build(authClientProperties.getEncryption(), key).decodeHex(data.toString());
+                body = Codec.build(encryption, key).decodeHex(data.toString());
 
                 UserResume userResume = Json.fromJson(body, UserResume.class);
                 inCache(cacheKey, new AuthenticationInformation(OK, userResume));
@@ -298,6 +299,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
+        this.encryption = authClientProperties.getEncryption();
         CACHEABLE = new GuavaCacheable(CacheConfiguration.builder()
                 .expireAfterWrite((int) authClientProperties.getCacheTimeout())
                 .hotColdBackup(authClientProperties.isCacheHotColdBackup())
