@@ -3,10 +3,8 @@ package com.chua.starter.oauth.server.support.information;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
-import com.chua.common.support.crypto.decode.KeyDecode;
-import com.chua.common.support.crypto.encode.KeyEncode;
-import com.chua.common.support.crypto.utils.DigestUtils;
-import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.crypto.Codec;
+import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.Md5Utils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
@@ -31,11 +29,10 @@ public class AuthInformation {
     private final HttpServletRequest request;
     @Getter
     private final AuthServerProperties authServerProperties;
-    private final KeyDecode decode;
     @Getter
     private final String address;
+    private final String encryption;
     @Getter
-    private final KeyEncode encode;
     private String accessKey;
     private String secretKey;
     @Getter
@@ -48,8 +45,7 @@ public class AuthInformation {
         this.request = request;
         this.authServerProperties = authServerProperties;
         this.address = RequestUtils.getIpAddress(request);
-        this.decode = ServiceProvider.of(KeyDecode.class).getExtension(authServerProperties.getEncryption());
-        this.encode = ServiceProvider.of(KeyEncode.class).getExtension(authServerProperties.getEncryption());
+        this.encryption = authServerProperties.getEncryption();
     }
 
     /**
@@ -67,15 +63,15 @@ public class AuthInformation {
      * 解析请求
      */
     private Authorization analysisRequest() {
-        String requestData = decode.decodeHex(data, authServerProperties.getServiceKey());
+        String requestData = Codec.build(encryption, authServerProperties.getServiceKey()).decodeHex(data);
         JSONObject jsonObject = JSON.parseObject(requestData);
         String oauthValue = jsonObject.getString(OAUTH_VALUE);
         this.accessKey = jsonObject.getString(ACCESS_KEY);
         this.secretKey = jsonObject.getString(SECRET_KEY);
         this.oauthKey = jsonObject.getString(OAUTH_KEY);
 
-        String tokenCookie = decode.decodeHex(oauthValue, Md5Utils.getInstance()
-                .getMd5String(accessKey + DigestUtils.md5Hex(secretKey + oauthKey)));
+        String tokenCookie = Codec.build(encryption, Md5Utils.getInstance()
+                .getMd5String(accessKey + DigestUtils.md5Hex(secretKey + oauthKey))).decodeHex(oauthValue);
 
         JSONObject parseObject = JSON.parseObject(tokenCookie);
         this.token = parseObject.getString(authServerProperties.getTokenName());
@@ -91,5 +87,9 @@ public class AuthInformation {
         RequestAuthorization authorization = new RequestAuthorization(this, token, cookie, accessKey, secretKey);
         SpringBeanUtils.getApplicationContext().getAutowireCapableBeanFactory().autowireBean(authorization);
         return authorization;
+    }
+
+    public Codec getCodec() {
+        return Codec.build(encryption, oauthKey);
     }
 }
