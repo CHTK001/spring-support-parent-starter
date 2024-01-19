@@ -2,12 +2,11 @@ package com.chua.starter.oauth.server.support.provider;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
-import com.chua.common.support.crypto.decode.KeyDecode;
-import com.chua.common.support.crypto.encode.KeyEncode;
-import com.chua.common.support.crypto.utils.DigestUtils;
+import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.utils.CookieUtil;
@@ -56,8 +55,6 @@ import static com.chua.starter.oauth.client.support.contants.AuthConstant.*;
 @SuppressWarnings("ALL")
 @RequestMapping("${plugin.auth.server.context-path:}")
 public class LoginProvider implements InitializingBean {
-    private KeyDecode decode;
-    private KeyEncode encode;
     @Resource
     private AuthServerProperties authServerProperties;
 
@@ -68,6 +65,8 @@ public class LoginProvider implements InitializingBean {
     private LoginCheck loginCheck;
     @Resource
     private LoggerResolver loggerResolver;
+    private String encryption;
+    private String serviceKey;
 
     /**
      * 无权限页面
@@ -155,9 +154,9 @@ public class LoginProvider implements InitializingBean {
             return ReturnResult.ok();
         }
 
-        JSONObject jsonObject = JSON.parseObject(decode.decodeHex(data, authServerProperties.getServiceKey()));
+        JSONObject jsonObject = JSON.parseObject(Codec.build(encryption, serviceKey).decodeHex(data));
         String key = jsonObject.getString(OAUTH_KEY);
-        JSONObject request1 = JSON.parseObject(decode.decodeHex(jsonObject.getString(OAUTH_VALUE), DigestUtils.md5Hex(key)));
+        JSONObject request1 = JSON.parseObject(Codec.build(encryption, DigestUtils.md5Hex(key) ).decodeHex(jsonObject.getString(OAUTH_VALUE)));
         String uid = request1.getString("uid");
         request.setAttribute("uid", uid);
         request.setAttribute("type", type);
@@ -229,7 +228,7 @@ public class LoginProvider implements InitializingBean {
         loginResult.getUserResult().setAccessSecret(new AccessSecret());
 
         String json = Json.toJson(loginResult);
-        resultReturnResult.setData(encode.encodeHex(json, accessSecret.getUKey()));
+        resultReturnResult.setData(Codec.build(encryption, accessSecret.getUKey()).encodeHex(json));
     }
 
     private AccessSecret getAkSk(String data) {
@@ -289,12 +288,12 @@ public class LoginProvider implements InitializingBean {
      * @return 请求
      */
     private AccessSecret createAccessSecret(String data) {
-        String decode1 = decode.decodeHex(data, authServerProperties.getServiceKey());
+        String decode1 = Codec.build(encryption, serviceKey).decodeHex(data);
         JSONObject jsonObject = JSON.parseObject(decode1);
         String key = jsonObject.getString(OAUTH_KEY);
         String authKey = jsonObject.getString("x-oauth-uid");
         String value = jsonObject.getString(OAUTH_VALUE);
-        String request = decode.decodeHex(value, DigestUtils.md5Hex(key));
+        String request = Codec.build(encryption, DigestUtils.md5Hex(key)).decodeHex(value);
         JSONObject jsonObject2 = JSON.parseObject(request);
 
         return new AccessSecret(jsonObject2.getString(ACCESS_KEY),
@@ -433,8 +432,8 @@ public class LoginProvider implements InitializingBean {
         String rs = null;
         if (null != data1) {
             data1.setAddress(null);
-            KeyEncode encode = ServiceProvider.of(KeyEncode.class).getExtension(authServerProperties.getEncryption());
-            rs = encode.encodeHex(Json.toJson(data1), key);
+            Codec codec = Codec.build(encryption, key);
+            rs = codec.encodeHex(Json.toJson(data1));
         }
 
         loggerResolver.register("oauth", oauth.getCode(), oauth.getMsg(), address);
@@ -444,7 +443,7 @@ public class LoginProvider implements InitializingBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        this.decode = ServiceProvider.of(KeyDecode.class).getExtension(authServerProperties.getEncryption());
-        this.encode = ServiceProvider.of(KeyEncode.class).getExtension(authServerProperties.getEncryption());
+        this.encryption = authServerProperties.getEncryption();
+        this.serviceKey = authServerProperties.getServiceKey();
     }
 }
