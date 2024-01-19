@@ -68,6 +68,8 @@ public class AuthClientExecute {
     private final String encryption;
     private static final String DEFAULT_KEY = "1234567980123456";
 
+    private final Codec AES = Codec.build("AES", DEFAULT_KEY);
+
     public static AuthClientExecute getInstance() {
         return INSTANCE;
     }
@@ -169,7 +171,7 @@ public class AuthClientExecute {
         item2.put(AuthConstant.OAUTH_VALUE, request);
         item2.put(AuthConstant.OAUTH_KEY, key);
         item2.put("x-oauth-uid", uidKey);
-        request = Codec.build(encryption, serviceKey).encodeHex(Json.toJson(item2);
+        request = Codec.build(encryption, serviceKey).encodeHex(Json.toJson(item2));
         Robin robin = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
         Robin robin1 = robin.create();
         String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(authClientProperties.getAddress()).split(",");
@@ -526,7 +528,7 @@ public class AuthClientExecute {
         }
         if(isEmbed(authClientProperties)) {
             try {
-                UserResult userResult = Json.fromJson(AES.decrypt(token), UserResult.class);
+                UserResult userResult = Json.fromJson(AES.decode(token), UserResult.class);
                 CACHE.put(token, Value.of(userResult));
                 return userResult;
             } catch (Exception ignored) {
