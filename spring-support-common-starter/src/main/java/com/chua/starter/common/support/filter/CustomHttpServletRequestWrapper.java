@@ -8,6 +8,7 @@ import javax.servlet.http.HttpServletRequestWrapper;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 
 /**
  * 自定义httpservlet请求包装器
@@ -22,6 +23,11 @@ public class CustomHttpServletRequestWrapper extends HttpServletRequestWrapper {
     public CustomHttpServletRequestWrapper(HttpServletRequest request) throws IOException {
         super(request);
         body = IoUtils.toByteArray(request.getInputStream());
+    }
+
+    public CustomHttpServletRequestWrapper(HttpServletRequest request, String body) {
+        super(request);
+        this.body = body.getBytes(StandardCharsets.UTF_8);
     }
 
     @Override
@@ -42,5 +48,9 @@ public class CustomHttpServletRequestWrapper extends HttpServletRequestWrapper {
     @Override
     public String[] getParameterValues(String name) {
         return super.getParameterValues(name);
+    }
+
+    public String getBody() {
+        return new String(body);
     }
 }
