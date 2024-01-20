@@ -1,6 +1,6 @@
 package com.chua.starter.oauth.client.support.advice;
 
-import com.alibaba.fastjson2.JSON;
+import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.code.ResultCode;
 import com.chua.common.support.lang.code.ReturnResult;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +32,7 @@ public class JsonAdviceResolver implements AdviceResolver {
         response.setStatus(status);
         try {
             response.setHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE);
-            response.getOutputStream().write(JSON.toJSONBytes(rs));
+            response.getOutputStream().write(Json.toJSONBytes(rs));
         } catch (IOException e) {
             log.error("", e);
         }

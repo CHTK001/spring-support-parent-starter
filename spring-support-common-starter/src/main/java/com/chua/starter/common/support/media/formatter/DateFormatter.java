@@ -1,7 +1,5 @@
 package com.chua.starter.common.support.media.formatter;
 
-import com.alibaba.fastjson2.annotation.JSONField;
-import com.chua.common.support.annotations.Extension;
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.lang.date.DateTime;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -20,14 +18,6 @@ public class DateFormatter implements Formatter {
         DateTimeFormat dateTimeFormat = field.getDeclaredAnnotation(DateTimeFormat.class);
         if (null != dateTimeFormat) {
             String pattern = dateTimeFormat.pattern();
-            try {
-                return DateTime.of(value).toString(pattern);
-            } catch (Exception ignored) {
-            }
-        }
-        JSONField jsonField = field.getDeclaredAnnotation(JSONField.class);
-        if (null != jsonField) {
-            String pattern = jsonField.format();
             try {
                 return DateTime.of(value).toString(pattern);
             } catch (Exception ignored) {
