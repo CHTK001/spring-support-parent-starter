@@ -1,9 +1,9 @@
 package com.chua.starter.oauth.server.support.information;
 
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.crypto.Codec;
+import com.chua.common.support.json.Json;
+import com.chua.common.support.json.JsonArray;
+import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.Md5Utils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
@@ -64,7 +64,7 @@ public class AuthInformation {
      */
     private Authorization analysisRequest() {
         String requestData = Codec.build(encryption, authServerProperties.getServiceKey()).decodeHex(data);
-        JSONObject jsonObject = JSON.parseObject(requestData);
+        JsonObject jsonObject = Json.getJsonObject(requestData);
         String oauthValue = jsonObject.getString(OAUTH_VALUE);
         this.accessKey = jsonObject.getString(ACCESS_KEY);
         this.secretKey = jsonObject.getString(SECRET_KEY);
@@ -73,13 +73,13 @@ public class AuthInformation {
         String tokenCookie = Codec.build(encryption, Md5Utils.getInstance()
                 .getMd5String(accessKey + DigestUtils.md5Hex(secretKey + oauthKey))).decodeHex(oauthValue);
 
-        JSONObject parseObject = JSON.parseObject(tokenCookie);
+        JsonObject parseObject = Json.getJsonObject(tokenCookie);
         this.token = parseObject.getString(authServerProperties.getTokenName());
-        JSONArray jsonArray = parseObject.getJSONArray(authServerProperties.getCookieName());
+        JsonArray jsonArray = parseObject.getJsonArray(authServerProperties.getCookieName());
         int size = jsonArray.size();
         Cookie[] cookies = new Cookie[size];
         for (int i = 0; i < size; i++) {
-            JSONObject jsonObject1 = jsonArray.getJSONObject(i);
+            JsonObject jsonObject1 = jsonArray.getJsonObject(i);
             cookies[i] = new Cookie(jsonObject1.getString("name"), jsonObject1.getString("value"));
         }
         this.cookie = cookies;
