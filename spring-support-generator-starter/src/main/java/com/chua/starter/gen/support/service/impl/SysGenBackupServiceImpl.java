@@ -1,6 +1,5 @@
 package com.chua.starter.gen.support.service.impl;
 
-import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.common.support.backup.Backup;
@@ -10,6 +9,7 @@ import com.chua.common.support.backup.strategy.BackupStrategy;
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.constant.Action;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
@@ -150,7 +150,7 @@ public class SysGenBackupServiceImpl extends ServiceImpl<SysGenBackupMapper, Sys
                 @Override
                 public void listen(Action action, String from, String message, Serializable[] newValue, Serializable[] oldValue) {
                     sseTemplate.emit(SseMessage.builder().event(sysGenBackup.getGenId() + "")
-                                    .message(Json.toJson(new JSONObject().fluentPut("action", action.name().toLowerCase()).fluentPut("message", message)))
+                                    .message(Json.toJson(new JsonObject().fluentPut("action", action.name().toLowerCase()).fluentPut("message", message)))
                             .build(), sysGenBackup.getGenId() + "");
                 }
             });
