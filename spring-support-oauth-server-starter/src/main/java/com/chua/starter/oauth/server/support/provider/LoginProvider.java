@@ -1,9 +1,8 @@
 package com.chua.starter.oauth.server.support.provider;
 
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.DigestUtils;
@@ -154,9 +153,9 @@ public class LoginProvider implements InitializingBean {
             return ReturnResult.ok();
         }
 
-        JSONObject jsonObject = JSON.parseObject(Codec.build(encryption, serviceKey).decodeHex(data));
+        JsonObject jsonObject = Json.getJsonObject(Codec.build(encryption, serviceKey).decodeHex(data));
         String key = jsonObject.getString(OAUTH_KEY);
-        JSONObject request1 = JSON.parseObject(Codec.build(encryption, DigestUtils.md5Hex(key) ).decodeHex(jsonObject.getString(OAUTH_VALUE)));
+        JsonObject request1 = Json.getJsonObject(Codec.build(encryption, DigestUtils.md5Hex(key) ).decodeHex(jsonObject.getString(OAUTH_VALUE)));
         String uid = request1.getString("uid");
         request.setAttribute("uid", uid);
         request.setAttribute("type", type);
@@ -289,12 +288,12 @@ public class LoginProvider implements InitializingBean {
      */
     private AccessSecret createAccessSecret(String data) {
         String decode1 = Codec.build(encryption, serviceKey).decodeHex(data);
-        JSONObject jsonObject = JSON.parseObject(decode1);
+        JsonObject jsonObject = Json.getJsonObject(decode1);
         String key = jsonObject.getString(OAUTH_KEY);
         String authKey = jsonObject.getString("x-oauth-uid");
         String value = jsonObject.getString(OAUTH_VALUE);
         String request = Codec.build(encryption, DigestUtils.md5Hex(key)).decodeHex(value);
-        JSONObject jsonObject2 = JSON.parseObject(request);
+        JsonObject jsonObject2 = Json.getJsonObject(request);
 
         return new AccessSecret(jsonObject2.getString(ACCESS_KEY),
                 jsonObject2.getString(SECRET_KEY),
