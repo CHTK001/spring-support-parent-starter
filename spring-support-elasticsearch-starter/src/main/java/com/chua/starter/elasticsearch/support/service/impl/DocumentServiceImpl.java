@@ -1,8 +1,8 @@
 package com.chua.starter.elasticsearch.support.service.impl;
 
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.bean.BeanUtils;
+import com.chua.common.support.json.Json;
+import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.code.PageResult;
 import com.chua.starter.common.support.result.Result;
 import com.chua.starter.elasticsearch.support.pojo.Mapping;
@@ -218,7 +218,7 @@ public class DocumentServiceImpl implements DocumentService {
         }
         PutMappingRequest request = new PutMappingRequest(mapping.getIndexName().toLowerCase());
         try {
-            request.source(JSON.parseObject(mapping.getMapping()));
+            request.source(Json.getJsonObject(mapping.getMapping()));
             restHighLevelClient.indices().putMapping(request, RequestOptions.DEFAULT);
         } catch (Exception e) {
             log.error("", e);
@@ -233,13 +233,13 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     private void doBuilder(XContentBuilder builder, Object mapping) throws Exception{
-        JSONObject jsonObject = null;
-        if(mapping instanceof JSONObject) {
-            jsonObject = (JSONObject) mapping;
+        JsonObject jsonObject = null;
+        if(mapping instanceof JsonObject) {
+            jsonObject = (JsonObject) mapping;
         } else if(mapping instanceof String ) {
             String str = mapping.toString();
             if(str.startsWith("{")) {
-                jsonObject = JSON.parseObject(mapping.toString());
+                jsonObject = Json.getJsonObject(mapping.toString());
                 builder.map(jsonObject);
                 return ;
             }
