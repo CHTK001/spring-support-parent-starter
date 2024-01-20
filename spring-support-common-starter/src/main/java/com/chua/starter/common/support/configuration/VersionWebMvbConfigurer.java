@@ -6,7 +6,6 @@ import com.chua.starter.common.support.version.ApiVersionRequestMappingHandlerMa
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.web.servlet.WebMvcRegistrations;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import javax.annotation.Resource;
@@ -18,7 +17,7 @@ import javax.annotation.Resource;
  */
 @EnableConfigurationProperties({
         VersionProperties.class,
-        IpProperties.class
+        IpProperties.class,
 })
 @Slf4j
 public class VersionWebMvbConfigurer implements WebMvcRegistrations {

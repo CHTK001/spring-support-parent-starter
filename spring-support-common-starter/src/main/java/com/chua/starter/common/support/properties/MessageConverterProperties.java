@@ -1,8 +1,6 @@
 package com.chua.starter.common.support.properties;
 
 
-import com.alibaba.fastjson2.JSONReader;
-import com.alibaba.fastjson2.JSONWriter;
 import com.google.common.collect.Lists;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -36,14 +34,6 @@ public class MessageConverterProperties {
      * 开启加解密
      */
     private boolean openCrypto = true;
-    /**
-     * 特征
-     */
-    private JSONWriter.Feature[] writerFeatures;
-    /**
-     * 特征
-     */
-    private JSONReader.Feature[] readerFeatures;
     /**
      * 媒体类型
      */
