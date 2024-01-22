@@ -1,9 +1,9 @@
 package com.chua.starter.unified.server.support.controller;
 
-import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.http.HttpClient;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
@@ -51,7 +51,7 @@ public class UnifiedActuatorController {
 
 
     @GetMapping("oshi")
-    public ReturnResult<JSONObject> oshi( @RequestParam(value = "dataId") String dataId) {
+    public ReturnResult<JsonObject> oshi(@RequestParam(value = "dataId") String dataId) {
         return ReturnResult.success(unifiedExecuterItemService.getOshi(dataId));
     }
 
@@ -59,10 +59,10 @@ public class UnifiedActuatorController {
      * 进程
      *
      * @param dataId 数据id
-     * @return {@link ReturnResult}<{@link JSONObject}>
+     * @return {@link ReturnResult}<{@link JsonObject}>
      */
     @GetMapping("process")
-    public ReturnPageResult<JSONObject> process( @RequestParam(value = "dataId") String dataId,
+    public ReturnPageResult<JsonObject> process( @RequestParam(value = "dataId") String dataId,
                                              @RequestParam(value = "status", required = false) String status,
                                              @RequestParam(value = "keyword", required = false) String keyword,
                                              @RequestParam(value = "page", defaultValue = "1", required = false) Integer page,
@@ -77,7 +77,7 @@ public class UnifiedActuatorController {
      */
     @GetMapping("/actuator")
     @SuppressWarnings("ALL")
-    public ReturnResult<JSONObject> command(
+    public ReturnResult<JsonObject> command(
             @RequestParam(value = "page", defaultValue = "1") Integer page,
             @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize,
             @RequestParam(value = "dataId") String dataId,
@@ -96,7 +96,7 @@ public class UnifiedActuatorController {
                     .when(POST.name().equals(method), it -> it.header(CONTENT_TYPE, APPLICATION_JSON_UTF_8))
                     .url("http://" + actuatorQuery.getHost() + ":" + actuatorQuery.getPort() + StringUtils.startWithAppend(actuatorQuery.getContextPath(), "/") + "" + StringUtils.startWithAppend(actuatorQuery.getEndpointsUrl(), "/") + "/" + command)
                     .body(Json.toMapStringObject(param))
-                    .newInvoker().execute().content(JSONObject.class));
+                    .newInvoker().execute().content(JsonObject.class));
         } catch (Throwable e) {
             return ReturnResult.of(ReturnCode.SYSTEM_SERVER_NOT_FOUND, null, "操作失败");
         }
