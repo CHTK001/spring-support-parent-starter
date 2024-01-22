@@ -1,7 +1,10 @@
 package com.chua.starter.common.support.configuration;
 
 import com.chua.starter.common.support.configuration.resolver.RequestParamsMapMethodArgumentResolver;
+import com.chua.starter.common.support.mdc.MdcHandlerInterceptor;
+import com.chua.starter.common.support.mdc.RestTemplateTraceIdInterceptor;
 import com.chua.starter.common.support.processor.ResponseModelViewMethodProcessor;
+import com.chua.starter.common.support.properties.MdcProperties;
 import com.chua.starter.common.support.properties.MessageConverterProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
@@ -14,11 +17,14 @@ import org.springframework.format.FormatterRegistry;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandler;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import javax.annotation.Resource;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -28,11 +34,13 @@ import java.util.List;
  * @author CH
  */
 @Slf4j
-@EnableConfigurationProperties(MessageConverterProperties.class)
+@EnableConfigurationProperties({MessageConverterProperties.class, MdcProperties.class})
 public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, ApplicationContextAware, WebMvcRegistrations {
 
     @Resource
     private MessageConverterProperties messageConverterProperties;
+    @Resource
+    private MdcProperties mdcProperties;
     private List<HttpMessageConverter<?>> messageConverters;
 
     public void addReturnValueHandlers(List<HandlerMethodReturnValueHandler> handlers) {
@@ -42,6 +50,14 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     @Override
     public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
         resolvers.add(new RequestParamsMapMethodArgumentResolver());
+    }
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        if(!mdcProperties.isEnable()) {
+            return;
+        }
+        registry.addInterceptor(new MdcHandlerInterceptor()).addPathPatterns("/**");
     }
 
     @Override
@@ -120,5 +136,11 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
         messageConverters.add(new MappingJackson2HttpMessageConverter());
 //        messageConverters.add(new FastJsonHttpMessageConverter());
         messageConverters.add(new StringHttpMessageConverter());
+
+        try {
+            RestTemplate restTemplate = applicationContext.getBean(RestTemplate.class);
+            restTemplate.setInterceptors(Collections.singletonList(new RestTemplateTraceIdInterceptor()));
+        } catch (BeansException ignored) {
+        }
     }
 }

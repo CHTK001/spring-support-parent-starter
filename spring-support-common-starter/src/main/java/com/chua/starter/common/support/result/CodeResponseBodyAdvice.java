@@ -1,22 +1,24 @@
 package com.chua.starter.common.support.result;
 
-import com.chua.common.support.crypto.Codec;
-import com.chua.common.support.crypto.CodecKeyPair;
+import com.chua.common.support.converter.Converter;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.json.JsonObject;
-import com.chua.common.support.utils.Hex;
-import com.chua.starter.common.support.properties.CodecProperties;
+import com.chua.common.support.utils.RandomUtils;
+import com.chua.starter.common.support.provider.CodecProvider;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.MethodParameter;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
+import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
-import java.security.PrivateKey;
+import javax.servlet.http.HttpServletRequest;
+import java.util.UUID;
 
 /**
  * @author CH
@@ -25,28 +27,13 @@ import java.security.PrivateKey;
 @Slf4j
 public class CodeResponseBodyAdvice implements ResponseBodyAdvice<Object> {
 
-    private final CodecProperties codecProperties;
+    private final CodecProvider codecProvider;
 
-    private PrivateKey privateKey;
 
-    public CodeResponseBodyAdvice(CodecProperties codecProperties) {
-        this.codecProperties = codecProperties;
-        privateKey = createPrivateKey();
+    public CodeResponseBodyAdvice(CodecProvider codecProvider) {
+        this.codecProvider = codecProvider;
     }
 
-    private PrivateKey createPrivateKey() {
-        if(codecProperties.isEnable()) {
-            try {
-                Codec codec = Codec.build(codecProperties.getCodecType());
-                if(codec instanceof CodecKeyPair) {
-                    return ((CodecKeyPair) codec).getPrivateKey(Hex.decodeHex(codecProperties.getPrivateKey()));
-                }
-            } catch (Exception e) {
-            }
-        }
-        return null;
-
-    }
 
     @Override
     public boolean supports(MethodParameter methodParameter, Class<? extends HttpMessageConverter<?>> aClass) {
@@ -56,16 +43,28 @@ public class CodeResponseBodyAdvice implements ResponseBodyAdvice<Object> {
     @SneakyThrows
     @Override
     public Object beforeBodyWrite(Object o, MethodParameter methodParameter, MediaType mediaType, Class<? extends HttpMessageConverter<?>> aClass, ServerHttpRequest serverHttpRequest, ServerHttpResponse serverHttpResponse) {
-        if(!codecProperties.isEnable()) {
+        if(codecProvider.isPass()) {
             return o;
         }
 
-        Codec codec = Codec.build(codecProperties.getCodecType());
-        CodecKeyPair codecKeyPair = (CodecKeyPair) codec;
-        codecKeyPair.setPrivateKey(privateKey);
-        JsonObject jsonObject = new JsonObject();
-        jsonObject.put("data", codec.encodeHex(Json.toJson(o)));
-        jsonObject.put("codec", true);
-        return jsonObject;
+        if(serverHttpRequest instanceof ServletServerHttpRequest) {
+            HttpServletRequest servletRequest = ((ServletServerHttpRequest) serverHttpRequest).getServletRequest();
+            if(codecProvider.isPass(servletRequest.getRequestURI())) {
+                return o;
+            }
+            Boolean aBoolean = Converter.convertIfNecessary(servletRequest.getSession().getAttribute("codec"), Boolean.class);
+            if(null != aBoolean && !aBoolean) {
+                return o;
+            }
+            HttpHeaders headers = serverHttpResponse.getHeaders();
+            JsonObject jsonObject = new JsonObject();
+            CodecProvider.CodecResult codecResult = codecProvider.encode(Json.toJson(o));
+            headers.set("access-control-origin-key", codecResult.getKey());
+            headers.set("access-control-codec", UUID.randomUUID().toString());
+            jsonObject.put("data", RandomUtils.randomInt(1) + "200" + codecResult.getData() + "ffff");
+            return jsonObject;
+        }
+
+        return o;
     }
 }
