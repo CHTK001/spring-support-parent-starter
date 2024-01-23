@@ -36,8 +36,10 @@ public class UniformResponseBodyAdvice implements ResponseBodyAdvice<Object> {
         if(ResponseEntity.class.isAssignableFrom(declaringClass)) {
             return o;
         }
+
+        String url = serverHttpRequest.getURI().toURL().toExternalForm();
         String typeName = declaringClass.getTypeName().toLowerCase();
-        if (typeName.contains("swagger")) {
+        if (url.contains("swagger")) {
             return o;
         }
 
