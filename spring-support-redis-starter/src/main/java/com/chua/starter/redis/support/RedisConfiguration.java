@@ -1,10 +1,15 @@
 package com.chua.starter.redis.support;
 
+import com.chua.common.support.protocol.options.ClientOption;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.redis.support.RedisSearchClient;
+import com.chua.redis.support.search.RedisSearch;
 import com.chua.starter.redis.support.properties.RedisServerProperties;
 import com.chua.starter.redis.support.server.RedisEmbeddedServer;
 import org.springframework.beans.BeansException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
@@ -27,6 +32,21 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
 
     RedisServerProperties redisServerProperties;
 
+
+    @Bean
+    @ConditionalOnMissingBean
+    public RedisSearch redisSearch(RedisProperties redisProperties) {
+        RedisSearchClient redisSearchClient = new RedisSearchClient(
+                ClientOption.builder()
+                        .database("default")
+                        .password(redisProperties.getPassword())
+                        .build()
+        );
+
+        redisSearchClient.connect(StringUtils.defaultString(redisProperties.getUrl(),
+                "redis://" + redisProperties.getHost() + ":" + redisProperties.getPort() + "/"), null ==  redisProperties.getTimeout()? 10000:  redisProperties.getTimeout().toMillis());
+        return redisSearchClient.createClient().getClient();
+    }
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
