@@ -42,9 +42,8 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import static com.chua.common.support.constant.NumberConstant.NUM_200;
 import static com.chua.common.support.http.HttpClientUtils.APPLICATION_JSON;
@@ -509,7 +508,8 @@ public class AuthClientExecute {
         return httpResponse.getBody();
     }
     private static final Cache<String, Value<UserResult>> CACHE = CacheBuilder
-            .newBuilder().expireAfterWrite(Duration.of(3, ChronoUnit.MINUTES))
+            .newBuilder()
+            .expireAfterWrite(3, TimeUnit.MINUTES)
             .build();
     /**
      * 获取用户结果
