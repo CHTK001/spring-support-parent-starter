@@ -528,7 +528,7 @@ public class AuthClientExecute {
         }
         if(isEmbed(authClientProperties)) {
             try {
-                UserResult userResult = Json.fromJson(AES.decode(token), UserResult.class);
+                UserResult userResult = Json.fromJson(AES.decodeHex(token), UserResult.class);
                 CACHE.put(token, Value.of(userResult));
                 return userResult;
             } catch (Exception ignored) {
