@@ -41,6 +41,7 @@ import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -51,7 +52,6 @@ import static com.chua.common.support.lang.code.ReturnCode.OK;
 import static com.chua.starter.common.support.utils.RequestUtils.*;
 import static com.chua.starter.oauth.client.support.contants.AuthConstant.ACCESS_KEY;
 import static com.chua.starter.oauth.client.support.contants.AuthConstant.SECRET_KEY;
-import static com.chua.starter.oauth.client.support.web.WebRequest.isEmbed;
 
 /**
  * 鉴权客户端操作
@@ -64,9 +64,7 @@ public class AuthClientExecute {
 
     public static final AuthClientExecute INSTANCE = new AuthClientExecute();
     private final String encryption;
-    private static final String DEFAULT_KEY = "1234567980123456";
-
-    private final Codec AES = Codec.build("AES", DEFAULT_KEY);
+    public static final String DEFAULT_KEY = "1234567980123456";
 
     public static AuthClientExecute getInstance() {
         return INSTANCE;
@@ -476,7 +474,7 @@ public class AuthClientExecute {
      * @param type
      * @return 登陆码
      */
-    public String getLoginCode(String loginCodeType, String type) {
+    public String getLoginCode(String loginCodeType, String type, String token) {
         Robin robin1 = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
         Robin balance = robin1.create();
         String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(authClientProperties.getAddress()).split(",");
@@ -492,7 +490,7 @@ public class AuthClientExecute {
 
             httpResponse = Unirest.get(
                             StringUtils.endWithAppend(StringUtils.startWithAppend(url, "http://"), "/")
-                                    + loginCodeType + "/" + type+"/loginCodeType?redirect_url=")
+                                    + loginCodeType + "/" + type+"/loginCodeType?loginCode=" + token)
                     .asString();
 
         } catch (UnirestException ignored) {
@@ -526,14 +524,6 @@ public class AuthClientExecute {
 
         if(StringUtils.isEmpty(token) || CommonConstant.NULL.equals(token)) {
             return null;
-        }
-        if(isEmbed(authClientProperties)) {
-            try {
-                UserResult userResult = Json.fromJson(AES.decodeHex(token), UserResult.class);
-                CACHE.put(token, Value.of(userResult));
-                return userResult;
-            } catch (Exception ignored) {
-            }
         }
 
         Protocol protocol = ServiceProvider.of(Protocol.class).getExtension(authClientProperties.getProtocol());
@@ -661,5 +651,26 @@ public class AuthClientExecute {
 
         HttpServletRequest request = attributes.getRequest();
         request.getSession().removeAttribute(SESSION_USER_INFO);
+    }
+
+    public String getToken() {
+        HttpServletRequest request = getRequest();
+        if(null == request) {
+            return null;
+        }
+        String header = request.getHeader(authClientProperties.getTokenName());
+        String token = Strings.isNullOrEmpty(header) ? StringUtils.defaultString(
+                request.getParameter(authClientProperties.getTokenName()),
+                (String) request.getAttribute(authClientProperties.getTokenName())
+        ) : header;
+
+        if(StringUtils.isNotBlank(token)) {
+            return token;
+        }
+
+        return Arrays.stream(request.getCookies())
+                .filter(cookie -> StringUtils.equals("x-oauth-cookie", cookie.getName()))
+                .findFirst().orElse(new Cookie("x-oauth-cookie", null))
+                .getValue();
     }
 }
