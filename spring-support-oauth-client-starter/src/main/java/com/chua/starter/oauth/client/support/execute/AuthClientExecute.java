@@ -473,9 +473,10 @@ public class AuthClientExecute {
      * 登陆码
      *
      * @param loginCodeType 登录类型
+     * @param type
      * @return 登陆码
      */
-    public String getLoginCode(String loginCodeType) {
+    public String getLoginCode(String loginCodeType, String type) {
         Robin robin1 = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
         Robin balance = robin1.create();
         String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(authClientProperties.getAddress()).split(",");
@@ -491,7 +492,7 @@ public class AuthClientExecute {
 
             httpResponse = Unirest.get(
                             StringUtils.endWithAppend(StringUtils.startWithAppend(url, "http://"), "/")
-                                    + loginCodeType + "/loginCodeType?redirect_url=")
+                                    + loginCodeType + "/" + type+"/loginCodeType?redirect_url=")
                     .asString();
 
         } catch (UnirestException ignored) {

@@ -3,6 +3,8 @@ package com.chua.starter.oauth.server.support.configuration;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.common.support.utils.BeanDefinitionRegistryUtils;
 import com.chua.starter.oauth.server.support.check.LoginCheck;
+import com.chua.starter.oauth.server.support.gitee.GiteeBinderProvider;
+import com.chua.starter.oauth.server.support.gitee.GiteeLoginProvider;
 import com.chua.starter.oauth.server.support.processor.ResponseAdviceMethodProcessor;
 import com.chua.starter.oauth.server.support.properties.AuthServerProperties;
 import com.chua.starter.oauth.server.support.properties.CasProperties;
@@ -63,8 +65,8 @@ public class EnableAuthServerConfiguration implements BeanDefinitionRegistryPost
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         BeanDefinitionRegistryUtils.registerBeanDefinition(registry, LoginCheck.class);
         BeanDefinitionRegistryUtils.registerBeanDefinition(registry, LoginProvider.class);
-        BeanDefinitionRegistryUtils.registerBeanDefinition(registry, ThirdPartyLoginProperties.class);
-        BeanDefinitionRegistryUtils.registerBeanDefinition(registry, ThirdPartyBinderProperties.class);
+        BeanDefinitionRegistryUtils.registerBeanDefinition(registry, GiteeLoginProvider.class);
+        BeanDefinitionRegistryUtils.registerBeanDefinition(registry, GiteeBinderProvider.class);
         BeanDefinitionRegistryUtils.registerBeanDefinition(registry, SimpleLoggerResolver.class);
         BeanDefinitionRegistryUtils.registerBeanDefinition(registry, SimpleUserInfoResolver.class);
 

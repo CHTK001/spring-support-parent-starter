@@ -58,7 +58,7 @@ public class GiteeLoginProvider implements InitializingBean , ApplicationContext
      *
      * @return 登录页
      */
-    @GetMapping("/bind/callback")
+    @GetMapping("/callback")
     @ResponseBody
     public String thirdIndex(AuthCallback authCallback, RedirectAttributes attributes, HttpServletResponse response) {
         AuthResponse<AuthUser> authResponse = authRequest.login(authCallback);
