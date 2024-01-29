@@ -21,7 +21,7 @@ public class CaptchaProperties {
     /**
      * 验证码类型
      */
-    private CaptchaTypeEnum type = CaptchaTypeEnum.ARITHMETIC;
+    private CaptchaTypeEnum type = CaptchaTypeEnum.RANDOM;
 
     /**
      *  是否打开
@@ -45,7 +45,6 @@ public class CaptchaProperties {
      * 验证码高度
      */
     private int height = 36;
-
 
     /**
      * 验证码字体
