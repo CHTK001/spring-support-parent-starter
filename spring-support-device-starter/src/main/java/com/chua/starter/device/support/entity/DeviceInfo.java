@@ -1,7 +1,6 @@
 package com.chua.starter.device.support.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
-import com.chua.common.support.spi.ServiceGroup;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -242,7 +241,7 @@ public class DeviceInfo implements Serializable {
      * 组
      */
     @TableField(exist = false)
-    private List<ServiceGroup.GroupInfo> group;
+    private List<Object> group;
     /**
      * channels
      */

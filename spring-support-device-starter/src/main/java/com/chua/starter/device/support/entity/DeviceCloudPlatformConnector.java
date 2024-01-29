@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.chua.common.support.spi.ServiceGroup;
+import com.chua.common.support.collection.Option;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -110,5 +110,5 @@ public class DeviceCloudPlatformConnector implements Serializable {
      * 组
      */
     @TableField(exist = false)
-    private List<ServiceGroup.GroupInfo> group;
+    private List<Option> group;
 }

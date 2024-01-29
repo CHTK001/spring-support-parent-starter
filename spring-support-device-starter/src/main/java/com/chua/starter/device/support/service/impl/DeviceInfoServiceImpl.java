@@ -4,13 +4,11 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.device.support.adaptor.Adaptor;
+import com.chua.starter.device.support.adaptor.pojo.StaticResult;
 import com.chua.starter.device.support.entity.*;
 import com.chua.starter.device.support.mapper.DeviceInfoMapper;
-import com.chua.starter.device.support.adaptor.pojo.StaticResult;
 import com.chua.starter.device.support.service.DeviceChannelService;
 import com.chua.starter.device.support.service.DeviceInfoService;
 import com.chua.starter.device.support.service.DeviceLogService;
@@ -80,7 +78,7 @@ public class DeviceInfoServiceImpl extends ServiceImpl<DeviceInfoMapper, DeviceI
                 continue;
             }
             deviceIds.add(record.getDeviceId());
-            record.setGroup(ServiceProvider.of(Adaptor.class).group(devicePlatformCode).getGroupInfo("device"));
+//            record.setGroup(ServiceProvider.of(Adaptor.class).group(devicePlatformCode).getGroupInfo("device"));
         }
 
         List<DeviceChannel> list = deviceChannelService.list(Wrappers.<DeviceChannel>lambdaQuery().in(DeviceChannel::getDeviceId, deviceIds));

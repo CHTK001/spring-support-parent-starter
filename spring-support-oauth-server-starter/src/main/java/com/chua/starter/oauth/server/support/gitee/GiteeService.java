@@ -12,10 +12,11 @@ import me.zhyd.oauth.model.AuthUser;
 public interface GiteeService {
 
     /**
+     * 粘合剂
      * 认证用户
      *
      * @param data  数据
-     * @param token
+     * @param token token
      */
     void binder(AuthUser data, String token);
 }
