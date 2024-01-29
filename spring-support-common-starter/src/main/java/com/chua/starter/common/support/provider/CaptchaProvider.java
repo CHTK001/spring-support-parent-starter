@@ -89,6 +89,20 @@ public class CaptchaProvider {
     }
 
 
+    public Captcha createCaptcha() {
+        int randomInt = RandomUtils.randomInt(2, 3);
+        CaptchaTypeEnum typeEnum = captchaProperties.getType();
+        CaptchaTypeEnum captchaTypeEnum = typeEnum;
+        if(typeEnum == CaptchaTypeEnum.RANDOM) {
+            typeEnum = RandomUtils.randomEnum(CaptchaTypeEnum.class);
+        }
+        if (captchaTypeEnum == CaptchaTypeEnum.CHINESE || captchaTypeEnum == CaptchaTypeEnum.CHINESE_GIF) {
+            randomInt = RandomUtils.randomInt(4, 5);
+        } else if (captchaTypeEnum != CaptchaTypeEnum.ARITHMETIC) {
+            randomInt = RandomUtils.randomInt(6, 7);
+        }
+        return producer(captchaTypeEnum, randomInt);
+    }
     /**
      * 校验码
      *
@@ -97,14 +111,7 @@ public class CaptchaProvider {
      */
     @GetMapping("captcha.jpg")
     public void captcha(HttpServletRequest request, HttpServletResponse response) {
-        int randomInt = RandomUtils.randomInt(2, 3);
-        CaptchaTypeEnum captchaTypeEnum = RandomUtils.randomEnum(CaptchaTypeEnum.class);
-        if (captchaTypeEnum == CaptchaTypeEnum.CHINESE || captchaTypeEnum == CaptchaTypeEnum.CHINESE_GIF) {
-            randomInt = RandomUtils.randomInt(4, 5);
-        } else if (captchaTypeEnum != CaptchaTypeEnum.ARITHMETIC) {
-            randomInt = RandomUtils.randomInt(6, 7);
-        }
-        Captcha captcha = producer(captchaTypeEnum, randomInt);
+        Captcha captcha = createCaptcha();
         String captchaText = captcha.text();
         ServletOutputStream out = null;
 
@@ -134,14 +141,7 @@ public class CaptchaProvider {
      */
     @GetMapping("captcha")
     public CaptchaResult captchaBase64(HttpServletRequest request) {
-        int randomInt = RandomUtils.randomInt(2, 3);
-        CaptchaTypeEnum captchaTypeEnum = RandomUtils.randomEnum(CaptchaTypeEnum.class);
-        if (captchaTypeEnum == CaptchaTypeEnum.CHINESE || captchaTypeEnum == CaptchaTypeEnum.CHINESE_GIF) {
-            randomInt = RandomUtils.randomInt(4, 5);
-        } else if (captchaTypeEnum != CaptchaTypeEnum.ARITHMETIC) {
-            randomInt = RandomUtils.randomInt(6, 7);
-        }
-        Captcha captcha = producer(captchaTypeEnum, randomInt);
+        Captcha captcha = createCaptcha();
         String captchaText = captcha.text();
         log.info("当前校验码: {}", captchaText);
         String captchaBase64 = captcha.toBase64();

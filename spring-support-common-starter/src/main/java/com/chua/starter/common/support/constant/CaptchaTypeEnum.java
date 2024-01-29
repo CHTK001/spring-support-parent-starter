@@ -9,6 +9,10 @@ package com.chua.starter.common.support.constant;
 public enum CaptchaTypeEnum {
 
     /**
+     * 随机
+     */
+    RANDOM,
+    /**
      * 算数
      */
     ARITHMETIC,
