@@ -48,8 +48,7 @@ import java.util.concurrent.TimeUnit;
 import static com.chua.common.support.constant.NumberConstant.NUM_200;
 import static com.chua.common.support.http.HttpClientUtils.APPLICATION_JSON;
 import static com.chua.common.support.lang.code.ReturnCode.OK;
-import static com.chua.starter.common.support.utils.RequestUtils.SESSION_USERNAME;
-import static com.chua.starter.common.support.utils.RequestUtils.SESSION_USER_INFO;
+import static com.chua.starter.common.support.utils.RequestUtils.*;
 import static com.chua.starter.oauth.client.support.contants.AuthConstant.ACCESS_KEY;
 import static com.chua.starter.oauth.client.support.contants.AuthConstant.SECRET_KEY;
 import static com.chua.starter.oauth.client.support.web.WebRequest.isEmbed;
@@ -367,6 +366,7 @@ public class AuthClientExecute {
         }
 
         RequestUtils.setUsername(userResult.getUsername());
+        RequestUtils.setUserId(userResult.getId());
         RequestUtils.setUserInfo(userResult);
         return loginAuthResult;
     }
@@ -544,6 +544,23 @@ public class AuthClientExecute {
     }
 
 
+    /**
+     * 获取用户名
+     *
+     * @return {@link String}
+     */
+    public static String getUserId() {
+        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
+        if (requestAttributes == null) {
+            return null;
+        }
+
+        ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
+
+        HttpServletRequest request = attributes.getRequest();
+        Object attribute = request.getSession().getAttribute(SESSION_USERID);
+        return null == attribute ? null : attribute.toString();
+    }
     /**
      * 获取用户名
      *
