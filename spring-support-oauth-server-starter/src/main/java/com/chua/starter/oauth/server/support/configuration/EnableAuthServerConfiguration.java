@@ -6,9 +6,9 @@ import com.chua.starter.oauth.server.support.check.LoginCheck;
 import com.chua.starter.oauth.server.support.processor.ResponseAdviceMethodProcessor;
 import com.chua.starter.oauth.server.support.properties.AuthServerProperties;
 import com.chua.starter.oauth.server.support.properties.CasProperties;
-import com.chua.starter.oauth.server.support.properties.ThirdPartyProperties;
+import com.chua.starter.oauth.server.support.properties.ThirdPartyBinderProperties;
+import com.chua.starter.oauth.server.support.properties.ThirdPartyLoginProperties;
 import com.chua.starter.oauth.server.support.protocol.Protocol;
-import com.chua.starter.oauth.server.support.provider.GiteeThirdPartyProvider;
 import com.chua.starter.oauth.server.support.provider.LoginProvider;
 import com.chua.starter.oauth.server.support.resolver.SimpleLoggerResolver;
 import com.chua.starter.oauth.server.support.resolver.SimpleUserInfoResolver;
@@ -47,7 +47,7 @@ import java.util.*;
  * @since 2022/7/23 8:51
  */
 @Slf4j
-@EnableConfigurationProperties({AuthServerProperties.class, ThirdPartyProperties.class, CasProperties.class})
+@EnableConfigurationProperties({AuthServerProperties.class, ThirdPartyBinderProperties.class, CasProperties.class, ThirdPartyLoginProperties.class})
 public class EnableAuthServerConfiguration implements BeanDefinitionRegistryPostProcessor,
         EnvironmentPostProcessor,
         CommandLineRunner,
@@ -63,7 +63,8 @@ public class EnableAuthServerConfiguration implements BeanDefinitionRegistryPost
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         BeanDefinitionRegistryUtils.registerBeanDefinition(registry, LoginCheck.class);
         BeanDefinitionRegistryUtils.registerBeanDefinition(registry, LoginProvider.class);
-        BeanDefinitionRegistryUtils.registerBeanDefinition(registry, GiteeThirdPartyProvider.class);
+        BeanDefinitionRegistryUtils.registerBeanDefinition(registry, ThirdPartyLoginProperties.class);
+        BeanDefinitionRegistryUtils.registerBeanDefinition(registry, ThirdPartyBinderProperties.class);
         BeanDefinitionRegistryUtils.registerBeanDefinition(registry, SimpleLoggerResolver.class);
         BeanDefinitionRegistryUtils.registerBeanDefinition(registry, SimpleUserInfoResolver.class);
 
