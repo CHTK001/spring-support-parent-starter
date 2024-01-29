@@ -77,8 +77,13 @@ public class GiteeLoginProvider implements InitializingBean , ApplicationContext
      */
     @ResponseBody
     @GetMapping("loginCodeType")
-    public String gitee(@RequestParam("redirect_url") String url) {
-        return authRequest.authorize(AuthStateUtils.createState());
+    public String gitee(@RequestParam("loginCode") String loginCode) {
+        AuthGiteeRequest authGiteeRequest = new AuthGiteeRequest(AuthConfig.builder()
+                .clientId(thirdPartyLoginProperties.getGitee().getClientId())
+                .clientSecret(thirdPartyLoginProperties.getGitee().getClientSecret())
+                .redirectUri(thirdPartyLoginProperties.getGitee().getRedirectUri() + "?loginCode=" + loginCode)
+                .build());
+        return authGiteeRequest.authorize(AuthStateUtils.createState());
     }
 
     @Override
