@@ -1,8 +1,8 @@
 package com.chua.starter.unified.client.support.event;
 
-import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.constant.Projects;
+import com.chua.common.support.json.JsonObject;
 import com.chua.oshi.support.Oshi;
 import com.chua.starter.unified.client.support.configuration.StartupTimeListener;
 import io.vertx.core.http.HttpServerResponse;
@@ -22,7 +22,7 @@ public class OshiEvent implements Event{
     @Override
     public void onListener(HttpServerResponse response) {
 
-        response.end(new JSONObject()
+        response.end(new JsonObject()
                 .fluentPut("cpu", Oshi.newCpu(1000))
                 .fluentPut("mem", Oshi.newMem())
                 .fluentPut("jvm", Oshi.newJvm())
