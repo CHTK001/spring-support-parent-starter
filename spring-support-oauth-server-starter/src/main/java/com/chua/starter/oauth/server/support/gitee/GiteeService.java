@@ -14,7 +14,8 @@ public interface GiteeService {
     /**
      * 认证用户
      *
-     * @param data 数据
+     * @param data  数据
+     * @param token
      */
-    void binder(AuthUser data);
+    void binder(AuthUser data, String token);
 }

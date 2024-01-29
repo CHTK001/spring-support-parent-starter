@@ -4,17 +4,12 @@ import com.chua.common.support.annotations.Ignore;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
-import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.annotation.AuthIgnore;
-import com.chua.starter.oauth.client.support.execute.AuthClientExecute;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.infomation.Information;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.protocol.Protocol;
-import com.chua.starter.oauth.client.support.user.UserResult;
-import com.chua.starter.oauth.client.support.user.UserResume;
 import com.google.common.base.Strings;
-import com.google.common.collect.Sets;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.AntPathMatcher;
@@ -28,7 +23,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -211,43 +205,11 @@ public class WebRequest {
     public AuthenticationInformation authentication() {
         Cookie[] cookie = getCookie();
         String token = getToken();
-        if (isEmbed(authProperties)) {
-            return newAuthenticationInformation(token, cookie);
-        }
         Protocol protocol = ServiceProvider.of(Protocol.class).getExtension(authProperties.getProtocol());
         return protocol.approve(cookie, token);
     }
 
-    /**
-     * 新身份验证信息
-     *
-     * @return {@link AuthenticationInformation}
-     */
-    private AuthenticationInformation newAuthenticationInformation(String token, Cookie[] cookie) {
-        UserResume userResume = new UserResume();
-        UserResult userResult = AuthClientExecute.getInstance().getUserResult(token);
 
-        if(null == userResult && null != cookie) {
-            for (Cookie cookie1 : cookie) {
-                if(!"JSESSIONID".equals(cookie1.getName())) {
-                    userResult = AuthClientExecute.getInstance().getUserResult(cookie1.getValue());
-                    if(null != userResult) {
-                        break;
-                    }
-                }
-            }
-        }
-
-        if(null != userResult) {
-            userResume.setUsername(userResult.getUsername());
-            RequestUtils.setUsername(userResume.getUsername());
-        }
-
-        userResume.setRoles(Sets.newHashSet("OPS"));
-        userResume.setPermission(Collections.emptySet());
-        RequestUtils.setUserInfo(userResume);
-        return new AuthenticationInformation(Information.OK, userResume);
-    }
 
     /**
      * 是嵌入
