@@ -21,7 +21,7 @@ public class CaptchaProperties {
     /**
      * 验证码类型
      */
-    private CaptchaTypeEnum type = CaptchaTypeEnum.RANDOM;
+    private CaptchaTypeEnum type = CaptchaTypeEnum.SPEC;
 
     /**
      *  是否打开
