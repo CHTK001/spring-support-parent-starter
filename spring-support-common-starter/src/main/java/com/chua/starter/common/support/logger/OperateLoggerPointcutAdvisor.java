@@ -97,6 +97,7 @@ public class OperateLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdv
         String module = getModule(method);
         SysLoggerInfo sysLoggerInfo = new SysLoggerInfo(name);
         sysLoggerInfo.setCreateBy(RequestUtils.getUsername());
+        sysLoggerInfo.setCreateName(RequestUtils.getUserId());
         sysLoggerInfo.setCreateTime(new Date());
         sysLoggerInfo.setLogName(name);
         sysLoggerInfo.setLogModule(StringUtils.defaultString(operateLog.module(), module));
