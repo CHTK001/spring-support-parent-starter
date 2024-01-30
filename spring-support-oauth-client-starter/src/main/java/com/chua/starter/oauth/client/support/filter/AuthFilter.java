@@ -42,6 +42,7 @@ public class AuthFilter implements Filter {
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         WebRequest webRequest = new WebRequest(this.webRequest.getAuthProperties(), (HttpServletRequest) request, requestMappingHandlerMapping);
+        ((HttpServletRequest) request).getSession().setAttribute("codec", true);
         if (webRequest.isPass()) {
             ((HttpServletRequest) request).getSession().setAttribute("codec", false);
             chain.doFilter(request, response);

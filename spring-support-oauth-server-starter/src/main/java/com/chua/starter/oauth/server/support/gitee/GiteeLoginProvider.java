@@ -1,8 +1,12 @@
 package com.chua.starter.oauth.server.support.gitee;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.net.NetAddress;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.utils.CookieUtil;
+import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.starter.oauth.client.support.user.LoginResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.server.support.check.LoginCheck;
 import com.chua.starter.oauth.server.support.condition.OnBeanCondition;
@@ -34,6 +38,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 
 import javax.annotation.Resource;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
@@ -63,28 +69,36 @@ public class GiteeLoginProvider implements InitializingBean , ApplicationContext
     @Resource
     private AuthServerProperties authServerProperties;
     private AuthStateCache authStateCache = AuthDefaultStateCache.INSTANCE;
-
     /**
      * gitee页面
      *
      * @return 登录页
      */
     @GetMapping("/callback")
-    public RedirectView thirdIndex(AuthCallback authCallback, RedirectAttributes attributes, HttpServletResponse response) {
+    public RedirectView thirdIndex(AuthCallback authCallback, RedirectAttributes attributes, HttpServletRequest request, HttpServletResponse response) {
         AuthResponse<AuthUser> authResponse = authRequest.login(authCallback);
         RedirectView view = new RedirectView();
-        view.setUrl("/");
+        String state = authCallback.getState();
+        String loginCode = authStateCache.get(state + "_info");
+        view.setUrl(loginCode);
         AuthUser data = authResponse.getData();
         if (null == data) {
             return view;
         }
-        String state = authCallback.getState();
         String callback = authStateCache.get(state + "_callback");
-        if(null != giteeService) {
-            boolean doLogin = giteeService.doLogin(data);
-            if(doLogin) {
-                view.setUrl(StringUtils.defaultString(callback, "/"));
-            }
+        ReturnResult<LoginResult> gitee = loginCheck.doLogin(RequestUtils.getIpAddress(request), data.getUuid(), data.getUsername(), "gitee", data);
+        if(null != gitee && gitee.isOk()) {
+            LoginResult data1 = gitee.getData();
+            Cookie cookie = new Cookie(authServerProperties.getCookieName(), data1.getToken());
+            cookie.setPath("/");
+            NetAddress netAddress = NetAddress.of(callback);
+            cookie.setDomain(netAddress.getHost());
+            cookie.setMaxAge(Integer.MAX_VALUE);
+            cookie.setSecure(true);
+            response.addCookie(cookie);
+//            response.addHeader("Set-Cookie", CookieUtil.toString(cookie) + "; SameSite = None; Secure;");
+            response.setHeader("Access-Control-Allow-Credentials","true");
+            view.setUrl(StringUtils.defaultString(callback, "/"));
         }
         return view;
     }
@@ -97,12 +111,12 @@ public class GiteeLoginProvider implements InitializingBean , ApplicationContext
     @GetMapping("loginCodeType")
     public String gitee(@RequestParam("loginCode") String loginCode, String callback) {
         String state = AuthStateUtils.createState();
-        authStateCache.cache(state + "_info", loginCode);
         try {
+            authStateCache.cache(state + "_info", URLDecoder.decode(loginCode, "UTF-8"));
             authStateCache.cache(state + "_callback", URLDecoder.decode(callback, "UTF-8"));
         } catch (UnsupportedEncodingException ignored) {
         }
-        return authRequest.authorize(AuthStateUtils.createState());
+        return authRequest.authorize(state);
     }
 
     @Override

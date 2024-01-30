@@ -25,7 +25,6 @@ import org.springframework.web.client.RestTemplate;
         LimitProperties.class, LogProperties.class, ParameterProperties.class
 })
 public class CommonConfiguration {
-
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(name = "plugin.limit.enable", havingValue = "true", matchIfMissing = true)
