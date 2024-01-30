@@ -29,6 +29,6 @@ public class CodecProperties {
     private String codecType = "sm2";
 
 
-    private List<String> whiteList = Lists.newArrayList("/**/setting/*");
+    private List<String> whiteList ;
     
 }

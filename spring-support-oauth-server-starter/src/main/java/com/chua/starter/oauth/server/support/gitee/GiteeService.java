@@ -21,12 +21,4 @@ public interface GiteeService {
      */
     void binder(AuthUser data, UserResult userResult);
 
-
-    /**
-     * 进行登录
-     *
-     * @param data 数据
-     * @return boolean
-     */
-    boolean doLogin(AuthUser data);
 }

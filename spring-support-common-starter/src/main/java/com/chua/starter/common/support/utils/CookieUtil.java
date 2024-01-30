@@ -136,8 +136,8 @@ public class CookieUtil {
      * @param cookies Cookie
      * @return {@link String}
      */
-    public static String toString(Cookie[] cookies) {
-        return Joiner.on("&").withKeyValueSeparator("=").join(Arrays.stream(cookies)
+    public static String toString(Cookie... cookies) {
+        return Joiner.on(";").withKeyValueSeparator("=").join(Arrays.stream(cookies)
                 .collect(Collectors.toMap(Cookie::getName, Cookie::getValue)));
     }
 }
