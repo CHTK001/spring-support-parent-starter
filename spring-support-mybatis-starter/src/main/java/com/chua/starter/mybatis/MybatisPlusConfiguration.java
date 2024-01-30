@@ -150,17 +150,6 @@ public class MybatisPlusConfiguration {
         }));
     }
 
-    /**
-     * SqlInterceptor
-     *
-     * @return SqlInterceptor
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = MybatisPlusProperties.PRE, name = "open-sql", havingValue = "true", matchIfMissing = false)
-    public SqlInterceptor sqlInterceptor() {
-        return new SqlInterceptor();
-    }
 
     /**
      * SqlInterceptor

@@ -16,10 +16,6 @@ public class MybatisPlusProperties {
 
 
     public static final String PRE = "plugin.mybatis";
-    /**
-     * 打印sql
-     */
-    private boolean openSql = true;
 
     /**
      * 开启租户
