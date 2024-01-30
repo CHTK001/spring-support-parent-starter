@@ -25,6 +25,9 @@ public class Advice {
         List<AdviceResolver> adviceResolvers = ServiceProvider.of(AdviceResolver.class).collect();
         resolverMap = new ConcurrentHashMap<>(adviceResolvers.size());
         for (AdviceResolver adviceResolver : adviceResolvers) {
+            if(null == adviceResolver) {
+                continue;
+            }
             String type = adviceResolver.type();
             if(StringUtils.isBlank(type)) {
                 continue;

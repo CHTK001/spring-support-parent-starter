@@ -1,8 +1,12 @@
 package com.chua.starter.common.support.utils;
 
+import com.google.common.base.Joiner;
+
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 /**
  * Cookie.Util
@@ -126,4 +130,14 @@ public class CookieUtil {
         }
     }
 
+    /**
+     * 到字符串
+     *
+     * @param cookies Cookie
+     * @return {@link String}
+     */
+    public static String toString(Cookie[] cookies) {
+        return Joiner.on("&").withKeyValueSeparator("=").join(Arrays.stream(cookies)
+                .collect(Collectors.toMap(Cookie::getName, Cookie::getValue)));
+    }
 }

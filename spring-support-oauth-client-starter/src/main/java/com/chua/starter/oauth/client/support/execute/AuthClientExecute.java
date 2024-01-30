@@ -472,9 +472,10 @@ public class AuthClientExecute {
      *
      * @param loginCodeType 登录类型
      * @param type
+     * @param callback
      * @return 登陆码
      */
-    public String getLoginCode(String loginCodeType, String type, String token) {
+    public String getLoginCode(String loginCodeType, String type, String token, String callback) {
         Robin robin1 = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
         Robin balance = robin1.create();
         String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(authClientProperties.getAddress()).split(",");
@@ -490,7 +491,7 @@ public class AuthClientExecute {
 
             httpResponse = Unirest.get(
                             StringUtils.endWithAppend(StringUtils.startWithAppend(url, "http://"), "/")
-                                    + loginCodeType + "/" + type+"/loginCodeType?loginCode=" + token)
+                                    + loginCodeType + "/" + type+"/loginCodeType?loginCode=" + token + "&callback=" + callback)
                     .asString();
 
         } catch (UnirestException ignored) {

@@ -1,12 +1,16 @@
 package com.chua.starter.oauth.server.support.gitee;
 
+import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.server.support.check.LoginCheck;
 import com.chua.starter.oauth.server.support.condition.OnBeanCondition;
 import com.chua.starter.oauth.server.support.properties.AuthServerProperties;
 import com.chua.starter.oauth.server.support.properties.CasProperties;
 import com.chua.starter.oauth.server.support.properties.ThirdPartyBinderProperties;
 import com.chua.starter.oauth.server.support.resolver.LoggerResolver;
+import com.chua.starter.oauth.server.support.token.TokenResolver;
 import me.zhyd.oauth.cache.AuthDefaultStateCache;
 import me.zhyd.oauth.cache.AuthStateCache;
 import me.zhyd.oauth.config.AuthConfig;
@@ -27,10 +31,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.view.RedirectView;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 
 /**
  * gitee绑定账号
@@ -65,23 +72,30 @@ public class GiteeBinderProvider implements InitializingBean , ApplicationContex
      * @return 登录页
      */
     @GetMapping("/callback")
-    @ResponseBody
-    public String thirdIndex(AuthCallback authCallback, RedirectAttributes attributes, HttpServletRequest request, HttpServletResponse response) {
+    public RedirectView thirdIndex(AuthCallback authCallback, RedirectAttributes attributes, HttpServletRequest request, HttpServletResponse response) {
+        RedirectView view = new RedirectView();
+        view.setUrl("/");
+//        view.addStaticAttribute("Set-Cookie", CookieUtil.toString(request.getCookies()));
         AuthResponse<AuthUser> authResponse = authRequest.login(authCallback);
         AuthUser data = authResponse.getData();
         if (null == data) {
-            return "操作超时";
+            return view;
         }
         String state = authCallback.getState();
-        String string = authStateCache.get(state + "_info");
-        if(StringUtils.isBlank(string)) {
-            return "请重新登录";
-        }
-        if(null != giteeService) {
-            giteeService.binder(data, string);
+        String token = authStateCache.get(state + "_info");
+        String callback = authStateCache.get(state + "_callback");
+        if(StringUtils.isBlank(token)) {
+            return view;
         }
 
-        return "绑定失败";
+        String tokenManagement = authServerProperties.getTokenManagement();
+        TokenResolver tokenResolver = ServiceProvider.of(TokenResolver.class).getExtension(tokenManagement);
+        ReturnResult<UserResult> result = tokenResolver.resolve(null, token);
+        if(null != giteeService) {
+            giteeService.binder(data, result.getData());
+        }
+        view.setUrl(callback);
+        return view;
     }
     /**
      * gitee页面
@@ -90,9 +104,13 @@ public class GiteeBinderProvider implements InitializingBean , ApplicationContex
      */
     @ResponseBody
     @GetMapping("loginCodeType")
-    public String gitee(@RequestParam("loginCode") String loginCode) {
+    public String gitee(@RequestParam("loginCode") String loginCode, String callback) {
         String state = AuthStateUtils.createState();
         authStateCache.cache(state + "_info", loginCode);
+        try {
+            authStateCache.cache(state + "_callback", URLDecoder.decode(callback, "UTF-8"));
+        } catch (UnsupportedEncodingException ignored) {
+        }
         return authRequest.authorize(state);
     }
 
