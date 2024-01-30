@@ -2,19 +2,16 @@ package com.chua.starter.oauth.server.support.gitee;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.net.NetAddress;
-import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.common.support.utils.CookieUtil;
+import com.chua.starter.common.support.utils.LocaleUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.user.LoginResult;
-import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.server.support.check.LoginCheck;
 import com.chua.starter.oauth.server.support.condition.OnBeanCondition;
 import com.chua.starter.oauth.server.support.properties.AuthServerProperties;
 import com.chua.starter.oauth.server.support.properties.CasProperties;
 import com.chua.starter.oauth.server.support.properties.ThirdPartyLoginProperties;
 import com.chua.starter.oauth.server.support.resolver.LoggerResolver;
-import com.chua.starter.oauth.server.support.token.TokenResolver;
 import me.zhyd.oauth.cache.AuthDefaultStateCache;
 import me.zhyd.oauth.cache.AuthStateCache;
 import me.zhyd.oauth.config.AuthConfig;
@@ -43,6 +40,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
 
 /**
  * gitee绑定账号
@@ -99,6 +97,18 @@ public class GiteeLoginProvider implements InitializingBean , ApplicationContext
 //            response.addHeader("Set-Cookie", CookieUtil.toString(cookie) + "; SameSite = None; Secure;");
             response.setHeader("Access-Control-Allow-Credentials","true");
             view.setUrl(StringUtils.defaultString(callback, "/"));
+        } else {
+            Cookie cookie = null;
+            try {
+                cookie = new Cookie("Access-Message", URLEncoder.encode(URLEncoder.encode(LocaleUtils.getMessage("message.login.binder"), "UTF-8"), "UTF-8"));
+            } catch (UnsupportedEncodingException ignored) {
+            }
+            cookie.setPath("/");
+            NetAddress netAddress = NetAddress.of(callback);
+            cookie.setDomain(netAddress.getHost());
+            cookie.setMaxAge(Integer.MAX_VALUE);
+            cookie.setSecure(true);
+            response.addCookie(cookie);
         }
         return view;
     }
