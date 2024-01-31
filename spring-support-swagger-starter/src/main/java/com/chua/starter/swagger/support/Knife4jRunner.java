@@ -1,5 +1,6 @@
 package com.chua.starter.swagger.support;
 
+import com.chua.common.support.utils.FileUtils;
 import com.google.common.base.Strings;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -23,7 +24,7 @@ public class Knife4jRunner implements CommandLineRunner {
             contextPath = contextPath + "/";
         }
         String port = environment.getProperty("server.port", "8080");
-        log.info("\r\n当前swagger文档地址      http://127.0.0.1:{}/{}/doc.html"
-                + "\r\n健康检查               http://127.0.0.1:{}/{}/actuator", port, StringUtils.removeEnd(StringUtils.removeStart(contextPath, "/"), "/"), port, StringUtils.removeEnd(StringUtils.removeStart(contextPath, "/"), "/"));
+        log.info("\r\n当前swagger文档地址      " + FileUtils.normalize("http://127.0.0.1:"+ port, StringUtils.removeEnd(StringUtils.removeStart(contextPath, "/"), "/"), "doc.html")
+                + "\r\n健康检查               " + FileUtils.normalize("http://127.0.0.1:"+ port, StringUtils.removeEnd(StringUtils.removeStart(contextPath, "/"), "/"), "actuator"));
     }
 }

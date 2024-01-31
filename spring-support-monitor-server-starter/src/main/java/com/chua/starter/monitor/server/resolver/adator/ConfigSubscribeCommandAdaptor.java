@@ -31,9 +31,6 @@ public class ConfigSubscribeCommandAdaptor implements CommandAdaptor{
     @Override
     public BootResponse resolve(BootRequest request) {
         String content = request.getContent();
-        if(StringUtils.isBlank(content)) {
-            return BootResponse.empty();
-        }
         List<MonitorConfig> list = monitorConfigService.list(Wrappers.<MonitorConfig>lambdaQuery()
                 .eq(MonitorConfig::getConfigProfile, request.getProfile())
                 .eq(MonitorConfig::getConfigStatus, 1)
