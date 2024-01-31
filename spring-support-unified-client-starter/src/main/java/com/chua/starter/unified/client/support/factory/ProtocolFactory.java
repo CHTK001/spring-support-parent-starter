@@ -1,8 +1,8 @@
 package com.chua.starter.unified.client.support.factory;
 
-import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.bean.BeanMap;
 import com.chua.common.support.function.InitializingAware;
+import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.protocol.boot.BootOption;
 import com.chua.common.support.protocol.boot.Protocol;
 import com.chua.common.support.protocol.options.ServerOption;
@@ -47,7 +47,7 @@ public class ProtocolFactory implements InitializingAware {
     public void afterPropertiesSet() {
         UnifiedClientProperties.UnifiedExecuter executer = unifiedClientProperties.getExecuter();
         String protocol = unifiedClientProperties.getProtocol();
-        JSONObject jsonObject = new JSONObject();
+        JsonObject jsonObject = new JsonObject();
         jsonObject.putAll(BeanMap.create(executer));
         jsonObject.put(SUBSCRIBE, unifiedClientProperties.getSubscribe());
         BootOption bootOption = BootOption.builder()

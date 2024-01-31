@@ -1,7 +1,6 @@
 package com.chua.starter.unified.client.support.endpoint;
 
-import com.alibaba.fastjson2.JSONObject;
-import com.alibaba.fastjson2.JSONWriter;
+import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.utils.ClassUtils;
 import org.springframework.boot.actuate.endpoint.annotation.ReadOperation;
 import org.springframework.boot.actuate.endpoint.web.annotation.WebEndpoint;
@@ -46,7 +45,7 @@ public class FileHandlerEndpoint {
         }
 
         try {
-            return new JSONObject().fluentPut("data", method.invoke(null).toString()).toJSONString(JSONWriter.Feature.LargeObject);
+            return new JsonObject().fluentPut("data", method.invoke(null).toString()).toJSONString();
         } catch (Exception ignored) {
         }
         return EMPTY_JSON;

@@ -1,7 +1,5 @@
 package com.chua.starter.unified.client.support.factory;
 
-import com.alibaba.fastjson2.JSONObject;
-import com.alibaba.fastjson2.JSONWriter;
 import com.chua.common.support.bean.BeanMap;
 import com.chua.common.support.function.InitializingAware;
 import com.chua.common.support.json.Json;
@@ -104,11 +102,11 @@ public class ExecutorFactory implements InitializingAware, DisposableBean, Appli
         request.setModuleType(ModuleType.EXECUTOR);
         request.setCommandType(CommandType.REGISTER);
         UnifiedClientProperties.UnifiedExecuter executer = unifiedClientProperties.getExecuter();
-        JSONObject jsonObject = new JSONObject();
+        JsonObject jsonObject = new JsonObject();
         jsonObject.putAll(BeanMap.create(executer));
         Map<ModuleType, UnifiedClientProperties.SubscribeOption> subscribe = unifiedClientProperties.getSubscribe();
         UnifiedClientProperties.SubscribeOption subscribeOption = new UnifiedClientProperties.SubscribeOption();
-        subscribeOption.setExt(new JSONObject()
+        subscribeOption.setExt(new JsonObject()
                 .fluentPut("port", environment.resolvePlaceholders("${server.port:8080}"))
                 .fluentPut("endpointsUrl", environment.resolvePlaceholders("${management.endpoints.web.base-path:/actuator}"))
                 .fluentPut("contextPath", environment.resolvePlaceholders("${server.servlet.context-path:}")));
@@ -116,7 +114,7 @@ public class ExecutorFactory implements InitializingAware, DisposableBean, Appli
         jsonObject.put(SUBSCRIBE, subscribe);
         request.setAppName(appName);
         request.setProfile(environment.getProperty("spring.profiles.active", "default"));
-        request.setContent(jsonObject.toJSONString(JSONWriter.Feature.WriteEnumsUsingName));
+        request.setContent(jsonObject.toJSONString());
         return request;
     }
 
@@ -129,7 +127,7 @@ public class ExecutorFactory implements InitializingAware, DisposableBean, Appli
     public void onApplicationEvent(UnifiedEvent event) {
         if(null != producer) {
             Message msg = new Message();
-            msg.setBody(new JSONObject()
+            msg.setBody(new JsonObject()
                     .fluentPut("applicationName", appName)
                     .fluentPut("mode", event.getMode())
                     .fluentPut("type", event.getType())

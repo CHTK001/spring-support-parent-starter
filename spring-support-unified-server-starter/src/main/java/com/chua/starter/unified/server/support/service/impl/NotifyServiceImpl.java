@@ -1,11 +1,10 @@
 package com.chua.starter.unified.server.support.service.impl;
 
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.json.JsonArray;
+import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.json.JsonWriter;
 import com.chua.common.support.protocol.boot.*;
 import com.chua.common.support.protocol.options.ServerOption;
@@ -97,13 +96,13 @@ public class NotifyServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M
                 continue;
             }
 
-            JSONObject jsonObject = JSON.parseObject(unifiedExecuterItemSubscribe);
-            JSONObject config = jsonObject.getJSONObject(moduleType.name());
+            JsonObject jsonObject = Json.getJsonObject(unifiedExecuterItemSubscribe);
+            JsonObject config = jsonObject.getJSONObject(moduleType.name());
             if(null == config) {
                 continue;
             }
 
-            JSONArray jsonArray = config.getJSONArray(SUBSCRIBE);
+            JsonArray jsonArray = config.getJsonArray(SUBSCRIBE);
             if(null == jsonArray || !jsonArray.contains(getAppName.apply(t))) {
                 continue;
             }

@@ -1,7 +1,7 @@
 package com.chua.starter.unified.client.support.event;
 
-import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.annotations.Spi;
+import com.chua.common.support.json.JsonObject;
 import io.vertx.core.http.HttpServerResponse;
 
 /**
@@ -14,7 +14,7 @@ import io.vertx.core.http.HttpServerResponse;
 public class HealthEvent implements Event{
     @Override
     public void onListener(HttpServerResponse response) {
-        response.end(new JSONObject().fluentPut("status", "UP").toString());
+        response.end(new JsonObject().fluentPut("status", "UP").toString());
 
     }
 }

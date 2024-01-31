@@ -1,8 +1,8 @@
 package com.chua.starter.unified.client.support.mybatis;
 
-import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.injector.AbstractMethod;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
+import com.chua.common.support.json.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.builder.xml.XMLMapperEntityResolver;
 import org.apache.ibatis.mapping.MappedStatement;
@@ -27,7 +27,7 @@ public class DynamicSqlMethod extends AbstractMethod {
     protected SqlType sqlType;
     private Class<?> modelType;
     private Class<?> mapperType;
-    private JSONObject jsonObject;
+    private JsonObject jsonObject;
     private MappedStatement mappedStatement;
 
     /**
@@ -35,7 +35,7 @@ public class DynamicSqlMethod extends AbstractMethod {
      * @param jsonObject
      * @since 3.5.0
      */
-    protected DynamicSqlMethod(String methodName, String sql, SqlType sqlType, Class<?> modelType, Class<?> mapperType, JSONObject jsonObject) {
+    protected DynamicSqlMethod(String methodName, String sql, SqlType sqlType, Class<?> modelType, Class<?> mapperType, JsonObject jsonObject) {
         super(methodName);
         this.sql = sql;
         this.sqlType = sqlType;
@@ -91,9 +91,9 @@ public class DynamicSqlMethod extends AbstractMethod {
     /**
      * 获取配置
      *
-     * @return {@link JSONObject}
+     * @return {@link JsonObject}
      */
-    public JSONObject getConfig() {
+    public JsonObject getConfig() {
         return jsonObject;
     }
 }

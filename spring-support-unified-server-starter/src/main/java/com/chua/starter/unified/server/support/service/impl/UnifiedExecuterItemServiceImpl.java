@@ -1,9 +1,9 @@
 package com.chua.starter.unified.server.support.service.impl;
 
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.chua.common.support.json.Json;
+import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.page.Page;
 import com.chua.common.support.protocol.boot.BootRequest;
 import com.chua.common.support.protocol.boot.ModuleType;
@@ -78,16 +78,16 @@ public class UnifiedExecuterItemServiceImpl extends NotifyServiceImpl<UnifiedExe
     }
 
     @Override
-    public JSONObject getOshi(String dataId) {
+    public JsonObject getOshi(String dataId) {
         UnifiedExecuterItem unifiedExecuterItem = ((UnifiedExecuterItemService) AopContext.currentProxy()).get(dataId);
         if(null == unifiedExecuterItem) {
-            return new JSONObject();
+            return new JsonObject();
         }
 
-        JSONObject rs = new JSONObject();
+        JsonObject rs = new JsonObject();
         setInLog(false);
         setModuleType(ModuleType.OSHI);
-        setResponseConsumer(response -> rs.putAll(JSON.parseObject(response.getContent())));
+        setResponseConsumer(response -> rs.putAll(Json.getJsonObject(response.getContent())));
         setRequestConsumer(request -> {
             request.setContent(null);
         });
@@ -97,16 +97,16 @@ public class UnifiedExecuterItemServiceImpl extends NotifyServiceImpl<UnifiedExe
 
 
     @Override
-    public Page<JSONObject> getProcess(String dataId, String status, String keyword, Integer page, Integer pageSize) {
+    public Page<JsonObject> getProcess(String dataId, String status, String keyword, Integer page, Integer pageSize) {
         UnifiedExecuterItem unifiedExecuterItem = ((UnifiedExecuterItemService) AopContext.currentProxy()).get(dataId);
         if(null == unifiedExecuterItem) {
             return new Page<>();
         }
 
-        JSONObject rs = new JSONObject();
+        JsonObject rs = new JsonObject();
         setInLog(false);
         setModuleType(ModuleType.PROCESS);
-        setResponseConsumer(response -> rs.putAll(JSON.parseObject(response.getContent())));
+        setResponseConsumer(response -> rs.putAll(Json.getJsonObject(response.getContent())));
         setRequestConsumer(request -> {
             request.addParam("status", status);
             request.addParam("keyword", keyword);
@@ -233,7 +233,7 @@ public class UnifiedExecuterItemServiceImpl extends NotifyServiceImpl<UnifiedExe
             return;
         }
         UnifiedExecuterItem item = new UnifiedExecuterItem();
-        JSONObject jsonObject = JSON.parseObject(request.getContent());
+        JsonObject jsonObject = Json.getJsonObject(request.getContent());
         item.setUnifiedExecuterItemPort(jsonObject.getString("port"));
         item.setUnifiedExecuterItemHost(jsonObject.getString("host"));
         item.setUnifiedExecuterItemSubscribe(jsonObject.getString(SUBSCRIBE));
@@ -249,7 +249,7 @@ public class UnifiedExecuterItemServiceImpl extends NotifyServiceImpl<UnifiedExe
     private boolean checkHaveItem(BootRequest request) {
         String content = request.getContent();
         String appName = request.getAppName();
-        JSONObject jsonObject = JSON.parseObject(content);
+        JsonObject jsonObject = Json.getJsonObject(content);
         String host = jsonObject.getString("host");
         String port = jsonObject.getString("port");
         String key = appName + "" + host + port;

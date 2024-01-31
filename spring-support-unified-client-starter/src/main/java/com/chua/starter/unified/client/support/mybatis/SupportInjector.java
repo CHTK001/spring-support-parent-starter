@@ -1,12 +1,12 @@
 package com.chua.starter.unified.client.support.mybatis;
 
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.injector.AbstractMethod;
 import com.baomidou.mybatisplus.core.injector.DefaultSqlInjector;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.chua.common.support.function.Joiner;
+import com.chua.common.support.json.Json;
+import com.chua.common.support.json.JsonArray;
+import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.protocol.annotations.ServiceMapping;
 import com.chua.common.support.protocol.boot.*;
 import com.chua.common.support.utils.ClassUtils;
@@ -75,7 +75,7 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
         }
 
         log.info("监听到Mybatis推送数据");
-        JSONObject jsonObject = JSON.parseObject(content);
+        JsonObject jsonObject = Json.getJsonObject(content);
         try {
             register(jsonObject);
         } catch (Exception e) {
@@ -113,16 +113,16 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
 
         log.info("MYBATIS 订阅: {} 成功", subscribe);
         try {
-            JSONArray jsonArray = JSON.parseArray(response.getContent());
+            JsonArray jsonArray = Json.getJsonArray(response.getContent());
             register(jsonArray);
         } catch (Exception ignored) {
         }
     }
 
-    private void register(JSONArray jsonArray) {
+    private void register(JsonArray jsonArray) {
         int size = jsonArray.size();
         for (int i = 0; i < size; i++) {
-            JSONObject jsonObject = jsonArray.getJSONObject(i);
+            JsonObject jsonObject = jsonArray.getJsonObject(i);
             if(null == jsonObject) {
                 continue;
             }
@@ -131,7 +131,7 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
         }
     }
 
-    private void register(JSONObject jsonObject) {
+    private void register(JsonObject jsonObject) {
         String unifiedMybatisName = jsonObject.getString("unifiedMybatisName");
         if(StringUtils.isBlank(unifiedMybatisName)) {
             return;
@@ -163,7 +163,7 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
         refreshStatement(unifiedMybatisName, unifiedMybatisSql, sqlType1, mapperType, modelType, jsonObject);
     }
 
-    private void refreshStatement(String unifiedMybatisName, String unifiedMybatisSql, SqlType sqlType, Class<?> mapperType, Class<?> modelType, JSONObject jsonObject) {
+    private void refreshStatement(String unifiedMybatisName, String unifiedMybatisSql, SqlType sqlType, Class<?> mapperType, Class<?> modelType, JsonObject jsonObject) {
         refreshSqlMethod(methodMap.get(unifiedMybatisName), unifiedMybatisName, unifiedMybatisSql, sqlType, modelType, mapperType, jsonObject);
         refreshStatement(statementMap.getOrDefault(unifiedMybatisName,
                 statementMap.get(mapperType.getTypeName() + "." + unifiedMybatisName)), unifiedMybatisSql, sqlType, mapperType, modelType);
@@ -183,7 +183,7 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
         }
     }
 
-    private void refreshSqlMethod(DynamicSqlMethod dynamicSqlMethod, String unifiedMybatisName, String unifiedMybatisSql, SqlType sqlType, Class<?> modelType, Class<?> mapperType, JSONObject jsonObject) {
+    private void refreshSqlMethod(DynamicSqlMethod dynamicSqlMethod, String unifiedMybatisName, String unifiedMybatisSql, SqlType sqlType, Class<?> modelType, Class<?> mapperType, JsonObject jsonObject) {
         if(null == dynamicSqlMethod) {
             methodMap.put(unifiedMybatisName, new DynamicSqlMethod(unifiedMybatisName, unifiedMybatisSql, sqlType, modelType, mapperType, jsonObject));
             return;

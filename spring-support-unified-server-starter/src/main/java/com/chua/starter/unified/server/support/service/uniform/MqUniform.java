@@ -1,8 +1,8 @@
 package com.chua.starter.unified.server.support.service.uniform;
 
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.constant.NameConstant;
+import com.chua.common.support.json.Json;
+import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
@@ -90,7 +90,7 @@ public class MqUniform implements Uniform, Consumer.ConsumerHandler, Initializin
 
     @Override
     public void handle(Message msg, Consumer consumer) throws IOException {
-        JSONObject jsonObject = JSON.parseObject(msg.getBody());
+        JsonObject jsonObject = Json.getJsonObject(msg.getBody());
         String applicationName = jsonObject.getString(UNIFORM_APPLICATION_NAME);
         if (StringUtils.isEmpty(applicationName)) {
             return;

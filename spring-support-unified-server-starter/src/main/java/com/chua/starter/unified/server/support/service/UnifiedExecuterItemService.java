@@ -1,6 +1,6 @@
 package com.chua.starter.unified.server.support.service;
 
-import com.alibaba.fastjson2.JSONObject;
+import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.page.Page;
 import com.chua.common.support.protocol.boot.BootRequest;
 import com.chua.starter.unified.server.support.entity.UnifiedExecuter;
@@ -29,9 +29,9 @@ public interface UnifiedExecuterItemService extends NotifyService<UnifiedExecute
      * 获取oshi
      *
      * @param dataId 数据id
-     * @return {@link JSONObject}
+     * @return {@link JsonObject}
      */
-    JSONObject getOshi(String dataId);
+    JsonObject getOshi(String dataId);
     /**
      * 查找项目
      *
@@ -93,7 +93,7 @@ public interface UnifiedExecuterItemService extends NotifyService<UnifiedExecute
      * @param keyword  关键字
      * @param page     分页
      * @param pageSize 分页大小
-     * @return {@link JSONObject}
+     * @return {@link JsonObject}
      */
-    Page<JSONObject> getProcess(String dataId, String status, String keyword, Integer page, Integer pageSize);
+    Page<JsonObject> getProcess(String dataId, String status, String keyword, Integer page, Integer pageSize);
 }
