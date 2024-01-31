@@ -1,11 +1,12 @@
 package com.chua.starter.unified.server.support.service.impl;
 
-import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.chua.common.support.json.Json;
+import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.protocol.boot.BootRequest;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.starter.mybatis.entity.DelegatePage;
@@ -150,7 +151,7 @@ public class UnifiedExecuterServiceImpl extends ServiceImpl<UnifiedExecuterMappe
      */
     private void registerExecutorItem(UnifiedExecuter unifiedExecuter, BootRequest request) {
         UnifiedExecuterItem unifiedExecuterItem = new UnifiedExecuterItem();
-        JSONObject jsonObject = JSONObject.parseObject(request.getContent());
+        JsonObject jsonObject = Json.getJsonObject(request.getContent());
         unifiedExecuterItem.setUnifiedExecuterId(unifiedExecuter.getUnifiedExecuterId());
         unifiedExecuterItem.setUnifiedExecuterItemHost(jsonObject.getString("host"));
         unifiedExecuterItem.setUnifiedExecuterItemPort(jsonObject.getString("port"));
