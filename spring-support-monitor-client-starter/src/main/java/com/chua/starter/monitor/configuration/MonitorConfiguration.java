@@ -1,5 +1,6 @@
 package com.chua.starter.monitor.configuration;
 
+import com.chua.common.support.utils.ClassUtils;
 import com.chua.starter.monitor.factory.MonitorFactory;
 import com.chua.starter.monitor.properties.MonitorProperties;
 import com.chua.starter.monitor.protocol.ProtocolFactory;
@@ -46,6 +47,10 @@ public class MonitorConfiguration  implements BeanDefinitionRegistryPostProcesso
             return;
         }
 
+        if(ClassUtils.isPresent("com.chua.starter.monitor.server.properties.MonitorServerProperties")) {
+            return;
+        }
+
         MonitorFactory monitorFactory = MonitorFactory.getInstance();
         monitorFactory.register(monitorProperties);
         monitorFactory.register(environment);
@@ -53,9 +58,6 @@ public class MonitorConfiguration  implements BeanDefinitionRegistryPostProcesso
 
         ProtocolFactory protocolFactory = new ProtocolFactory(registry);
         protocolFactory.afterPropertiesSet();
-        Protocol protocol = protocolFactory.getProtocol();
-        this.executorFactory = new ExecutorFactory(protocol, unifiedClientProperties, appName, environment);
-        executorFactory.afterPropertiesSet();
     }
 
     @Override

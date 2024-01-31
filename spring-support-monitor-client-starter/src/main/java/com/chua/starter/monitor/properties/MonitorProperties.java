@@ -30,7 +30,7 @@ public class MonitorProperties {
     /**
      * 打开
      */
-    private boolean enable = false;
+    private boolean enable = true;
 
     /**
      * 统一服务端地址
@@ -40,6 +40,11 @@ public class MonitorProperties {
      * 客户端绑定的端口
      */
     private int port = 31111;
+
+    /**
+     * 协议
+     */
+    private String protocol = "http";
     /**
      * mq端口
      */
@@ -50,7 +55,8 @@ public class MonitorProperties {
     private int mqPort = 31112;
 
     /**
-     * 协议
+     * mq订阅者
      */
-    private String protocol = "http";
+    private String mqSubscriber = "monitor";
+
 }
