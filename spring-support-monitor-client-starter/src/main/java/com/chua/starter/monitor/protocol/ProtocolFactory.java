@@ -39,9 +39,10 @@ public class ProtocolFactory implements InitializingAware {
         BootOption bootOption = BootOption.builder()
                 .encryptionSchema(monitorProtocolProperties.getEncryptionSchema())
                 .encryptionKey(monitorProtocolProperties.getEncryptionKey())
-                .address(monitorProtocolProperties.getHost() + ":" + monitorProtocolProperties.getPort())
+                .address(monitorProperties.getMonitor())
                 .appName(monitorFactory.getAppName())
                 .profile(monitorFactory.getActive())
+                .heartbeat(false)
                 .serverOption(ServerOption.builder().port(monitorProtocolProperties.getPort()).host(monitorProtocolProperties.getHost()).build())
                 .build();
         this.protocol = ServiceProvider.of(Protocol.class).getNewExtension(protocol, bootOption);

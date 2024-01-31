@@ -38,9 +38,14 @@
             <artifactId>spring-support-mybatis-starter</artifactId>
         </dependency>
 
+<!--        <dependency>-->
+<!--            <groupId>com.chua</groupId>-->
+<!--            <artifactId>spring-support-oauth-client-starter</artifactId>-->
+<!--        </dependency>-->
+
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-support-oauth-client-starter</artifactId>
+            <artifactId>spring-support-swagger-starter</artifactId>
         </dependency>
 
         <dependency>
