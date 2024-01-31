@@ -1,12 +1,17 @@
 package com.chua.starter.monitor.server.configuration;
 
+import com.chua.common.support.annotations.OnRouterEvent;
+import com.chua.common.support.json.Json;
 import com.chua.common.support.protocol.options.ServerOption;
+import com.chua.starter.monitor.request.MonitorRequest;
 import com.chua.starter.monitor.server.properties.MonitorServerProperties;
+import com.chua.starter.monitor.server.router.Router;
 import com.chua.zbus.support.server.ZbusServer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
@@ -17,13 +22,13 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.core.env.Environment;
+import org.springframework.util.ReflectionUtils;
 import org.zbus.broker.Broker;
 import org.zbus.broker.BrokerConfig;
 import org.zbus.broker.HaBroker;
 import org.zbus.broker.SingleBroker;
 import org.zbus.mq.Consumer;
 import org.zbus.mq.MqConfig;
-import org.zbus.net.http.Message;
 
 import java.io.IOException;
 
@@ -36,16 +41,35 @@ import java.io.IOException;
  */
 @Slf4j
 @EnableConfigurationProperties(MonitorServerProperties.class)
-public class MonitorServerConfiguration implements BeanDefinitionRegistryPostProcessor, EnvironmentAware, ApplicationContextAware, DisposableBean, CommandLineRunner {
+public class MonitorServerConfiguration implements BeanDefinitionRegistryPostProcessor, EnvironmentAware, ApplicationContextAware, DisposableBean, CommandLineRunner, SmartInstantiationAwareBeanPostProcessor {
 
     private MonitorServerProperties monitorServerProperties;
 
     private Broker broker;
     private Consumer consumer;
+    private final Router router = new Router();
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         registerMqServer(registry);
+    }
+
+    @Override
+    public boolean postProcessAfterInstantiation(Object bean, String beanName) throws BeansException {
+        registerBean(bean);
+        return SmartInstantiationAwareBeanPostProcessor.super.postProcessAfterInstantiation(bean, beanName);
+    }
+
+    private void registerBean(Object bean) {
+        Class<?> aClass = bean.getClass();
+        ReflectionUtils.doWithMethods(aClass, method -> {
+            OnRouterEvent onRouterEvent = method.getDeclaredAnnotation(OnRouterEvent.class);
+            if(null == onRouterEvent) {
+                return;
+            }
+
+            router.addRoute(onRouterEvent, bean, method);
+        });
     }
 
     private void registerMqClient() {
@@ -67,11 +91,9 @@ public class MonitorServerConfiguration implements BeanDefinitionRegistryPostPro
         config.setMq(monitorServerProperties.getMqSubscriber());
         this.consumer = new Consumer(config);
         try {
-            consumer.start(new Consumer.ConsumerHandler() {
-                @Override
-                public void handle(Message msg, Consumer consumer) throws IOException {
-                    System.out.println();
-                }
+            consumer.start((msg, consumer) -> {
+                MonitorRequest monitorRequest = Json.fromJson(msg.getBody(), MonitorRequest.class);
+                router.doRoute(monitorRequest);
             });
         } catch (IOException ignored) {
         }

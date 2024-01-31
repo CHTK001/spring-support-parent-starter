@@ -1,5 +1,6 @@
 package com.chua.starter.monitor.properties;
 
+import com.chua.common.support.net.NetUtils;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -39,7 +40,7 @@ public class MonitorProperties {
     /**
      * 客户端绑定的端口
      */
-    private int port = 31111;
+    private int port = NetUtils.getRandomPort();
 
     /**
      * 协议

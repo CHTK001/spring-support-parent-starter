@@ -52,9 +52,10 @@ public class MonitorConfiguration  implements BeanDefinitionRegistryPostProcesso
         }
 
         MonitorFactory monitorFactory = MonitorFactory.getInstance();
-        monitorFactory.register(monitorProperties);
         monitorFactory.register(environment);
         monitorFactory.registerAppName(environment.getProperty("spring.application.name"));
+        monitorFactory.register(monitorProperties);
+        monitorFactory.finish();
 
         ProtocolFactory protocolFactory = new ProtocolFactory(registry);
         protocolFactory.afterPropertiesSet();

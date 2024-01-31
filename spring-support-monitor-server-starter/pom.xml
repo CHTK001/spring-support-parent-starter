@@ -22,6 +22,12 @@
             <artifactId>spring-support-monitor-client-starter</artifactId>
         </dependency>
 
+
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-redis-starter</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-socketio-starter</artifactId>
