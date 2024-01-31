@@ -22,4 +22,10 @@ public class MonitorProperties {
      */
     private boolean enable = true;
 
+
+    /**
+     * 监听地址
+     */
+    private String monitor = "http://127.0.0.1:8080/report";
+
 }

@@ -2,6 +2,7 @@ package com.chua.starter.monitor.configuration;
 
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.starter.monitor.factory.MonitorFactory;
+import com.chua.starter.monitor.properties.MonitorConfigProperties;
 import com.chua.starter.monitor.properties.MonitorMqProperties;
 import com.chua.starter.monitor.properties.MonitorProperties;
 import com.chua.starter.monitor.properties.MonitorProtocolProperties;
@@ -34,6 +35,7 @@ public class MonitorConfiguration  implements BeanDefinitionRegistryPostProcesso
     private MonitorProperties monitorProperties;
     private MonitorMqProperties monitorMqProperties;
     private MonitorProtocolProperties monitorProtocolProperties;
+    private MonitorConfigProperties monitorConfigProperties;
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
@@ -61,6 +63,7 @@ public class MonitorConfiguration  implements BeanDefinitionRegistryPostProcesso
         monitorFactory.register(monitorProperties);
         monitorFactory.register(monitorMqProperties);
         monitorFactory.register(monitorProtocolProperties);
+        monitorFactory.register(monitorConfigProperties);
         monitorFactory.finish();
 
         ProtocolFactory protocolFactory = new ProtocolFactory(registry);
@@ -80,6 +83,8 @@ public class MonitorConfiguration  implements BeanDefinitionRegistryPostProcesso
                 .bindOrCreate(MonitorMqProperties.PRE, MonitorMqProperties.class);
         monitorProtocolProperties = Binder.get(applicationContext.getEnvironment())
                 .bindOrCreate(MonitorProtocolProperties.PRE, MonitorProtocolProperties.class);
+        monitorConfigProperties = Binder.get(applicationContext.getEnvironment())
+                .bindOrCreate(MonitorConfigProperties.PRE, MonitorConfigProperties.class);
     }
 
     @Override

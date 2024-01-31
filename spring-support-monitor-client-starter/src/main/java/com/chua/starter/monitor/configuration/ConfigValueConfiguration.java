@@ -160,6 +160,7 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
                         .commandType(CommandType.SUBSCRIBE)
                         .appName(environment.getProperty("spring.application.name"))
                         .profile(environment.getProperty("spring.profiles.active", "default"))
+                        .content(MonitorFactory.getInstance().getMonitorConfigProperties().getConfigAppName())
                 .build()
         );
         if(response.getCommandType() != CommandType.RESPONSE) {

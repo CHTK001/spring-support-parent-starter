@@ -31,4 +31,14 @@ public class MonitorServerProperties {
      * mq主机
      */
     private String mqHost = "0.0.0.0";
+
+    /**
+     * 加密模式
+     */
+    private String encryptionSchema = "aes";
+
+    /**
+     * 加密密钥
+     */
+    private String encryptionKey = "123456";
 }
