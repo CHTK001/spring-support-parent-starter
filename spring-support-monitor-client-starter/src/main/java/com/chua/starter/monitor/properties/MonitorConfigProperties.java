@@ -3,7 +3,7 @@ package com.chua.starter.monitor.properties;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import static com.chua.starter.monitor.properties.MonitorProperties.PRE;
+import static com.chua.starter.monitor.properties.MonitorConfigProperties.PRE;
 
 /**
  * 监视器属性
@@ -14,18 +14,13 @@ import static com.chua.starter.monitor.properties.MonitorProperties.PRE;
  */
 @Data
 @ConfigurationProperties(prefix = PRE, ignoreInvalidFields = true)
-public class MonitorProperties {
+public class MonitorConfigProperties {
 
-    public static final String PRE = "plugin.monitor";
-    /**
-     * 打开
-     */
-    private boolean enable = true;
-
+    public static final String PRE = "plugin.monitor.config";
 
     /**
-     * 监听地址
+     * 订阅的配置名称, 默认全部
      */
-    private String monitor = "http://127.0.0.1:8080/report";
+    private String configAppName;
 
 }

@@ -28,6 +28,11 @@ public class MonitorRequest {
     private String profile;
 
     /**
+     * 订阅应用程序名称
+     */
+    private String subscribeAppName;
+
+    /**
      * 数据
      */
     private Object data;

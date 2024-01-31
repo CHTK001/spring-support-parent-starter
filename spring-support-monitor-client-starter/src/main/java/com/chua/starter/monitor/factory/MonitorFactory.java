@@ -3,6 +3,7 @@ package com.chua.starter.monitor.factory;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.ThreadUtils;
+import com.chua.starter.monitor.properties.MonitorConfigProperties;
 import com.chua.starter.monitor.properties.MonitorMqProperties;
 import com.chua.starter.monitor.properties.MonitorProperties;
 import com.chua.starter.monitor.properties.MonitorProtocolProperties;
@@ -42,6 +43,7 @@ public class MonitorFactory implements AutoCloseable{
     private final ScheduledExecutorService scheduledExecutorService = ThreadUtils.newScheduledThreadPoolExecutor(1, "monitor-core-thread");
     private MonitorMqProperties monitorMqProperties;
     private MonitorProtocolProperties monitorProtocolProperties;
+    private MonitorConfigProperties monitorConfigProperties;
 
     public static MonitorFactory getInstance() {
         return INSTANCE;
@@ -100,6 +102,7 @@ public class MonitorFactory implements AutoCloseable{
                 request.setType(MonitorRequestType.HEARTBEAT);
                 request.setAppName(appName);
                 request.setProfile(active);
+                request.setSubscribeAppName(monitorConfigProperties.getConfigAppName());
                 request.setServerPort(environment.resolvePlaceholders("${server.port:8080}" ));
                 request.setServerHost(environment.resolvePlaceholders("${server.address:127.0.0.1}" ));
                 request.setData(monitorProtocolProperties);
@@ -122,5 +125,9 @@ public class MonitorFactory implements AutoCloseable{
 
     public void register(MonitorProtocolProperties monitorProtocolProperties) {
         this.monitorProtocolProperties = monitorProtocolProperties;
+    }
+
+    public void register(MonitorConfigProperties monitorConfigProperties) {
+        this.monitorConfigProperties = monitorConfigProperties;
     }
 }
