@@ -1,7 +1,11 @@
 package com.chua.starter.monitor.factory;
 
+import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.IoUtils;
+import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.monitor.properties.MonitorProperties;
+import com.chua.starter.monitor.request.MonitorRequest;
+import com.chua.starter.monitor.request.MonitorRequestType;
 import lombok.Getter;
 import org.springframework.core.env.Environment;
 import org.zbus.broker.Broker;
@@ -10,8 +14,11 @@ import org.zbus.broker.HaBroker;
 import org.zbus.broker.SingleBroker;
 import org.zbus.mq.MqConfig;
 import org.zbus.mq.Producer;
+import org.zbus.net.http.Message;
 
 import java.io.IOException;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 监视器工厂
@@ -30,6 +37,7 @@ public class MonitorFactory implements AutoCloseable{
     private String active;
     private Broker broker;
     private Producer producer;
+    private final ScheduledExecutorService scheduledExecutorService = ThreadUtils.newScheduledThreadPoolExecutor(1, "monitor-core-thread");
 
     public static MonitorFactory getInstance() {
         return INSTANCE;
@@ -37,7 +45,6 @@ public class MonitorFactory implements AutoCloseable{
 
     public void register(MonitorProperties monitorProperties) {
         this.monitorProperties = monitorProperties;
-        this.registerMqClient();
     }
 
 
@@ -74,5 +81,31 @@ public class MonitorFactory implements AutoCloseable{
     public void close() throws Exception {
         IoUtils.closeQuietly(producer);
         IoUtils.closeQuietly(broker);
+        ThreadUtils.closeQuietly(scheduledExecutorService);
     }
+
+    public void finish() {
+        this.registerMqClient();
+        this.heartbeat();
+    }
+
+    private void heartbeat() {
+        scheduledExecutorService.scheduleAtFixedRate(() -> {
+            try {
+                MonitorRequest request = new MonitorRequest();
+                request.setType(MonitorRequestType.HEARTBEAT);
+                request.setAppName(appName);
+                request.setProfile(active);
+                request.setServerPort(environment.resolvePlaceholders("${server.port:8080}" ));
+                request.setServerHost(environment.resolvePlaceholders("${server.address:127.0.0.1}" ));
+                request.setData(monitorProperties);
+                Message message = new Message();
+                message.setBody(Json.toJSONBytes(request));
+                producer.sendAsync(message);
+            } catch (Throwable ignored) {
+            }
+        }, 0, 1, TimeUnit.MINUTES);
+    }
+
+
 }
