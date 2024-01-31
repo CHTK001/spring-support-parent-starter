@@ -7,6 +7,7 @@ import com.chua.common.support.protocol.options.ServerOption;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.monitor.factory.MonitorFactory;
 import com.chua.starter.monitor.properties.MonitorProperties;
+import com.chua.starter.monitor.properties.MonitorProtocolProperties;
 import lombok.Getter;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -22,24 +23,26 @@ public class ProtocolFactory implements InitializingAware {
     private final BeanDefinitionRegistry registry;
     private final MonitorFactory monitorFactory;
     private final MonitorProperties monitorProperties;
+    private final MonitorProtocolProperties monitorProtocolProperties;
     @Getter
     private Protocol protocol;
     public ProtocolFactory(BeanDefinitionRegistry registry) {
         this.registry = registry;
         this.monitorFactory = MonitorFactory.getInstance();
         this.monitorProperties = this.monitorFactory.getMonitorProperties();
+        this.monitorProtocolProperties = this.monitorFactory.getMonitorProtocolProperties();
     }
 
     @Override
     public void afterPropertiesSet() {
-        String protocol = monitorProperties.getProtocol();
+        String protocol = monitorProtocolProperties.getProtocol();
         BootOption bootOption = BootOption.builder()
-                .encryptionSchema(monitorProperties.getEncryptionSchema())
-                .encryptionKey(monitorProperties.getEncryptionKey())
-                .address(monitorProperties.getHost() + ":" + monitorProperties.getPort())
+                .encryptionSchema(monitorProtocolProperties.getEncryptionSchema())
+                .encryptionKey(monitorProtocolProperties.getEncryptionKey())
+                .address(monitorProtocolProperties.getHost() + ":" + monitorProtocolProperties.getPort())
                 .appName(monitorFactory.getAppName())
                 .profile(monitorFactory.getActive())
-                .serverOption(ServerOption.builder().port(monitorProperties.getPort()).host(monitorProperties.getHost()).build())
+                .serverOption(ServerOption.builder().port(monitorProtocolProperties.getPort()).host(monitorProtocolProperties.getHost()).build())
                 .build();
         this.protocol = ServiceProvider.of(Protocol.class).getNewExtension(protocol, bootOption);
 
