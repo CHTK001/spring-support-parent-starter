@@ -28,7 +28,7 @@ import org.springframework.core.env.Environment;
  * @since 2024/01/31
  */
 @Slf4j
-@EnableConfigurationProperties({MonitorProperties.class, MonitorProtocolProperties.class, MonitorMqProperties.class})
+@EnableConfigurationProperties({MonitorProperties.class, MonitorProtocolProperties.class, MonitorMqProperties.class,MonitorConfigProperties.class})
 public class MonitorConfiguration  implements BeanDefinitionRegistryPostProcessor,
         ApplicationContextAware, EnvironmentAware, CommandLineRunner{
     private Environment environment;
