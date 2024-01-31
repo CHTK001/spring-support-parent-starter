@@ -8,6 +8,7 @@ import com.chua.starter.monitor.server.properties.MonitorServerProperties;
 import com.chua.starter.monitor.server.router.Router;
 import com.chua.zbus.support.server.ZbusServer;
 import lombok.extern.slf4j.Slf4j;
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
@@ -41,6 +42,7 @@ import java.io.IOException;
  * @since 2024/01/31
  */
 @Slf4j
+@MapperScan("com.chua.starter.monitor.server.mapper")
 @ComponentScan("com.chua.starter.monitor.server")
 @EnableConfigurationProperties(MonitorServerProperties.class)
 public class MonitorServerConfiguration implements BeanDefinitionRegistryPostProcessor, EnvironmentAware, ApplicationContextAware, DisposableBean, CommandLineRunner, SmartInstantiationAwareBeanPostProcessor {
