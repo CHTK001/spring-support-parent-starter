@@ -21,6 +21,7 @@ import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.EnvironmentAware;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.env.Environment;
 import org.springframework.util.ReflectionUtils;
 import org.zbus.broker.Broker;
@@ -40,6 +41,7 @@ import java.io.IOException;
  * @since 2024/01/31
  */
 @Slf4j
+@ComponentScan("com.chua.starter.monitor.server")
 @EnableConfigurationProperties(MonitorServerProperties.class)
 public class MonitorServerConfiguration implements BeanDefinitionRegistryPostProcessor, EnvironmentAware, ApplicationContextAware, DisposableBean, CommandLineRunner, SmartInstantiationAwareBeanPostProcessor {
 
