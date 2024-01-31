@@ -25,7 +25,6 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-socketio-starter</artifactId>
-            <version>3.1.0</version>
         </dependency>
 
         <dependency>
@@ -36,6 +35,11 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-oauth-client-starter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-zbus-starter</artifactId>
         </dependency>
 
     </dependencies>
