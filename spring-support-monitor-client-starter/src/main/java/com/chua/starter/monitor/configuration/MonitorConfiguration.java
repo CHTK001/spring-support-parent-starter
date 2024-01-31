@@ -2,7 +2,9 @@ package com.chua.starter.monitor.configuration;
 
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.starter.monitor.factory.MonitorFactory;
+import com.chua.starter.monitor.properties.MonitorMqProperties;
 import com.chua.starter.monitor.properties.MonitorProperties;
+import com.chua.starter.monitor.properties.MonitorProtocolProperties;
 import com.chua.starter.monitor.protocol.ProtocolFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
@@ -25,11 +27,13 @@ import org.springframework.core.env.Environment;
  * @since 2024/01/31
  */
 @Slf4j
-@EnableConfigurationProperties(MonitorProperties.class)
+@EnableConfigurationProperties({MonitorProperties.class, MonitorProtocolProperties.class, MonitorMqProperties.class})
 public class MonitorConfiguration  implements BeanDefinitionRegistryPostProcessor,
         ApplicationContextAware, EnvironmentAware, CommandLineRunner{
     private Environment environment;
     private MonitorProperties monitorProperties;
+    private MonitorMqProperties monitorMqProperties;
+    private MonitorProtocolProperties monitorProtocolProperties;
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
@@ -55,6 +59,8 @@ public class MonitorConfiguration  implements BeanDefinitionRegistryPostProcesso
         monitorFactory.register(environment);
         monitorFactory.registerAppName(environment.getProperty("spring.application.name"));
         monitorFactory.register(monitorProperties);
+        monitorFactory.register(monitorMqProperties);
+        monitorFactory.register(monitorProtocolProperties);
         monitorFactory.finish();
 
         ProtocolFactory protocolFactory = new ProtocolFactory(registry);
@@ -70,6 +76,10 @@ public class MonitorConfiguration  implements BeanDefinitionRegistryPostProcesso
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         monitorProperties = Binder.get(applicationContext.getEnvironment())
                 .bindOrCreate(MonitorProperties.PRE, MonitorProperties.class);
+        monitorMqProperties = Binder.get(applicationContext.getEnvironment())
+                .bindOrCreate(MonitorMqProperties.PRE, MonitorMqProperties.class);
+        monitorProtocolProperties = Binder.get(applicationContext.getEnvironment())
+                .bindOrCreate(MonitorProtocolProperties.PRE, MonitorProtocolProperties.class);
     }
 
     @Override

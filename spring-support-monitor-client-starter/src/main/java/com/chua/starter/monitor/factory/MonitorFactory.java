@@ -3,7 +3,9 @@ package com.chua.starter.monitor.factory;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.ThreadUtils;
+import com.chua.starter.monitor.properties.MonitorMqProperties;
 import com.chua.starter.monitor.properties.MonitorProperties;
+import com.chua.starter.monitor.properties.MonitorProtocolProperties;
 import com.chua.starter.monitor.request.MonitorRequest;
 import com.chua.starter.monitor.request.MonitorRequestType;
 import lombok.Getter;
@@ -38,6 +40,8 @@ public class MonitorFactory implements AutoCloseable{
     private Broker broker;
     private Producer producer;
     private final ScheduledExecutorService scheduledExecutorService = ThreadUtils.newScheduledThreadPoolExecutor(1, "monitor-core-thread");
+    private MonitorMqProperties monitorMqProperties;
+    private MonitorProtocolProperties monitorProtocolProperties;
 
     public static MonitorFactory getInstance() {
         return INSTANCE;
@@ -50,7 +54,7 @@ public class MonitorFactory implements AutoCloseable{
 
     private void registerMqClient() {
         BrokerConfig brokerConfig = new BrokerConfig();
-        String endpoint = monitorProperties.getMqHost() + ":" + monitorProperties.getMqPort();
+        String endpoint = monitorMqProperties.getMqHost() + ":" + monitorMqProperties.getMqPort();
         brokerConfig.setBrokerAddress(endpoint);
         try {
             if (endpoint.contains(",")) {
@@ -64,7 +68,7 @@ public class MonitorFactory implements AutoCloseable{
 
         MqConfig config = new MqConfig();
         config.setBroker(this.broker);
-        config.setMq(monitorProperties.getMqSubscriber());
+        config.setMq(monitorMqProperties.getMqSubscriber());
         this.producer = new Producer(config);
     }
 
@@ -98,7 +102,7 @@ public class MonitorFactory implements AutoCloseable{
                 request.setProfile(active);
                 request.setServerPort(environment.resolvePlaceholders("${server.port:8080}" ));
                 request.setServerHost(environment.resolvePlaceholders("${server.address:127.0.0.1}" ));
-                request.setData(monitorProperties);
+                request.setData(monitorProtocolProperties);
                 Message message = new Message();
                 message.setBody(Json.toJSONBytes(request));
                 producer.sendAsync(message);
@@ -108,4 +112,15 @@ public class MonitorFactory implements AutoCloseable{
     }
 
 
+    public boolean isEnable() {
+        return monitorProperties.isEnable();
+    }
+
+    public void register(MonitorMqProperties monitorMqProperties) {
+        this.monitorMqProperties = monitorMqProperties;
+    }
+
+    public void register(MonitorProtocolProperties monitorProtocolProperties) {
+        this.monitorProtocolProperties = monitorProtocolProperties;
+    }
 }
