@@ -1,10 +1,9 @@
 package com.chua.starter.unified.client.support.configuration;
 
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.function.Joiner;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.json.JsonArray;
+import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.protocol.annotations.ServiceMapping;
 import com.chua.common.support.protocol.boot.*;
 import com.chua.common.support.utils.CollectionUtils;
@@ -182,7 +181,7 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
         }
 
         KeyValue keyValue = new KeyValue();
-        JSONObject jsonObject = JSON.parseObject(request.getContent());
+        JsonObject jsonObject = Json.getJsonObject(request.getContent());
         keyValue.setDataId(jsonObject.getString("unifiedConfigName"));
         keyValue.setData(jsonObject.getString("unifiedConfigValue"));
         onListener(keyValue);
@@ -210,18 +209,18 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
         }
 
         log.info("CONFIG 订阅: {} 成功", subscribe);
-        JSONArray jsonArray = JSON.parseArray(response.getContent());
+        JsonArray jsonArray = Json.getJsonArray(response.getContent());
         int size = jsonArray.size();
         Map<String, Object> map = new LinkedHashMap<>();
         for (int i = 0; i < size; i++) {
-            register((JSONObject)jsonArray.get(i), map);
+            register(jsonArray.getJsonObject(i), map);
         }
         PropertySource propertySource = new MapPropertySource(Joiner.on(",").join(subscribe), map);
         propertySources.addFirst(propertySource);
 
     }
 
-    private void register(JSONObject jsonObject, Map<String, Object> map) {
+    private void register(JsonObject jsonObject, Map<String, Object> map) {
         map.put(jsonObject.getString("unifiedConfigName"), jsonObject.get("unifiedConfigValue"));
     }
 

@@ -1,9 +1,9 @@
 package com.chua.starter.unified.server.support.resolver.adator;
 
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.annotations.Spi;
+import com.chua.common.support.json.Json;
+import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.protocol.boot.BootRequest;
 import com.chua.common.support.protocol.boot.BootResponse;
 import com.chua.common.support.utils.MapUtils;
@@ -42,14 +42,14 @@ public class ConfigRegisterCommandAdaptor implements ConfigCommandAdaptor{
                 .execute(() -> {
                     try {
                         String content = request.getContent();
-                        JSONObject jsonObject = JSON.parseObject(content);
+                        JsonObject jsonObject = Json.getJsonObject(content);
                         List<UnifiedConfig> configList = new LinkedList<>();
 
-                        JSONObject transfer = jsonObject.getJSONObject("transfer");
-                        Optional.ofNullable(jsonObject.getJSONObject("data")).orElse(new JSONObject())
+                        JsonObject transfer = jsonObject.getJsonObject("transfer");
+                        Optional.ofNullable(jsonObject.getJSONObject("data")).orElse(new JsonObject())
                                 .forEach((k, v) -> {
-                                    if(v instanceof JSONObject) {
-                                        ((JSONObject) v).forEach((k1 , v1) -> {
+                                    if(v instanceof JsonObject) {
+                                        ((JsonObject) v).forEach((k1 , v1) -> {
                                             UnifiedConfig item = new UnifiedConfig();
                                             if(null != k) {
                                                 item.setUnfiedConfigFrom(k.length() > 500 ? k.substring(0, 490) : k);

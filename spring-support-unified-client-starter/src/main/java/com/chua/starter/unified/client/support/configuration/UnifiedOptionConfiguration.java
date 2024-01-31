@@ -1,8 +1,8 @@
 package com.chua.starter.unified.client.support.configuration;
 
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.constant.Projects;
+import com.chua.common.support.json.Json;
+import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.lang.compile.Decompiler;
 import com.chua.common.support.protocol.annotations.ServiceMapping;
@@ -65,7 +65,7 @@ public class UnifiedOptionConfiguration implements ApplicationContextAware {
     public BootResponse process(BootRequest request) {
         return BootResponse.builder()
                 .data(BootResponse.DataDTO.builder()
-                        .content(new JSONObject()
+                        .content(new JsonObject()
                             .fluentPut("process", Oshi.newProcess(request.getParams()))
                             .toString())
                         .build())
@@ -84,7 +84,7 @@ public class UnifiedOptionConfiguration implements ApplicationContextAware {
     public BootResponse oshi(BootRequest request) {
         return BootResponse.builder()
                 .data(BootResponse.DataDTO.builder()
-                        .content(new JSONObject()
+                        .content(new JsonObject()
                                 .fluentPut("mem", Oshi.newMem())
                                 .fluentPut("jvm", Oshi.newJvm())
                                 .fluentPut("sysFile", Oshi.newSysFile())
@@ -163,7 +163,7 @@ public class UnifiedOptionConfiguration implements ApplicationContextAware {
         if(StringUtils.isBlank(content)) {
             return BootResponse.empty();
         }
-        JSONObject jsonObject = JSON.parseObject(content);
+        JsonObject jsonObject = Json.getJsonObject(content);
         String patchFile = jsonObject.getString("patchFile");
         String patchFileName = jsonObject.getString("patchFileName");
         if(StringUtils.isBlank(patchFile) || StringUtils.isBlank(patchFileName)) {
