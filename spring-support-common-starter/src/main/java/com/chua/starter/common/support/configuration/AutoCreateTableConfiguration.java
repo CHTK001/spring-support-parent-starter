@@ -7,7 +7,6 @@ import com.chua.common.support.datasource.executor.DdlExecutor;
 import com.chua.common.support.datasource.jdbc.JdbcEngineDataSource;
 import com.chua.common.support.utils.*;
 import com.chua.starter.common.support.properties.CreateTableProperties;
-import com.chua.starter.common.support.utils.BeanDefinitionUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
