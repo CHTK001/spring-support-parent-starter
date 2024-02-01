@@ -1,9 +1,9 @@
 package com.chua.starter.device.support.adaptor.factory.client;
 
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.bean.BeanMap;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.json.JsonArray;
+import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.date.DateUtils;
 import com.chua.common.support.lang.date.constant.DateFormatConstant;
 import com.chua.common.support.mapping.annotations.Url;
@@ -81,18 +81,18 @@ public interface HikYunYaoClient {
         if(StringUtils.isEmpty(projectId)) {
             return null;
         }
-        JSONArray jsonArray = new JSONArray();
-        jsonArray.add(new JSONObject().fluentPut("key", "pageSize").fluentPut("option", "eq").fluentPut("value", pageSize));
-        jsonArray.add(new JSONObject().fluentPut("key", "pageNo").fluentPut("option", "eq").fluentPut("value", pageNo));
-        jsonArray.add(new JSONObject().fluentPut("key", "projectId").fluentPut("option", "eq").fluentPut("value", Long.valueOf(projectId)));
-        return devicePage(jsonArray.toJSONString());
+        JsonArray jsonArray = new JsonArray();
+        jsonArray.add(new JsonObject().fluentPut("key", "pageSize").fluentPut("option", "eq").fluentPut("value", pageSize));
+        jsonArray.add(new JsonObject().fluentPut("key", "pageNo").fluentPut("option", "eq").fluentPut("value", pageNo));
+        jsonArray.add(new JsonObject().fluentPut("key", "projectId").fluentPut("option", "eq").fluentPut("value", Long.valueOf(projectId)));
+        return devicePage(Json.toJson(jsonArray));
     }
 
 
     /**
      * 获取实时地址
      *
-     * @param deviceImsi 设备imsi
+     * @param deviceSerial 设备imsi
      * @param projectId  项目id
      * @param channelNo  通道编号
      * @param expireTime 过期时间

@@ -1,9 +1,9 @@
 package com.chua.starter.device.support.adaptor.factory.sennuo;
 
-import com.alibaba.fastjson2.JSON;
 import com.chua.common.support.annotations.Group;
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.bean.BeanUtils;
+import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.lang.date.DateUtils;
 import com.chua.common.support.utils.StringUtils;
@@ -46,7 +46,7 @@ public class SenNuoEventAdaptor extends SenNuoAdaptor implements AccessEventAdap
         if(StringUtils.isBlank(event) || event.startsWith("<html>")) {
             return Collections.emptyList();
         }
-        Event parseObject = JSON.parseObject(event, Event.class);
+        Event parseObject = Json.fromJson(event, Event.class);
         DeviceMeteorologicalStationEvent event1 = new DeviceMeteorologicalStationEvent();
         event1.setTime(DateUtils.toInstant(DateTime.of(parseObject.getDatetime()).toLocalDateTime()));
         List<Event.DataDTO> data = parseObject.getData();
