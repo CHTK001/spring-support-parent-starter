@@ -10,6 +10,8 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.server.properties.MonitorServerProperties;
 import com.chua.starter.monitor.server.request.RemoteRequest;
 import com.chua.starter.monitor.server.resolver.ModuleResolver;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,12 +31,14 @@ import static com.chua.common.support.protocol.boot.CommandType.RESPONSE;
  * @since 2024/01/31
  */
 @RequestMapping
+@Tag(name = "上报数据接口")
 @RestController
 public class ReportController {
 
     @Resource
     private MonitorServerProperties monitorServerProperties;
     @PostMapping("/report")
+    @Operation(summary = "上报数据")
     public BootResponse home(@RequestBody RemoteRequest remoteRequest) {
         BootRequest request = remoteRequest.getRequest(monitorServerProperties);
         if(null == request) {
