@@ -68,7 +68,7 @@ public class DeviceCloudPlatformConnectorController {
             if(StringUtils.isBlank(record.getDevicePlatformCode())) {
                 continue;
             }
-            record.setGroup(ServiceProvider.of(Adaptor.class).group(record.getDevicePlatformCode()).getGroupInfo("service"));
+//            record.setGroup(ServiceProvider.of(Adaptor.class).group(record.getDevicePlatformCode()).getGroupInfo("service"));
         }
         return PageResultUtils.ok(devicePlatformName);
 
