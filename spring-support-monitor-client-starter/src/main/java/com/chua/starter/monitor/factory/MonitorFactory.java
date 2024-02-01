@@ -123,7 +123,7 @@ public class MonitorFactory implements AutoCloseable{
                 }
             } catch (Throwable ignored) {
             }
-        }, 1000, 1, TimeUnit.MINUTES);
+        }, 0, 70, TimeUnit.SECONDS);
     }
 
     private MonitorRequest createMonitorRequest() {
@@ -147,7 +147,7 @@ public class MonitorFactory implements AutoCloseable{
                 producer.sendAsync(message);
             } catch (Throwable ignored) {
             }
-        }, 0, 1, TimeUnit.MINUTES);
+        }, 0, monitorProperties.getKeepAliveTime(), TimeUnit.SECONDS);
     }
 
 
