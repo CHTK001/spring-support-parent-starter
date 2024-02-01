@@ -18,6 +18,11 @@ public class MonitorRequest {
     private MonitorRequestType type;
 
     /**
+     * 报告类型
+     */
+    private String reportType;
+
+    /**
      * 应用程序名称
      */
     private String appName;

@@ -14,7 +14,16 @@ import lombok.Getter;
 @Getter
 public enum MonitorRequestType {
 
+    /**
+     * 心跳事件
+     */
     HEARTBEAT("heartbeat"),
+
+    /**
+     * 报告事件
+     */
+    REPORT("report"),
+
     ;
 
     private final String name;
