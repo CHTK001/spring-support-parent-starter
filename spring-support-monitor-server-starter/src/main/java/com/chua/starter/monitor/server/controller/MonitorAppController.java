@@ -32,7 +32,7 @@ import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
  * 监控应用控制器
  */
 @RestController
-@RequestMapping
+@RequestMapping("monitor/app")
 @Tag(name = "上报数据接口")
 @RequiredArgsConstructor
 public class MonitorAppController extends AbstractSwaggerUpdateController<MonitorAppService, MonitorApp> {
