@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.monitor.server.mapper.MonitorConfigMapper">
+  <resultMap id="BaseResultMap" type="com.chua.starter.monitor.server.entity.MonitorConfig">
+    <!--@mbg.generated-->
+    <!--@Table monitor_config-->
+    <id column="config_id" jdbcType="INTEGER" property="configId" />
+    <result column="config_name" jdbcType="VARCHAR" property="configName" />
+    <result column="config_value" jdbcType="VARCHAR" property="configValue" />
+    <result column="config_profile" jdbcType="VARCHAR" property="configProfile" />
+    <result column="config_appname" jdbcType="VARCHAR" property="configAppname" />
+    <result column="config_status" jdbcType="INTEGER" property="configStatus" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    config_id, config_name, config_value, config_profile, config_appname, config_status
+  </sql>
+</mapper>

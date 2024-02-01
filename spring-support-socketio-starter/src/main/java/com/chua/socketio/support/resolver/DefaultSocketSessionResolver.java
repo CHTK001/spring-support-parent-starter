@@ -29,9 +29,9 @@ import java.util.List;
  */
 public class DefaultSocketSessionResolver implements SocketSessionResolver{
     private List<SocketIOListener> listenerList;
-    private List<SocketInfo> connect = new LinkedList<>();
-    private List<SocketInfo> disconnect = new LinkedList<>();
-    private List<SocketInfo> data = new LinkedList<>();
+    private final List<SocketInfo> connect = new LinkedList<>();
+    private final List<SocketInfo> disconnect = new LinkedList<>();
+    private final List<SocketInfo> data = new LinkedList<>();
 
     private static ObjectMapper objectMapper = new ObjectMapper();
 
