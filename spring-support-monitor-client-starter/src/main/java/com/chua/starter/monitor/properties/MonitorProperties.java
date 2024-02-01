@@ -24,6 +24,10 @@ public class MonitorProperties {
 
 
     /**
+     * 保活时间(s)
+     */
+    private long keepAliveTime = 30;
+    /**
      * 监听地址
      */
     private String monitor = "http://127.0.0.1:31111/monitor/api/report";
