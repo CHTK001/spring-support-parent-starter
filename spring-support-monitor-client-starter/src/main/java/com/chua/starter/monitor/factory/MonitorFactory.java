@@ -1,12 +1,12 @@
 package com.chua.starter.monitor.factory;
 
 import com.chua.common.support.json.Json;
+import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.ThreadUtils;
-import com.chua.starter.monitor.properties.MonitorConfigProperties;
-import com.chua.starter.monitor.properties.MonitorMqProperties;
-import com.chua.starter.monitor.properties.MonitorProperties;
-import com.chua.starter.monitor.properties.MonitorProtocolProperties;
+import com.chua.starter.monitor.properties.*;
+import com.chua.starter.monitor.report.Report;
 import com.chua.starter.monitor.request.MonitorRequest;
 import com.chua.starter.monitor.request.MonitorRequestType;
 import lombok.Getter;
@@ -20,6 +20,7 @@ import org.zbus.mq.Producer;
 import org.zbus.net.http.Message;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -39,18 +40,19 @@ public class MonitorFactory implements AutoCloseable{
     private Environment environment;
     private String active;
     private Broker broker;
+    private Producer reportProducer;
     private Producer producer;
-    private final ScheduledExecutorService scheduledExecutorService = ThreadUtils.newScheduledThreadPoolExecutor(1, "monitor-core-thread");
+    private final ScheduledExecutorService scheduledExecutorService = ThreadUtils.newScheduledThreadPoolExecutor(2, "monitor-core-thread");
     private MonitorMqProperties monitorMqProperties;
     private MonitorProtocolProperties monitorProtocolProperties;
     private MonitorConfigProperties monitorConfigProperties;
+    private MonitorReportProperties monitorReportProperties;
+    private String serverPort;
+    private String serverHost;
+    private List<String> plugins;
 
     public static MonitorFactory getInstance() {
         return INSTANCE;
-    }
-
-    public void register(MonitorProperties monitorProperties) {
-        this.monitorProperties = monitorProperties;
     }
 
 
@@ -72,6 +74,10 @@ public class MonitorFactory implements AutoCloseable{
         config.setBroker(this.broker);
         config.setMq(monitorMqProperties.getMqSubscriber());
         this.producer = new Producer(config);
+        MqConfig configReport = new MqConfig();
+        configReport.setBroker(this.broker);
+        configReport.setMq(monitorMqProperties.getMqSubscriber() + "#report");
+        this.reportProducer = new Producer(configReport);
     }
 
     public void registerAppName(String appName) {
@@ -80,12 +86,15 @@ public class MonitorFactory implements AutoCloseable{
 
     public void register(Environment environment) {
         this.environment = environment;
+        this.serverPort = environment.resolvePlaceholders("${server.port:8080}" );
+        this.serverHost = environment.resolvePlaceholders("${server.address:127.0.0.1}" );
         this.active = environment.getProperty("spring.profiles.active", "default");
     }
 
     @Override
     public void close() throws Exception {
         IoUtils.closeQuietly(producer);
+        IoUtils.closeQuietly(reportProducer);
         IoUtils.closeQuietly(broker);
         ThreadUtils.closeQuietly(scheduledExecutorService);
     }
@@ -93,18 +102,45 @@ public class MonitorFactory implements AutoCloseable{
     public void finish() {
         this.registerMqClient();
         this.heartbeat();
+        this.report();
+    }
+
+    private void report() {
+        if(CollectionUtils.isEmpty(plugins)) {
+            return;
+        }
+
+        scheduledExecutorService.scheduleAtFixedRate(() -> {
+            try {
+                for (String plugin : plugins) {
+                    MonitorRequest request = createMonitorRequest();
+                    request.setType(MonitorRequestType.REPORT);
+                    request.setReportType(plugin);
+                    request.setData(ServiceProvider.of(Report.class).getNewExtension(plugin).report());
+                    Message message = new Message();
+                    message.setBody(Json.toJSONBytes(request));
+                    reportProducer.sendAsync(message);
+                }
+            } catch (Throwable ignored) {
+            }
+        }, 1000, 1, TimeUnit.MINUTES);
+    }
+
+    private MonitorRequest createMonitorRequest() {
+        MonitorRequest request = new MonitorRequest();
+        request.setAppName(appName);
+        request.setProfile(active);
+        request.setSubscribeAppName(monitorConfigProperties.getConfigAppName());
+        request.setServerPort(serverPort);
+        request.setServerHost(serverHost);
+        return request;
     }
 
     private void heartbeat() {
         scheduledExecutorService.scheduleAtFixedRate(() -> {
             try {
-                MonitorRequest request = new MonitorRequest();
+                MonitorRequest request = createMonitorRequest();
                 request.setType(MonitorRequestType.HEARTBEAT);
-                request.setAppName(appName);
-                request.setProfile(active);
-                request.setSubscribeAppName(monitorConfigProperties.getConfigAppName());
-                request.setServerPort(environment.resolvePlaceholders("${server.port:8080}" ));
-                request.setServerHost(environment.resolvePlaceholders("${server.address:127.0.0.1}" ));
                 request.setData(monitorProtocolProperties);
                 Message message = new Message();
                 message.setBody(Json.toJSONBytes(request));
@@ -123,11 +159,20 @@ public class MonitorFactory implements AutoCloseable{
         this.monitorMqProperties = monitorMqProperties;
     }
 
+    public void register(MonitorProperties monitorProperties) {
+        this.monitorProperties = monitorProperties;
+    }
+
     public void register(MonitorProtocolProperties monitorProtocolProperties) {
         this.monitorProtocolProperties = monitorProtocolProperties;
     }
 
     public void register(MonitorConfigProperties monitorConfigProperties) {
         this.monitorConfigProperties = monitorConfigProperties;
+    }
+
+    public void register(MonitorReportProperties monitorReportProperties) {
+        this.monitorReportProperties = monitorReportProperties;
+        this.plugins = monitorReportProperties.getPlugins();
     }
 }

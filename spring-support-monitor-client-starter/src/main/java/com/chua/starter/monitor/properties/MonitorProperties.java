@@ -26,6 +26,6 @@ public class MonitorProperties {
     /**
      * 监听地址
      */
-    private String monitor = "http://127.0.0.1:31111/report";
+    private String monitor = "http://127.0.0.1:31111/monitor/api/report";
 
 }

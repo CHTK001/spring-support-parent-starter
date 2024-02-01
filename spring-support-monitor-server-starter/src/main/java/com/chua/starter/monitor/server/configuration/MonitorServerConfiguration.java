@@ -1,9 +1,10 @@
 package com.chua.starter.monitor.server.configuration;
 
 import com.chua.common.support.annotations.OnRouterEvent;
-import com.chua.common.support.json.Json;
 import com.chua.common.support.protocol.options.ServerOption;
-import com.chua.starter.monitor.request.MonitorRequest;
+import com.chua.common.support.utils.IoUtils;
+import com.chua.starter.monitor.server.consumer.MonitorConsumer;
+import com.chua.starter.monitor.server.consumer.ReportConsumer;
 import com.chua.starter.monitor.server.properties.MonitorServerProperties;
 import com.chua.starter.monitor.server.router.Router;
 import com.chua.zbus.support.server.ZbusServer;
@@ -30,7 +31,6 @@ import org.zbus.broker.BrokerConfig;
 import org.zbus.broker.HaBroker;
 import org.zbus.broker.SingleBroker;
 import org.zbus.mq.Consumer;
-import org.zbus.mq.MqConfig;
 
 import java.io.IOException;
 
@@ -52,6 +52,8 @@ public class MonitorServerConfiguration implements BeanDefinitionRegistryPostPro
     private Broker broker;
     private Consumer consumer;
     private final Router router = new Router();
+    private MonitorConsumer mqConsumer;
+    private ReportConsumer reportConsumer;
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
@@ -90,17 +92,8 @@ public class MonitorServerConfiguration implements BeanDefinitionRegistryPostPro
             throw new RuntimeException(var7);
         }
 
-        MqConfig config = new MqConfig();
-        config.setBroker(this.broker);
-        config.setMq(monitorServerProperties.getMqSubscriber());
-        this.consumer = new Consumer(config);
-        try {
-            consumer.start((msg, consumer) -> {
-                MonitorRequest monitorRequest = Json.fromJson(msg.getBody(), MonitorRequest.class);
-                router.doRoute(monitorRequest);
-            });
-        } catch (IOException ignored) {
-        }
+        this.mqConsumer = new MonitorConsumer(router, broker, monitorServerProperties.getMqSubscriber());
+        this.reportConsumer = new ReportConsumer(router, broker, monitorServerProperties.getMqSubscriber());
     }
 
     private void registerMqServer(BeanDefinitionRegistry registry) {
@@ -134,19 +127,9 @@ public class MonitorServerConfiguration implements BeanDefinitionRegistryPostPro
 
     @Override
     public void destroy() throws Exception {
-        try {
-            if(null != broker) {
-                broker.close();
-            }
-        } catch (IOException ignored) {
-        }
-
-        try {
-            if(null != consumer) {
-                consumer.close();
-            }
-        } catch (IOException ignored) {
-        }
+        IoUtils.closeQuietly(mqConsumer);
+        IoUtils.closeQuietly(reportConsumer);
+        IoUtils.closeQuietly(broker);
     }
 
     @Override
