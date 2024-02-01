@@ -32,7 +32,7 @@ import java.util.concurrent.TimeUnit;
  * @since 2024/01/31
  */
 @Getter
-public class MonitorFactory implements AutoCloseable{
+public class MonitorFactory implements AutoCloseable {
 
     private static final MonitorFactory INSTANCE = new MonitorFactory();
     private MonitorProperties monitorProperties;
@@ -50,6 +50,8 @@ public class MonitorFactory implements AutoCloseable{
     private String serverPort;
     private String serverHost;
     private List<String> plugins;
+    private String endpointsUrl;
+    private String contextPath;
 
     public static MonitorFactory getInstance() {
         return INSTANCE;
@@ -86,9 +88,11 @@ public class MonitorFactory implements AutoCloseable{
 
     public void register(Environment environment) {
         this.environment = environment;
-        this.serverPort = environment.resolvePlaceholders("${server.port:8080}" );
-        this.serverHost = environment.resolvePlaceholders("${server.address:127.0.0.1}" );
+        this.serverPort = environment.resolvePlaceholders("${server.port:8080}");
+        this.serverHost = environment.resolvePlaceholders("${server.address:127.0.0.1}");
         this.active = environment.getProperty("spring.profiles.active", "default");
+        this.endpointsUrl = environment.resolvePlaceholders("${management.endpoints.web.base-path:/actuator}");
+        this.contextPath = environment.resolvePlaceholders("${server.servlet.context-path:}");
     }
 
     @Override
@@ -106,7 +110,7 @@ public class MonitorFactory implements AutoCloseable{
     }
 
     private void report() {
-        if(CollectionUtils.isEmpty(plugins)) {
+        if (CollectionUtils.isEmpty(plugins)) {
             return;
         }
 
@@ -133,6 +137,8 @@ public class MonitorFactory implements AutoCloseable{
         request.setSubscribeAppName(monitorConfigProperties.getConfigAppName());
         request.setServerPort(serverPort);
         request.setServerHost(serverHost);
+        request.setContextPath(contextPath);
+        request.setEndpointsUrl(endpointsUrl);
         return request;
     }
 

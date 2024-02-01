@@ -52,4 +52,14 @@ public class MonitorRequest {
      */
     private String serverPort;
 
+    /**
+     * 端点URL
+     */
+    private String endpointsUrl;
+
+    /**
+     * 上下文路径
+     */
+    private String contextPath;
+
 }

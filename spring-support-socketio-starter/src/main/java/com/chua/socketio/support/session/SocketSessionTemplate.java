@@ -38,4 +38,12 @@ public interface SocketSessionTemplate {
      * @param msg       消息
      */
     void send(String sessionId, String event, String msg);
+
+    /**
+     * 下發命令
+     *
+     * @param event     事件
+     * @param msg       消息
+     */
+    void send(String event, String msg);
 }

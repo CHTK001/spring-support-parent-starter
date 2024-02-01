@@ -59,4 +59,5 @@ public class SocketSession {
     public void send(String event, String msg) {
         client.sendEvent(event, msg);
     }
+
 }

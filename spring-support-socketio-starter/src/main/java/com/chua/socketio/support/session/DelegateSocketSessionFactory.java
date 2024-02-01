@@ -34,4 +34,11 @@ public class DelegateSocketSessionFactory implements SocketSessionTemplate {
         SocketSession session = getSession(sessionId);
         session.send(event, msg);
     }
+
+    @Override
+    public void send(String event, String msg) {
+        for (SocketSession socketSession : cache.values()) {
+            socketSession.send(event, msg);
+        }
+    }
 }
