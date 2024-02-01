@@ -34,6 +34,8 @@ public class Heartbeat {
     public void heartbeat(MonitorRequest request) {
         stringRedisTemplate.opsForValue()
                         .set("monitor:heart:" + request.getAppName()+ ":" + request.getServerHost() + "_" + request.getServerPort(), Json.toJson(request.getData()), 2, TimeUnit.MINUTES);
-        log.info("检测到: {}心跳 <- {}:{}", request.getAppName(), request.getServerHost(), request.getServerPort());
+        if(log.isDebugEnabled()) {
+            log.debug("检测到: {}心跳 <- {}:{}", request.getAppName(), request.getServerHost(), request.getServerPort());
+        }
     }
 }
