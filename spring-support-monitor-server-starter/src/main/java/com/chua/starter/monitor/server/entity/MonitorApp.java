@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.chua.starter.monitor.request.MonitorRequest;
+import com.chua.starter.mybatis.pojo.SysBase;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -19,7 +20,7 @@ import java.util.List;
 @Schema
 @Data
 @TableName(value = "monitor_app")
-public class MonitorApp implements Serializable {
+public class MonitorApp extends SysBase implements Serializable {
     @TableId(value = "monitor_id", type = IdType.AUTO)
     @ApiModelProperty(value="")
     @Schema(description="")

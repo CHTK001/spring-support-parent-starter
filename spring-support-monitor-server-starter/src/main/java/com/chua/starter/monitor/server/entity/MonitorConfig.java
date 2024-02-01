@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.starter.mybatis.pojo.SysBase;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -20,7 +21,7 @@ import java.io.Serializable;
 @Schema(description="配置参数")
 @Data
 @TableName(value = "monitor_config")
-public class MonitorConfig implements Serializable {
+public class MonitorConfig extends SysBase implements Serializable {
     @TableId(value = "config_id", type = IdType.AUTO)
     @ApiModelProperty(value="")
     @Schema(description="")
