@@ -3,6 +3,7 @@ package com.chua.starter.monitor.server.command;
 import com.chua.common.support.annotations.OnRouterEvent;
 import com.chua.common.support.json.Json;
 import com.chua.starter.monitor.request.MonitorRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +18,7 @@ import java.util.concurrent.TimeUnit;
  * @since 2024/01/31
  */
 @Service
+@Slf4j
 public class Heartbeat {
 
     @Resource
@@ -32,5 +34,6 @@ public class Heartbeat {
     public void heartbeat(MonitorRequest request) {
         stringRedisTemplate.opsForValue()
                         .set("monitor:heart:" + request.getAppName()+ ":" + request.getServerHost() + "_" + request.getServerPort(), Json.toJson(request.getData()), 2, TimeUnit.MINUTES);
+        log.info("检测到: {}心跳 <- {}:{}", request.getAppName(), request.getServerHost(), request.getServerPort());
     }
 }
