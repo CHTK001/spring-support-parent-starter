@@ -1,9 +1,9 @@
 package com.chua.starter.device.support.adaptor.factory.haikang;
 
-import com.alibaba.fastjson2.JSONObject;
 import com.chua.common.support.annotations.Group;
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.device.support.adaptor.factory.client.pojo.HikYunYaoDeviceListResult;
 import com.chua.starter.device.support.adaptor.CameraDeviceAdaptor;
@@ -82,7 +82,7 @@ public class HikYunYaoDeviceAdaptor
 
     @Override
     public LiveResult getLiveAddress(String deviceImsi, String deviceChannel) {
-        JSONObject jsonObject = Json.fromJson(hikYunYaoClient.getLiveAddress(deviceCloudPlatformConnector.getDeviceConnectorProjectCode(), deviceImsi, Integer.valueOf(StringUtils.defaultString(deviceChannel, "1"))), JSONObject.class);
+        JsonObject jsonObject =  Json.fromJson(hikYunYaoClient.getLiveAddress(deviceCloudPlatformConnector.getDeviceConnectorProjectCode(), deviceImsi, Integer.valueOf(StringUtils.defaultString(deviceChannel, "1"))), JsonObject.class);
         if(null == jsonObject) {
             return new LiveResult();
         }
@@ -90,7 +90,7 @@ public class HikYunYaoDeviceAdaptor
         if(NUM_200 == jsonObject.getIntValue(STATUS, NUM_500)) {
             result.setMsg(jsonObject.getString("msg"));
         }
-        JSONObject data = jsonObject.getJSONObject("data");
+        JsonObject data = jsonObject.getJSONObject("data");
         if(null != data) {
             result.setUrl(data.getString("url"));
         }

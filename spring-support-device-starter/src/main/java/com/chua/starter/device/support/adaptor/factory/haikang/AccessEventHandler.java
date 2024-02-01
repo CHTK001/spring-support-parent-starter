@@ -1,7 +1,7 @@
 package com.chua.starter.device.support.adaptor.factory.haikang;
 
-import com.alibaba.fastjson2.JSON;
 import com.chua.common.support.annotations.Spi;
+import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.date.DateUtils;
 import com.chua.starter.device.support.adaptor.factory.client.HikYunYaoClient;
 import com.chua.starter.device.support.adaptor.pojo.AccessEventRequest;
@@ -25,7 +25,7 @@ public class AccessEventHandler implements EventHandler{
     @Override
     public List<? extends DeviceDataEvent> getEvent(AccessEventRequest request, HikYunYaoClient client) {
         String event = client.getEvent(request);
-        AccessEventYunYaoTransit accessEventYunYaoTransit = JSON.parseObject(event, AccessEventYunYaoTransit.class);
+        AccessEventYunYaoTransit accessEventYunYaoTransit = Json.fromJson(event, AccessEventYunYaoTransit.class);
         if(null == accessEventYunYaoTransit) {
             return Collections.emptyList();
         }
