@@ -124,7 +124,7 @@ public class CaptchaProvider {
             response.setContentType("image/jpeg");
 
             session.setAttribute(Constants.CAPTCHA_SESSION_KEY, captchaText);
-            response.setHeader("verifyCodeKey", Base64.getEncoder().encodeToString(captchaText.getBytes(StandardCharsets.UTF_8)));
+            response.setHeader("Access-Control-Captcha", Base64.getEncoder().encodeToString(captchaText.getBytes(StandardCharsets.UTF_8)));
             out = response.getOutputStream();
             captcha.out(out);
             out.flush();
@@ -140,7 +140,7 @@ public class CaptchaProvider {
      * @param request 请求
      */
     @GetMapping("captcha")
-    public CaptchaResult captchaBase64(HttpServletRequest request) {
+    public CaptchaResult captchaBase64(HttpServletRequest request, HttpServletResponse response) {
         Captcha captcha = createCaptcha();
         String captchaText = captcha.text();
         log.info("当前校验码: {}", captchaText);
@@ -148,8 +148,8 @@ public class CaptchaProvider {
         try {
             HttpSession session = request.getSession();
             session.setAttribute(Constants.CAPTCHA_SESSION_KEY, captchaText);
+            response.addHeader("Access-Control-Captcha", Base64.getEncoder().encodeToString(captchaText.getBytes(StandardCharsets.UTF_8)));
             return CaptchaResult.builder()
-                    .verifyCodeKey(Base64.getEncoder().encodeToString(captchaText.getBytes(StandardCharsets.UTF_8)))
                     .verifyCodeBase64(captchaBase64)
                     .build();
         } catch (Exception e) {
