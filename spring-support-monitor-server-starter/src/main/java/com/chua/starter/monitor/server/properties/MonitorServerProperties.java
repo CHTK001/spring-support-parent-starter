@@ -41,4 +41,9 @@ public class MonitorServerProperties {
      * 加密密钥
      */
     private String encryptionKey = "123456";
+
+    /**
+     * 报表数据保持活动(s)
+     */
+    private long reportDataKeepAlive = 24 * 60 * 60;
 }
