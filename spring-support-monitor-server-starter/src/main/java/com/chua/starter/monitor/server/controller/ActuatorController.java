@@ -56,7 +56,7 @@ public class ActuatorController {
                     .header(ACCEPT, APPLICATION_JSON_UTF_8)
                     .when(POST.name().equals(method), it -> it.header(CONTENT_TYPE, APPLICATION_JSON_UTF_8))
                     .url("http://" + request.getServerHost() + ":" + request.getServerPort() + FileUtils.normalize(request.getContextPath(),request.getEndpointsUrl()) + "/" + command)
-                    .body(Json.toMapStringObject(param))
+                    .body(Json.getJsonObject(param))
                     .newInvoker().execute().content(JsonObject.class));
         } catch (Throwable e) {
             return ReturnResult.of(ReturnCode.SYSTEM_SERVER_NOT_FOUND, null, "操作失败");
