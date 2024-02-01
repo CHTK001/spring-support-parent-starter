@@ -29,7 +29,7 @@ public class MonitorServerFactory implements MonitorConstant {
      */
     public List<MonitorRequest> getHeart(String appName) {
         // 获取所有的心跳数据键
-        Set<String> keys = stringRedisTemplate.keys(HEART + ":" +appName);
+        Set<String> keys = stringRedisTemplate.keys(HEART + appName);
         Map<String, List<MonitorRequest>> stringListMap = create(keys);
         if(stringListMap.isEmpty()) {
             return Collections.emptyList();
@@ -59,7 +59,7 @@ public class MonitorServerFactory implements MonitorConstant {
      */
     public Map<String, List<MonitorRequest>> getHeart() {
         // 获取所有的心跳数据键
-        Set<String> keys = stringRedisTemplate.keys(HEART);
+        Set<String> keys = stringRedisTemplate.keys(HEART + "*");
         return create(keys);
     }
 }

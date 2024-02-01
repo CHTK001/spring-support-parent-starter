@@ -26,13 +26,11 @@ import javax.validation.Valid;
 import java.util.List;
 import java.util.Map;
 
-import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
-
 /**
  * 监控应用控制器
  */
 @RestController
-@RequestMapping("monitor/app")
+@RequestMapping("v1/app")
 @Tag(name = "上报数据接口")
 @RequiredArgsConstructor
 public class MonitorAppController extends AbstractSwaggerUpdateController<MonitorAppService, MonitorApp> {
@@ -40,7 +38,8 @@ public class MonitorAppController extends AbstractSwaggerUpdateController<Monito
     @Getter
     private final MonitorAppService service;
 
-    private final MonitorServerFactory migrationServerFactory;
+    private final MonitorServerFactory monitorServerFactory;
+
 
     /**
      * 分页查询数据
@@ -52,16 +51,13 @@ public class MonitorAppController extends AbstractSwaggerUpdateController<Monito
     @Operation(summary = "分页查询基础数据")
     @GetMapping("page")
     public ReturnPageResult<MonitorApp> page(PageRequest<MonitorApp> page, @Valid MonitorApp entity, @Ignore BindingResult bindingResult) {
-        if(bindingResult.hasErrors()) {
-            return ReturnPageResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
-        }
         Page<MonitorApp> page1 = getService().page(page.createPage(), Wrappers.lambdaQuery(entity));
         mergePage(page1);
         return PageResultUtils.ok(page1);
     }
 
     private void mergePage(Page<MonitorApp> page1) {
-        Map<String, List<MonitorRequest>> appHeart = migrationServerFactory.getHeart();
+        Map<String, List<MonitorRequest>> appHeart = monitorServerFactory.getHeart();
         for (MonitorApp record : page1.getRecords()) {
             record.setMonitorRequests(appHeart.get(record.getMonitorAppname()));
         }
