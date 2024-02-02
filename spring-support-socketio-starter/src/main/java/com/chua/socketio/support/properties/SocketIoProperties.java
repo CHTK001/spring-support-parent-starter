@@ -62,4 +62,8 @@ public class SocketIoProperties {
      */
     private Integer pingInterval = 25_000;
 
+    /**
+     * 命名空间
+     */
+    private String namespace;
 }
