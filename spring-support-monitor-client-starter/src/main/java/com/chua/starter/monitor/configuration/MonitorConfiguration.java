@@ -70,7 +70,7 @@ public class MonitorConfiguration  implements BeanDefinitionRegistryPostProcesso
         monitorFactory.register(monitorReportProperties);
         monitorFactory.finish();
 
-        ProtocolFactory protocolFactory = new ProtocolFactory(registry);
+        ProtocolFactory protocolFactory = new ProtocolFactory(registry, environment);
         protocolFactory.afterPropertiesSet();
     }
 
