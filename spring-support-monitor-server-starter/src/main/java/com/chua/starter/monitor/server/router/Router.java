@@ -33,6 +33,9 @@ public class Router {
 
     public void doRoute(MonitorRequest monitorRequest) {
         MonitorRequestType monitorRequestType = monitorRequest.getType();
+        if(null == monitorRequestType) {
+            return;
+        }
         routerInfoMap.getOrDefault(monitorRequestType.getName().toUpperCase(), Collections.emptyList()).forEach(it -> {
             try {
                 it.getMethod().invoke(it.getBean(), monitorRequest);

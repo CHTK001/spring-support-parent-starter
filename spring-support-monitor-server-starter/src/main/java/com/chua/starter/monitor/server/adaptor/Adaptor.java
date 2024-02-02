@@ -24,4 +24,13 @@ public interface Adaptor<T> {
      * @return {@link Class}<{@link T}>
      */
     Class<T> getType();
+
+    /**
+     * 进入数据库
+     *
+     * @return boolean
+     */
+    default boolean intoDb() {
+        return false;
+    }
 }

@@ -26,4 +26,9 @@ public class JvmAdaptor implements Adaptor<Jvm> {
     public Class<Jvm> getType() {
         return Jvm.class;
     }
+
+    @Override
+    public boolean intoDb() {
+        return true;
+    }
 }

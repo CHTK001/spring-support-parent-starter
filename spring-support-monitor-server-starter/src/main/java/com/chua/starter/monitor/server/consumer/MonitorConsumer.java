@@ -28,6 +28,9 @@ public class MonitorConsumer implements AutoCloseable{
         try {
             consumer.start((msg, consumer) -> {
                 MonitorRequest monitorRequest = Json.fromJson(msg.getBody(), MonitorRequest.class);
+                if(null == monitorRequest) {
+                    return;
+                }
                 router.doRoute(monitorRequest);
             });
         } catch (IOException ignored) {
