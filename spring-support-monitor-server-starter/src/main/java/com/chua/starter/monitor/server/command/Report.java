@@ -50,11 +50,13 @@ public class Report implements InitializingBean, DisposableBean {
             Adaptor adaptor = ServiceProvider.of(Adaptor.class)
                     .getNewExtension(request.getReportType());
             adaptor.doAdaptor(Converter.convertIfNecessary(request.getData(), adaptor.getType()));
+            if(adaptor.intoDb()) {
+                stringRedisTemplate.opsForZSet()
+                        .add("monitor:report:" + request.getAppName()+ ":" + request.getServerHost() + "_" + request.getServerPort() + ":" +  request.getReportType(),
+                                Json.toJson(request.getData()), System.currentTimeMillis());
+            }
         } catch (Exception ignored) {
         }
-        stringRedisTemplate.opsForZSet()
-                .add("monitor:report:" + request.getAppName()+ ":" + request.getServerHost() + "_" + request.getServerPort() + ":" +  request.getReportType(),
-                                Json.toJson(request.getData()), System.currentTimeMillis());
     }
 
 

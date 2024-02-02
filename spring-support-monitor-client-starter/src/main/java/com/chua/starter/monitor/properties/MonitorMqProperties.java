@@ -20,15 +20,15 @@ public class MonitorMqProperties {
     /**
      * mq端口
      */
-    private String mqHost = "127.0.0.1";
+    private String host = "127.0.0.1";
     /**
      * mq端口
      */
-    private int mqPort = 31112;
+    private int port = 31112;
 
     /**
      * mq订阅者
      */
-    private String mqSubscriber = "monitor";
+    private String subscriber = "monitor";
 
 }
