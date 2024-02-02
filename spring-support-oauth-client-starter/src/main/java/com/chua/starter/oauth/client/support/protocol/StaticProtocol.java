@@ -35,7 +35,7 @@ public class StaticProtocol extends AbstractProtocol{
     private AuthenticationInformation newAuthenticationInformation(String token, Cookie[] cookie) {
         UserResume userResume = new UserResume();
         UserResult userResult = null;
-        if(StringUtils.isNotBlank(token)) {
+        if(StringUtils.isNotBlank(token) && !"null".equals(token)) {
             userResult = Json.fromJson(AES.decodeHex(token), UserResult.class);
         }
 
