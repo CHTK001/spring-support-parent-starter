@@ -1,6 +1,7 @@
 package com.chua.socketio.support.session;
 
 import com.corundumstudio.socketio.SocketIOClient;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -12,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 public class SocketSession {
 
     private final SocketIOClient client;
+    @Getter
     private final String sessionId;
 
     public SocketSession(SocketIOClient client) {

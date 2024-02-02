@@ -1,8 +1,6 @@
 package com.chua.starter.monitor.server.adaptor;
 
-import com.chua.common.support.json.Json;
 import com.chua.socketio.support.session.SocketSessionTemplate;
-import com.chua.starter.monitor.request.MonitorRequest;
 
 import javax.annotation.Resource;
 
@@ -13,17 +11,17 @@ import javax.annotation.Resource;
  * @version 1.0.0
  * @since 2024/02/01
  */
-public class LogAdaptor implements Adaptor<MonitorRequest> {
+public class LogAdaptor implements Adaptor<String> {
 
     @Resource
     private SocketSessionTemplate socketSessionTemplate;
     @Override
-    public void doAdaptor(MonitorRequest request) {
-        socketSessionTemplate.send("log", Json.toJson(request));
+    public void doAdaptor(String request) {
+        socketSessionTemplate.send("log", request);
     }
 
     @Override
-    public Class<MonitorRequest> getType() {
-        return MonitorRequest.class;
+    public Class<String> getType() {
+        return String.class;
     }
 }

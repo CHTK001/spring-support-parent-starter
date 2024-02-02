@@ -118,7 +118,7 @@ public class DefaultSocketSessionResolver implements SocketSessionResolver{
                         method.invoke(bean, client.getSessionId().toString());
                     }
 
-                    if(type == SocketSession.class) {
+                    if(type == SocketSession.class || type == Object.class) {
                         method.invoke(bean, new SocketSession(client));
                     }
                 } catch (Exception e) {
