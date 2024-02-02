@@ -3,10 +3,17 @@ package com.chua.starter.monitor.report;
 
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.annotations.SpiCondition;
+import com.chua.common.support.utils.IoUtils;
 import com.chua.redis.support.oshi.RedisOshi;
+import org.springframework.beans.BeansException;
+import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.context.ApplicationContext;
-import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.core.env.Environment;
+import org.springframework.data.redis.core.RedisTemplate;
+import redis.clients.jedis.DefaultJedisClientConfig;
+import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisClientConfig;
 
 import javax.annotation.Resource;
 import java.util.Collections;
@@ -14,19 +21,22 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @Spi("redis")
 @SpiCondition("org.springframework.data.redis.core.RedisTemplate")
-public class RedisReport implements Report{
+public class RedisReport implements Report, AutoCloseable{
 
     @Resource
-    private RedisConnection redisConnection;
+    private Environment environment;
     @Resource
     private ApplicationContext applicationContext;
+
+    @Resource
+    private RedisTemplate redisTemplate;
 
     private Jedis jedis;
 
     private final AtomicBoolean running = new AtomicBoolean(false);
     @Override
     public Object report() {
-        if(null == redisConnection) {
+        if(null == environment) {
             return Collections.emptyList();
         }
 
@@ -44,6 +54,23 @@ public class RedisReport implements Report{
         }
 
         running.set(true);
-        jedis = new Jedis();
+        RedisProperties redisProperties = null;
+        try {
+            redisProperties = applicationContext.getBean(RedisProperties.class);
+        } catch (BeansException ignored) {
+        }
+        if(null != redisProperties) {
+            HostAndPort hostAndPort = new HostAndPort(redisProperties.getHost(), redisProperties.getPort());
+            JedisClientConfig jedisClientConfig = DefaultJedisClientConfig.builder()
+                    .password(redisProperties.getPassword())
+                    .database(redisProperties.getDatabase())
+                    .build();
+            jedis = new Jedis(hostAndPort, jedisClientConfig);
+        }
+    }
+
+    @Override
+    public void close() throws Exception {
+        IoUtils.closeQuietly(jedis);
     }
 }

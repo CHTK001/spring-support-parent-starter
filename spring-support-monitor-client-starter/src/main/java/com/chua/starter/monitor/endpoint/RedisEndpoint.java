@@ -1,7 +1,9 @@
 package com.chua.starter.monitor.endpoint;
 
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.IoUtils;
 import com.chua.starter.monitor.report.Report;
+import org.springframework.beans.factory.DisposableBean;
 import org.springframework.boot.actuate.endpoint.annotation.ReadOperation;
 import org.springframework.boot.actuate.endpoint.web.annotation.WebEndpoint;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -17,10 +19,17 @@ import org.springframework.data.redis.connection.RedisConnection;
 
 @ConditionalOnClass(RedisConnection.class)
 @WebEndpoint(id = "redis")
-public class RedisEndpoint {
+public class RedisEndpoint implements DisposableBean {
+    private Report redis;
+
     @ReadOperation
     public Object read() {
-        Report redis = ServiceProvider.of(Report.class).getExtension("Redis");
+        this.redis = ServiceProvider.of(Report.class).getExtension("Redis");
         return redis.report();
+    }
+
+    @Override
+    public void destroy() throws Exception {
+        IoUtils.closeQuietly(redis);
     }
 }
