@@ -18,6 +18,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 
@@ -42,6 +43,7 @@ public class SocketConfiguration {
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = SocketIoProperties.PRE, name = "open", havingValue = "true", matchIfMissing = false)
     public DelegateSocketIOServer socketIOServer(Configuration configuration,
+                                                 SocketIoProperties properties,
                                                  SocketSessionTemplate socketSessionTemplate,
                                                  List<SocketIOListener> listenerList) {
         DelegateSocketIOServer socketIOServer = new DelegateSocketIOServer(configuration);
@@ -62,6 +64,11 @@ public class SocketConfiguration {
             }
         });
         socketSessionResolver.registerEvent(socketIOServer);
+        String namespace = properties.getNamespace();
+
+        if(StringUtils.hasText(namespace)) {
+            socketIOServer.addNamespace(namespace.startsWith("/") ? namespace : "/" + namespace);
+        }
         return socketIOServer;
     }
     @Bean
@@ -83,6 +90,7 @@ public class SocketConfiguration {
         // host在本地测试可以设置为localhost或者本机IP，在Linux服务器跑可换成服务器IP
         configuration.setHostname(properties.getHost());
         configuration.setPort(properties.getPort());
+        configuration.setTransports(Transport.POLLING, Transport.WEBSOCKET);
         // socket连接数大小（如只监听一个端口boss线程组为1即可）
         configuration.setBossThreads(properties.getBossCount());
         configuration.setWorkerThreads(properties.getBossCount());
@@ -93,6 +101,7 @@ public class SocketConfiguration {
         configuration.setPingTimeout(properties.getPingTimeout());
         // Ping消息间隔（毫秒），默认25秒。客户端向服务器发送一条心跳消息间隔
         configuration.setPingInterval(properties.getPingInterval());
+
         if(null != socketAuthFactory) {
             configuration.setAuthorizationListener(new AuthorizationListener() {
                 @Override

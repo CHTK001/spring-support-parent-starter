@@ -4,12 +4,12 @@ import com.chua.common.support.annotations.Extension;
 import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.json.Json;
 import com.chua.starter.common.support.utils.RequestUtils;
-import com.chua.starter.oauth.client.support.execute.AuthClientExecute;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.infomation.Information;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.google.common.collect.Sets;
+import io.micrometer.core.instrument.util.StringUtils;
 
 import javax.servlet.http.Cookie;
 import java.util.Collections;
@@ -34,7 +34,10 @@ public class StaticProtocol extends AbstractProtocol{
      */
     private AuthenticationInformation newAuthenticationInformation(String token, Cookie[] cookie) {
         UserResume userResume = new UserResume();
-        UserResult userResult = AuthClientExecute.getInstance().getUserResult(token);
+        UserResult userResult = null;
+        if(StringUtils.isNotBlank(token)) {
+            userResult = Json.fromJson(AES.decodeHex(token), UserResult.class);
+        }
 
         if(null == userResult && null != cookie) {
             for (Cookie cookie1 : cookie) {
