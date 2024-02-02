@@ -30,6 +30,6 @@ public class MonitorProperties {
     /**
      * 监听地址
      */
-    private String monitor = "http://${plugin.monitor.mq.mq-host:127.0.0.1}/monitor/api/report";
+    private String monitor = "http://${plugin.monitor.mq.mq-host:127.0.0.1}:31111/monitor/api/report";
 
 }
