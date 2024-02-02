@@ -19,7 +19,7 @@ public class LogAdaptor implements Adaptor<MonitorRequest> {
     private SocketSessionTemplate socketSessionTemplate;
     @Override
     public void doAdaptor(MonitorRequest request) {
-        socketSessionTemplate.send("log", StringUtils.format("[{}({}:{})] [{}]", request.getAppName(), request.getServerHost() , request.getServerPort(), request.getData()));
+        socketSessionTemplate.send("log", StringUtils.format("[{}({}:{})] -> {}", request.getAppName(), request.getServerHost() , request.getServerPort(), request.getData()));
     }
 
     @Override
