@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.result;
 
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.exception.AuthenticationException;
 import com.chua.common.support.lang.file.adaptor.univocity.parsers.conversions.Validator;
 import com.chua.common.support.utils.StringUtils;
@@ -74,9 +75,9 @@ public class ExceptionAdvice  {
      */
     @ExceptionHandler(MissingServletRequestParameterException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public <T> Result<T> processException(MissingServletRequestParameterException e) {
+    public <T> ReturnResult<T> processException(MissingServletRequestParameterException e) {
         log.error(e.getMessage(), e);
-        return Result.failed(REQUEST_PARAM_ERROR);
+        return Result.illegal(REQUEST_PARAM_ERROR, REQUEST_PARAM_ERROR.getMsg() + "(" + e.getParameterName() + ")缺失");
     }
 
     /**
