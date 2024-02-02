@@ -60,7 +60,7 @@ public class MonitorFactory implements AutoCloseable {
 
     private void registerMqClient() {
         BrokerConfig brokerConfig = new BrokerConfig();
-        String endpoint = monitorMqProperties.getMqHost() + ":" + monitorMqProperties.getMqPort();
+        String endpoint = monitorMqProperties.getHost() + ":" + monitorMqProperties.getPort();
         brokerConfig.setBrokerAddress(endpoint);
         try {
             if (endpoint.contains(",")) {
@@ -74,11 +74,11 @@ public class MonitorFactory implements AutoCloseable {
 
         MqConfig config = new MqConfig();
         config.setBroker(this.broker);
-        config.setMq(monitorMqProperties.getMqSubscriber());
+        config.setMq(monitorMqProperties.getSubscriber());
         this.producer = new Producer(config);
         MqConfig configReport = new MqConfig();
         configReport.setBroker(this.broker);
-        configReport.setMq(monitorMqProperties.getMqSubscriber() + "#report");
+        configReport.setMq(monitorMqProperties.getSubscriber() + "#report");
         this.reportProducer = new Producer(configReport);
     }
 

@@ -1,8 +1,8 @@
 package com.chua.starter.monitor.server.adaptor;
 
 import com.chua.common.support.json.Json;
-import com.chua.oshi.support.Jvm;
 import com.chua.socketio.support.session.SocketSessionTemplate;
+import com.chua.starter.monitor.request.MonitorRequest;
 
 import javax.annotation.Resource;
 
@@ -13,22 +13,17 @@ import javax.annotation.Resource;
  * @version 1.0.0
  * @since 2024/02/01
  */
-public class JvmAdaptor implements Adaptor<Jvm> {
+public class LogAdaptor implements Adaptor<MonitorRequest> {
 
     @Resource
     private SocketSessionTemplate socketSessionTemplate;
     @Override
-    public void doAdaptor(Jvm jvm) {
-        socketSessionTemplate.send("jvm", Json.toJson(jvm));
+    public void doAdaptor(MonitorRequest request) {
+        socketSessionTemplate.send("log", Json.toJson(request));
     }
 
     @Override
-    public Class<Jvm> getType() {
-        return Jvm.class;
-    }
-
-    @Override
-    public boolean intoDb() {
-        return true;
+    public Class<MonitorRequest> getType() {
+        return MonitorRequest.class;
     }
 }
