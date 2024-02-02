@@ -105,9 +105,10 @@ public class SocketConfiguration {
         if(null != socketAuthFactory) {
             configuration.setAuthorizationListener(new AuthorizationListener() {
                 @Override
-                public boolean isAuthorized(HandshakeData data) {
-                    return socketAuthFactory.isAuthorized(data);
+                public AuthorizationResult getAuthorizationResult(HandshakeData data) {
+                    return new AuthorizationResult(socketAuthFactory.isAuthorized(data));
                 }
+
             });
         }
 
