@@ -34,6 +34,8 @@ public class RedisReport implements Report, AutoCloseable{
     private Jedis jedis;
 
     private final AtomicBoolean running = new AtomicBoolean(false);
+    private RedisProperties redisProperties;
+
     @Override
     public Object report() {
         if(null == environment) {
@@ -41,7 +43,11 @@ public class RedisReport implements Report, AutoCloseable{
         }
 
         initialJedis();
-        return RedisOshi.newRedis(jedis);
+        com.chua.redis.support.oshi.RedisReport redisReport = RedisOshi.newRedis(jedis);
+        if(null != redisProperties) {
+            redisReport.setPort(redisProperties.getPort());
+        }
+        return redisReport;
     }
 
     private void initialJedis() {
@@ -54,7 +60,6 @@ public class RedisReport implements Report, AutoCloseable{
         }
 
         running.set(true);
-        RedisProperties redisProperties = null;
         try {
             redisProperties = applicationContext.getBean(RedisProperties.class);
         } catch (BeansException ignored) {
