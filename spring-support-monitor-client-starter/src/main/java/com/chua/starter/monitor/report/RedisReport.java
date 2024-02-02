@@ -4,6 +4,7 @@ package com.chua.starter.monitor.report;
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.annotations.SpiCondition;
 import com.chua.redis.support.oshi.RedisOshi;
+import org.springframework.context.ApplicationContext;
 import org.springframework.data.redis.connection.RedisConnection;
 import redis.clients.jedis.Jedis;
 
@@ -17,6 +18,8 @@ public class RedisReport implements Report{
 
     @Resource
     private RedisConnection redisConnection;
+    @Resource
+    private ApplicationContext applicationContext;
 
     private Jedis jedis;
 
