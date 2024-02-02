@@ -518,6 +518,9 @@ public class AuthClientExecute {
      * @return {@link UserResult}
      */
     public UserResult getUserResult(String token) {
+        if(StringUtils.isEmpty(token)) {
+            return null;
+        }
         Value<UserResult> ifPresent = CACHE.getIfPresent(token);
         if(null != ifPresent) {
             return ifPresent.getValue();
