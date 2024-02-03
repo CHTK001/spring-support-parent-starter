@@ -4,6 +4,7 @@ import com.chua.common.support.json.Json;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.IoUtils;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.monitor.properties.*;
 import com.chua.starter.monitor.report.Report;
@@ -89,7 +90,6 @@ public class MonitorFactory implements AutoCloseable {
     public void register(Environment environment) {
         this.environment = environment;
         this.serverPort = environment.resolvePlaceholders("${server.port:8080}");
-        this.serverHost = environment.resolvePlaceholders("${server.address:127.0.0.1}");
         this.active = environment.getProperty("spring.profiles.active", "default");
         this.endpointsUrl = environment.resolvePlaceholders("${management.endpoints.web.base-path:/actuator}");
         this.contextPath = environment.resolvePlaceholders("${server.servlet.context-path:}");
@@ -167,6 +167,7 @@ public class MonitorFactory implements AutoCloseable {
 
     public void register(MonitorProperties monitorProperties) {
         this.monitorProperties = monitorProperties;
+        this.serverHost = StringUtils.defaultString(monitorProperties.getAddress(), environment.resolvePlaceholders("${server.address:}"));
     }
 
     public void register(MonitorProtocolProperties monitorProtocolProperties) {
