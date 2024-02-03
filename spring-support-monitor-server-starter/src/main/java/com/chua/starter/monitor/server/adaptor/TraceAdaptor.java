@@ -1,6 +1,6 @@
 package com.chua.starter.monitor.server.adaptor;
 
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.json.Json;
 import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.monitor.request.MonitorRequest;
 
@@ -19,7 +19,7 @@ public class TraceAdaptor implements Adaptor<MonitorRequest> {
     private SocketSessionTemplate socketSessionTemplate;
     @Override
     public void doAdaptor(MonitorRequest request) {
-        socketSessionTemplate.send("trace", StringUtils.format("[{}({}:{})] -> {}", request.getAppName(), request.getServerHost() , request.getServerPort(), request.getData()));
+        socketSessionTemplate.send("trace", Json.toJson(request));
     }
 
     @Override
