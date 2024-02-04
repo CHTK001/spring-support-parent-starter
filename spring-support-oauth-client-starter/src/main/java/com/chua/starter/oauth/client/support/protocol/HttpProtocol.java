@@ -73,6 +73,8 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
                     RequestUtils.setUsername(userResume.getUsername());
                     RequestUtils.setUserInfo(userResume);
                     return authenticationInformation;
+                } else {
+                    CACHEABLE.remove(cacheKey);
                 }
             }
         }
