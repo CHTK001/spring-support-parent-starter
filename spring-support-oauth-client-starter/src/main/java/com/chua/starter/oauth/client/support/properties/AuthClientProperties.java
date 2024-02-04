@@ -23,6 +23,7 @@ public class AuthClientProperties {
         whitelist.add("/**/logout");
         whitelist.add("/doc.html");
         whitelist.add("/actuator");
+        whitelist.add("/actuator/**");
         whitelist.add("/webjars/**");
         whitelist.add("/markdown/**");
         whitelist.add("/static/**");
@@ -41,7 +42,7 @@ public class AuthClientProperties {
     /**
      * 客户端缓存鉴权信息(用于提高访问效率)(s)
      */
-    private long cacheTimeout = 60 * 60;
+    private long cacheTimeout = 60;
     /**
      * 是否开启客户端缓存冷热备份
      */
