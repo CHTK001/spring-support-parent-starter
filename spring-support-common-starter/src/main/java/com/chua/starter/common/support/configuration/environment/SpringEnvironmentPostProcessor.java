@@ -21,6 +21,7 @@ public class SpringEnvironmentPostProcessor implements EnvironmentPostProcessor 
         Properties properties = new Properties();
         properties.setProperty("server.compression.enabled", "true");
         properties.setProperty("server.http2.enabled", "true");
+        properties.setProperty("server.max-http-header-size", "67108864");
         properties.setProperty("spring.datasource.url", "jdbc:sqlite:./sys");
         properties.setProperty("spring.datasource.driver-class-name", "org.sqlite.JDBC");
         properties.setProperty("spring.datasource.username", "sa");

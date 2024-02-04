@@ -3,7 +3,6 @@ package com.chua.starter.oauth.client.support.provider;
 import com.chua.common.support.collection.ImmutableBuilder;
 import com.chua.common.support.function.Splitter;
 import com.chua.common.support.json.Json;
-import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.result.Result;
@@ -76,7 +75,7 @@ public class TempProvider {
 
         String address = getIpAddress(request);
         AuthClientExecute clientExecute = AuthClientExecute.getInstance();
-        LoginAuthResult accessToken = clientExecute.getAccessToken(loginData.getUsername(), loginData.getPassword(), AuthType.AUTO,
+        LoginAuthResult accessToken = clientExecute.getAccessToken(loginData.getUsername(), loginData.getPassword(), AuthType.WEB,
                 ImmutableBuilder.<String, Object>builderOfMap().put("address", address).build()
         );
         if (null == accessToken) {
