@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.common.support.annotations.Group;
 import com.chua.starter.mybatis.pojo.SysBase;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -25,7 +26,7 @@ public class MonitorConfig extends SysBase implements Serializable {
     @TableId(value = "config_id", type = IdType.AUTO)
     @ApiModelProperty(value="")
     @Schema(description="")
-    @NotNull(message = "不能为null")
+    @NotNull(message = "不能为null", groups = Group.class)
     private Integer configId;
 
     /**
@@ -45,6 +46,15 @@ public class MonitorConfig extends SysBase implements Serializable {
     @Schema(description="值")
     @Size(max = 255,message = "值最大长度要小于 255")
     private String configValue;
+
+    /**
+     * 环境
+     */
+    @TableField(value = "config_desc")
+    @ApiModelProperty(value="描述")
+    @Schema(description="描述")
+    @Size(max = 255,message = "环境最大长度要小于 255")
+    private String configDesc;
 
     /**
      * 环境
