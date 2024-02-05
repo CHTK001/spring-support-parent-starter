@@ -1,10 +1,12 @@
 package com.chua.starter.monitor.configuration;
 
+import com.chua.common.support.function.Splitter;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.json.JsonArray;
 import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.protocol.annotations.ServiceMapping;
 import com.chua.common.support.protocol.boot.*;
+import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.Md5Utils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.processor.AnnotationInjectedBeanPostProcessor;
@@ -68,6 +70,7 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
     private Environment environment;
     @Setter
     private ApplicationContext applicationContext;
+    private Set<String> actives;
 
     @Override
     protected Object doGetInjectedBean(ConfigValue annotation, Object bean, String beanName, Class<?> injectedType,
@@ -122,6 +125,12 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
         if(!MonitorFactory.getInstance().isEnable()) {
             return;
         }
+
+
+        String active = MonitorFactory.getInstance().getActive();
+        if(StringUtils.isNotBlank(active)) {
+            this.actives = Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(active);
+        }
         postProcessEnvironment((ConfigurableEnvironment) environment);
     }
 
@@ -149,6 +158,7 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
         JsonObject jsonObject = Json.getJsonObject(request.getContent());
         keyValue.setDataId(jsonObject.getString("configName"));
         keyValue.setData(jsonObject.getString("configValue"));
+        keyValue.setProfile(jsonObject.getString("configProfile"));
         onListener(keyValue);
         return BootResponse.ok();
     }
@@ -225,6 +235,17 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
         if (keyValue.getData() == null) {
             return;
         }
+
+        if(CollectionUtils.isNotEmpty(actives) ) {
+            if(StringUtils.isBlank(keyValue.getProfile())) {
+                return;
+            }
+
+            if(!actives.contains(keyValue.getProfile())) {
+                return;
+            }
+        }
+
         String newValue = keyValue.getData();
         List<ConfigValueTarget> beanPropertyList = placeholderConfigValueTargetMap.get(keyValue.getDataId());
         if (null == beanPropertyList) {
