@@ -20,6 +20,6 @@ public class RegisterCenterModuleResolver implements ModuleResolver{
     @Override
     public BootResponse resolve(BootRequest request) {
         CommandType commandType = request.getCommandType();
-        return ServiceProvider.of(CommandAdaptor.class).getNewExtension(commandType).resolve(request);
+        return ServiceProvider.of(CommandAdaptor.class).getNewExtension("register_center_" + commandType).resolve(request);
     }
 }
