@@ -6,6 +6,7 @@ import com.chua.starter.monitor.request.MonitorRequest;
 import com.chua.starter.redis.support.listener.RedisListener;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.Message;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.data.redis.listener.Topic;
 
@@ -28,12 +29,15 @@ public class RedisKeyExpireListener implements RedisListener {
 
     @Resource
     private SocketSessionTemplate socketSessionTemplate;
+    @Resource
+    private StringRedisTemplate stringRedisTemplate;
     @Override
     public void onMessage(Message message, byte[] pattern) {
         String key = message.toString();
         String string = new String(message.getChannel());
         if(key.startsWith(HEART) && string.endsWith(":expire")) {
             try {
+                stringRedisTemplate.delete(key + ":SERVER");
                 MonitorRequest request = new MonitorRequest();
                 String substring = key.substring(HEART.length());
                 String[] split = substring.split(":");
@@ -41,7 +45,7 @@ public class RedisKeyExpireListener implements RedisListener {
                 String[] split1 = split[1].split("_");
                 request.setServerHost(split1[0]);
                 request.setServerPort(split1[1]);
-                socketSessionTemplate.send("offline", Json.toJson(request));
+                socketSessionTemplate.send(":offline", Json.toJson(request));
             } catch (Exception ignored) {
             }
         }
