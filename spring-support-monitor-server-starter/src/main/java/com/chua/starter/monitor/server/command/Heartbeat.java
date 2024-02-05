@@ -6,7 +6,7 @@ import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.monitor.request.MonitorRequest;
 import com.chua.starter.monitor.server.constant.MonitorConstant;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 public class Heartbeat implements MonitorConstant {
 
     @Resource
-    private StringRedisTemplate stringRedisTemplate;
+    private RedisTemplate stringRedisTemplate;
 
     @Resource
     private SocketSessionTemplate socketSessionTemplate;
@@ -42,7 +42,7 @@ public class Heartbeat implements MonitorConstant {
             socketSessionTemplate.send("online", Json.toJson(request));
         }
         stringRedisTemplate.opsForValue()
-                        .set(key, Json.toJson(request), 2, TimeUnit.MINUTES);
+                        .set(key, request, 2, TimeUnit.MINUTES);
         if(log.isDebugEnabled()) {
             log.debug("检测到: {}心跳 <- {}:{}", request.getAppName(), request.getServerHost(), request.getServerPort());
         }

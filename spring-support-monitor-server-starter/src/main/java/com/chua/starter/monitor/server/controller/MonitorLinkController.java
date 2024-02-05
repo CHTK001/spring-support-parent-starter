@@ -2,11 +2,9 @@ package com.chua.starter.monitor.server.controller;
 
 
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.monitor.server.resolver.adator.CommandAdaptor;
-import com.chua.starter.monitor.server.resolver.adator.RegisterCenterRequestCommandAdaptor;
-import com.chua.starter.monitor.service.ServiceInstance;
+import com.chua.starter.monitor.server.factory.MonitorServerFactory;
+import com.chua.starter.monitor.server.pojo.ServiceTarget;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +13,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -26,6 +23,7 @@ import java.util.List;
 @Tag(name = "注册中心")
 @RequiredArgsConstructor
 public class MonitorLinkController {
+    private final MonitorServerFactory monitorServerFactory;
 
     /**
      * 添加数据
@@ -35,15 +33,10 @@ public class MonitorLinkController {
     @ResponseBody
     @Operation(summary = "获取访问链路")
     @GetMapping
-    public ReturnResult<List<ServiceInstance>> get(String appName, String serverAddress) {
+    public ReturnResult<List<ServiceTarget>> get(String appName, String serverAddress) {
         if (StringUtils.isEmpty(appName)) {
             return ReturnResult.illegal("应用不存在");
         }
-        return ReturnResult.ok(Collections.singletonList(getServiceInstance(appName)));
-    }
-
-    private ServiceInstance getServiceInstance(String appName) {
-        RegisterCenterRequestCommandAdaptor commandAdaptor = (RegisterCenterRequestCommandAdaptor) ServiceProvider.of(CommandAdaptor.class).getNewExtension("register_center_request");
-        return commandAdaptor.getServiceInstance(appName);
+        return ReturnResult.ok(monitorServerFactory.getServiceInstance(appName, serverAddress));
     }
 }

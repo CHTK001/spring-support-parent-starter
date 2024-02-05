@@ -2,7 +2,6 @@ package com.chua.starter.monitor.server.command;
 
 import com.chua.common.support.annotations.OnRouterEvent;
 import com.chua.common.support.bean.BeanUtils;
-import com.chua.common.support.json.Json;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.ThreadUtils;
@@ -12,7 +11,7 @@ import com.chua.starter.monitor.server.properties.MonitorServerProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
@@ -33,7 +32,7 @@ import java.util.concurrent.TimeUnit;
 public class Report implements InitializingBean, DisposableBean {
 
     @Resource
-    private StringRedisTemplate stringRedisTemplate;
+    private RedisTemplate stringRedisTemplate;
     @Resource
     private MonitorServerProperties monitorServerProperties;
     private final ScheduledExecutorService scheduledExecutorService = ThreadUtils.newScheduledThreadPoolExecutor(2, "monitor-core-thread");
@@ -58,7 +57,7 @@ public class Report implements InitializingBean, DisposableBean {
             if(adaptor.intoDb()) {
                 stringRedisTemplate.opsForZSet()
                         .add("monitor:report:" + request.getAppName()+ ":" + request.getServerHost() + "_" + request.getServerPort() + ":" +  request.getReportType(),
-                                Json.toJson(request.getData()), System.currentTimeMillis());
+                                request.getData(), System.currentTimeMillis());
             }
         } catch (Exception ignored) {
         }

@@ -2,13 +2,16 @@ package com.chua.starter.monitor.server.factory;
 
 import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.request.MonitorRequest;
 import com.chua.starter.monitor.server.constant.MonitorConstant;
+import com.chua.starter.monitor.server.pojo.ServiceTarget;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 监控服务器工厂
@@ -61,5 +64,43 @@ public class MonitorServerFactory implements MonitorConstant {
         // 获取所有的心跳数据键
         Set<String> keys = stringRedisTemplate.keys(HEART + "*");
         return create(keys);
+    }
+
+    /**
+     * 获取服务实例
+     *
+     * @param appName       应用程序名称
+     * @param serverAddress 服务器地址
+     * @return {@link List}<{@link ServiceTarget}>
+     */
+    public List<ServiceTarget> getServiceInstance(String appName, String serverAddress) {
+        List<ServiceTarget> rs = new ArrayList<>();
+        Set<String> keys = getKeys(appName, serverAddress);
+        for (String key : keys) {
+            try {
+                List<String> strings = stringRedisTemplate.opsForZSet().randomMembers(key, 100);
+                if(CollectionUtils.isEmpty(strings)) {
+                    continue;
+                }
+                for (String string : strings) {
+                    rs.add(Json.fromJson(string, ServiceTarget.class));
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        return rs;
+
+    }
+
+    private Set<String> getKeys(String appName, String serverAddress) {
+        if(StringUtils.isEmpty(serverAddress)) {
+            return Optional.ofNullable(stringRedisTemplate.keys(REPORT + appName + ":*"))
+                    .orElse(Collections.emptySet())
+                    .stream().filter(it -> it.endsWith("SERVER"))
+                    .collect(Collectors.toSet());
+        }
+        return Optional.ofNullable(stringRedisTemplate.keys(REPORT + appName + ":" + serverAddress+ ":SERVER"))
+                .orElse(Collections.emptySet());
     }
 }
