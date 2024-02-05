@@ -5,6 +5,8 @@ import com.chua.starter.monitor.endpoint.RedisEndpoint;
 import com.chua.starter.monitor.factory.MonitorFactory;
 import com.chua.starter.monitor.properties.*;
 import com.chua.starter.monitor.protocol.ProtocolFactory;
+import com.chua.starter.monitor.service.ProtocolRegisterCenterService;
+import com.chua.starter.monitor.service.RegisterCenterService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
@@ -95,10 +97,25 @@ public class MonitorConfiguration  implements BeanDefinitionRegistryPostProcesso
 
 
 
+    /**
+     * 注解Bean，如果不存在RedisConnection类则创建RedisEndpoint实例
+     * @return RedisEndpoint实例
+     */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnClass(RedisConnection.class)
     public RedisEndpoint redisEndpoint() {
         return new RedisEndpoint();
     }
+    /**
+     * 注解Bean，如果不存在RegisterCenterService实例则创建ProtocolRegisterCenterService实例
+     * @return RegisterCenterService实例
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public RegisterCenterService registerCenterService() {
+        return new ProtocolRegisterCenterService();
+    }
+
+
 }
