@@ -4,6 +4,7 @@ import com.chua.common.support.protocol.options.ClientOption;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.redis.support.RedisSearchClient;
 import com.chua.redis.support.search.RedisSearch;
+import com.chua.starter.redis.support.listener.RedisListener;
 import com.chua.starter.redis.support.properties.RedisServerProperties;
 import com.chua.starter.redis.support.server.RedisEmbeddedServer;
 import org.springframework.beans.BeansException;
@@ -21,6 +22,8 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
+
+import java.util.List;
 
 /**
  * redisson
@@ -75,9 +78,12 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
 
     @Bean
     @ConditionalOnMissingBean
-    RedisMessageListenerContainer container(RedisConnectionFactory connectionFactory) {
+    RedisMessageListenerContainer container(RedisConnectionFactory connectionFactory, List<RedisListener>listeners) {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
+        for (RedisListener listener : listeners) {
+            container.addMessageListener(listener::onMessage, listener.getTopics());
+        }
         return container;
     }
 

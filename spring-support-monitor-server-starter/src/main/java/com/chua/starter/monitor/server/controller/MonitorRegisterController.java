@@ -36,7 +36,7 @@ public class MonitorRegisterController {
     @Operation(summary = "获取注册中心服务")
     @GetMapping
     public ReturnResult<List<ServiceInstance>> get(String appName) {
-        if(StringUtils.isEmpty(appName)) {
+        if (StringUtils.isEmpty(appName)) {
             return ReturnResult.illegal("应用不存在");
         }
         return ReturnResult.ok(Collections.singletonList(getServiceInstance(appName)));
