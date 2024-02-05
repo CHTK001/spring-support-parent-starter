@@ -38,6 +38,10 @@ public class MonitorProtocolProperties {
     private int port = NetUtils.getRandomPort();
 
     /**
+     * 均衡
+     */
+    private String balance = "random";
+    /**
      * 协议
      */
     private String protocol = "http";
