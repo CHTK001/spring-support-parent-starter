@@ -15,6 +15,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Collections;
+import java.util.List;
+
 /**
  * 监控应用控制器
  */
@@ -32,11 +35,11 @@ public class MonitorRegisterController {
     @ResponseBody
     @Operation(summary = "获取注册中心服务")
     @GetMapping
-    public ReturnResult<ServiceInstance> get(String appName) {
+    public ReturnResult<List<ServiceInstance>> get(String appName) {
         if(StringUtils.isEmpty(appName)) {
             return ReturnResult.illegal("应用不存在");
         }
-        return ReturnResult.ok(getServiceInstance(appName));
+        return ReturnResult.ok(Collections.singletonList(getServiceInstance(appName)));
     }
 
     private ServiceInstance getServiceInstance(String appName) {
