@@ -1,7 +1,7 @@
 package com.chua.starter.monitor.server.command;
 
 import com.chua.common.support.annotations.OnRouterEvent;
-import com.chua.common.support.converter.Converter;
+import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.CollectionUtils;
@@ -53,7 +53,7 @@ public class Report implements InitializingBean, DisposableBean {
             if(type == MonitorRequest.class) {
                 adaptor.doAdaptor(request);
             } else {
-                adaptor.doAdaptor(Converter.convertIfNecessary(request.getData(), type));
+                adaptor.doAdaptor(BeanUtils.copyProperties(request.getData(), type));
             }
             if(adaptor.intoDb()) {
                 stringRedisTemplate.opsForZSet()

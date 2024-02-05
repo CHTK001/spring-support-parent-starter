@@ -136,7 +136,7 @@ public class MonitorFactory implements AutoCloseable {
         request.setProfile(active);
         request.setSubscribeAppName(monitorConfigProperties.getConfigAppName());
         request.setServerPort(serverPort);
-        request.setServerHost(serverHost);
+        request.setServerHost(StringUtils.defaultString(monitorProperties.getAddress(), serverHost));
         request.setContextPath(contextPath);
         request.setEndpointsUrl(endpointsUrl);
         return request;
