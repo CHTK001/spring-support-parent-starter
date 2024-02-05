@@ -20,7 +20,7 @@ import java.util.List;
  * @author CH
  * @since 2023/11/16
  */
-@Spi("subscribe")
+@Spi("config_subscribe")
 public class ConfigSubscribeCommandAdaptor implements CommandAdaptor{
 
 
