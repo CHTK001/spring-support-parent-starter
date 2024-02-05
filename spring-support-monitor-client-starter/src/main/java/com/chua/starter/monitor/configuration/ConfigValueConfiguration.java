@@ -146,8 +146,8 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
 
         KeyValue keyValue = new KeyValue();
         JsonObject jsonObject = Json.getJsonObject(request.getContent());
-        keyValue.setDataId(jsonObject.getString("unifiedConfigName"));
-        keyValue.setData(jsonObject.getString("unifiedConfigValue"));
+        keyValue.setDataId(jsonObject.getString("configName"));
+        keyValue.setData(jsonObject.getString("configValue"));
         onListener(keyValue);
         return BootResponse.ok();
     }
