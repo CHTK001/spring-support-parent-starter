@@ -1,8 +1,8 @@
 package com.chua.starter.monitor.server.adaptor;
 
 import com.chua.common.support.json.Json;
-import com.chua.oshi.support.Mem;
 import com.chua.socketio.support.session.SocketSessionTemplate;
+import com.chua.starter.monitor.request.MonitorRequest;
 
 import javax.annotation.Resource;
 
@@ -13,18 +13,18 @@ import javax.annotation.Resource;
  * @version 1.0.0
  * @since 2024/02/01
  */
-public class MemAdaptor implements Adaptor<Mem> {
+public class MemAdaptor implements Adaptor<MonitorRequest> {
 
     @Resource
     private SocketSessionTemplate socketSessionTemplate;
     @Override
-    public void doAdaptor(Mem mem) {
+    public void doAdaptor(MonitorRequest mem) {
         socketSessionTemplate.send("mem", Json.toJson(mem));
     }
 
     @Override
-    public Class<Mem> getType() {
-        return Mem.class;
+    public Class<MonitorRequest> getType() {
+        return MonitorRequest.class;
     }
 
     @Override
