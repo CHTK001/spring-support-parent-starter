@@ -10,4 +10,5 @@ package com.chua.starter.monitor.server.constant;
 public interface MonitorConstant {
 
     static String HEART = "monitor:heart:";
+    static String REPORT = "monitor:report:";
 }

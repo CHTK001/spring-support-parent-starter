@@ -65,7 +65,6 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
 
 //    @Bean
 //    @ConditionalOnMissingBean
-//    @Lazy
 //    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
 //        RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
 //        redisTemplate.setConnectionFactory(factory);
