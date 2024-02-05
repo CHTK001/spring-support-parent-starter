@@ -14,7 +14,7 @@ public class ServiceTarget {
 
 
     private String name;
-
+    private String sourceName = "HOST";
     private String sourceHost;
 
     private int sourcePort;

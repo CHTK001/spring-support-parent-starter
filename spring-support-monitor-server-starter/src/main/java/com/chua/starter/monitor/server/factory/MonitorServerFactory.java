@@ -6,7 +6,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.request.MonitorRequest;
 import com.chua.starter.monitor.server.constant.MonitorConstant;
 import com.chua.starter.monitor.server.pojo.ServiceTarget;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -20,11 +20,11 @@ import java.util.stream.Collectors;
  * @version 1.0.0
  * @since 2024/02/01
  */
-@Service
+@Service@SuppressWarnings("ALL")
 public class MonitorServerFactory implements MonitorConstant {
 
     @Resource
-    private StringRedisTemplate stringRedisTemplate;
+    private RedisTemplate stringRedisTemplate;
 
     /**
      * 获取心跳数据
@@ -49,7 +49,7 @@ public class MonitorServerFactory implements MonitorConstant {
         // 遍历所有的心跳数据键
         for (String key : keys) {
             // 从Redis中获取对应键的心跳数据，并将其反序列化为MonitorRequest对象
-            MonitorRequest monitorRequest = Json.fromJson(stringRedisTemplate.opsForValue().get(key), MonitorRequest.class);
+            MonitorRequest monitorRequest = (MonitorRequest) stringRedisTemplate.opsForValue().get(key);
             // 将心跳数据添加到对应的应用名称的列表中
             rs.computeIfAbsent(monitorRequest.getAppName(), it -> new LinkedList<>()).add(monitorRequest);
         }
@@ -95,9 +95,9 @@ public class MonitorServerFactory implements MonitorConstant {
 
     private Set<String> getKeys(String appName, String serverAddress) {
         if(StringUtils.isEmpty(serverAddress)) {
-            return Optional.ofNullable(stringRedisTemplate.keys(REPORT + appName + ":*"))
+            return (Set<String>) Optional.ofNullable(stringRedisTemplate.keys(REPORT + appName + ":*"))
                     .orElse(Collections.emptySet())
-                    .stream().filter(it -> it.endsWith("SERVER"))
+                    .stream().filter(it -> it.toString().endsWith("SERVER"))
                     .collect(Collectors.toSet());
         }
         return Optional.ofNullable(stringRedisTemplate.keys(REPORT + appName + ":" + serverAddress+ ":SERVER"))
