@@ -6,6 +6,7 @@ import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.protocol.annotations.ServiceMapping;
 import com.chua.common.support.protocol.boot.*;
 import com.chua.common.support.utils.Md5Utils;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.processor.AnnotationInjectedBeanPostProcessor;
 import com.chua.starter.monitor.annotation.ConfigValue;
 import com.chua.starter.monitor.entity.KeyValue;
@@ -296,10 +297,9 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
             if (annotation.autoRefreshed()) {
                 String placeholder = resolvePlaceholder(annotation.value());
 
-                if (placeholder == null) {
-                    return;
+                if(StringUtils.isEmpty(placeholder)) {
+                    placeholder = annotation.value();
                 }
-
                 ConfigValueTarget configValueTarget = new ConfigValueTarget(bean, beanName, method, field);
                 put2ListMap(placeholderConfigValueTargetMap, placeholder, configValueTarget);
             }

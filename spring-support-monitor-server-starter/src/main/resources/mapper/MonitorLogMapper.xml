@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.monitor.server.mapper.MonitorLogMapper">
+  <resultMap id="BaseResultMap" type="com.chua.starter.monitor.server.entity.MonitorLog">
+    <!--@mbg.generated-->
+    <!--@Table monitor_log-->
+    <id column="log_id" jdbcType="INTEGER" property="logId" />
+    <result column="log_module_type" jdbcType="VARCHAR" property="logModuleType" />
+    <result column="log_command_type" jdbcType="VARCHAR" property="logCommandType" />
+    <result column="log_content" jdbcType="LONGVARCHAR" property="logContent" />
+    <result column="log_appname" jdbcType="VARCHAR" property="logAppname" />
+    <result column="log_profile" jdbcType="VARCHAR" property="logProfile" />
+    <result column="log_host" jdbcType="VARCHAR" property="logHost" />
+    <result column="log_port" jdbcType="INTEGER" property="logPort" />
+    <result column="log_code" jdbcType="VARCHAR" property="logCode" />
+    <result column="log_msg" jdbcType="VARCHAR" property="logMsg" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    log_id, log_module_type, log_command_type, log_content, log_appname, log_profile, 
+    log_host, log_port, log_code, log_msg
+  </sql>
+</mapper>
