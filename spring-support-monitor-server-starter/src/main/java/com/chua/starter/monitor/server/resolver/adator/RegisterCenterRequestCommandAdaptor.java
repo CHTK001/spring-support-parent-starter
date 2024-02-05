@@ -24,7 +24,7 @@ import java.util.List;
  * @author CH
  * @since 2023/11/16
  */
-@Spi("request")
+@Spi("register_center_request")
 public class RegisterCenterRequestCommandAdaptor implements CommandAdaptor{
 
 
@@ -40,9 +40,25 @@ public class RegisterCenterRequestCommandAdaptor implements CommandAdaptor{
         if(StringUtils.isEmpty(appName)) {
             return BootResponse.empty();
         }
+
+        ServiceInstance serviceInstance = getServiceInstance(appName);
+        if(null == serviceInstance) {
+            return BootResponse.empty();
+        }
+
+        return BootResponse.builder()
+                .data(BootResponse.DataDTO.builder()
+                        .commandType(CommandType.RESPONSE)
+                        .content(Json.toJson(serviceInstance))
+                        .build())
+                .build();
+    }
+
+
+    public ServiceInstance getServiceInstance(String appName) {
         List<MonitorRequest> heart = monitorServerFactory.getHeart(appName);
         if(CollectionUtils.isEmpty(heart)) {
-            return BootResponse.empty();
+            return null;
         }
         Robin robin = ServiceProvider.of(Robin.class).getNewExtension(monitorProtocolProperties.getBalance());
 
@@ -65,11 +81,6 @@ public class RegisterCenterRequestCommandAdaptor implements CommandAdaptor{
         serviceInstance1.setName(request1.getAppName());
         serviceInstance1.setHost(request1.getServerHost());
 
-        return BootResponse.builder()
-                .data(BootResponse.DataDTO.builder()
-                        .commandType(CommandType.RESPONSE)
-                        .content(Json.toJson(serviceInstance1))
-                        .build())
-                .build();
+        return serviceInstance1;
     }
 }
