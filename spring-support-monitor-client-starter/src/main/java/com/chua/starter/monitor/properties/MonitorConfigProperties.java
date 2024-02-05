@@ -23,4 +23,6 @@ public class MonitorConfigProperties {
      */
     private String configAppName;
 
+
+
 }

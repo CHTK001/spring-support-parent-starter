@@ -127,7 +127,7 @@ public class MonitorFactory implements AutoCloseable {
                 }
             } catch (Throwable ignored) {
             }
-        }, 0, 70, TimeUnit.SECONDS);
+        }, 0, monitorReportProperties.getReportTime(), TimeUnit.SECONDS);
     }
 
     private MonitorRequest createMonitorRequest() {
