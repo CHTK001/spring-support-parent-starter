@@ -22,4 +22,9 @@ public class MonitorReportProperties {
     public static final String PRE = "plugin.monitor.report";
 
     private List<String> plugins = Lists.newArrayList("jvm");
+
+    /**
+     * 报告时间
+     */
+    private long reportTime = 70;
 }

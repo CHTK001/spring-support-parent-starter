@@ -10,7 +10,7 @@ import com.chua.oshi.support.Oshi;
  * @version 1.0.0
  * @since 2024/02/01
  */
-@Spi("mem")
+@Spi("memory")
 public class SystemMemReport implements Report{
     @Override
     public Object report() {
