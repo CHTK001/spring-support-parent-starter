@@ -103,4 +103,15 @@ public class MonitorServerFactory implements MonitorConstant {
         return Optional.ofNullable(stringRedisTemplate.keys(REPORT + appName + ":" + serverAddress+ ":SERVER"))
                 .orElse(Collections.emptySet());
     }
+
+    /**
+     * 列表系统
+     *
+     * @return {@link List}<{@link ServiceTarget}>
+     */
+    public List<ServiceTarget> listSys() {
+        Set keys = stringRedisTemplate.keys(HEART + "*");
+
+        return Collections.emptyList();
+    }
 }

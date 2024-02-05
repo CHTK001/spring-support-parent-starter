@@ -1,8 +1,8 @@
 package com.chua.starter.monitor.server.adaptor;
 
 import com.chua.common.support.json.Json;
-import com.chua.oshi.support.Cpu;
 import com.chua.socketio.support.session.SocketSessionTemplate;
+import com.chua.starter.monitor.request.MonitorRequest;
 
 import javax.annotation.Resource;
 
@@ -13,18 +13,18 @@ import javax.annotation.Resource;
  * @version 1.0.0
  * @since 2024/02/01
  */
-public class CpuAdaptor implements Adaptor<Cpu> {
+public class CpuAdaptor implements Adaptor<MonitorRequest> {
 
     @Resource
     private SocketSessionTemplate socketSessionTemplate;
     @Override
-    public void doAdaptor(Cpu cpu) {
+    public void doAdaptor(MonitorRequest cpu) {
         socketSessionTemplate.send("cpu", Json.toJson(cpu));
     }
 
     @Override
-    public Class<Cpu> getType() {
-        return Cpu.class;
+    public Class<MonitorRequest> getType() {
+        return MonitorRequest.class;
     }
 
     @Override
