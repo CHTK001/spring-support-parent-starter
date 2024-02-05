@@ -14,5 +14,7 @@ public class KeyValue {
 
     private String data;
 
+    private String profile;
+
     private String dataType;
 }
