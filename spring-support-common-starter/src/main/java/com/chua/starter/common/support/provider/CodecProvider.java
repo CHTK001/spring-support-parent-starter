@@ -3,6 +3,7 @@ package com.chua.starter.common.support.provider;
 import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.crypto.CodecKeyPair;
 import com.chua.common.support.matcher.PathMatcher;
+import com.chua.common.support.utils.DigestUtils;
 import com.chua.starter.common.support.properties.CodecProperties;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -50,7 +51,9 @@ public class CodecProvider {
         CodecKeyPair codecKeyPair = (CodecKeyPair) codec;
         String publicKeyHex = codecKeyPair.getPublicKeyHex();
         String encode = codecKeyPair.encode(data, publicKeyHex);
-        return new CodecResult(codecKeyPair.getPrivateKeyHex(), encode);
+        String nanoTime = System.nanoTime() + "000";
+        String encrypt = DigestUtils.aesEncrypt(codecKeyPair.getPrivateKeyHex(), nanoTime);
+        return new CodecResult(encrypt, encode, nanoTime);
     }
 
     public void setEnable(boolean parseBoolean) {
@@ -84,5 +87,10 @@ public class CodecProvider {
         private String key;
 
         private String data;
+
+        /**
+         * 时间戳
+         */
+        private String timestamp;
     }
 }
