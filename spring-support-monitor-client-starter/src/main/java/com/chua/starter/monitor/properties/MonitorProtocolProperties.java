@@ -29,9 +29,9 @@ public class MonitorProtocolProperties {
     private String encryptionKey = "123456";
 
     /**
-     * 统一服务端地址
+     * 当前服务器地址(多网卡指定使用)
      */
-    private String host = "127.0.0.1";
+    private String host = NetUtils.getLocalHost();
     /**
      * 客户端绑定的端口
      */
