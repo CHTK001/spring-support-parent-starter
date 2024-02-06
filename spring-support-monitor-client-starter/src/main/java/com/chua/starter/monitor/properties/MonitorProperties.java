@@ -1,6 +1,5 @@
 package com.chua.starter.monitor.properties;
 
-import com.chua.common.support.net.NetUtils;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -22,9 +21,6 @@ public class MonitorProperties {
      * 打开
      */
     private boolean enable = true;
-
-
-    private String address = NetUtils.getLocalHost();
 
     /**
      * 保活时间(s)
