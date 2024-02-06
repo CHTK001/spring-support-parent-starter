@@ -52,39 +52,47 @@ public class MonitorAppServiceImpl extends ServiceImpl<MonitorAppMapper, Monitor
         ThreadUtils.newStaticThreadPool().execute(() -> {
             for (MonitorRequest monitorRequest : heart) {
                 try {
-                    upload(config, monitorRequest);
+                    upload(config, monitorRequest, Json.toJSONString(config), CONFIG, CommandType.REGISTER);
                 } catch (Exception ignored) {
                 }
             }
         });
     }
 
-    private void upload(MonitorConfig config, MonitorRequest monitorRequest) {
+    /**
+     * 上载
+     *
+     * @param config         配置
+     * @param monitorRequest 监视器请求
+     * @return {@link BootResponse}
+     */
+    @Override
+    public BootResponse upload(MonitorConfig config, MonitorRequest monitorRequest, String content, ModuleType moduleType, CommandType commandType) {
         Object data = monitorRequest.getData();
         if(null == data) {
-            return;
+            return null;
         }
 
         MonitorProtocolProperties monitorProtocolProperties = BeanUtils.copyProperties(data, MonitorProtocolProperties.class);
         BootOption bootOption = BootOption.builder()
-                .address(monitorProtocolProperties.getHost() + ":" + monitorProtocolProperties.getPort() + "/config")
+                .address(monitorProtocolProperties.getHost() + ":" + monitorProtocolProperties.getPort() + "/" + moduleType.name().toLowerCase())
                 .heartbeat(false)
                 .encryptionSchema(monitorProtocolProperties.getEncryptionSchema())
                 .encryptionKey(monitorProtocolProperties.getEncryptionKey())
-                .profile(config.getConfigProfile())
-                .appName(config.getConfigAppname()).build();
+                .profile(null == config ? "default" : config.getConfigProfile())
+                .appName(null == config ? monitorRequest.getAppName() : config.getConfigAppname()).build();
         Protocol protocol = ServiceProvider.of(Protocol.class).getNewExtension(monitorProtocolProperties.getProtocol(), bootOption);
         if(null == protocol) {
-            return;
+            return BootResponse.empty();
         }
 
         ProtocolClient protocolClient = protocol.createClient();
         BootResponse bootResponse = protocolClient.get(BootRequest.builder()
-                .profile(config.getConfigProfile())
-                .content(Json.toJSONString(config))
-                .appName(config.getConfigAppname())
-                .moduleType(CONFIG)
-                .commandType(CommandType.REGISTER)
+                .profile(null == config ? "default" : config.getConfigProfile())
+                .content(content)
+                .appName(null == config ? monitorRequest.getAppName() : config.getConfigAppname())
+                .moduleType(moduleType)
+                .commandType(commandType)
                 .build());
 
         try {
@@ -93,14 +101,16 @@ public class MonitorAppServiceImpl extends ServiceImpl<MonitorAppMapper, Monitor
             monitorLog.setLogMsg(null == bootResponse ? null : bootResponse.getMsg());
             monitorLog.setLogHost(monitorProtocolProperties.getHost());
             monitorLog.setLogPort(monitorProtocolProperties.getPort());
-            monitorLog.setLogModuleType(CONFIG);
-            monitorLog.setLogCommandType(CommandType.REGISTER);
-            monitorLog.setLogProfile(config.getConfigProfile());
-            monitorLog.setLogAppname(config.getConfigAppname());
-            monitorLog.setLogContent(Json.toJSONString(config));
+            monitorLog.setLogModuleType(moduleType);
+            monitorLog.setLogCommandType(commandType);
+            monitorLog.setLogProfile(null == config ? "default" : config.getConfigProfile());
+            monitorLog.setLogAppname(null == config ? monitorRequest.getAppName() : config.getConfigAppname());
+            monitorLog.setLogContent(content);
 
             monitorLogService.save(monitorLog);
         } catch (Exception ignored) {
         }
+
+        return bootResponse;
     }
 }
