@@ -24,7 +24,7 @@ public class MonitorReportProperties {
     private List<String> plugins = Lists.newArrayList("jvm");
 
     /**
-     * 报告时间
+     * 报告时间(s)
      */
-    private long reportTime = 70;
+    private long reportTime = 10;
 }

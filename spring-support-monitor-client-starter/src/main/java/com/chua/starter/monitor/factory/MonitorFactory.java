@@ -167,11 +167,11 @@ public class MonitorFactory implements AutoCloseable {
 
     public void register(MonitorProperties monitorProperties) {
         this.monitorProperties = monitorProperties;
-        this.serverHost = StringUtils.defaultString(monitorProtocolProperties.getHost(), environment.resolvePlaceholders("${server.address:}"));
     }
 
     public void register(MonitorProtocolProperties monitorProtocolProperties) {
         this.monitorProtocolProperties = monitorProtocolProperties;
+        this.serverHost = StringUtils.defaultString(monitorProtocolProperties.getHost(), environment.resolvePlaceholders("${server.address:}"));
     }
 
     public void register(MonitorConfigProperties monitorConfigProperties) {
