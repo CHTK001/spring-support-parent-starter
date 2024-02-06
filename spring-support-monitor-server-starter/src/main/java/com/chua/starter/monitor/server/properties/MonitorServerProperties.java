@@ -45,5 +45,5 @@ public class MonitorServerProperties {
     /**
      * 报表数据保持活动(s)
      */
-    private long reportDataKeepAlive = 24 * 60 * 60;
+    private long reportDataKeepAlive = 60 * 60L;
 }
