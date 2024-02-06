@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.UUID;
 
 /**
  * @author CH
@@ -56,11 +55,12 @@ public class CodeResponseBodyAdvice implements ResponseBodyAdvice<Object> {
             if(null != aBoolean && !aBoolean) {
                 return o;
             }
+
             HttpHeaders headers = serverHttpResponse.getHeaders();
             JsonObject jsonObject = new JsonObject();
             CodecProvider.CodecResult codecResult = codecProvider.encode(Json.toJson(o));
             headers.set("access-control-origin-key", codecResult.getKey());
-            headers.set("access-control-codec", UUID.randomUUID().toString());
+            headers.set("access-control-timestamp-user", codecResult.getTimestamp());
             jsonObject.put("data", RandomUtils.randomInt(1) + "200" + codecResult.getData() + "ffff");
             return jsonObject;
         }
