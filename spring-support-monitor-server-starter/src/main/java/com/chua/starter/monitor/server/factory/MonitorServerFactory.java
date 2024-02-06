@@ -39,6 +39,19 @@ public class MonitorServerFactory implements MonitorConstant {
         }
         return new ArrayList<>(stringListMap.get(appName));
     }
+    /**
+     * 获取心跳数据
+     * @return 心跳数据的映射表，以应用名称为键，心跳数据列表为值
+     */
+    public MonitorRequest getHeart(String appName, String appModel) {
+        // 获取所有的心跳数据键
+        Set<String> keys = stringRedisTemplate.keys(HEART + appName + ":" + appModel);
+        Map<String, List<MonitorRequest>> stringListMap = create(keys);
+        if(stringListMap.isEmpty()) {
+            return null;
+        }
+        return CollectionUtils.findFirst(stringListMap.get(appName));
+    }
 
     private Map<String, List<MonitorRequest>> create(Set<String> keys) {
         if(CollectionUtils.isEmpty(keys)) {

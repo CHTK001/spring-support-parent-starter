@@ -22,6 +22,12 @@
             <groupId>com.chua</groupId>
             <artifactId>spring-support-common-starter</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-shell-starter</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-oshi-starter</artifactId>
@@ -40,12 +46,6 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-zbus-starter</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.benf</groupId>
-            <artifactId>cfr</artifactId>
-            <version>0.152</version>
         </dependency>
 
 
