@@ -1,6 +1,7 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
   com.chua.starter.monitor.configuration.MonitorConfiguration,\
   com.chua.starter.monitor.configuration.ConfigValueConfiguration,\
-  com.chua.starter.monitor.configuration.ShellConfiguration
+  com.chua.starter.monitor.configuration.ShellConfiguration,\
+  com.chua.starter.monitor.configuration.ShellBeanDefinitionRegistryPostProcessor
 org.springframework.context.ApplicationListener=\
   com.chua.starter.monitor.listener.StartupTimeListener
