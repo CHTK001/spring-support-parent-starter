@@ -58,7 +58,7 @@ public class DefaultSocketSessionResolver implements SocketSessionResolver{
                 OnEvent onEvent = method.getDeclaredAnnotation(OnEvent.class);
                 if(null != onEvent) {
                     ReflectionUtils.makeAccessible(method);
-                    disconnect.add(new SocketInfo(socketIOListener, method, onEvent.value()));
+                    data.add(new SocketInfo(socketIOListener, method, onEvent.value()));
                     return;
                 }
             });
