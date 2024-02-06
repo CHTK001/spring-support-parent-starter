@@ -139,25 +139,37 @@ public class DefaultSocketSessionResolver implements SocketSessionResolver{
 
         public void invoke(SocketIOClient client, String data) {
             int parameterCount = method.getParameterCount();
-            if(parameterCount == 1) {
-                Parameter parameter = method.getParameters()[0];
-                Class<?> type = parameter.getType();
-                try {
-                    Object treeToValue = objectMapper.treeToValue(objectMapper.readTree(data), type);
-                    method.invoke(bean, treeToValue);
-                } catch (Exception e) {
-                    log.error("{}", e.getMessage());
-                }
-                return;
+            Object[] args = new Object[parameterCount];
+            Parameter[] parameters = method.getParameters();
+            for (int i = 0; i < parameters.length; i++) {
+                Parameter parameter = parameters[i];
+                args[i] = createParameter(parameter, client, data);
+            }
+            try {
+                method.invoke(bean, args);
+            } catch (Exception e) {
+                log.error("{}", e.getMessage());
+            }
+        }
+
+        private Object createParameter(Parameter parameter, SocketIOClient client, String data) {
+            Class<?> type = parameter.getType();
+            if(SocketIOClient.class.isAssignableFrom(type)) {
+                return client;
             }
 
-            if(parameterCount == 0) {
-                try {
-                    method.invoke(bean);
-                } catch (Exception e) {
-                    log.error("{}", e.getMessage());
-                }
-                return;
+            if(SocketSession.class.isAssignableFrom(type)) {
+                return new SocketSession(client);
+            }
+
+            if(String.class.isAssignableFrom(type)) {
+                return data;
+            }
+
+            try {
+                return objectMapper.treeToValue(objectMapper.readTree(data), type);
+            } catch (Exception e) {
+                return null;
             }
         }
     }
