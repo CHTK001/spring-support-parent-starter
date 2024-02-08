@@ -1,5 +1,6 @@
 package com.chua.socketio.support.session;
 
+import com.chua.socketio.support.properties.SocketIoProperties;
 import com.corundumstudio.socketio.SocketIOClient;
 
 import java.util.Map;
@@ -12,9 +13,15 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DelegateSocketSessionFactory implements SocketSessionTemplate {
 
     private final Map<String, SocketSession> cache = new ConcurrentHashMap<>();
+    private final SocketIoProperties socketIoProperties;
+
+    public DelegateSocketSessionFactory(SocketIoProperties socketIoProperties) {
+        this.socketIoProperties = socketIoProperties;
+    }
+
     @Override
     public SocketSession save(SocketIOClient client) {
-        SocketSession socketSession = new SocketSession(client);
+        SocketSession socketSession = new SocketSession(client, socketIoProperties);
         cache.put(client.getSessionId().toString(), socketSession);
         return socketSession;
     }
