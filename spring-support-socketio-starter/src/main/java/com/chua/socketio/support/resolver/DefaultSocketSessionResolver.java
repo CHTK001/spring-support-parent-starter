@@ -3,6 +3,7 @@ package com.chua.socketio.support.resolver;
 import com.chua.socketio.support.SocketIOListener;
 import com.chua.socketio.support.annotations.OnConnect;
 import com.chua.socketio.support.annotations.OnEvent;
+import com.chua.socketio.support.properties.SocketIoProperties;
 import com.chua.socketio.support.server.DelegateSocketIOServer;
 import com.chua.socketio.support.session.SocketSession;
 import com.corundumstudio.socketio.AckRequest;
@@ -28,6 +29,7 @@ import java.util.List;
  * @since 2024/01/18
  */
 public class DefaultSocketSessionResolver implements SocketSessionResolver{
+    private final SocketIoProperties socketIoProperties;
     private List<SocketIOListener> listenerList;
     private final List<SocketInfo> connect = new LinkedList<>();
     private final List<SocketInfo> disconnect = new LinkedList<>();
@@ -35,7 +37,8 @@ public class DefaultSocketSessionResolver implements SocketSessionResolver{
 
     private static ObjectMapper objectMapper = new ObjectMapper();
 
-    public DefaultSocketSessionResolver(List<SocketIOListener> listenerList) {
+    public DefaultSocketSessionResolver(List<SocketIOListener> listenerList, SocketIoProperties socketIoProperties) {
+        this.socketIoProperties = socketIoProperties;
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         this.listenerList = listenerList;
         for (SocketIOListener socketIOListener : listenerList) {
@@ -44,21 +47,21 @@ public class DefaultSocketSessionResolver implements SocketSessionResolver{
                 OnConnect onConnect = method.getDeclaredAnnotation(OnConnect.class);
                 if(null != onConnect) {
                     ReflectionUtils.makeAccessible(method);
-                    connect.add(new SocketInfo(socketIOListener, method, null));
+                    connect.add(new SocketInfo(socketIOListener, method, null, socketIoProperties));
                     return;
                 }
 
                 OnDisconnect onDisconnect = method.getDeclaredAnnotation(OnDisconnect.class);
                 if(null != onDisconnect) {
                     ReflectionUtils.makeAccessible(method);
-                    disconnect.add(new SocketInfo(socketIOListener, method, null));
+                    disconnect.add(new SocketInfo(socketIOListener, method, null, socketIoProperties));
                     return;
                 }
 
                 OnEvent onEvent = method.getDeclaredAnnotation(OnEvent.class);
                 if(null != onEvent) {
                     ReflectionUtils.makeAccessible(method);
-                    data.add(new SocketInfo(socketIOListener, method, onEvent.value()));
+                    data.add(new SocketInfo(socketIOListener, method, onEvent.value(), socketIoProperties));
                     return;
                 }
             });
@@ -107,6 +110,8 @@ public class DefaultSocketSessionResolver implements SocketSessionResolver{
 
         private String name;
 
+        private SocketIoProperties socketIoProperties;
+
 
         public void invoke(SocketIOClient client) {
             int parameterCount = method.getParameterCount();
@@ -119,7 +124,7 @@ public class DefaultSocketSessionResolver implements SocketSessionResolver{
                     }
 
                     if(type == SocketSession.class || type == Object.class) {
-                        method.invoke(bean, new SocketSession(client));
+                        method.invoke(bean, new SocketSession(client, socketIoProperties));
                     }
                 } catch (Exception e) {
                     log.error("{}", e.getMessage());
@@ -159,7 +164,7 @@ public class DefaultSocketSessionResolver implements SocketSessionResolver{
             }
 
             if(SocketSession.class.isAssignableFrom(type)) {
-                return new SocketSession(client);
+                return new SocketSession(client, socketIoProperties);
             }
 
             if(String.class.isAssignableFrom(type)) {
