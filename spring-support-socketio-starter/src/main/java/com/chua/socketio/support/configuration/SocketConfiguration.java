@@ -36,8 +36,8 @@ public class SocketConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = SocketIoProperties.PRE, name = "open", havingValue = "true", matchIfMissing = false)
-    public SocketSessionTemplate socketSessionFactory() {
-        return new DelegateSocketSessionFactory();
+    public SocketSessionTemplate socketSessionFactory( SocketIoProperties properties) {
+        return new DelegateSocketSessionFactory(properties);
     }
     @Bean
     @ConditionalOnMissingBean
@@ -47,7 +47,7 @@ public class SocketConfiguration {
                                                  SocketSessionTemplate socketSessionTemplate,
                                                  List<SocketIOListener> listenerList) {
         DelegateSocketIOServer socketIOServer = new DelegateSocketIOServer(configuration);
-        SocketSessionResolver socketSessionResolver = new DefaultSocketSessionResolver(listenerList);
+        SocketSessionResolver socketSessionResolver = new DefaultSocketSessionResolver(listenerList, properties);
 
         socketIOServer.addConnectListener(new ConnectListener() {
            @Override

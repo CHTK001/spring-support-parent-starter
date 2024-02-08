@@ -16,6 +16,11 @@ public class SocketIoProperties {
 
 
     public static final String PRE = "plugin.socket";
+
+    /**
+     * 编解码器类型
+     */
+    private String codecType = "sm2";
     /**
      * 是否开启
      */
