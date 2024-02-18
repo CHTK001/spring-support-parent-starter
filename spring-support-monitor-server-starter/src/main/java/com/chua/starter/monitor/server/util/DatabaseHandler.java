@@ -274,7 +274,7 @@ public class DatabaseHandler implements AutoCloseable{
             if(!Column.getName().equals(column.getName()) ||
                     !Column.getJdbcType().equals(column.getJdbcType()) ||
                     Column.getPrecision() != Optional.ofNullable(column.getPrecision()).orElse(0) ||
-                    !Column.getComment().equals(column.getComment()) ||
+                    (null != Column.getComment() && !Column.getComment().equals(column.getComment())) ||
                     Column.getLength() != column.getLength()
             ) {
                 rs.add(column);
