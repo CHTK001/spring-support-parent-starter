@@ -1,0 +1,88 @@
+package ${packageName}.controller;
+
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import ${packageName}.entity.${ClassName};
+import ${packageName}.query.PageQuery;
+import ${packageName}.service.${ClassName}Service;
+import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.lang.code.ReturnPageResult;
+import com.chua.starter.mybatis.utils.PageResultUtils;
+import com.chua.starter.common.support.result.Result;
+import com.chua.starter.gen.support.validator.group.AddGroup;
+
+import javax.annotation.Resource;
+import java.util.Arrays;
+/**
+ * ${functionName}
+ *
+ * @author ${author}
+ * @since  ${datetime}
+ */
+@RestController
+    #if($version)
+    @RequestMapping("/${version}/${businessName}")
+    #else
+    @RequestMapping("/${moduleName}/${businessName}")
+    #end
+public class ${ClassName}Controller {
+
+    @Resource
+    private ${ClassName}Service ${className}Service;
+
+    /**
+     * 查询${functionName}列表
+     * @param query 查询条件
+     */
+    @GetMapping("/page")
+    public ReturnPageResult<${Entity}> queryPage(PageQuery<${Entity}> query) {
+        return PageResultUtils.ok(${className}Service.page(new Page<${Entity}>(query.getPageNum(), query.getPageSize())));
+    }
+
+    /**
+     * 获取${functionName}详细信息
+     *
+     * @param ${pkColumn.colJavaField} 主键
+     */
+    @GetMapping(value = "/info")
+    public ReturnResult<${ClassName}> getInfo(${pkColumn.colJavaType} ${pkColumn.colJavaField}) {
+        return Result.success(${className}Service.getById(${pkColumn.colJavaField}));
+    }
+
+    /**
+     * 新增${functionName}
+     */
+    @PostMapping("/save")
+    public Result<${ClassName}> save(@Validated(AddGroup.class) @RequestBody ${ClassName} ${className}) {
+            ${className}Service.save(${className});
+        return Result.success(${className});
+    }
+
+    /**
+     * 修改${functionName}
+     */
+    @PutMapping("/update")
+    public Result<Boolean> update(@RequestBody ${ClassName} ${className}) {
+        return Result.success(${className}Service.updateById(${className}));
+    }
+
+    /**
+     * 删除${functionName}
+     *
+     * @param ${pkColumn.colJavaField}s 主键串
+     */
+    @DeleteMapping("/delete")
+    public ReturnResult<Boolean> delete(String ${pkColumn.colJavaField}s) {
+        if(null == ${pkColumn.colJavaField}s) {
+            return Result.illegal(false, "数据不存在");
+        }
+        return Result.success(${className}Service.removeByIds(Arrays.asList(${pkColumn.colJavaField}s.split(","))));
+    }
+}
