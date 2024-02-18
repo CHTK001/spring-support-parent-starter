@@ -169,23 +169,27 @@ public class SessionController {
         }
         StringBuilder stringBuffer = new StringBuilder();
         long startTime = System.nanoTime();
-        Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions());
-        SessionResultSet sessionResultSet = null;
-        try {
-            sessionResultSet = session.executeQuery("explain " + explainQuery.getContent(), explainQuery);
-            stringBuffer.append("explain\r\n " + HighlightingFormatter.INSTANCE.format(SqlFormatter.format(explainQuery.getContent())));
-        } catch (Exception e) {
-            String localizedMessage = e.getLocalizedMessage();
-            if(null != localizedMessage) {
-                int i = localizedMessage.indexOf(SYMBOL_EXCEPTION);
-                while (i > -1) {
-                    localizedMessage = localizedMessage.substring(SYMBOL_EXCEPTION.length() + i + 1);
-                    i = localizedMessage.indexOf(SYMBOL_EXCEPTION);
+        SessionResultSet sessionResultSet;
+        try (Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions())) {
+            sessionResultSet = null;
+            try {
+                sessionResultSet = session.executeQuery("explain " + explainQuery.getContent(), explainQuery);
+                stringBuffer.append("explain\r\n " + HighlightingFormatter.INSTANCE.format(SqlFormatter.format(explainQuery.getContent())));
+            } catch (Exception e) {
+                String localizedMessage = e.getLocalizedMessage();
+                if (null != localizedMessage) {
+                    int i = localizedMessage.indexOf(SYMBOL_EXCEPTION);
+                    while (i > -1) {
+                        localizedMessage = localizedMessage.substring(SYMBOL_EXCEPTION.length() + i + 1);
+                        i = localizedMessage.indexOf(SYMBOL_EXCEPTION);
+                    }
+                    stringBuffer.append(localizedMessage);
                 }
-                stringBuffer.append(localizedMessage);
-            }
 
-            return ReturnResult.illegal();
+                return ReturnResult.illegal();
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
         long toMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
         stringBuffer.append("\r\n").append("耗时: ").append(toMillis);
@@ -266,13 +270,17 @@ public class SessionController {
             return ReturnResult.error("未配置生成器类型");
         }
 
-        Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions());
-        SessionResultSet sessionResultSet = null;
-        try {
-            sessionResultSet = session.log(executeQuery);
+        SessionResultSet sessionResultSet;
+        try (Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions())) {
+            sessionResultSet = null;
+            try {
+                sessionResultSet = session.log(executeQuery);
+            } catch (Exception e) {
+                log.error("", e);
+                return ReturnResult.illegal();
+            }
         } catch (Exception e) {
-            log.error("", e);
-            return ReturnResult.illegal();
+            throw new RuntimeException(e);
         }
         if(sessionResultSet.hasMessage()) {
             return ReturnResult.illegal(sessionResultSet.getMessage());
@@ -300,13 +308,17 @@ public class SessionController {
             return ReturnResult.error("未配置生成器类型");
         }
 
-        Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions());
-        SessionInfo sessionInfo = null;
-        try {
-            sessionInfo = session.info();
+        SessionInfo sessionInfo;
+        try (Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions())) {
+            sessionInfo = null;
+            try {
+                sessionInfo = session.info();
+            } catch (Exception e) {
+                log.error("", e);
+                return ReturnResult.illegal(e);
+            }
         } catch (Exception e) {
-            log.error("", e);
-            return ReturnResult.illegal(e);
+            throw new RuntimeException(e);
         }
         if(sessionInfo.hasMessage()) {
             return ReturnResult.illegal(sessionInfo.getMessage());
@@ -468,14 +480,13 @@ public class SessionController {
                     result = IoUtils.toByteArray(fis);
                 }
             } else {
-                try {
-                    Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions());
-                    result = session.previewDoc(query);
-                    if(session.docCache()) {
-                        try(OutputStream os = new FileOutputStream(file)) {
-                            IoUtils.write(result, os);
+                try (Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions())) {
+                        result = session.previewDoc(query);
+                        if (session.docCache()) {
+                            try (OutputStream os = new FileOutputStream(file)) {
+                                IoUtils.write(result, os);
+                            }
                         }
-                    }
                 } catch (Exception e) {
                     if(null == result) {
                         return ResponseEntity
@@ -516,22 +527,20 @@ public class SessionController {
         File mkdir = FileUtils.mkdir(new File(genProperties.getTempPath(), sysGen.getGenId() + ""));
         File file = new File(mkdir, "doc");
         file = new File(file, sysGen.getGenId() + ".html");
-        try {
-            if(file.exists()) {
-                try {
-                    FileUtils.forceDelete(file);
-                } catch (IOException ignored) {
-                }
+        if(file.exists()) {
+            try {
+                FileUtils.forceDelete(file);
+            } catch (IOException ignored) {
             }
-            Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions());
+        }
+        try (Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions())) {
             try (FileOutputStream fileOutputStream = new FileOutputStream(file)) {
                 IoUtils.write(session.previewDoc(query), fileOutputStream);
             }
-            return ReturnResult.ok(true);
-        } catch (IOException e) {
-            log.error("", e);
-            return ReturnResult.illegal();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
+        return ReturnResult.ok(true);
     }
 
     /**
@@ -551,13 +560,17 @@ public class SessionController {
         if (StringUtils.isEmpty(sysGen.getGenType())) {
             return ResponseEntity.notFound().build();
         }
-        Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions());
-        byte[] result = null;
-        try {
-            result = session.previewDoc(query);
+        byte[] result;
+        try (Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions())) {
+            result = null;
+            try {
+                result = session.previewDoc(query);
+            } catch (Exception e) {
+                log.error("", e);
+                return ResponseEntity.notFound().build();
+            }
         } catch (Exception e) {
-            log.error("", e);
-            return ResponseEntity.notFound().build();
+            throw new RuntimeException(e);
         }
         return ResponseEntity
                 .ok()
