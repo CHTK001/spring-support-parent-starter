@@ -63,37 +63,42 @@ public class JdbcSessionDoc implements SessionDoc {
                 // 忽略表名
                 .ignoreTableName(Splitter.on(',').trimResults().omitEmptyStrings().splitToList(query.getIgnoreTableName())).build();
         // 配置
-        HikariConfig hikariConfig = new HikariConfig();
-        hikariConfig.setUsername(databaseOptions.getUsername());
-        hikariConfig.setPassword(databaseOptions.getPassword());
-        hikariConfig.setJdbcUrl(databaseOptions.getUrl());
-        hikariConfig.setDriverClassName(databaseOptions.getDriver());
-        HikariDataSource hikariDataSource = new HikariDataSource(hikariConfig);
-        Configuration config = Configuration.builder()
-                // 版本
-                .version("1.0.0")
-                // 描述
-                .description("数据库说明文档")
-                // 数据源
-                .dataSource(hikariDataSource)
-                // 生成配置
-                .engineConfig(engineConfig)
-                // 生成配置
-                .produceConfig(processConfig).build();
-
-        // 执行生成
+        HikariDataSource hikariDataSource = null;
         try {
-            long start = System.currentTimeMillis();
-            //处理数据
-            DataModel dataModel = new DataModelProcess(config).process();
-            String docName = getDocName(dataModel.getDatabase(), config);
-            //产生文档
-            TemplateEngine produce = new EngineFactory(config.getEngineConfig()).newInstance();
-            produce.produce(dataModel, docName);
-            File file = new File("./doc", docName + "." + engineFileType.name().toLowerCase());
+            HikariConfig hikariConfig = new HikariConfig();
+            hikariConfig.setUsername(databaseOptions.getUsername());
+            hikariConfig.setPassword(databaseOptions.getPassword());
+            hikariConfig.setJdbcUrl(databaseOptions.getUrl());
+            hikariConfig.setDriverClassName(databaseOptions.getDriver());
+            hikariDataSource = new HikariDataSource(hikariConfig);
+            Configuration config = Configuration.builder()
+                    // 版本
+                    .version("1.0.0")
+                    // 描述
+                    .description("数据库说明文档")
+                    // 数据源
+                    .dataSource(hikariDataSource)
+                    // 生成配置
+                    .engineConfig(engineConfig)
+                    // 生成配置
+                    .produceConfig(processConfig).build();
 
-            return IoUtils.toByteArray(Files.newInputStream(file.toPath()));
-        } catch (Exception ignored) {
+            // 执行生成
+            try {
+                long start = System.currentTimeMillis();
+                //处理数据
+                DataModel dataModel = new DataModelProcess(config).process();
+                String docName = getDocName(dataModel.getDatabase(), config);
+                //产生文档
+                TemplateEngine produce = new EngineFactory(config.getEngineConfig()).newInstance();
+                produce.produce(dataModel, docName);
+                File file = new File("./doc", docName + "." + engineFileType.name().toLowerCase());
+
+                return IoUtils.toByteArray(Files.newInputStream(file.toPath()));
+            } catch (Exception ignored) {
+            }
+        } finally {
+            IoUtils.closeQuietly(hikariDataSource);
         }
         return new byte[0];
     }
