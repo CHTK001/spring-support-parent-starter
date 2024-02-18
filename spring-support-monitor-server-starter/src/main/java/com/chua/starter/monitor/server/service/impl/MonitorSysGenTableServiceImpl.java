@@ -155,58 +155,65 @@ public class MonitorSysGenTableServiceImpl extends ServiceImpl<SysGenTableMapper
      */
     private void generatorCode(String tabId, ZipOutputStream zip, Download download) {
         // 查询表信息
-        MonitorSysGenTable sysGenTable = baseMapper.selectById(tabId);
-        List<MonitorSysGenColumn> sysGenColumns = sysGenColumnService.list(Wrappers.<MonitorSysGenColumn>lambdaQuery().eq(MonitorSysGenColumn::getTabId, tabId));
-        VelocityInitializer.initVelocity();
-        // 设置主键列信息
-        setPkColumn(sysGenTable, sysGenColumns);
+        List<MonitorSysGenTable> sysGenTables = baseMapper.selectList(Wrappers.<MonitorSysGenTable>lambdaQuery().in(MonitorSysGenTable::getTabId, Splitter.on(",").omitEmptyStrings().trimResults().splitToSet(tabId)));
+        Set<String> less = new HashSet<>();
+        for (MonitorSysGenTable sysGenTable : sysGenTables) {
 
-        VelocityContext context = VelocityUtils.prepareContext(sysGenTable, sysGenColumns, download);
+            List<MonitorSysGenColumn> sysGenColumns = sysGenColumnService.list(Wrappers.<MonitorSysGenColumn>lambdaQuery().eq(MonitorSysGenColumn::getTabId, tabId));
+            VelocityInitializer.initVelocity();
+            // 设置主键列信息
+            setPkColumn(sysGenTable, sysGenColumns);
 
-        // 获取模板列表
-        List<MonitorSysGenTemplate> list = sysGenTemplateService.list(Wrappers.<MonitorSysGenTemplate>lambdaQuery().eq(MonitorSysGenTemplate::getGenId, sysGenTable.getGenId()).or().isNull(MonitorSysGenTemplate::getGenId));
-        for (MonitorSysGenTemplate sysGenTemplate : list) {
-            String fileName = VelocityUtils.getFileName(sysGenTable, download, sysGenTemplate);
-            if(StringUtils.isEmpty(fileName)) {
-                continue;
+            VelocityContext context = VelocityUtils.prepareContext(sysGenTable, sysGenColumns, download);
+
+            // 获取模板列表
+            List<MonitorSysGenTemplate> list = sysGenTemplateService.list(Wrappers.<MonitorSysGenTemplate>lambdaQuery().eq(MonitorSysGenTemplate::getGenId, sysGenTable.getGenId()).or().isNull(MonitorSysGenTemplate::getGenId));
+            for (MonitorSysGenTemplate sysGenTemplate : list) {
+                String fileName = VelocityUtils.getFileName(sysGenTable, download, sysGenTemplate);
+                if(StringUtils.isEmpty(fileName) || less.contains(fileName)) {
+                    continue;
+                }
+                // 渲染模板
+                try {
+                    StringWriter sw = new StringWriter();
+                    Template tpl = Velocity.getTemplate(sysGenTemplate.getTemplateContent(), UTF_8);
+                    tpl.merge(context, sw);
+                    // 添加到zip
+                    zip.putNextEntry(new ZipEntry(fileName));
+                    IoUtils.write(zip, StandardCharsets.UTF_8, false, sw.toString());
+                    IoUtils.closeQuietly(sw);
+                    zip.flush();
+                    zip.closeEntry();
+                    less.add(fileName);
+                } catch (IOException e) {
+                    log.error("渲染模板失败，表名：" + sysGenTable.getTabName(), e);
+                }
             }
-            // 渲染模板
-            try {
-                StringWriter sw = new StringWriter();
-                Template tpl = Velocity.getTemplate(sysGenTemplate.getTemplateContent(), UTF_8);
-                tpl.merge(context, sw);
-                // 添加到zip
-                zip.putNextEntry(new ZipEntry(fileName));
-                IoUtils.write(zip, StandardCharsets.UTF_8, false, sw.toString());
-                IoUtils.closeQuietly(sw);
-                zip.flush();
-                zip.closeEntry();
-            } catch (IOException e) {
-                log.error("渲染模板失败，表名：" + sysGenTable.getTabName(), e);
+
+            List<String> templates = VelocityUtils.getTemplateList(genProperties.getTemplatePath());
+            VelocityInitializer.initFileVelocity();
+            for (String template : templates) {
+                String fileName = VelocityUtils.getFileName(template, sysGenTable, download);
+                if(StringUtils.isEmpty(fileName) || less.contains(fileName)) {
+                    continue;
+                }
+                // 渲染模板
+                try {
+                    StringWriter sw = new StringWriter();
+                    Template tpl = Velocity.getTemplate(template, UTF_8);
+                    tpl.merge(context, sw);
+                    // 添加到zip
+                    zip.putNextEntry(new ZipEntry(fileName));
+                    IoUtils.write(zip, StandardCharsets.UTF_8, false, sw.toString());
+                    IoUtils.closeQuietly(sw);
+                    zip.flush();
+                    zip.closeEntry();
+                    less.add(fileName);
+                } catch (IOException e) {
+                    log.error("渲染模板失败，表名：" + sysGenTable.getTabName(), e);
+                }
             }
         }
-
-//        List<String> templates = VelocityUtils.getTemplateList(genProperties.getTemplatePath());
-//        for (String template : templates) {
-//            String fileName = VelocityUtils.getFileName(template, sysGenTable, download);
-//            if(StringUtils.isEmpty(fileName)) {
-//                continue;
-//            }
-//            // 渲染模板
-//            try {
-//                StringWriter sw = new StringWriter();
-//                Template tpl = Velocity.getTemplate(template, UTF_8);
-//                tpl.merge(context, sw);
-//                // 添加到zip
-//                zip.putNextEntry(new ZipEntry(fileName));
-//                IoUtils.write(zip, StandardCharsets.UTF_8, false, sw.toString());
-//                IoUtils.closeQuietly(sw);
-//                zip.flush();
-//                zip.closeEntry();
-//            } catch (IOException e) {
-//                log.error("渲染模板失败，表名：" + sysGenTable.getTabName(), e);
-//            }
-//        }
     }
 
     /**
