@@ -205,7 +205,7 @@ public class ExceptionAdvice  {
         if(Validator.hasChinese(e.getMessage())) {
             return Result.failed(e);
         }
-        return Result.failed("当前系统版本不支持该功能/操作");
+        return Result.failed("当前系统版本不支持或者系统不开放");
     }
 
     /**
