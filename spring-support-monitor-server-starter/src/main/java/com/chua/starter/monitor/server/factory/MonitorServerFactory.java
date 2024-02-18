@@ -6,6 +6,8 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.request.MonitorRequest;
 import com.chua.starter.monitor.server.constant.MonitorConstant;
 import com.chua.starter.monitor.server.pojo.ServiceTarget;
+import org.springframework.beans.factory.DisposableBean;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -21,7 +23,7 @@ import java.util.stream.Collectors;
  * @since 2024/02/01
  */
 @Service@SuppressWarnings("ALL")
-public class MonitorServerFactory implements MonitorConstant {
+public class MonitorServerFactory implements MonitorConstant, DisposableBean, InitializingBean {
 
     @Resource
     private RedisTemplate stringRedisTemplate;
@@ -126,5 +128,13 @@ public class MonitorServerFactory implements MonitorConstant {
         Set keys = stringRedisTemplate.keys(HEART + "*");
 
         return Collections.emptyList();
+    }
+
+    @Override
+    public void destroy() throws Exception {
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
     }
 }

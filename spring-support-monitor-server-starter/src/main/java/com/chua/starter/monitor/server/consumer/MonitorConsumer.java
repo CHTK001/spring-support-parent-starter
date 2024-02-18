@@ -27,7 +27,12 @@ public class MonitorConsumer implements AutoCloseable{
         this.consumer = new Consumer(config);
         try {
             consumer.start((msg, consumer) -> {
-                MonitorRequest monitorRequest = Json.fromJson(msg.getBody(), MonitorRequest.class);
+                MonitorRequest monitorRequest = null;
+                try {
+                    monitorRequest = Json.fromJson(msg.getBody(), MonitorRequest.class);
+                } catch (Exception ignored) {
+                    return;
+                }
                 if(null == monitorRequest) {
                     return;
                 }

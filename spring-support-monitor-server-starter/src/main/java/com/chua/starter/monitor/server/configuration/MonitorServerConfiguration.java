@@ -5,6 +5,7 @@ import com.chua.common.support.protocol.options.ServerOption;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.starter.monitor.server.consumer.MonitorConsumer;
 import com.chua.starter.monitor.server.consumer.ReportConsumer;
+import com.chua.starter.monitor.server.properties.GenProperties;
 import com.chua.starter.monitor.server.properties.MonitorServerProperties;
 import com.chua.starter.monitor.server.router.Router;
 import com.chua.zbus.support.server.ZbusServer;
@@ -44,7 +45,7 @@ import java.io.IOException;
 @Slf4j
 @MapperScan("com.chua.starter.monitor.server.mapper")
 @ComponentScan("com.chua.starter.monitor.server")
-@EnableConfigurationProperties(MonitorServerProperties.class)
+@EnableConfigurationProperties({MonitorServerProperties.class, GenProperties.class})
 public class MonitorServerConfiguration implements BeanDefinitionRegistryPostProcessor, EnvironmentAware, ApplicationContextAware, DisposableBean, CommandLineRunner, SmartInstantiationAwareBeanPostProcessor {
 
     private MonitorServerProperties monitorServerProperties;
