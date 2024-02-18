@@ -82,7 +82,7 @@ public class SocketSession {
         CodecKeyPair codecKeyPair = (CodecKeyPair) codec;
         String publicKeyHex = codecKeyPair.getPublicKeyHex();
         String encode = ((CodecKeyPair) codec).encode(Json.toJSONString(returnResult), publicKeyHex);
-        String nanoTime = System.nanoTime() + "000";
+        String nanoTime = (System.nanoTime() + "000" + RandomUtils.randomInt(16)).substring(0, 16);
         String encrypt = DigestUtils.aesEncrypt(codecKeyPair.getPrivateKeyHex(), nanoTime);
         client.sendEvent(event,
                 new JsonObject()

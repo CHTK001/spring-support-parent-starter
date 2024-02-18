@@ -23,6 +23,7 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 
 import javax.servlet.ServletException;
 import java.net.UnknownHostException;
+import java.sql.SQLException;
 import java.sql.SQLSyntaxErrorException;
 import java.text.DecimalFormat;
 import java.util.regex.Matcher;
@@ -186,6 +187,15 @@ public class ExceptionAdvice  {
     public <T> Result<T> handleException(Exception e) {
         log.error("unknown exception: {}", e.getMessage());
         return Result.failed("请求失败,请稍后重试");
+    }
+    @ExceptionHandler(SQLException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public <T> Result<T> sqlException(SQLException e) {
+        log.error("SQLException: {}", e.getMessage());
+        if(Validator.hasChinese(e.getMessage())) {
+            return Result.failed(e);
+        }
+        return Result.failed(e.getSQLState());
     }
     @ExceptionHandler(RuntimeException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
