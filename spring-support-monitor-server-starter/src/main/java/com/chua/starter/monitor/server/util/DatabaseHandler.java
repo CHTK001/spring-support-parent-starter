@@ -24,7 +24,7 @@ public class DatabaseHandler implements AutoCloseable{
     public DatabaseHandler(DataSourceOptions databaseOptions) {
         this.databaseOptions = databaseOptions;
         try {
-            this.connection = databaseOptions.getDataSource().getConnection();
+            this.connection = DriverManager.getConnection(databaseOptions.getUrl(), databaseOptions.getUsername(), databaseOptions.getPassword());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
