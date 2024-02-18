@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.incrementer.DefaultIdentifierGenerator;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.chua.common.support.function.Splitter;
 import com.chua.common.support.net.NetUtils;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.FileUtils;
@@ -31,10 +32,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -81,6 +79,18 @@ public class MonitorSysGenTableServiceImpl extends ServiceImpl<SysGenTableMapper
             temp.add(createTemplateResult(sysGenTable, sysGenColumns, sysGenTemplate));
 
         }
+        Download download = new Download();
+        for (String template : templates) {
+            temp.add(createTemplateResult(template, sysGenTable, sysGenColumns, download));
+        }
+        String tabTplCategory = sysGenTable.getTabTplCategory();
+        if (StringUtils.isNotEmpty(tabTplCategory)) {
+            Set<String> strings = Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(tabTplCategory);
+            for (String template : strings) {
+                temp.add(createTemplateResult(template, sysGenTable, sysGenColumns, download));
+            }
+        }
+
 
         return temp;
     }
@@ -99,7 +109,7 @@ public class MonitorSysGenTableServiceImpl extends ServiceImpl<SysGenTableMapper
     private TemplateResult createTemplateResult(String template, MonitorSysGenTable sysGenTable, List<MonitorSysGenColumn> sysGenColumns, Download download) {
         TemplateResult item = new TemplateResult();
         String fileName = FileUtils.getBaseName(template);
-        VelocityInitializer.initVelocity();
+        VelocityInitializer.initFileVelocity();
         // 设置主键列信息
         setPkColumn(sysGenTable, sysGenColumns);
         VelocityContext context = VelocityUtils.prepareContext(sysGenTable, sysGenColumns, download);
