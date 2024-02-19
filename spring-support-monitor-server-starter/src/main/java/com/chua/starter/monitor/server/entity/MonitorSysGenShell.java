@@ -49,6 +49,15 @@ public class MonitorSysGenShell extends SysBase implements Serializable {
     @NotNull(message = "脚本路径不能为null", groups = AddGroup.class)
     @Size(max = 255, message = "脚本路径最大长度要小于 255")
     private String shellScriptPath;
+    /**
+     * 日志路径
+     */
+    @TableField(value = "shell_log_path")
+    @ApiModelProperty(value = "日志路径")
+    @Schema(description = "日志路径")
+    @NotNull(message = "日志路径不能为null", groups = AddGroup.class)
+    @Size(max = 255, message = "日志路径最大长度要小于 255")
+    private String shellLogPath;
 
     /**
      * 脚本参数
@@ -95,4 +104,9 @@ public class MonitorSysGenShell extends SysBase implements Serializable {
     private Integer shellStatus;
 
     private static final long serialVersionUID = 1L;
+
+
+    public String getOutName() {
+        return shellLogPath;
+    }
 }

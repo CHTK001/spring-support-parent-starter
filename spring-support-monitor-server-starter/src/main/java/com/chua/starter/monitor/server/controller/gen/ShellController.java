@@ -43,6 +43,60 @@ public class ShellController extends AbstractSwaggerController<MonitorSysGenShel
     @Resource
     private SocketSessionTemplate socketSessionTemplate;
     /**
+     * 关闭
+     *
+     * @param shellId 外壳id
+     * @return {@link ReturnResult}<{@link Boolean}>
+     */
+    @Operation(summary = "关闭日志日志")
+    @PutMapping({"log/close"})
+    public ReturnResult<Boolean> close(@RequestBody ExecuteQuery executeQuery) {
+        if (null == executeQuery.getGenId() || null == executeQuery.getDataId()) {
+            return ReturnResult.error("未配置生成器类型");
+        }
+        MonitorSysGen sysGen = sysGenService.getById(executeQuery.getGenId());
+        if (StringUtils.isEmpty(sysGen.getGenType())) {
+            return ReturnResult.error("未配置生成器类型");
+        }
+
+        MonitorSysGenShell sysGenShell = service.getById(executeQuery.getDataId());
+        ServiceProvider.of(Session.class).closeKeepExtension(sysGen.getGenId() + "_log");
+        try {
+            return ReturnResult.ok();
+        } catch (Exception e) {
+            return ReturnResult.error("开启失败");
+        }
+    }
+    /**
+     * 开始
+     *
+     * @param shellId 外壳id
+     * @return {@link ReturnResult}<{@link Boolean}>
+     */
+    @Operation(summary = "开启日志")
+    @PutMapping({"log/open"})
+    public ReturnResult<Boolean> open(@RequestBody ExecuteQuery executeQuery) {
+        if (null == executeQuery.getGenId() || null == executeQuery.getDataId()) {
+            return ReturnResult.error("未配置生成器类型");
+        }
+        MonitorSysGen sysGen = sysGenService.getById(executeQuery.getGenId());
+        if (StringUtils.isEmpty(sysGen.getGenType())) {
+            return ReturnResult.error("未配置生成器类型");
+        }
+
+        MonitorSysGenShell sysGenShell = service.getById(executeQuery.getDataId());
+        Session session = ServiceProvider.of(Session.class).getKeepExtension(sysGen.getGenId() + "_log", sysGen.getGenType(), sysGen.newDatabaseOptions());
+        session.setListener(message -> {
+            socketSessionTemplate.send(executeQuery.getDataId(), message);
+        });
+        try {
+            session.executeQuery("tail -f " + sysGenShell.getOutName() + " \r", new ExecuteQuery());
+            return ReturnResult.ok();
+        } catch (Exception e) {
+            return ReturnResult.error("开启失败");
+        }
+    }
+    /**
      * 开始
      *
      * @param shellId 外壳id
@@ -68,7 +122,7 @@ public class ShellController extends AbstractSwaggerController<MonitorSysGenShel
             socketSessionTemplate.send(executeQuery.getDataId(), message);
         });
         try {
-            sessionResultSet = session.executeQuery("nohup " + sysGenShell.getShellScriptPath() + " 2>1& &\r", new ExecuteQuery());
+            sessionResultSet = session.executeQuery("nohup " + sysGenShell.getShellScriptPath() + "> "+ sysGenShell.getOutName() +" 2>&1 &\r", new ExecuteQuery());
             if(StringUtils.isNotEmpty(sysGenShell.getShellScriptPath())) {
                 stringBuffer.append(sysGenShell.getShellScriptPath());
             }
