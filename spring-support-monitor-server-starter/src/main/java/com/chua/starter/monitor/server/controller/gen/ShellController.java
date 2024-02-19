@@ -1,14 +1,13 @@
 package com.chua.starter.monitor.server.controller.gen;
 
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.lang.formatter.HighlightingFormatter;
-import com.chua.common.support.lang.formatter.SqlFormatter;
 import com.chua.common.support.session.Session;
 import com.chua.common.support.session.query.ExecuteQuery;
 import com.chua.common.support.session.result.SessionResult;
 import com.chua.common.support.session.result.SessionResultSet;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.monitor.server.entity.MonitorSysGen;
 import com.chua.starter.monitor.server.entity.MonitorSysGenShell;
 import com.chua.starter.monitor.server.service.MonitorSysGenService;
@@ -41,7 +40,8 @@ public class ShellController extends AbstractSwaggerController<MonitorSysGenShel
     @Getter
     @Resource
     private MonitorSysGenShellService service;
-
+    @Resource
+    private SocketSessionTemplate socketSessionTemplate;
     /**
      * 开始
      *
@@ -62,15 +62,15 @@ public class ShellController extends AbstractSwaggerController<MonitorSysGenShel
         MonitorSysGenShell sysGenShell = service.getById(executeQuery.getDataId());
         StringBuilder stringBuffer = new StringBuilder();
         long startTime = System.nanoTime();
-        Session session = ServiceProvider.of(Session.class).getKeepExtension(sysGen.getGenId() + "", sysGen.getGenType(), sysGen.newDatabaseOptions(false));
+        Session session = ServiceProvider.of(Session.class).getKeepExtension(sysGen.getGenId() + "", sysGen.getGenType(), sysGen.newDatabaseOptions());
         SessionResultSet sessionResultSet = null;
         session.setListener(message -> {
-            System.out.println();
+            socketSessionTemplate.send(executeQuery.getDataId(), message);
         });
         try {
-            sessionResultSet = session.executeQuery(sysGenShell.getShellScriptPath(), new ExecuteQuery());
+            sessionResultSet = session.executeQuery("nohup " + sysGenShell.getShellScriptPath() + " 2>1& &\r", new ExecuteQuery());
             if(StringUtils.isNotEmpty(sysGenShell.getShellScriptPath())) {
-                stringBuffer.append(HighlightingFormatter.INSTANCE.format(SqlFormatter.format(sysGenShell.getShellScriptPath())));
+                stringBuffer.append(sysGenShell.getShellScriptPath());
             }
         } catch (Exception e) {
             String localizedMessage = e.getLocalizedMessage();
@@ -88,13 +88,13 @@ public class ShellController extends AbstractSwaggerController<MonitorSysGenShel
         long toMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
         stringBuffer.append("\r\n").append("耗时: ").append(toMillis);
         stringBuffer.append(" ms");
-
+        sysGenShell.setShellStatus(sysGenShell.getShellStatus() == 0 ? 1 : 0);
+        service.updateById(sysGenShell);
         SessionResult sessionResult = new SessionResult();
-        sessionResult.setFields(sessionResultSet.toFields());
         sessionResult.setData(sessionResultSet.toData());
+        sessionResult.setFields(sessionResultSet.toFields());;
         sessionResult.setMessage(stringBuffer.toString());
         sessionResult.setCost(toMillis);
-        sessionResult.setTotal(sessionResultSet.toTotal());
         return ReturnResult.ok(sessionResult);
     }
 }
