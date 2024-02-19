@@ -30,6 +30,12 @@
 
         <dependency>
             <groupId>com.chua</groupId>
+            <artifactId>utils-support-sftp-starter</artifactId>
+            <version>3.1.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.chua</groupId>
             <artifactId>spring-support-oauth-client-starter</artifactId>
         </dependency>
 
@@ -42,11 +48,6 @@
             <groupId>com.chua</groupId>
             <artifactId>spring-support-mybatis-starter</artifactId>
         </dependency>
-
-<!--        <dependency>-->
-<!--            <groupId>com.chua</groupId>-->
-<!--            <artifactId>spring-support-oauth-client-starter</artifactId>-->
-<!--        </dependency>-->
 
         <dependency>
             <groupId>com.chua</groupId>
