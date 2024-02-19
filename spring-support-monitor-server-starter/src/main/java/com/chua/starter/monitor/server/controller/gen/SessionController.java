@@ -85,7 +85,7 @@ public class SessionController {
                 tpl.put(sysGenRemark.getRemarkColumn(), sysGenRemark);
             }
             List<Column> columns = session.getColumns(query.getDatabase(), query.getDatabaseId());
-            for (Column column : columns) {
+            for (Column column : CollectionUtils.wrapper(columns)) {
                 String columnName = column.getName();
                 MonitorSysGenRemark sysGenRemark = tpl.get(columnName);
                 if(null != sysGenRemark) {
