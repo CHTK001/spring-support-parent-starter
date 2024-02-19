@@ -205,7 +205,7 @@ public class MonitorSysGen implements Serializable {
     }
 
     public String initialGenUrl(DataSourceOptions databaseOptions, boolean codecPassword) {
-        if(!codecPassword) {
+        if(!"jdbc".equalsIgnoreCase(genType)) {
             return genHost + ":" + genPort;
         }
         Dialect dialect = DialectFactory.createDriver(genDriver);

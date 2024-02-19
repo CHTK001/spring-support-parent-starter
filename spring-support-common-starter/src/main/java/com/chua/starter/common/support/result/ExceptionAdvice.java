@@ -50,12 +50,12 @@ public class ExceptionAdvice  {
     }
     @ExceptionHandler(RemoteExecutionException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public <T> ReturnResult<T> remoteExecutionException(RemoteExecutionException e) {
+    public <T> Result<T> remoteExecutionException(RemoteExecutionException e) {
         String message = e.getMessage();
         if(message.contains("Auth fail")) {
-            return ReturnResult.illegal(e.getType() + "登录认证失败");
+            return Result.failed(e.getType() + "登录认证失败");
         }
-        return ReturnResult.illegal(REMOTE_EXECUTION_TIMEOUT, REMOTE_EXECUTION_TIMEOUT.getMsg());
+        return Result.failed(REMOTE_EXECUTION_TIMEOUT, REMOTE_EXECUTION_TIMEOUT.getMsg());
     }
 
 
@@ -195,7 +195,7 @@ public class ExceptionAdvice  {
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> handleException(Exception e) {
-        log.error("unknown exception: {}", e.getMessage());
+        log.error("handleException exception: {}", e.getMessage());
         return Result.failed("请求失败,请稍后重试");
     }
     @ExceptionHandler(SQLException.class)
@@ -210,11 +210,15 @@ public class ExceptionAdvice  {
     @ExceptionHandler(RuntimeException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> handleRuntimeException(RuntimeException e) {
-        log.error("unknown exception: {}", e.getMessage());
-        log.error("", e);
+        log.error("handleRuntimeException exception: {}", e.getMessage());
         if(Validator.hasChinese(e.getMessage())) {
             return Result.failed(e);
         }
+        Throwable cause = e.getCause();
+        if(cause instanceof RemoteExecutionException) {
+            return remoteExecutionException((RemoteExecutionException) cause);
+        }
+
         return Result.failed("当前系统版本不支持或者系统不开放");
     }
 
