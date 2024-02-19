@@ -100,7 +100,6 @@ public class ParameterLogFilter implements Filter {
     }
 
     private void printQuery(HttpServletRequest request) throws IOException {
-        log.info("请求URL: {}", request.getRequestURL());
         String body = request.getQueryString();
         if(StringUtils.isNotEmpty(body) && body.length() < NumberConstant.ONE_THOUSAND) {
             try {

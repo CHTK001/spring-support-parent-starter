@@ -118,8 +118,8 @@ public class DatabaseController {
             return ReturnResult.illegal("数据不存在");
         }
         if(StringUtils.isEmpty(sysGen.getGenPassword())){
-            sysGen.setGenPassword(null);
-            sysGen.setGenUid(null);
+            sysGen.setGenPassword("");
+            sysGen.setGenUid("");
         }
         ServiceProvider.of(Session.class).closeKeepExtension(sysGen.getGenId() + "");
 
