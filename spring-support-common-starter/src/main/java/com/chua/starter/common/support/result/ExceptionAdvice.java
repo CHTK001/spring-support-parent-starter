@@ -2,6 +2,7 @@ package com.chua.starter.common.support.result;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.exception.AuthenticationException;
+import com.chua.common.support.lang.exception.RemoteExecutionException;
 import com.chua.common.support.lang.file.adaptor.univocity.parsers.conversions.Validator;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.exception.BusinessException;
@@ -46,6 +47,15 @@ public class ExceptionAdvice  {
         log.error("BindException:{}", e.getMessage());
         String msg = e.getAllErrors().stream().map(DefaultMessageSourceResolvable::getDefaultMessage).collect(Collectors.joining("；"));
         return Result.failed(REQUEST_PARAM_ERROR, msg);
+    }
+    @ExceptionHandler(RemoteExecutionException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public <T> ReturnResult<T> remoteExecutionException(RemoteExecutionException e) {
+        String message = e.getMessage();
+        if(message.contains("Auth fail")) {
+            return ReturnResult.illegal(e.getType() + "登录认证失败");
+        }
+        return ReturnResult.illegal(REMOTE_EXECUTION_TIMEOUT, REMOTE_EXECUTION_TIMEOUT.getMsg());
     }
 
 

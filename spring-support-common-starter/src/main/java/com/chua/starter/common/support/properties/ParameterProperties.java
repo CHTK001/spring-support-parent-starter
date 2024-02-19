@@ -11,7 +11,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class ParameterProperties {
 
     /**
-     * 开启限流
+     * 开启统一参数
      */
     private boolean enable;
 }

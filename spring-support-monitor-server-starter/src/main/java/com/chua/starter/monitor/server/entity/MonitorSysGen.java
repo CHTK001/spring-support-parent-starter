@@ -168,12 +168,23 @@ public class MonitorSysGen implements Serializable {
     @ColumnDesc("url")
     @TableField(exist = false)
     private String genUrl;
+
     /**
-     * 新数据库配置
+     * 新数据库选项
      *
      * @return {@link DataSourceOptions}
      */
     public DataSourceOptions newDatabaseOptions() {
+        return newDatabaseOptions(true);
+    }
+    /**
+     * 新数据库选项
+     * 新数据库配置
+     *
+     * @param codecPassword 编解码器密码
+     * @return {@link DataSourceOptions}
+     */
+    public DataSourceOptions newDatabaseOptions(boolean codecPassword) {
         DataSourceOptions databaseOptions = new DataSourceOptions();
         databaseOptions.setName(genDatabase);
         databaseOptions.setDriver(genDriver);
@@ -184,16 +195,19 @@ public class MonitorSysGen implements Serializable {
         databaseOptions.setGenType(genType);
         databaseOptions.setSecretKey(genUid);
         databaseOptions.setUrl(genHost + ":" + genPort);
-        this.genUrl = initialGenUrl(databaseOptions);
+        this.genUrl = initialGenUrl(databaseOptions, codecPassword);
         databaseOptions.setUrl(genUrl);
-        if(null != genUid) {
+        if(null != genUid && codecPassword) {
             databaseOptions.setPassword(Codec.build(databaseOptions.getSecretKeyType(), genUid).decodeBase64(StringUtils.utf8Str(Base64.getDecoder().decode(genPassword))));
         }
 
         return databaseOptions;
     }
 
-    public String initialGenUrl(DataSourceOptions databaseOptions) {
+    public String initialGenUrl(DataSourceOptions databaseOptions, boolean codecPassword) {
+        if(!codecPassword) {
+            return genHost + ":" + genPort;
+        }
         Dialect dialect = DialectFactory.createDriver(genDriver);
         if(null != dialect) {
             return dialect.getUrl(databaseOptions);
