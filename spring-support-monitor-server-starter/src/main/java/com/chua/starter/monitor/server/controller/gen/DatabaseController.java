@@ -7,6 +7,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.session.Session;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.FileUtils;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.utils.MultipartFileUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.monitor.server.entity.MonitorSysGen;
@@ -116,10 +117,9 @@ public class DatabaseController {
         if(null == sysGen1) {
             return ReturnResult.illegal("数据不存在");
         }
-        if("".equalsIgnoreCase(sysGen.getGenPassword())){
+        if(StringUtils.isEmpty(sysGen.getGenPassword())){
             sysGen.setGenPassword(null);
-        } else if(null == sysGen.getGenPassword()) {
-            sysGen.setGenPassword("");
+            sysGen.setGenUid(null);
         }
         ServiceProvider.of(Session.class).closeKeepExtension(sysGen.getGenId() + "");
 
