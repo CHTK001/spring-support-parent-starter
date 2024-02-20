@@ -223,10 +223,23 @@ public class SessionController {
         long startTime = System.nanoTime();
         Session session = ServiceProvider.of(Session.class).getKeepExtension(executeQuery.getGenId(), sysGen.getGenType(), sysGen.newDatabaseOptions());
         SessionResultSet sessionResultSet = null;
+        Map<String, String> remark = new HashMap<>();
         try {
             sessionResultSet = session.executeQuery(executeQuery.getContent(), executeQuery);
             if(StringUtils.isNotEmpty(executeQuery.getContent())) {
                 stringBuffer.append(HighlightingFormatter.INSTANCE.format(SqlFormatter.format(executeQuery.getContent())));
+            }
+            String currentDatabase = executeQuery.getCurrentDatabase();
+            String currentTable = executeQuery.getCurrentTable();
+            if(StringUtils.isNotBlank(currentTable)) {
+                List<MonitorSysGenRemark> list = sysGenRemarkService.list(Wrappers.<MonitorSysGenRemark>lambdaQuery()
+                        .eq(MonitorSysGenRemark::getGenId, executeQuery.getGenId())
+                        .eq(MonitorSysGenRemark::getRemarkTable, currentTable)
+                        .eq(StringUtils.isNotEmpty(currentDatabase), MonitorSysGenRemark::getRemarkDatabase, currentDatabase)
+                );
+                for (MonitorSysGenRemark sysGenRemark : list) {
+                    remark.put(sysGenRemark.getRemarkColumn(), sysGenRemark.getRemarkName());
+                }
             }
         } catch (Exception e) {
             String localizedMessage = e.getLocalizedMessage();
@@ -251,6 +264,7 @@ public class SessionController {
         sessionResult.setMessage(stringBuffer.toString());
         sessionResult.setCost(toMillis);
         sessionResult.setTotal(sessionResultSet.toTotal());
+        sessionResult.setRemark(remark);
         return ReturnResult.ok(sessionResult);
     }
     /**
@@ -394,6 +408,9 @@ public class SessionController {
             sessionInfo = session.delete(deleteQuery);
         } catch (Exception e) {
             throw new RuntimeException(e);
+        }
+        if(StringUtils.isNotBlank(sessionInfo.getMessage())) {
+            return ReturnResult.illegal(sessionInfo.getMessage());
         }
         return ReturnResult.ok(sessionInfo.toResult());
     }
