@@ -113,6 +113,10 @@ public class SessionController {
         List<Database> results1 = new LinkedList<>();
         Session session = ServiceProvider.of(Session.class).getKeepExtension(query.getGenId() + "", sysGen.getGenType(), sysGen.newDatabaseOptions());
         try{
+            if(!session.isConnect()) {
+                ServiceProvider.of(Session.class).closeKeepExtension(query.getGenId() + "");
+                return ReturnResult.illegal("当前服务器不可达");
+            }
             List<Database> database1 = session.getDatabase(query.getKeyword());
             if(CollectionUtils.isNotEmpty(database1)) {
                 return ReturnResult.ok(database1);
