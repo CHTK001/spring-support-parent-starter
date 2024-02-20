@@ -124,6 +124,10 @@ public class ExceptionAdvice  {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> handleIllegalArgumentException(IllegalArgumentException e) {
         log.error("非法参数异常，异常原因：{}", e.getMessage(), e);
+        String message = e.getMessage();
+        if(message.contains("Unable to parse url")) {
+            return Result.failed(message.replace("Unable to parse url", "无法解析地址"));
+        }
         return Result.failed(e.getMessage());
     }
 
@@ -217,6 +221,10 @@ public class ExceptionAdvice  {
         Throwable cause = e.getCause();
         if(cause instanceof RemoteExecutionException) {
             return remoteExecutionException((RemoteExecutionException) cause);
+        }
+
+        if(cause instanceof IllegalArgumentException) {
+            return handleIllegalArgumentException((IllegalArgumentException) cause);
         }
 
         return Result.failed("当前系统版本不支持或者系统不开放");
