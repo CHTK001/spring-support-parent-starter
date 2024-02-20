@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.monitor.server.mapper.MonitorMybatisMapper">
+  <resultMap id="BaseResultMap" type="com.chua.starter.monitor.server.entity.MonitorMybatis">
+    <!--@mbg.generated-->
+    <!--@Table monitor_mybatis-->
+    <id column="monitor_mybatis_id" jdbcType="INTEGER" property="monitorMybatisId" />
+    <result column="monitor_mybatis_name" jdbcType="VARCHAR" property="monitorMybatisName" />
+    <result column="monitor_mybatis_desc" jdbcType="VARCHAR" property="monitorMybatisDesc" />
+    <result column="monitor_mybatis_sql" jdbcType="VARCHAR" property="monitorMybatisSql" />
+    <result column="monitor_mybatis_sql_type" jdbcType="VARCHAR" property="monitorMybatisSqlType" />
+    <result column="monitor_mybatic_model_type" jdbcType="VARCHAR" property="monitorMybaticModelType" />
+    <result column="monitor_mybatic_mapper_type" jdbcType="VARCHAR" property="monitorMybaticMapperType" />
+    <result column="monitor_mybatis_profile" jdbcType="VARCHAR" property="monitorMybatisProfile" />
+    <result column="monitor_appname" jdbcType="VARCHAR" property="monitorAppname" />
+    <result column="create_time" jdbcType="DATE" property="createTime" />
+    <result column="update_time" jdbcType="DATE" property="updateTime" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    monitor_mybatis_id, monitor_mybatis_name, monitor_mybatis_desc, monitor_mybatis_sql, 
+    monitor_mybatis_sql_type, monitor_mybatic_model_type, monitor_mybatic_mapper_type, 
+    monitor_mybatis_profile, monitor_appname, create_time, update_time
+  </sql>
+</mapper>

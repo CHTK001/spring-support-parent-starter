@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.monitor.server.mapper.MonitorPatchMapper">
+  <resultMap id="BaseResultMap" type="com.chua.starter.monitor.server.entity.MonitorPatch">
+    <!--@mbg.generated-->
+    <!--@Table monitor_patch-->
+    <id column="monitor_patch_id" jdbcType="INTEGER" property="monitorPatchId" />
+    <result column="monitor_patch_name" jdbcType="VARCHAR" property="monitorPatchName" />
+    <result column="monitor_patch_chinese_name" jdbcType="VARCHAR" property="monitorPatchChineseName" />
+    <result column="monitor_patch_pack" jdbcType="VARCHAR" property="monitorPatchPack" />
+    <result column="monitor_patch_desc" jdbcType="VARCHAR" property="monitorPatchDesc" />
+    <result column="monitor_patch_version" jdbcType="VARCHAR" property="monitorPatchVersion" />
+    <result column="create_time" jdbcType="DATE" property="createTime" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    monitor_patch_id, monitor_patch_name, monitor_patch_chinese_name, monitor_patch_pack, 
+    monitor_patch_desc, monitor_patch_version, create_time
+  </sql>
+</mapper>
