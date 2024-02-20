@@ -76,7 +76,7 @@ public class RemarkController {
 
         MonitorSysGenRemark remark = sysGenRemarkService.getOne(Wrappers.<MonitorSysGenRemark>lambdaQuery()
                 .eq(MonitorSysGenRemark::getGenId, sysGenRemark.getGenId())
-                .eq(MonitorSysGenRemark::getRemarkDatabase, sysGenRemark.getRemarkDatabase())
+                .eq(StringUtils.isNotEmpty(sysGenRemark.getRemarkDatabase()), MonitorSysGenRemark::getRemarkDatabase, sysGenRemark.getRemarkDatabase())
                 .eq(MonitorSysGenRemark::getRemarkTable, sysGenRemark.getRemarkTable())
                 .eq(MonitorSysGenRemark::getRemarkColumn, sysGenRemark.getRemarkColumn())
         );
