@@ -30,7 +30,7 @@ public enum Information {
     /**
      * 501
      */
-    AUTHENTICATION_SERVER_NO_EXIST(501, "The authentication server does not exist"),
+    AUTHENTICATION_SERVER_NO_EXIST(501, "鉴权服务器异常"),
     /**
      * -1
      */
