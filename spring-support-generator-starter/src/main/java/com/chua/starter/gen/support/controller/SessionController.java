@@ -113,6 +113,10 @@ public class SessionController {
         List<Database> results1 = new LinkedList<>();
         Session session = ServiceProvider.of(Session.class).getKeepExtension(query.getGenId() + "", sysGen.getGenType(), sysGen.newDatabaseOptions());
         try{
+            if(!session.isConnect()) {
+                ServiceProvider.of(Session.class).closeKeepExtension(query.getGenId() + "");
+                return ReturnResult.illegal("当前服务器不可达");
+            }
             List<Database> database1 = session.getDatabase(query.getKeyword());
             if(CollectionUtils.isNotEmpty(database1)) {
                 return ReturnResult.ok(database1);
@@ -222,6 +226,10 @@ public class SessionController {
         StringBuilder stringBuffer = new StringBuilder();
         long startTime = System.nanoTime();
         Session session = ServiceProvider.of(Session.class).getKeepExtension(executeQuery.getGenId(), sysGen.getGenType(), sysGen.newDatabaseOptions());
+        if(!session.isConnect()) {
+            ServiceProvider.of(Session.class).closeKeepExtension(executeQuery.getGenId() + "");
+            return ReturnResult.illegal("当前服务器不可达");
+        }
         SessionResultSet sessionResultSet = null;
         try {
             sessionResultSet = session.executeQuery(executeQuery.getContent(), executeQuery);
@@ -353,6 +361,10 @@ public class SessionController {
         }
 
         Session session = ServiceProvider.of(Session.class).getKeepExtension(saveQuery.getGenId(), sysGen.getGenType(), sysGen.newDatabaseOptions());
+        if(!session.isConnect()) {
+            ServiceProvider.of(Session.class).closeKeepExtension(saveQuery.getGenId() + "");
+            return ReturnResult.illegal("当前服务器不可达");
+        }
         SessionInfo sessionInfo = null;
         File file1 = null;
         try {
@@ -393,6 +405,10 @@ public class SessionController {
         }
 
         Session session = ServiceProvider.of(Session.class).getKeepExtension(deleteQuery.getGenId(), sysGen.getGenType(), sysGen.newDatabaseOptions());
+        if(!session.isConnect()) {
+            ServiceProvider.of(Session.class).closeKeepExtension(deleteQuery.getGenId() + "");
+            return ReturnResult.illegal("当前服务器不可达");
+        }
         SessionInfo sessionInfo = null;
         try {
             sessionInfo = session.delete(deleteQuery);
@@ -433,6 +449,10 @@ public class SessionController {
         } catch (Exception ignored) {
         }
         Session session = ServiceProvider.of(Session.class).getKeepExtension(updateQuery.getGenId(), sysGen.getGenType(), sysGen.newDatabaseOptions());
+        if(!session.isConnect()) {
+            ServiceProvider.of(Session.class).closeKeepExtension(updateQuery.getGenId());
+            return ReturnResult.illegal("当前服务器不可达");
+        }
         SessionInfo sessionInfo = null;
         try {
             sessionInfo = session.update(updateQuery, file1);
