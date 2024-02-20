@@ -32,14 +32,14 @@ import org.springframework.data.redis.connection.RedisConnection;
  * @since 2024/01/31
  */
 @Slf4j
-@EnableConfigurationProperties({MonitorProperties.class, MonitorProtocolProperties.class, MonitorMqProperties.class,MonitorConfigProperties.class, MonitorReportProperties.class})
+@EnableConfigurationProperties({MonitorProperties.class, MonitorProtocolProperties.class, MonitorMqProperties.class, MonitorSubscribeProperties.class, MonitorReportProperties.class})
 public class MonitorConfiguration  implements BeanDefinitionRegistryPostProcessor,
         ApplicationContextAware, EnvironmentAware, CommandLineRunner{
     private Environment environment;
     private MonitorProperties monitorProperties;
     private MonitorMqProperties monitorMqProperties;
     private MonitorProtocolProperties monitorProtocolProperties;
-    private MonitorConfigProperties monitorConfigProperties;
+    private MonitorSubscribeProperties monitorSubscribeProperties;
     private MonitorReportProperties monitorReportProperties;
 
     @Override
@@ -68,7 +68,7 @@ public class MonitorConfiguration  implements BeanDefinitionRegistryPostProcesso
         monitorFactory.register(monitorProperties);
         monitorFactory.register(monitorMqProperties);
         monitorFactory.register(monitorProtocolProperties);
-        monitorFactory.register(monitorConfigProperties);
+        monitorFactory.register(monitorSubscribeProperties);
         monitorFactory.register(monitorReportProperties);
         monitorFactory.finish();
 
@@ -87,7 +87,7 @@ public class MonitorConfiguration  implements BeanDefinitionRegistryPostProcesso
         monitorReportProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(MonitorReportProperties.PRE, MonitorReportProperties.class);
         monitorMqProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(MonitorMqProperties.PRE, MonitorMqProperties.class);
         monitorProtocolProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(MonitorProtocolProperties.PRE, MonitorProtocolProperties.class);
-        monitorConfigProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(MonitorConfigProperties.PRE, MonitorConfigProperties.class);
+        monitorSubscribeProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(MonitorSubscribeProperties.PRE, MonitorSubscribeProperties.class);
     }
 
     @Override

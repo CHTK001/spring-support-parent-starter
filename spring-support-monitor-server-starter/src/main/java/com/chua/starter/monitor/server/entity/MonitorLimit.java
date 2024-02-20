@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.common.support.validator.group.AddGroup;
+import com.chua.common.support.validator.group.UpdateGroup;
 import com.chua.starter.mybatis.pojo.SysBase;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -22,7 +24,7 @@ public class MonitorLimit extends SysBase implements Serializable {
     @TableId(value = "limit_id", type = IdType.AUTO)
     @ApiModelProperty(value = "")
     @Schema(description = "")
-    @NotNull(message = "不能为null")
+    @NotNull(message = "不能为null", groups = UpdateGroup.class)
     private Integer limitId;
 
     /**
@@ -32,6 +34,7 @@ public class MonitorLimit extends SysBase implements Serializable {
     @ApiModelProperty(value = "限流名称")
     @Schema(description = "限流名称")
     @Size(max = 255, message = "限流名称最大长度要小于 255")
+    @NotNull(message = "限流名称不能为null", groups = AddGroup.class)
     private String limitName;
 
     /**
@@ -41,16 +44,18 @@ public class MonitorLimit extends SysBase implements Serializable {
     @ApiModelProperty(value = "限流地址")
     @Schema(description = "限流地址")
     @Size(max = 255, message = "限流地址最大长度要小于 255")
+    @NotNull(message = "限流地址不能为null", groups = AddGroup.class)
     private String limitMapping;
 
     /**
      * 每秒次数
      */
-    @TableField(value = "imit_permits")
+    @TableField(value = "limit_permits")
     @ApiModelProperty(value = "每秒次数")
     @Schema(description = "每秒次数")
     @Size(max = 255, message = "每秒次数最大长度要小于 255")
-    private String imitPermits;
+    @NotNull(message = "每秒次数不能为null", groups = AddGroup.class)
+    private String limitPermits;
 
     /**
      * 是否开启; 0: 不开启
@@ -67,6 +72,7 @@ public class MonitorLimit extends SysBase implements Serializable {
     @ApiModelProperty(value = "限流实现方式, guava")
     @Schema(description = "限流实现方式, guava")
     @Size(max = 255, message = "限流实现方式, guava最大长度要小于 255")
+    @NotNull(message = "限流实现方式, guava不能为null", groups = AddGroup.class)
     private String limitType;
 
     /**
@@ -76,6 +82,7 @@ public class MonitorLimit extends SysBase implements Serializable {
     @ApiModelProperty(value = "限流模式,URL, REMOTE")
     @Schema(description = "限流模式,URL, REMOTE")
     @Size(max = 255, message = "限流模式,URL, REMOTE最大长度要小于 255")
+    @NotNull(message = "限流模式只支持URL, REMOTE", groups = AddGroup.class)
     private String limitResolver;
 
     /**
@@ -94,6 +101,7 @@ public class MonitorLimit extends SysBase implements Serializable {
     @ApiModelProperty(value = "限流应用")
     @Schema(description = "限流应用")
     @Size(max = 255, message = "限流应用最大长度要小于 255")
+    @NotNull(message = "限流应用不能为null", groups = AddGroup.class)
     private String limitApp;
 
     /**

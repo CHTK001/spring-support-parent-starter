@@ -1,12 +1,14 @@
 package com.chua.starter.common.support.limit;
 
+import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.task.limit.Limit;
 import com.chua.common.support.task.limit.LimiterProvider;
 import com.chua.common.support.task.limit.RateLimitMappingFactory;
 import com.chua.common.support.task.limit.resolver.RateLimitResolver;
-import com.chua.common.support.utils.MapUtils;
+import com.chua.common.support.utils.ArrayUtils;
+import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.properties.LimitProperties;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.google.common.collect.Maps;
@@ -15,11 +17,10 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
-import org.springframework.core.annotation.AnnotationUtils;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.core.env.Environment;
+import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -43,7 +44,7 @@ public class LimitAspect {
         this.limitProperties = limitProperties;
     }
 
-    @Around("@annotation(com.chua.common.support.task.limit.Limit)")
+    @Around("@annotation(org.springframework.web.bind.annotation.GetMapping) || @annotation(org.springframework.web.bind.annotation.PostMapping) || @annotation(org.springframework.web.bind.annotation.DeleteMapping) || @annotation(org.springframework.web.bind.annotation.PutMapping) || @annotation(org.springframework.web.bind.annotation.RequestMapping) || @annotation(org.springframework.web.bind.annotation.PatchMapping)")
     public Object around(ProceedingJoinPoint joinPoint) throws Throwable {
         if (!limitProperties.isEnable()) {
             return joinPoint.proceed();
@@ -73,15 +74,9 @@ public class LimitAspect {
             return joinPoint.proceed();
         }
 
-        Annotation annotation = AnnotationUtils.findAnnotation(method, RequestMapping.class);
-        if(null == annotation) {
-            return joinPoint.proceed();
-        }
+        String requestURI = request.getRequestURI();
 
-        Map<String, Object> annotationAttributes = AnnotationUtils.getAnnotationAttributes(annotation);
-        String[] url = MapUtils.getStringArray(annotationAttributes, "value", "path");
-
-        RateLimitResolver resolver = rateLimitFactory.getRateLimitResolver(url);
+        RateLimitResolver resolver = rateLimitFactory.getRateLimitResolver(new String[]{requestURI.replace(SpringBeanUtils.getContextPath(), "")});
         if(null == resolver) {
             return joinPoint.proceed();
         }
@@ -91,6 +86,50 @@ public class LimitAspect {
         }
 
         throw new RuntimeException(ReturnCode.SYSTEM_SERVER_BUSINESS_ERROR.getMsg());
+    }
+
+    private String[] resolver(String[] url) {
+        String[] rs = new String[url.length ];
+        for (int i = 0; i < url.length; i++) {
+            String string = url[i];
+            rs[i] = resolver(string);
+        }
+
+        return rs;
+    }
+
+    private String resolver(String string) {
+        Environment environment = SpringBeanUtils.getEnvironment();
+        return environment.resolvePlaceholders(string);
+    }
+
+    private String[] getUrl(Method method) {
+        RequestMapping requestMapping = method.getDeclaredAnnotation(RequestMapping.class);
+        if(null != requestMapping) {
+            return ArrayUtils.defaultIfEmpty(requestMapping.value(), requestMapping.path());
+        }
+        GetMapping getMapping = method.getDeclaredAnnotation(GetMapping.class);
+        if(null != getMapping) {
+            return ArrayUtils.defaultIfEmpty(getMapping.value(), getMapping.path());
+        }
+        PostMapping postMapping = method.getDeclaredAnnotation(PostMapping.class);
+        if(null != postMapping) {
+            return ArrayUtils.defaultIfEmpty(postMapping.value(), postMapping.path());
+        }
+        PutMapping putMapping = method.getDeclaredAnnotation(PutMapping.class);
+        if(null != putMapping) {
+            return ArrayUtils.defaultIfEmpty(putMapping.value(), putMapping.path());
+        }
+        DeleteMapping deleteMapping = method.getDeclaredAnnotation(DeleteMapping.class);
+        if(null != deleteMapping) {
+            return ArrayUtils.defaultIfEmpty(deleteMapping.value(), deleteMapping.path());
+        }
+        PatchMapping patchMapping = method.getDeclaredAnnotation(PatchMapping.class);
+        if(null != patchMapping) {
+            return ArrayUtils.defaultIfEmpty(patchMapping.value(), patchMapping.path());
+        }
+
+        return CommonConstant.EMPTY_ARRAY;
     }
 
     private Object doLimit(ProceedingJoinPoint joinPoint, Limit limit) throws Throwable {

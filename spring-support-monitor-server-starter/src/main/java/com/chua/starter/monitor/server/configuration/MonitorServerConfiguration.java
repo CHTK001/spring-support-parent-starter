@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.server.configuration;
 
 import com.chua.common.support.annotations.OnRouterEvent;
+import com.chua.common.support.net.NetUtils;
 import com.chua.common.support.protocol.options.ServerOption;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.starter.monitor.server.consumer.MonitorConsumer;
@@ -98,6 +99,10 @@ public class MonitorServerConfiguration implements BeanDefinitionRegistryPostPro
     }
 
     private void registerMqServer(BeanDefinitionRegistry registry) {
+        if(NetUtils.isPortInUsed(monitorServerProperties.getMqPort())) {
+            log.info("MQ: {}已被占用", monitorServerProperties.getMqPort());
+            return;
+        }
         registry.registerBeanDefinition("mqServer", BeanDefinitionBuilder.rootBeanDefinition(ZbusServer.class)
                 .addConstructorArgValue(ServerOption.builder()
                         .port(monitorServerProperties.getMqPort())

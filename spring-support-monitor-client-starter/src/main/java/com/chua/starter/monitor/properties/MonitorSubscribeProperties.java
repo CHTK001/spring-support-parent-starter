@@ -3,7 +3,9 @@ package com.chua.starter.monitor.properties;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import static com.chua.starter.monitor.properties.MonitorConfigProperties.PRE;
+import java.util.List;
+
+import static com.chua.starter.monitor.properties.MonitorSubscribeProperties.PRE;
 
 /**
  * 监视器属性
@@ -14,14 +16,14 @@ import static com.chua.starter.monitor.properties.MonitorConfigProperties.PRE;
  */
 @Data
 @ConfigurationProperties(prefix = PRE, ignoreInvalidFields = true)
-public class MonitorConfigProperties {
+public class MonitorSubscribeProperties {
 
-    public static final String PRE = "plugin.monitor.config";
+    public static final String PRE = "plugin.monitor.subscribe";
 
     /**
-     * 订阅的配置名称, 默认全部
+     * 订阅的配置名称, 默不订阅
      */
-    private String configAppName;
+    private List<String> config;
 
 
 

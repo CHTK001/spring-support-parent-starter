@@ -1,5 +1,6 @@
 package com.chua.starter.monitor.factory;
 
+import com.chua.common.support.function.Joiner;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.CollectionUtils;
@@ -46,7 +47,7 @@ public class MonitorFactory implements AutoCloseable {
     private final ScheduledExecutorService scheduledExecutorService = ThreadUtils.newScheduledThreadPoolExecutor(2, "monitor-core-thread");
     private MonitorMqProperties monitorMqProperties;
     private MonitorProtocolProperties monitorProtocolProperties;
-    private MonitorConfigProperties monitorConfigProperties;
+    private MonitorSubscribeProperties monitorConfigProperties;
     private MonitorReportProperties monitorReportProperties;
     private String serverPort;
     private String serverHost;
@@ -134,7 +135,7 @@ public class MonitorFactory implements AutoCloseable {
         MonitorRequest request = new MonitorRequest();
         request.setAppName(appName);
         request.setProfile(active);
-        request.setSubscribeAppName(monitorConfigProperties.getConfigAppName());
+        request.setSubscribeAppName(Joiner.on(",").join(monitorConfigProperties.getConfig()));
         request.setServerPort(serverPort);
         request.setServerHost(StringUtils.defaultString(monitorProtocolProperties.getHost(), serverHost));
         request.setContextPath(contextPath);
@@ -174,12 +175,16 @@ public class MonitorFactory implements AutoCloseable {
         this.serverHost = StringUtils.defaultString(monitorProtocolProperties.getHost(), environment.resolvePlaceholders("${server.address:}"));
     }
 
-    public void register(MonitorConfigProperties monitorConfigProperties) {
+    public void register(MonitorSubscribeProperties monitorConfigProperties) {
         this.monitorConfigProperties = monitorConfigProperties;
     }
 
     public void register(MonitorReportProperties monitorReportProperties) {
         this.monitorReportProperties = monitorReportProperties;
         this.plugins = monitorReportProperties.getPlugins();
+    }
+
+    public String getSubscribeConfig() {
+        return Joiner.on(',').join(monitorConfigProperties.getConfig());
     }
 }

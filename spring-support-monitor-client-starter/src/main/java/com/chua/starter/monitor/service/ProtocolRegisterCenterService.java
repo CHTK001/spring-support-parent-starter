@@ -2,6 +2,7 @@ package com.chua.starter.monitor.service;
 
 import com.chua.common.support.json.Json;
 import com.chua.common.support.protocol.boot.*;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.factory.MonitorFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
@@ -29,12 +30,18 @@ public class ProtocolRegisterCenterService implements RegisterCenterService, App
         if(null == protocolClient) {
             throw new NullPointerException("protocolClient is null");
         }
+
+        String config = MonitorFactory.getInstance().getSubscribeConfig();
+        if(StringUtils.isEmpty(config)) {
+            throw new NullPointerException("protocolClient is null");
+        }
+
         BootResponse response = protocolClient.get(BootRequest.builder()
                 .moduleType(ModuleType.REGISTER_CENTER)
                 .commandType(CommandType.REQUEST)
                 .appName(environment.getProperty("spring.application.name"))
                 .profile(environment.getProperty("spring.profiles.active", "default"))
-                .content(MonitorFactory.getInstance().getMonitorConfigProperties().getConfigAppName())
+                .content(config)
                 .build()
         );
         if(response.getCommandType() != CommandType.RESPONSE) {
