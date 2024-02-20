@@ -18,6 +18,9 @@ import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.BeanFactoryAware;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -39,10 +42,10 @@ import static io.lettuce.core.pubsub.PubSubOutput.Type.subscribe;
  * @since 2023/11/20
  */
 @Slf4j
-public class SupportInjector extends DefaultSqlInjector implements EnvironmentAware, ApplicationContextAware, CommandLineRunner {
+public class SupportInjector extends DefaultSqlInjector implements EnvironmentAware, BeanFactoryAware, ApplicationContextAware, CommandLineRunner {
 
-    private final ProtocolClient protocolClient;
-    private final ProtocolServer protocolServer;
+    private ProtocolClient protocolClient;
+    private ProtocolServer protocolServer;
 
 
     private final Map<String, DynamicSqlMethod> methodMap = new ConcurrentHashMap<>();
@@ -51,11 +54,7 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
     private final Map<String, MappedStatement> statementMap = new ConcurrentHashMap<>();
     private ApplicationContext applicationContext;
     private Configuration configuration;
-
-    public SupportInjector(ProtocolClient protocolClient, ProtocolServer protocolServer) {
-        this.protocolClient = protocolClient;
-        this.protocolServer = protocolServer;
-    }
+    private ConfigurableListableBeanFactory beanFactory;
 
     @Override
     public List<AbstractMethod> getMethodList(Class<?> mapperClass, TableInfo tableInfo) {
@@ -87,37 +86,7 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
 
     @Override
     public void setEnvironment(Environment environment) {
-        this.protocolServer.addListen(this);
-        MonitorFactory monitorFactory = MonitorFactory.getInstance();
-        if(!MonitorFactory.getInstance().isEnable()) {
-            return;
-        }
 
-        if(!MonitorFactory.getInstance().hasSubscribers()) {
-            return;
-        }
-
-        BootResponse response = protocolClient.get(BootRequest.builder()
-                .moduleType(ModuleType.MYBATIS)
-                .commandType(CommandType.SUBSCRIBE)
-                .appName(monitorFactory.getAppName())
-                .profile(monitorFactory.getActive())
-                .content(monitorFactory.getSubscribeConfig())
-                .build()
-        );
-
-
-        if(response.getCommandType() != CommandType.RESPONSE) {
-            log.error("MYBATIS 订阅: {}失败 => {}", subscribe, response.getContent());
-            return;
-        }
-
-        log.info("MYBATIS 订阅: {} 成功", subscribe);
-        try {
-            JsonArray jsonArray = Json.getJsonArray(response.getContent());
-            register(jsonArray);
-        } catch (Exception ignored) {
-        }
     }
 
     private void register(JsonArray jsonArray) {
@@ -227,6 +196,52 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
 
         for (Map.Entry<String, DynamicSqlMethod> entry : methodMap.entrySet()) {
             register(entry.getValue().getConfig());
+        }
+    }
+
+    @Override
+    public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
+        if (!(beanFactory instanceof ConfigurableListableBeanFactory)) {
+            throw new IllegalArgumentException(
+                    "ConfigValueAnnotationBeanPostProcessor requires a ConfigurableListableBeanFactory");
+        }
+        this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
+        String[] beanNamesForType = this.beanFactory.getBeanNamesForType(ProtocolServer.class);
+        if(beanNamesForType.length == 0) {
+            return;
+        }
+        this.protocolServer = this.beanFactory.getBean(ProtocolServer.class);
+        this.protocolClient = this.beanFactory.getBean(ProtocolClient.class);
+        this.protocolServer.addListen(this);
+        MonitorFactory monitorFactory = MonitorFactory.getInstance();
+        if(!MonitorFactory.getInstance().isEnable()) {
+            return;
+        }
+
+        if(!MonitorFactory.getInstance().hasSubscribers()) {
+            return;
+        }
+
+        BootResponse response = protocolClient.get(BootRequest.builder()
+                .moduleType(ModuleType.MYBATIS)
+                .commandType(CommandType.SUBSCRIBE)
+                .appName(monitorFactory.getAppName())
+                .profile(monitorFactory.getActive())
+                .content(monitorFactory.getSubscribeConfig())
+                .build()
+        );
+
+
+        if(response.getCommandType() != CommandType.RESPONSE) {
+            log.error("MYBATIS 订阅: {}失败 => {}", subscribe, response.getContent());
+            return;
+        }
+
+        log.info("MYBATIS 订阅: {} 成功", subscribe);
+        try {
+            JsonArray jsonArray = Json.getJsonArray(response.getContent());
+            register(jsonArray);
+        } catch (Exception ignored) {
         }
     }
 }

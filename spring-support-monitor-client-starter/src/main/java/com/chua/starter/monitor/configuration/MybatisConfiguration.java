@@ -15,12 +15,12 @@ import org.springframework.context.annotation.Bean;
  */
 @Slf4j
 @AutoConfigureAfter({ProtocolClient.class, ProtocolServer.class})
-public class MybatisConfiguration {
+public class MybatisConfiguration  {
 
 
     @Bean
     @ConditionalOnMissingBean
-    public SupportInjector supportInjector(ProtocolClient protocolClient, ProtocolServer protocolServer) {
-        return new SupportInjector(protocolClient, protocolServer);
+    public SupportInjector supportInjector() {
+        return new SupportInjector();
     }
 }

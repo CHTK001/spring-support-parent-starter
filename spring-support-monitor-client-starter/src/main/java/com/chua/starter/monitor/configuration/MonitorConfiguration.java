@@ -58,10 +58,6 @@ public class MonitorConfiguration  implements BeanDefinitionRegistryPostProcesso
             return;
         }
 
-        if(ClassUtils.isPresent("com.chua.starter.monitor.server.properties.MonitorServerProperties")) {
-            return;
-        }
-
         MonitorFactory monitorFactory = MonitorFactory.getInstance();
         monitorFactory.register(environment);
         monitorFactory.registerAppName(environment.getProperty("spring.application.name"));
@@ -70,6 +66,11 @@ public class MonitorConfiguration  implements BeanDefinitionRegistryPostProcesso
         monitorFactory.register(monitorProtocolProperties);
         monitorFactory.register(monitorSubscribeProperties);
         monitorFactory.register(monitorReportProperties);
+
+
+        if(ClassUtils.isPresent("com.chua.starter.monitor.server.properties.MonitorServerProperties")) {
+            return;
+        }
         monitorFactory.finish();
 
         ProtocolFactory protocolFactory = new ProtocolFactory(registry, environment);
