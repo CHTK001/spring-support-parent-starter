@@ -27,6 +27,15 @@ public class MonitorPatch extends SysBase implements Serializable {
     private Integer monitorPatchId;
 
     /**
+     * 补丁应用
+     */
+    @TableField(value = "monitor_patch_app")
+    @ApiModelProperty(value = "补丁所属应用")
+    @Schema(description = "补丁所属应用")
+    @Size(max = 255, message = "补丁名称最大长度要小于 255")
+    private String monitorPatchApp;
+
+    /**
      * 补丁名称
      */
     @TableField(value = "monitor_patch_name")
@@ -71,6 +80,9 @@ public class MonitorPatch extends SysBase implements Serializable {
     @Size(max = 255, message = "版本最大长度要小于 255")
     private String monitorPatchVersion;
 
+
+    @TableField(exist = false)
+    private String patchFile;
 
     private static final long serialVersionUID = 1L;
     /**

@@ -12,6 +12,7 @@ import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.factory.MonitorFactory;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.session.Configuration;
@@ -45,6 +46,8 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
 
 
     private final Map<String, DynamicSqlMethod> methodMap = new ConcurrentHashMap<>();
+
+    @Getter
     private final Map<String, MappedStatement> statementMap = new ConcurrentHashMap<>();
     private ApplicationContext applicationContext;
     private Configuration configuration;
