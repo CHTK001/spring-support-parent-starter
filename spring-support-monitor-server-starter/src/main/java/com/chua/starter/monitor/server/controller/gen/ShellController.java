@@ -86,6 +86,10 @@ public class ShellController extends AbstractSwaggerController<MonitorSysGenShel
 
         MonitorSysGenShell sysGenShell = service.getById(executeQuery.getDataId());
         Session session = ServiceProvider.of(Session.class).getKeepExtension(sysGen.getGenId() + "_log", sysGen.getGenType(), sysGen.newDatabaseOptions());
+        if(!session.isConnect()) {
+            ServiceProvider.of(Session.class).closeKeepExtension(sysGen.getGenId() + "");
+            return ReturnResult.illegal("当前服务器不可达");
+        }
         session.setListener(message -> {
             socketSessionTemplate.send(executeQuery.getDataId(), message);
         });
@@ -117,6 +121,10 @@ public class ShellController extends AbstractSwaggerController<MonitorSysGenShel
         StringBuilder stringBuffer = new StringBuilder();
         long startTime = System.nanoTime();
         Session session = ServiceProvider.of(Session.class).getKeepExtension(sysGen.getGenId() + "", sysGen.getGenType(), sysGen.newDatabaseOptions());
+        if(!session.isConnect()) {
+            ServiceProvider.of(Session.class).closeKeepExtension(sysGen.getGenId() + "");
+            return ReturnResult.illegal("当前服务器不可达");
+        }
         SessionResultSet sessionResultSet = null;
         session.setListener(message -> {
             socketSessionTemplate.send(executeQuery.getDataId(), message);
