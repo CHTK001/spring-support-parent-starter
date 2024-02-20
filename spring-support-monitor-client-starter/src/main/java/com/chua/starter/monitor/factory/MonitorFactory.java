@@ -187,4 +187,12 @@ public class MonitorFactory implements AutoCloseable {
     public String getSubscribeConfig() {
         return Joiner.on(',').join(monitorConfigProperties.getConfig());
     }
+
+    public String getHotspotPath() {
+        return monitorConfigProperties.getHotspot();
+    }
+
+    public boolean hasSubscribers() {
+        return CollectionUtils.isNotEmpty(monitorConfigProperties.getConfig());
+    }
 }

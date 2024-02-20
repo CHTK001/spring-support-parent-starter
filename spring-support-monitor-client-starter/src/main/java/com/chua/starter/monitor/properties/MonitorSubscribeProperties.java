@@ -25,6 +25,8 @@ public class MonitorSubscribeProperties {
      */
     private List<String> config;
 
-
-
+    /**
+     * 补丁存放位置
+     */
+    private String hotspot = "./patch/client/";
 }
