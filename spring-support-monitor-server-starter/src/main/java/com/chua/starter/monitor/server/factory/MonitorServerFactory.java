@@ -47,7 +47,8 @@ public class MonitorServerFactory implements MonitorConstant, DisposableBean, In
      */
     public MonitorRequest getHeart(String appName, String appModel) {
         // 获取所有的心跳数据键
-        Set<String> keys = stringRedisTemplate.keys(HEART + appName + ":" + StringUtils.defaultString(appModel, "").replace(":", "_"));
+        Set<String> keys = stringRedisTemplate.keys(HEART + appName + ":" +
+                StringUtils.defaultString(appModel, "").replace(":", "_"));
         Map<String, List<MonitorRequest>> stringListMap = create(keys);
         if(stringListMap.isEmpty()) {
             return null;
