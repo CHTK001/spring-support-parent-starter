@@ -165,13 +165,16 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
 
     private void doInjectSubscribe(MutablePropertySources propertySources) {
         this.protocolServer.addListen(this);
-
+        String config = MonitorFactory.getInstance().getSubscribeConfig();
+        if(StringUtils.isEmpty(config)) {
+            return;
+        }
         BootResponse response = protocolClient.get(BootRequest.builder()
                         .moduleType(ModuleType.CONFIG)
                         .commandType(CommandType.SUBSCRIBE)
-                        .appName(environment.getProperty("spring.application.name"))
-                        .profile(environment.getProperty("spring.profiles.active", "default"))
-                        .content(MonitorFactory.getInstance().getMonitorConfigProperties().getConfigAppName())
+                        .appName(MonitorFactory.getInstance().getAppName())
+                        .profile(MonitorFactory.getInstance().getActive())
+                        .content(config)
                 .build()
         );
         if(response.getCommandType() != CommandType.RESPONSE) {

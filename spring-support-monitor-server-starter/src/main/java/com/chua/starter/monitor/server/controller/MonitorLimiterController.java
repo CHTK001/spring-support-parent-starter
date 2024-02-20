@@ -10,6 +10,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.protocol.boot.CommandType;
 import com.chua.common.support.protocol.boot.ModuleType;
 import com.chua.common.support.utils.ObjectUtils;
+import com.chua.common.support.validator.group.AddGroup;
 import com.chua.starter.common.support.result.ResultData;
 import com.chua.starter.monitor.request.MonitorRequest;
 import com.chua.starter.monitor.server.entity.MonitorLimit;
@@ -20,6 +21,7 @@ import com.chua.starter.mybatis.entity.DelegatePage;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.AllArgsConstructor;
 import org.springframework.validation.BindingResult;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -52,9 +54,6 @@ public class MonitorLimiterController {
     @GetMapping("page")
     @ResponseBody
     public ReturnPageResult<Page<MonitorLimit>> page(DelegatePage<MonitorLimit> page, @Valid MonitorLimit entity, BindingResult bindingResult) {
-        if (bindingResult.hasErrors()) {
-            return ReturnPageResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
-        }
         return ReturnPageResult.ok(monitorLimitService.page(page.createPage(), Wrappers.<MonitorLimit>lambdaQuery()
                 .eq(StringUtils.isNotBlank(entity.getLimitProfile()), MonitorLimit::getLimitProfile, entity.getLimitProfile())
         ));
@@ -148,7 +147,7 @@ public class MonitorLimiterController {
         }
 
         for (MonitorRequest monitorRequest : heart) {
-            monitorAppService.upload(null, monitorRequest, Json.toJSONString(config), ModuleType.SHELL, CommandType.REQUEST);
+            monitorAppService.upload(null, monitorRequest, Json.toJSONString(config), ModuleType.LIMIT, CommandType.REQUEST);
         }
         return ReturnResult.success();
     }
@@ -160,7 +159,7 @@ public class MonitorLimiterController {
      */
     @PostMapping("save")
     @ResponseBody
-    public ResultData<Boolean> save(@Valid @RequestBody MonitorLimit t, BindingResult bindingResult) {
+    public ResultData<Boolean> save(@Validated({AddGroup.class, AddGroup.class}) @RequestBody MonitorLimit t, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ResultData.failure(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }

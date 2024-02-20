@@ -49,7 +49,7 @@ public class ShellConfiguration implements BeanFactoryAware {
         }
 
         Command command = Json.fromJson(request.getContent(), Command.class);
-        if(null == command) {
+        if(null == command || null == command.getCommand()) {
             return BootResponse.notSupport("The non-register command is not supported");
         }
 
