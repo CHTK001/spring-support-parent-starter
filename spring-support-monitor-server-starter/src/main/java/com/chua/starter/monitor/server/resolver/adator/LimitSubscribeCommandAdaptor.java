@@ -8,8 +8,8 @@ import com.chua.common.support.protocol.boot.BootRequest;
 import com.chua.common.support.protocol.boot.BootResponse;
 import com.chua.common.support.protocol.boot.CommandType;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.monitor.server.entity.MonitorConfig;
-import com.chua.starter.monitor.server.service.MonitorConfigService;
+import com.chua.starter.monitor.server.entity.MonitorLimit;
+import com.chua.starter.monitor.server.service.MonitorLimitService;
 
 import javax.annotation.Resource;
 import java.util.List;
@@ -20,12 +20,11 @@ import java.util.List;
  * @author CH
  * @since 2023/11/16
  */
-@Spi("config_subscribe")
-public class ConfigSubscribeCommandAdaptor implements CommandAdaptor{
-
+@Spi("limit_subscribe")
+public class LimitSubscribeCommandAdaptor implements CommandAdaptor{
 
     @Resource
-    private MonitorConfigService monitorConfigService;
+    private MonitorLimitService monitorLimitService;
 
 
     @Override
@@ -35,10 +34,10 @@ public class ConfigSubscribeCommandAdaptor implements CommandAdaptor{
             return BootResponse.empty();
         }
 
-        List<MonitorConfig> list = monitorConfigService.list(Wrappers.<MonitorConfig>lambdaQuery()
-                .eq(MonitorConfig::getConfigProfile, Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(request.getProfile()))
-                .eq(MonitorConfig::getConfigStatus, 1)
-                .in(StringUtils.isNotEmpty(content), MonitorConfig::getConfigAppname, Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(content))
+        List<MonitorLimit> list = monitorLimitService.list(Wrappers.<MonitorLimit>lambdaQuery()
+                .in(MonitorLimit::getLimitProfile, Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(request.getProfile()))
+                .eq(MonitorLimit::getLimitStatus, 1)
+                .in(StringUtils.isNotEmpty(content), MonitorLimit::getLimitApp, Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(content))
         );
         return BootResponse.builder()
                 .data(BootResponse.DataDTO.builder()
