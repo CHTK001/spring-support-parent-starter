@@ -2,7 +2,9 @@ package com.chua.starter.oauth.client.support.provider;
 
 import com.chua.common.support.collection.ImmutableBuilder;
 import com.chua.common.support.function.Splitter;
-import com.chua.common.support.json.Json;
+import com.chua.common.support.json.Json5;
+import com.chua.common.support.json.JsonObject;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.result.Result;
@@ -161,7 +163,21 @@ public class TempProvider {
         CookieUtil.remove(request, response, "x-oauth-cookie");
         return Result.success("注销成功");
     }
-
+    /**
+     * 保存用户首页布局
+     *
+     * @param sysUserSetting 保存用户首页布局
+     * @return 保存用户首页布局
+     */
+    @PostMapping("/grid")
+    public ReturnResult<Boolean> grid(@RequestBody JsonObject sysUserSetting,
+                                      @UserValue("userDashboardGrid") String userDashboardGrid,
+                                      @UserValue("userId") Long userId,
+                                      @UserValue("username") String username,
+                                      @UserValue("roles") Set<String> roles
+    ) {
+        return ReturnResult.illegal("暂不支持服务器保存");
+    }
     /**
      * 我菜单
      *
@@ -183,7 +199,7 @@ public class TempProvider {
         }
         UserMenuResult userMenuResult = new UserMenuResult();
         userMenuResult.setPermissions(AuthClientExecute.getInstance().getUserResult().getPermission());
-        userMenuResult.setMenu(Json.fromJsonToList(TempProvider.class.getResourceAsStream(StringUtils.defaultString(authProperties.getTemp().getMenuPath(), "/menu.json")), RouteVO.class));
+        userMenuResult.setMenu(Json5.fromJsonToList(TempProvider.class.getResourceAsStream(StringUtils.defaultString(authProperties.getTemp().getMenuPath(), "/menu.json5")), RouteVO.class));
         userMenuResult.setDashboardGrid(Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(userGrid));
         userMenuResult.setDashboard(userDashboard);
         return Result.success(userMenuResult);
