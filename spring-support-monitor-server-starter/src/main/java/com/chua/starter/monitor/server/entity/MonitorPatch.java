@@ -27,6 +27,15 @@ public class MonitorPatch extends SysBase implements Serializable {
     private Integer monitorPatchId;
 
     /**
+     * 补丁所属环境
+     */
+    @TableField(value = "monitor_patch_profile")
+    @ApiModelProperty(value = "补丁所属环境")
+    @Schema(description = "补丁所属环境")
+    @Size(max = 255, message = "补丁名称最大长度要小于 255")
+    private String monitorPatchProfile;
+
+    /**
      * 补丁应用
      */
     @TableField(value = "monitor_patch_app")
