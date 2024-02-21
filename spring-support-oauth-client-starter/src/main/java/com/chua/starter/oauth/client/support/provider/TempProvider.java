@@ -199,8 +199,14 @@ public class TempProvider {
         }
         UserMenuResult userMenuResult = new UserMenuResult();
         userMenuResult.setPermissions(AuthClientExecute.getInstance().getUserResult().getPermission());
-        userMenuResult.setMenu(Json5.fromJsonToList(TempProvider.class.getResourceAsStream(StringUtils.defaultString(authProperties.getTemp().getMenuPath(), "/menu.json5")), RouteVO.class));
-        userMenuResult.setDashboardGrid(Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(userGrid));
+        try {
+            userMenuResult.setMenu(Json5.fromJsonToList(TempProvider.class.getResourceAsStream(StringUtils.defaultString(authProperties.getTemp().getMenuPath(), "/menu.json5")), RouteVO.class));
+        } catch (Exception ignored) {
+        }
+        try {
+            userMenuResult.setDashboardGrid(Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(userGrid));
+        } catch (Exception ignored) {
+        }
         userMenuResult.setDashboard(userDashboard);
         return Result.success(userMenuResult);
     }
