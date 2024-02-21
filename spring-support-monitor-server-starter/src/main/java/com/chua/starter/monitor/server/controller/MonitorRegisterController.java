@@ -3,6 +3,7 @@ package com.chua.starter.monitor.server.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.server.resolver.adator.CommandAdaptor;
 import com.chua.starter.monitor.server.resolver.adator.RegisterCenterRequestCommandAdaptor;
@@ -15,7 +16,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -39,7 +39,7 @@ public class MonitorRegisterController {
         if (StringUtils.isEmpty(appName)) {
             return ReturnResult.illegal("应用不存在");
         }
-        return ReturnResult.ok(Collections.singletonList(getServiceInstance(appName)));
+        return ReturnResult.ok(CollectionUtils.wrapper(getServiceInstance(appName)));
     }
 
     private ServiceInstance getServiceInstance(String appName) {
