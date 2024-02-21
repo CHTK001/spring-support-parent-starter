@@ -1,9 +1,15 @@
 package com.chua.starter.monitor.configuration;
 
-import com.chua.common.support.protocol.boot.*;
-import com.chua.common.support.task.limit.RateLimitMappingFactory;
+import com.chua.common.support.json.Json;
+import com.chua.common.support.json.JsonObject;
+import com.chua.common.support.protocol.annotations.ServiceMapping;
+import com.chua.common.support.protocol.boot.BootRequest;
+import com.chua.common.support.protocol.boot.BootResponse;
+import com.chua.common.support.protocol.boot.ProtocolClient;
+import com.chua.common.support.protocol.boot.ProtocolServer;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.factory.MonitorFactory;
+import com.chua.starter.monitor.patch.PatchResolver;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
@@ -20,7 +26,7 @@ import org.springframework.core.env.Environment;
  * @author CH
  */
 @Slf4j
-public class LimitConfiguration implements BeanFactoryAware, EnvironmentAware, ApplicationContextAware {
+public class PatchConfiguration implements BeanFactoryAware, EnvironmentAware, ApplicationContextAware {
 
 
     private ProtocolServer protocolServer;
@@ -43,40 +49,38 @@ public class LimitConfiguration implements BeanFactoryAware, EnvironmentAware, A
         if(beanNamesForType.length == 0) {
             return;
         }
+
         if(!MonitorFactory.getInstance().isEnable()) {
             return;
         }
         this.protocolServer = this.beanFactory.getBean(ProtocolServer.class);
         this.protocolClient = this.beanFactory.getBean(ProtocolClient.class);
-        this.protocolServer.addListen(RateLimitMappingFactory.getInstance());
-        doInjectSubscribe();
+        this.protocolServer.addListen(this);
     }
 
-    private void doInjectSubscribe() {
-        String configAppName = MonitorFactory.getInstance().getSubscribeConfig();
-        if(StringUtils.isEmpty(configAppName)) {
-            return;
+
+    /**
+     * 补丁
+     *
+     * @param request 请求
+     * @return {@link BootResponse}
+     */
+    @ServiceMapping("patch")
+    public BootResponse patch(BootRequest request ) {
+        String content = request.getContent();
+        if(StringUtils.isBlank(content)) {
+            return BootResponse.empty();
         }
-        BootResponse response = protocolClient.get(BootRequest.builder()
-                        .moduleType(ModuleType.LIMIT)
-                        .commandType(CommandType.SUBSCRIBE)
-                        .appName(MonitorFactory.getInstance().getAppName())
-                        .profile(MonitorFactory.getInstance().getActive())
-                        .content(configAppName)
-                .build()
-        );
-        if(response.getCommandType() != CommandType.RESPONSE) {
-            return;
+        JsonObject jsonObject = Json.getJsonObject(content);
+        String patchFile = jsonObject.getString("patchFile");
+        String patchFileName = jsonObject.getString("monitorPatchPack");
+        if(StringUtils.isBlank(patchFile) || StringUtils.isBlank(patchFileName)) {
+            return BootResponse.empty();
         }
 
-        log.info("LIMIT 订阅成功");
-        register(response.getContent());
-    }
-
-    private void register(String content) {
-        BootRequest request = new BootRequest();
-        request.setContent(content);
-        RateLimitMappingFactory.getInstance().limitConfig(request);
+        PatchResolver patchResolver = new PatchResolver(patchFileName);
+        patchResolver.resolve(patchFile);
+        return BootResponse.ok();
     }
 
 
