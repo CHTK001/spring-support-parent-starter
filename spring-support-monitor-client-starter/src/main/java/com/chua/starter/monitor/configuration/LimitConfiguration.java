@@ -43,6 +43,9 @@ public class LimitConfiguration implements BeanFactoryAware, EnvironmentAware, A
         if(beanNamesForType.length == 0) {
             return;
         }
+        if(!MonitorFactory.getInstance().isEnable()) {
+            return;
+        }
         this.protocolServer = this.beanFactory.getBean(ProtocolServer.class);
         this.protocolClient = this.beanFactory.getBean(ProtocolClient.class);
         this.protocolServer.addListen(RateLimitMappingFactory.getInstance());

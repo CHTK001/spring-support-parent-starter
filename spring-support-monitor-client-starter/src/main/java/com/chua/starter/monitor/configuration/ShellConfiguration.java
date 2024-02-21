@@ -13,6 +13,7 @@ import com.chua.common.support.shell.mapping.DelegateCommand;
 import com.chua.common.support.shell.mapping.HelpCommand;
 import com.chua.common.support.shell.mapping.SystemCommand;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.starter.monitor.factory.MonitorFactory;
 import com.chua.starter.monitor.shell.command.CfrCommand;
 import com.chua.starter.monitor.shell.command.SpringCommand;
 import com.chua.starter.monitor.shell.resolver.Resolver;
@@ -71,6 +72,10 @@ public class ShellConfiguration implements BeanFactoryAware {
         this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
         String[] beanNamesForType = this.beanFactory.getBeanNamesForType(ProtocolServer.class);
         if(beanNamesForType.length == 0) {
+            return;
+        }
+
+        if(!MonitorFactory.getInstance().isEnable()) {
             return;
         }
         this.protocolServer = this.beanFactory.getBean(ProtocolServer.class);

@@ -1,5 +1,6 @@
 package com.chua.starter.monitor.server.service.impl;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.common.support.lang.code.ErrorResult;
 import com.chua.common.support.utils.FileUtils;
@@ -28,8 +29,8 @@ public class MonitorPatchServiceImpl extends ServiceImpl<MonitorPatchMapper, Mon
     @Override
     public Boolean removePatch(String id) {
         return transactionTemplate.execute(status -> {
-            baseMapper.deleteById(id);
             unloadPatch(getById(id));
+            baseMapper.deleteById(id);
             return true;
         });
     }
@@ -40,13 +41,15 @@ public class MonitorPatchServiceImpl extends ServiceImpl<MonitorPatchMapper, Mon
         File file = getPatchFile(byId);
         FileUtils.forceDeleteDirectory(file);
         FileUtils.forceMkdir(file);
-        File patchFile = new File(file, t.getMonitorPatchName() + "-" + t.getMonitorPatchVersion() + "." + FileUtils.getExtension(multipartFile.getOriginalFilename()));
+        File patchFile = new File(file, t.getMonitorPatchName() + "-" + StringUtils.defaultString(t.getMonitorPatchVersion(), "1.0.0") + "." + FileUtils.getExtension(multipartFile.getOriginalFilename()));
         try {
             MultipartFileUtils.transferTo(multipartFile, patchFile);
             if(patchFile.exists()) {
                 t.setMonitorPatchPack(patchFile.getName());
                 baseMapper.updateById(t);
                 return ErrorResult.empty();
+            } else {
+                baseMapper.updateById(t);
             }
             return ErrorResult.of("上传失败");
         } catch (IOException ignored) {
@@ -55,17 +58,18 @@ public class MonitorPatchServiceImpl extends ServiceImpl<MonitorPatchMapper, Mon
     }
 
     @Override
-    public Boolean unloadPatch(MonitorPatch t) {
-        if(null == t) {
+    public Boolean unloadPatch(MonitorPatch byId) {
+        if(null == byId) {
             return false;
         }
-        MonitorPatch byId = getById(t.getMonitorPatchId());
         File file = getPatchFile(byId);
         if(null != file) {
             FileUtils.forceDeleteDirectory(file.getParentFile());
         }
-        t.setMonitorPatchPack(null);
-        baseMapper.updateById(t);
+        baseMapper.update(byId, Wrappers.<MonitorPatch>lambdaUpdate()
+                .set(MonitorPatch::getMonitorPatchPack, null)
+                .eq(MonitorPatch::getMonitorPatchId, byId.getMonitorPatchId())
+        );
         return true;
     }
 
@@ -79,13 +83,7 @@ public class MonitorPatchServiceImpl extends ServiceImpl<MonitorPatchMapper, Mon
     @Override
     public File getPatchFile(MonitorPatch unifiedPatch) {
         String patchPath = StringUtils.defaultString(genProperties.getTempPath(), ".");
-        File file = new File(patchPath, "patch" + unifiedPatch.getMonitorPatchId());
-        String unifiedPatchPack = unifiedPatch.getMonitorPatchPack();
-        if(StringUtils.isBlank(unifiedPatchPack)) {
-            return file;
-        }
-        File rs = new File(file, unifiedPatchPack);
-        return rs.exists() ? rs : null;
+        return new File(patchPath + "/../", "patch/" + unifiedPatch.getMonitorPatchId());
     }
 
     @Override
@@ -94,11 +92,15 @@ public class MonitorPatchServiceImpl extends ServiceImpl<MonitorPatchMapper, Mon
         if(null == patchFile) {
             throw new RuntimeException("补丁不存在");
         }
+        patchFile = new File(patchFile, unifiedPatch.getMonitorPatchPack());
+        if(!patchFile.exists()) {
+            throw new RuntimeException("补丁不存在");
+        }
 
         try (FileInputStream fileInputStream = new FileInputStream(patchFile)) {
             return IoUtils.toByteArray(fileInputStream);
         } catch (IOException e) {
-            throw new RuntimeException("补丁暂不支持下载");
+            throw new RuntimeException("补丁无法解析");
         }
     }
 }

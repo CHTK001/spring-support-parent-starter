@@ -108,6 +108,9 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
         if(beanNamesForType.length == 0) {
             return;
         }
+        if(!MonitorFactory.getInstance().isEnable()) {
+            return;
+        }
         this.protocolServer = this.beanFactory.getBean(ProtocolServer.class);
         this.protocolClient = this.beanFactory.getBean(ProtocolClient.class);
     }
