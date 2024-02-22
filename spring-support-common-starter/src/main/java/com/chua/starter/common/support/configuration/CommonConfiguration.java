@@ -1,8 +1,10 @@
 package com.chua.starter.common.support.configuration;
 
+import com.chua.starter.common.support.external.ExternalController;
 import com.chua.starter.common.support.filter.ParameterLogFilter;
 import com.chua.starter.common.support.limit.LimitAspect;
 import com.chua.starter.common.support.logger.OperateLoggerPointcutAdvisor;
+import com.chua.starter.common.support.properties.ExternalInterfaceProperties;
 import com.chua.starter.common.support.properties.LimitProperties;
 import com.chua.starter.common.support.properties.LogProperties;
 import com.chua.starter.common.support.properties.ParameterProperties;
@@ -25,7 +27,7 @@ import org.springframework.web.client.RestTemplate;
  * @author CH
  */
 @EnableConfigurationProperties({
-        LimitProperties.class, LogProperties.class, ParameterProperties.class
+        LimitProperties.class, LogProperties.class, ParameterProperties.class, ExternalInterfaceProperties.class
 })
 public class CommonConfiguration {
     @Bean
@@ -33,6 +35,12 @@ public class CommonConfiguration {
     @ConditionalOnProperty(name = "plugin.limit.enable", havingValue = "true", matchIfMissing = true)
     public LimitAspect limitAspect(LimitProperties limitProperties) {
         return new LimitAspect(limitProperties);
+    }
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(name = "plugin.external.enable", havingValue = "true", matchIfMissing = true)
+    public ExternalController externalController(ExternalInterfaceProperties externalInterfaceProperties) {
+        return new ExternalController(externalInterfaceProperties);
     }
 
     @Bean

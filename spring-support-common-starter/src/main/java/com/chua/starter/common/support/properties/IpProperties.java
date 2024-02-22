@@ -3,15 +3,13 @@ package com.chua.starter.common.support.properties;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import static com.chua.starter.common.support.properties.VersionProperties.PRE;
-
 /**
  * 跨域/版本控制/统一响应
  *
  * @author CH
  */
 @Data
-@ConfigurationProperties(prefix = PRE, ignoreInvalidFields = true)
+@ConfigurationProperties(prefix = IpProperties.PRE, ignoreInvalidFields = true)
 public class IpProperties {
 
     public static final String PRE = "plugin.ip";
