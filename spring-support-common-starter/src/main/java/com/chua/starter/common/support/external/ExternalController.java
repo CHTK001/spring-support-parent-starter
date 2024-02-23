@@ -1,12 +1,20 @@
 package com.chua.starter.common.support.external;
 
+import com.chua.common.support.external.Weather;
+import com.chua.common.support.external.WeatherResolver;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.utils.Weather;
+import com.chua.common.support.value.Value;
 import com.chua.starter.common.support.properties.ExternalInterfaceProperties;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import static com.chua.starter.common.support.constant.Constant.REDIS_CACHE_HOUR;
+import static java.util.concurrent.TimeUnit.HOURS;
 
 /**
  * 外部控制器
@@ -19,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/v1/external")
 public class ExternalController {
     private final ExternalInterfaceProperties externalInterfaceProperties;
+    private static final Cache<String, Value<Weather>> CACHE = CacheBuilder.newBuilder().expireAfterWrite(1, HOURS).build();
 
     public ExternalController(ExternalInterfaceProperties externalInterfaceProperties) {
         this.externalInterfaceProperties = externalInterfaceProperties;
@@ -32,7 +41,15 @@ public class ExternalController {
      * @return {@link ReturnResult}<{@link Weather}>
      */
     @GetMapping("weather")
+    @Cacheable(cacheManager = REDIS_CACHE_HOUR, cacheNames = REDIS_CACHE_HOUR, key = "'weather:'+#p0")
     public ReturnResult<Weather> getWeather(@RequestParam(value = "city", required = false) String city) {
-        return ReturnResult.of(Weather.create(city));
+        city = city == null ? "" : city;
+        Value<Weather> ifPresent = CACHE.getIfPresent(city);
+        if(null != ifPresent) {
+            return ReturnResult.of(ifPresent.getValue());
+        }
+        Weather weather = WeatherResolver.newDefault().getWeather(city);
+        CACHE.put(city, Value.of(weather));
+        return ReturnResult.of(weather);
     }
 }
