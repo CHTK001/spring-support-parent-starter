@@ -214,7 +214,7 @@ public class ExceptionAdvice  {
     @ExceptionHandler(RuntimeException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> handleRuntimeException(RuntimeException e) {
-        log.error("handleRuntimeException exception: {}", e.getMessage());
+        log.error("handleRuntimeException exception", e);
         if(Validator.hasChinese(e.getMessage())) {
             return Result.failed(e);
         }
