@@ -90,6 +90,7 @@ public class ParameterLogFilter implements Filter {
             }
         }
 
+        log.info("客户端地址：{}", RequestUtils.getIpAddress(request));
         if(headers.isEmpty()) {
             return;
         }
