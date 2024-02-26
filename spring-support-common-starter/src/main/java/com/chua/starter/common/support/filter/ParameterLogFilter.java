@@ -2,6 +2,7 @@ package com.chua.starter.common.support.filter;
 
 import com.chua.common.support.constant.NumberConstant;
 import com.chua.common.support.log.Log;
+import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
@@ -94,9 +95,13 @@ public class ParameterLogFilter implements Filter {
         if(headers.isEmpty()) {
             return;
         }
-        log.info("请求头");
-        for (String headerName : headers) {
-            log.info("{}: {}", headerName, request.getHeader(headerName));
+
+        if(CollectionUtils.isNotEmpty(headers)) {
+            log.info("************************请求头**********************");
+            for (String headerName : headers) {
+                log.info("{}: {}", headerName, request.getHeader(headerName));
+            }
+            log.info("***************************************************");
         }
     }
 
