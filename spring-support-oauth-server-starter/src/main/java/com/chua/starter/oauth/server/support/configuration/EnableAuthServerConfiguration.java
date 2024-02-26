@@ -1,7 +1,6 @@
 package com.chua.starter.oauth.server.support.configuration;
 
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.view.view.SmallTableView;
 import com.chua.starter.common.support.utils.BeanDefinitionRegistryUtils;
 import com.chua.starter.oauth.server.support.check.LoginCheck;
 import com.chua.starter.oauth.server.support.gitee.GiteeBinderProvider;
@@ -135,13 +134,12 @@ public class EnableAuthServerConfiguration implements BeanDefinitionRegistryPost
     @Override
     public void run(String... args) throws Exception {
         log.info("开启鉴权服务器");
-        SmallTableView view = new SmallTableView("说明", "配置");
-        view.addRow("加密方式", authServerProperties.getEncryption());
-        view.addRow("是否开启密钥校验", authServerProperties.isOpenCheckAkSk() + "");
-        view.addRow("在线模式", authServerProperties.getOnline().name().toLowerCase());
-        view.addRow("密钥管理器", authServerProperties.getTokenManagement());
-        view.addRow("密钥生成器", authServerProperties.getTokenGeneration());
-        view.addRow("日志实现器", authServerProperties.getLog());
-        log.info("{}", view.draw());
+        log.info("加密方式: {}", authServerProperties.getEncryption());
+        log.info("是否开启密钥校验: {}", authServerProperties.isOpenCheckAkSk());
+        log.info("在线模式: {}", authServerProperties.getOnline());
+        log.info("密钥管理器: {}", authServerProperties.getTokenManagement());
+        log.info("密钥生成器: {}", authServerProperties.getTokenGeneration());
+        log.info("日志实现器: {}", authServerProperties.getLog());
+
     }
 }
