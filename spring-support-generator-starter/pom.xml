@@ -135,8 +135,7 @@
 
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>utils-support-sftp-starter</artifactId>
-            <version>3.1.0</version>
+            <artifactId>utils-support-ssh-starter</artifactId>
         </dependency>
     </dependencies>
 
