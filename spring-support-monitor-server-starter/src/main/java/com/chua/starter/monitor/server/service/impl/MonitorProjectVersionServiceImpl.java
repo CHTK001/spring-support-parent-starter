@@ -41,8 +41,12 @@ public class MonitorProjectVersionServiceImpl extends ServiceImpl<MonitorProject
         return transactionTemplate.execute(status -> {
             monitorProjectVersion.setVersionStatus(1);
             if(baseMapper.updateById(monitorProjectVersion) > 0) {
-                StartScript script = new StartScript(monitorProjectService, socketSessionTemplate);
-                script.run(monitorProjectVersion);
+                try {
+                    StartScript script = new StartScript(monitorProjectService, socketSessionTemplate);
+                    script.run(monitorProjectVersion);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
             }
             return ErrorResult.ok();
         });
@@ -66,8 +70,12 @@ public class MonitorProjectVersionServiceImpl extends ServiceImpl<MonitorProject
             monitorProjectVersion.setVersionStatus(0);
             if(baseMapper.updateById(monitorProjectVersion) > 0) {
                 if(!StringUtils.isEmpty(versionStopScript)) {
-                    StopScript script = new StopScript(monitorProjectService, socketSessionTemplate);
-                    script.run(monitorProjectVersion);
+                    try {
+                        StopScript script = new StopScript(monitorProjectService, socketSessionTemplate);
+                        script.run(monitorProjectVersion);
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
                 }
             }
             return ErrorResult.ok();
