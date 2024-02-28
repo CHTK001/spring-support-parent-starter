@@ -42,7 +42,7 @@ public class LogScript {
             }
             SshSession sshSession = terminalSession.getSshSession();
             session.setListener(message -> {
-                socketSessionTemplate.send(monitorProjectVersion.getVersionId() + "", message);
+                socketSessionTemplate.send(monitorProjectVersion.getVersionId() + "terminal", message);
             });
 
             try {

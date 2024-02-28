@@ -42,18 +42,18 @@ public class StopScript {
             }
             SshSession sshSession = terminalSession.getSshSession();
             session.setListener(message -> {
-                socketSessionTemplate.send(monitorProjectVersion.getVersionId() + "", message);
+                socketSessionTemplate.send(monitorProjectVersion.getVersionId() + "terminal", message);
             });
 
             try {
-                doStart(sshSession, monitorProjectVersion, monitorProject);
+                doStop(sshSession, monitorProjectVersion, monitorProject);
             } catch (Exception e) {
                 throw new RuntimeException("脚本运行失败");
             }
         }
     }
 
-    private void doStart(SshSession sshSession, MonitorProjectVersion monitorProjectVersion, MonitorProject monitorProject) throws Exception {
+    private void doStop(SshSession sshSession, MonitorProjectVersion monitorProjectVersion, MonitorProject monitorProject) throws Exception {
         sshSession.executeQuery(
                 "nohup "
                         + getRunScript(monitorProjectVersion, monitorProject)
