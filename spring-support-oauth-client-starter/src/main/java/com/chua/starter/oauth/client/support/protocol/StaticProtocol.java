@@ -18,12 +18,21 @@ import static com.chua.starter.oauth.client.support.execute.AuthClientExecute.DE
 
 @Extension("Static")
 public class StaticProtocol extends AbstractProtocol{
-
-    private final Codec AES = Codec.build("AES", DEFAULT_KEY);
-
+    private static  Codec AES
     @Override
     public AuthenticationInformation approve(Cookie[] cookie, String token) {
+        initial();
         return newAuthenticationInformation(token, cookie);
+    }
+
+    private void initial() {
+        if(null == AES) {
+            synchronized (this) {
+                if(null == AES) {
+                    AES = Codec.build("AES", DEFAULT_KEY);
+                }
+            }
+        }
     }
 
 
