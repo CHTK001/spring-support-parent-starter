@@ -33,7 +33,7 @@ public class LogScript {
         if(null == monitorProjectVersion) {
             throw new RuntimeException(Language.newDefault().getString("${data.not-exist:数据不存在}"));
         }
-        Session session = ServiceProvider.of(Session.class).getKeepExtension(monitorProject.getProjectId() + "", "terminal", monitorProject.newDatabaseOptions());
+        Session session = ServiceProvider.of(Session.class).getKeepExtension(monitorProject.getProjectId() + "terminal", "terminal", monitorProject.newDatabaseOptions());
         if(null != session) {
             TerminalSession terminalSession = (TerminalSession)session;
             if(!terminalSession.isConnect()) {

@@ -76,7 +76,7 @@ public class ProjectController {
 
         Set<String> ids = Splitter.on(",").trimResults().omitEmptyStrings().splitToSet(id);
         for (String s : ids) {
-            ServiceProvider.of(Session.class).closeKeepExtension(s);
+            ServiceProvider.of(Session.class).closeKeepExtension(s + "terminal");
         }
         return ReturnResult.of(service.removeBatchByIds(ids));
     }
@@ -94,7 +94,7 @@ public class ProjectController {
         if(bindingResult.hasErrors()) {
             return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
-        ServiceProvider.of(Session.class).closeKeepExtension(MonitorProject.getProjectId() + "");
+        ServiceProvider.of(Session.class).closeKeepExtension(MonitorProject.getProjectId() + "terminal");
         return ReturnResult.of(service.updateById(MonitorProject));
     }
 
