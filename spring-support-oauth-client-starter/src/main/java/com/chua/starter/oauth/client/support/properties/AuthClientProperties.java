@@ -85,7 +85,7 @@ public class AuthClientProperties {
     private List<String> whitelist = new LinkedList<>();
 
     /**
-     * 协议
+     * 协议, http, static
      */
     private String protocol = "http";
     /**
