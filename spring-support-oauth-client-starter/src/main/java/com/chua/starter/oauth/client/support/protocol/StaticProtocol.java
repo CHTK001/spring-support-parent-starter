@@ -42,7 +42,12 @@ public class StaticProtocol extends AbstractProtocol{
         if(null == userResult && null != cookie) {
             for (Cookie cookie1 : cookie) {
                 if(!"JSESSIONID".equals(cookie1.getName())) {
-                    userResult = Json.fromJson(AES.decodeHex(cookie1.getValue()), UserResult.class);
+                    String source;
+                    try {
+                        source = AES.decodeHex(cookie1.getValue());
+                        userResult = Json.fromJson(source, UserResult.class);
+                    } catch (Exception e) {
+                    }
                     if(null != userResult) {
                         break;
                     }
