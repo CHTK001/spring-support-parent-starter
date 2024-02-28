@@ -4,14 +4,18 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.common.support.crypto.Codec;
+import com.chua.common.support.datasource.jdbc.option.DataSourceOptions;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.io.Serializable;
+import lombok.Data;
+
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
-import lombok.Data;
+import java.io.Serializable;
+import java.util.Base64;
 
 /**
  * 版本管理
@@ -19,7 +23,7 @@ import lombok.Data;
 @ApiModel(description="版本管理")
 @Schema(description="版本管理")
 @Data
-@JsonIgnoreProperties("projectControlPassword")
+@JsonIgnoreProperties(value = "projectControlPassword", allowSetters = true)
 @TableName(value = "monitor_project")
 public class MonitorProject implements Serializable {
     @TableId(value = "project_id", type = IdType.AUTO)
@@ -101,4 +105,21 @@ public class MonitorProject implements Serializable {
     private String projectControlUid;
 
     private static final long serialVersionUID = 1L;
+
+    /**
+     * 新数据库选项
+     * 新数据库配置
+     *
+     * @return {@link DataSourceOptions}
+     */
+    public DataSourceOptions newDatabaseOptions() {
+        DataSourceOptions databaseOptions = new DataSourceOptions();
+        databaseOptions.setName(projectName);
+        databaseOptions.setUsername(projectControlUser);
+        databaseOptions.setPassword(projectControlPassword);
+        databaseOptions.setSecretKey(projectControlUid);
+        databaseOptions.setUrl(projectControlHost + ":" + projectControlPort);
+        databaseOptions.setPassword(Codec.build(databaseOptions.getSecretKeyType(), projectControlUid).decodeString(Base64.getDecoder().decode(Base64.getDecoder().decode(projectControlPassword))));
+        return databaseOptions;
+    }
 }

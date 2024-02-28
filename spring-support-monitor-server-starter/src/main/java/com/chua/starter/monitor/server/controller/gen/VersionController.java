@@ -4,19 +4,19 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.function.Splitter;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.session.Session;
+import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.IdUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.common.support.validator.group.UpdateGroup;
 import com.chua.socketio.support.session.SocketSessionTemplate;
-import com.chua.starter.monitor.server.entity.MonitorProject;
 import com.chua.starter.monitor.server.entity.MonitorProjectVersion;
 import com.chua.starter.monitor.server.service.MonitorProjectService;
 import com.chua.starter.monitor.server.service.MonitorProjectVersionService;
-import com.chua.starter.mybatis.controller.AbstractSwaggerController;
 import com.chua.starter.mybatis.entity.PageRequest;
 import com.chua.starter.mybatis.utils.ReturnPageResultUtils;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -27,14 +27,12 @@ import org.springframework.web.bind.annotation.*;
 import javax.annotation.Resource;
 import java.util.Set;
 
-import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
-
 @RestController
 @SuppressWarnings("ALL")
-@Tag(name = "脚本接口")
+@Tag(name = "版本接口")
 @Slf4j
 @RequestMapping("v1/version")
-public class VersionController extends AbstractSwaggerController<MonitorProjectService, MonitorProject> {
+public class VersionController  {
 
     @Resource
     private MonitorProjectVersionService monitorProjectVersionService;
@@ -45,29 +43,12 @@ public class VersionController extends AbstractSwaggerController<MonitorProjectS
     @Resource
     private SocketSessionTemplate socketSessionTemplate;
     /**
-     * 根据主键删除数据
-     *
-     * @param id 页码
-     * @return 分页结果
-     */
-    @ResponseBody
-    @Operation(summary = "删除数据")
-    @DeleteMapping("delete")
-    public ReturnResult<Boolean> delete2(@Parameter(name = "主键") String id) {
-        if(null == id) {
-            return ReturnResult.illegal(REQUEST_PARAM_ERROR,  "主键不能为空");
-        }
-
-        Set<String> ids = Splitter.on(",").trimResults().omitEmptyStrings().splitToSet(id);
-        return ReturnResult.of(getService().removeBatchByIds(ids));
-    }
-    /**
      * 分页查询基础数据
      * @param page 分页请求对象
      * @param entity 基础数据实体对象
      * @return 分页查询结果
      */
-    @GetMapping("item/page")
+    @GetMapping("page")
     @Operation(summary = "分页查询基础数据")
     public ReturnPageResult<MonitorProjectVersion> pageItem(PageRequest<MonitorProjectVersion> page, MonitorProjectVersion entity) {
         if(null == entity.getProjectId()) {
@@ -83,12 +64,14 @@ public class VersionController extends AbstractSwaggerController<MonitorProjectS
      * @param bindingResult 绑定结果对象
      * @return 保存结果
      */
-    @PostMapping("item/save")
+    @PostMapping("save")
     @Operation(summary = "保存版本数据")
-    public ReturnResult<MonitorProjectVersion> save(@Validated(AddGroup.class) MonitorProjectVersion entity, BindingResult bindingResult) {
+    public ReturnResult<MonitorProjectVersion> save(@Validated(AddGroup.class) @RequestBody MonitorProjectVersion entity, BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
             return ReturnResult.illegal(bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
+        entity.setVersionCode(IdUtils.createUlid());
+        entity.setVersionStatus(0);
         monitorProjectVersionService.save(entity);
         return ReturnResult.ok(entity);
     }
@@ -99,14 +82,69 @@ public class VersionController extends AbstractSwaggerController<MonitorProjectS
      * @param bindingResult 绑定结果对象
      * @return 保存结果
      */
-    @PutMapping("item/update")
-    @Operation(summary = "保存版本数据")
-    public ReturnResult<MonitorProjectVersion> update(@Validated(UpdateGroup.class) MonitorProjectVersion entity, BindingResult bindingResult) {
+    @PutMapping("update")
+    @Operation(summary = "更新版本数据")
+    public ReturnResult<MonitorProjectVersion> update(@Validated(UpdateGroup.class) @RequestBody MonitorProjectVersion entity, BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
             return ReturnResult.illegal(bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
+
+        MonitorProjectVersion monitorProjectVersion = monitorProjectVersionService.getById(entity.getVersionId());
+        if(null == monitorProjectVersion) {
+            return ReturnResult.illegal("数据不存在");
+        }
+        entity.setVersionCode(null);
+        ServiceProvider.of(Session.class).closeKeepExtension(monitorProjectVersion.getProjectId() + "");
         monitorProjectVersionService.updateById(entity);
         return ReturnResult.ok(entity);
+    }
+    /**
+     * 启动脚本
+     * @param entity 版本数据实体对象
+     * @param bindingResult 绑定结果对象
+     * @return 保存结果
+     */
+    @PutMapping("start")
+    @Operation(summary = "启动脚本")
+    public ReturnResult<Boolean> start(@Validated(UpdateGroup.class)
+                                                         @RequestBody MonitorProjectVersion entity, BindingResult bindingResult) {
+        if(bindingResult.hasErrors()) {
+            return ReturnResult.illegal(bindingResult.getAllErrors().get(0).getDefaultMessage());
+        }
+
+        return ReturnResult.of(monitorProjectVersionService.start(entity));
+    }
+    /**
+     * 保存版本数据
+     * @param entity 版本数据实体对象
+     * @param bindingResult 绑定结果对象
+     * @return 保存结果
+     */
+    @PutMapping("stop")
+    @Operation(summary = "停止脚本")
+    public ReturnResult<Boolean> stop(@Validated(UpdateGroup.class)
+                                                         @RequestBody MonitorProjectVersion entity, BindingResult bindingResult) {
+        if(bindingResult.hasErrors()) {
+            return ReturnResult.illegal(bindingResult.getAllErrors().get(0).getDefaultMessage());
+        }
+
+        return ReturnResult.of(monitorProjectVersionService.stop(entity));
+    }
+    /**
+     * 保存版本数据
+     * @param entity 版本数据实体对象
+     * @param bindingResult 绑定结果对象
+     * @return 保存结果
+     */
+    @PutMapping("log")
+    @Operation(summary = "获取日志")
+    public ReturnResult<Boolean> log(@Validated(UpdateGroup.class)
+                                                         @RequestBody MonitorProjectVersion entity, BindingResult bindingResult) {
+        if(bindingResult.hasErrors()) {
+            return ReturnResult.illegal(bindingResult.getAllErrors().get(0).getDefaultMessage());
+        }
+
+        return ReturnResult.of(monitorProjectVersionService.log(entity));
     }
 
     /**
@@ -114,13 +152,17 @@ public class VersionController extends AbstractSwaggerController<MonitorProjectS
      * @param id 数据索引
      * @return 删除结果
      */
-    @DeleteMapping("item/delete")
+    @DeleteMapping("delete")
     @Operation(summary = "删除版本数据")
     public ReturnResult<Boolean> delete(String id) {
         if(StringUtils.isEmpty(id)) {
             return ReturnResult.illegal("数据索引不能为空");
         }
-        monitorProjectVersionService.removeBatchByIds(Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(id));
+        Set<String> strings = Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(id);
+        for (String string : strings) {
+            ServiceProvider.of(Session.class).closeKeepExtension(string);
+        }
+        monitorProjectVersionService.removeBatchByIds(strings);
         return ReturnResult.ok(true);
     }
 }
