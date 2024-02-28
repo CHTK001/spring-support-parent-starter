@@ -2,6 +2,7 @@ package com.chua.starter.monitor.server.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.common.support.lang.code.ErrorResult;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.monitor.server.entity.MonitorProjectVersion;
 import com.chua.starter.monitor.server.mapper.MonitorProjectVersionMapper;
@@ -59,11 +60,15 @@ public class MonitorProjectVersionServiceImpl extends ServiceImpl<MonitorProject
             return ErrorResult.of("${status.script.starting:脚本已启动}");
         }
 
+        String versionStopScript = monitorProjectVersion.getVersionStopScript();
+
         return transactionTemplate.execute(status -> {
             monitorProjectVersion.setVersionStatus(0);
             if(baseMapper.updateById(monitorProjectVersion) > 0) {
-                StopScript script = new StopScript(monitorProjectService, socketSessionTemplate);
-                script.run(monitorProjectVersion);
+                if(!StringUtils.isEmpty(versionStopScript)) {
+                    StopScript script = new StopScript(monitorProjectService, socketSessionTemplate);
+                    script.run(monitorProjectVersion);
+                }
             }
             return ErrorResult.ok();
         });

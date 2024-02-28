@@ -52,7 +52,7 @@ public class ExceptionAdvice  {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> remoteExecutionException(RemoteExecutionException e) {
         String message = e.getMessage();
-        if(message.contains("Auth fail")) {
+        if(null != message && message.contains("Auth fail")) {
             return Result.failed(e.getType() + "登录认证失败");
         }
         return Result.failed(REMOTE_EXECUTION_TIMEOUT, REMOTE_EXECUTION_TIMEOUT.getMsg());
