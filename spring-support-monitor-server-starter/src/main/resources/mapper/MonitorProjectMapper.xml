@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.monitor.server.mapper.MonitorProjectMapper">
+  <resultMap id="BaseResultMap" type="com.chua.starter.monitor.server.entity.MonitorProject">
+    <!--@mbg.generated-->
+    <!--@Table monitor_project-->
+    <id column="project_id" jdbcType="INTEGER" property="projectId" />
+    <result column="project_name" jdbcType="VARCHAR" property="projectName" />
+    <result column="project_desc" jdbcType="VARCHAR" property="projectDesc" />
+    <result column="project_control_user" jdbcType="VARCHAR" property="projectControlUser" />
+    <result column="project_control_password" jdbcType="VARCHAR" property="projectControlPassword" />
+    <result column="project_control_host" jdbcType="VARCHAR" property="projectControlHost" />
+    <result column="project_control_port" jdbcType="VARCHAR" property="projectControlPort" />
+    <result column="project_project_path" jdbcType="VARCHAR" property="projectProjectPath" />
+    <result column="project_control_uid" jdbcType="VARCHAR" property="projectControlUid" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    project_id, project_name, project_desc, project_control_user, project_control_password, 
+    project_control_host, project_control_port, project_project_path, project_control_uid
+  </sql>
+</mapper>
