@@ -94,7 +94,7 @@ public class VersionController  {
             return ReturnResult.illegal("数据不存在");
         }
         entity.setVersionCode(null);
-        ServiceProvider.of(Session.class).closeKeepExtension(monitorProjectVersion.getProjectId() + "");
+        ServiceProvider.of(Session.class).closeKeepExtension(monitorProjectVersion.getProjectId() + "terminal");
         monitorProjectVersionService.updateById(entity);
         return ReturnResult.ok(entity);
     }

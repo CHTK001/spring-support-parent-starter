@@ -18,7 +18,7 @@ import static com.chua.starter.oauth.client.support.execute.AuthClientExecute.DE
 
 @Extension("Static")
 public class StaticProtocol extends AbstractProtocol{
-    private static  Codec AES;
+    private static  Codec SM4;
     @Override
     public AuthenticationInformation approve(Cookie[] cookie, String token) {
         initial();
@@ -26,10 +26,10 @@ public class StaticProtocol extends AbstractProtocol{
     }
 
     private void initial() {
-        if(null == AES) {
+        if(null == SM4) {
             synchronized (this) {
-                if(null == AES) {
-                    AES = Codec.build("AES", DEFAULT_KEY);
+                if(null == SM4) {
+                    SM4 = Codec.build("SM4", DEFAULT_KEY);
                 }
             }
         }
@@ -45,7 +45,7 @@ public class StaticProtocol extends AbstractProtocol{
         UserResume userResume = new UserResume();
         UserResult userResult = null;
         if(StringUtils.isNotBlank(token) && !"null".equals(token)) {
-            userResult = Json.fromJson(AES.decodeHex(token), UserResult.class);
+            userResult = Json.fromJson(SM4.decodeHex(token), UserResult.class);
         }
 
         if(null == userResult && null != cookie) {
@@ -53,7 +53,7 @@ public class StaticProtocol extends AbstractProtocol{
                 if(!"JSESSIONID".equals(cookie1.getName())) {
                     String source;
                     try {
-                        source = AES.decodeHex(cookie1.getValue());
+                        source = SM4.decodeHex(cookie1.getValue());
                         userResult = Json.fromJson(source, UserResult.class);
                     } catch (Exception e) {
                     }
