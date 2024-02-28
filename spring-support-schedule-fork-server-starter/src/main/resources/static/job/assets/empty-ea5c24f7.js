@@ -1,0 +1,1 @@
+import{_ as r,r as t,o,e as s}from"./index-bd432aa0.js";const c={};function n(a,p){const e=t("router-view");return o(),s(e)}const u=r(c,[["render",n],["__file","F:/workspace/vue-support-parent-starter/vue-support-scheduler-starter/src/layout/other/empty.vue"]]);export{u as default};
