@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.monitor.server.mapper.MonitorProjectVersionMapper">
+  <resultMap id="BaseResultMap" type="com.chua.starter.monitor.server.entity.MonitorProjectVersion">
+    <!--@mbg.generated-->
+    <!--@Table monitor_project_version-->
+    <id column="version_item_id" jdbcType="INTEGER" property="versionItemId" />
+    <result column="project_id" jdbcType="INTEGER" property="projectId" />
+    <result column="version_item_name" jdbcType="VARCHAR" property="versionItemName" />
+    <result column="version_item_run_script" jdbcType="VARCHAR" property="versionItemRunScript" />
+    <result column="version_item_stop_script" jdbcType="VARCHAR" property="versionItemStopScript" />
+    <result column="version_item_log" jdbcType="VARCHAR" property="versionItemLog" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    version_item_id, project_id, version_item_name, version_item_run_script, version_item_stop_script, 
+    version_item_log
+  </sql>
+</mapper>
