@@ -38,18 +38,18 @@ public class MonitorProjectVersionServiceImpl extends ServiceImpl<MonitorProject
             return ErrorResult.of("${status.script.starting:脚本已启动}");
         }
 
-        return transactionTemplate.execute(status -> {
-            monitorProjectVersion.setVersionStatus(1);
-            if(baseMapper.updateById(monitorProjectVersion) > 0) {
-                try {
-                    StartScript script = new StartScript(monitorProjectService, socketSessionTemplate);
-                    script.run(monitorProjectVersion);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
+        monitorProjectVersion.setVersionStatus(1);
+        if(baseMapper.updateById(monitorProjectVersion) > 0) {
+            try {
+                StartScript script = new StartScript(monitorProjectService, socketSessionTemplate);
+                script.run(monitorProjectVersion);
+            } catch (Exception e) {
+                monitorProjectVersion.setVersionStatus(0);
+                baseMapper.updateById(monitorProjectVersion);
+                throw new RuntimeException(e);
             }
-            return ErrorResult.ok();
-        });
+        }
+        return ErrorResult.ok();
     }
 
     @Override
@@ -66,20 +66,20 @@ public class MonitorProjectVersionServiceImpl extends ServiceImpl<MonitorProject
 
         String versionStopScript = monitorProjectVersion.getVersionStopScript();
 
-        return transactionTemplate.execute(status -> {
-            monitorProjectVersion.setVersionStatus(0);
-            if(baseMapper.updateById(monitorProjectVersion) > 0) {
-                if(!StringUtils.isEmpty(versionStopScript)) {
-                    try {
-                        StopScript script = new StopScript(monitorProjectService, socketSessionTemplate);
-                        script.run(monitorProjectVersion);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
+        monitorProjectVersion.setVersionStatus(0);
+        if(baseMapper.updateById(monitorProjectVersion) > 0) {
+            if(!StringUtils.isEmpty(versionStopScript)) {
+                try {
+                    StopScript script = new StopScript(monitorProjectService, socketSessionTemplate);
+                    script.run(monitorProjectVersion);
+                } catch (Exception e) {
+                    monitorProjectVersion.setVersionStatus(1);
+                    baseMapper.updateById(monitorProjectVersion);
+                    throw new RuntimeException(e);
                 }
             }
-            return ErrorResult.ok();
-        });
+        }
+        return ErrorResult.ok();
     }
 
     @Override
