@@ -18,7 +18,7 @@ import static com.chua.starter.oauth.client.support.execute.AuthClientExecute.DE
 
 @Extension("Static")
 public class StaticProtocol extends AbstractProtocol{
-    private static  Codec AES
+    private static  Codec AES;
     @Override
     public AuthenticationInformation approve(Cookie[] cookie, String token) {
         initial();
