@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.chua.common.support.constant.Position;
 import com.chua.common.support.datasource.annotation.Column;
 import com.chua.common.support.validator.group.AddGroup;
 import io.swagger.annotations.ApiModel;
@@ -110,7 +109,7 @@ public class MonitorProjectVersion implements Serializable {
     @Schema(description = "版本状态;0: 未启动")
     @ColumnDefault("0")
     @Column(defaultValue = "0")
-    private Position versionLogPathPosition;
+    private Integer versionLogPathPosition;
 
     private static final long serialVersionUID = 1L;
 }
