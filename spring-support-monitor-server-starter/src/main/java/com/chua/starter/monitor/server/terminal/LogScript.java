@@ -61,7 +61,8 @@ public class LogScript {
     }
 
     private String getLogPath(MonitorProjectVersion monitorProjectVersion, MonitorProject monitorProject) {
-        return FileUtils.normalize(monitorProject.getProjectProjectPath(), monitorProjectVersion.getVersionLog());
+        Integer versionLogPathPosition = monitorProjectVersion.getVersionLogPathPosition();
+        return 0 == versionLogPathPosition ? FileUtils.normalize(monitorProject.getProjectProjectPath(), monitorProjectVersion.getVersionLog()) : monitorProjectVersion.getVersionLog();
     }
 
 }
