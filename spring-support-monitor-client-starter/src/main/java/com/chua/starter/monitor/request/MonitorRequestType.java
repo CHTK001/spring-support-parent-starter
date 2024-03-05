@@ -24,6 +24,10 @@ public enum MonitorRequestType {
      */
     REPORT("report"),
 
+    /**
+     * 启动
+     */
+    START("start")
     ;
 
     private final String name;
