@@ -62,4 +62,9 @@ public class MonitorRequest {
      */
     private String contextPath;
 
+    private transient volatile String uid;
+
+    public String getUid() {
+        return "monitor:report:" + getAppName()+ ":" + getServerHost() + "_" + getServerPort() + ":" +  getReportType();
+    }
 }

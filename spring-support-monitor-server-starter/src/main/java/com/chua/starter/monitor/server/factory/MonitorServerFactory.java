@@ -1,11 +1,17 @@
 package com.chua.starter.monitor.server.factory;
 
+import com.chua.common.support.geo.GeoCity;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.utils.ArrayUtils;
 import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.NumberUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.request.MonitorRequest;
 import com.chua.starter.monitor.server.constant.MonitorConstant;
+import com.chua.starter.monitor.server.pojo.IpInstance;
 import com.chua.starter.monitor.server.pojo.ServiceTarget;
+import com.chua.starter.monitor.server.service.IptablesService;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -28,6 +34,9 @@ public class MonitorServerFactory implements MonitorConstant, DisposableBean, In
     @Resource
     private RedisTemplate stringRedisTemplate;
 
+    @Resource
+    private IptablesService iptablesService;
+
     /**
      * 获取心跳数据
      * @return 心跳数据的映射表，以应用名称为键，心跳数据列表为值
@@ -47,7 +56,7 @@ public class MonitorServerFactory implements MonitorConstant, DisposableBean, In
      */
     public MonitorRequest getHeart(String appName, String appModel) {
         // 获取所有的心跳数据键
-        Set<String> keys = stringRedisTemplate.keys(HEART + appName + ":" +
+         Set<String> keys = stringRedisTemplate.keys(HEART + appName + ":" +
                 StringUtils.defaultString(appModel, "").replace(":", "_"));
         Map<String, List<MonitorRequest>> stringListMap = create(keys);
         if(stringListMap.isEmpty()) {
@@ -91,7 +100,7 @@ public class MonitorServerFactory implements MonitorConstant, DisposableBean, In
      */
     public List<ServiceTarget> getServiceInstance(String appName, String serverAddress) {
         List<ServiceTarget> rs = new ArrayList<>();
-        Set<String> keys = getKeys(appName, serverAddress);
+        Set<String> keys = getKeys(appName, serverAddress, "SERVER", false);
         for (String key : keys) {
             try {
                 List<String> strings = stringRedisTemplate.opsForZSet().randomMembers(key, 100);
@@ -109,14 +118,14 @@ public class MonitorServerFactory implements MonitorConstant, DisposableBean, In
 
     }
 
-    private Set<String> getKeys(String appName, String serverAddress) {
+    private Set<String> getKeys(String appName, String serverAddress, String type, boolean deep) {
         if(StringUtils.isEmpty(serverAddress)) {
             return (Set<String>) Optional.ofNullable(stringRedisTemplate.keys(REPORT + appName + ":*"))
                     .orElse(Collections.emptySet())
-                    .stream().filter(it -> it.toString().endsWith("SERVER"))
+                    .stream().filter(it -> it.toString().endsWith(type))
                     .collect(Collectors.toSet());
         }
-        return Optional.ofNullable(stringRedisTemplate.keys(REPORT + appName + ":" + serverAddress+ ":SERVER"))
+        return Optional.ofNullable(stringRedisTemplate.keys(REPORT + appName + ":" + serverAddress+ ":" + type + (deep ? ":*" : "")))
                 .orElse(Collections.emptySet());
     }
 
@@ -137,5 +146,26 @@ public class MonitorServerFactory implements MonitorConstant, DisposableBean, In
 
     @Override
     public void afterPropertiesSet() throws Exception {
+    }
+
+    public List<IpInstance> getIpInstance(String appName, String serverAddress) {
+        List<IpInstance> rs = new ArrayList<>();
+        Set<String> keys = getKeys(appName, serverAddress, "IP", true);
+        for (String key : keys) {
+            try {
+                String[] split = key.split(":");
+                String k1 = ArrayUtils.last(split);
+                ReturnResult<GeoCity> geoCityReturnResult = iptablesService.transferAddress(k1);
+                GeoCity data = geoCityReturnResult.getData();
+                IpInstance item = new IpInstance();
+                item.setIp(k1);
+                item.setCity(null != data ? data.getCity() : null);
+                item.setCount(NumberUtils.toLong(stringRedisTemplate.opsForValue().get(key) + "", 0L));
+                rs.add(item);
+            } catch (Exception ignored) {
+            }
+        }
+
+        return rs;
     }
 }
