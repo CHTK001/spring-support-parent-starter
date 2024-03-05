@@ -195,4 +195,19 @@ public class MonitorFactory implements AutoCloseable {
     public boolean hasSubscribers() {
         return CollectionUtils.isNotEmpty(monitorConfigProperties.getConfig());
     }
+
+    public void end() {
+        ThreadUtils.newStaticThreadPool().execute(() -> {
+            try {
+                MonitorRequest request = createMonitorRequest();
+                request.setType(MonitorRequestType.START);
+                request.setData(monitorProtocolProperties);
+                Message message = new Message();
+                message.setBody(Json.toJSONBytes(request));
+                producer.sendAsync(message);
+            } catch (Throwable ignored) {
+            }
+        });
+
+    }
 }
