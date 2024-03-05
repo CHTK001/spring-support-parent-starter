@@ -38,7 +38,6 @@ public class Heartbeat implements MonitorConstant {
         String key = HEART + request.getAppName()+ ":" + request.getServerHost() + "_" + request.getServerPort();
 
         if(!stringRedisTemplate.hasKey(key)) {
-            stringRedisTemplate.delete(key + ":SERVER");
             socketSessionTemplate.send("online", Json.toJson(request));
         }
         stringRedisTemplate.opsForValue()

@@ -79,7 +79,7 @@ public class MonitorConfiguration  implements BeanDefinitionRegistryPostProcesso
 
     @Override
     public void run(String... args) throws Exception {
-
+        MonitorFactory.getInstance().end();
     }
 
     @Override
