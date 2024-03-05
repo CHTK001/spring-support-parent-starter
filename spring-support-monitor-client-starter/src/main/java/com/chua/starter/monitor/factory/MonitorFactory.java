@@ -54,6 +54,7 @@ public class MonitorFactory implements AutoCloseable {
     private List<String> plugins;
     private String endpointsUrl;
     private String contextPath;
+    private boolean openIpPlugin;
 
     public static MonitorFactory getInstance() {
         return INSTANCE;
@@ -82,6 +83,7 @@ public class MonitorFactory implements AutoCloseable {
         configReport.setBroker(this.broker);
         configReport.setMq(monitorMqProperties.getSubscriber() + "#report");
         this.reportProducer = new Producer(configReport);
+        end();
     }
 
     public void registerAppName(String appName) {
@@ -109,7 +111,18 @@ public class MonitorFactory implements AutoCloseable {
         this.heartbeat();
         this.report();
     }
+    public void report(MonitorRequest request) {
+        if (null == request) {
+            return;
+        }
 
+        try {
+            Message message = new Message();
+            message.setBody(Json.toJSONBytes(request));
+            reportProducer.sendAsync(message);
+        } catch (Throwable ignored) {
+        }
+    }
     private void report() {
         if (CollectionUtils.isEmpty(plugins)) {
             return;
@@ -118,9 +131,12 @@ public class MonitorFactory implements AutoCloseable {
         scheduledExecutorService.scheduleAtFixedRate(() -> {
             try {
                 for (String plugin : plugins) {
+                    if(StringUtils.isEmpty(plugin)) {
+                        continue;
+                    }
                     MonitorRequest request = createMonitorRequest();
                     request.setType(MonitorRequestType.REPORT);
-                    request.setReportType(plugin);
+                    request.setReportType(plugin.toUpperCase());
                     request.setData(ServiceProvider.of(Report.class).getNewExtension(plugin).report());
                     Message message = new Message();
                     message.setBody(Json.toJSONBytes(request));
@@ -131,7 +147,7 @@ public class MonitorFactory implements AutoCloseable {
         }, 0, monitorReportProperties.getReportTime(), TimeUnit.SECONDS);
     }
 
-    private MonitorRequest createMonitorRequest() {
+    public MonitorRequest createMonitorRequest() {
         MonitorRequest request = new MonitorRequest();
         request.setAppName(appName);
         request.setProfile(active);
@@ -182,6 +198,7 @@ public class MonitorFactory implements AutoCloseable {
     public void register(MonitorReportProperties monitorReportProperties) {
         this.monitorReportProperties = monitorReportProperties;
         this.plugins = monitorReportProperties.getPlugins();
+        this.openIpPlugin = CollectionUtils.containsIgnoreCase("ip", plugins);
     }
 
     public String getSubscribeConfig() {
@@ -209,5 +226,9 @@ public class MonitorFactory implements AutoCloseable {
             }
         });
 
+    }
+
+    public boolean isIpEnable() {
+        return openIpPlugin;
     }
 }
