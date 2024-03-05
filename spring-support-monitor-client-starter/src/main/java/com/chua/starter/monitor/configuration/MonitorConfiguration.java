@@ -3,6 +3,7 @@ package com.chua.starter.monitor.configuration;
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.starter.monitor.endpoint.RedisEndpoint;
 import com.chua.starter.monitor.factory.MonitorFactory;
+import com.chua.starter.monitor.filter.EmptyFilter;
 import com.chua.starter.monitor.properties.*;
 import com.chua.starter.monitor.protocol.ProtocolFactory;
 import com.chua.starter.monitor.service.ProtocolRegisterCenterService;
@@ -17,12 +18,15 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
 import org.springframework.data.redis.connection.RedisConnection;
+
+import java.util.Collections;
 
 /**
  * 监视器配置
@@ -79,7 +83,6 @@ public class MonitorConfiguration  implements BeanDefinitionRegistryPostProcesso
 
     @Override
     public void run(String... args) throws Exception {
-        MonitorFactory.getInstance().end();
     }
 
     @Override
@@ -118,5 +121,16 @@ public class MonitorConfiguration  implements BeanDefinitionRegistryPostProcesso
         return new ProtocolRegisterCenterService();
     }
 
+
+    @Bean
+    @ConditionalOnMissingBean
+    public FilterRegistrationBean<EmptyFilter> filterRegistrationBean() {
+        FilterRegistrationBean<EmptyFilter> filterRegistrationBean = new FilterRegistrationBean<EmptyFilter>();
+        filterRegistrationBean.setFilter(new EmptyFilter());
+        filterRegistrationBean.setUrlPatterns(Collections.singletonList("/*"));
+        filterRegistrationBean.setAsyncSupported(true);
+
+        return filterRegistrationBean;
+    }
 
 }
