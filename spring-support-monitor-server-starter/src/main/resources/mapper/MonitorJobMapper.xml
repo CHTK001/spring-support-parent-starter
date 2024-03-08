@@ -6,18 +6,21 @@
     <!--@Table monitor_job-->
     <id column="job_id" jdbcType="INTEGER" property="jobId" />
     <result column="job_name" jdbcType="VARCHAR" property="jobName" />
-    <result column="job_desc" jdbcType="VARCHAR" property="jobDesc" />
     <result column="job_type" jdbcType="VARCHAR" property="jobType" />
     <result column="job_conf" jdbcType="VARCHAR" property="jobConf" />
+    <result column="job_status" jdbcType="INTEGER" property="jobStatus" />
+    <result column="job_app" jdbcType="VARCHAR" property="jobApp" />
+    <result column="job_profile" jdbcType="VARCHAR" property="jobProfile" />
     <result column="job_execute_type" jdbcType="VARCHAR" property="jobExecuteType" />
     <result column="job_execute_bean" jdbcType="VARCHAR" property="jobExecuteBean" />
-    <result column="job_profile" jdbcType="VARCHAR" property="jobProfile" />
-    <result column="job_app" jdbcType="VARCHAR" property="jobApp" />
     <result column="job_execute_route" jdbcType="VARCHAR" property="jobExecuteRoute" />
+    <result column="job_desc" jdbcType="VARCHAR" property="jobDesc" />
+    <result column="job_trigger_last_time" jdbcType="TIMESTAMP" property="jobTriggerLastTime" />
+    <result column="job_trigger_next_time" jdbcType="TIMESTAMP" property="jobTriggerNextTime" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
-    job_id, job_name, job_desc, job_type, job_conf, job_execute_type, job_execute_bean, 
-    job_profile, job_app, job_execute_route
+    job_id, job_name, job_type, job_conf, job_status, job_app, job_profile, job_execute_type, 
+    job_execute_bean, job_execute_route, job_desc, job_trigger_last_time, job_trigger_next_time
   </sql>
 </mapper>
