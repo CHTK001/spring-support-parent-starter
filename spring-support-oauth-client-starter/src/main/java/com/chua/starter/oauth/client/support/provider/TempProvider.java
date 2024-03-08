@@ -202,6 +202,7 @@ public class TempProvider {
         try {
             userMenuResult.setMenu(Json5.fromJsonToList(TempProvider.class.getResourceAsStream(StringUtils.defaultString(authProperties.getTemp().getMenuPath(), "/menu.json5")), RouteVO.class));
         } catch (Exception ignored) {
+            userMenuResult.setMenu(Collections.emptyList());
         }
         try {
             userMenuResult.setDashboardGrid(Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(userGrid));
