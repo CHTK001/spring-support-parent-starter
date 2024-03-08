@@ -11,12 +11,13 @@
     <result column="job_conf" jdbcType="VARCHAR" property="jobConf" />
     <result column="job_execute_type" jdbcType="VARCHAR" property="jobExecuteType" />
     <result column="job_execute_bean" jdbcType="VARCHAR" property="jobExecuteBean" />
+    <result column="job_profile" jdbcType="VARCHAR" property="jobProfile" />
     <result column="job_app" jdbcType="VARCHAR" property="jobApp" />
     <result column="job_execute_route" jdbcType="VARCHAR" property="jobExecuteRoute" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
     job_id, job_name, job_desc, job_type, job_conf, job_execute_type, job_execute_bean, 
-    job_app, job_execute_route
+    job_profile, job_app, job_execute_route
   </sql>
 </mapper>
