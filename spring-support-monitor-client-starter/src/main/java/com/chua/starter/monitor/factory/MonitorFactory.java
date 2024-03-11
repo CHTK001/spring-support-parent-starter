@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.factory;
 
 import com.chua.common.support.function.Joiner;
+import com.chua.common.support.function.Splitter;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.CollectionUtils;
@@ -22,7 +23,9 @@ import org.zbus.mq.Producer;
 import org.zbus.net.http.Message;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -41,6 +44,7 @@ public class MonitorFactory implements AutoCloseable {
     private String appName;
     private Environment environment;
     private String active;
+    private Set<String> activeProfiles;
     private Broker broker;
     private Producer reportProducer;
     private Producer producer;
@@ -94,6 +98,10 @@ public class MonitorFactory implements AutoCloseable {
         this.environment = environment;
         this.serverPort = environment.resolvePlaceholders("${server.port:8080}");
         this.active = environment.getProperty("spring.profiles.active", "default");
+        if(StringUtils.isNotBlank(active)) {
+            activeProfiles = new HashSet<>();
+            activeProfiles.addAll(Splitter.on(',').splitToSet(active));
+        }
         this.endpointsUrl = environment.resolvePlaceholders("${management.endpoints.web.base-path:/actuator}");
         this.contextPath = environment.resolvePlaceholders("${server.servlet.context-path:}");
     }
@@ -198,7 +206,7 @@ public class MonitorFactory implements AutoCloseable {
     public void register(MonitorReportProperties monitorReportProperties) {
         this.monitorReportProperties = monitorReportProperties;
         this.plugins = monitorReportProperties.getPlugins();
-        this.openIpPlugin = CollectionUtils.containsIgnoreCase("ip", plugins);
+        this.openIpPlugin = CollectionUtils.containsIgnoreCase( plugins, "ip");
     }
 
     public String getSubscribeConfig() {
@@ -230,5 +238,14 @@ public class MonitorFactory implements AutoCloseable {
 
     public boolean isIpEnable() {
         return openIpPlugin;
+    }
+
+    public boolean inProfile(String profile) {
+        if(CollectionUtils.isEmpty(activeProfiles)) {
+            return true;
+        }
+
+        return CollectionUtils.containsIgnoreCase(activeProfiles, profile);
+
     }
 }

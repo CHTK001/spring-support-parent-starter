@@ -3,6 +3,7 @@ package com.chua.starter.monitor.job.execute;
 import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.protocol.boot.BootResponse;
+import com.chua.starter.monitor.factory.MonitorFactory;
 import com.chua.starter.monitor.job.GlueTypeEnum;
 import com.chua.starter.monitor.job.TriggerParam;
 import com.chua.starter.monitor.job.glue.GlueFactory;
@@ -28,11 +29,14 @@ public class DefaultJobExecute implements JobExecute {
 
     @Override
     public BootResponse run(TriggerParam triggerParam) {
+
+        boolean inProfile = MonitorFactory.getInstance().inProfile(triggerParam.getProfile());
+
         // valid：jobHandler + jobThread
         GlueTypeEnum glueTypeEnum = GlueTypeEnum.match(triggerParam.getGlueType());
 
         HandlerResult handler = getJobHandler(triggerParam, glueTypeEnum);
-        if (null == handler  || handler.getJobHandler() == null ) {
+        if (!inProfile || null == handler  || handler.getJobHandler() == null ) {
             return BootResponse.builder().code(ReturnCode.REQUEST_PARAM_ERROR.getCode())
                     .msg("job handler [" + triggerParam.getExecutorHandler() + "] not found.")
                     .build();
