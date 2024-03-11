@@ -42,30 +42,36 @@ public class TypeConverterRegisterConfiguration {
 
             Map<String, TypeConverter> list = ServiceProvider.of(TypeConverter.class).list();
             for (TypeConverter converter : list.values()) {
-                converterRegistry.addConverter(Object.class, converter.getType(), new Converter<Object, Object>() {
-                    @Override
-                    public Object convert(Object source) {
-                        return converter.convert(source);
-                    }
-                });
-                if(converter instanceof EnumTypeConverter) {
-                    converterRegistry.removeConvertible(String.class, Enum.class);
-                    converterRegistry.addConverter(new ConditionalGenericConverter() {
+                try {
+                    converterRegistry.addConverter(Object.class, converter.getType(), new Converter<Object, Object>() {
                         @Override
-                        public boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {
-                            return true;
-                        }
-
-                        @Override
-                        public Set<ConvertiblePair> getConvertibleTypes() {
-                            return Collections.singleton(new ConvertiblePair(String.class, Enum.class));
-                        }
-
-                        @Override
-                        public Object convert(Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {
-                            return com.chua.common.support.converter.Converter.convertIfNecessary(source, targetType.getType());
+                        public Object convert(Object source) {
+                            return converter.convert(source);
                         }
                     });
+                } catch (Exception e) {
+                }
+                try {
+                    if(converter instanceof EnumTypeConverter) {
+                        converterRegistry.removeConvertible(String.class, Enum.class);
+                        converterRegistry.addConverter(new ConditionalGenericConverter() {
+                            @Override
+                            public boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {
+                                return true;
+                            }
+
+                            @Override
+                            public Set<ConvertiblePair> getConvertibleTypes() {
+                                return Collections.singleton(new ConvertiblePair(String.class, Enum.class));
+                            }
+
+                            @Override
+                            public Object convert(Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {
+                                return com.chua.common.support.converter.Converter.convertIfNecessary(source, targetType.getType());
+                            }
+                        });
+                    }
+                } catch (Exception e) {
                 }
             }
         }

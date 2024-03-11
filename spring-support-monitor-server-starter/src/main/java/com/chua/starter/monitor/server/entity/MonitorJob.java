@@ -56,14 +56,6 @@ public class MonitorJob extends SysBase implements Serializable {
     @Size(max = 255, message = "时间配置最大长度要小于 255")
     private String jobConf;
 
-    /**
-     * 执行对应的标识
-     */
-    @TableField(value = "job_bean")
-    @ApiModelProperty(value = "执行对应的标识")
-    @Schema(description = "执行对应的标识")
-    @Size(max = 255, message = "执行对应的标识最大长度要小于 255")
-    private String jobBean;
 
     /**
      * 状态;0: 未启用； 1: 正在运行

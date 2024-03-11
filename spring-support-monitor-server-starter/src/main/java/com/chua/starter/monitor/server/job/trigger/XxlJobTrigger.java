@@ -1,6 +1,5 @@
 package com.chua.starter.monitor.server.job.trigger;
 
-import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.job.TriggerParam;
 import com.chua.starter.monitor.request.MonitorRequest;
@@ -73,7 +72,7 @@ public class XxlJobTrigger {
         // 1、save log-id
         MonitorJobLog jobLog = new MonitorJobLog();
         jobLog.setJobLogApp(jobInfo.getJobApp());
-        jobLog.setJobLogTriggerBean(jobInfo.getJobBean());
+        jobLog.setJobLogTriggerBean(jobInfo.getJobExecuteBean());
         jobLog.setJobLogTriggerType(triggerType.getName());
         jobLog.setJobLogProfile(jobInfo.getJobProfile());
         jobLog.setJobLogTriggerTime(new Date());
@@ -109,7 +108,7 @@ public class XxlJobTrigger {
         StringBuffer triggerMsgSb = new StringBuffer();
 
         // 6、save log trigger-info
-        jobLog.setJobLogTriggerAddress(Json.toJson(address));
+        jobLog.setJobLogTriggerAddress(null == address ? "" :address.stream().map(it -> it.getServerHost() + ":" +it.getServerPort()).collect(Collectors.joining()));
         jobLog.setJobLogTriggerParam(jobInfo.getJobExecuteParam());
         jobLog.setJobLogTriggerCode(triggerResult.getCode());
         jobLog.setJobLogTriggerMsg(triggerMsgSb.toString());
