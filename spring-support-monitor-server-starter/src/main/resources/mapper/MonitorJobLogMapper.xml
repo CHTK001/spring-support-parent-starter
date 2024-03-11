@@ -1,21 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.chua.starter.monitor.server.mapper.MonitorJobLogMapper">
-  <resultMap id="BaseResultMap" type="com.chua.starter.monitor.server.entity.MonitorJobLog">
-    <!--@mbg.generated-->
-    <!--@Table monitor_job_log-->
-    <id column="job_log_id" jdbcType="INTEGER" property="jobLogId" />
-    <result column="job_log_trigger_time" jdbcType="TIMESTAMP" property="jobLogTriggerTime" />
-    <result column="job_log_trigger_code" jdbcType="INTEGER" property="jobLogTriggerCode" />
-    <result column="job_log_trigger_msg" jdbcType="VARCHAR" property="jobLogTriggerMsg" />
-    <result column="job_log_app" jdbcType="VARCHAR" property="jobLogApp" />
-    <result column="job_log_trigger_address" jdbcType="VARCHAR" property="jobLogTriggerAddress" />
-    <result column="job_log_trigger_param" jdbcType="VARCHAR" property="jobLogTriggerParam" />
-    <result column="job_log_profile" jdbcType="VARCHAR" property="jobLogProfile" />
-  </resultMap>
-  <sql id="Base_Column_List">
-    <!--@mbg.generated-->
-    job_log_id, job_log_trigger_time, job_log_trigger_code, job_log_trigger_msg, job_log_app, 
-    job_log_trigger_address, job_log_trigger_param, job_log_profile
-  </sql>
+  <select id="time" resultType="com.chua.starter.monitor.server.job.pojo.JobStatistic">
+      SELECT
+        count( job_log_trigger_code ) cnt,
+        job_log_trigger_code,
+        job_log_trigger_date
+      FROM
+        monitor_job_log
+      WHERE
+        job_log_trigger_time <![CDATA[>=]]> #{query.startDate} AND job_log_trigger_time  <![CDATA[<=]]> #{query.endDate}
+      GROUP BY
+        job_log_trigger_code, job_log_trigger_date
+    </select>
 </mapper>

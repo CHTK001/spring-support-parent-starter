@@ -5,6 +5,7 @@ import com.chua.common.support.converter.definition.TypeConverter;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.common.support.converter.StringToDateTypeConverter;
 import com.chua.starter.common.support.converter.StringToLocalDateTimeTypeConverter;
+import com.chua.starter.common.support.converter.StringToLocalDateTypeConverter;
 import com.chua.starter.common.support.converter.StringToLocalTimeTypeConverter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -36,6 +37,7 @@ public class TypeConverterRegisterConfiguration {
         public TypeConverterRegistry(ConverterRegistry converterRegistry) {
             converterRegistry.addConverter(new StringToDateTypeConverter());
             converterRegistry.addConverter(new StringToLocalTimeTypeConverter());
+            converterRegistry.addConverter(new StringToLocalDateTypeConverter());
             converterRegistry.addConverter(new StringToLocalDateTimeTypeConverter());
             converterRegistry.addConverter(new StringToDateTypeConverter());
 

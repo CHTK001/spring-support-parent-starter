@@ -43,6 +43,16 @@ public class MonitorRequest {
     private Object data;
 
     /**
+     * 消息
+     */
+    private String msg;
+
+    /**
+     * 密码
+     */
+    private String code;
+
+    /**
      * 服务器主机
      */
     private String serverHost;
