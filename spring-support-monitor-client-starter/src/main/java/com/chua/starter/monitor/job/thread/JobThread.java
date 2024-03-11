@@ -1,10 +1,13 @@
 package com.chua.starter.monitor.job.thread;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.monitor.factory.MonitorFactory;
 import com.chua.starter.monitor.job.TriggerParam;
 import com.chua.starter.monitor.job.handler.JobHandler;
 import com.chua.starter.monitor.job.log.JobFileAppender;
 import com.chua.starter.monitor.job.log.JobLog;
+import com.chua.starter.monitor.request.MonitorRequest;
+import com.chua.starter.monitor.request.MonitorRequestType;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.PrintWriter;
@@ -125,10 +128,10 @@ public class JobThread extends Thread{
                             triggerParam.getBroadcastTotal());
 
                     // init job context
-                    JobContext.setXxlJobContext(xxlJobContext);
+                    JobContext.setJobContext(xxlJobContext);
 
                     // execute
-                    JobLog.getDefault().info("<br>----------- xxl-job job execute start -----------<br>----------- Param:" + xxlJobContext.getJobParam());
+                    JobLog.getDefault().info("<br>----------- job job execute start -----------<br>----------- Param:" + xxlJobContext.getJobParam());
 
                     if (triggerParam.getExecutorTimeout() > 0) {
                         // limit timeout
@@ -139,7 +142,7 @@ public class JobThread extends Thread{
                                 public Boolean call() throws Exception {
 
                                     // init job context
-                                    JobContext.setXxlJobContext(xxlJobContext);
+                                    JobContext.setJobContext(xxlJobContext);
 
                                     handler.execute();
                                     return true;
@@ -149,13 +152,18 @@ public class JobThread extends Thread{
                             futureThread.start();
 
                             Boolean tempResult = futureTask.get(triggerParam.getExecutorTimeout(), TimeUnit.SECONDS);
+                            reportJob(triggerParam, "SUCCESS", null);
+
                         } catch (TimeoutException e) {
 
-                            JobLog.getDefault().info("<br>----------- xxl-job job execute timeout");
+                            JobLog.getDefault().info("<br>----------- job job execute timeout");
                             JobLog.getDefault().info("{}", e);
 
                             // handle result
                             JobLog.getDefault().error("job execute timeout ");
+
+                            reportJob(triggerParam, "FAILURE", "job execute timeout ");
+
                         } finally {
                             futureThread.interrupt();
                         }
@@ -174,7 +182,7 @@ public class JobThread extends Thread{
                                 :tempHandleMsg;
                         JobContext.getXxlJobContext().setHandleMsg(tempHandleMsg);
                     }
-                    JobLog.getDefault().info("<br>----------- xxl-job job execute end(finish) -----------<br>----------- Result: handleCode="
+                    JobLog.getDefault().info("<br>----------- job job execute end(finish) -----------<br>----------- Result: handleCode="
                             + JobContext.getXxlJobContext().getHandleCode()
                             + ", handleMsg = "
                             + JobContext.getXxlJobContext().getHandleMsg()
@@ -197,9 +205,11 @@ public class JobThread extends Thread{
                 e.printStackTrace(new PrintWriter(stringWriter));
                 String errorMsg = stringWriter.toString();
 
+                reportJob(triggerParam, "FAILURE", errorMsg);
+
                 JobLog.getDefault().error(errorMsg);
 
-                JobLog.getDefault().info("<br>----------- JobThread Exception:" + errorMsg + "<br>----------- xxl-job job execute end(error) -----------");
+                JobLog.getDefault().info("<br>----------- JobThread Exception:" + errorMsg + "<br>----------- job job execute end(error) -----------");
             }
         }
 
@@ -211,6 +221,16 @@ public class JobThread extends Thread{
             log.error(e.getMessage(), e);
         }
 
-        log.info(">>>>>>>>>>> xxl-job JobThread stoped, hashCode:{}", Thread.currentThread());
+        log.info(">>>>>>>>>>> job JobThread stoped, hashCode:{}", Thread.currentThread());
+    }
+
+    private void reportJob(TriggerParam triggerParam, String failure, String errorMsg) {
+        MonitorRequest request = MonitorFactory.getInstance().createMonitorRequest();
+        request.setType(MonitorRequestType.REPORT);
+        request.setReportType("JOB");
+        request.setData(triggerParam.getLogId());
+        request.setCode(failure);
+        request.setMsg(errorMsg);
+        MonitorFactory.getInstance().report(request);
     }
 }

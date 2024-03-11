@@ -1,5 +1,6 @@
 package com.chua.starter.monitor.job.thread;
 
+import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.monitor.job.handler.JobHandler;
 import lombok.extern.slf4j.Slf4j;
 
@@ -31,7 +32,7 @@ public class JobThreadFactory {
         JobThread newJobThread = new JobThread(jobId, handler);
         newJobThread.start();
         log.info(">>>>>>>>>>> job regist JobThread success, jobId:{}, handler:{}", jobId, handler);
-
+        SpringBeanUtils.autowireBean(newJobThread);
         JobThread oldJobThread = jobThreadRepository.put(jobId, newJobThread);
         if (oldJobThread != null) {
             oldJobThread.toStop(removeOldReason);
