@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.configuration;
 
+import com.chua.starter.common.support.debounce.DebounceAspect;
 import com.chua.starter.common.support.external.ExternalController;
 import com.chua.starter.common.support.filter.ParameterLogFilter;
 import com.chua.starter.common.support.limit.LimitAspect;
@@ -35,6 +36,11 @@ public class CommonConfiguration {
     @ConditionalOnProperty(name = "plugin.limit.enable", havingValue = "true", matchIfMissing = true)
     public LimitAspect limitAspect(LimitProperties limitProperties) {
         return new LimitAspect(limitProperties);
+    }
+    @Bean
+    @ConditionalOnMissingBean
+    public DebounceAspect debounceAspect() {
+        return new DebounceAspect();
     }
     @Bean
     @ConditionalOnMissingBean

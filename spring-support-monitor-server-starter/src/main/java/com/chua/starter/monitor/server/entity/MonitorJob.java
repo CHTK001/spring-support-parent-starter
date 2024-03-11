@@ -13,6 +13,7 @@ import lombok.Data;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import java.io.Serializable;
+import java.util.Date;
 
 /**
  * 任务
@@ -56,6 +57,15 @@ public class MonitorJob extends SysBase implements Serializable {
     private String jobConf;
 
     /**
+     * 执行对应的标识
+     */
+    @TableField(value = "job_bean")
+    @ApiModelProperty(value = "执行对应的标识")
+    @Schema(description = "执行对应的标识")
+    @Size(max = 255, message = "执行对应的标识最大长度要小于 255")
+    private String jobBean;
+
+    /**
      * 状态;0: 未启用； 1: 正在运行
      */
     @TableField(value = "job_status")
@@ -82,6 +92,57 @@ public class MonitorJob extends SysBase implements Serializable {
     private String jobProfile;
 
     /**
+     * 描述
+     */
+    @TableField(value = "job_desc")
+    @ApiModelProperty(value = "描述")
+    @Schema(description = "描述")
+    @Size(max = 255, message = "描述最大长度要小于 255")
+    private String jobDesc;
+
+    /**
+     * Glue最后更新时间
+     */
+    @TableField(value = "job_glue_updatetime")
+    @ApiModelProperty(value = "Glue最后更新时间")
+    @Schema(description = "Glue最后更新时间")
+    private Date jobGlueUpdatetime;
+
+    /**
+     * 源码
+     */
+    @TableField(value = "job_glue_source")
+    @ApiModelProperty(value = "源码")
+    @Schema(description = "源码")
+    @Size(max = 255, message = "源码最大长度要小于 255")
+    private String jobGlueSource;
+
+    /**
+     * Glue类型（例如：脚本、JAR等）
+     */
+    @TableField(value = "job_glue_type")
+    @ApiModelProperty(value = "Glue类型（例如：脚本、JAR等）")
+    @Schema(description = "Glue类型（例如：脚本、JAR等）")
+    @Size(max = 255, message = "Glue类型（例如：脚本、JAR等）最大长度要小于 255")
+    private String jobGlueType;
+
+    /**
+     * 失败重试次数
+     */
+    @TableField(value = "job_fail_retry")
+    @ApiModelProperty(value = "失败重试次数")
+    @Schema(description = "失败重试次数")
+    private Integer jobFailRetry;
+
+    /**
+     * 超时时间
+     */
+    @TableField(value = "job_execute_timeout")
+    @ApiModelProperty(value = "超时时间")
+    @Schema(description = "超时时间")
+    private Integer jobExecuteTimeout;
+
+    /**
      * 模式; spring, xxl-job
      */
     @TableField(value = "job_execute_type")
@@ -89,6 +150,15 @@ public class MonitorJob extends SysBase implements Serializable {
     @Schema(description = "模式; spring, xxl-job")
     @Size(max = 255, message = "模式; spring, xxl-job最大长度要小于 255")
     private String jobExecuteType;
+
+    /**
+     * 失效后策略
+     */
+    @TableField(value = "job_execute_misfire_strategy")
+    @ApiModelProperty(value = "失效后策略")
+    @Schema(description = "失效后策略")
+    @Size(max = 255, message = "失效后策略最大长度要小于 255")
+    private String jobExecuteMisfireStrategy;
 
     /**
      * bean名称
@@ -100,22 +170,22 @@ public class MonitorJob extends SysBase implements Serializable {
     private String jobExecuteBean;
 
     /**
+     * 执行参数
+     */
+    @TableField(value = "job_execute_param")
+    @ApiModelProperty(value = "执行参数")
+    @Schema(description = "执行参数")
+    @Size(max = 255, message = "执行参数最大长度要小于 255")
+    private String jobExecuteParam;
+
+    /**
      * 执行路由策略
      */
-    @TableField(value = "job_execute_route")
+    @TableField(value = "job_execute_router")
     @ApiModelProperty(value = "执行路由策略")
     @Schema(description = "执行路由策略")
     @Size(max = 255, message = "执行路由策略最大长度要小于 255")
-    private String jobExecuteRoute;
-
-    /**
-     * 描述
-     */
-    @TableField(value = "job_desc")
-    @ApiModelProperty(value = "描述")
-    @Schema(description = "描述")
-    @Size(max = 255, message = "描述最大长度要小于 255")
-    private String jobDesc;
+    private String jobExecuteRouter;
 
     /**
      * 任务触发的最后一次时间
@@ -132,6 +202,8 @@ public class MonitorJob extends SysBase implements Serializable {
     @ApiModelProperty(value = "任务触发的下一次时间")
     @Schema(description = "任务触发的下一次时间")
     private Long jobTriggerNextTime;
+
+
 
     private static final long serialVersionUID = 1L;
 }

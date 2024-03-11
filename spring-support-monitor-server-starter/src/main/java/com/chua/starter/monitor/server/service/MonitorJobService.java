@@ -3,6 +3,7 @@ package com.chua.starter.monitor.server.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.server.entity.MonitorJob;
+
 public interface MonitorJobService extends IService<MonitorJob>{
 
 
@@ -21,4 +22,5 @@ public interface MonitorJobService extends IService<MonitorJob>{
      * @return {@link ReturnResult}<{@link String}>
      */
     ReturnResult<String> start(int jobId);
+
 }

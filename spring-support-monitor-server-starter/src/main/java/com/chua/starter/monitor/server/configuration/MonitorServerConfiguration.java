@@ -6,7 +6,9 @@ import com.chua.common.support.protocol.options.ServerOption;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.starter.monitor.server.consumer.MonitorConsumer;
 import com.chua.starter.monitor.server.consumer.ReportConsumer;
+import com.chua.starter.monitor.server.job.trigger.SchedulerTrigger;
 import com.chua.starter.monitor.server.properties.GenProperties;
+import com.chua.starter.monitor.server.properties.JobProperties;
 import com.chua.starter.monitor.server.properties.MonitorServerProperties;
 import com.chua.starter.monitor.server.router.Router;
 import com.chua.zbus.support.server.ZbusServer;
@@ -20,11 +22,13 @@ import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.EnvironmentAware;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.env.Environment;
 import org.springframework.util.ReflectionUtils;
@@ -46,7 +50,7 @@ import java.io.IOException;
 @Slf4j
 @MapperScan("com.chua.starter.monitor.server.mapper")
 @ComponentScan("com.chua.starter.monitor.server")
-@EnableConfigurationProperties({MonitorServerProperties.class, GenProperties.class})
+@EnableConfigurationProperties({MonitorServerProperties.class, GenProperties.class, JobProperties.class})
 public class MonitorServerConfiguration implements BeanDefinitionRegistryPostProcessor, EnvironmentAware, ApplicationContextAware, DisposableBean, CommandLineRunner, SmartInstantiationAwareBeanPostProcessor {
 
     private MonitorServerProperties monitorServerProperties;
@@ -57,6 +61,13 @@ public class MonitorServerConfiguration implements BeanDefinitionRegistryPostPro
     private MonitorConsumer mqConsumer;
     private ReportConsumer reportConsumer;
 
+
+
+    @Bean
+    @ConditionalOnMissingBean
+    public SchedulerTrigger schedulerTrigger() {
+        return new SchedulerTrigger();
+    }
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         registerMqServer(registry);

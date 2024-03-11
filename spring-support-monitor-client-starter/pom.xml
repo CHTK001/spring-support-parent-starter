@@ -48,6 +48,11 @@
             <artifactId>utils-support-zbus-starter</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-groovy-starter</artifactId>
+        </dependency>
+
 
         <dependency>
             <groupId>org.springframework.boot</groupId>

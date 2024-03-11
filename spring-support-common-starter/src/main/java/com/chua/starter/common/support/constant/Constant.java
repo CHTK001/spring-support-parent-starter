@@ -5,7 +5,7 @@ package com.chua.starter.common.support.constant;
  *
  * @author CH
  */
-public interface Constant {
+public interface Constant extends CacheConstant{
 
     String LAN = "局域网";
     String DEFAULT_EXECUTOR = "default-executor";
@@ -14,9 +14,7 @@ public interface Constant {
     String DEFAULT_SER = "123456";
 
     String ADMIN = "ADMIN";
-    String SYSTEM = "system";
-    String REDIS_CACHE = "redis-cache-600";
-    String REDIS_CACHE_HOUR = "redis-cache-3600";
+
     String EXECUTER = "executer";
     String PARAM = "param";
     String CONNECT = "connect";

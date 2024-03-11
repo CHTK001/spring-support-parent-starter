@@ -7,6 +7,9 @@ import com.chua.redis.support.search.RedisSearch;
 import com.chua.starter.redis.support.listener.RedisListener;
 import com.chua.starter.redis.support.properties.RedisServerProperties;
 import com.chua.starter.redis.support.server.RedisEmbeddedServer;
+import org.redisson.Redisson;
+import org.redisson.api.RedissonClient;
+import org.redisson.config.Config;
 import org.springframework.beans.BeansException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -36,6 +39,21 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     RedisServerProperties redisServerProperties;
 
 
+    @Bean
+    @ConditionalOnMissingBean
+    public RedissonClient redissonClient(RedisProperties redisProperties) {
+        Config config = new Config();
+        config.useSingleServer()
+                .setDatabase(redisProperties.getDatabase())
+                .setUsername(redisProperties.getUsername())
+                .setPassword(redisProperties.getPassword())
+                .setAddress(StringUtils.defaultString(redisProperties.getUrl(),
+                        "redis://" + redisProperties.getHost() + ":" + redisProperties.getPort() + "/"))
+                .setTimeout(null == redisProperties.getTimeout() ? 10000 : (int) redisProperties.getTimeout().toMillis())
+                .setConnectTimeout(null == redisProperties.getConnectTimeout() ? 10000: (int) redisProperties.getConnectTimeout().toMillis())
+                .setClientName(redisProperties.getClientName());
+        return Redisson.create(config);
+    }
     @Bean
     @ConditionalOnMissingBean
     public RedisSearch redisSearch(RedisProperties redisProperties) {
