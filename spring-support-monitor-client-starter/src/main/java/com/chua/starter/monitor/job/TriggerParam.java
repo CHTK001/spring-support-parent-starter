@@ -11,6 +11,8 @@ public class TriggerParam {
 
     private int jobId; // 任务ID
 
+    private String profile;
+
     // 执行器相关参数
     private String executorHandler; // 执行器处理代码的标识
     private String executorParams; // 执行器的参数

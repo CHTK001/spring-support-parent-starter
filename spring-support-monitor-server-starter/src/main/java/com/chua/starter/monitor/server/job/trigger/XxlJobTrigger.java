@@ -82,6 +82,7 @@ public class XxlJobTrigger {
 
         // 2、init trigger-param
         TriggerParam triggerParam = new TriggerParam();
+        triggerParam.setProfile(jobInfo.getJobProfile());
         triggerParam.setJobId(jobInfo.getJobId());
         triggerParam.setExecutorHandler(jobInfo.getJobExecuteBean());
         triggerParam.setExecutorParams(jobInfo.getJobExecuteParam());
