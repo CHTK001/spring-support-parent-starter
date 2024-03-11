@@ -10,12 +10,13 @@ import com.chua.starter.monitor.server.job.TriggerTypeEnum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * xxl-job trigger
+ * job trigger
  * Created by xuxueli on 17/7/13.
  */
 public class XxlJobTrigger {
@@ -76,8 +77,9 @@ public class XxlJobTrigger {
         jobLog.setJobLogTriggerType(triggerType.getName());
         jobLog.setJobLogProfile(jobInfo.getJobProfile());
         jobLog.setJobLogTriggerTime(new Date());
+        jobLog.setJobLogTriggerDate(LocalDate.now());
         JobConfig.getInstance().saveLog(jobLog);
-        logger.debug(">>>>>>>>>>> xxl-job trigger start, jobId:{}", jobLog.getJobLogId());
+        logger.debug(">>>>>>>>>>> job trigger start, jobId:{}", jobLog.getJobLogId());
 
         // 2、init trigger-param
         TriggerParam triggerParam = new TriggerParam();
@@ -111,10 +113,11 @@ public class XxlJobTrigger {
         jobLog.setJobLogTriggerAddress(null == address ? "" :address.stream().map(it -> it.getServerHost() + ":" +it.getServerPort()).collect(Collectors.joining()));
         jobLog.setJobLogTriggerParam(jobInfo.getJobExecuteParam());
         jobLog.setJobLogTriggerCode(triggerResult.getCode());
+        jobLog.setJobLogExecuteCode("PADDING");
         jobLog.setJobLogTriggerMsg(triggerMsgSb.toString());
         JobConfig.getInstance().updateLog(jobLog);
 
-        logger.debug(">>>>>>>>>>> xxl-job trigger end, jobId:{}", jobLog.getJobLogId());
+        logger.debug(">>>>>>>>>>> job trigger end, jobId:{}", jobLog.getJobLogId());
     }
 
     /**
@@ -129,7 +132,7 @@ public class XxlJobTrigger {
         try {
             runResult = JobConfig.getInstance().run(address, triggerParam);
         } catch (Exception e) {
-            logger.error(">>>>>>>>>>> xxl-job trigger error, please check if the executor[{}] is running.", address, e);
+            logger.error(">>>>>>>>>>> job trigger error, please check if the executor[{}] is running.", address, e);
             runResult = ReturnResult.illegal(e);
         }
 
