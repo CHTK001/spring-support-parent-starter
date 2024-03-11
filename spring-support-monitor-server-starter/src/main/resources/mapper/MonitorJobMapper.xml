@@ -8,19 +8,36 @@
     <result column="job_name" jdbcType="VARCHAR" property="jobName" />
     <result column="job_type" jdbcType="VARCHAR" property="jobType" />
     <result column="job_conf" jdbcType="VARCHAR" property="jobConf" />
+    <result column="job_bean" jdbcType="VARCHAR" property="jobBean" />
     <result column="job_status" jdbcType="INTEGER" property="jobStatus" />
     <result column="job_app" jdbcType="VARCHAR" property="jobApp" />
     <result column="job_profile" jdbcType="VARCHAR" property="jobProfile" />
-    <result column="job_execute_type" jdbcType="VARCHAR" property="jobExecuteType" />
-    <result column="job_execute_bean" jdbcType="VARCHAR" property="jobExecuteBean" />
-    <result column="job_execute_route" jdbcType="VARCHAR" property="jobExecuteRoute" />
     <result column="job_desc" jdbcType="VARCHAR" property="jobDesc" />
-    <result column="job_trigger_last_time" jdbcType="TIMESTAMP" property="jobTriggerLastTime" />
-    <result column="job_trigger_next_time" jdbcType="TIMESTAMP" property="jobTriggerNextTime" />
+    <result column="job_glue_updatetime" jdbcType="TIMESTAMP" property="jobGlueUpdatetime" />
+    <result column="job_glue_source" jdbcType="VARCHAR" property="jobGlueSource" />
+    <result column="job_glue_type" jdbcType="VARCHAR" property="jobGlueType" />
+    <result column="job_fail_retry" jdbcType="INTEGER" property="jobFailRetry" />
+    <result column="job_execute_timeout" jdbcType="INTEGER" property="jobExecuteTimeout" />
+    <result column="job_execute_type" jdbcType="VARCHAR" property="jobExecuteType" />
+    <result column="job_execute_misfire_strategy" jdbcType="VARCHAR" property="jobExecuteMisfireStrategy" />
+    <result column="job_execute_bean" jdbcType="VARCHAR" property="jobExecuteBean" />
+    <result column="job_execute_param" jdbcType="VARCHAR" property="jobExecuteParam" />
+    <result column="job_execute_router" jdbcType="VARCHAR" property="jobExecuteRouter" />
+    <result column="job_trigger_last_time" jdbcType="BIGINT" property="jobTriggerLastTime" />
+    <result column="job_trigger_next_time" jdbcType="BIGINT" property="jobTriggerNextTime" />
+    <result column="create_name" jdbcType="VARCHAR" property="createName" />
+    <result column="create_by" jdbcType="INTEGER" property="createBy" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+    <result column="update_name" jdbcType="VARCHAR" property="updateName" />
+    <result column="update_by" jdbcType="INTEGER" property="updateBy" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
-    job_id, job_name, job_type, job_conf, job_status, job_app, job_profile, job_execute_type, 
-    job_execute_bean, job_execute_route, job_desc, job_trigger_last_time, job_trigger_next_time
+    job_id, job_name, job_type, job_conf, job_bean, job_status, job_app, job_profile, 
+    job_desc, job_glue_updatetime, job_glue_source, job_glue_type, job_fail_retry, job_execute_timeout, 
+    job_execute_type, job_execute_misfire_strategy, job_execute_bean, job_execute_param, 
+    job_execute_router, job_trigger_last_time, job_trigger_next_time, create_name, create_by, 
+    create_time, update_time, update_name, update_by
   </sql>
 </mapper>
