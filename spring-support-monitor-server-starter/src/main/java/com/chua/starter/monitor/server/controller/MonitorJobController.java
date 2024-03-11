@@ -3,8 +3,11 @@ package com.chua.starter.monitor.server.controller;
 
 import cn.hutool.core.date.DateUtil;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.monitor.server.entity.MonitorJob;
 import com.chua.starter.monitor.server.job.JobHelper;
+import com.chua.starter.monitor.server.job.TriggerTypeEnum;
+import com.chua.starter.monitor.server.job.trigger.JobTriggerPoolHelper;
 import com.chua.starter.monitor.server.service.MonitorAppService;
 import com.chua.starter.monitor.server.service.MonitorJobService;
 import com.chua.starter.mybatis.controller.AbstractSwaggerController;
@@ -34,15 +37,27 @@ public class MonitorJobController extends AbstractSwaggerController<MonitorJobSe
     @Resource
     private final MonitorAppService monitorAppService;
     @RequestMapping("/stop")
+    @Permission("sys:monitor:job:stop")
     public ReturnResult<String> pause(int jobId) {
         return service.stop(jobId);
     }
 
     @RequestMapping("/start")
+    @Permission("sys:monitor:job:start")
     public ReturnResult<String> start(int jobId) {
         return service.start(jobId);
     }
+    @RequestMapping("/trigger")
+    @Permission("sys:monitor:job:run")
+    public ReturnResult<String> triggerJob(int id, String executorParam) {
+        // force cover job param
+        if (executorParam == null) {
+            executorParam = "";
+        }
 
+        JobTriggerPoolHelper.trigger(id, TriggerTypeEnum.MANUAL, -1, null, executorParam);
+        return ReturnResult.SUCCESS;
+    }
     /**
      * 下一次触发时间
      *
@@ -51,6 +66,7 @@ public class MonitorJobController extends AbstractSwaggerController<MonitorJobSe
      * @return {@link ReturnResult}<{@link List}<{@link String}>>
      */
     @GetMapping("/nextTriggerTime")
+    @Permission("sys:monitor:job:run")
     public ReturnResult<List<String>> nextTriggerTime(String scheduleType, String scheduleConf) {
 
         MonitorJob paramXxlJobInfo = new MonitorJob();
