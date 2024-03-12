@@ -77,6 +77,18 @@ public class MonitorJobController extends AbstractSwaggerController<MonitorJobSe
      * @return 分页结果
      */
     @ResponseBody
+    @Operation(summary = "清除日志信息")
+    @GetMapping("clear")
+    public ReturnResult<Boolean> clear(MonitorJobLog entity) {
+        return ReturnResult.of(monitorJobLogService.clear(entity));
+    }
+    /**
+     * 分页查询数据
+     *
+     * @param entity 结果
+     * @return 分页结果
+     */
+    @ResponseBody
     @Operation(summary = "分页查询日志信息")
     @GetMapping("time")
     public ReturnResult<JobStatisticResult> time(MonitorJobLog entity) {

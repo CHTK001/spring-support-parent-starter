@@ -1,5 +1,6 @@
 package com.chua.starter.monitor.server.service.impl;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.starter.monitor.server.entity.MonitorJobLog;
 import com.chua.starter.monitor.server.job.pojo.JobStatistic;
@@ -48,5 +49,18 @@ public class MonitorJobLogServiceImpl extends ServiceImpl<MonitorJobLogMapper, M
         result.setSuccessCount(success.toArray(new Long[0]));
         result.setFailureCount(failure.toArray(new Long[0]));
         return result;
+    }
+
+    @Override
+    public Boolean clear(MonitorJobLog entity) {
+        LocalDateTime startDate = entity.getStartDate();
+        LocalDateTime endDate = entity.getEndDate();
+        if(null == startDate || null == endDate) {
+            return true;
+        }
+        baseMapper.delete(Wrappers.<MonitorJobLog>lambdaUpdate()
+                .between(MonitorJobLog::getJobLogTriggerDate, startDate, endDate)
+        );
+        return true;
     }
 }
