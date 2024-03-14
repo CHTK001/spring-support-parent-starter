@@ -110,7 +110,7 @@ public class DubboBeanDefinitionResolver implements BeanDefinitionResolver{
      * @return 下划线数据
      */
     public static String toFirstUpperCase(String source) {
-        if (source == null || source.length() == 0) {
+        if (source == null || source.isEmpty()) {
             return source;
         }
 
