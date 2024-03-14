@@ -48,6 +48,9 @@ public class Report implements InitializingBean, DisposableBean {
         try {
             Adaptor adaptor = ServiceProvider.of(Adaptor.class)
                     .getNewExtension(request.getReportType());
+            if(null == adaptor) {
+                return;
+            }
             Class type = adaptor.getType();
             if(type == MonitorRequest.class) {
                 adaptor.doAdaptor(request);

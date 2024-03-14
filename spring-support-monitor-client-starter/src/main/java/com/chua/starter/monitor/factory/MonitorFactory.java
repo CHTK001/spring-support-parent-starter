@@ -145,7 +145,11 @@ public class MonitorFactory implements AutoCloseable {
                     MonitorRequest request = createMonitorRequest();
                     request.setType(MonitorRequestType.REPORT);
                     request.setReportType(plugin.toUpperCase());
-                    request.setData(ServiceProvider.of(Report.class).getNewExtension(plugin).report());
+                    Report newExtension = ServiceProvider.of(Report.class).getNewExtension(plugin);
+                    if(null == newExtension) {
+                        continue;
+                    }
+                    request.setData(newExtension.report());
                     Message message = new Message();
                     message.setBody(Json.toJSONBytes(request));
                     reportProducer.sendAsync(message);
