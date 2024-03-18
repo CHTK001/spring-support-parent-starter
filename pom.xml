@@ -14,7 +14,7 @@
     <groupId>com.chua</groupId>
     <artifactId>spring-support-parent-starter</artifactId>
     <packaging>pom</packaging>
-    <version>3.1.0</version>
+    <version>4.0.0</version>
     <modules>
         <module>spring-support-datasource-starter</module>
         <module>spring-support-common-starter</module>
@@ -43,9 +43,9 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
-        <module.version>3.1.0</module.version>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <module.version>4.0.0</module.version>
         <spring-boot.version>2.7.8</spring-boot.version>
 
         <mybatis-plus.version>3.4.0</mybatis-plus.version>

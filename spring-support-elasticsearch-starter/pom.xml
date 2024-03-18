@@ -6,16 +6,16 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>3.1.0</version>
+        <version>4.0.0</version>
     </parent>
 
     <artifactId>spring-support-elasticsearch-starter</artifactId>
 
     <properties>
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <elasticsearch-java>7.17.9</elasticsearch-java>
+        <elasticsearch-java>8.12.0</elasticsearch-java>
     </properties>
 
 
@@ -23,12 +23,12 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-elasticsearch-starter</artifactId>
-            <version>3.1.0</version>
+            <version>4.0.0</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.data</groupId>
             <artifactId>spring-data-elasticsearch</artifactId>
-            <version>4.4.12</version>
+            <version>5.1.5</version>
             <scope>compile</scope>
             <exclusions>
                 <exclusion>
