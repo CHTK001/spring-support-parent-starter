@@ -5,9 +5,9 @@ import ch.rasc.sse.eventbus.SseEventBus;
 import ch.rasc.sse.eventbus.config.EnableSseEventBus;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.IdUtils;
+import jakarta.annotation.Resource;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import javax.annotation.Resource;
 import java.time.Duration;
 import java.util.Arrays;
 

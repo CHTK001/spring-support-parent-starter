@@ -11,7 +11,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.server.entity.MonitorLimit;
 import com.chua.starter.monitor.server.service.MonitorLimitService;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import java.util.List;
 
 /**

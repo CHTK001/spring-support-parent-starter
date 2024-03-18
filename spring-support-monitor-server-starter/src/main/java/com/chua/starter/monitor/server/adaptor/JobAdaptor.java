@@ -6,7 +6,7 @@ import com.chua.starter.monitor.request.MonitorRequest;
 import com.chua.starter.monitor.server.entity.MonitorJobLog;
 import com.chua.starter.monitor.server.service.MonitorJobLogService;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 
 /**
  * jvm适配器

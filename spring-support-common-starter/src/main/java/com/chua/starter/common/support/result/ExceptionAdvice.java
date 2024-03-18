@@ -22,7 +22,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletException;
 import java.net.UnknownHostException;
 import java.sql.SQLException;
 import java.sql.SQLSyntaxErrorException;

@@ -11,8 +11,8 @@ import com.chua.starter.oauth.server.support.token.TokenResolver;
 import com.google.common.base.Strings;
 import org.springframework.context.ApplicationContext;
 
-import javax.annotation.Resource;
-import javax.servlet.http.Cookie;
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.Cookie;
 
 import static com.chua.common.support.lang.code.ReturnCode.OK;
 

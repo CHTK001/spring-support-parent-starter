@@ -19,7 +19,7 @@ import com.chua.starter.monitor.server.service.MonitorAppService;
 import com.chua.starter.monitor.server.service.MonitorLogService;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import java.util.List;
 
 import static com.chua.common.support.protocol.boot.ModuleType.CONFIG;

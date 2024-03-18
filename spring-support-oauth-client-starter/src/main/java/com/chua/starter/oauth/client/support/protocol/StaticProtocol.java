@@ -10,8 +10,8 @@ import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.google.common.collect.Sets;
 import io.micrometer.core.instrument.util.StringUtils;
+import jakarta.servlet.http.Cookie;
 
-import javax.servlet.http.Cookie;
 import java.util.Collections;
 
 import static com.chua.starter.oauth.client.support.execute.AuthClientExecute.DEFAULT_KEY;

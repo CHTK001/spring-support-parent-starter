@@ -7,7 +7,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.env.Environment;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 
 /**
  * @author CH
