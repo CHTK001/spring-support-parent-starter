@@ -17,9 +17,9 @@ import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
-import javax.annotation.Resource;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import static com.chua.common.support.lang.code.ReturnCode.OK;
 import static com.chua.common.support.lang.code.ReturnCode.RESOURCE_OAUTH_ERROR;

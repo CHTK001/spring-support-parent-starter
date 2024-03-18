@@ -5,7 +5,7 @@ import com.chua.starter.monitor.server.job.trigger.JobTriggerPoolHelper;
 import com.chua.starter.monitor.server.properties.JobProperties;
 import lombok.extern.slf4j.Slf4j;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;

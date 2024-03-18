@@ -6,7 +6,7 @@ import com.chua.starter.common.support.properties.VersionProperties;
 import com.chua.starter.common.support.utils.RequestUtils;
 import lombok.Data;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.concurrent.Executor;
 
 @Data

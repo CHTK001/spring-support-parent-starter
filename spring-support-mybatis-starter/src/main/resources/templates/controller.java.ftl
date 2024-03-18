@@ -12,7 +12,7 @@ import ${superControllerClassPackage};
 import ${package.Entity}.${entity};
 import ${package.Service}.${table.serviceName};
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 /**
  * <p>
  * ${table.comment!} 前端控制器

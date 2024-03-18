@@ -18,7 +18,7 @@ import com.chua.starter.mybatis.utils.PageResultUtils;
 import com.chua.starter.common.support.result.Result;
 import com.chua.starter.gen.support.validator.group.AddGroup;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import java.util.Arrays;
 /**
  * ${functionName}

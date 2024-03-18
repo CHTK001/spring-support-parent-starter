@@ -14,8 +14,8 @@ import com.chua.starter.oauth.server.support.parser.RequestAuthorization;
 import com.chua.starter.oauth.server.support.properties.AuthServerProperties;
 import lombok.Getter;
 
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 
 import static com.chua.starter.oauth.client.support.contants.AuthConstant.*;
 

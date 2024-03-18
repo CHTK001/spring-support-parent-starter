@@ -19,13 +19,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.alibaba</groupId>
-            <artifactId>druid</artifactId>
-            <version>${druid.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
             <groupId>p6spy</groupId>
             <artifactId>p6spy</artifactId>
             <version>3.8.7</version>

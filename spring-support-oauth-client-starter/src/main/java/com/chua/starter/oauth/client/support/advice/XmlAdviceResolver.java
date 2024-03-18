@@ -8,8 +8,8 @@ import com.chua.common.support.lang.file.impl.writer.XmlFileWriter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 
-import javax.servlet.ServletOutputStream;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.OutputStream;
 import java.util.Collections;
 

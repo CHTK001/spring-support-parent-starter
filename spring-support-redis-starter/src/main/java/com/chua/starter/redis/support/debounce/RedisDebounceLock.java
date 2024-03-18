@@ -4,7 +4,7 @@ import com.chua.starter.common.support.debounce.DebounceLock;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import java.util.concurrent.TimeUnit;
 
 /**

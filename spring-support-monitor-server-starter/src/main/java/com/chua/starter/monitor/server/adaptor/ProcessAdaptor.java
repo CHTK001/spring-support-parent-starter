@@ -4,7 +4,7 @@ import com.chua.common.support.json.Json;
 import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.monitor.request.MonitorRequest;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 
 /**
  * process 适配器

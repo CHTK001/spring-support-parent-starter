@@ -3,7 +3,7 @@ package com.chua.starter.mail.support.controller;
 import com.chua.starter.mail.support.properties.EmailProperties;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 
 /**
  * rest

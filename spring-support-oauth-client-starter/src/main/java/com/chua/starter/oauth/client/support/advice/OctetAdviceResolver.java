@@ -2,7 +2,7 @@ package com.chua.starter.oauth.client.support.advice;
 
 import org.springframework.http.MediaType;
 
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 /**

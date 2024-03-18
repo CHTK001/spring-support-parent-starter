@@ -9,7 +9,7 @@ import com.chua.starter.common.support.properties.IpProperties;
 import com.chua.starter.monitor.server.service.IptablesService;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 
 /**
  * ip
