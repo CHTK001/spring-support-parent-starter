@@ -9,6 +9,7 @@ import com.chua.shell.support.command.CfrCommand;
 import com.chua.shell.support.command.SpringCommand;
 import com.chua.shell.support.properties.ShellProperties;
 import com.chua.starter.common.support.utils.RequestUtils;
+import jakarta.servlet.*;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
@@ -22,7 +23,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.web.socket.server.standard.ServerEndpointExporter;
 import org.springframework.web.util.WebAppRootListener;
 
-import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import javax.websocket.HandshakeResponse;
@@ -90,12 +90,6 @@ public class ShellWebSocketConfiguration extends ServerEndpointConfig.Configurat
         return registrationBean;
     }
 
-    @Override
-    public void onStartup(ServletContext servletContext) throws ServletException {
-        servletContext.addListener(WebAppRootListener.class);
-        servletContext.setInitParameter("org.apache.tomcat.websocket.textBufferSize", "52428800");
-        servletContext.setInitParameter("org.apache.tomcat.websocket.binaryBufferSize", "52428800");
-    }
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
@@ -109,6 +103,13 @@ public class ShellWebSocketConfiguration extends ServerEndpointConfig.Configurat
     @Override
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
 
+    }
+
+    @Override
+    public void onStartup(jakarta.servlet.ServletContext servletContext) throws jakarta.servlet.ServletException {
+        servletContext.addListener(WebAppRootListener.class);
+        servletContext.setInitParameter("org.apache.tomcat.websocket.textBufferSize", "52428800");
+        servletContext.setInitParameter("org.apache.tomcat.websocket.binaryBufferSize", "52428800");
     }
 
     static class ShellFilter implements Filter {
