@@ -10,7 +10,7 @@ import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.InjectionMetadata;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.beans.factory.config.InstantiationAwareBeanPostProcessorAdapter;
+import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor;
 import org.springframework.beans.factory.support.MergedBeanDefinitionPostProcessor;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.context.annotation.Bean;
@@ -43,9 +43,8 @@ import static org.springframework.core.BridgeMethodResolver.isVisibilityBridgeMe
  * @author CH
  */
 @Slf4j
-public abstract class AbstractAnnotationBeanPostProcessor extends
-        InstantiationAwareBeanPostProcessorAdapter implements MergedBeanDefinitionPostProcessor,
-        BeanFactoryAware, BeanClassLoaderAware, EnvironmentAware, DisposableBean {
+public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanDefinitionPostProcessor,
+        BeanFactoryAware, BeanClassLoaderAware, EnvironmentAware, DisposableBean, SmartInstantiationAwareBeanPostProcessor {
 
     private final static int CACHE_SIZE = Integer.getInteger("", 32);
 
