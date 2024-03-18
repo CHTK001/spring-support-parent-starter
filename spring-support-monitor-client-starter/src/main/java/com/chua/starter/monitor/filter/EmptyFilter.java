@@ -5,8 +5,8 @@ import com.chua.starter.monitor.factory.MonitorFactory;
 import com.chua.starter.monitor.request.MonitorRequest;
 import com.chua.starter.monitor.request.MonitorRequestType;
 
-import javax.servlet.*;
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.*;
+import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 
 public class EmptyFilter implements Filter {

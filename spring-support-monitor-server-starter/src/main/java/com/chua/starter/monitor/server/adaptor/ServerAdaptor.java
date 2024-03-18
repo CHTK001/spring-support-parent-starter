@@ -3,7 +3,7 @@ package com.chua.starter.monitor.server.adaptor;
 import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.monitor.server.pojo.ServiceTarget;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 
 /**
  * jvm适配器

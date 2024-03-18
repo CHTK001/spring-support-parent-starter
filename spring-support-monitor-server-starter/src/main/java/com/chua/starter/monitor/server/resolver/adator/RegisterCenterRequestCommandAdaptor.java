@@ -15,7 +15,7 @@ import com.chua.starter.monitor.request.MonitorRequest;
 import com.chua.starter.monitor.server.factory.MonitorServerFactory;
 import com.chua.starter.monitor.service.ServiceInstance;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import java.util.List;
 
 /**

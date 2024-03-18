@@ -5,7 +5,7 @@ import org.springframework.boot.actuate.endpoint.annotation.ReadOperation;
 import org.springframework.boot.actuate.endpoint.web.annotation.WebEndpoint;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 
 /**
  * redis端点

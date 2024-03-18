@@ -18,8 +18,8 @@ import org.springframework.cglib.beans.BeanMap;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
-import javax.annotation.Resource;
-import javax.servlet.http.Cookie;
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.Cookie;
 import java.time.Duration;
 import java.util.Set;
 
