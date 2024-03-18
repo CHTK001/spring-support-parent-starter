@@ -5,7 +5,10 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.milvus.support.properties.MilvusProperties;
 import io.milvus.client.MilvusServiceClient;
 import io.milvus.grpc.*;
-import io.milvus.param.*;
+import io.milvus.param.ConnectParam;
+import io.milvus.param.MetricType;
+import io.milvus.param.R;
+import io.milvus.param.RpcStatus;
 import io.milvus.param.collection.*;
 import io.milvus.param.dml.DeleteParam;
 import io.milvus.param.dml.InsertParam;
@@ -561,7 +564,7 @@ public class MilvusTemplate implements InitializingBean {
                 .withVectorFieldName(vectorFields)
                 .withExpr(expr)
                 .withParams(params)
-                .withGuaranteeTimestamp(Constant.GUARANTEE_EVENTUALLY_TS)
+//                .withGuaranteeTimestamp(Constant.GUARANTEE_EVENTUALLY_TS)
                 .build();
 
         R<SearchResults> response = milvusServiceClient.search(searchParam);
