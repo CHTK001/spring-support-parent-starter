@@ -9,7 +9,7 @@ import org.springframework.beans.PropertyValues;
 import org.springframework.beans.factory.*;
 import org.springframework.beans.factory.annotation.InjectionMetadata;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.beans.factory.config.InstantiationAwareBeanPostProcessorAdapter;
+import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor;
 import org.springframework.beans.factory.support.MergedBeanDefinitionPostProcessor;
 import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.context.EnvironmentAware;
@@ -37,7 +37,7 @@ import java.util.concurrent.ConcurrentMap;
  * @since 2022/7/30 11:36
  */
 @SuppressWarnings("ALL")
-public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> extends InstantiationAwareBeanPostProcessorAdapter implements MergedBeanDefinitionPostProcessor, PriorityOrdered, BeanFactoryAware, BeanClassLoaderAware, EnvironmentAware, DisposableBean {
+public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> implements MergedBeanDefinitionPostProcessor, PriorityOrdered, BeanFactoryAware, BeanClassLoaderAware, EnvironmentAware, DisposableBean, SmartInstantiationAwareBeanPostProcessor {
 
     private static final int CACHE_SIZE = Integer.getInteger("", 32);
     private final Log logger = LogFactory.getLog(this.getClass());
@@ -80,7 +80,7 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
     }
 
     @Override
-    public PropertyValues postProcessPropertyValues(PropertyValues pvs, PropertyDescriptor[] pds, Object bean, String beanName) throws BeanCreationException {
+    public PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName) throws BeansException {
         InjectionMetadata metadata = this.findInjectionMetadata(beanName, bean.getClass(), pvs);
 
         try {
@@ -92,6 +92,7 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
             throw new BeanCreationException(beanName, "Injection of @" + this.getAnnotationType().getName() + " dependencies is failed", var8);
         }
     }
+
 
     private List<AnnotatedFieldElement> findFieldAnnotationMetadata(Class<?> beanClass) {
         final List<AnnotatedFieldElement> elements = new LinkedList();
