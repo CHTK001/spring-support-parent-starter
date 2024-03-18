@@ -6,15 +6,15 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>3.1.0</version>
+        <version>4.0.0</version>
     </parent>
 
     <artifactId>spring-support-generator-starter</artifactId>
     <description>生成器</description>
 
     <properties>
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <neo4j.version>5.7.0</neo4j.version>
         <calcite.version>1.34.0</calcite.version>
@@ -31,7 +31,7 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-neo4j-starter</artifactId>
-            <version>3.1.0</version>
+            <version>4.0.0</version>
             <exclusions>
                 <exclusion>
                     <artifactId>neo4j-java-driver</artifactId>
@@ -43,19 +43,19 @@
         <dependency>
             <groupId>org.neo4j.driver</groupId>
             <artifactId>neo4j-java-driver</artifactId>
-            <version>5.7.0</version>
+            <version>5.15.0</version>
         </dependency>
 
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-minio-starter</artifactId>
-            <version>3.1.0</version>
+            <version>4.0.0</version>
         </dependency>
 
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-pcap-starter</artifactId>
-            <version>3.1.0</version>
+            <version>4.0.0</version>
         </dependency>
 
         <dependency>
@@ -66,7 +66,7 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-influxdb-starter</artifactId>
-            <version>3.1.0</version>
+            <version>4.0.0</version>
         </dependency>
 
         <!--  WebSocket 支持  -->
@@ -78,31 +78,31 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-datasource-starter</artifactId>
-            <version>3.1.0</version>
+            <version>4.0.0</version>
         </dependency>
 
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-poi-starter</artifactId>
-            <version>3.1.0</version>
+            <version>4.0.0</version>
         </dependency>
 
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-zookeeper-starter</artifactId>
-            <version>3.1.0</version>
+            <version>4.0.0</version>
         </dependency>
 
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-elasticsearch-starter</artifactId>
-            <version>3.1.0</version>
+            <version>4.0.0</version>
         </dependency>
 
         <dependency>
             <groupId>redis.clients</groupId>
             <artifactId>jedis</artifactId>
-            <version>4.3.1</version>
+            <version>5.1.0</version>
         </dependency>
 
         <dependency>
