@@ -32,7 +32,6 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.annotation.AnnotationAttributes;
 import org.springframework.core.type.MethodMetadata;
 
-import java.beans.PropertyDescriptor;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Member;
 import java.util.*;
@@ -233,8 +232,7 @@ public class RpcDubboReferenceAnnotationBeanPostProcessor extends AbstractAnnota
     }
 
     @Override
-    public PropertyValues postProcessPropertyValues(
-            PropertyValues pvs, PropertyDescriptor[] pds, Object bean, String beanName) throws BeansException {
+    public PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName) throws BeansException {
 
         try {
             AnnotatedInjectionMetadata metadata = findInjectionMetadata(beanName, bean.getClass(), pvs);
@@ -248,6 +246,7 @@ public class RpcDubboReferenceAnnotationBeanPostProcessor extends AbstractAnnota
         }
         return pvs;
     }
+
 
     private boolean isReferenceBean(BeanDefinition beanDefinition) {
         return ReferenceBean.class.getName().equals(beanDefinition.getBeanClassName());
