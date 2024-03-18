@@ -3,10 +3,10 @@ package com.chua.starter.common.support.websocket;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.StringUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.websocket.*;
+import jakarta.websocket.server.PathParam;
 import lombok.extern.slf4j.Slf4j;
 
-import javax.websocket.*;
-import javax.websocket.server.PathParam;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
