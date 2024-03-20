@@ -20,6 +20,7 @@ public class SpringEnvironmentPostProcessor implements EnvironmentPostProcessor 
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         Properties properties = new Properties();
         properties.setProperty("server.compression.enabled", "true");
+        properties.setProperty("server.output.ansi.enabled", "always");
         properties.setProperty("server.http2.enabled", "true");
         properties.setProperty("server.max-http-header-size", "67108864");
         properties.setProperty("spring.datasource.url", "jdbc:sqlite:./sys");
