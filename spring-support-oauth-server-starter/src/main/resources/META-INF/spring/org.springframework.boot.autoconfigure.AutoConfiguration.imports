@@ -1,0 +1,2 @@
+com.chua.starter.oauth.server.support.configuration.EnableAuthServerConfiguration
+com.chua.starter.oauth.server.support.configuration.EnableRedisTokenManagerConfiguration

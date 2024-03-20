@@ -9,8 +9,6 @@ import com.chua.starter.common.support.properties.IpProperties;
 import com.chua.starter.monitor.server.service.IptablesService;
 import org.springframework.stereotype.Service;
 
-import jakarta.annotation.Resource;
-
 /**
  * ip
  * @author CH
@@ -20,7 +18,6 @@ import jakarta.annotation.Resource;
 @Service
 public class IptablesServiceImpl implements IptablesService {
 
-    @Resource
     private IpProperties ipProperties;
     /**
      * 翻译地址

@@ -3,12 +3,11 @@ package com.chua.starter.common.support.configuration;
 import com.chua.starter.common.support.properties.IpProperties;
 import com.chua.starter.common.support.properties.VersionProperties;
 import com.chua.starter.common.support.version.ApiVersionRequestMappingHandlerMapping;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.web.servlet.WebMvcRegistrations;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
-
-import jakarta.annotation.Resource;
 
 /**
  * Web版本MVB配置
