@@ -1,0 +1,3 @@
+com.chua.starter.rpc.support.configuration.EnableRpcConfiguration
+com.chua.starter.rpc.support.annotation.RpcDubboReferenceAnnotationBeanPostProcessor
+com.chua.starter.rpc.support.annotation.RpcDubboServiceAnnotationPostProcessor
