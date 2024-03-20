@@ -11,6 +11,7 @@ import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
 import org.springframework.beans.BeansException;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
@@ -56,6 +57,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     }
     @Bean
     @ConditionalOnMissingBean
+    @ConditionalOnClass(name = {"redis.clients.jedis.AbstractPipeline"})
     public RedisSearch redisSearch(RedisProperties redisProperties) {
         RedisSearchClient redisSearchClient = new RedisSearchClient(
                 ClientOption.builder()
