@@ -2,7 +2,7 @@ package com.chua.starter.oauth.client.support.advice;
 
 import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.lang.file.config.WriterOption;
+import com.chua.common.support.lang.file.config.WriterSetting;
 import com.chua.common.support.lang.file.impl.writer.XmlFileWriter;
 import com.chua.common.support.lang.robin.Node;
 import com.chua.common.support.lang.robin.Robin;
@@ -19,6 +19,7 @@ import org.springframework.http.MediaType;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 
 /**
@@ -82,14 +83,14 @@ public class HtmlAdviceResolver implements AdviceResolver {
         }
 
         try {
-            String encode = URLEncoder.encode(toString, "UTF-8");
+            String encode = URLEncoder.encode(toString, StandardCharsets.UTF_8);
             String url = address;
             if (Strings.isNullOrEmpty(url)) {
                 try (OutputStream writer = response.getOutputStream();
                      XmlFileWriter xmlFileWriter = new XmlFileWriter(
                              Collections.emptyList(),
-                             writer, WriterOption.newDefault()
-                             );) {
+                             writer, WriterSetting.newDefault()
+                             )) {
                     xmlFileWriter.writeJson(Json.getJsonObject(Json.toJson(ReturnResult.noAuth())));
                 } catch (Exception e) {
                     throw new RuntimeException(e);
