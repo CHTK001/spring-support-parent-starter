@@ -17,6 +17,8 @@ import jakarta.annotation.Resource;
 
 import java.util.List;
 
+import static com.chua.common.support.protocol.boot.CommandType.RESPONSE;
+
 /**
  * config-subscribe命令适配器
  *
@@ -46,6 +48,7 @@ public class RegisterCenterRequestCommandAdaptor implements CommandAdaptor{
         }
 
         return BootResponse.builder()
+                .commandType(RESPONSE)
                 .data(Json.toJson(serviceInstance))
                 .build();
     }
