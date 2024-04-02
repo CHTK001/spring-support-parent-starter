@@ -13,6 +13,8 @@ import jakarta.annotation.Resource;
 
 import java.util.List;
 
+import static com.chua.common.support.protocol.boot.CommandType.RESPONSE;
+
 /**
  * config-subscribe命令适配器
  *
@@ -41,6 +43,7 @@ public class ConfigSubscribeCommandAdaptor implements CommandAdaptor{
                         Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(content))
         );
         return BootResponse.builder()
+                .commandType(RESPONSE)
                 .data(Json.toJson(list))
                 .build();
     }
