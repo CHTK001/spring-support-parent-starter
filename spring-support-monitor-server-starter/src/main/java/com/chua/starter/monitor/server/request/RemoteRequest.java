@@ -1,12 +1,15 @@
 package com.chua.starter.monitor.server.request;
 
 import com.chua.common.support.crypto.Codec;
+import com.chua.common.support.json.Json;
 import com.chua.common.support.protocol.boot.BootRequest;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.Hex;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.server.properties.MonitorServerProperties;
 import lombok.Data;
+
+import java.nio.charset.StandardCharsets;
 
 /**
  * @author CH
@@ -24,9 +27,9 @@ public class RemoteRequest {
      */
     public BootRequest getRequest(MonitorServerProperties monitorServerProperties) {
         Codec decode = ServiceProvider.of(Codec.class)
-                .getNewExtension(monitorServerProperties.getEncryptionSchema(), monitorServerProperties.getEncryptionKey());
+                .getNewExtension(monitorServerProperties.getEncryptionSchema(), monitorServerProperties.getEncryptionKey().getBytes(StandardCharsets.UTF_8));
         try {
-            return BootRequest.builder().content(StringUtils.utf8Str(decode.decode(Hex.decodeHex(data)))).build();
+            return Json.fromJson(StringUtils.utf8Str(decode.decode(Hex.decodeHex(data))), BootRequest.class);
         } catch (Exception e) {
             return null;
         }

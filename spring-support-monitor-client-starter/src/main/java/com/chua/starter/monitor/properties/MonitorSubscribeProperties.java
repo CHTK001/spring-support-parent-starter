@@ -21,7 +21,12 @@ public class MonitorSubscribeProperties {
     public static final String PRE = "plugin.monitor.subscribe";
 
     /**
-     * 订阅的配置名称, 默不订阅
+     * 订阅的配置名称, 默不订阅, (订阅哪些应用的配置)
+     */
+    private List<String> apps;
+
+    /**
+     * 开启订阅的模块, 默认全部开启(开启哪些功能)
      */
     private List<String> config;
 

@@ -2,7 +2,6 @@ package com.chua.starter.monitor.configuration;
 
 import com.chua.common.support.protocol.boot.*;
 import com.chua.common.support.task.limit.RateLimitMappingFactory;
-import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.factory.MonitorFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
@@ -53,8 +52,7 @@ public class LimitConfiguration implements BeanFactoryAware, EnvironmentAware, A
     }
 
     private void doInjectSubscribe() {
-        String configAppName = MonitorFactory.getInstance().getSubscribeConfig();
-        if(StringUtils.isEmpty(configAppName)) {
+        if(!MonitorFactory.getInstance().containsKey("LIMIT")) {
             return;
         }
         BootResponse response = protocolClient.get(BootRequest.builder()
@@ -62,7 +60,7 @@ public class LimitConfiguration implements BeanFactoryAware, EnvironmentAware, A
                         .commandType(CommandType.SUBSCRIBE)
                         .appName(MonitorFactory.getInstance().getAppName())
                         .profile(MonitorFactory.getInstance().getActive())
-                        .content(configAppName)
+                        .content(MonitorFactory.getInstance().getSubscribeApps())
                 .build()
         );
         if(response.getCommandType() != CommandType.RESPONSE) {

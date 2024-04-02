@@ -5,7 +5,6 @@ import com.chua.common.support.protocol.boot.BootRequest;
 import com.chua.common.support.protocol.boot.BootResponse;
 import com.chua.common.support.protocol.boot.CommandType;
 import com.chua.common.support.protocol.boot.ProtocolClient;
-import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.factory.MonitorFactory;
 import jakarta.annotation.Resource;
 import org.springframework.beans.BeansException;
@@ -33,8 +32,7 @@ public class ProtocolRegisterCenterService implements RegisterCenterService, App
             throw new NullPointerException("protocolClient is null");
         }
 
-        String config = MonitorFactory.getInstance().getSubscribeConfig();
-        if(StringUtils.isEmpty(config)) {
+        if(!MonitorFactory.getInstance().containsKey("REGISTER_CENTER")) {
             throw new NullPointerException("protocolClient is null");
         }
 
@@ -43,7 +41,7 @@ public class ProtocolRegisterCenterService implements RegisterCenterService, App
                 .commandType(CommandType.REQUEST)
                 .appName(environment.getProperty("spring.application.name"))
                 .profile(environment.getProperty("spring.profiles.active", "default"))
-                .content(config)
+                .content(MonitorFactory.getInstance().getSubscribeApps())
                 .build()
         );
         if(response.getCommandType() != CommandType.RESPONSE) {

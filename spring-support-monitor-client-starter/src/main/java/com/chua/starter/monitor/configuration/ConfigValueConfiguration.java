@@ -168,8 +168,7 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
 
     private void doInjectSubscribe(MutablePropertySources propertySources) {
         this.protocolServer.addMapping(this);
-        String config = MonitorFactory.getInstance().getSubscribeConfig();
-        if(StringUtils.isEmpty(config)) {
+        if(!MonitorFactory.getInstance().containsKey("CONFIG")) {
             return;
         }
         BootResponse response = protocolClient.get(BootRequest.builder()
@@ -177,7 +176,7 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
                         .commandType(CommandType.SUBSCRIBE)
                         .appName(MonitorFactory.getInstance().getAppName())
                         .profile(MonitorFactory.getInstance().getActive())
-                        .content(config)
+                        .content(MonitorFactory.getInstance().getSubscribeApps())
                 .build()
         );
         if(response.getCommandType() != CommandType.RESPONSE) {

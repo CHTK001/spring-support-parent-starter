@@ -163,7 +163,7 @@ public class MonitorFactory implements AutoCloseable {
         MonitorRequest request = new MonitorRequest();
         request.setAppName(appName);
         request.setProfile(active);
-        request.setSubscribeAppName(Joiner.on(",").join(monitorConfigProperties.getConfig()));
+        request.setSubscribeAppName(Joiner.on(",").join(monitorConfigProperties.getApps()));
         request.setServerPort(serverPort);
         request.setServerHost(StringUtils.defaultString(monitorProtocolProperties.getHost(), serverHost));
         request.setContextPath(contextPath);
@@ -212,9 +212,8 @@ public class MonitorFactory implements AutoCloseable {
         this.plugins = monitorReportProperties.getPlugins();
         this.openIpPlugin = CollectionUtils.containsIgnoreCase( plugins, "ip");
     }
-
-    public String getSubscribeConfig() {
-        return Joiner.on(',').join(monitorConfigProperties.getConfig());
+    public String getSubscribeApps() {
+        return Joiner.on(',').join(monitorConfigProperties.getApps());
     }
 
     public String getHotspotPath() {
@@ -222,7 +221,7 @@ public class MonitorFactory implements AutoCloseable {
     }
 
     public boolean hasSubscribers() {
-        return CollectionUtils.isNotEmpty(monitorConfigProperties.getConfig());
+        return CollectionUtils.isNotEmpty(monitorConfigProperties.getApps());
     }
 
     public void end() {
@@ -252,4 +251,19 @@ public class MonitorFactory implements AutoCloseable {
         return CollectionUtils.containsIgnoreCase(activeProfiles, profile);
 
     }
+
+    public boolean containsKey(String name) {
+        List<String> options = monitorConfigProperties.getConfig();
+        if(CollectionUtils.isEmpty(options)) {
+            return true;
+        }
+        for (String s : options) {
+            if(s.equalsIgnoreCase(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
 }
