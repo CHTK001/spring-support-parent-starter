@@ -7,6 +7,7 @@ import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.protocol.annotations.ServiceMapping;
 import com.chua.common.support.protocol.boot.*;
 import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.Md5Utils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.processor.AnnotationInjectedBeanPostProcessor;
@@ -184,7 +185,7 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
         }
 
         log.info("CONFIG 订阅成功");
-        JsonArray jsonArray = Json.getJsonArray(response.getData().toString());
+        JsonArray jsonArray = Json.getJsonArray(MapUtils.getString(response.getData(), "data"));
         int size = jsonArray.size();
         Map<String, Object> map = new LinkedHashMap<>();
         for (int i = 0; i < size; i++) {

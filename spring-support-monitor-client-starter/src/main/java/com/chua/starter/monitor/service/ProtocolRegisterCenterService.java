@@ -5,6 +5,7 @@ import com.chua.common.support.protocol.boot.BootRequest;
 import com.chua.common.support.protocol.boot.BootResponse;
 import com.chua.common.support.protocol.boot.CommandType;
 import com.chua.common.support.protocol.boot.ProtocolClient;
+import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.monitor.factory.MonitorFactory;
 import jakarta.annotation.Resource;
 import org.springframework.beans.BeansException;
@@ -48,7 +49,7 @@ public class ProtocolRegisterCenterService implements RegisterCenterService, App
             return null;
         }
 
-        return Json.fromJson(response.getData() + "", ServiceInstance.class);
+        return Json.fromJson(MapUtils.getString(response.getData(), "data"), ServiceInstance.class);
     }
 
     @Override
