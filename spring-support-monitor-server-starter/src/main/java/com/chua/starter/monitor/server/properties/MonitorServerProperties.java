@@ -40,7 +40,7 @@ public class MonitorServerProperties {
     /**
      * 加密密钥
      */
-    private String encryptionKey = "123456";
+    private String encryptionKey = "12345678900lO1o@";
 
     /**
      * 报表数据保持活动(s)

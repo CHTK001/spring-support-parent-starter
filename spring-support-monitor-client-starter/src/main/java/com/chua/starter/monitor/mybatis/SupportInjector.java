@@ -223,7 +223,7 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
             return;
         }
 
-        if(!MonitorFactory.getInstance().hasSubscribers()) {
+        if(!MonitorFactory.getInstance().containsKey("MYBATIS")) {
             return;
         }
 
@@ -232,7 +232,7 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
                 .commandType(CommandType.SUBSCRIBE)
                 .appName(monitorFactory.getAppName())
                 .profile(monitorFactory.getActive())
-                .content(monitorFactory.getSubscribeConfig())
+                .content(MonitorFactory.getInstance().getSubscribeApps())
                 .build()
         );
 
