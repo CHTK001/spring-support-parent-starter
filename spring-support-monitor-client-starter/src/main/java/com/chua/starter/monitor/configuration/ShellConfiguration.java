@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.configuration;
 
 import com.chua.common.support.json.Json;
+import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.protocol.annotations.ServiceMapping;
 import com.chua.common.support.protocol.boot.BootRequest;
 import com.chua.common.support.protocol.boot.BootResponse;
@@ -49,12 +50,14 @@ public class ShellConfiguration implements BeanFactoryAware {
             return BootResponse.notSupport("The non-register command is not supported");
         }
 
-        Command command = Json.fromJson(request.getContent(), Command.class);
-        if(null == command || null == command.getCommand()) {
+        JsonObject jsonObject = Json.getJsonObject(request.getContent());
+        if(null == jsonObject || !jsonObject.hasKey("command")) {
             return BootResponse.notSupport("The non-register command is not supported");
         }
 
-        Resolver resolver = ServiceProvider.of(Resolver.class).getNewExtension(command.getCommand());
+        Resolver resolver = ServiceProvider.of(Resolver.class).getNewExtension(jsonObject.getString("command"));
+        Command command = new Command();
+        command.setCommand(jsonObject.getString("command"));
         return BootResponse.builder()
                 .data(resolver.execute(command, shell))
                 .build();
