@@ -2,8 +2,8 @@ package com.chua.starter.redis.support;
 
 import com.chua.common.support.protocol.options.ClientOption;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.redis.support.client.RedisSearchClient;
-import com.chua.redis.support.search.RedisSearch;
+import com.chua.redis.support.client.RedisClient;
+import com.chua.redis.support.client.operable.OperableRedis;
 import com.chua.starter.redis.support.listener.RedisListener;
 import com.chua.starter.redis.support.properties.RedisServerProperties;
 import com.chua.starter.redis.support.server.RedisEmbeddedServer;
@@ -58,8 +58,8 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnClass(name = {"redis.clients.jedis.AbstractPipeline"})
-    public RedisSearch redisSearch(RedisProperties redisProperties) {
-        RedisSearchClient redisSearchClient = new RedisSearchClient(
+    public OperableRedis redisSearch(RedisProperties redisProperties) {
+        RedisClient redisClient = new RedisClient(
                 ClientOption.builder()
                         .database("default")
                         .host(redisProperties.getHost())
@@ -68,8 +68,8 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
                         .build()
         );
 
-        redisSearchClient.connect(null ==  redisProperties.getTimeout()? 10000:  redisProperties.getTimeout().toMillis());
-        return redisSearchClient.createClient();
+        redisClient.connect(null ==  redisProperties.getTimeout()? 10000:  redisProperties.getTimeout().toMillis());
+        return redisClient.createClient();
     }
 
     @Override

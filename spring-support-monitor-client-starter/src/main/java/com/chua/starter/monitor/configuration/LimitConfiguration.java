@@ -48,7 +48,7 @@ public class LimitConfiguration implements BeanFactoryAware, EnvironmentAware, A
         }
         this.protocolServer = this.beanFactory.getBean(ProtocolServer.class);
         this.protocolClient = this.beanFactory.getBean(ProtocolClient.class);
-        this.protocolServer.addListen(RateLimitMappingFactory.getInstance());
+        this.protocolServer.addMapping(RateLimitMappingFactory.getInstance());
         doInjectSubscribe();
     }
 
@@ -58,7 +58,7 @@ public class LimitConfiguration implements BeanFactoryAware, EnvironmentAware, A
             return;
         }
         BootResponse response = protocolClient.get(BootRequest.builder()
-                        .moduleType(ModuleType.LIMIT)
+                        .moduleType("LIMIT")
                         .commandType(CommandType.SUBSCRIBE)
                         .appName(MonitorFactory.getInstance().getAppName())
                         .profile(MonitorFactory.getInstance().getActive())
@@ -70,7 +70,7 @@ public class LimitConfiguration implements BeanFactoryAware, EnvironmentAware, A
         }
 
         log.info("LIMIT 订阅成功");
-        register(response.getContent());
+        register(response.getData() + "");
     }
 
     private void register(String content) {

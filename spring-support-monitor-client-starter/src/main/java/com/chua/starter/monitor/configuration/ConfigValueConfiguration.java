@@ -167,13 +167,13 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
     }
 
     private void doInjectSubscribe(MutablePropertySources propertySources) {
-        this.protocolServer.addListen(this);
+        this.protocolServer.addMapping(this);
         String config = MonitorFactory.getInstance().getSubscribeConfig();
         if(StringUtils.isEmpty(config)) {
             return;
         }
         BootResponse response = protocolClient.get(BootRequest.builder()
-                        .moduleType(ModuleType.CONFIG)
+                        .moduleType("CONFIG")
                         .commandType(CommandType.SUBSCRIBE)
                         .appName(MonitorFactory.getInstance().getAppName())
                         .profile(MonitorFactory.getInstance().getActive())
@@ -185,7 +185,7 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
         }
 
         log.info("CONFIG 订阅成功");
-        JsonArray jsonArray = Json.getJsonArray(response.getContent());
+        JsonArray jsonArray = Json.getJsonArray(response.getData().toString());
         int size = jsonArray.size();
         Map<String, Object> map = new LinkedHashMap<>();
         for (int i = 0; i < size; i++) {

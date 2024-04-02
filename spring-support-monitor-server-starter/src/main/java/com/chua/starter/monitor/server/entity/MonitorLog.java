@@ -5,7 +5,6 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.chua.common.support.protocol.boot.CommandType;
-import com.chua.common.support.protocol.boot.ModuleType;
 import com.chua.starter.mybatis.pojo.SysTenantBase;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -34,7 +33,7 @@ public class MonitorLog extends SysTenantBase implements Serializable {
     @ApiModelProperty(value = "模块")
     @Schema(description = "模块")
     @Size(max = 255, message = "模块最大长度要小于 255")
-    private ModuleType logModuleType;
+    private String logModuleType;
 
     /**
      * 命令

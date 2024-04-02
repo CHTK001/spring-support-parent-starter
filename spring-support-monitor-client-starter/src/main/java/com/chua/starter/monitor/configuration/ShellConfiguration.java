@@ -56,10 +56,7 @@ public class ShellConfiguration implements BeanFactoryAware {
 
         Resolver resolver = ServiceProvider.of(Resolver.class).getNewExtension(command.getCommand());
         return BootResponse.builder()
-                .data(BootResponse.DataDTO.builder()
-                        .commandType(CommandType.RESPONSE)
-                        .content(resolver.execute(command, shell))
-                        .build())
+                .data(resolver.execute(command, shell))
                 .build();
     }
 
@@ -79,7 +76,7 @@ public class ShellConfiguration implements BeanFactoryAware {
             return;
         }
         this.protocolServer = this.beanFactory.getBean(ProtocolServer.class);
-        this.protocolServer.addListen(this);
+        this.protocolServer.addMapping(this);
     }
 
 }

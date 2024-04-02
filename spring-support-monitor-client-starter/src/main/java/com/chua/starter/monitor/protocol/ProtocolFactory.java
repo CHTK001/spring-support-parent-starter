@@ -1,9 +1,8 @@
 package com.chua.starter.monitor.protocol;
 
 import com.chua.common.support.function.InitializingAware;
-import com.chua.common.support.protocol.boot.BootOption;
+import com.chua.common.support.protocol.boot.BootSetting;
 import com.chua.common.support.protocol.boot.Protocol;
-import com.chua.common.support.protocol.options.ServerOption;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.monitor.factory.MonitorFactory;
 import com.chua.starter.monitor.properties.MonitorProperties;
@@ -39,15 +38,15 @@ public class ProtocolFactory implements InitializingAware {
     @Override
     public void afterPropertiesSet() {
         String protocol = monitorProtocolProperties.getProtocol();
-        BootOption bootOption = BootOption.builder()
-                .encryptionSchema(monitorProtocolProperties.getEncryptionSchema())
-                .encryptionKey(monitorProtocolProperties.getEncryptionKey())
+        BootSetting bootOption = BootSetting.builder()
+                .codec(monitorProtocolProperties.getEncryptionSchema())
+                .key(monitorProtocolProperties.getEncryptionKey())
+                .host(monitorProtocolProperties.getHost())
+                .port(monitorProtocolProperties.getPort())
                 .address(environment.resolvePlaceholders(monitorProperties.getMonitor()))
                 .appName(monitorFactory.getAppName())
                 .profile(monitorFactory.getActive())
                 .heartbeat(false)
-                .serverOption(ServerOption.builder().port(monitorProtocolProperties.getPort())
-                        .host(environment.resolvePlaceholders(monitorProtocolProperties.getHost())).build())
                 .build();
         this.protocol = ServiceProvider.of(Protocol.class).getNewExtension(protocol, bootOption);
 

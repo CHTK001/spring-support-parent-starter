@@ -1,15 +1,17 @@
 package com.chua.starter.monitor.service;
 
 import com.chua.common.support.json.Json;
-import com.chua.common.support.protocol.boot.*;
+import com.chua.common.support.protocol.boot.BootRequest;
+import com.chua.common.support.protocol.boot.BootResponse;
+import com.chua.common.support.protocol.boot.CommandType;
+import com.chua.common.support.protocol.boot.ProtocolClient;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.factory.MonitorFactory;
+import jakarta.annotation.Resource;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.env.Environment;
-
-import jakarta.annotation.Resource;
 
 /**
  * 注册中心服务
@@ -37,7 +39,7 @@ public class ProtocolRegisterCenterService implements RegisterCenterService, App
         }
 
         BootResponse response = protocolClient.get(BootRequest.builder()
-                .moduleType(ModuleType.REGISTER_CENTER)
+                .moduleType("REGISTER_CENTER")
                 .commandType(CommandType.REQUEST)
                 .appName(environment.getProperty("spring.application.name"))
                 .profile(environment.getProperty("spring.profiles.active", "default"))
@@ -48,7 +50,7 @@ public class ProtocolRegisterCenterService implements RegisterCenterService, App
             return null;
         }
 
-        return Json.fromJson(response.getData().getContent(), ServiceInstance.class);
+        return Json.fromJson(response.getData() + "", ServiceInstance.class);
     }
 
     @Override

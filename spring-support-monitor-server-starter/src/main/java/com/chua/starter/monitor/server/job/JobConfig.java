@@ -5,7 +5,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.protocol.boot.CommandType;
-import com.chua.common.support.protocol.boot.ModuleType;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.starter.monitor.job.TriggerParam;
@@ -144,7 +143,7 @@ public class JobConfig {
     public ReturnResult<String> run( List<MonitorRequest> address, TriggerParam triggerParam) {
         // 遍历地址列表，发送触发参数
         for (MonitorRequest monitorRequest : address) {
-            monitorAppService.upload(null, monitorRequest, Json.toJSONString(triggerParam), ModuleType.JOB, CommandType.REQUEST);
+            monitorAppService.upload(null, monitorRequest, Json.toJSONString(triggerParam), "JOB", CommandType.REQUEST);
         }
         // 执行成功
         return ReturnResult.success();

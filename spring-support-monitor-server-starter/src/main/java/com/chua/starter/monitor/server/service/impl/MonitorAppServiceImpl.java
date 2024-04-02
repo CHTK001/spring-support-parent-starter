@@ -17,12 +17,10 @@ import com.chua.starter.monitor.server.mapper.MonitorAppMapper;
 import com.chua.starter.monitor.server.properties.MonitorServerProperties;
 import com.chua.starter.monitor.server.service.MonitorAppService;
 import com.chua.starter.monitor.server.service.MonitorLogService;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
-import jakarta.annotation.Resource;
 import java.util.List;
-
-import static com.chua.common.support.protocol.boot.ModuleType.CONFIG;
 
 @Service
 public class MonitorAppServiceImpl extends ServiceImpl<MonitorAppMapper, MonitorApp> implements MonitorAppService{
@@ -52,7 +50,7 @@ public class MonitorAppServiceImpl extends ServiceImpl<MonitorAppMapper, Monitor
         ThreadUtils.newStaticThreadPool().execute(() -> {
             for (MonitorRequest monitorRequest : heart) {
                 try {
-                    upload(config, monitorRequest, Json.toJSONString(config), CONFIG, CommandType.REGISTER);
+                    upload(config, monitorRequest, Json.toJSONString(config), "CONFIG", CommandType.REGISTER);
                 } catch (Exception ignored) {
                 }
             }
@@ -67,18 +65,18 @@ public class MonitorAppServiceImpl extends ServiceImpl<MonitorAppMapper, Monitor
      * @return {@link BootResponse}
      */
     @Override
-    public BootResponse upload(MonitorConfig config, MonitorRequest monitorRequest, String content, ModuleType moduleType, CommandType commandType) {
+    public BootResponse upload(MonitorConfig config, MonitorRequest monitorRequest, String content, String moduleType, CommandType commandType) {
         Object data = monitorRequest.getData();
         if(null == data) {
             return null;
         }
 
         MonitorProtocolProperties monitorProtocolProperties = BeanUtils.copyProperties(data, MonitorProtocolProperties.class);
-        BootOption bootOption = BootOption.builder()
-                .address(monitorProtocolProperties.getHost() + ":" + monitorProtocolProperties.getPort() + "/" + moduleType.name().toLowerCase())
+        BootSetting bootOption = BootSetting.builder()
+                .address(monitorProtocolProperties.getHost() + ":" + monitorProtocolProperties.getPort())
                 .heartbeat(false)
-                .encryptionSchema(monitorProtocolProperties.getEncryptionSchema())
-                .encryptionKey(monitorProtocolProperties.getEncryptionKey())
+                .codec(monitorProtocolProperties.getEncryptionSchema())
+                .key(monitorProtocolProperties.getEncryptionKey())
                 .profile(null == config ? "default" : config.getConfigProfile())
                 .appName(null == config ? monitorRequest.getAppName() : config.getConfigAppname()).build();
         Protocol protocol = ServiceProvider.of(Protocol.class).getNewExtension(monitorProtocolProperties.getProtocol(), bootOption);
