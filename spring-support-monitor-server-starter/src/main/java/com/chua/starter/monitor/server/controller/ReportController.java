@@ -5,7 +5,6 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.protocol.boot.BootRequest;
 import com.chua.common.support.protocol.boot.BootResponse;
 import com.chua.common.support.protocol.boot.CommandType;
-import com.chua.common.support.protocol.boot.ModuleType;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.server.factory.MonitorServerFactory;
@@ -15,13 +14,11 @@ import com.chua.starter.monitor.server.request.RemoteRequest;
 import com.chua.starter.monitor.server.resolver.ModuleResolver;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.annotation.Resource;
 import java.util.List;
 import java.util.Optional;
-
-import static com.chua.common.support.protocol.boot.CommandType.RESPONSE;
 
 
 /**
@@ -54,7 +51,7 @@ public class ReportController {
             return BootResponse.notSupport();
         }
 
-        ModuleType moduleType = request.getModuleType();
+        String moduleType = request.getModuleType();
         if(null == moduleType) {
             return BootResponse.notSupport();
         }
@@ -62,9 +59,7 @@ public class ReportController {
         String appName = request.getAppName();
         if(StringUtils.isBlank(appName)) {
             return BootResponse.builder()
-                    .data(BootResponse.DataDTO.builder()
-                            .commandType(RESPONSE).content("appName不能为空")
-                            .build())
+                    .data("appName不能为空")
                     .build();
         }
 

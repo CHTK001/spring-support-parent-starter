@@ -55,7 +55,7 @@ public class PatchConfiguration implements BeanFactoryAware, EnvironmentAware, A
         }
         this.protocolServer = this.beanFactory.getBean(ProtocolServer.class);
         this.protocolClient = this.beanFactory.getBean(ProtocolClient.class);
-        this.protocolServer.addListen(this);
+        this.protocolServer.addMapping(this);
     }
 
 

@@ -6,7 +6,6 @@ import com.chua.common.support.lang.robin.Node;
 import com.chua.common.support.lang.robin.Robin;
 import com.chua.common.support.protocol.boot.BootRequest;
 import com.chua.common.support.protocol.boot.BootResponse;
-import com.chua.common.support.protocol.boot.CommandType;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.StringUtils;
@@ -14,8 +13,8 @@ import com.chua.starter.monitor.properties.MonitorProtocolProperties;
 import com.chua.starter.monitor.request.MonitorRequest;
 import com.chua.starter.monitor.server.factory.MonitorServerFactory;
 import com.chua.starter.monitor.service.ServiceInstance;
-
 import jakarta.annotation.Resource;
+
 import java.util.List;
 
 /**
@@ -47,10 +46,7 @@ public class RegisterCenterRequestCommandAdaptor implements CommandAdaptor{
         }
 
         return BootResponse.builder()
-                .data(BootResponse.DataDTO.builder()
-                        .commandType(CommandType.RESPONSE)
-                        .content(Json.toJson(serviceInstance))
-                        .build())
+                .data(Json.toJson(serviceInstance))
                 .build();
     }
 

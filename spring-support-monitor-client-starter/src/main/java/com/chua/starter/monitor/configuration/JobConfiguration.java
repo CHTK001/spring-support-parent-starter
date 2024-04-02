@@ -64,9 +64,7 @@ public class JobConfiguration implements BeanFactoryAware, SmartInstantiationAwa
         }
         return BootResponse.builder()
                 .code(OK)
-                .data(BootResponse.DataDTO.builder()
-                        .content(Json.toJson(JobHandlerFactory.getInstance().keys()))
-                        .build())
+                .data(Json.toJson(JobHandlerFactory.getInstance().keys()))
                 .build();
     }
 
@@ -93,7 +91,7 @@ public class JobConfiguration implements BeanFactoryAware, SmartInstantiationAwa
             return;
         }
         this.protocolServer = this.beanFactory.getBean(ProtocolServer.class);
-        this.protocolServer.addListen(this);
+        this.protocolServer.addMapping(this);
     }
 
     private void doAnalysisJob(Map<Method, Job> methodJobMap, String beanDefinitionName, Object bean) {
