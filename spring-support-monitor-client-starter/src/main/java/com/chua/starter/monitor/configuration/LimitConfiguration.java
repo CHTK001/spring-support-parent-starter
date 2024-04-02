@@ -2,6 +2,7 @@ package com.chua.starter.monitor.configuration;
 
 import com.chua.common.support.protocol.boot.*;
 import com.chua.common.support.task.limit.RateLimitMappingFactory;
+import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.monitor.factory.MonitorFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
@@ -68,7 +69,7 @@ public class LimitConfiguration implements BeanFactoryAware, EnvironmentAware, A
         }
 
         log.info("LIMIT 订阅成功");
-        register(response.getData() + "");
+        register(MapUtils.getString(response.getData(), "data"));
     }
 
     private void register(String content) {

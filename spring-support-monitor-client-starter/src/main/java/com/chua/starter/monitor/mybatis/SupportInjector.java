@@ -238,13 +238,13 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
 
 
         if(response.getCommandType() != CommandType.RESPONSE) {
-            log.error("MYBATIS 订阅: {}失败 => {}", subscribe, response.getData());
+            log.error("MYBATIS 订阅: {}失败 => {}", subscribe,MapUtils.getString(response.getData(), "data"));
             return;
         }
 
         log.info("MYBATIS 订阅: {} 成功", subscribe);
         try {
-            JsonArray jsonArray = Json.getJsonArray(response.getData() + "");
+            JsonArray jsonArray = Json.getJsonArray(MapUtils.getString(response.getData(), "data"));
             register(jsonArray);
         } catch (Exception ignored) {
         }
