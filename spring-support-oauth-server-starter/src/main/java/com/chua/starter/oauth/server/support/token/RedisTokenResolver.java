@@ -1,6 +1,7 @@
 package com.chua.starter.oauth.server.support.token;
 
 import com.chua.common.support.annotations.Extension;
+import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.IdUtils;
@@ -128,7 +129,7 @@ public class RedisTokenResolver implements TokenResolver {
         if (null == s) {
             return ReturnResult.noAuth();
         }
-        UserResult userResult = (UserResult) s;
+        UserResult userResult = Json.fromJson(s.toString(), UserResult.class);
         if (authServerProperties.isRenew()) {
             resetExpire(userResult, token);
         }
@@ -152,7 +153,7 @@ public class RedisTokenResolver implements TokenResolver {
             return ReturnResult.noAuth();
         }
 
-        UserResult userResult = (UserResult) s;
+        UserResult userResult = Json.fromJson(s.toString(), UserResult.class);
         UserResult userResult1 = loginCheck.getUserInfo(userResult);
         if (null == userResult1) {
             return ReturnResult.ok(userResult);
