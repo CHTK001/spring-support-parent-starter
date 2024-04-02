@@ -1,7 +1,6 @@
 package com.chua.starter.oauth.server.support.token;
 
 import com.chua.common.support.annotations.Extension;
-import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.IdUtils;
@@ -13,13 +12,12 @@ import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.server.support.check.LoginCheck;
 import com.chua.starter.oauth.server.support.generation.TokenGeneration;
 import com.chua.starter.oauth.server.support.properties.AuthServerProperties;
-import org.apache.commons.codec.digest.DigestUtils;
-import org.springframework.cglib.beans.BeanMap;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
-
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.Cookie;
+import org.apache.commons.codec.digest.DigestUtils;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
+
 import java.time.Duration;
 import java.util.Set;
 
@@ -34,7 +32,7 @@ import static com.chua.starter.oauth.client.support.contants.AuthConstant.TOKEN_
 public class RedisTokenResolver implements TokenResolver {
 
     @Resource
-    private StringRedisTemplate stringRedisTemplate;
+    private RedisTemplate stringRedisTemplate;
 
     @Resource
     private AuthServerProperties authServerProperties;
@@ -56,11 +54,11 @@ public class RedisTokenResolver implements TokenResolver {
         if (online == AuthServerProperties.Online.SINGLE) {
             registerSingle(generation);
         }
-        ValueOperations<String, String> forValue = stringRedisTemplate.opsForValue();
+        ValueOperations forValue = stringRedisTemplate.opsForValue();
         long expire = userResult.getExpire() == null ? authServerProperties.getExpire() : userResult.getExpire();
         userResult.setExpire(expire);
 //        forValue.set(serviceKey, Json.toJson(userResult));
-        forValue.set(redisKey, Json.toJson(BeanMap.create(userResult)));
+        forValue.set(redisKey, userResult);
 
 
         if (expire > 0) {
@@ -126,11 +124,11 @@ public class RedisTokenResolver implements TokenResolver {
             return ReturnResult.noAuth();
         }
         cv = TOKEN_PRE + cv;
-        String s = stringRedisTemplate.opsForValue().get(cv);
+        Object s = stringRedisTemplate.opsForValue().get(cv);
         if (null == s) {
             return ReturnResult.noAuth();
         }
-        UserResult userResult = Json.fromJson(s, UserResult.class);
+        UserResult userResult = (UserResult) s;
         if (authServerProperties.isRenew()) {
             resetExpire(userResult, token);
         }
@@ -149,17 +147,17 @@ public class RedisTokenResolver implements TokenResolver {
             return ReturnResult.noAuth();
         }
         cv = TOKEN_PRE + cv;
-        String s = stringRedisTemplate.opsForValue().get(cv);
+        Object s = stringRedisTemplate.opsForValue().get(cv);
         if (null == s) {
             return ReturnResult.noAuth();
         }
 
-        UserResult userResult = Json.fromJson(s, UserResult.class);
+        UserResult userResult = (UserResult) s;
         UserResult userResult1 = loginCheck.getUserInfo(userResult);
         if (null == userResult1) {
             return ReturnResult.ok(userResult);
         }
-        stringRedisTemplate.opsForValue().set(token, Json.toJson(BeanMap.create(userResult1)));
+        stringRedisTemplate.opsForValue().set(token, userResult1);
         if (authServerProperties.isRenew()) {
             resetExpire(userResult1, token);
         }
