@@ -64,8 +64,10 @@ public class ReportController {
         }
 
         try {
-            return Optional.ofNullable(ServiceProvider.of(ModuleResolver.class).getNewExtension(moduleType)
+            BootResponse bootResponse = Optional.ofNullable(ServiceProvider.of(ModuleResolver.class).getNewExtension(moduleType)
                     .resolve(request)).orElse(BootResponse.notSupport());
+            bootResponse.setCommandType(CommandType.RESPONSE);
+            return bootResponse;
         } catch (Exception e) {
             return BootResponse.notSupport();
         }
