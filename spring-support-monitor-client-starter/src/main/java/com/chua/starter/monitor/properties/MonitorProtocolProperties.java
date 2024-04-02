@@ -26,7 +26,7 @@ public class MonitorProtocolProperties {
     /**
      * 加密密钥
      */
-    private String encryptionKey = "123456";
+    private String encryptionKey = "12345678900lO1o@";
 
     /**
      * 当前服务器地址(多网卡指定使用)

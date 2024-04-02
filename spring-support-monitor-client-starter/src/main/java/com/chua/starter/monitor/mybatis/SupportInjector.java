@@ -217,7 +217,7 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
 
         this.protocolServer = this.beanFactory.getBean(ProtocolServer.class);
         this.protocolClient = this.beanFactory.getBean(ProtocolClient.class);
-        this.protocolServer.addListen(this);
+        this.protocolServer.addMapping(this);
         MonitorFactory monitorFactory = MonitorFactory.getInstance();
         if(!MonitorFactory.getInstance().isEnable()) {
             return;
@@ -228,7 +228,7 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
         }
 
         BootResponse response = protocolClient.get(BootRequest.builder()
-                .moduleType(ModuleType.MYBATIS)
+                .moduleType("MYBATIS")
                 .commandType(CommandType.SUBSCRIBE)
                 .appName(monitorFactory.getAppName())
                 .profile(monitorFactory.getActive())
@@ -238,13 +238,13 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
 
 
         if(response.getCommandType() != CommandType.RESPONSE) {
-            log.error("MYBATIS 订阅: {}失败 => {}", subscribe, response.getContent());
+            log.error("MYBATIS 订阅: {}失败 => {}", subscribe, response.getData());
             return;
         }
 
         log.info("MYBATIS 订阅: {} 成功", subscribe);
         try {
-            JsonArray jsonArray = Json.getJsonArray(response.getContent());
+            JsonArray jsonArray = Json.getJsonArray(response.getData() + "");
             register(jsonArray);
         } catch (Exception ignored) {
         }

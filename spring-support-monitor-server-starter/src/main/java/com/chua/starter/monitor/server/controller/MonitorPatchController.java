@@ -6,7 +6,6 @@ import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.code.ErrorResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.protocol.boot.CommandType;
-import com.chua.common.support.protocol.boot.ModuleType;
 import com.chua.common.support.utils.ObjectUtils;
 import com.chua.starter.common.support.result.ResultData;
 import com.chua.starter.monitor.request.MonitorRequest;
@@ -19,6 +18,7 @@ import com.github.xiaoymin.knife4j.annotations.Ignore;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.Resource;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -29,7 +29,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import jakarta.annotation.Resource;
 import java.util.Base64;
 import java.util.List;
 
@@ -77,7 +76,7 @@ public class MonitorPatchController extends AbstractSwaggerController<MonitorPat
 
         config.setPatchFile(Base64.getEncoder().encodeToString(service.downloadPatch(config)));
         for (MonitorRequest monitorRequest : heart) {
-            monitorAppService.upload(null, monitorRequest, Json.toJSONString(config), ModuleType.PATCH, CommandType.REQUEST);
+            monitorAppService.upload(null, monitorRequest, Json.toJSONString(config), "PATCH", CommandType.REQUEST);
         }
         return ReturnResult.success();
     }

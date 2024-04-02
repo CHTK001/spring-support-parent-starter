@@ -8,7 +8,6 @@ import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.protocol.boot.CommandType;
-import com.chua.common.support.protocol.boot.ModuleType;
 import com.chua.common.support.utils.ObjectUtils;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.starter.common.support.result.ResultData;
@@ -147,7 +146,7 @@ public class MonitorLimiterController {
         }
 
         for (MonitorRequest monitorRequest : heart) {
-            monitorAppService.upload(null, monitorRequest, Json.toJSONString(config), ModuleType.LIMIT, CommandType.REQUEST);
+            monitorAppService.upload(null, monitorRequest, Json.toJSONString(config), "LIMIT", CommandType.REQUEST);
         }
         return ReturnResult.success();
     }

@@ -6,12 +6,11 @@ import com.chua.common.support.function.Splitter;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.protocol.boot.BootRequest;
 import com.chua.common.support.protocol.boot.BootResponse;
-import com.chua.common.support.protocol.boot.CommandType;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.server.entity.MonitorConfig;
 import com.chua.starter.monitor.server.service.MonitorConfigService;
-
 import jakarta.annotation.Resource;
+
 import java.util.List;
 
 /**
@@ -42,10 +41,7 @@ public class ConfigSubscribeCommandAdaptor implements CommandAdaptor{
                         Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(content))
         );
         return BootResponse.builder()
-                .data(BootResponse.DataDTO.builder()
-                        .commandType(CommandType.RESPONSE)
-                        .content(Json.toJson(list))
-                        .build())
+                .data(Json.toJson(list))
                 .build();
     }
 }

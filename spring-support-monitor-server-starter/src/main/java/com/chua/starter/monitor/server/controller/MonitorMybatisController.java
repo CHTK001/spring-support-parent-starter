@@ -5,7 +5,6 @@ import com.chua.common.support.annotations.Group;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.protocol.boot.CommandType;
-import com.chua.common.support.protocol.boot.ModuleType;
 import com.chua.common.support.utils.ObjectUtils;
 import com.chua.starter.monitor.request.MonitorRequest;
 import com.chua.starter.monitor.server.entity.MonitorMybatis;
@@ -16,13 +15,13 @@ import com.chua.starter.mybatis.controller.AbstractSwaggerController;
 import com.github.xiaoymin.knife4j.annotations.Ignore;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.Resource;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.annotation.Resource;
 import java.util.List;
 
 import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
@@ -72,7 +71,7 @@ public class MonitorMybatisController extends AbstractSwaggerController<MonitorM
         }
 
         for (MonitorRequest monitorRequest : heart) {
-            monitorAppService.upload(null, monitorRequest, Json.toJSONString(config), ModuleType.MYBATIS, CommandType.REQUEST);
+            monitorAppService.upload(null, monitorRequest, Json.toJSONString(config), "MYBATIS", CommandType.REQUEST);
         }
         return ReturnResult.success();
     }
