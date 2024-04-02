@@ -70,6 +70,6 @@ public class AuthFilter implements Filter {
         HttpSession session = request.getSession();
         UserResume userResume = authentication.getReturnResult();
         session.setAttribute("username", userResume.getUsername());
-        session.setAttribute("userId", MapUtils.getString(userResume.getExt(), "id"));
+        session.setAttribute("userId", MapUtils.getString(userResume.getExt(), "userId"));
     }
 }
