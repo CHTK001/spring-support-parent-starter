@@ -1,6 +1,6 @@
 package com.chua.starter.common.support.mdc;
 
-import com.chua.common.support.discovery.Constants;
+import com.chua.common.support.constant.Constants;
 import com.chua.common.support.mdc.TraceContextHolder;
 import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;

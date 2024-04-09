@@ -1,12 +1,11 @@
 package com.chua.starter.common.support.mdc;
 
-import com.chua.common.support.discovery.Constants;
+import com.chua.common.support.constant.Constants;
 import com.chua.common.support.mdc.TraceContextHolder;
-import org.springframework.web.servlet.HandlerInterceptor;
-import org.springframework.web.servlet.ModelAndView;
-
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.ModelAndView;
 
 /**
  * mdc处理程序拦截器
