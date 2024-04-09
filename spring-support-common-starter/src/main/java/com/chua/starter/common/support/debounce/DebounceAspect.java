@@ -1,6 +1,6 @@
 package com.chua.starter.common.support.debounce;
 
-import com.chua.common.support.datasource.repository.wrapper.toolkit.ClassUtils;
+import com.chua.common.support.datasource.repository.wrapper.toolkit.WrapperClassUtils;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -61,7 +61,7 @@ public class DebounceAspect implements ApplicationContextAware {
         Class<? extends DebounceLock> aClass = debounce.lock();
         DebounceLock debounceLock = null;
         try {
-            debounceLock = ClassUtils.newInstance(aClass);
+            debounceLock = WrapperClassUtils.newInstance(aClass);
         } catch (Exception ignored) {
         }
         if(null == debounceLock) {
@@ -93,7 +93,7 @@ public class DebounceAspect implements ApplicationContextAware {
         Class<? extends DebounceKeyGenerator> aClass = debounce.keyGenerator();
         DebounceKeyGenerator debounceKeyGenerator = null;
         try {
-            debounceKeyGenerator = ClassUtils.newInstance(aClass);
+            debounceKeyGenerator = WrapperClassUtils.newInstance(aClass);
         } catch (Exception ignored) {
         }
         if(null == debounceKeyGenerator) {
