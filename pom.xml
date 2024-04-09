@@ -175,9 +175,16 @@
                 <artifactId>utils-support-guava-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
+
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-rpc-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-rpc-sofa-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
 
