@@ -26,8 +26,7 @@ public class SpringCompatUtils {
                 return factoryMethodMetadata != null ? factoryMethodMetadata.getReturnTypeName() : null;
             } else {
                 Object source = annotatedBeanDefinition.getSource();
-                if (source instanceof StandardMethodMetadata) {
-                    StandardMethodMetadata methodMetadata = (StandardMethodMetadata) source;
+                if (source instanceof StandardMethodMetadata methodMetadata) {
                     Method introspectedMethod = methodMetadata.getIntrospectedMethod();
                     if (introspectedMethod != null) {
                         return introspectedMethod.getReturnType().getName();
@@ -72,8 +71,7 @@ public class SpringCompatUtils {
         if (factoryMethodMetadata instanceof StandardMethodMetadata) {
             Method introspectedMethod = ((StandardMethodMetadata) factoryMethodMetadata).getIntrospectedMethod();
             Type returnType = introspectedMethod.getGenericReturnType();
-            if (returnType instanceof ParameterizedType) {
-                ParameterizedType parameterizedType = (ParameterizedType) returnType;
+            if (returnType instanceof ParameterizedType parameterizedType) {
                 Type actualTypeArgument = parameterizedType.getActualTypeArguments()[0];
                 if (actualTypeArgument instanceof Class) {
                     return (Class) actualTypeArgument;
@@ -99,4 +97,6 @@ public class SpringCompatUtils {
         }
         return factoryMethodMetadataEnabled;
     }
+
+
 }

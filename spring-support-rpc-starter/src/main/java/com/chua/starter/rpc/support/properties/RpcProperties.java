@@ -1,10 +1,16 @@
 package com.chua.starter.rpc.support.properties;
 
-import com.chua.common.support.rpc.*;
+import com.chua.common.support.rpc.RpcConsumerConfig;
+import com.chua.common.support.rpc.RpcProtocolConfig;
+import com.chua.common.support.rpc.RpcRegistryConfig;
+import com.chua.common.support.rpc.enums.RpcType;
+import com.chua.common.support.utils.NumberUtils;
+import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -50,7 +56,7 @@ public class RpcProperties {
     /**
      * 实现
      */
-    private String impl = "dubbo";
+    private RpcType type = RpcType.DUBBO;
     /**
      * 协议
      */
@@ -59,8 +65,7 @@ public class RpcProperties {
     /**
      * 应用
      */
-    @NestedConfigurationProperty
-    private RpcApplicationConfig application;
+    private String applicationName = "${spring.application.name:app}";
     /**
      * 消费者
      */
@@ -71,10 +76,34 @@ public class RpcProperties {
      */
     @NestedConfigurationProperty
     private List<RpcRegistryConfig> registry;
-    /**
-     * 注册器
-     */
-    @NestedConfigurationProperty
-    private RpcReferenceConfig reference;
 
+    public List<RpcRegistryConfig> getRegistry() {
+        if(null == registry) {
+            return Collections.emptyList();
+        }
+
+        for (RpcRegistryConfig config : registry) {
+            config.setAddress(SpringBeanUtils.resolvePlaceholders(config.getAddress()));
+            config.setUsername(SpringBeanUtils.resolvePlaceholders(config.getUsername()));
+            config.setPassword(SpringBeanUtils.resolvePlaceholders(config.getPassword()));
+        }
+        return registry;
+    }
+
+    public List<RpcProtocolConfig> getProtocols() {
+        if(null == protocols) {
+            return Collections.emptyList();
+        }
+
+        for (RpcProtocolConfig config : protocols) {
+            config.setHost(SpringBeanUtils.resolvePlaceholders(config.getHost()));
+            config.setPort(NumberUtils.toInt(SpringBeanUtils.resolvePlaceholders(config.getPort() + "")));
+            config.setName(SpringBeanUtils.resolvePlaceholders(config.getName()));
+        }
+        return protocols;
+    }
+
+    public String getApplicationName() {
+        return SpringBeanUtils.resolvePlaceholders(applicationName);
+    }
 }

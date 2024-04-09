@@ -19,15 +19,15 @@
 
     </properties>
     <dependencies>
-        <dependency>
-            <groupId>org.zbus</groupId>
-            <artifactId>zbus</artifactId>
-            <version>7.2.2</version>
-        </dependency>
 
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-rpc-starter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-rpc-sofa-starter</artifactId>
         </dependency>
 
         <dependency>
