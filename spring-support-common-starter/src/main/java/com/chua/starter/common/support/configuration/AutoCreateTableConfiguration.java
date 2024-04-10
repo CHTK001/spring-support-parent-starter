@@ -55,7 +55,7 @@ public class AutoCreateTableConfiguration implements ApplicationContextAware {
             );
         }
 
-        this.ddlExecutor = engine.toDdl();
+        this.ddlExecutor = engine.createDdl();
         if(createTableProperties.isAsync()) {
             ThreadUtils.newStaticThreadPool().execute(this::doCreateTable);
             return;
