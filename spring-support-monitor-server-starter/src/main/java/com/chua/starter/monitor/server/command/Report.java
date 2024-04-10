@@ -8,6 +8,7 @@ import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.monitor.request.MonitorRequest;
 import com.chua.starter.monitor.server.adaptor.Adaptor;
 import com.chua.starter.monitor.server.properties.MonitorServerProperties;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
@@ -15,7 +16,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
-import jakarta.annotation.Resource;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -35,7 +35,7 @@ public class Report implements InitializingBean, DisposableBean {
     private RedisTemplate stringRedisTemplate;
     @Resource
     private MonitorServerProperties monitorServerProperties;
-    private final ScheduledExecutorService scheduledExecutorService = ThreadUtils.newScheduledThreadPoolExecutor(2, "monitor-core-thread");
+    private final ScheduledExecutorService scheduledExecutorService = ThreadUtils.newScheduledThreadPoolExecutor(2, "com-ch-monitor-core-thread");
 
 
     /**
