@@ -2,7 +2,7 @@ package com.chua.starter.monitor.server.configuration;
 
 import com.chua.common.support.annotations.OnRouterEvent;
 import com.chua.common.support.net.NetUtils;
-import com.chua.common.support.protocol.options.ServerOption;
+import com.chua.common.support.protocol.options.ServerSetting;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.starter.monitor.server.consumer.MonitorConsumer;
 import com.chua.starter.monitor.server.consumer.ReportConsumer;
@@ -115,7 +115,7 @@ public class MonitorServerConfiguration implements BeanDefinitionRegistryPostPro
             return;
         }
         registry.registerBeanDefinition("mqServer", BeanDefinitionBuilder.rootBeanDefinition(ZbusServer.class)
-                .addConstructorArgValue(ServerOption.builder()
+                .addConstructorArgValue(ServerSetting.builder()
                         .port(monitorServerProperties.getMqPort())
                         .host(monitorServerProperties.getMqHost())
                         .build())
