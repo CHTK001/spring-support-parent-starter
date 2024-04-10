@@ -48,7 +48,7 @@ public class MonitorFactory implements AutoCloseable {
     private Broker broker;
     private Producer reportProducer;
     private Producer producer;
-    private final ScheduledExecutorService scheduledExecutorService = ThreadUtils.newScheduledThreadPoolExecutor(2, "monitor-core-thread");
+    private final ScheduledExecutorService scheduledExecutorService = ThreadUtils.newScheduledThreadPoolExecutor(2, "com-ch-monitor-core-thread");
     private MonitorMqProperties monitorMqProperties;
     private MonitorProtocolProperties monitorProtocolProperties;
     private MonitorSubscribeProperties monitorConfigProperties;
