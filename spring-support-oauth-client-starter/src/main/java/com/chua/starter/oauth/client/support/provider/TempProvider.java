@@ -17,6 +17,9 @@ import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import com.google.common.base.Strings;
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.validation.BindingResult;
@@ -25,15 +28,12 @@ import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import jakarta.annotation.Resource;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
 
-import static com.chua.common.support.discovery.Constants.CAPTCHA_SESSION_KEY;
+import static com.chua.common.support.constant.Constants.CAPTCHA_SESSION_KEY;
 import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
 import static com.chua.common.support.lang.code.ReturnCode.USERNAME_OR_PASSWORD_ERROR;
 import static com.chua.starter.common.support.constant.Constant.ADMIN;
