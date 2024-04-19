@@ -1,18 +1,21 @@
 package com.chua.starter.common.support.configuration;
 
 import com.chua.starter.common.support.configuration.resolver.RequestParamsMapMethodArgumentResolver;
-import com.chua.starter.common.support.mdc.MdcHandlerInterceptor;
+import com.chua.starter.common.support.mdc.MdcHandlerFilter;
 import com.chua.starter.common.support.mdc.RestTemplateTraceIdInterceptor;
 import com.chua.starter.common.support.processor.ResponseModelViewMethodProcessor;
 import com.chua.starter.common.support.properties.MdcProperties;
 import com.chua.starter.common.support.properties.MessageConverterProperties;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.boot.autoconfigure.web.servlet.WebMvcRegistrations;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.convert.ApplicationConversionService;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.annotation.Bean;
 import org.springframework.format.FormatterRegistry;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
@@ -23,7 +26,6 @@ import org.springframework.web.method.support.HandlerMethodReturnValueHandler;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import jakarta.annotation.Resource;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -55,9 +57,17 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         if(!mdcProperties.isEnable()) {
-            return;
         }
-        registry.addInterceptor(new MdcHandlerInterceptor()).addPathPatterns("/**");
+    }
+
+
+    @Bean
+    public FilterRegistrationBean<MdcHandlerFilter> mdcHandlerFilter() {
+        FilterRegistrationBean<MdcHandlerFilter> filterRegistrationBean = new FilterRegistrationBean<>();
+        filterRegistrationBean.setFilter(new MdcHandlerFilter());
+        filterRegistrationBean.setOrder(Integer.MIN_VALUE);
+        filterRegistrationBean.addUrlPatterns("/*");
+        return filterRegistrationBean;
     }
 
     @Override
