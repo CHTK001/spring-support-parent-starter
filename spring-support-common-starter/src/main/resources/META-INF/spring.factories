@@ -7,7 +7,6 @@ org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
   com.chua.starter.common.support.configuration.CacheConfiguration,\
   com.chua.starter.common.support.configuration.CaptchaConfiguration,\
   com.chua.starter.common.support.configuration.AutoCreateTableConfiguration,\
-  com.chua.starter.common.support.logback.LogbackConfiguration,\
   com.chua.starter.common.support.configuration.CommonConfiguration,\
   com.chua.starter.common.support.configuration.CorsConfiguration,\
   com.chua.starter.common.support.configuration.ResourceConfiguration,\

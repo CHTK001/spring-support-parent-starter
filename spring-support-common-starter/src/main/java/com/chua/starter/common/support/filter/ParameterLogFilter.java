@@ -6,12 +6,13 @@ import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
-
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
+
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Enumeration;
 import java.util.LinkedList;
 import java.util.List;
@@ -31,12 +32,11 @@ public class ParameterLogFilter implements Filter {
 
     @Override
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
-        if(!(servletRequest instanceof HttpServletRequest)) {
+        if(!(servletRequest instanceof HttpServletRequest request)) {
             filterChain.doFilter(servletRequest, servletResponse);
             return;
         }
 
-        HttpServletRequest request = (HttpServletRequest) servletRequest;
         String requestURI = request.getRequestURI();
         if(isPass(requestURI)) {
             filterChain.doFilter(servletRequest, servletResponse);
@@ -52,6 +52,7 @@ public class ParameterLogFilter implements Filter {
         String method = request.getMethod();
 
         if(StringUtils.isEmpty(header) || (GET.equals(method) || PUT.equals(method))) {
+            printUrl(request);
             printQuery(request);
             printHeader(request);
             log.info("======================================\r\n");
@@ -70,6 +71,8 @@ public class ParameterLogFilter implements Filter {
         filterChain.doFilter(request, servletResponse);
     }
 
+
+
     private boolean isPass(String requestURI) {
         return RequestUtils.isResource(requestURI);
     }
@@ -80,7 +83,9 @@ public class ParameterLogFilter implements Filter {
         request.getAttributeNames();
         request.getLocales();
     }
-
+    private void printUrl(HttpServletRequest request) {
+        log.info("{} -> {}", request.getMethod(), request.getRequestURI());
+    }
     private void printHeader(HttpServletRequest request) {
         Enumeration<String> headerNames = request.getHeaderNames();
         List<String> headers = new LinkedList<>();
@@ -108,11 +113,8 @@ public class ParameterLogFilter implements Filter {
     private void printQuery(HttpServletRequest request) throws IOException {
         String body = request.getQueryString();
         if(StringUtils.isNotEmpty(body) && body.length() < NumberConstant.ONE_THOUSAND) {
-            try {
-                body = URLDecoder.decode(body, "UTF-8");
-                log.info("请求参数: {}", body);
-            } catch (UnsupportedEncodingException ignored) {
-            }
+            body = URLDecoder.decode(body, StandardCharsets.UTF_8);
+            log.info("请求参数: {}", body);
         }
     }
 

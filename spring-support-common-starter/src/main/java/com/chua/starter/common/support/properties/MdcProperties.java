@@ -18,7 +18,8 @@ public class MdcProperties {
 
 
     /**
-     * 开启脱敏
+     * 开启MDC。
+     * 默认值为true，表示功能启用。
      */
     private boolean enable = true;
 

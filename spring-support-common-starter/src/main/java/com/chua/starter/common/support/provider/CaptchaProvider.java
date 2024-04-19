@@ -1,11 +1,16 @@
 package com.chua.starter.common.support.provider;
 
-import com.chua.common.support.discovery.Constants;
+import com.chua.common.support.constant.Constants;
 import com.chua.common.support.utils.RandomUtils;
 import com.chua.starter.common.support.constant.CaptchaTypeEnum;
 import com.chua.starter.common.support.properties.CaptchaProperties;
 import com.wf.captcha.*;
 import com.wf.captcha.base.Captcha;
+import jakarta.annotation.Resource;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -14,11 +19,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import jakarta.annotation.Resource;
-import jakarta.servlet.ServletOutputStream;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 

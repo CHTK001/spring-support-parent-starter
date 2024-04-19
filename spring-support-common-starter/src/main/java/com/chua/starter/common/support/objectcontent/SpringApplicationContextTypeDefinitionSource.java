@@ -10,6 +10,9 @@ import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 
 import java.lang.annotation.Annotation;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 import static com.chua.common.support.objects.source.AbstractTypeDefinitionSource.COMPARABLE;
 
@@ -86,5 +89,14 @@ public class SpringApplicationContextTypeDefinitionSource implements TypeDefinit
     @Override
     public SortedList<TypeDefinition> getBeanByMethod(Class<? extends Annotation> annotationType) {
         return SortedList.emptyList();
+    }
+
+    @Override
+    public Set<String> getBeanDefinitionNames() {
+        ApplicationContext applicationContext = SpringBeanUtils.getApplicationContext();
+        if(null == applicationContext) {
+            return Collections.emptySet();
+        }
+        return new HashSet<>(Set.of(applicationContext.getBeanDefinitionNames()));
     }
 }

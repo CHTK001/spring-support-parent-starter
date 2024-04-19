@@ -8,6 +8,7 @@ package com.chua.starter.common.support.constant;
 public interface Constant extends CacheConstant{
 
     String LAN = "局域网";
+    String DEFAULT_EXECUTOR_TASK = "taskExecutor";
     String DEFAULT_EXECUTOR = "default-executor";
     String DEFAULT_EXECUTOR2 = "default-executor-2";
     String DEFAULT_TASK_EXECUTOR = "default-task-executor";

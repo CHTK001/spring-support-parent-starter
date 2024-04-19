@@ -29,7 +29,7 @@ public class ThreadMdcUtil {
             try {
                 return callable.call();
             } finally {
-                MDC.clear();
+                TraceContextHolder.clear();
             }
         };
     }
@@ -45,7 +45,7 @@ public class ThreadMdcUtil {
             try {
                 runnable.run();
             } finally {
-                MDC.clear();
+                TraceContextHolder.clear();
             }
         };
     }
