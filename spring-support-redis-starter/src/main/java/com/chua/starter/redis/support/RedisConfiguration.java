@@ -69,7 +69,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
         );
 
         redisClient.connect(null ==  redisProperties.getTimeout()? 10000:  redisProperties.getTimeout().toMillis());
-        return redisClient.createClient();
+        return redisClient.createSession();
     }
 
     @Override
