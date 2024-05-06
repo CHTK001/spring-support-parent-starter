@@ -1,6 +1,6 @@
 package com.chua.starter.redis.support;
 
-import com.chua.common.support.protocol.options.ClientOption;
+import com.chua.common.support.protocol.options.ClientSetting;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.redis.support.client.RedisClient;
 import com.chua.redis.support.client.operable.OperableRedis;
@@ -60,7 +60,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     @ConditionalOnClass(name = {"redis.clients.jedis.AbstractPipeline"})
     public OperableRedis redisSearch(RedisProperties redisProperties) {
         RedisClient redisClient = new RedisClient(
-                ClientOption.builder()
+                ClientSetting.builder()
                         .database("default")
                         .host(redisProperties.getHost())
                         .port(redisProperties.getPort())
