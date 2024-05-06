@@ -44,8 +44,8 @@ import static io.lettuce.core.pubsub.PubSubOutput.Type.subscribe;
 @Slf4j
 public class SupportInjector extends DefaultSqlInjector implements EnvironmentAware, BeanFactoryAware, ApplicationContextAware, CommandLineRunner {
 
-    private ProtocolClient protocolClient;
-    private ProtocolServer protocolServer;
+    private BootProtocolClient protocolClient;
+    private BootProtocolServer protocolServer;
 
 
     private final Map<String, DynamicSqlMethod> methodMap = new ConcurrentHashMap<>();
@@ -206,7 +206,7 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
                     "ConfigValueAnnotationBeanPostProcessor requires a ConfigurableListableBeanFactory");
         }
         this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
-        String[] beanNamesForType = this.beanFactory.getBeanNamesForType(ProtocolServer.class);
+        String[] beanNamesForType = this.beanFactory.getBeanNamesForType(BootProtocolServer.class);
         if(beanNamesForType.length == 0) {
             return;
         }
@@ -215,8 +215,8 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
             return;
         }
 
-        this.protocolServer = this.beanFactory.getBean(ProtocolServer.class);
-        this.protocolClient = this.beanFactory.getBean(ProtocolClient.class);
+        this.protocolServer = this.beanFactory.getBean(BootProtocolServer.class);
+        this.protocolClient = this.beanFactory.getBean(BootProtocolClient.class);
         this.protocolServer.addMapping(this);
         MonitorFactory monitorFactory = MonitorFactory.getInstance();
         if(!MonitorFactory.getInstance().isEnable()) {
