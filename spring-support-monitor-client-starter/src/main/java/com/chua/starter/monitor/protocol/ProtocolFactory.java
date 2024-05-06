@@ -1,8 +1,8 @@
 package com.chua.starter.monitor.protocol;
 
 import com.chua.common.support.function.InitializingAware;
+import com.chua.common.support.protocol.boot.BootProtocol;
 import com.chua.common.support.protocol.boot.BootSetting;
-import com.chua.common.support.protocol.boot.Protocol;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.monitor.factory.MonitorFactory;
 import com.chua.starter.monitor.properties.MonitorProperties;
@@ -26,7 +26,7 @@ public class ProtocolFactory implements InitializingAware {
     private final MonitorProperties monitorProperties;
     private final MonitorProtocolProperties monitorProtocolProperties;
     @Getter
-    private Protocol protocol;
+    private BootProtocol protocol;
     public ProtocolFactory(BeanDefinitionRegistry registry, Environment environment) {
         this.registry = registry;
         this.environment = environment;
@@ -48,7 +48,7 @@ public class ProtocolFactory implements InitializingAware {
                 .profile(monitorFactory.getActive())
                 .heartbeat(false)
                 .build();
-        this.protocol = ServiceProvider.of(Protocol.class).getNewExtension(protocol, bootOption);
+        this.protocol = ServiceProvider.of(BootProtocol.class).getNewExtension(protocol, bootOption);
 
         registry.registerBeanDefinition(protocol + "server", BeanDefinitionBuilder
                 .rootBeanDefinition(this.protocol.serverType())

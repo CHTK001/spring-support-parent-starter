@@ -2,10 +2,10 @@ package com.chua.starter.monitor.configuration;
 
 import com.chua.common.support.json.Json;
 import com.chua.common.support.protocol.annotations.ServiceMapping;
+import com.chua.common.support.protocol.boot.BootProtocolServer;
 import com.chua.common.support.protocol.boot.BootRequest;
 import com.chua.common.support.protocol.boot.BootResponse;
 import com.chua.common.support.protocol.boot.CommandType;
-import com.chua.common.support.protocol.boot.ProtocolServer;
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.starter.common.support.annotations.Job;
 import com.chua.starter.monitor.factory.MonitorFactory;
@@ -39,7 +39,7 @@ import static com.chua.common.support.lang.message.AbstractMessagePush.OK;
 @Slf4j
 public class JobConfiguration implements BeanFactoryAware, SmartInstantiationAwareBeanPostProcessor {
 
-    private ProtocolServer protocolServer;
+    private BootProtocolServer protocolServer;
     private ConfigurableListableBeanFactory beanFactory;
 
     @ServiceMapping("job")
@@ -82,7 +82,7 @@ public class JobConfiguration implements BeanFactoryAware, SmartInstantiationAwa
                     "ConfigValueAnnotationBeanPostProcessor requires a ConfigurableListableBeanFactory");
         }
         this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
-        String[] beanNamesForType = this.beanFactory.getBeanNamesForType(ProtocolServer.class);
+        String[] beanNamesForType = this.beanFactory.getBeanNamesForType(BootProtocolServer.class);
         if(beanNamesForType.length == 0) {
             return;
         }
@@ -90,7 +90,7 @@ public class JobConfiguration implements BeanFactoryAware, SmartInstantiationAwa
         if(!MonitorFactory.getInstance().isEnable()) {
             return;
         }
-        this.protocolServer = this.beanFactory.getBean(ProtocolServer.class);
+        this.protocolServer = this.beanFactory.getBean(BootProtocolServer.class);
         this.protocolServer.addMapping(this);
     }
 

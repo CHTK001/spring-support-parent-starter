@@ -3,10 +3,10 @@ package com.chua.starter.monitor.configuration;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.protocol.annotations.ServiceMapping;
+import com.chua.common.support.protocol.boot.BootProtocolClient;
+import com.chua.common.support.protocol.boot.BootProtocolServer;
 import com.chua.common.support.protocol.boot.BootRequest;
 import com.chua.common.support.protocol.boot.BootResponse;
-import com.chua.common.support.protocol.boot.ProtocolClient;
-import com.chua.common.support.protocol.boot.ProtocolServer;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.factory.MonitorFactory;
 import com.chua.starter.monitor.patch.PatchResolver;
@@ -29,8 +29,8 @@ import org.springframework.core.env.Environment;
 public class PatchConfiguration implements BeanFactoryAware, EnvironmentAware, ApplicationContextAware {
 
 
-    private ProtocolServer protocolServer;
-    private ProtocolClient protocolClient;
+    private BootProtocolServer protocolServer;
+    private BootProtocolClient protocolClient;
 
     private ConfigurableListableBeanFactory beanFactory;
 
@@ -45,7 +45,7 @@ public class PatchConfiguration implements BeanFactoryAware, EnvironmentAware, A
                     "ConfigValueAnnotationBeanPostProcessor requires a ConfigurableListableBeanFactory");
         }
         this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
-        String[] beanNamesForType = this.beanFactory.getBeanNamesForType(ProtocolServer.class);
+        String[] beanNamesForType = this.beanFactory.getBeanNamesForType(BootProtocolServer.class);
         if(beanNamesForType.length == 0) {
             return;
         }
@@ -53,8 +53,8 @@ public class PatchConfiguration implements BeanFactoryAware, EnvironmentAware, A
         if(!MonitorFactory.getInstance().isEnable()) {
             return;
         }
-        this.protocolServer = this.beanFactory.getBean(ProtocolServer.class);
-        this.protocolClient = this.beanFactory.getBean(ProtocolClient.class);
+        this.protocolServer = this.beanFactory.getBean(BootProtocolServer.class);
+        this.protocolClient = this.beanFactory.getBean(BootProtocolClient.class);
         this.protocolServer.addMapping(this);
     }
 

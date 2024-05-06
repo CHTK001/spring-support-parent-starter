@@ -3,10 +3,10 @@ package com.chua.starter.monitor.configuration;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.protocol.annotations.ServiceMapping;
+import com.chua.common.support.protocol.boot.BootProtocolServer;
 import com.chua.common.support.protocol.boot.BootRequest;
 import com.chua.common.support.protocol.boot.BootResponse;
 import com.chua.common.support.protocol.boot.CommandType;
-import com.chua.common.support.protocol.boot.ProtocolServer;
 import com.chua.common.support.shell.BaseShell;
 import com.chua.common.support.shell.Command;
 import com.chua.common.support.shell.WebShell;
@@ -40,7 +40,7 @@ public class ShellConfiguration implements BeanFactoryAware {
         shell.register(new SpringCommand());
         shell.register(new CfrCommand());
     }
-    private ProtocolServer protocolServer;
+    private BootProtocolServer protocolServer;
     public static final String ADDRESS = "IP.ADDRESS";
     private ConfigurableListableBeanFactory beanFactory;
 
@@ -70,7 +70,7 @@ public class ShellConfiguration implements BeanFactoryAware {
                     "ConfigValueAnnotationBeanPostProcessor requires a ConfigurableListableBeanFactory");
         }
         this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
-        String[] beanNamesForType = this.beanFactory.getBeanNamesForType(ProtocolServer.class);
+        String[] beanNamesForType = this.beanFactory.getBeanNamesForType(BootProtocolServer.class);
         if(beanNamesForType.length == 0) {
             return;
         }
@@ -78,7 +78,7 @@ public class ShellConfiguration implements BeanFactoryAware {
         if(!MonitorFactory.getInstance().isEnable()) {
             return;
         }
-        this.protocolServer = this.beanFactory.getBean(ProtocolServer.class);
+        this.protocolServer = this.beanFactory.getBean(BootProtocolServer.class);
         this.protocolServer.addMapping(this);
     }
 

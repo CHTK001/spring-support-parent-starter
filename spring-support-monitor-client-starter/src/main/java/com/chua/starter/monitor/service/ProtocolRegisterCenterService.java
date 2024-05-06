@@ -1,10 +1,10 @@
 package com.chua.starter.monitor.service;
 
 import com.chua.common.support.json.Json;
+import com.chua.common.support.protocol.boot.BootProtocolClient;
 import com.chua.common.support.protocol.boot.BootRequest;
 import com.chua.common.support.protocol.boot.BootResponse;
 import com.chua.common.support.protocol.boot.CommandType;
-import com.chua.common.support.protocol.boot.ProtocolClient;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.monitor.factory.MonitorFactory;
 import jakarta.annotation.Resource;
@@ -22,7 +22,7 @@ import org.springframework.core.env.Environment;
  */
 public class ProtocolRegisterCenterService implements RegisterCenterService, ApplicationContextAware {
 
-    private ProtocolClient protocolClient;
+    private BootProtocolClient protocolClient;
 
     @Resource
     private Environment environment;
@@ -55,7 +55,7 @@ public class ProtocolRegisterCenterService implements RegisterCenterService, App
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         try {
-            this.protocolClient = applicationContext.getAutowireCapableBeanFactory().getBean(ProtocolClient.class);
+            this.protocolClient = applicationContext.getAutowireCapableBeanFactory().getBean(BootProtocolClient.class);
         } catch (Exception ignored) {
         }
 

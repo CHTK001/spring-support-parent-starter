@@ -79,12 +79,12 @@ public class MonitorAppServiceImpl extends ServiceImpl<MonitorAppMapper, Monitor
                 .key(monitorProtocolProperties.getEncryptionKey())
                 .profile(null == config ? "default" : config.getConfigProfile())
                 .appName(null == config ? monitorRequest.getAppName() : config.getConfigAppname()).build();
-        Protocol protocol = ServiceProvider.of(Protocol.class).getNewExtension(monitorProtocolProperties.getProtocol(), bootOption);
+        BootProtocol protocol = ServiceProvider.of(BootProtocol.class).getNewExtension(monitorProtocolProperties.getProtocol(), bootOption);
         if(null == protocol) {
             return BootResponse.empty();
         }
 
-        ProtocolClient protocolClient = protocol.createClient();
+        BootProtocolClient protocolClient = protocol.createClient();
         BootResponse bootResponse = protocolClient.get(BootRequest.builder()
                 .profile(null == config ? "default" : config.getConfigProfile())
                 .content(content)

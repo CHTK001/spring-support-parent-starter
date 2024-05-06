@@ -57,8 +57,8 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
 
     private static final String VALUE_SEPARATOR = ":";
 
-    private ProtocolServer protocolServer;
-    private ProtocolClient protocolClient;
+    private BootProtocolServer protocolServer;
+    private BootProtocolClient protocolClient;
 
     /**
      * placeholder, ConfigValueTarget
@@ -105,15 +105,15 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
                     "ConfigValueAnnotationBeanPostProcessor requires a ConfigurableListableBeanFactory");
         }
         this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
-        String[] beanNamesForType = this.beanFactory.getBeanNamesForType(ProtocolServer.class);
+        String[] beanNamesForType = this.beanFactory.getBeanNamesForType(BootProtocolServer.class);
         if(beanNamesForType.length == 0) {
             return;
         }
         if(!MonitorFactory.getInstance().isEnable()) {
             return;
         }
-        this.protocolServer = this.beanFactory.getBean(ProtocolServer.class);
-        this.protocolClient = this.beanFactory.getBean(ProtocolClient.class);
+        this.protocolServer = this.beanFactory.getBean(BootProtocolServer.class);
+        this.protocolClient = this.beanFactory.getBean(BootProtocolClient.class);
     }
 
     @Override
