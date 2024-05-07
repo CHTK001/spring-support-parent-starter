@@ -12,6 +12,7 @@ import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.properties.LimitProperties;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.google.common.collect.Maps;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -20,7 +21,6 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.core.env.Environment;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.servlet.http.HttpServletRequest;
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -38,7 +38,7 @@ public class LimitAspect {
     private final Map<String, LimiterProvider> limitMap = Maps.newConcurrentMap();
 
     private final RateLimitMappingFactory rateLimitFactory = RateLimitMappingFactory.getInstance();
-    private LimitProperties limitProperties;
+    private final LimitProperties limitProperties;
 
     public LimitAspect(LimitProperties limitProperties) {
         this.limitProperties = limitProperties;
@@ -129,7 +129,7 @@ public class LimitAspect {
             return ArrayUtils.defaultIfEmpty(patchMapping.value(), patchMapping.path());
         }
 
-        return CommonConstant.EMPTY_ARRAY;
+        return CommonConstant.SYMBOL_EMPTY_ARRAY_STRING;
     }
 
     private Object doLimit(ProceedingJoinPoint joinPoint, Limit limit) throws Throwable {
