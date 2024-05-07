@@ -1,9 +1,13 @@
 package com.chua.starter.common.support.logger;
 
+import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.*;
 import com.chua.starter.common.support.annotations.OperateLog;
 import com.chua.starter.common.support.utils.RequestUtils;
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.aop.support.StaticMethodMatcherPointcutAdvisor;
@@ -18,9 +22,6 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import jakarta.annotation.Resource;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.*;
@@ -138,7 +139,7 @@ public class OperateLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdv
 
     private String getContent(String content, MethodInvocation invocation, Object proceed) {
         if(StringUtils.isEmpty(content)) {
-            return EMPTY;
+            return CommonConstant.SYMBOL_EMPTY;
         }
         ExpressionParser expressionParser = new SpelExpressionParser();
         EvaluationContext evaluationContext = new StandardEvaluationContext();

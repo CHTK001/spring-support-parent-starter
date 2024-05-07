@@ -21,7 +21,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static com.chua.common.support.constant.CommonConstant.EMPTY;
+import static com.chua.common.support.constant.CommonConstant.SYMBOL_EMPTY;
 import static com.chua.common.support.constant.NameConstant.*;
 
 /**
@@ -54,7 +54,7 @@ public class VelocityUtils {
      * @return 模板列表
      */
     public static VelocityContext prepareContext(MonitorSysGenTable genTable, List<MonitorSysGenColumn> sysGenColumns, Download download) {
-        String moduleName = StringUtils.defaultString(download.getModuleName(), EMPTY);
+        String moduleName = StringUtils.defaultString(download.getModuleName(), SYMBOL_EMPTY);
         String businessName = genTable.getTabBusinessName();
         String packageName = StringUtils.defaultString(download.getPackageName(), genTable.getTabPackageName());
         String tplCategory = genTable.getTabTplCategory();
@@ -128,7 +128,7 @@ public class VelocityUtils {
     public static String getFileName(MonitorSysGenTable genTable, Download download, MonitorSysGenTemplate sysGenTemplate) {
         // 文件名称
         String fileName = "";
-        String moduleName =  StringUtils.defaultString(download.getModuleName(), EMPTY);
+        String moduleName =  StringUtils.defaultString(download.getModuleName(), SYMBOL_EMPTY);
         String packageName = StringUtils.defaultString(download.getPackageName(), genTable.getTabPackageName());
         // 大写类名
         String className = genTable.getTabClassName();
@@ -156,7 +156,7 @@ public class VelocityUtils {
     public static String getFileName(String template, MonitorSysGenTable genTable, Download download) {
         // 文件名称
         String fileName = "";
-        String moduleName =  StringUtils.defaultString(download.getModuleName(), EMPTY);
+        String moduleName =  StringUtils.defaultString(download.getModuleName(), SYMBOL_EMPTY);
         String businessName = genTable.getTabBusinessName();
         String packageName = StringUtils.defaultString(download.getPackageName(), genTable.getTabPackageName());
         String tplCategory = genTable.getTabTplCategory();
