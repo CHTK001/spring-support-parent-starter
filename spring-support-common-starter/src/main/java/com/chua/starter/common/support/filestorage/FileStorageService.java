@@ -1,6 +1,6 @@
 package com.chua.starter.common.support.filestorage;
 
-import com.chua.common.support.lang.file.transfer.FileConverterFactory;
+import com.chua.common.support.lang.file.transfer.FileConverterResolver;
 import com.chua.common.support.oss.FileStorage;
 import com.chua.common.support.oss.entity.GetResult;
 import com.chua.common.support.spi.Option;
@@ -98,7 +98,7 @@ public interface FileStorageService {
         try (ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(getResult.getBytes());
              ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream()
         ) {
-            FileConverterFactory.transform(simpleExtension, byteArrayInputStream, format, byteArrayOutputStream);
+            FileConverterResolver.transform(simpleExtension, byteArrayInputStream, inputUrl, format, byteArrayOutputStream, writerSetting);
             return GetResult.builder()
                     .name(baseName + "." + format)
                     .requestId(getResult.getRequestId())
