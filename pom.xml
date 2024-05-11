@@ -36,6 +36,7 @@
         <module>spring-support-subscribe-starter</module>
         <module>spring-support-monitor-client-starter</module>
         <module>spring-support-monitor-server-starter</module>
+        <module>spring-support-proxy-client-starter</module>
     </modules>
 
     <properties>
