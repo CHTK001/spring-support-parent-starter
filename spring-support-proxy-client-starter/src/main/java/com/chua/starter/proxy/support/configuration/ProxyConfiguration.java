@@ -1,5 +1,6 @@
 package com.chua.starter.proxy.support.configuration;
 
+import com.chua.common.support.annotations.Ignore;
 import com.chua.common.support.discovery.Discovery;
 import com.chua.common.support.discovery.DiscoveryOption;
 import com.chua.common.support.discovery.ServiceDiscovery;
@@ -113,7 +114,7 @@ public class ProxyConfiguration implements SmartInstantiationAwareBeanPostProces
                 || method.isAnnotationPresent(org.springframework.web.bind.annotation.PutMapping.class)
                 || method.isAnnotationPresent(org.springframework.web.bind.annotation.DeleteMapping.class)
                 || method.isAnnotationPresent(org.springframework.web.bind.annotation.PatchMapping.class)
-                ;
+                && (!method.isAnnotationPresent(Ignore.class)  && !method.isAnnotationPresent(com.chua.starter.common.support.annotations.Ignore.class));
     }
 
 
