@@ -30,7 +30,7 @@ public class MonitorServerProperties {
     /**
      * mq主机
      */
-    private String mqHost = "0.0.0.0";
+    private String mqHost = "127.0.0.1";
 
     /**
      * 加密模式
