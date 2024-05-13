@@ -70,7 +70,7 @@ public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, Mon
         }
 
         String key = createKey(monitorProxy);
-        if(!SERVER_MAP.containsKey(key)) {
+        if(!SERVER_MAP.containsKey(key) && 0 == monitorProxy.getProxyStatus()) {
             return ReturnResult.error("代理已停止");
         }
 
@@ -79,7 +79,10 @@ public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, Mon
             int i = baseMapper.updateById(monitorProxy);
             if(i > 0) {
                 try {
-                    SERVER_MAP.get(key).stop();
+                    Server server = SERVER_MAP.get(key);
+                    if(null != server) {
+                        server.stop();
+                    }
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
@@ -98,13 +101,8 @@ public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, Mon
         }
         Server server = Server.create("proxy", monitorProxy.getProxyPort());
         server.addDefinition(serviceDiscovery);
-        server.addLastFilter(AsyncHttpRoutingGatewayFilter.class);
-        server.addLastFilter(AsyncWebSocketRoutingGatewayFilter.class);
-        try {
-            server.start();
-        } catch (Exception e) {
-            throw new RuntimeException("服务启动失败");
-        }
+        server.addFilter(AsyncHttpRoutingGatewayFilter.class);
+        server.addFilter(AsyncWebSocketRoutingGatewayFilter.class);
         return server;
     }
 

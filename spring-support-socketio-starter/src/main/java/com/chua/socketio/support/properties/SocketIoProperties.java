@@ -24,7 +24,7 @@ public class SocketIoProperties {
     /**
      * 是否开启
      */
-    private boolean open;
+    private boolean enable;
     /**
      * 本地IP
      */
