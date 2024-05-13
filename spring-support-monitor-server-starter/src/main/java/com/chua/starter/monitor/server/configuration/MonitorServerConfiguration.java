@@ -40,6 +40,8 @@ import org.zbus.mq.Consumer;
 
 import java.io.IOException;
 
+import static com.chua.common.support.constant.CommonConstant.SYMBOL_COMMA;
+
 /**
  * 监视服务器配置
  *
@@ -96,7 +98,7 @@ public class MonitorServerConfiguration implements BeanDefinitionRegistryPostPro
         String endpoint = monitorServerProperties.getMqHost() + ":" + monitorServerProperties.getMqPort();
         brokerConfig.setBrokerAddress(endpoint);
         try {
-            if (endpoint.contains(",")) {
+            if (endpoint.contains(SYMBOL_COMMA)) {
                 this.broker = new HaBroker(brokerConfig);
             } else {
                 this.broker = new SingleBroker(brokerConfig);
