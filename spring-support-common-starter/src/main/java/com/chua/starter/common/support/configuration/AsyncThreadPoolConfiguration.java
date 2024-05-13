@@ -7,7 +7,7 @@ import jakarta.annotation.Resource;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.task.TaskDecorator;
-import org.springframework.scheduling.annotation.AsyncConfigurerSupport;
+import org.springframework.scheduling.annotation.AsyncConfigurer;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
@@ -21,7 +21,7 @@ import java.util.concurrent.ThreadPoolExecutor;
  */
 @EnableAsync
 @EnableConfigurationProperties(AsyncThreadPoolProperties.class)
-public class AsyncThreadPoolConfiguration extends AsyncConfigurerSupport {
+public class AsyncThreadPoolConfiguration implements AsyncConfigurer {
 
     @Resource
     AsyncThreadPoolProperties asyncProperties;
