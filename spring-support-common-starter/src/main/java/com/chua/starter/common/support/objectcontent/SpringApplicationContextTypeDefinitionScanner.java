@@ -104,4 +104,13 @@ public class SpringApplicationContextTypeDefinitionScanner implements TypeDefini
     public void refresh() {
 
     }
+
+    @Override
+    public boolean hashDefinition(Class<?> aClass) {
+        ApplicationContext applicationContext = SpringBeanUtils.getApplicationContext();
+        if(null == applicationContext) {
+            return false;
+        }
+        return applicationContext.containsBeanDefinition(aClass.getName());
+    }
 }
