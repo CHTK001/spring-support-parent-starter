@@ -1,22 +1,18 @@
 package com.chua.subscribe.support;
 
+import com.chua.common.support.eventbus.EventRouter;
 import com.chua.common.support.eventbus.Eventbus;
-import com.chua.common.support.eventbus.SubscribeEventbus;
-import com.chua.common.support.function.InitializingAware;
-import com.chua.common.support.spi.ServiceProvider;
 import com.chua.subscribe.support.properties.EventbusProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 
 import java.util.Map;
-import java.util.concurrent.Executor;
 
-import static com.chua.common.support.eventbus.EventbusType.KAFKA;
 
 /**
  * 订阅配置
@@ -36,61 +32,37 @@ public class SubscribeConfiguration  {
      */
     @Bean
     @ConditionalOnMissingBean
-    public Eventbus eventbus(@Qualifier("default-executor-2") Executor executor) {
-        return Eventbus.newDefault(executor);
+    public EventRouter eventRouter() {
+        EventRouter eventRouter = Eventbus.newDefault();
+        return eventRouter;
     }
     @Bean
     @ConditionalOnMissingBean
-    public EventBusProcessor eventBusProcessor(Eventbus eventbus, EventbusProperties properties) {
-        return new EventBusProcessor(eventbus, properties);
+    public EventBusProcessor eventBusProcessor(EventRouter eventRouter, ApplicationContext applicationContext) {
+        return new EventBusProcessor(eventRouter, applicationContext);
     }
 
-    public static class EventBusProcessor implements SmartInstantiationAwareBeanPostProcessor, InitializingAware {
+    public static class EventBusProcessor implements SmartInstantiationAwareBeanPostProcessor {
 
         private static final String SPRING = "org.spring";
-        private final Eventbus eventbus;
-        private final EventbusProperties eventbusProperties;
+        private final EventRouter eventRouter;
 
-        public EventBusProcessor(Eventbus eventbus, EventbusProperties eventbusProperties) {
-            this.eventbus = eventbus;
-            this.eventbusProperties = eventbusProperties;
-            afterPropertiesSet();
+        public EventBusProcessor(EventRouter eventRouter, ApplicationContext applicationContext) {
+            this.eventRouter = eventRouter;
+            Map<String, Eventbus> beansOfType = applicationContext.getBeansOfType(Eventbus.class);
+            for (Map.Entry<String, Eventbus> entry : beansOfType.entrySet()) {
+                eventRouter.addEventbus(entry.getKey(), entry.getValue());
+            }
         }
 
         @Override
         public boolean postProcessAfterInstantiation(Object bean, String beanName) throws BeansException {
             String typeName = bean.getClass().getTypeName();
             if(!typeName.startsWith(SPRING)) {
-                eventbus.registerObject(bean);
+                eventRouter.registerObject(bean);
             }
             return SmartInstantiationAwareBeanPostProcessor.super.postProcessAfterInstantiation(bean, beanName);
         }
 
-        @Override
-        public void afterPropertiesSet() {
-            Map<String, EventbusProperties.SubscribeEventbusConfig> subscribe = eventbusProperties.getSubscribe();
-            for (Map.Entry<String, EventbusProperties.SubscribeEventbusConfig> entry : subscribe.entrySet()) {
-                SubscribeEventbus subscribeEventbus = createSubscribeEventbus(entry.getKey(), entry.getValue());
-                if(null == subscribeEventbus) {
-                    log.warn("{}注册失败", entry.getKey());
-                    continue;
-                }
-                eventbus.registerSubscriber(entry.getKey(), subscribeEventbus);
-            }
-        }
-
-        /**
-         * 创建订阅事件总线
-         *
-         * @param value 值
-         * @param key   钥匙
-         * @return {@link SubscribeEventbus}
-         */
-        private SubscribeEventbus createSubscribeEventbus(String key, EventbusProperties.SubscribeEventbusConfig value) {
-            if(KAFKA.name().equalsIgnoreCase(key)) {
-                return ServiceProvider.of(SubscribeEventbus.class).getNewExtension(key, value.getHost(), value.getPort(), value.getPasswd(), value.getUsername(), value.getGroupId());
-            }
-            return ServiceProvider.of(SubscribeEventbus.class).getNewExtension(key, value.getHost(), value.getPort(), value.getPasswd(), value.getUsername());
-        }
     }
 }
