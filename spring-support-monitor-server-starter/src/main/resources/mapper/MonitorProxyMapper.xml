@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.monitor.server.mapper.MonitorProxyMapper">
+  <resultMap id="BaseResultMap" type="com.chua.starter.monitor.server.entity.MonitorProxy">
+    <!--@mbg.generated-->
+    <!--@Table monitor_proxy-->
+    <id column="proxy_id" jdbcType="INTEGER" property="proxyId" />
+    <result column="proxy_name" jdbcType="VARCHAR" property="proxyName" />
+    <result column="proxy_desc" jdbcType="VARCHAR" property="proxyDesc" />
+    <result column="proxy_host" jdbcType="VARCHAR" property="proxyHost" />
+    <result column="proxy_port" jdbcType="INTEGER" property="proxyPort" />
+    <result column="proxy_protocol" jdbcType="VARCHAR" property="proxyProtocol" />
+    <result column="proxy_status" jdbcType="INTEGER" property="proxyStatus" />
+    <result column="proxy_version" jdbcType="INTEGER" property="proxyVersion" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    proxy_id, proxy_name, proxy_desc, proxy_host, proxy_port, proxy_protocol, proxy_status, 
+    proxy_version
+  </sql>
+</mapper>

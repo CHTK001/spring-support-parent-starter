@@ -39,6 +39,14 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
         }
 
         Set<String> ids = Splitter.on(",").trimResults().omitEmptyStrings().splitToSet(id);
+        if(ids.isEmpty()) {
+            return ReturnResult.ok();
+        }
+
+        if(ids.size() == 1) {
+            return ReturnResult.of(getService().removeById(ids.iterator().next()));
+        }
+
         return ReturnResult.of(getService().removeBatchByIds(ids));
     }
 
@@ -55,6 +63,7 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
         if(bindingResult.hasErrors()) {
             return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
+
         return ReturnResult.of(getService().updateById(t));
     }
 
@@ -76,5 +85,11 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
     }
 
 
+    /**
+     * 获取服务的方法。
+     * 这是一个抽象方法，需要在具体实现类中进行定义。
+     *
+     * @return S 返回服务的实例。这里的S是泛型，代表了服务的类型。
+     */
     abstract public S getService();
 }

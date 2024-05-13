@@ -10,7 +10,6 @@ import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Enumeration;
@@ -93,6 +92,7 @@ public class ParameterLogFilter implements Filter {
             String headerName = headerNames.nextElement();
             if(headerName.startsWith("x-")) {
                 headers.add(headerName);
+                continue;
             }
         }
 
