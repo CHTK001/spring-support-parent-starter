@@ -35,13 +35,13 @@ public class SocketConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = SocketIoProperties.PRE, name = "open", havingValue = "true", matchIfMissing = false)
+    @ConditionalOnProperty(prefix = SocketIoProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = false)
     public SocketSessionTemplate socketSessionFactory( SocketIoProperties properties) {
         return new DelegateSocketSessionFactory(properties);
     }
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = SocketIoProperties.PRE, name = "open", havingValue = "true", matchIfMissing = false)
+    @ConditionalOnProperty(prefix = SocketIoProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = false)
     public DelegateSocketIOServer socketIOServer(Configuration configuration,
                                                  SocketIoProperties properties,
                                                  SocketSessionTemplate socketSessionTemplate,
@@ -73,7 +73,7 @@ public class SocketConfiguration {
     }
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = SocketIoProperties.PRE, name = "open", havingValue = "true", matchIfMissing = false)
+    @ConditionalOnProperty(prefix = SocketIoProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = false)
     public Configuration configuration(SocketIoProperties properties,
                                        @Autowired(required = false) SocketAuthFactory socketAuthFactory) {
         SocketConfig socketConfig = new SocketConfig();
