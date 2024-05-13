@@ -9,13 +9,11 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.robin.Node;
 import com.chua.common.support.lang.robin.Robin;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.task.cache.CacheConfiguration;
 import com.chua.common.support.task.cache.Cacheable;
 import com.chua.common.support.task.cache.GuavaCacheable;
 import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.Md5Utils;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.common.support.value.Value;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.common.support.utils.RequestUtils;
@@ -65,9 +63,9 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         String cacheKey = getCacheKey(cookies, token);
         if (null != cacheKey) {
             check();
-            Value o = CACHEABLE.get(cacheKey);
-            if (null != o) {
-                AuthenticationInformation authenticationInformation = (AuthenticationInformation) o.getValue();
+            Object value = CACHEABLE.get(cacheKey);
+            if (null != value) {
+                AuthenticationInformation authenticationInformation = (AuthenticationInformation)value;
                 if (null != authenticationInformation && authenticationInformation.getInformation().getCode() == 200) {
                     UserResume userResume = authenticationInformation.getReturnResult();
                     RequestUtils.setUsername(userResume.getUsername());
@@ -282,7 +280,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
             return authenticationInformation;
         }
 
-        return (AuthenticationInformation) CACHEABLE.put(cacheKey, authenticationInformation).getValue();
+        return CACHEABLE.put(cacheKey, authenticationInformation);
     }
 
     private String getCacheKey(Cookie[] cookies, String token) {
@@ -302,9 +300,8 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
     @Override
     public void afterPropertiesSet() throws Exception {
         this.encryption = authClientProperties.getEncryption();
-        CACHEABLE = new GuavaCacheable(CacheConfiguration.builder()
-                .expireAfterWrite((int) authClientProperties.getCacheTimeout())
-                .hotColdBackup(authClientProperties.isCacheHotColdBackup())
-                .build());
+        CACHEABLE = new GuavaCacheable((int) authClientProperties.getCacheTimeout() / 3600);
+        CACHEABLE.afterPropertiesSet();
+        CACHEABLE = CACHEABLE.cacheHotColdBackup(authClientProperties.isCacheHotColdBackup());
     }
 }
