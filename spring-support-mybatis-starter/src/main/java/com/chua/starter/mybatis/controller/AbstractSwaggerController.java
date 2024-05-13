@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.mybatis.entity.PageRequest;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,7 +33,7 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> extend
         return PageResultUtils.ok(getService().page(page.createPage(), Wrappers.lambdaQuery(entity)));
     }
     /**
-     * 分页查询数据
+     * 查询基础数据
      *
      * @param entity 结果
      * @return 分页结果
@@ -42,6 +43,20 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> extend
     @GetMapping("list")
     public ReturnResult<List<T>> list( T entity) {
         return ReturnResult.ok(getService().list( Wrappers.lambdaQuery(entity)));
+    }
+
+    /**
+     * 查询详细信息
+     * @param id id
+     * @return 结果
+     */
+    @Operation(summary = "查询详细信息")
+    @GetMapping("get")
+    public ReturnResult<T> get(String id) {
+        if(StringUtils.isEmpty(id)) {
+            return ReturnResult.error("数据不存在, 请刷新后重试");
+        }
+        return ReturnResult.ok(getService().getById(id));
     }
 
 }

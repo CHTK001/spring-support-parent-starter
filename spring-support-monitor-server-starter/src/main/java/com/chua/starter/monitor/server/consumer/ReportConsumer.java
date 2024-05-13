@@ -4,9 +4,9 @@ import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.starter.monitor.request.MonitorRequest;
 import com.chua.starter.monitor.server.router.Router;
-import org.zbus.broker.Broker;
-import org.zbus.mq.Consumer;
-import org.zbus.mq.MqConfig;
+import io.zbus.mq.Broker;
+import io.zbus.mq.Consumer;
+import io.zbus.mq.ConsumerConfig;
 
 import java.io.IOException;
 
@@ -21,9 +21,9 @@ public class ReportConsumer implements AutoCloseable{
     private final Consumer consumer;
 
     public ReportConsumer(Router router, Broker broker, String subscribe) {
-        MqConfig config = new MqConfig();
+        ConsumerConfig config = new ConsumerConfig();
         config.setBroker(broker);
-        config.setMq(subscribe + "#report");
+        config.setTopic(subscribe + "#report");
         this.consumer = new Consumer(config);
         try {
             consumer.start((msg, consumer) -> {

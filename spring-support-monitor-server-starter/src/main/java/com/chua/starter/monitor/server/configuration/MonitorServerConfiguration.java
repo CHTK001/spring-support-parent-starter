@@ -12,6 +12,9 @@ import com.chua.starter.monitor.server.properties.JobProperties;
 import com.chua.starter.monitor.server.properties.MonitorServerProperties;
 import com.chua.starter.monitor.server.router.Router;
 import com.chua.zbus.support.server.ZbusServer;
+import io.zbus.mq.Broker;
+import io.zbus.mq.BrokerConfig;
+import io.zbus.mq.Consumer;
 import lombok.extern.slf4j.Slf4j;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.BeansException;
@@ -32,15 +35,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.env.Environment;
 import org.springframework.util.ReflectionUtils;
-import org.zbus.broker.Broker;
-import org.zbus.broker.BrokerConfig;
-import org.zbus.broker.HaBroker;
-import org.zbus.broker.SingleBroker;
-import org.zbus.mq.Consumer;
-
-import java.io.IOException;
-
-import static com.chua.common.support.constant.CommonConstant.SYMBOL_COMMA;
 
 /**
  * 监视服务器配置
@@ -96,17 +90,8 @@ public class MonitorServerConfiguration implements BeanDefinitionRegistryPostPro
     private void registerMqClient() {
         BrokerConfig brokerConfig = new BrokerConfig();
         String endpoint = monitorServerProperties.getMqHost() + ":" + monitorServerProperties.getMqPort();
-        brokerConfig.setBrokerAddress(endpoint);
-        try {
-            if (endpoint.contains(SYMBOL_COMMA)) {
-                this.broker = new HaBroker(brokerConfig);
-            } else {
-                this.broker = new SingleBroker(brokerConfig);
-            }
-        } catch (IOException var7) {
-            throw new RuntimeException(var7);
-        }
-
+        brokerConfig.addTracker(endpoint);
+        this.broker = new Broker(brokerConfig);
         this.mqConsumer = new MonitorConsumer(router, broker, monitorServerProperties.getMqSubscriber());
         this.reportConsumer = new ReportConsumer(router, broker, monitorServerProperties.getMqSubscriber());
     }
@@ -119,7 +104,7 @@ public class MonitorServerConfiguration implements BeanDefinitionRegistryPostPro
         registry.registerBeanDefinition("mqServer", BeanDefinitionBuilder.rootBeanDefinition(ZbusServer.class)
                 .addConstructorArgValue(ServerSetting.builder()
                         .port(monitorServerProperties.getMqPort())
-                        .host(monitorServerProperties.getMqHost())
+                        .host("0.0.0.0")
                         .build())
                 .setDestroyMethodName("stop")
                 .setInitMethodName("start")
@@ -153,6 +138,7 @@ public class MonitorServerConfiguration implements BeanDefinitionRegistryPostPro
 
     @Override
     public void run(String... args) throws Exception {
+        Thread.sleep(1000);
         registerMqClient();
     }
 }

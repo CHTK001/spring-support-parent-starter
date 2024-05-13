@@ -129,7 +129,7 @@ public class RedisTokenResolver implements TokenResolver {
         if (null == s) {
             return ReturnResult.noAuth();
         }
-        UserResult userResult = Json.fromJson(s.toString(), UserResult.class);
+        UserResult userResult = (UserResult) s;
         if (authServerProperties.isRenew()) {
             resetExpire(userResult, token);
         }

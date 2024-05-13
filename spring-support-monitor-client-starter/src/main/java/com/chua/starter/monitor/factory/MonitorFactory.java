@@ -3,6 +3,7 @@ package com.chua.starter.monitor.factory;
 import com.chua.common.support.function.Joiner;
 import com.chua.common.support.function.Splitter;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.protocol.options.ClientSetting;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.IoUtils;
@@ -12,17 +13,12 @@ import com.chua.starter.monitor.properties.*;
 import com.chua.starter.monitor.report.Report;
 import com.chua.starter.monitor.request.MonitorRequest;
 import com.chua.starter.monitor.request.MonitorRequestType;
+import com.chua.zbus.support.protocol.ZbusClient;
+import io.zbus.mq.Message;
+import io.zbus.mq.Producer;
 import lombok.Getter;
 import org.springframework.core.env.Environment;
-import org.zbus.broker.Broker;
-import org.zbus.broker.BrokerConfig;
-import org.zbus.broker.HaBroker;
-import org.zbus.broker.SingleBroker;
-import org.zbus.mq.MqConfig;
-import org.zbus.mq.Producer;
-import org.zbus.net.http.Message;
 
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -45,9 +41,7 @@ public class MonitorFactory implements AutoCloseable {
     private Environment environment;
     private String active;
     private Set<String> activeProfiles;
-    private Broker broker;
-    private Producer reportProducer;
-    private Producer producer;
+    private ZbusClient zbusClient;
     private final ScheduledExecutorService scheduledExecutorService = ThreadUtils.newScheduledThreadPoolExecutor(2, "com-ch-monitor-core-thread");
     private MonitorMqProperties monitorMqProperties;
     private MonitorProtocolProperties monitorProtocolProperties;
@@ -59,6 +53,10 @@ public class MonitorFactory implements AutoCloseable {
     private String endpointsUrl;
     private String contextPath;
     private boolean openIpPlugin;
+    private Producer reportProducer;
+    private Producer producer;
+    private String topic;
+    private String reportTopic;
 
     public static MonitorFactory getInstance() {
         return INSTANCE;
@@ -66,27 +64,16 @@ public class MonitorFactory implements AutoCloseable {
 
 
     private void registerMqClient() {
-        BrokerConfig brokerConfig = new BrokerConfig();
-        String endpoint = monitorMqProperties.getHost() + ":" + monitorMqProperties.getPort();
-        brokerConfig.setBrokerAddress(endpoint);
-        try {
-            if (endpoint.contains(",")) {
-                this.broker = new HaBroker(brokerConfig);
-            } else {
-                this.broker = new SingleBroker(brokerConfig);
-            }
-        } catch (IOException var7) {
-            throw new RuntimeException(var7);
-        }
+        zbusClient = new ZbusClient(ClientSetting.builder()
+                .host(monitorMqProperties.getHost())
+                .port(monitorMqProperties.getPort())
+                .build());
 
-        MqConfig config = new MqConfig();
-        config.setBroker(this.broker);
-        config.setMq(monitorMqProperties.getSubscriber());
-        this.producer = new Producer(config);
-        MqConfig configReport = new MqConfig();
-        configReport.setBroker(this.broker);
-        configReport.setMq(monitorMqProperties.getSubscriber() + "#report");
-        this.reportProducer = new Producer(configReport);
+        zbusClient.connect();
+        this.topic = monitorMqProperties.getSubscriber();
+        this.reportTopic = this.topic + "#report";
+        producer = zbusClient.createProducer();
+        reportProducer = zbusClient.createProducer();
         end();
     }
 
@@ -108,9 +95,7 @@ public class MonitorFactory implements AutoCloseable {
 
     @Override
     public void close() throws Exception {
-        IoUtils.closeQuietly(producer);
-        IoUtils.closeQuietly(reportProducer);
-        IoUtils.closeQuietly(broker);
+        IoUtils.closeQuietly(zbusClient);
         ThreadUtils.closeQuietly(scheduledExecutorService);
     }
 
@@ -126,8 +111,9 @@ public class MonitorFactory implements AutoCloseable {
 
         try {
             Message message = new Message();
+            message.setTopic(reportTopic);
             message.setBody(Json.toJSONBytes(request));
-            reportProducer.sendAsync(message);
+            reportProducer.publish(message);
         } catch (Throwable ignored) {
         }
     }
@@ -151,8 +137,9 @@ public class MonitorFactory implements AutoCloseable {
                     }
                     request.setData(newExtension.report());
                     Message message = new Message();
+                    message.setTopic(reportTopic);
                     message.setBody(Json.toJSONBytes(request));
-                    reportProducer.sendAsync(message);
+                    reportProducer.publish(message);
                 }
             } catch (Throwable ignored) {
             }
@@ -179,7 +166,8 @@ public class MonitorFactory implements AutoCloseable {
                 request.setData(monitorProtocolProperties);
                 Message message = new Message();
                 message.setBody(Json.toJSONBytes(request));
-                producer.sendAsync(message);
+                message.setTopic(topic);
+                producer.publish(message);
             } catch (Throwable ignored) {
             }
         }, 0, monitorProperties.getKeepAliveTime(), TimeUnit.SECONDS);
@@ -231,8 +219,9 @@ public class MonitorFactory implements AutoCloseable {
                 request.setType(MonitorRequestType.START);
                 request.setData(monitorProtocolProperties);
                 Message message = new Message();
+                message.setTopic(topic);
                 message.setBody(Json.toJSONBytes(request));
-                producer.sendAsync(message);
+                producer.publish(message);
             } catch (Throwable ignored) {
             }
         });
