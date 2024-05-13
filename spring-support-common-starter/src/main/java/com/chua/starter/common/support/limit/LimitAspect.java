@@ -1,6 +1,5 @@
 package com.chua.starter.common.support.limit;
 
-import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.task.limit.Limit;
@@ -24,6 +23,8 @@ import org.springframework.web.bind.annotation.*;
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
+import static com.chua.common.support.constant.CommonConstant.SYMBOL_EMPTY_ARRAY;
 
 /**
  * @author CH
@@ -129,7 +130,7 @@ public class LimitAspect {
             return ArrayUtils.defaultIfEmpty(patchMapping.value(), patchMapping.path());
         }
 
-        return CommonConstant.SYMBOL_EMPTY_ARRAY_STRING;
+        return SYMBOL_EMPTY_ARRAY;
     }
 
     private Object doLimit(ProceedingJoinPoint joinPoint, Limit limit) throws Throwable {

@@ -29,7 +29,6 @@ import java.util.Base64;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Function;
 
 /**
  * 档案查看器
@@ -44,7 +43,7 @@ public class ArchiveViewer implements Viewer {
             return ViewResult.EMPTY;
         }
 
-        List<JsonObject> jsonArray  = new LinkedList<>();
+        List<JsonObject> jsonObjectList  = new LinkedList<>();
         try (ByteArrayInputStream bais = new ByteArrayInputStream(getResult.getBytes())) {
             ResourceFile resourceFile = ResourceFileFactory.getResourceFile(FileUtils.getSimpleExtension(getResult.getName()), bais);
             if(null == resourceFile) {
@@ -67,7 +66,7 @@ public class ArchiveViewer implements Viewer {
                         item.put("id", FileUtils.normalize(fileMetadata.getName()));
                         item.put("pid", FileUtils.normalize(Optional.ofNullable(new File(fileMetadata.getName()).getParent()).orElse("/")));
                     }
-                    jsonArray.add(item);
+                    jsonObjectList.add(item);
                     return null;
                 }
             });
@@ -86,15 +85,12 @@ public class ArchiveViewer implements Viewer {
             html = html.replace("./assets",  contextPath + "/storage");
             html += "<input style=\"display:none;\" id='fileId' value='"+ Base64.getEncoder().encodeToString(
                     requestURI.replace("/preview/", "/download/").getBytes(StandardCharsets.UTF_8))+ "' ></input>";
-            TreeNode<JsonObject> transfer = TreeNode.transfer(jsonArray, new Function<JsonObject, TreeNode>() {
-                @Override
-                public TreeNode<JsonObject> apply(JsonObject jsonObject) {
-                    TreeNode<JsonObject> item = new TreeNode<>();
-                    item.setId(jsonObject.getString("id"));
-                    item.setPid(Optional.ofNullable(jsonObject.getString("pid")).orElse("/"));
-                    item.setValue(jsonObject.getString("name"));
-                    return item;
-                }
+            TreeNode<JsonObject> transfer = TreeNode.transfer(jsonObjectList, jsonObject -> {
+                TreeNode<JsonObject> item = new TreeNode<>();
+                item.setId(jsonObject.getString("id"));
+                item.setPid(Optional.ofNullable(jsonObject.getString("pid")).orElse("/"));
+                item.setValue(jsonObject.getString("name"));
+                return item;
             });
             html += "<div style='display:none' id='data'>"+ Json.toJson(transfer) +"</div>";
             return new ViewResult(

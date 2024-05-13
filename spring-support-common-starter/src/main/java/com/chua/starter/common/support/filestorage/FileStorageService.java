@@ -98,7 +98,9 @@ public interface FileStorageService {
         try (ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(getResult.getBytes());
              ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream()
         ) {
-            FileConverterResolver.transform(simpleExtension, byteArrayInputStream, inputUrl, format, byteArrayOutputStream, writerSetting);
+            FileConverterResolver resolver = new FileConverterResolver(simpleExtension, format);
+            resolver.convert(byteArrayInputStream, byteArrayOutputStream);
+
             return GetResult.builder()
                     .name(baseName + "." + format)
                     .requestId(getResult.getRequestId())
