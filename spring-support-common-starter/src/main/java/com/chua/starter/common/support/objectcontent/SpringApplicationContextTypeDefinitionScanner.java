@@ -2,8 +2,8 @@ package com.chua.starter.common.support.objectcontent;
 
 import com.chua.common.support.collection.SortedArrayList;
 import com.chua.common.support.collection.SortedList;
-import com.chua.common.support.objects.definition.ObjectTypeDefinition;
-import com.chua.common.support.objects.definition.TypeDefinition;
+import com.chua.common.support.objects.definition.BeanDefinition;
+import com.chua.common.support.objects.definition.ObjectElementDefinition;
 import com.chua.common.support.objects.source.TypeDefinitionScanner;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import org.springframework.beans.BeansException;
@@ -22,12 +22,12 @@ import static com.chua.common.support.objects.source.AbstractTypeDefinitionScann
  */
 public class SpringApplicationContextTypeDefinitionScanner implements TypeDefinitionScanner {
     @Override
-    public boolean isMatch(TypeDefinition typeDefinition) {
+    public boolean isMatch(BeanDefinition typeDefinition) {
         return false;
     }
 
     @Override
-    public SortedList<TypeDefinition> getBean(String name, Class<?> targetType) {
+    public SortedList<BeanDefinition> getBean(String name, Class<?> targetType) {
         ApplicationContext applicationContext = SpringBeanUtils.getApplicationContext();
         if(null == applicationContext) {
             return SortedList.emptyList();
@@ -38,11 +38,11 @@ public class SpringApplicationContextTypeDefinitionScanner implements TypeDefini
         } catch (BeansException e) {
             return SortedList.emptyList();
         }
-        return new SortedArrayList<>(new ObjectTypeDefinition(name, bean), COMPARABLE);
+        return new SortedArrayList<>(new ObjectElementDefinition(name, bean), COMPARABLE);
     }
 
     @Override
-    public SortedList<TypeDefinition> getBean(String name) {
+    public SortedList<BeanDefinition> getBean(String name) {
         ApplicationContext applicationContext = SpringBeanUtils.getApplicationContext();
         if(null == applicationContext) {
             return SortedList.emptyList();
@@ -53,26 +53,26 @@ public class SpringApplicationContextTypeDefinitionScanner implements TypeDefini
         } catch (BeansException ignored) {
             return SortedList.emptyList();
         }
-        return new SortedArrayList<>(new ObjectTypeDefinition(name, bean), COMPARABLE);
+        return new SortedArrayList<>(new ObjectElementDefinition(name, bean), COMPARABLE);
     }
 
     @Override
-    public SortedList<TypeDefinition> getBean(Class<?> targetType) {
-        SortedList<TypeDefinition> rs = new SortedArrayList<>(COMPARABLE);
+    public SortedList<BeanDefinition> getBean(Class<?> targetType) {
+        SortedList<BeanDefinition> rs = new SortedArrayList<>(COMPARABLE);
         ApplicationContext applicationContext = SpringBeanUtils.getApplicationContext();
         if(null == applicationContext) {
             return rs;
         }
         String[] beanNamesForType = applicationContext.getBeanNamesForType(targetType);
         for (String s : beanNamesForType) {
-            rs.add(new ObjectTypeDefinition(s, applicationContext.getBean(s, targetType)));
+            rs.add(new ObjectElementDefinition(s, applicationContext.getBean(s, targetType)));
         }
 
         return rs;
     }
 
     @Override
-    public void unregister(TypeDefinition typeDefinition) {
+    public void unregister(BeanDefinition typeDefinition) {
 
     }
 
@@ -82,12 +82,12 @@ public class SpringApplicationContextTypeDefinitionScanner implements TypeDefini
     }
 
     @Override
-    public void register(TypeDefinition definition) {
+    public void register(BeanDefinition definition) {
 
     }
 
     @Override
-    public SortedList<TypeDefinition> getBeanByMethod(Class<? extends Annotation> annotationType) {
+    public SortedList<BeanDefinition> getBeanByMethod(Class<? extends Annotation> annotationType) {
         return SortedList.emptyList();
     }
 
