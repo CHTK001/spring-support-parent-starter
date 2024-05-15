@@ -1,6 +1,5 @@
 package com.chua.starter.monitor.server.service.impl;
 
-import com.chua.common.support.geo.GeoCity;
 import com.chua.common.support.geo.IpPosition;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
