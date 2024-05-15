@@ -1,6 +1,5 @@
 package com.chua.starter.monitor.server.service;
 
-import com.chua.common.support.geo.GeoCity;
 import com.chua.common.support.lang.code.ReturnResult;
 import org.springframework.cache.annotation.Cacheable;
 

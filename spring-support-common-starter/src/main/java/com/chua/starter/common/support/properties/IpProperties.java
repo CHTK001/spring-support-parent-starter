@@ -19,6 +19,11 @@ public class IpProperties {
     private boolean enable;
 
     /**
+     * 数据库文件路径
+     */
+    private String databaseFile;
+
+    /**
      * ip翻译实现方式
      */
     private String ipType = "qqwry";
