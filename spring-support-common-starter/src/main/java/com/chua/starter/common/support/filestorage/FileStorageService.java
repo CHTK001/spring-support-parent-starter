@@ -1,6 +1,5 @@
 package com.chua.starter.common.support.filestorage;
 
-import com.chua.common.support.lang.file.transfer.FileConverterResolver;
 import com.chua.common.support.oss.FileStorage;
 import com.chua.common.support.oss.entity.GetResult;
 import com.chua.common.support.spi.Option;
