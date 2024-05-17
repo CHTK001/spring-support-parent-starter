@@ -27,13 +27,13 @@ import com.chua.starter.monitor.server.properties.GenProperties;
 import com.chua.starter.monitor.server.query.TableQuery;
 import com.chua.starter.monitor.server.service.MonitorSysGenRemarkService;
 import com.chua.starter.monitor.server.service.MonitorSysGenService;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import jakarta.annotation.Resource;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -71,7 +71,7 @@ public class SessionController {
             return ReturnResult.illegal("表不存在");
         }
 
-        try (Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions());) {
+        try (Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions())) {
             if(query.getFileType() == FileType.DATABASE) {
                 return ReturnResult.ok(session.getTables(query.getDatabaseId(), "%", query.createSessionQuery()));
             }
@@ -546,7 +546,7 @@ public class SessionController {
         }
         return ResponseEntity
                 .ok()
-                .contentType(MediaType.valueOf(MediaTypeFactory.getMediaType(query.getDataId()).orElse(com.chua.common.support.media.MediaType.parse("text/html")).toString()))
+                .contentType(MediaType.valueOf(MediaTypeFactory.getMediaType(query.getDataId()).orElse(MediaTypeFactory.parse("text/html")).toString()))
                 .contentLength(result.length)
                 .body(result);
     }
