@@ -276,7 +276,7 @@ public class MonitorSysGenColumn implements Serializable {
             column.setColHtmlType(HTML_IMAGE_UPLOAD);
         }
         // 文件字段设置文件上传控件
-        else if (StringUtils.endsWithIgnoreCase(columnName, FILE)) {
+        else if (StringUtils.endsWithIgnoreCase(columnName, FILE_PROTOCOL)) {
             column.setColHtmlType(HTML_FILE_UPLOAD);
         }
         // 内容字段设置富文本控件
