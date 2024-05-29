@@ -5,6 +5,7 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.oauth.client.support.annotation.AuthIgnore;
+import com.chua.starter.oauth.client.support.enums.UpgradeType;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.infomation.Information;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
@@ -233,11 +234,12 @@ public class WebRequest {
 
     /**
      * 刷新token
+     * @param upgradeType 升级类型
      */
-    public void refreshToken() {
+    public void upgrade(UpgradeType upgradeType) {
         Cookie[] cookie = getCookie();
         String token = getToken();
         Protocol protocol = ServiceProvider.of(Protocol.class).getExtension(authProperties.getProtocol());
-        protocol.refreshToken(cookie, token);
+        protocol.upgrade(cookie, token, upgradeType);
     }
 }
