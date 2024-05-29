@@ -21,6 +21,7 @@ import com.chua.starter.common.support.utils.ResponseUtils;
 import com.chua.starter.oauth.client.support.advice.def.DefSecret;
 import com.chua.starter.oauth.client.support.contants.AuthConstant;
 import com.chua.starter.oauth.client.support.entity.AuthRequest;
+import com.chua.starter.oauth.client.support.enums.UpgradeType;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.user.UserResume;
@@ -37,6 +38,7 @@ import java.util.*;
 
 import static com.chua.common.support.http.HttpClientUtils.APPLICATION_JSON;
 import static com.chua.common.support.lang.code.ReturnCode.RESOURCE_OAUTH_ERROR;
+import static com.chua.starter.oauth.client.support.contants.AuthConstant.OAUTH_UPGRADE_KEY;
 import static com.chua.starter.oauth.client.support.infomation.Information.*;
 
 /**
@@ -178,13 +180,14 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
     }
 
     @Override
-    public void refreshToken(Cookie[] cookie, String token) {
+    public void upgrade(Cookie[] cookie, String token, UpgradeType upgradeType) {
         String key = DigestUtils.md5Hex(UUID.randomUUID().toString());
         Map<String, Object> jsonObject = new HashMap<>(2);
         Cookie[] cookies = Optional.ofNullable(cookie).orElse(new Cookie[0]);
         String cacheKey = getCacheKey(cookies, token);
         jsonObject.put("x-oauth-cookie", cookies);
         jsonObject.put("x-oauth-token", token);
+        jsonObject.put(OAUTH_UPGRADE_KEY, upgradeType);
         String accessKey = authClientProperties.getAccessKey();
         String secretKey = authClientProperties.getSecretKey();
         String serviceKey = authClientProperties.getServiceKey();
@@ -218,7 +221,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
             }
 
             httpResponse = Unirest.post(
-                            StringUtils.endWithAppend(StringUtils.startWithAppend(url, "http://"), "/") + "refresh")
+                            StringUtils.endWithAppend(StringUtils.startWithAppend(url, "http://"), "/") + "upgrade")
                     .header("x-oauth-timestamp", System.nanoTime() + "")
                     .field("data", request)
                     .asString();

@@ -10,11 +10,11 @@ import com.chua.starter.oauth.server.support.properties.AuthServerProperties;
 import com.chua.starter.oauth.server.support.service.UserInfoService;
 import com.chua.starter.oauth.server.support.token.TokenResolver;
 import com.google.common.base.Strings;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
 import org.springframework.util.ClassUtils;
 
-import jakarta.annotation.Resource;
 import java.util.Map;
 
 import static com.chua.common.support.lang.code.ReturnCode.OK;
@@ -108,15 +108,15 @@ public class LoginCheck {
     /**
      * 获取用户信息
      *
-     * @param userResult1 用户信息
+     * @param userResult 用户信息
      * @return 用户信息
      */
-    public UserResult getUserInfo(UserResult userResult1) {
+    public UserResult getUserInfo(UserResult userResult) {
         try {
             Map<String, UserInfoService> beansOfType = applicationContext.getBeansOfType(UserInfoService.class);
             UserInfoService userInfoService = null;
             for (Map.Entry<String, UserInfoService> entry : beansOfType.entrySet()) {
-                if (ClassUtils.getUserClass(entry.getValue()).getTypeName().equalsIgnoreCase(userResult1.getBeanType())) {
+                if (ClassUtils.getUserClass(entry.getValue()).getTypeName().equalsIgnoreCase(userResult.getBeanType())) {
                     userInfoService = entry.getValue();
                     break;
                 }
@@ -125,7 +125,7 @@ public class LoginCheck {
                 return null;
             }
 
-            return userInfoService.getUserInfo(userResult1.getUsername());
+            return userInfoService.upgrade(userResult);
         } catch (Exception e) {
             return null;
         }
