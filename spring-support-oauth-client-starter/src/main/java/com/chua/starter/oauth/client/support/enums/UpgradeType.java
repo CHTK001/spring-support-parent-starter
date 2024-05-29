@@ -9,12 +9,12 @@ package com.chua.starter.oauth.client.support.enums;
 public enum UpgradeType {
 
     /**
-     * 表示基于版本号的升级。
+     * 表示基于版本号的升级。(升级账号信息)
      */
     VERSION,
 
     /**
-     * 表示基于时间戳的升级。
+     * 表示基于时间戳的升级。(升级账号信息， 并重置时长)
      */
     TIMESTAMP;
 
