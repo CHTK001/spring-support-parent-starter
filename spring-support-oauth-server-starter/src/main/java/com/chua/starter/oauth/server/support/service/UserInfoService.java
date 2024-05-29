@@ -11,19 +11,19 @@ public interface UserInfoService {
     /**
      * 检验ak/sk是否合法
      *
-     * @param accessKey ak
-     * @param secretKey sk
+     * @param username ak
+     * @param password sk
      * @param address   地址
      * @param ext       额外参数
      * @return 检验ak/sk是否合法
      */
-    UserResult checkLogin(String accessKey, String secretKey, String address, Object ext);
+    UserResult checkLogin(String username, String password, String address, Object ext);
 
     /**
      * 获取用户信息
      *
-     * @param accessKey 账号
+     * @param userResult 账号信息
      * @return 用户信息
      */
-    UserResult getUserInfo(String accessKey);
+    UserResult upgrade(UserResult userResult);
 }

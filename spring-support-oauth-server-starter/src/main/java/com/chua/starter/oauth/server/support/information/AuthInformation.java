@@ -8,14 +8,14 @@ import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.Md5Utils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.starter.oauth.client.support.enums.UpgradeType;
 import com.chua.starter.oauth.server.support.parser.Authorization;
 import com.chua.starter.oauth.server.support.parser.InvalidAuthorization;
 import com.chua.starter.oauth.server.support.parser.RequestAuthorization;
 import com.chua.starter.oauth.server.support.properties.AuthServerProperties;
-import lombok.Getter;
-
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.Getter;
 
 import static com.chua.starter.oauth.client.support.contants.AuthConstant.*;
 
@@ -39,6 +39,8 @@ public class AuthInformation {
     private String oauthKey;
     private String token;
     private Cookie[] cookie;
+    @Getter
+    private UpgradeType upgradeType;
 
     public AuthInformation(String data, HttpServletRequest request, AuthServerProperties authServerProperties) {
         this.data = data;
@@ -75,6 +77,7 @@ public class AuthInformation {
 
         JsonObject parseObject = Json.getJsonObject(tokenCookie);
         this.token = parseObject.getString(authServerProperties.getTokenName());
+        this.upgradeType = UpgradeType.getUpgradeType(parseObject.getString(OAUTH_UPGRADE_KEY));
         JsonArray jsonArray = parseObject.getJsonArray(authServerProperties.getCookieName());
         int size = jsonArray.size();
         Cookie[] cookies = new Cookie[size];
@@ -84,7 +87,7 @@ public class AuthInformation {
         }
         this.cookie = cookies;
 
-        RequestAuthorization authorization = new RequestAuthorization(this, token, cookie, accessKey, secretKey);
+        RequestAuthorization authorization = new RequestAuthorization(this, token, cookie, accessKey, secretKey, upgradeType);
         SpringBeanUtils.getApplicationContext().getAutowireCapableBeanFactory().autowireBean(authorization);
         return authorization;
     }

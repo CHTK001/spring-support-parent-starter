@@ -57,5 +57,5 @@ public interface Authorization {
      *
      * @return 刷新缓存
      */
-    ReturnResult<String> refresh();
+    ReturnResult<String> upgrade();
 }

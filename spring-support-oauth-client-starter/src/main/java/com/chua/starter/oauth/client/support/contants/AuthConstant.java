@@ -18,6 +18,12 @@ public interface AuthConstant {
      * ok
      */
     String OAUTH_KEY = "x-oauth-key";
+
+
+    /**
+     * "x-oauth-upgrade"
+     */
+    String OAUTH_UPGRADE_KEY =  "x-oauth-upgrade";
     /**
      * ov
      */

@@ -11,15 +11,14 @@ import com.chua.starter.oauth.server.support.parser.Authorization;
 import com.chua.starter.oauth.server.support.properties.AuthServerProperties;
 import com.chua.starter.oauth.server.support.provider.LoginProvider;
 import com.chua.starter.oauth.server.support.resolver.LoggerResolver;
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
-
-import jakarta.annotation.Resource;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 
 import static com.chua.common.support.lang.code.ReturnCode.OK;
 import static com.chua.common.support.lang.code.ReturnCode.RESOURCE_OAUTH_ERROR;
@@ -83,15 +82,17 @@ public class HttpProtocol implements Protocol, InitializingBean {
 
         return authentication;
     }
-
     /**
-     * 鉴权
+     * 执行升级操作的方法。
      *
-     * @return 鉴权
+     * @param data 包含升级相关数据的字符串，具体格式和内容根据业务逻辑而定。
+     * @param request HttpServletRequest对象，用于获取客户端请求的相关信息。
+     * @param response HttpServletResponse对象，用于向客户端发送响应。
+     * @return ReturnResult<String> 包含升级操作结果的返回对象，其中可能包含成功与否、错误信息等。
      */
-    @PostMapping("/refresh")
+    @PostMapping("/upgrade")
     @ResponseBody
-    public ReturnResult<String> refresh(@RequestParam("data") String data, HttpServletRequest request, HttpServletResponse response) {
+    public ReturnResult<String> upgrade(@RequestParam("data") String data, HttpServletRequest request, HttpServletResponse response) {
         AuthInformation authInformation = new AuthInformation(data, request, authServerProperties);
         Authorization authorization = authInformation.resolve();
         String address = RequestUtils.getIpAddress(request);
@@ -108,7 +109,7 @@ public class HttpProtocol implements Protocol, InitializingBean {
             return ReturnResult.noAuth();
         }
 
-        ReturnResult<String> authentication = authorization.refresh();
+        ReturnResult<String> authentication = authorization.upgrade();
         if (!OK.getCode().equals(authentication.getCode())) {
             loginProvider.logout(request, response);
             loggerResolver.register(AuthConstant.OAUTH, RESOURCE_OAUTH_ERROR.getCode(), "ak,sk限制登录", address);

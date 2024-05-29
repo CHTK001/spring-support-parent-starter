@@ -53,17 +53,15 @@ public class RedisTokenResolver implements TokenResolver {
 
         AuthServerProperties.Online online = authServerProperties.getOnline();
         if (online == AuthServerProperties.Online.SINGLE) {
-            registerSingle(generation);
+            unRegisterSingle(generation);
         }
         ValueOperations forValue = stringRedisTemplate.opsForValue();
         long expire = userResult.getExpire() == null ? authServerProperties.getExpire() : userResult.getExpire();
         userResult.setExpire(expire);
-//        forValue.set(serviceKey, Json.toJson(userResult));
         forValue.set(redisKey, userResult);
 
 
         if (expire > 0) {
-//            stringRedisTemplate.expire(serviceKey, Duration.ofSeconds(expire));
             stringRedisTemplate.expire(redisKey, Duration.ofSeconds(expire));
         }
 
@@ -71,13 +69,13 @@ public class RedisTokenResolver implements TokenResolver {
     }
 
     /**
-     * 单例模式
+     * 注销其它相同账号
      *
      * @param generation 用户信息
      */
-    private void registerSingle(String generation) {
+    private void unRegisterSingle(String generation) {
         String uid = generation.substring(0, 128);
-        registerUid(uid);
+        unRegisterUid(uid);
     }
 
     /**
@@ -85,7 +83,7 @@ public class RedisTokenResolver implements TokenResolver {
      *
      * @param uid 用户信息
      */
-    private void registerUid(String uid) {
+    private void unRegisterUid(String uid) {
         //
         Set<String> keys = stringRedisTemplate.keys(TOKEN_PRE + uid + "*");
         try {
@@ -103,7 +101,7 @@ public class RedisTokenResolver implements TokenResolver {
     public void logout(String uid, LogoutType type) {
         if (type == LogoutType.UN_REGISTER || type == LogoutType.LOGOUT_ALL) {
             TokenGeneration tokenGeneration = ServiceProvider.of(TokenGeneration.class).getExtension(authServerProperties.getTokenGeneration());
-            registerSingle(tokenGeneration.generation(uid));
+            unRegisterSingle(tokenGeneration.generation(uid));
             return;
         }
 
@@ -137,32 +135,43 @@ public class RedisTokenResolver implements TokenResolver {
     }
 
     @Override
-    public ReturnResult<UserResult> refresh(Cookie[] cookies, String token) {
-        Cookie cookie = CookieUtil.getCookie(cookies, authServerProperties.getCookieName());
-        String cv = token;
-        if (StringUtils.isEmpty(StringUtils.ifValid(cv, ""))) {
-            cv = null == cookie ? null : cookie.getValue();
+    public ReturnResult<UserResult> upgradeForTimestamp(Cookie[] cookies, String token) {
+        ReturnResult<UserResult> userResultReturnResult = upgradeForVersion(cookies, token);
+        if(!userResultReturnResult.isOk()) {
+            return userResultReturnResult;
         }
 
-        if (null == cv) {
+        if (authServerProperties.isRenew()) {
+            resetExpire(userResultReturnResult.getData(), token);
+        }
+        return ReturnResult.ok(userResultReturnResult.getData());
+    }
+
+    @Override
+    public ReturnResult<UserResult> upgradeForVersion(Cookie[] cookies, String token) {
+        Cookie cookie = CookieUtil.getCookie(cookies, authServerProperties.getCookieName());
+        String newToken = token;
+        if (StringUtils.isEmpty(StringUtils.ifValid(newToken, ""))) {
+            newToken = null == cookie ? null : cookie.getValue();
+        }
+
+        if (null == newToken) {
             return ReturnResult.noAuth();
         }
-        cv = TOKEN_PRE + cv;
-        Object s = stringRedisTemplate.opsForValue().get(cv);
+        newToken = TOKEN_PRE + newToken;
+        Object s = stringRedisTemplate.opsForValue().get(newToken);
         if (null == s) {
             return ReturnResult.noAuth();
         }
 
         UserResult userResult = Json.fromJson(s.toString(), UserResult.class);
-        UserResult userResult1 = loginCheck.getUserInfo(userResult);
-        if (null == userResult1) {
+
+        UserResult newUserResult = loginCheck.getUserInfo(userResult);
+        if (null == newUserResult) {
             return ReturnResult.ok(userResult);
         }
-        stringRedisTemplate.opsForValue().set(token, userResult1);
-        if (authServerProperties.isRenew()) {
-            resetExpire(userResult1, token);
-        }
-        return ReturnResult.ok(userResult1);
+        stringRedisTemplate.opsForValue().set(token, newUserResult);
+        return ReturnResult.ok(newUserResult);
     }
 
     /**

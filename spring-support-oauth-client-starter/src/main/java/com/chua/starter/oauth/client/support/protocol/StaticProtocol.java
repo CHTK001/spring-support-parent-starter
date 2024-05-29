@@ -4,6 +4,7 @@ import com.chua.common.support.annotations.Extension;
 import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.json.Json;
 import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.starter.oauth.client.support.enums.UpgradeType;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.infomation.Information;
 import com.chua.starter.oauth.client.support.user.UserResult;
@@ -75,7 +76,7 @@ public class StaticProtocol extends AbstractProtocol{
         return new AuthenticationInformation(Information.OK, userResume);
     }
     @Override
-    public void refreshToken(Cookie[] cookie, String token) {
+    public void upgrade(Cookie[] cookie, String token, UpgradeType upgradeType) {
 
     }
 }

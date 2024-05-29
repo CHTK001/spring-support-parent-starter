@@ -4,7 +4,6 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.user.LoginResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
-
 import jakarta.servlet.http.Cookie;
 
 /**
@@ -55,5 +54,14 @@ public interface TokenResolver {
      * @param token   token
      * @return 登录信息
      */
-    ReturnResult<UserResult> refresh(Cookie[] cookies, String token);
+    ReturnResult<UserResult> upgradeForTimestamp(Cookie[] cookies, String token);
+
+    /**
+     * 刷新token内容
+     *
+     * @param cookie cookie
+     * @param token  token
+     * @return 登录信息
+     */
+    ReturnResult<UserResult> upgradeForVersion(Cookie[] cookie, String token);
 }
