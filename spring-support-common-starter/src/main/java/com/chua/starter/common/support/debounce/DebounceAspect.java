@@ -1,6 +1,6 @@
 package com.chua.starter.common.support.debounce;
 
-import com.chua.common.support.datasource.repository.wrapper.toolkit.WrapperClassUtils;
+import com.chua.common.support.wrapper.toolkit.WrapperClassUtils;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
