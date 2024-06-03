@@ -1,14 +1,10 @@
 package com.chua.starter.common.support.filestorage;
 
-import com.chua.common.support.oss.options.FileStorageOption;
-import com.chua.common.support.oss.plugin.FileStorageConversionPlugin;
-import com.chua.common.support.oss.plugin.FileStorageMonitorPlugin;
-import com.chua.common.support.oss.plugin.FileStorageNamingPlugin;
-import lombok.Builder;
+import com.chua.common.support.oss.extension.FileStorageConversionPlugin;
+import com.chua.common.support.oss.extension.FileStorageMonitorPlugin;
+import com.chua.common.support.oss.extension.NamingResolver;
 import lombok.Data;
-import lombok.Singular;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -107,7 +103,7 @@ public class FileStorageProperties {
         private FileStorageConversionPlugin fileStorageConversionPlugin;
 
 
-        private FileStorageNamingPlugin fileStorageNamingPlugin;
+        private NamingResolver fileStorageNamingPlugin;
 
         /**
          * 文件存储监视器插件
