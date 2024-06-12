@@ -1,9 +1,7 @@
 package com.chua.starter.oauth.client.support.interceptor;
 
-import com.chua.common.support.utils.AnnotationUtils;
 import com.chua.common.support.utils.ArrayUtils;
 import com.chua.common.support.utils.CollectionUtils;
-import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.exception.OauthException;
@@ -18,7 +16,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -67,16 +64,11 @@ public class PermissionPointcut extends StaticMethodMatcherPointcutAdvisor imple
             return false;
         }
         Set<String> roles = userInfo.getRoles();
-        if(CollectionUtils.containsIgnoreCase(roles, "ADMIN")) {
-            return true;
-        }
-
-        return false;
+        return CollectionUtils.containsIgnoreCase(roles, "ADMIN");
     }
 
     private boolean isPermissionMatch(Permission permission) {
-        Map<String, Object> as = AnnotationUtils.getAnnotationAttributes(permission);
-        String[] permissions = MapUtils.getStringArray(as, "value");
+        String[] permissions = permission.value();
         if(ArrayUtils.isEmpty(permissions)) {
             return true;
         }

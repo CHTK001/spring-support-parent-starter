@@ -1,8 +1,8 @@
 package com.chua.starter.monitor.configuration;
 
+import com.chua.common.support.invoke.annotation.RequestLine;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.json.JsonObject;
-import com.chua.common.support.protocol.annotations.ServiceMapping;
 import com.chua.common.support.protocol.boot.BootProtocolServer;
 import com.chua.common.support.protocol.boot.BootRequest;
 import com.chua.common.support.protocol.boot.BootResponse;
@@ -44,7 +44,7 @@ public class ShellConfiguration implements BeanFactoryAware {
     public static final String ADDRESS = "IP.ADDRESS";
     private ConfigurableListableBeanFactory beanFactory;
 
-    @ServiceMapping("shell")
+    @RequestLine("shell")
     public BootResponse listen(BootRequest request) {
         if(request.getCommandType() != CommandType.REQUEST) {
             return BootResponse.notSupport("The non-register command is not supported");

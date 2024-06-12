@@ -18,6 +18,8 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
+import static com.chua.common.support.constant.NameConstant.NULL;
+
 /**
  * job alarm by email
  *
@@ -25,7 +27,7 @@ import java.util.Set;
  */
 @Component
 public class EmailJobAlarm implements JobAlarm {
-    private static Logger logger = LoggerFactory.getLogger(EmailJobAlarm.class);
+    private static final Logger logger = LoggerFactory.getLogger(EmailJobAlarm.class);
 
     /**
      * fail alarm
@@ -53,7 +55,7 @@ public class EmailJobAlarm implements JobAlarm {
             String personal = I18nUtil.getString("admin_name_full");
             String title = I18nUtil.getString("jobconf_monitor");
             String content = MessageFormat.format(loadEmailJobAlarmTemplate(),
-                    group!=null?group.getTitle():"null",
+                    group!=null?group.getTitle():NULL,
                     info.getId(),
                     info.getJobDesc(),
                     alarmContent);

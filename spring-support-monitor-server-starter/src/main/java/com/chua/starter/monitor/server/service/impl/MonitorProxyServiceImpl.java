@@ -6,11 +6,13 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.protocol.Server;
 import com.chua.common.support.utils.ObjectUtils;
 import com.chua.netty.support.proxy.filter.AsyncHttpRoutingGatewayFilter;
+import com.chua.netty.support.proxy.filter.AsyncTcpRoutingGatewayFilter;
 import com.chua.netty.support.proxy.filter.AsyncWebSocketRoutingGatewayFilter;
 import com.chua.starter.monitor.server.entity.MonitorProxy;
 import com.chua.starter.monitor.server.mapper.MonitorProxyMapper;
 import com.chua.starter.monitor.server.service.MonitorProxyService;
 import jakarta.annotation.Resource;
+import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -95,9 +97,20 @@ public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, Mon
     }
 
     private Server createServer(MonitorProxy monitorProxy) {
-        ServiceDiscovery serviceDiscovery = applicationContext.getBean(ServiceDiscovery.class);
+        ServiceDiscovery serviceDiscovery = null;
+        try {
+            serviceDiscovery = applicationContext.getBean(ServiceDiscovery.class);
+        } catch (BeansException ignored) {
+        }
         if(null == serviceDiscovery) {
             throw new RuntimeException("未找到服务发现");
+        }
+        String proxyProtocol = monitorProxy.getProxyProtocol();
+        if("tcp".equals(proxyProtocol)) {
+            Server server = Server.create("tcp-proxy", monitorProxy.getProxyPort());
+            server.addDefinition(serviceDiscovery);
+            server.addFilter(AsyncTcpRoutingGatewayFilter.class);
+            return server;
         }
         Server server = Server.create("proxy", monitorProxy.getProxyPort());
         server.addDefinition(serviceDiscovery);

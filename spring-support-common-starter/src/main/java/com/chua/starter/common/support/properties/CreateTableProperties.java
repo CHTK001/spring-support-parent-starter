@@ -1,6 +1,6 @@
 package com.chua.starter.common.support.properties;
 
-import com.chua.common.support.datasource.enums.ActionType;
+import com.chua.common.support.lang.engine.ddl.ActionType;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 

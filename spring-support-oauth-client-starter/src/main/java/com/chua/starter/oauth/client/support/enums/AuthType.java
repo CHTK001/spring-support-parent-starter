@@ -33,12 +33,12 @@ public enum AuthType {
      */
     CUSTOM,
     /**
-     * 根据URL自动判断是WEB还是ENBED
+     * 根据URL自动判断是WEB还是EMBED
      */
     AUTO,
 
     /**
      * 嵌入式
      */
-    EMBED
+    STATIC
 }
