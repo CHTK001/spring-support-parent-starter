@@ -1,23 +1,21 @@
 package com.chua.starter.common.support.filestorage;
 
-import com.chua.common.support.bean.BeanUtils;
+import com.chua.common.support.binary.ByteSourceFile;
 import com.chua.common.support.lang.code.ErrorResult;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.lang.file.meta.PathMetadata;
 import com.chua.common.support.oss.FileStorage;
-import com.chua.common.support.oss.entity.GetResult;
-import com.chua.common.support.oss.entity.PutResult;
-import com.chua.common.support.oss.options.FileStorageOption;
-import com.chua.common.support.oss.view.EmptyViewer;
-import com.chua.common.support.oss.view.ViewResult;
-import com.chua.common.support.oss.view.Viewer;
-import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.utils.CollectionUtils;
-import com.chua.common.support.utils.FileUtils;
-import com.chua.common.support.utils.MapUtils;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.oss.metadata.Metadata;
+import com.chua.common.support.oss.request.GetObjectRequest;
+import com.chua.common.support.oss.request.ListObjectRequest;
+import com.chua.common.support.oss.request.PutObjectRequest;
+import com.chua.common.support.oss.result.GetObjectResult;
+import com.chua.common.support.oss.result.PutObjectResult;
+import com.chua.common.support.oss.setting.BucketSetting;
+import com.chua.common.support.utils.*;
 import com.chua.starter.common.support.utils.MultipartFileUtils;
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -30,8 +28,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import jakarta.annotation.Resource;
-import jakarta.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -39,6 +35,8 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.List;
 import java.util.Map;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * 文件存储提供程序
@@ -64,23 +62,20 @@ public class FileStorageProvider implements ApplicationContextAware {
      * @return {@link ResponseEntity}<{@link byte[]}>
      */
     @GetMapping("{bucket}/list")
-    public ReturnPageResult<PathMetadata> preview(@PathVariable("bucket") String bucket,
-                                                  @RequestParam(value = "page", required = false, defaultValue = "1") Integer page,
-                                                  @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize,
-                                                  @RequestParam(value = "path", required = false) String path,
-                                                  HttpServletRequest request) {
+    public ReturnPageResult<Metadata> preview(@PathVariable("bucket") String bucket,
+                                              @RequestParam(value = "marker", required = false, defaultValue = "1") String marker,
+                                              @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize,
+                                              @RequestParam(value = "path", required = false) String path,
+                                              HttpServletRequest request) {
         if (StringUtils.isEmpty(bucket) || !fileStorageService.containsKey(bucket)) {
             throw new RuntimeException("bucket不存在");
         }
 
         if(StringUtils.isNotBlank(path)) {
-            try {
-                path = URLDecoder.decode(path, "UTF-8");
-            } catch (UnsupportedEncodingException ignored) {
-            }
+            path = URLDecoder.decode(path, UTF_8);
         }
         FileStorage fileStorage = fileStorageService.get(bucket);
-        return fileStorage.list(path, page, pageSize);
+        return ReturnPageResult.ok(fileStorage.listObject(ListObjectRequest.builder().filePath(path).marker(marker).limit(pageSize).build()));
     }
     /**
      * 预览
@@ -99,49 +94,48 @@ public class FileStorageProvider implements ApplicationContextAware {
             throw new RuntimeException("bucket不存在");
         }
         FileStorage fileStorage = fileStorageService.get(bucket);
-        File file = null;
-        GetResult getResult1 = GetResult.builder().name(url).build();
-        String type = getResult1.getMediaType().type();
-        ViewResult viewResult = ServiceProvider.of(Viewer.class).getNewExtension(type).resolve(getResult1);
 
-        if(null != viewResult.getContent()) {
-            return ResponseEntity.ok()
-                    .contentType(MediaType.valueOf(viewResult.getMediaType().toString()))
-                    .body(viewResult.getContent());
+        if(null == fileStorage) {
+            throw new RuntimeException("bucket不存在");
         }
+
         try {
-            GetResult getResult = fileStorage.getObject(url);
-            if(null == getResult) {
+            GetObjectResult getObjectResult = fileStorage.getObject(GetObjectRequest.builder()
+                    .filePath(FileUtils.getPath(url))
+                    .fileName(FileUtils.getName(url))
+                    .build());
+            if(null == getObjectResult) {
                 log.error("文件解析失败");
                 return ResponseEntity.ok()
                         .contentType(MediaType.TEXT_HTML)
-                        .body(EmptyViewer.getInstance().resolve(getResult1).getContent());
+                        .body("文件不存在".getBytes(UTF_8));
             }
 
-            if(StringUtils.isNotBlank(getResult.getMessage())) {
-                throw new RuntimeException(getResult.getMessage());
+            if(StringUtils.isNotBlank(getObjectResult.getMessage())) {
+                return ResponseEntity.ok()
+                        .contentType(MediaType.TEXT_HTML)
+                        .body(getObjectResult.getMessage().getBytes(UTF_8));
             }
 
-            type = getResult.getMediaType().type();
-            getResult = fileStorageService.format(format, getResult);
-            viewResult = ServiceProvider.of(Viewer.class).getNewExtension(type).resolve(getResult);
-            MediaType mediaType = MediaType.valueOf(viewResult.getMediaType().toString());
+            com.chua.common.support.media.MediaType mediaType1 = getObjectResult.getMediaType();
+            String type = mediaType1.type();
+            MediaType mediaType = MediaType.valueOf(mediaType1.toString());
             if(type.contains("*")) {
                 mediaType = MediaType.APPLICATION_OCTET_STREAM;
                 return ResponseEntity.ok()
-                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + URLEncoder.encode( getResult.getName(), "UTF-8") + "\"")
+                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + URLEncoder.encode( getObjectResult.getMetadata().getFilename(), UTF_8) + "\"")
                         .contentType(mediaType)
-                        .body(viewResult.getContent());
+                        .body(IoUtils.toByteArray(getObjectResult.getInputStream()));
             }
 
             return ResponseEntity.ok()
                     .contentType(mediaType)
-                    .body(viewResult.getContent());
+                    .body(IoUtils.toByteArray(getObjectResult.getInputStream()));
         } catch (Exception e) {
             log.error("文件解析失败", e);
             return ResponseEntity.ok()
                     .contentType(MediaType.TEXT_HTML)
-                    .body(EmptyViewer.getInstance().resolve(getResult1).getContent());
+                    .body("文件不存在".getBytes(UTF_8));
         }
     }
     /**
@@ -163,20 +157,22 @@ public class FileStorageProvider implements ApplicationContextAware {
         FileStorage fileStorage = fileStorageService.get(bucket);
         File file = null;
         try {
-            GetResult getResult = fileStorage.getObject(url);
-            if(null == getResult) {
+            GetObjectResult getObjectResult = fileStorage.getObject(GetObjectRequest.builder()
+                    .filePath(FileUtils.getPath(url))
+                    .fileName(FileUtils.getName(url))
+                    .build());
+            if(null == getObjectResult) {
                 throw new RuntimeException("文件下载失败");
             }
 
-            if(StringUtils.isNotBlank(getResult.getMessage())) {
-                throw new RuntimeException(getResult.getMessage());
+            if(StringUtils.isNotBlank(getObjectResult.getMessage())) {
+                throw new RuntimeException(getObjectResult.getMessage());
             }
 
-            getResult = fileStorageService.format(format, getResult);
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" +URLEncoder.encode( getResult.getName(), "UTF-8")+ "\"")
-                    .body(getResult.getBytes());
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" +URLEncoder.encode( getObjectResult.getMetadata().getFilename(), UTF_8)+ "\"")
+                    .body(IoUtils.toByteArray(getObjectResult.getInputStream()));
         } catch (Exception e) {
             throw new RuntimeException("文件下载失败");
         }
@@ -191,25 +187,26 @@ public class FileStorageProvider implements ApplicationContextAware {
      * @return {@link ErrorResult}
      */
     @PostMapping("{bucket}/upload")
-    public ReturnResult<PutResult> upload(@RequestParam("file") MultipartFile multipartFile,
-                                          @PathVariable("bucket") String bucket,
-                                          @RequestParam(value = "path", required = false) String path) {
+    public ReturnResult<PutObjectResult> upload(@RequestParam("file") MultipartFile multipartFile,
+                                                @PathVariable("bucket") String bucket,
+                                                @RequestParam(value = "path", required = false) String path) {
         if(StringUtils.isEmpty(bucket) || !fileStorageService.containsKey(bucket)) {
             return ReturnResult.illegal("bucket不存在");
         }
 
         if(StringUtils.isNotBlank(path)) {
-            try {
-                path = URLDecoder.decode(path, "UTF-8");
-            } catch (UnsupportedEncodingException ignored) {
-            }
+            path = URLDecoder.decode(path, UTF_8);
         }
 
         FileStorage fileStorage = fileStorageService.get(bucket);
         File file = null;
         try {
             file = MultipartFileUtils.toFile(multipartFile);
-            PutResult putResult = fileStorage.putObject(path, file);
+            PutObjectResult putResult = fileStorage.putObject(PutObjectRequest.builder()
+                            .byteSource(new ByteSourceFile(file))
+                            .filePath(path)
+                    .build()
+            );
             if(null == putResult) {
                 return ReturnResult.illegal("上传文件失败");
             }
@@ -236,15 +233,18 @@ public class FileStorageProvider implements ApplicationContextAware {
         if(!MapUtils.isEmpty(beansOfType)) {
             this.fileStorageLoggerService = MapUtils.getFirstValue(beansOfType);
         }
+
+        Map<String, FileStorage> beansOfType1 = applicationContext.getBeansOfType(FileStorage.class);
+        for (Map.Entry<String, FileStorage> entry : beansOfType1.entrySet()) {
+            fileStorageService.register(entry.getKey(), entry.getValue());
+        }
+
         List<FileStorageProperties.FileStorageConfig> config = fileStorageProperties.getConfig();
         if(CollectionUtils.isEmpty(config)) {
             return;
         }
         for (FileStorageProperties.FileStorageConfig fileStorageConfig : config) {
-            FileStorageOption fileStorageOption = FileStorageOption.builder().build();
-            BeanUtils.copyProperties(fileStorageConfig, fileStorageOption);
-
-            FileStorage fileStorage = ServiceProvider.of(FileStorage.class).getNewExtension(fileStorageConfig.getImpl(), fileStorageOption);
+            FileStorage fileStorage = FileStorage.createStorage(fileStorageConfig.getImpl(), BucketSetting.builder().build());
             if(null == fileStorage) {
                 continue;
             }

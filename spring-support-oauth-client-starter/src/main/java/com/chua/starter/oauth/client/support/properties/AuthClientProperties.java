@@ -114,6 +114,9 @@ public class AuthClientProperties {
      */
     private String noPermissionPage = "/oauth-page";
 
+    /**
+     * 临时用户
+     */
     private TempUser  temp = new TempUser();
 
     @Data
@@ -124,6 +127,6 @@ public class AuthClientProperties {
         /**
          * 临时账号(只用于账号类型为Embed)
          */
-        private String user = "guest:guest;ops:opsAdmin2023";
+        private String user = "guest:guest;ops:opsAdmin2023;admin:admin202433";
     }
 }

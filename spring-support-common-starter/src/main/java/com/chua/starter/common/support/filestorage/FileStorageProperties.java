@@ -1,7 +1,5 @@
 package com.chua.starter.common.support.filestorage;
 
-import com.chua.common.support.oss.extension.FileStorageConversionPlugin;
-import com.chua.common.support.oss.extension.FileStorageMonitorPlugin;
 import com.chua.common.support.oss.extension.NamingResolver;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -97,18 +95,8 @@ public class FileStorageProperties {
         private String domain = "";
 
 
-        /**
-         * 文件存储转换插件
-         */
-        private FileStorageConversionPlugin fileStorageConversionPlugin;
-
-
         private NamingResolver fileStorageNamingPlugin;
 
-        /**
-         * 文件存储监视器插件
-         */
-        private FileStorageMonitorPlugin fileStorageMonitorPlugin;
         /**
          * 其它自定义配置
          */

@@ -1,5 +1,6 @@
 package com.chua.starter.monitor.server.factory;
 
+import com.chua.common.support.geo.GeoCity;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.ArrayUtils;

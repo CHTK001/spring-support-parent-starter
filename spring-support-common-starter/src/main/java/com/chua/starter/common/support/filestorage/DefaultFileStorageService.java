@@ -2,7 +2,6 @@ package com.chua.starter.common.support.filestorage;
 
 import com.chua.common.support.image.filter.ImageFilter;
 import com.chua.common.support.oss.FileStorage;
-import com.chua.common.support.oss.extension.FileStorageConversionPlugin;
 import com.chua.common.support.oss.extension.NamingResolver;
 import com.chua.common.support.spi.Option;
 import com.chua.common.support.spi.ServiceProvider;
@@ -57,10 +56,6 @@ public class DefaultFileStorageService implements FileStorageService{
         return ServiceProvider.of(ImageFilter.class).options();
     }
 
-    @Override
-    public List<Option<String>> getPlugin() {
-        return ServiceProvider.of(FileStorageConversionPlugin.class).options();
-    }
 
     @Override
     public List<Option<String>> getNamed() {

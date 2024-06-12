@@ -15,6 +15,7 @@ public interface Constant extends CacheConstant{
     String DEFAULT_SER = "123456";
 
     String ADMIN = "ADMIN";
+    String OPS = "OPS";
 
     String EXECUTER = "executer";
     String PARAM = "param";

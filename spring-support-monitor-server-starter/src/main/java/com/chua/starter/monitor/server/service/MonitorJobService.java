@@ -4,6 +4,9 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.server.entity.MonitorJob;
 
+/**
+ * @author Administrator
+ */
 public interface MonitorJobService extends IService<MonitorJob>{
 
 

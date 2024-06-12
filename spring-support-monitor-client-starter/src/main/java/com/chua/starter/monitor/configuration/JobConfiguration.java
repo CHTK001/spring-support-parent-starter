@@ -1,7 +1,7 @@
 package com.chua.starter.monitor.configuration;
 
+import com.chua.common.support.invoke.annotation.RequestLine;
 import com.chua.common.support.json.Json;
-import com.chua.common.support.protocol.annotations.ServiceMapping;
 import com.chua.common.support.protocol.boot.BootProtocolServer;
 import com.chua.common.support.protocol.boot.BootRequest;
 import com.chua.common.support.protocol.boot.BootResponse;
@@ -42,7 +42,7 @@ public class JobConfiguration implements BeanFactoryAware, SmartInstantiationAwa
     private BootProtocolServer protocolServer;
     private ConfigurableListableBeanFactory beanFactory;
 
-    @ServiceMapping("job")
+    @RequestLine("job")
     public BootResponse listen(BootRequest request) {
         if(request.getCommandType() != CommandType.REQUEST) {
             return BootResponse.notSupport("The non-register command is not supported");
@@ -57,7 +57,7 @@ public class JobConfiguration implements BeanFactoryAware, SmartInstantiationAwa
      * @param request 要求
      * @return {@link BootResponse}
      */
-    @ServiceMapping("job-bean")
+    @RequestLine("job-bean")
     public BootResponse bean(BootRequest request) {
         if(request.getCommandType() != CommandType.REQUEST) {
             return BootResponse.notSupport("The non-register command is not supported");

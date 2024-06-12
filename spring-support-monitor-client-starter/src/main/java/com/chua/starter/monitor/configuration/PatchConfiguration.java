@@ -1,8 +1,8 @@
 package com.chua.starter.monitor.configuration;
 
+import com.chua.common.support.invoke.annotation.RequestLine;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.json.JsonObject;
-import com.chua.common.support.protocol.annotations.ServiceMapping;
 import com.chua.common.support.protocol.boot.BootProtocolClient;
 import com.chua.common.support.protocol.boot.BootProtocolServer;
 import com.chua.common.support.protocol.boot.BootRequest;
@@ -65,7 +65,7 @@ public class PatchConfiguration implements BeanFactoryAware, EnvironmentAware, A
      * @param request 请求
      * @return {@link BootResponse}
      */
-    @ServiceMapping("patch")
+    @RequestLine("patch")
     public BootResponse patch(BootRequest request ) {
         String content = request.getContent();
         if(StringUtils.isBlank(content)) {
