@@ -69,6 +69,7 @@ public class MonitorServerConfiguration implements BeanDefinitionRegistryPostPro
         registerMqServer(registry);
     }
 
+
     @Override
     public boolean postProcessAfterInstantiation(Object bean, String beanName) throws BeansException {
         registerBean(bean);

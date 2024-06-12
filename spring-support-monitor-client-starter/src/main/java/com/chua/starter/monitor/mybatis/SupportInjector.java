@@ -3,10 +3,10 @@ package com.chua.starter.monitor.mybatis;
 import com.baomidou.mybatisplus.core.injector.AbstractMethod;
 import com.baomidou.mybatisplus.core.injector.DefaultSqlInjector;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
+import com.chua.common.support.invoke.annotation.RequestLine;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.json.JsonArray;
 import com.chua.common.support.json.JsonObject;
-import com.chua.common.support.protocol.annotations.ServiceMapping;
 import com.chua.common.support.protocol.boot.*;
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.utils.MapUtils;
@@ -67,7 +67,7 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
         return list;
     }
 
-    @ServiceMapping("mybatis")
+    @RequestLine("mybatis")
     public BootResponse mybatis(BootRequest request) {
         String content = request.getContent();
         if(StringUtils.isBlank(content)) {

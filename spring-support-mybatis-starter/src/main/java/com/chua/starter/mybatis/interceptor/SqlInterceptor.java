@@ -26,6 +26,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 
+import static com.chua.common.support.constant.NameConstant.NULL;
+
 /**
  * SQLInterceptor
  *
@@ -66,10 +68,9 @@ public class SqlInterceptor implements Interceptor {
         try {
             final Object[] args = invocation.getArgs();
             //获取原始的ms
-            if (!(args[0] instanceof MappedStatement)) {
+            if (!(args[0] instanceof MappedStatement ms)) {
                 return returnValue;
             }
-            MappedStatement ms = (MappedStatement) args[0];
             Object parameter = null;
             //获取参数，if语句成立，表示sql语句有参数，参数格式是map形式
             if (invocation.getArgs().length > 1) {
@@ -202,7 +203,7 @@ public class SqlInterceptor implements Interceptor {
                             sql = sql.replaceFirst("\\?", Matcher.quoteReplacement(getParameterValue(obj)));
                             list.add(parameterMapping.getProperty() + "=" + obj + "(" + obj.getClass().getSimpleName() + ")");
                         } else {
-                            sql = sql.replaceFirst("\\?", "null");
+                            sql = sql.replaceFirst("\\?", NULL);
                             list.add(parameterMapping.getProperty() + "=null");
                         }
                     } else if (boundSql.hasAdditionalParameter(propertyName)) {
@@ -212,7 +213,7 @@ public class SqlInterceptor implements Interceptor {
                             sql = sql.replaceFirst("\\?", Matcher.quoteReplacement(getParameterValue(obj)));
                             list.add(parameterMapping.getProperty() + "=" + obj + "(" + obj.getClass().getSimpleName() + ")");
                         } else {
-                            sql = sql.replaceFirst("\\?", "null");
+                            sql = sql.replaceFirst("\\?", NULL);
                             list.add(parameterMapping.getProperty() + "=null");
                         }
                     } else {

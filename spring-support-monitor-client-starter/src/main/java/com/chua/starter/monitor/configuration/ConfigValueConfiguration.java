@@ -1,10 +1,10 @@
 package com.chua.starter.monitor.configuration;
 
 import com.chua.common.support.function.Splitter;
+import com.chua.common.support.invoke.annotation.RequestLine;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.json.JsonArray;
 import com.chua.common.support.json.JsonObject;
-import com.chua.common.support.protocol.annotations.ServiceMapping;
 import com.chua.common.support.protocol.boot.*;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.MapUtils;
@@ -152,7 +152,7 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
     }
 
 
-    @ServiceMapping("config")
+    @RequestLine("config")
     public BootResponse listen(BootRequest request) {
         if(request.getCommandType() != CommandType.REGISTER) {
             return BootResponse.notSupport("The non-register command is not supported");

@@ -2,11 +2,10 @@ package com.chua.starter.oauth.client.support.advice;
 
 import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.lang.file.config.WriterSetting;
-import com.chua.common.support.lang.file.impl.writer.XmlFileWriter;
 import com.chua.common.support.lang.robin.Node;
 import com.chua.common.support.lang.robin.Robin;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.xml.Xml;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
@@ -20,7 +19,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
 
 /**
  * html
@@ -86,12 +84,8 @@ public class HtmlAdviceResolver implements AdviceResolver {
             String encode = URLEncoder.encode(toString, StandardCharsets.UTF_8);
             String url = address;
             if (Strings.isNullOrEmpty(url)) {
-                try (OutputStream writer = response.getOutputStream();
-                     XmlFileWriter xmlFileWriter = new XmlFileWriter(
-                             Collections.emptyList(),
-                             writer, WriterSetting.newDefault()
-                             )) {
-                    xmlFileWriter.writeJson(Json.getJsonObject(Json.toJson(ReturnResult.noAuth())));
+                try (OutputStream writer = response.getOutputStream()) {
+                    writer.write(Xml.toXmlByte(Json.getJsonObject(Json.toJson(ReturnResult.noAuth()))));
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }

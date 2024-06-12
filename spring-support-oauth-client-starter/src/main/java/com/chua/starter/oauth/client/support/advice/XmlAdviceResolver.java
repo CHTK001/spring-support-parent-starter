@@ -1,16 +1,13 @@
 package com.chua.starter.oauth.client.support.advice;
 
-import com.chua.common.support.json.Json;
+import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.code.ResultCode;
-import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.lang.file.config.WriterSetting;
-import com.chua.common.support.lang.file.impl.writer.XmlFileWriter;
+import com.chua.common.support.xml.Xml;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 
 import java.io.OutputStream;
-import java.util.Collections;
 
 /**
  * xml
@@ -29,13 +26,8 @@ public class XmlAdviceResolver implements AdviceResolver {
 
     @Override
     public Object resolve(HttpServletResponse response, Integer status, String message) {
-
-        try (OutputStream writer = response.getOutputStream();
-             XmlFileWriter xmlFileWriter = new XmlFileWriter(
-                     Collections.emptyList(),
-                     writer, WriterSetting.newDefault()
-             )) {
-            xmlFileWriter.writeJson(Json.getJsonObject(Json.toJson(ReturnResult.newBuilder().code(ResultCode.transferForHttpCodeStatus(status)))));
+        try (OutputStream writer = response.getOutputStream()) {
+            writer.write(Xml.toXmlByte(JsonObject.create().fluent("code", ResultCode.transferForHttpCodeStatus(status))));
         } catch (Exception e) {
             log.error("", e);
         }

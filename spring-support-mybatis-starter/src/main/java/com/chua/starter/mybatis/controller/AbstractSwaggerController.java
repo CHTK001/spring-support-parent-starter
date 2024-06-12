@@ -1,6 +1,7 @@
 package com.chua.starter.mybatis.controller;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
@@ -30,7 +31,9 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> extend
     @Operation(summary = "分页查询基础数据")
     @GetMapping("page")
     public ReturnPageResult<T> page(PageRequest<T> page, T entity) {
-        return PageResultUtils.ok(getService().page(page.createPage(), Wrappers.lambdaQuery(entity)));
+        S service = getService();
+        Page<T> tPage = service.page(page.createPage(), Wrappers.lambdaQuery(entity));
+        return PageResultUtils.ok(tPage);
     }
     /**
      * 查询基础数据

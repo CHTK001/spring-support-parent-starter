@@ -16,8 +16,8 @@ public class ProxyFactoryBean implements FactoryBean<Server> {
     public ProxyFactoryBean(ServiceDiscovery serviceDiscovery, int port) {
         this.server = Server.create("proxy", port);
         server.addDefinition(serviceDiscovery);
-        server.addLastFilter(AsyncHttpRoutingGatewayFilter.class);
-        server.addLastFilter(AsyncWebSocketRoutingGatewayFilter.class);
+        server.addFilter(AsyncHttpRoutingGatewayFilter.class);
+        server.addFilter(AsyncWebSocketRoutingGatewayFilter.class);
     }
 
     @Override

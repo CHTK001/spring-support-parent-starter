@@ -1,9 +1,7 @@
 package com.chua.starter.common.support.configuration;
 
-import com.chua.common.support.datasource.driver.JdbcDriver;
-import com.chua.common.support.datasource.engine.DefaultEngine;
-import com.chua.common.support.datasource.engine.Engine;
-import com.chua.common.support.datasource.executor.DdlExecutor;
+import com.chua.common.support.lang.engine.JdbcEngine;
+import com.chua.common.support.lang.engine.datasource.JdbcEngineDataSource;
 import com.chua.common.support.utils.*;
 import com.chua.starter.common.support.properties.CreateTableProperties;
 import lombok.extern.slf4j.Slf4j;
@@ -33,7 +31,7 @@ public class AutoCreateTableConfiguration implements ApplicationContextAware {
 
     CreateTableProperties createTableProperties;
     private Map<String, DataSource> dataSources;
-    private DdlExecutor ddlExecutor;
+    private JdbcEngine engine;
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
@@ -44,17 +42,16 @@ public class AutoCreateTableConfiguration implements ApplicationContextAware {
 
         log.info(">>>>>>> 开启自动建表功能[{}]", Arrays.toString(createTableProperties.getPackages()));
         this.dataSources = applicationContext.getBeansOfType(DataSource.class);
-        Engine engine = new DefaultEngine();
-        engine.register(new JdbcDriver());
+        engine = new JdbcEngine();
         for (Map.Entry<String, DataSource> entry : dataSources.entrySet()) {
-            engine.register(JdbcEngineDataSource.builder()
+            engine.addDataSource(JdbcEngineDataSource.builder()
                     .name(entry.getKey())
                     .dataSource(entry.getValue())
                     .build()
             );
         }
 
-        this.ddlExecutor = engine.createDdl();
+
         if(createTableProperties.isAsync()) {
             ThreadUtils.newStaticThreadPool().execute(this::doCreateTable);
             return;
@@ -106,6 +103,6 @@ public class AutoCreateTableConfiguration implements ApplicationContextAware {
         if(null == type) {
             return;
         }
-       ddlExecutor.execute(type, createTableProperties.getType());
+         engine.build().doIt(type, createTableProperties.getType());
     }
 }
