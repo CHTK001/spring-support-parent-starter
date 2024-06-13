@@ -29,6 +29,16 @@ public class ProxyProperties {
     private String url;
 
     /**
+     * 代理服务的权重
+     */
+    private int weight = 1;
+
+    /**
+     * 连接代理服务的超时时间
+     */
+    private int timeoutMills = 10_000;
+
+    /**
      * 连接代理服务的用户名
      */
     private String username;
