@@ -1,10 +1,12 @@
 package com.chua.starter.monitor.server.service.impl;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.common.support.discovery.ServiceDiscovery;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.protocol.Server;
 import com.chua.common.support.utils.ObjectUtils;
+import com.chua.common.support.utils.ThreadUtils;
 import com.chua.netty.support.proxy.filter.AsyncHttpRoutingGatewayFilter;
 import com.chua.netty.support.proxy.filter.AsyncTcpRoutingGatewayFilter;
 import com.chua.netty.support.proxy.filter.AsyncWebSocketRoutingGatewayFilter;
@@ -13,10 +15,12 @@ import com.chua.starter.monitor.server.mapper.MonitorProxyMapper;
 import com.chua.starter.monitor.server.service.MonitorProxyService;
 import jakarta.annotation.Resource;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -27,7 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author CH
  */
 @Service
-public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, MonitorProxy> implements MonitorProxyService{
+public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, MonitorProxy> implements MonitorProxyService, InitializingBean {
 
     private static final Map<String, Server> SERVER_MAP = new ConcurrentHashMap<>();
     @Resource
@@ -121,5 +125,21 @@ public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, Mon
 
     private String createKey(MonitorProxy monitorProxy) {
         return monitorProxy.getProxyHost() + ":" + monitorProxy.getProxyPort();
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        ThreadUtils.newStaticThreadPool().execute(() -> {
+            try {
+                List<MonitorProxy> monitorProxies = baseMapper.selectList(Wrappers.<MonitorProxy>lambdaQuery().eq(MonitorProxy::getProxyStatus, 1));
+                for (MonitorProxy monitorProxy : monitorProxies) {
+                    try {
+                        start(monitorProxy);
+                    } catch (Exception ignored) {
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+        });
     }
 }

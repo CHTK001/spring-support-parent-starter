@@ -3,8 +3,8 @@ package com.chua.starter.common.support.filestorage;
 import com.chua.common.support.image.filter.ImageFilter;
 import com.chua.common.support.oss.FileStorage;
 import com.chua.common.support.oss.extension.NamingResolver;
-import com.chua.common.support.spi.Option;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.spi.SpiOption;
 import com.chua.common.support.utils.IoUtils;
 
 import java.util.List;
@@ -47,18 +47,18 @@ public class DefaultFileStorageService implements FileStorageService{
     }
 
     @Override
-    public List<Option<String>> getType() {
+    public List<SpiOption> getType() {
         return ServiceProvider.of(FileStorage.class).options();
     }
 
     @Override
-    public List<Option<String>> getFilter() {
+    public List<SpiOption> getFilter() {
         return ServiceProvider.of(ImageFilter.class).options();
     }
 
 
     @Override
-    public List<Option<String>> getNamed() {
+    public List<SpiOption> getNamed() {
         return ServiceProvider.of(NamingResolver.class).options();
     }
 

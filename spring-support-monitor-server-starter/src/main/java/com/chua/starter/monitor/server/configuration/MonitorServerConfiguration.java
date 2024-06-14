@@ -26,6 +26,7 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
@@ -61,7 +62,9 @@ public class MonitorServerConfiguration implements BeanDefinitionRegistryPostPro
 
     @Bean
     @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = JobProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = true)
     public SchedulerTrigger schedulerTrigger() {
+        log.info("开启定时任务");
         return new SchedulerTrigger();
     }
     @Override
