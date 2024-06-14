@@ -15,6 +15,9 @@ import java.awt.*;
 @ConfigurationProperties(prefix = CaptchaProperties.PRE, ignoreInvalidFields = true)
 public class CaptchaProperties {
 
+    /**
+     * 配置前缀
+     */
     public static final String PRE = "plugin.captcha";
 
 

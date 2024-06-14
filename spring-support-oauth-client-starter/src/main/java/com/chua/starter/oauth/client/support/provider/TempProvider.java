@@ -7,6 +7,7 @@ import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.result.Result;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.oauth.client.support.annotation.UserValue;
@@ -22,6 +23,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.env.Environment;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.RequestAttributes;
@@ -29,9 +31,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.validation.Valid;
-import java.util.Collections;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 import static com.chua.common.support.constant.Constants.CAPTCHA_SESSION_KEY;
 import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
@@ -199,8 +199,22 @@ public class TempProvider {
         }
         UserMenuResult userMenuResult = new UserMenuResult();
         userMenuResult.setPermissions(AuthClientExecute.getInstance().getUserResult().getPermission());
+        Environment environment = SpringBeanUtils.getEnvironment();
         try {
-            userMenuResult.setMenu(Json5.fromJsonToList(TempProvider.class.getResourceAsStream(StringUtils.defaultString(authProperties.getTemp().getMenuPath(), "/menu.json5")), RouteVO.class));
+            List<RouteVO> routeVOS = Json5.fromJsonToList(TempProvider.class.getResourceAsStream(StringUtils.defaultString(authProperties.getTemp().getMenuPath(), "/menu.json5")), RouteVO.class);
+            List<RouteVO> result = new ArrayList<>(routeVOS.size());
+            for (RouteVO routeVO : routeVOS) {
+                if(StringUtils.isEmpty(routeVO.getCondition())) {
+                    result.add(routeVO);
+                    continue;
+                }
+                Boolean aBoolean = environment.getProperty(routeVO.getCondition(), Boolean.class);
+                if(null == aBoolean || !aBoolean) {
+                    result.add(routeVO);
+                }
+
+            }
+            userMenuResult.setMenu(result);
         } catch (Exception ignored) {
             userMenuResult.setMenu(Collections.emptyList());
         }
