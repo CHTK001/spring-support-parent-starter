@@ -1,7 +1,7 @@
 package com.chua.starter.common.support.filestorage;
 
 import com.chua.common.support.oss.FileStorage;
-import com.chua.common.support.spi.Option;
+import com.chua.common.support.spi.SpiOption;
 
 import java.util.List;
 import java.util.Set;
@@ -48,21 +48,21 @@ public interface FileStorageService {
      *
      * @return {@link Set}<{@link String}>
      */
-    List<Option<String>> getType();
+    List<SpiOption> getType();
 
     /**
      * 获取图片滤镜
      *
-     * @return {@link List}<{@link Option}<{@link String}>>
+     * @return {@link List}<{@link SpiOption}<{@link String}>>
      */
-    List<Option<String>> getFilter();
+    List<SpiOption> getFilter();
 
     /**
      * 获得命名
      *
-     * @return {@link List}<{@link Option}<{@link String}>>
+     * @return {@link List}<{@link SpiOption}<{@link String}>>
      */
-    List<Option<String>> getNamed();
+    List<SpiOption> getNamed();
 
 
 }
