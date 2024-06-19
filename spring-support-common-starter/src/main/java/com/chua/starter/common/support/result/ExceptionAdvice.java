@@ -7,6 +7,7 @@ import com.chua.common.support.lang.file.adaptor.univocity.parsers.conversions.V
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import jakarta.servlet.ServletException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
@@ -22,7 +23,6 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
-import jakarta.servlet.ServletException;
 import java.net.UnknownHostException;
 import java.sql.SQLException;
 import java.sql.SQLSyntaxErrorException;
@@ -214,7 +214,11 @@ public class ExceptionAdvice  {
     @ExceptionHandler(RuntimeException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> handleRuntimeException(RuntimeException e) {
-        log.error("handleRuntimeException exception", e);
+        if("org.apache.ibatis.exceptions.TooManyResultsException".equals(e.getClass().getName())) {
+            log.error("SQL只允许返回一条数据, 但是查询到多条数据", e);
+        } else {
+            log.error("handleRuntimeException exception", e);
+        }
         if(Validator.hasChinese(e.getMessage())) {
             return Result.failed(e);
         }
