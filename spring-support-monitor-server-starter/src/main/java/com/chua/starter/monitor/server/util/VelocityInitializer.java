@@ -28,6 +28,7 @@ public class VelocityInitializer {
             // 定义字符集
             p.setProperty(Velocity.INPUT_ENCODING, UTF_8);
             // 初始化Velocity引擎，指定配置Properties
+            Velocity.reset();
             Velocity.init(p);
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -42,6 +43,7 @@ public class VelocityInitializer {
             p.setProperty("root", "");
             // 定义字符集
             p.setProperty(Velocity.INPUT_ENCODING, UTF_8);
+            Velocity.reset();
             // 初始化Velocity引擎，指定配置Properties
             Velocity.init(p);
         } catch (Exception e) {

@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.server.controller.gen;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.chua.common.support.annotations.Ignore;
 import com.chua.common.support.constant.FileType;
 import com.chua.common.support.datasource.meta.Column;
 import com.chua.common.support.datasource.meta.Database;
@@ -59,6 +60,7 @@ public class SessionController {
 
     @Resource
     private MonitorSysGenRemarkService sysGenRemarkService;
+
     /**
      * 表格列表
      *
@@ -67,12 +69,12 @@ public class SessionController {
     @GetMapping("children")
     public ReturnResult<List<?>> children(TableQuery query) {
         MonitorSysGen sysGen = sysGenService.getById(query.getGenId());
-        if(null == sysGen) {
+        if (null == sysGen) {
             return ReturnResult.illegal("表不存在");
         }
 
         try (Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions())) {
-            if(query.getFileType() == FileType.DATABASE) {
+            if (query.getFileType() == FileType.DATABASE) {
                 return ReturnResult.ok(session.getTables(query.getDatabaseId(), "%", query.createSessionQuery()));
             }
 
@@ -88,7 +90,7 @@ public class SessionController {
             for (Column column : CollectionUtils.wrapper(columns)) {
                 String columnName = column.getName();
                 MonitorSysGenRemark sysGenRemark = tpl.get(columnName);
-                if(null != sysGenRemark) {
+                if (null != sysGenRemark) {
                     column.setComment(sysGenRemark.getRemarkName());
                 }
             }
@@ -98,6 +100,7 @@ public class SessionController {
             return ReturnResult.ok(Collections.emptyList());
         }
     }
+
     /**
      * 表格列表
      *
@@ -106,23 +109,23 @@ public class SessionController {
     @GetMapping("keyword")
     public ReturnResult<List<Database>> keyword(TableQuery query) {
         MonitorSysGen sysGen = sysGenService.getById(query.getGenId());
-        if(null == sysGen) {
+        if (null == sysGen) {
             return ReturnResult.illegal("表不存在");
         }
         String database = StringUtils.defaultString(query.getDatabaseId(), sysGen.getGenDatabase());
         List<Database> results1 = new LinkedList<>();
         Session session = ServiceProvider.of(Session.class).getKeepExtension(query.getGenId() + "", sysGen.getGenType(), sysGen.newDatabaseOptions());
-        try{
-            if(!session.isConnect()) {
+        try {
+            if (!session.isConnect()) {
                 ServiceProvider.of(Session.class).closeKeepExtension(query.getGenId() + "");
                 return ReturnResult.illegal("当前服务器不可达");
             }
             List<Database> database1 = session.getDatabase(query.getKeyword());
-            if(CollectionUtils.isNotEmpty(database1)) {
+            if (CollectionUtils.isNotEmpty(database1)) {
                 return ReturnResult.ok(database1);
             }
 
-            List<Table> results = session.getTables(database, "%",  query.createSessionQuery());
+            List<Table> results = session.getTables(database, "%", query.createSessionQuery());
             Database item = new Database();
             item.setName("table");
             item.setLabel("表");
@@ -149,12 +152,13 @@ public class SessionController {
             log.error("", e);
         }
 
-        if(CollectionUtils.isEmpty(results1)) {
+        if (CollectionUtils.isEmpty(results1)) {
             return ReturnResult.ok(Collections.emptyList());
         }
 
         return ReturnResult.ok(results1);
     }
+
     /**
      * 解释
      *
@@ -162,8 +166,8 @@ public class SessionController {
      * @return {@link ReturnResult}<{@link SessionResultSet}>
      */
     @PostMapping("explain")
-   public ReturnResult<SessionResult> explain(@RequestBody ExplainQuery explainQuery) {
-        if (StringUtils.isEmpty(explainQuery.getGenId())){
+    public ReturnResult<SessionResult> explain(@RequestBody ExplainQuery explainQuery) {
+        if (StringUtils.isEmpty(explainQuery.getGenId())) {
             return ReturnResult.error("未配置生成器");
         }
 
@@ -206,6 +210,7 @@ public class SessionController {
         sessionResult.setMessage(stringBuffer.toString());
         return ReturnResult.ok(sessionResult);
     }
+
     /**
      * 解释
      *
@@ -213,8 +218,8 @@ public class SessionController {
      * @return {@link ReturnResult}<{@link SessionResultSet}>
      */
     @PostMapping("execute")
-   public ReturnResult<SessionResult> execute(@RequestBody ExecuteQuery executeQuery) {
-        if (StringUtils.isEmpty(executeQuery.getGenId())){
+    public ReturnResult<SessionResult> execute(@RequestBody ExecuteQuery executeQuery) {
+        if (StringUtils.isEmpty(executeQuery.getGenId())) {
             return ReturnResult.error("未配置生成器");
         }
 
@@ -226,20 +231,20 @@ public class SessionController {
         StringBuilder stringBuffer = new StringBuilder();
         long startTime = System.nanoTime();
         Session session = ServiceProvider.of(Session.class).getKeepExtension(executeQuery.getGenId(), sysGen.getGenType(), sysGen.newDatabaseOptions());
-        if(!session.isConnect()) {
-            ServiceProvider.of(Session.class).closeKeepExtension(executeQuery.getGenId() );
+        if (!session.isConnect()) {
+            ServiceProvider.of(Session.class).closeKeepExtension(executeQuery.getGenId());
             return ReturnResult.illegal("当前服务器不可达");
         }
         SessionResultSet sessionResultSet = null;
         Map<String, String> remark = new HashMap<>();
         try {
             sessionResultSet = session.executeQuery(executeQuery.getContent(), executeQuery);
-            if(StringUtils.isNotEmpty(executeQuery.getContent())) {
+            if (StringUtils.isNotEmpty(executeQuery.getContent())) {
                 stringBuffer.append(HighlightingFormatter.INSTANCE.format(SqlFormatter.format(executeQuery.getContent())));
             }
             String currentDatabase = executeQuery.getCurrentDatabase();
             String currentTable = executeQuery.getCurrentTable();
-            if(StringUtils.isNotBlank(currentTable)) {
+            if (StringUtils.isNotBlank(currentTable)) {
                 List<MonitorSysGenRemark> list = sysGenRemarkService.list(Wrappers.<MonitorSysGenRemark>lambdaQuery()
                         .eq(MonitorSysGenRemark::getGenId, executeQuery.getGenId())
                         .eq(MonitorSysGenRemark::getRemarkTable, currentTable)
@@ -251,7 +256,7 @@ public class SessionController {
             }
         } catch (Exception e) {
             String localizedMessage = e.getLocalizedMessage();
-            if(null != localizedMessage) {
+            if (null != localizedMessage) {
                 int i = localizedMessage.indexOf(SYMBOL_EXCEPTION);
                 while (i > -1) {
                     localizedMessage = localizedMessage.substring(SYMBOL_EXCEPTION.length() + i + 1);
@@ -275,6 +280,7 @@ public class SessionController {
         sessionResult.setRemark(remark);
         return ReturnResult.ok(sessionResult);
     }
+
     /**
      * 基本信息
      *
@@ -282,8 +288,8 @@ public class SessionController {
      * @return {@link ReturnResult}<{@link SessionResultSet}>
      */
     @PostMapping("log")
-   public ReturnResult<SessionResult> log(@RequestBody ExecuteQuery executeQuery) {
-        if (StringUtils.isEmpty(executeQuery.getGenId())){
+    public ReturnResult<SessionResult> log(@RequestBody ExecuteQuery executeQuery) {
+        if (StringUtils.isEmpty(executeQuery.getGenId())) {
             return ReturnResult.error("未配置生成器");
         }
 
@@ -304,7 +310,7 @@ public class SessionController {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        if(sessionResultSet.hasMessage()) {
+        if (sessionResultSet.hasMessage()) {
             return ReturnResult.illegal(sessionResultSet.getMessage());
         }
         SessionResult sessionResult = new SessionResult();
@@ -313,6 +319,7 @@ public class SessionController {
         sessionResult.setTotal(sessionResultSet.toTotal());
         return ReturnResult.ok(sessionResult);
     }
+
     /**
      * 基本信息
      *
@@ -320,8 +327,8 @@ public class SessionController {
      * @return {@link ReturnResult}<{@link SessionResultSet}>
      */
     @PostMapping("info")
-   public ReturnResult<SessionResult> info(@RequestBody ExecuteQuery executeQuery) {
-        if (StringUtils.isEmpty(executeQuery.getGenId())){
+    public ReturnResult<SessionResult> info(@RequestBody ExecuteQuery executeQuery) {
+        if (StringUtils.isEmpty(executeQuery.getGenId())) {
             return ReturnResult.error("未配置生成器");
         }
 
@@ -331,7 +338,7 @@ public class SessionController {
         }
 
         Session session = ServiceProvider.of(Session.class).getKeepExtension(sysGen.getGenId() + "", sysGen.getGenType(), sysGen.newDatabaseOptions());
-        if(!session.isConnect()) {
+        if (!session.isConnect()) {
             ServiceProvider.of(Session.class).closeKeepExtension(sysGen.getGenId() + "");
             return ReturnResult.illegal("当前服务器不可达");
         }
@@ -342,11 +349,12 @@ public class SessionController {
             log.error("", e);
             return ReturnResult.illegal(e);
         }
-        if(sessionInfo.hasMessage()) {
+        if (sessionInfo.hasMessage()) {
             return ReturnResult.illegal(sessionInfo.getMessage());
         }
         return ReturnResult.ok(sessionInfo.toResult());
     }
+
     /**
      * 基本信息
      *
@@ -354,9 +362,10 @@ public class SessionController {
      * @return {@link ReturnResult}<{@link SessionResultSet}>
      */
     @PostMapping("save")
-   public ReturnResult<SessionResult> save(@RequestBody SaveQuery saveQuery) {
+    public ReturnResult<SessionResult> save(@RequestBody SaveQuery saveQuery) {
         return save(saveQuery, null);
     }
+
     /**
      * 基本信息
      *
@@ -364,8 +373,8 @@ public class SessionController {
      * @return {@link ReturnResult}<{@link SessionResultSet}>
      */
     @PostMapping("saveForm")
-   public ReturnResult<SessionResult> save(SaveQuery saveQuery, @RequestParam("file")MultipartFile file) {
-        if (StringUtils.isEmpty(saveQuery.getGenId())){
+    public ReturnResult<SessionResult> save(SaveQuery saveQuery, @RequestParam("file") MultipartFile file) {
+        if (StringUtils.isEmpty(saveQuery.getGenId())) {
             return ReturnResult.error("未配置生成器");
         }
 
@@ -375,7 +384,7 @@ public class SessionController {
         }
 
         Session session = ServiceProvider.of(Session.class).getKeepExtension(saveQuery.getGenId(), sysGen.getGenType(), sysGen.newDatabaseOptions());
-        if(!session.isConnect()) {
+        if (!session.isConnect()) {
             ServiceProvider.of(Session.class).closeKeepExtension(saveQuery.getGenId());
             return ReturnResult.illegal("当前服务器不可达");
         }
@@ -396,11 +405,12 @@ public class SessionController {
             } catch (IOException ignored) {
             }
         }
-        if(sessionInfo.hasMessage()) {
+        if (sessionInfo.hasMessage()) {
             return ReturnResult.illegal(sessionInfo.getMessage());
         }
         return ReturnResult.ok(sessionInfo.toResult());
     }
+
     /**
      * 基本信息
      *
@@ -408,8 +418,8 @@ public class SessionController {
      * @return {@link ReturnResult}<{@link SessionResultSet}>
      */
     @PostMapping("delete")
-   public ReturnResult<SessionResult> delete(@RequestBody DeleteQuery deleteQuery) {
-        if (StringUtils.isEmpty(deleteQuery.getGenId())){
+    public ReturnResult<SessionResult> delete(@RequestBody DeleteQuery deleteQuery) {
+        if (StringUtils.isEmpty(deleteQuery.getGenId())) {
             return ReturnResult.error("未配置生成器");
         }
 
@@ -419,7 +429,7 @@ public class SessionController {
         }
 
         Session session = ServiceProvider.of(Session.class).getKeepExtension(deleteQuery.getGenId(), sysGen.getGenType(), sysGen.newDatabaseOptions());
-        if(!session.isConnect()) {
+        if (!session.isConnect()) {
             ServiceProvider.of(Session.class).closeKeepExtension(deleteQuery.getGenId());
             return ReturnResult.illegal("当前服务器不可达");
         }
@@ -429,11 +439,12 @@ public class SessionController {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        if(StringUtils.isNotBlank(sessionInfo.getMessage())) {
+        if (StringUtils.isNotBlank(sessionInfo.getMessage())) {
             return ReturnResult.illegal(sessionInfo.getMessage());
         }
         return ReturnResult.ok(sessionInfo.toResult());
     }
+
     /**
      * 基本信息
      *
@@ -441,9 +452,10 @@ public class SessionController {
      * @return {@link ReturnResult}<{@link SessionResultSet}>
      */
     @PostMapping("update")
-   public ReturnResult<SessionResult> update(@RequestBody UpdateQuery updateQuery) {
+    public ReturnResult<SessionResult> update(@RequestBody UpdateQuery updateQuery) {
         return update(updateQuery, null);
     }
+
     /**
      * 基本信息
      *
@@ -451,8 +463,8 @@ public class SessionController {
      * @return {@link ReturnResult}<{@link SessionResultSet}>
      */
     @PostMapping("updateForm")
-   public ReturnResult<SessionResult> update(UpdateQuery updateQuery, @RequestParam("file")MultipartFile file) {
-        if (StringUtils.isEmpty(updateQuery.getGenId())){
+    public ReturnResult<SessionResult> update(UpdateQuery updateQuery, @RequestParam("file") MultipartFile file) {
+        if (StringUtils.isEmpty(updateQuery.getGenId())) {
             return ReturnResult.error("未配置生成器");
         }
 
@@ -466,7 +478,7 @@ public class SessionController {
         } catch (Exception ignored) {
         }
         Session session = ServiceProvider.of(Session.class).getKeepExtension(updateQuery.getGenId(), sysGen.getGenType(), sysGen.newDatabaseOptions());
-        if(!session.isConnect()) {
+        if (!session.isConnect()) {
             ServiceProvider.of(Session.class).closeKeepExtension(updateQuery.getGenId());
             return ReturnResult.illegal("当前服务器不可达");
         }
@@ -482,7 +494,7 @@ public class SessionController {
             } catch (IOException ignored) {
             }
         }
-        if(sessionInfo.hasMessage()) {
+        if (sessionInfo.hasMessage()) {
             return ReturnResult.illegal(sessionInfo.getMessage());
         }
         return ReturnResult.ok(sessionInfo.toResult());
@@ -495,9 +507,10 @@ public class SessionController {
      * @param query 执行查询
      * @return {@link ResponseEntity}<{@link byte[]}>
      */
+    @Ignore
     @GetMapping("previewDoc")
-   public ResponseEntity<byte[]> previewDoc(DocQuery query) {
-        if (StringUtils.isEmpty(query.getGenId())){
+    public ResponseEntity<byte[]> previewDoc(DocQuery query) {
+        if (StringUtils.isEmpty(query.getGenId())) {
             return ResponseEntity.notFound().build();
         }
 
@@ -512,11 +525,11 @@ public class SessionController {
         FileUtils.mkParentDirs(file);
         byte[] result = null;
         try {
-            if(file.exists() && file.length() > 0) {
-                try(FileInputStream fis = new FileInputStream(file)) {
+            if (file.exists() && file.length() > 0) {
+                try (FileInputStream fis = new FileInputStream(file)) {
                     result = IoUtils.toByteArray(fis);
                 }
-                if(result.length == 0) {
+                if (result.length == 0) {
                     FileUtils.forceDelete(file);
                     return ResponseEntity
                             .ok()
@@ -524,15 +537,15 @@ public class SessionController {
                             .body("文档不存在".getBytes(StandardCharsets.UTF_8));
                 }
             } else {
-                    try (Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions())) {
-                        result = session.previewDoc(query);
-                        if (session.docCache()) {
-                            try (OutputStream os = new FileOutputStream(file)) {
-                                IoUtils.write(result, os);
-                            }
+                try (Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions())) {
+                    result = session.previewDoc(query);
+                    if (session.docCache()) {
+                        try (OutputStream os = new FileOutputStream(file)) {
+                            IoUtils.write(result, os);
                         }
+                    }
                 } catch (Exception e) {
-                    if(null == result) {
+                    if (null == result) {
                         return ResponseEntity
                                 .ok()
                                 .contentType(MediaType.TEXT_HTML)
@@ -550,6 +563,7 @@ public class SessionController {
                 .contentLength(result.length)
                 .body(result);
     }
+
     /**
      * 预览文档
      * 基本信息
@@ -558,8 +572,8 @@ public class SessionController {
      * @return {@link ResponseEntity}<{@link byte[]}>
      */
     @PostMapping("syncDoc")
-   public ReturnResult<Boolean> syncDoc(@RequestBody DocQuery query) {
-        if (StringUtils.isEmpty(query.getGenId())){
+    public ReturnResult<Boolean> syncDoc(@RequestBody DocQuery query) {
+        if (StringUtils.isEmpty(query.getGenId())) {
             return ReturnResult.error("未配置生成器");
         }
 
@@ -571,7 +585,7 @@ public class SessionController {
         File mkdir = FileUtils.mkdir(new File(genProperties.getTempPath(), sysGen.getGenId() + ""));
         File file = new File(mkdir, "doc");
         file = new File(file, sysGen.getGenId() + ".html");
-        if(file.exists()) {
+        if (file.exists()) {
             try {
                 FileUtils.forceDelete(file);
             } catch (IOException ignored) {
@@ -595,8 +609,8 @@ public class SessionController {
      * @return {@link ResponseEntity}<{@link byte[]}>
      */
     @GetMapping("downloadDoc")
-   public ResponseEntity<byte[]> downloadDoc(DocQuery query) {
-        if (StringUtils.isEmpty(query.getGenId())){
+    public ResponseEntity<byte[]> downloadDoc(DocQuery query) {
+        if (StringUtils.isEmpty(query.getGenId())) {
             return ResponseEntity.notFound().build();
         }
 
@@ -618,7 +632,7 @@ public class SessionController {
         }
         return ResponseEntity
                 .ok()
-                .header("Content-Disposition", "attachment;filename="+ sysGen.getGenDatabase() +"." + query.getType().toLowerCase())
+                .header("Content-Disposition", "attachment;filename=" + sysGen.getGenDatabase() + "." + query.getType().toLowerCase())
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .contentLength(result.length)
                 .body(result);

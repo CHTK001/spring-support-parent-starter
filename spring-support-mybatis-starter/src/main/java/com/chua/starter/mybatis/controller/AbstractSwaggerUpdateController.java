@@ -92,4 +92,13 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
      * @return S 返回服务的实例。这里的S是泛型，代表了服务的类型。
      */
     abstract public S getService();
+    /**
+     * 渲染实体
+     *
+     * @param t 实体
+     * @return 分页结果
+     */
+    public T render(T t) {
+        return t;
+    }
 }

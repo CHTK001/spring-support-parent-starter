@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.server.util;
 
 import com.chua.common.support.lang.date.DateTime;
+import com.chua.common.support.utils.FileUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.server.entity.MonitorSysGenColumn;
 import com.chua.starter.monitor.server.entity.MonitorSysGenTable;
@@ -147,7 +148,7 @@ public class VelocityUtils {
         if(VUE.equalsIgnoreCase(sysGenTemplate.getTemplateType())) {
             path = vuePath;
         }
-        return StringUtils.format(sysGenTemplate.getTemplatePath(), path, className);
+        return FileUtils.normalize(StringUtils.format(sysGenTemplate.getTemplatePath(), path, className));
     }
 
     /**

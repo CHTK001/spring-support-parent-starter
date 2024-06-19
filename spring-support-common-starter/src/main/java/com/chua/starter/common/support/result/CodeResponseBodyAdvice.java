@@ -3,8 +3,10 @@ package com.chua.starter.common.support.result;
 import com.chua.common.support.converter.Converter;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.json.JsonObject;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.RandomUtils;
 import com.chua.starter.common.support.provider.CodecProvider;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.MethodParameter;
@@ -16,8 +18,6 @@ import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
-
-import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * @author CH
@@ -47,14 +47,21 @@ public class CodeResponseBodyAdvice implements ResponseBodyAdvice<Object> {
         }
 
         if(serverHttpRequest instanceof ServletServerHttpRequest) {
+            if(o instanceof ReturnResult returnResult && !returnResult.isOk()) {
+                return o;
+            }
+
             HttpServletRequest servletRequest = ((ServletServerHttpRequest) serverHttpRequest).getServletRequest();
             if(codecProvider.isPass(servletRequest.getRequestURI())) {
                 return o;
             }
+
             Boolean aBoolean = Converter.convertIfNecessary(servletRequest.getSession().getAttribute("codec"), Boolean.class);
             if(null != aBoolean && !aBoolean) {
                 return o;
             }
+
+
 
             HttpHeaders headers = serverHttpResponse.getHeaders();
             JsonObject jsonObject = new JsonObject();

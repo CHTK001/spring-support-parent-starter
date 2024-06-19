@@ -28,9 +28,9 @@ import java.util.Arrays;
  */
 @RestController
     #if($version)
-    @RequestMapping("/${version}/${businessName}")
+@RequestMapping("/${version}/${businessName}")
     #else
-    @RequestMapping("/${moduleName}/${businessName}")
+@RequestMapping("/${moduleName}/${businessName}")
     #end
 public class ${ClassName}Controller {
 
@@ -61,7 +61,7 @@ public class ${ClassName}Controller {
      */
     @PostMapping("/save")
     public Result<${ClassName}> save(@Validated(AddGroup.class) @RequestBody ${ClassName} ${className}) {
-            ${className}Service.save(${className});
+        ${className}Service.save(${className});
         return Result.success(${className});
     }
 

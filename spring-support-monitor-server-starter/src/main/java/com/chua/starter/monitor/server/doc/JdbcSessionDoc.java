@@ -16,7 +16,6 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
 import java.io.File;
-import java.nio.file.Files;
 
 import static cn.smallbun.screw.core.constant.DefaultConstants.DESCRIPTION;
 
@@ -94,7 +93,13 @@ public class JdbcSessionDoc implements SessionDoc {
                 produce.produce(dataModel, docName);
                 File file = new File("./doc", docName + "." + engineFileType.name().toLowerCase());
 
-                return IoUtils.toByteArray(Files.newInputStream(file.toPath()));
+                String string = IoUtils.toString(file);
+                string = string.replace("<style type=\"text/css\">", "<style type=\"text/css\">::-webkit-scrollbar {width: 5px;height: 5px;}\n" +
+                        "::-webkit-scrollbar-thumb {background-color: rgba(50, 50, 50, 0.3);}\n" +
+                        "::-webkit-scrollbar-thumb:hover {background-color: rgba(50, 50, 50, 0.6);}\n" +
+                        "::-webkit-scrollbar-track {background-color: rgba(50, 50, 50, 0.1);}\n" +
+                        "::-webkit-scrollbar-track:hover {background-color: rgba(50, 50, 50, 0.2);}");
+                return string.getBytes();
             } catch (Exception ignored) {
             }
         } finally {
