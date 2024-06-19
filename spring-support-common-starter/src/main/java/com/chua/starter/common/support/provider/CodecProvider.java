@@ -4,6 +4,7 @@ import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.crypto.CodecKeyPair;
 import com.chua.common.support.matcher.PathMatcher;
 import com.chua.common.support.utils.DigestUtils;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.properties.CodecProperties;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -21,6 +22,9 @@ public class CodecProvider {
 
 
     private final List<String> whiteList;
+    private final Codec codec;
+    private final CodecKeyPair codecKeyPair;
+    private final String publicKeyHex;
     private boolean enable;
 
     /**
@@ -32,7 +36,11 @@ public class CodecProvider {
     public CodecProvider(CodecProperties codecProperties) {
         this.enable = codecProperties.isEnable();
         this.codecType = codecProperties.getCodecType();
+        this.codec = Codec.build(codecType);
         this.whiteList = codecProperties.getWhiteList();
+        this.codecKeyPair = (CodecKeyPair) codec;
+        this.publicKeyHex = codecKeyPair.getPublicKeyHex();
+
     }
 
 
@@ -47,11 +55,8 @@ public class CodecProvider {
      * @return {@link Object}
      */
     public CodecResult encode(String data) {
-        Codec codec = Codec.build(codecType);
-        CodecKeyPair codecKeyPair = (CodecKeyPair) codec;
-        String publicKeyHex = codecKeyPair.getPublicKeyHex();
         String encode = codecKeyPair.encode(data, publicKeyHex);
-        String nanoTime = System.nanoTime() + "000";
+        String nanoTime = StringUtils.padAfter(System.nanoTime() + "", 16, "0");
         String encrypt = DigestUtils.aesEncrypt(codecKeyPair.getPrivateKeyHex(), nanoTime);
         return new CodecResult(encrypt, encode, nanoTime);
     }

@@ -209,7 +209,7 @@ public class TempProvider {
                     continue;
                 }
                 Boolean aBoolean = environment.getProperty(routeVO.getCondition(), Boolean.class);
-                if(null == aBoolean || !aBoolean) {
+                if(null == aBoolean || aBoolean) {
                     result.add(routeVO);
                 }
 
