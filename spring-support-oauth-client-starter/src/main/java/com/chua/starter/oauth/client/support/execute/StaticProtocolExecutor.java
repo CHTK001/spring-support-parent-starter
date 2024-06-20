@@ -12,6 +12,7 @@ import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
+import com.google.common.collect.Sets;
 
 import java.util.List;
 import java.util.Map;
@@ -75,6 +76,9 @@ public class StaticProtocolExecutor implements ProtocolExecutor{
                     userResult.setAuthType(AuthType.STATIC.name());
                     userResult.setUsername(username);
                     userResult.setExpire(System.nanoTime());
+                    if("admin".equals(username)) {
+                        userResult.setRoles(Sets.newHashSet("admin"));
+                    }
                     loginAuthResult.setUserResult(userResult);
                     try {
                         loginAuthResult.setToken(Codec.build(encryption, DEFAULT_KEY).encodeHex(Json.toJson(userResult)));
