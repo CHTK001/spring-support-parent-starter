@@ -5,6 +5,7 @@ import com.chua.common.support.function.Splitter;
 import com.chua.common.support.json.Json5;
 import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.utils.ArrayUtils;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
@@ -204,11 +205,19 @@ public class TempProvider {
             List<RouteVO> routeVOS = Json5.fromJsonToList(TempProvider.class.getResourceAsStream(StringUtils.defaultString(authProperties.getTemp().getMenuPath(), "/menu.json5")), RouteVO.class);
             List<RouteVO> result = new ArrayList<>(routeVOS.size());
             for (RouteVO routeVO : routeVOS) {
-                if(StringUtils.isEmpty(routeVO.getCondition())) {
+                String condition = routeVO.getCondition();
+                if(StringUtils.isEmpty(condition)) {
                     result.add(routeVO);
                     continue;
                 }
-                Boolean aBoolean = environment.getProperty(routeVO.getCondition(), Boolean.class);
+
+                Boolean aBoolean = false;
+                if(condition.startsWith("#user.role.")) {
+                    String substring = condition.substring(11);
+                    aBoolean = ArrayUtils.containsAny(roles, substring.split(","), true);
+                } else {
+                    aBoolean = environment.getProperty(condition, Boolean.class);
+                }
                 if(null == aBoolean || aBoolean) {
                     result.add(routeVO);
                 }
