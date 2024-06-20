@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.monitor.server.mapper.MonitorTerminalProjectMapper">
+  <resultMap id="BaseResultMap" type="com.chua.starter.monitor.server.entity.MonitorTerminalProject">
+    <!--@mbg.generated-->
+    <!--@Table monitor_terminal_project-->
+    <id column="terminal_project_id" jdbcType="INTEGER" property="terminalProjectId" />
+    <result column="terminal_project_name" jdbcType="VARCHAR" property="terminalProjectName" />
+    <result column="terminal_project_desc" jdbcType="VARCHAR" property="terminalProjectDesc" />
+    <result column="terminal_project_path" jdbcType="VARCHAR" property="terminalProjectPath" />
+    <result column="terminal_project_start_script" jdbcType="VARCHAR" property="terminalProjectStartScript" />
+    <result column="terminal_project_end_script" jdbcType="VARCHAR" property="terminalProjectEndScript" />
+    <result column="terminal_project_log" jdbcType="VARCHAR" property="terminalProjectLog" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    terminal_project_id, terminal_project_name, terminal_project_desc, terminal_project_path, 
+    terminal_project_start_script, terminal_project_end_script, terminal_project_log, 
+    create_time, update_time
+  </sql>
+</mapper>
