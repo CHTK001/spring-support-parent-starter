@@ -2,13 +2,11 @@ package com.chua.starter.common.support.configuration;
 
 import com.chua.starter.common.support.debounce.DebounceAspect;
 import com.chua.starter.common.support.external.ExternalController;
+import com.chua.starter.common.support.filter.ActuatorAuthenticationFilter;
 import com.chua.starter.common.support.filter.ParameterLogFilter;
 import com.chua.starter.common.support.limit.LimitAspect;
 import com.chua.starter.common.support.logger.OperateLoggerPointcutAdvisor;
-import com.chua.starter.common.support.properties.ExternalInterfaceProperties;
-import com.chua.starter.common.support.properties.LimitProperties;
-import com.chua.starter.common.support.properties.LogProperties;
-import com.chua.starter.common.support.properties.ParameterProperties;
+import com.chua.starter.common.support.properties.*;
 import com.chua.starter.common.support.provider.SettingProvider;
 import com.chua.starter.common.support.result.ExceptionAdvice;
 import com.chua.starter.common.support.result.UniformResponseBodyAdvice;
@@ -18,6 +16,7 @@ import com.chua.starter.common.support.watch.WatchPointcutAdvisor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.web.client.RestTemplate;
@@ -28,7 +27,11 @@ import org.springframework.web.client.RestTemplate;
  * @author CH
  */
 @EnableConfigurationProperties({
-        LimitProperties.class, LogProperties.class, ParameterProperties.class, ExternalInterfaceProperties.class
+        LimitProperties.class,
+        LogProperties.class,
+        ParameterProperties.class,
+        ActuatorProperties.class,
+        ExternalInterfaceProperties.class
 })
 public class CommonConfiguration {
     @Bean
@@ -54,6 +57,17 @@ public class CommonConfiguration {
     @ConditionalOnProperty(name = "plugin.log.enable", havingValue = "true", matchIfMissing = true)
     public ParameterLogFilter paramLogFilter() {
         return new ParameterLogFilter();
+    }
+    @Bean
+    @ConditionalOnMissingBean
+    public FilterRegistrationBean<ActuatorAuthenticationFilter> actuatorAuthenticationFilter(ActuatorProperties actuatorProperties) {
+        FilterRegistrationBean<ActuatorAuthenticationFilter> filterRegistrationBean = new FilterRegistrationBean<>();
+        filterRegistrationBean.setFilter(new ActuatorAuthenticationFilter(actuatorProperties));
+        filterRegistrationBean.addUrlPatterns("/actuator/*");
+        filterRegistrationBean.setName("actuator-filter");
+        filterRegistrationBean.setAsyncSupported(true);
+
+        return filterRegistrationBean;
     }
 
     @Bean
