@@ -18,10 +18,10 @@ public class SwaggerEnvironmentPostProcessor implements EnvironmentPostProcessor
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         Properties properties = new Properties();
         properties.setProperty("springdoc.api-docs.enabled", "true");
-        properties.setProperty("knife4j.enable", "true");
+        properties.setProperty("knife4j.enable", "${plugin.swagger.enable:true}");
         properties.setProperty("knife4j.basic.enable", "true");
-        properties.setProperty("knife4j.basic.username", "root");
-        properties.setProperty("knife4j.basic.password", "123321");
+        properties.setProperty("knife4j.basic.username", "${plugin.swagger.username:root}");
+        properties.setProperty("knife4j.basic.password", "${plugin.swagger.password:root123}");
         PropertiesPropertySource propertiesPropertySource = new PropertiesPropertySource("knife4j", properties);
         MutablePropertySources propertySources = environment.getPropertySources();
         propertySources.addLast(propertiesPropertySource);

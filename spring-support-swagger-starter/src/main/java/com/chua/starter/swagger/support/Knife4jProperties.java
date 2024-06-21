@@ -16,7 +16,21 @@ import java.util.List;
 public class Knife4jProperties {
 
 
+    /**
+     * 是否开启
+     */
+    private boolean enable = true;
+
     private List<Knife4j> knife4j;
+
+    /**
+     * 账号
+     */
+    private String username = "root";
+    /**
+     * 密码
+     */
+    private String password = "root123";
     /**
      * 是否开启swagger注解记录用户操作日志
      */
