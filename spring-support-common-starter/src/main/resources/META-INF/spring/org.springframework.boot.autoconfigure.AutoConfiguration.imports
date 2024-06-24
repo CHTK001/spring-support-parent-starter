@@ -7,8 +7,8 @@ com.chua.starter.common.support.configuration.CacheConfiguration
 com.chua.starter.common.support.configuration.CaptchaConfiguration
 com.chua.starter.common.support.configuration.AutoCreateTableConfiguration
 com.chua.starter.common.support.configuration.CommonConfiguration
-com.chua.starter.common.support.configuration.CorsConfiguration
-com.chua.starter.common.support.configuration.ResourceConfiguration
 com.chua.starter.common.support.configuration.CodecConfiguration
 com.chua.starter.common.support.configuration.FileStoreConfiguration
 com.chua.starter.common.support.discovery.ServiceDiscoveryConfiguration
+com.chua.starter.common.support.configuration.InterceptorWebMvcConfigurer
+com.chua.starter.common.support.configuration.FilterConfiguration
