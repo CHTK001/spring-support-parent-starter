@@ -12,10 +12,10 @@
     <artifactId>spring-support-elasticsearch-starter</artifactId>
 
     <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <elasticsearch-java>7.17.9</elasticsearch-java>
+        <elasticsearch-java>7.21.9</elasticsearch-java>
     </properties>
 
 
