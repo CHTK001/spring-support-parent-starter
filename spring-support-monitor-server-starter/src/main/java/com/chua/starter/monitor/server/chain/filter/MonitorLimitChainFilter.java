@@ -10,6 +10,7 @@ import com.chua.common.support.function.request.Request;
 import com.chua.common.support.objects.annotation.Config;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.monitor.server.entity.MonitorProxyLimitLog;
+import com.chua.starter.monitor.server.service.IptablesService;
 import com.chua.starter.monitor.server.service.MonitorProxyLimitLogService;
 import jakarta.annotation.Resource;
 import org.redisson.api.RRateLimiter;
@@ -34,8 +35,10 @@ public class MonitorLimitChainFilter implements ChainFilter {
     private RedissonClient redisson;
     @Config("serverId")
     private String serverId;
-    private static final ExecutorService POOL = ThreadUtils.newFixedThreadExecutor(Runtime.getRuntime().availableProcessors() * 100);
+    private static final ExecutorService POOL = ThreadUtils.newVirtualThreadExecutor();
 
+    @Resource
+    private IptablesService iptablesService;
     @Resource
     private MonitorProxyLimitLogService monitorProxyLimitLogService;
 
