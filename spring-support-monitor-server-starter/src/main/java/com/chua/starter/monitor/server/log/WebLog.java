@@ -25,41 +25,57 @@ public class WebLog extends Slf4jLog {
     public WebLog(String pid) {
         this.pid = pid;
     }
+    public WebLog(String pid, SocketSessionTemplate socketSessionTemplate) {
+        this.pid = pid;
+        this.socketSessionTemplate = socketSessionTemplate;
+    }
 
 
     @Override
     public void error(String message, Throwable e) {
-        socketSessionTemplate.send("log-" + pid, message);
+        if(null != socketSessionTemplate) {
+            socketSessionTemplate.send("log-" + pid, DateUtils.currentString() +  " " + StringUtils.format(message));
+        }
         super.error(message, e);
     }
 
     @Override
     public void error(String message, Object... args) {
-        socketSessionTemplate.send("log-" + pid, DateUtils.currentString() +  " " +  StringUtils.format(message, args));
+        if(null != socketSessionTemplate) {
+            socketSessionTemplate.send("log-" + pid, DateUtils.currentString() +  " " + StringUtils.format(message, args));
+        }
         super.error(message, args);
     }
 
     @Override
     public void debug(String message, Object... args) {
-        socketSessionTemplate.send("log-" + pid, DateUtils.currentString() +  " " + StringUtils.format(message, args));
+        if(null != socketSessionTemplate) {
+            socketSessionTemplate.send("log-" + pid, DateUtils.currentString() +  " " + StringUtils.format(message, args));
+        }
         super.debug(message, args);
     }
 
     @Override
     public void trace(String message, Object... args) {
-        socketSessionTemplate.send("log-" + pid, DateUtils.currentString() +  " " + StringUtils.format(message, args));
+        if(null != socketSessionTemplate) {
+            socketSessionTemplate.send("log-" + pid, DateUtils.currentString() +  " " + StringUtils.format(message, args));
+        }
         super.trace(message, args);
     }
 
     @Override
     public void warn(String message, Object... args) {
-        socketSessionTemplate.send("log-" + pid, DateUtils.currentString() +  " " + StringUtils.format(message, args));
+        if(null != socketSessionTemplate) {
+            socketSessionTemplate.send("log-" + pid, DateUtils.currentString() +  " " + StringUtils.format(message, args));
+        }
         super.warn(message, args);
     }
 
     @Override
     public void info(String message, Object... args) {
-        socketSessionTemplate.send("log-" + pid, DateUtils.currentString() +  " " + StringUtils.format(message, args));
+        if(null != socketSessionTemplate) {
+            socketSessionTemplate.send("log-" + pid, DateUtils.currentString() +  " " + StringUtils.format(message, args));
+        }
         super.info(message, args);
     }
 

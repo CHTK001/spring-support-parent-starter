@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.monitor.server.mapper.MonitorProxyPluginMapper">
+  <resultMap id="BaseResultMap" type="com.chua.starter.monitor.server.entity.MonitorProxyPlugin">
+    <!--@mbg.generated-->
+    <!--@Table monitor_proxy_plugin-->
+    <id column="plugin_id" jdbcType="INTEGER" property="pluginId" />
+    <result column="proxy_id" jdbcType="INTEGER" property="proxyId" />
+    <result column="plugin_name" jdbcType="VARCHAR" property="pluginName" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    plugin_id, proxy_id, plugin_name, create_time
+  </sql>
+</mapper>

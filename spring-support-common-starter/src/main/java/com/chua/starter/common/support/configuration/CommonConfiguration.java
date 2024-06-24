@@ -2,8 +2,6 @@ package com.chua.starter.common.support.configuration;
 
 import com.chua.starter.common.support.debounce.DebounceAspect;
 import com.chua.starter.common.support.external.ExternalController;
-import com.chua.starter.common.support.filter.ActuatorAuthenticationFilter;
-import com.chua.starter.common.support.filter.ParameterLogFilter;
 import com.chua.starter.common.support.limit.LimitAspect;
 import com.chua.starter.common.support.logger.OperateLoggerPointcutAdvisor;
 import com.chua.starter.common.support.properties.*;
@@ -16,7 +14,6 @@ import com.chua.starter.common.support.watch.WatchPointcutAdvisor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.web.client.RestTemplate;
@@ -50,24 +47,6 @@ public class CommonConfiguration {
     @ConditionalOnProperty(name = "plugin.external.enable", havingValue = "true", matchIfMissing = true)
     public ExternalController externalController(ExternalInterfaceProperties externalInterfaceProperties) {
         return new ExternalController(externalInterfaceProperties);
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
-    @ConditionalOnProperty(name = "plugin.log.enable", havingValue = "true", matchIfMissing = true)
-    public ParameterLogFilter paramLogFilter() {
-        return new ParameterLogFilter();
-    }
-    @Bean
-    @ConditionalOnMissingBean
-    public FilterRegistrationBean<ActuatorAuthenticationFilter> actuatorAuthenticationFilter(ActuatorProperties actuatorProperties) {
-        FilterRegistrationBean<ActuatorAuthenticationFilter> filterRegistrationBean = new FilterRegistrationBean<>();
-        filterRegistrationBean.setFilter(new ActuatorAuthenticationFilter(actuatorProperties));
-        filterRegistrationBean.addUrlPatterns("/actuator/*");
-        filterRegistrationBean.setName("actuator-filter");
-        filterRegistrationBean.setAsyncSupported(true);
-
-        return filterRegistrationBean;
     }
 
     @Bean

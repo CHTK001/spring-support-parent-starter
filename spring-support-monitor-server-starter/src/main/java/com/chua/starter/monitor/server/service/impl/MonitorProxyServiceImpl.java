@@ -16,7 +16,9 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.spi.definition.ServiceDefinition;
 import com.chua.common.support.utils.ObjectUtils;
 import com.chua.common.support.utils.ThreadUtils;
+import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.starter.monitor.server.chain.filter.MonitorLimitChainFilter;
 import com.chua.starter.monitor.server.entity.MonitorProxy;
 import com.chua.starter.monitor.server.entity.MonitorProxyConfig;
 import com.chua.starter.monitor.server.entity.MonitorProxyPlugin;
@@ -52,7 +54,8 @@ public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, Mon
     private static final Map<String, Server> SERVER_MAP = new ConcurrentHashMap<>();
     @Resource
     private ApplicationContext applicationContext;
-
+    @Resource
+    private SocketSessionTemplate socketSessionTemplate;
     @Resource
     private TransactionTemplate transactionTemplate;
 
@@ -136,19 +139,14 @@ public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, Mon
         }
         List<MonitorProxyConfig> list = monitorProxyConfigService.list(Wrappers.<MonitorProxyConfig>lambdaQuery().eq(MonitorProxyConfig::getProxyId, monitorProxy.getProxyId()));
         String proxyProtocol = monitorProxy.getProxyProtocol();
-        Log log = new Slf4jLog();
-        for (MonitorProxyConfig monitorProxyConfig : list) {
-            if("open-log".equals(monitorProxyConfig.getConfigName()) && "true".equals(monitorProxyConfig.getConfigValue())) {
-                log = new WebLog(monitorProxy.getProxyId() + "");
-                SpringBeanUtils.getApplicationContext().getAutowireCapableBeanFactory().autowireBean(log);
-                break;
-            }
-        }
+        Log log = createLog(monitorProxy, list);
+
         ServerSetting serverSetting = ServerSetting.builder().log(log).port(monitorProxy.getProxyPort()).build();
         Server server = Server.create(proxyProtocol, serverSetting);
         for (MonitorProxyConfig monitorProxyConfig : list) {
             server.addConfig(monitorProxyConfig.getConfigName(), monitorProxyConfig.getConfigValue());
         }
+        server.addConfig("serverId", monitorProxy.getProxyId());
         List<MonitorProxyPlugin> list1 = monitorProxyPluginService.list(Wrappers.<MonitorProxyPlugin>lambdaQuery()
                 .eq(MonitorProxyPlugin::getProxyId, monitorProxy.getProxyId())
                 .orderByDesc(MonitorProxyPlugin::getPluginSort)
@@ -182,13 +180,41 @@ public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, Mon
                 server.addDefinition(filterConfigTypeDefinition);
             }
         }
-//        if("tcp-proxy".equals(proxyProtocol)) {
-//            server.addFilter(AsyncTcpRoutingGatewayFilter.class);
-//            return server;
-//        }
-//        server.addFilter(AsyncHttpRoutingGatewayFilter.class);
-//        server.addFilter(AsyncWebSocketRoutingGatewayFilter.class);
+
+        if(isLimitOpen(list)) {
+            server.addDefinition(new FilterConfigTypeDefinition(MonitorLimitChainFilter.class, FilterOrderType.FIRST));
+        }
         return server;
+    }
+
+    /**
+     * 是否开启限流
+     * @param list list
+     * @return boolean
+     */
+    private boolean isLimitOpen(List<MonitorProxyConfig> list) {
+        for (MonitorProxyConfig monitorProxyConfig : list) {
+            if("open-limit".equals(monitorProxyConfig.getConfigName()) && "true".equals(monitorProxyConfig.getConfigValue())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 创建日志
+     * @param monitorProxy monitorProxy
+     * @param list list
+     * @return Log
+     */
+    private Log createLog(MonitorProxy monitorProxy, List<MonitorProxyConfig> list) {
+        for (MonitorProxyConfig monitorProxyConfig : list) {
+            if("open-log".equals(monitorProxyConfig.getConfigName()) && "true".equals(monitorProxyConfig.getConfigValue())) {
+                SpringBeanUtils.getApplicationContext().getAutowireCapableBeanFactory().autowireBean(log);
+                return new WebLog(monitorProxy.getProxyId() + "", socketSessionTemplate);
+            }
+        }
+        return new Slf4jLog();
     }
 
     private String createKey(MonitorProxy monitorProxy) {
