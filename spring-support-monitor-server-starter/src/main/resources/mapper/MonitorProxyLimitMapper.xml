@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.monitor.server.mapper.MonitorProxyLimitMapper">
+  <resultMap id="BaseResultMap" type="com.chua.starter.monitor.server.entity.MonitorProxyLimit">
+    <!--@mbg.generated-->
+    <!--@Table monitor_proxy_limit-->
+    <id column="limit_id" jdbcType="INTEGER" property="limitId" />
+    <result column="limit_address" jdbcType="VARCHAR" property="limitAddress" />
+    <result column="limit_url" jdbcType="VARCHAR" property="limitUrl" />
+    <result column="limit_disable" jdbcType="INTEGER" property="limitDisable" />
+    <result column="limit_permits_per_second" jdbcType="INTEGER" property="limitPermitsPerSecond" />
+    <result column="proxy_id" jdbcType="VARCHAR" property="proxyId" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    limit_id, limit_address, limit_url, limit_disable, limit_permits_per_second, proxy_id, 
+    create_time, update_time
+  </sql>
+</mapper>

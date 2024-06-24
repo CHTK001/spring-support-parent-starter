@@ -16,6 +16,17 @@ public class ResourceWebMvcConfigurer implements WebMvcConfigurer {
         registry.addResourceHandler("/webjars/**").addResourceLocations("classpath:/webjars/", "classpath:/META-INF/resources/webjars/");
         registry.addResourceHandler("doc.html").addResourceLocations("classpath:/META-INF/resources/");
         registry.addResourceHandler("swagger-ui.html").addResourceLocations("classpath:/META-INF/resources/");
+        registry.addResourceHandler("/storage/**").addResourceLocations("classpath:/static/storage/assets/").setUseLastModified(true);
+        registry.addResourceHandler("/storage-ui.html").addResourceLocations("classpath:/static/storage/");
+        registry.addResourceHandler("/markdown.html").addResourceLocations("classpath:/static/storage/");
+        registry.addResourceHandler("/text.html").addResourceLocations("classpath:/static/storage/");
+        registry.addResourceHandler("/fileView.html").addResourceLocations("classpath:/static/storage/");
+        registry.addResourceHandler("/xml.html").addResourceLocations("classpath:/static/storage/");
+        registry.addResourceHandler("/json.html").addResourceLocations("classpath:/static/storage/");
+        registry.addResourceHandler("/excel.html").addResourceLocations("classpath:/static/storage/");
+        registry.addResourceHandler("/word.html").addResourceLocations("classpath:/static/storage/");
+        registry.addResourceHandler("/archive.html").addResourceLocations("classpath:/static/storage/");
+
     }
 
 }
