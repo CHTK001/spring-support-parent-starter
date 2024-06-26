@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.starter.monitor.server.entity.MonitorProxyLimitLog;
 import com.chua.starter.monitor.server.mapper.MonitorProxyLimitLogMapper;
+import com.chua.starter.monitor.server.pojo.MonitorProxyLimitLogResult;
 import com.chua.starter.monitor.server.service.MonitorProxyLimitLogService;
 import org.springframework.stereotype.Service;
 
@@ -25,7 +26,7 @@ public class MonitorProxyLimitLogServiceImpl extends ServiceImpl<MonitorProxyLim
     }
 
     @Override
-    public Page<MonitorProxyLimitLog> pageForLog(Page<MonitorProxyLimitLog> page, MonitorProxyLimitLog entity) {
+    public Page<MonitorProxyLimitLogResult> pageForLog(Page<MonitorProxyLimitLog> page, MonitorProxyLimitLog entity) {
         return baseMapper.pageForLog(page, entity);
     }
 }

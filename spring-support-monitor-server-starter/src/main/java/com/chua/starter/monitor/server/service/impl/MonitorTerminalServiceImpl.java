@@ -180,28 +180,33 @@ public class MonitorTerminalServiceImpl extends ServiceImpl<MonitorTerminalMappe
         try {
             Session session = SERVER_MAP.get(key);
             if(null != session && session instanceof TerminalSession terminalSession) {
-                CollectionUtils.addAll(result, checkRelease( "release", terminalSession.release(), monitorTerminal, "系统"));
-                CollectionUtils.addAll(result, checkRelease( "ulimit", terminalSession.ulimit() + "", monitorTerminal, "最大连接数"));
-                CollectionUtils.addAll(result, checkRelease( "mem-total", terminalSession.memInfo().getTotal() + "", monitorTerminal, "最大内存"));
-                TerminalSession.CpuInfo cpuInfo = terminalSession.cpuInfo();
-                if(null != cpuInfo) {
-                    CollectionUtils.addAll(result, checkRelease( "cpu-model", cpuInfo.getCpuModel(), monitorTerminal, "cpu型号"));
-                    CollectionUtils.addAll(result, checkRelease( "cpu-num", cpuInfo.getCpuNum() + "", monitorTerminal, "cpu数"));
-                    CollectionUtils.addAll(result, checkRelease( "cpu-core-num", cpuInfo.getCpuCore() + "", monitorTerminal, "cpu core数"));
-                }
+                try {
+                    CollectionUtils.addAll(result, checkRelease( "public-ifconfig", terminalSession.ifconfig(), monitorTerminal, "公网IP"));
+                    CollectionUtils.addAll(result, checkRelease( "release", terminalSession.release(), monitorTerminal, "系统信息"));
+                    CollectionUtils.addAll(result, checkRelease( "ulimit", terminalSession.ulimit() + "", monitorTerminal, "最大连接数"));
+                    CollectionUtils.addAll(result, checkRelease( "mem-total", terminalSession.memInfo().getTotal() + "", monitorTerminal, "最大内存"));
+                    TerminalSession.CpuInfo cpuInfo = terminalSession.cpuInfo();
+                    if(null != cpuInfo) {
+                        CollectionUtils.addAll(result, checkRelease( "cpu-model", cpuInfo.getCpuModel(), monitorTerminal, "cpu型号"));
+                        CollectionUtils.addAll(result, checkRelease( "cpu-num", cpuInfo.getCpuNum() + "", monitorTerminal, "cpu数"));
+                        CollectionUtils.addAll(result, checkRelease( "cpu-core-num", cpuInfo.getCpuCore() + "", monitorTerminal, "cpu core数"));
+                    }
 
-                List<TerminalSession.IpAddress> ipAddresses = terminalSession.ipAddr();
-                monitorTerminalBaseService.remove(Wrappers.<MonitorTerminalBase>lambdaQuery()
-                        .eq(MonitorTerminalBase::getTerminalId, monitorTerminal.getTerminalId())
-                        .likeLeft(MonitorTerminalBase::getBaseName, "ipaddress-")
-                );
-                for (int i = 0; i < ipAddresses.size(); i++) {
-                    TerminalSession.IpAddress ipAddress = ipAddresses.get(i);
-                    CollectionUtils.addAll(result, checkRelease("ipaddress-name-"+ i, ipAddress.getName(), monitorTerminal, "ip地址名称"));
-                    CollectionUtils.addAll(result, checkRelease("ipaddress-ipv4-"+ i, ipAddress.getIpv4(), monitorTerminal, "ipv4"));
-                    CollectionUtils.addAll(result, checkRelease("ipaddress-broadcast-"+ i, ipAddress.getBroadcast(), monitorTerminal, "网关"));
+                    List<TerminalSession.IpAddress> ipAddresses = terminalSession.ipAddr();
+                    monitorTerminalBaseService.remove(Wrappers.<MonitorTerminalBase>lambdaQuery()
+                            .eq(MonitorTerminalBase::getTerminalId, monitorTerminal.getTerminalId())
+                            .likeLeft(MonitorTerminalBase::getBaseName, "ipaddress-")
+                    );
+                    for (int i = 0; i < ipAddresses.size(); i++) {
+                        TerminalSession.IpAddress ipAddress = ipAddresses.get(i);
+                        CollectionUtils.addAll(result, checkRelease("ipaddress-name-"+ i, ipAddress.getName(), monitorTerminal, "ip地址名称"));
+                        CollectionUtils.addAll(result, checkRelease("ipaddress-ipv4-"+ i, ipAddress.getIpv4(), monitorTerminal, "ipv4"));
+                        CollectionUtils.addAll(result, checkRelease("ipaddress-broadcast-"+ i, ipAddress.getBroadcast(), monitorTerminal, "网关"));
+                    }
+                    return result;
+                } finally {
+                    terminalSession.removeSession("ifconfig.me");
                 }
-                return result;
             }
         } catch (Exception e) {
             throw new RuntimeException(e);

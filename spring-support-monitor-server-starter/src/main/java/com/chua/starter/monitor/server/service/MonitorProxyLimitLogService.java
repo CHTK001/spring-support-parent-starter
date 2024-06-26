@@ -3,6 +3,8 @@ package com.chua.starter.monitor.server.service;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.starter.monitor.server.entity.MonitorProxyLimitLog;
+import com.chua.starter.monitor.server.pojo.MonitorProxyLimitLogResult;
+
 /**
  * MonitorProxyLimitLogService接口定义了对监控代理限制日志的操作。
  * 它继承自IService<MonitorProxyLimitLog>，表示对MonitorProxyLimitLog实体的CRUD操作。
@@ -32,5 +34,5 @@ public interface MonitorProxyLimitLogService extends IService<MonitorProxyLimitL
      * @return 返回一个Page对象，表示分页查询结果。
      *         Page对象包含了分页数据，包括记录列表和分页信息。
      */
-    Page<MonitorProxyLimitLog> pageForLog(Page<MonitorProxyLimitLog> page, MonitorProxyLimitLog entity);
+    Page<MonitorProxyLimitLogResult> pageForLog(Page<MonitorProxyLimitLog> page, MonitorProxyLimitLog entity);
 }
