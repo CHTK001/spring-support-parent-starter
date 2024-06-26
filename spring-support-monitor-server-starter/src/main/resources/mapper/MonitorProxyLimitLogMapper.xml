@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.chua.starter.monitor.server.mapper.MonitorProxyLimitLogMapper">
 
-  <select id="pageForLog" resultType="com.chua.starter.monitor.server.entity.MonitorProxyLimitLog">
+  <select id="pageForLog" resultType="com.chua.starter.monitor.server.pojo.MonitorProxyLimitLogResult">
     SELECT
       create_time_min,
       limit_log_url,
