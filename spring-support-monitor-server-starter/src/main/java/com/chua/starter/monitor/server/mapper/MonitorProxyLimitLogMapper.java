@@ -3,6 +3,7 @@ package com.chua.starter.monitor.server.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.starter.monitor.server.entity.MonitorProxyLimitLog;
+import com.chua.starter.monitor.server.pojo.MonitorProxyLimitLogResult;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -22,5 +23,5 @@ public interface MonitorProxyLimitLogMapper extends BaseMapper<MonitorProxyLimit
      * @param entity 查询条件实体，实体中的属性用于构建查询条件。
      * @return 返回分页后的监控代理限制日志列表。
      */
-    Page<MonitorProxyLimitLog> pageForLog(@Param("page")Page<MonitorProxyLimitLog> page, @Param("query")MonitorProxyLimitLog entity);
+    Page<MonitorProxyLimitLogResult> pageForLog(@Param("page")Page<MonitorProxyLimitLog> page, @Param("query")MonitorProxyLimitLog entity);
 }

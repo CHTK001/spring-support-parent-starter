@@ -4,16 +4,14 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.server.entity.MonitorTerminal;
 import com.chua.starter.monitor.server.entity.MonitorTerminalBase;
+import com.chua.starter.monitor.server.pojo.IdQuery;
 import com.chua.starter.monitor.server.service.MonitorTerminalService;
 import com.chua.starter.mybatis.controller.AbstractSwaggerController;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -88,18 +86,18 @@ public class MonitorTerminalController extends AbstractSwaggerController<Monitor
     /**
      * 查询基本信息。
      *
-     * @param id 监控代理的唯一标识符。
+     * @param idQuery 监控代理的唯一标识符。
      * @return 返回操作结果，如果操作成功，返回true；否则返回false，并附带错误信息。
      */
     @Operation(summary = "更新基本信息")
     @PutMapping("base")
-    public ReturnResult<List<MonitorTerminalBase>> baseUpgrade(String id) {
+    public ReturnResult<List<MonitorTerminalBase>> baseUpgrade(@RequestBody IdQuery idQuery) {
         // 检查ID是否为空
-        if(StringUtils.isEmpty(id)) {
+        if(StringUtils.isEmpty(idQuery.getId())) {
             return ReturnResult.error("数据不存在, 请刷新后重试");
         }
         // 根据ID获取监控代理实例
-        MonitorTerminal monitorProxy = service.getById(id);
+        MonitorTerminal monitorProxy = service.getById(idQuery.getId());
         // 检查监控代理实例是否存在
         if(null == monitorProxy) {
             return ReturnResult.error("数据不存在, 请刷新后重试");

@@ -11,6 +11,7 @@ import com.chua.common.support.validator.group.UpdateGroup;
 import com.chua.starter.monitor.server.entity.MonitorProxy;
 import com.chua.starter.monitor.server.entity.MonitorProxyLimit;
 import com.chua.starter.monitor.server.entity.MonitorProxyLimitLog;
+import com.chua.starter.monitor.server.pojo.MonitorProxyLimitLogResult;
 import com.chua.starter.monitor.server.service.MonitorProxyLimitLogService;
 import com.chua.starter.monitor.server.service.MonitorProxyLimitService;
 import com.chua.starter.monitor.server.service.MonitorProxyService;
@@ -69,8 +70,8 @@ public class MonitorProxyLimitController {
     @ResponseBody
     @Operation(summary = "日志分页查询基础数据")
     @GetMapping("log/page")
-    public ReturnPageResult<MonitorProxyLimitLog> logPage(PageRequest<MonitorProxyLimitLog> page, MonitorProxyLimitLog entity) {
-        Page<MonitorProxyLimitLog> tPage = monitorProxyLimitLogService.pageForLog(page.createPage(), entity);
+    public ReturnPageResult<MonitorProxyLimitLogResult> logPage(PageRequest<MonitorProxyLimitLog> page, MonitorProxyLimitLog entity) {
+        Page<MonitorProxyLimitLogResult> tPage = monitorProxyLimitLogService.pageForLog(page.createPage(), entity);
         return PageResultUtils.ok(tPage);
     }
     /**
