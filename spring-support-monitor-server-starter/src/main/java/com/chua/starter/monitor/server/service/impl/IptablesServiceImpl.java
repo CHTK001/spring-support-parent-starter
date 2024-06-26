@@ -54,5 +54,9 @@ public class IptablesServiceImpl implements IptablesService, ApplicationContextA
                         .databaseFile(ipProperties.getDatabaseFile())
                         .build()
                 );
+        try {
+            ipPosition.afterPropertiesSet();
+        } catch (Exception ignored) {
+        }
     }
 }

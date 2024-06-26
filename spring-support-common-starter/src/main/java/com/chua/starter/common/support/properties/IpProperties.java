@@ -21,7 +21,7 @@ public class IpProperties {
     /**
      * 数据库文件路径
      */
-    private String databaseFile;
+    private String databaseFile = "classpath:qqwry.dat";
 
     /**
      * ip翻译实现方式

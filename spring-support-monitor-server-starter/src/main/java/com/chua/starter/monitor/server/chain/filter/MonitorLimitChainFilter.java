@@ -7,13 +7,15 @@ import com.chua.common.support.chain.FilterChain;
 import com.chua.common.support.chain.filter.ChainFilter;
 import com.chua.common.support.function.request.BussinessResponse;
 import com.chua.common.support.function.request.Request;
+import com.chua.common.support.geo.GeoCity;
+import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.common.support.objects.annotation.Config;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.monitor.server.entity.MonitorProxyLimitLog;
 import com.chua.starter.monitor.server.service.IptablesService;
 import com.chua.starter.monitor.server.service.MonitorProxyLimitLogService;
 import jakarta.annotation.Resource;
-import org.redisson.api.RRateLimiter;
 import org.redisson.api.RedissonClient;
 
 import java.util.Date;
@@ -35,6 +37,9 @@ public class MonitorLimitChainFilter implements ChainFilter {
     private RedissonClient redisson;
     @Config("serverId")
     private String serverId;
+
+    @AutoInject
+    private LimitFactory limitFactory;
     private static final ExecutorService POOL = ThreadUtils.newVirtualThreadExecutor();
 
     @Resource
@@ -47,27 +52,15 @@ public class MonitorLimitChainFilter implements ChainFilter {
         Request request = context.getRequest();
         String url = request.url();
         String hostString = request.remoteAddress().getHostString();
-        RRateLimiter rateLimiterAddress = redisson.getRateLimiter("monitor:proxy:limit:token:" + serverId + ":"+ url + ":" + hostString);
-        RRateLimiter rateLimiter = redisson.getRateLimiter("monitor:proxy:limit:token:" + serverId + ":"+ url);
         try {
-            if(rateLimiterAddress.tryAcquire(1) ) {
+            if(limitFactory.tryAcquire(url, hostString) ) {
                 filterChain.doFilter(context);
                 doRegisterLog(url, hostString, "allow");
                 return;
             }
         } catch (Exception e) {
-            try {
-                if(rateLimiter.tryAcquire(1) ) {
-                    filterChain.doFilter(context);
-                    doRegisterLog(url, hostString, "allow");
-                    return;
-                }
-            } catch (Exception ex) {
-                filterChain.doFilter(context);
-                doRegisterLog(url, hostString, "allow");
-
-                return;
-            }
+            doRegisterLog(url, hostString, "allow");
+            return;
         }
 
         doRegisterLog(url, hostString, "deny");
@@ -83,6 +76,14 @@ public class MonitorLimitChainFilter implements ChainFilter {
                 monitorProxyLimitLog.setLimitLogServerId(serverId);
                 monitorProxyLimitLog.setLimitLogAddress(hostString);
                 monitorProxyLimitLog.setLimitLogType(type);
+                try {
+                    ReturnResult<GeoCity> geoCityReturnResult = iptablesService.transferAddress(hostString);
+                    if(geoCityReturnResult.isOk()) {
+                        monitorProxyLimitLog.setLimitLogAddressGeo(geoCityReturnResult.getData().getCity());
+                    }
+                } catch (Exception ignored) {
+                }
+                monitorProxyLimitLog.setCreateTimeMin( System.currentTimeMillis() / (60 * 1000) * (60 * 1000));
                 monitorProxyLimitLog.setCreateTime(new Date());
                 monitorProxyLimitLogService.save(monitorProxyLimitLog);
             } catch (Exception ignored) {

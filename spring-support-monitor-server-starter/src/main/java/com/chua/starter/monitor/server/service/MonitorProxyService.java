@@ -28,4 +28,12 @@ public interface MonitorProxyService extends IService<MonitorProxy> {
      * @return boolean 返回停止结果，成功为true，失败为false。
      */
     ReturnResult<Boolean> stop(MonitorProxy monitorProxy);
+
+    /**
+     * 刷新监控代理。
+     * <p>此方法用于刷新传入的监控代理实例。</p>
+     *
+     * @param proxyId 监控代理实例的ID，不能为空。
+     */
+    void refresh(String proxyId);
 }

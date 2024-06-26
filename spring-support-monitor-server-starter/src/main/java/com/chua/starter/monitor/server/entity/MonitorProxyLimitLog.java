@@ -63,6 +63,15 @@ public class MonitorProxyLimitLog implements Serializable {
     private String limitLogType;
 
     /**
+     * geo
+     */
+    @TableField(value = "limit_log_address_geo")
+    @ApiModelProperty(value = "geo")
+    @Schema(description = "geo")
+    @Size(max = 255, message = "geo最大长度要小于 255")
+    private String limitLogAddressGeo;
+
+    /**
      * 请求端地址
      */
     @TableField(value = "limit_log_address")
@@ -78,6 +87,13 @@ public class MonitorProxyLimitLog implements Serializable {
     @ApiModelProperty(value = "创建时间")
     @Schema(description = "创建时间")
     private Date createTime;
+    /**
+     * 创建时间
+     */
+    @TableField(value = "create_time_min")
+    @ApiModelProperty(value = "创建时间(min)")
+    @Schema(description = "创建时间(min)")
+    private Long createTimeMin;
 
     private static final long serialVersionUID = 1L;
     /**
