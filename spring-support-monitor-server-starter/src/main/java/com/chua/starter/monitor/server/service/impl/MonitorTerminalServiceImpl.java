@@ -192,17 +192,7 @@ public class MonitorTerminalServiceImpl extends ServiceImpl<MonitorTerminalMappe
                         CollectionUtils.addAll(result, checkRelease( "cpu-core-num", cpuInfo.getCpuCore() + "", monitorTerminal, "cpu core数"));
                     }
 
-                    List<TerminalSession.IpAddress> ipAddresses = terminalSession.ipAddr();
-                    monitorTerminalBaseService.remove(Wrappers.<MonitorTerminalBase>lambdaQuery()
-                            .eq(MonitorTerminalBase::getTerminalId, monitorTerminal.getTerminalId())
-                            .likeLeft(MonitorTerminalBase::getBaseName, "ipaddress-")
-                    );
-                    for (int i = 0; i < ipAddresses.size(); i++) {
-                        TerminalSession.IpAddress ipAddress = ipAddresses.get(i);
-                        CollectionUtils.addAll(result, checkRelease("ipaddress-name-"+ i, ipAddress.getName(), monitorTerminal, "ip地址名称"));
-                        CollectionUtils.addAll(result, checkRelease("ipaddress-ipv4-"+ i, ipAddress.getIpv4(), monitorTerminal, "ipv4"));
-                        CollectionUtils.addAll(result, checkRelease("ipaddress-broadcast-"+ i, ipAddress.getBroadcast(), monitorTerminal, "网关"));
-                    }
+                    CollectionUtils.addAll(result, checkRelease("ipaddress", terminalSession.ipAddr(), monitorTerminal, "ip地址名称"));
                     return result;
                 } finally {
                     terminalSession.removeSession("ifconfig.me");
