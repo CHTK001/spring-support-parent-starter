@@ -24,7 +24,7 @@ import org.springframework.web.client.RestTemplate;
  * @author CH
  */
 @EnableConfigurationProperties({
-        LimitProperties.class,
+        LimiterProperties.class,
         LogProperties.class,
         ParameterProperties.class,
         ActuatorProperties.class,
@@ -34,7 +34,7 @@ public class CommonConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(name = "plugin.limit.enable", havingValue = "true", matchIfMissing = true)
-    public LimitAspect limitAspect(LimitProperties limitProperties) {
+    public LimitAspect limitAspect(LimiterProperties limitProperties) {
         return new LimitAspect(limitProperties);
     }
     @Bean

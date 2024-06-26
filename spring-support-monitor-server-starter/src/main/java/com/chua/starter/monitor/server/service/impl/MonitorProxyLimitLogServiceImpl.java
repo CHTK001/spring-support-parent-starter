@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.server.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.starter.monitor.server.entity.MonitorProxyLimitLog;
 import com.chua.starter.monitor.server.mapper.MonitorProxyLimitLogMapper;
@@ -21,5 +22,10 @@ public class MonitorProxyLimitLogServiceImpl extends ServiceImpl<MonitorProxyLim
     public boolean delete(Integer limitMonth) {
         return baseMapper.delete(Wrappers.<MonitorProxyLimitLog>lambdaUpdate()
                 .lt(MonitorProxyLimitLog::getCreateTime, LocalDate.now().minusMonths(limitMonth).plusDays(1))) >= 0;
+    }
+
+    @Override
+    public Page<MonitorProxyLimitLog> pageForLog(Page<MonitorProxyLimitLog> page, MonitorProxyLimitLog entity) {
+        return baseMapper.pageForLog(page, entity);
     }
 }

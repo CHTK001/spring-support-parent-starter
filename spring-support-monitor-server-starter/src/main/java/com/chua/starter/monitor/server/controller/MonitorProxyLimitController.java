@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.function.Splitter;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.common.support.validator.group.UpdateGroup;
 import com.chua.starter.monitor.server.entity.MonitorProxy;
@@ -12,6 +13,7 @@ import com.chua.starter.monitor.server.entity.MonitorProxyLimit;
 import com.chua.starter.monitor.server.entity.MonitorProxyLimitLog;
 import com.chua.starter.monitor.server.service.MonitorProxyLimitLogService;
 import com.chua.starter.monitor.server.service.MonitorProxyLimitService;
+import com.chua.starter.monitor.server.service.MonitorProxyService;
 import com.chua.starter.mybatis.entity.PageRequest;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import com.github.xiaoymin.knife4j.annotations.Ignore;
@@ -20,17 +22,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.redisson.api.RRateLimiter;
-import org.redisson.api.RateIntervalUnit;
-import org.redisson.api.RateType;
-import org.redisson.api.RedissonClient;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Date;
-import java.util.List;
 import java.util.Set;
 
 import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
@@ -47,10 +44,10 @@ import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
 public class MonitorProxyLimitController {
     
     final MonitorProxyLimitService service;
+    final MonitorProxyService monitorProxyService;
     final MonitorProxyLimitLogService monitorProxyLimitLogService;
     final TransactionTemplate transactionTemplate;
 
-    final RedissonClient redisson;
     /**
      * 分页查询数据
      *
@@ -73,15 +70,7 @@ public class MonitorProxyLimitController {
     @Operation(summary = "日志分页查询基础数据")
     @GetMapping("log/page")
     public ReturnPageResult<MonitorProxyLimitLog> logPage(PageRequest<MonitorProxyLimitLog> page, MonitorProxyLimitLog entity) {
-        Page<MonitorProxyLimitLog> tPage = monitorProxyLimitLogService.page(page.createPage(), MPJWrappers.<MonitorProxyLimitLog>lambdaJoin()
-                .selectAll(MonitorProxyLimitLog.class)
-                .selectAs(MonitorProxy::getProxyName, MonitorProxyLimitLog::getProxyName)
-                .innerJoin(MonitorProxy.class, MonitorProxy::getProxyId, MonitorProxyLimitLog::getLimitLogServerId)
-                .eq(null != entity.getLimitLogServerId() , MonitorProxyLimit::getProxyId, entity.getLimitLogServerId())
-                .like(StringUtils.isNotEmpty(entity.getLimitLogUrl()), MonitorProxyLimit::getLimitUrl, entity.getLimitLogUrl())
-                .like(StringUtils.isNotEmpty(entity.getProxyName()),MonitorProxy::getProxyName, entity.getProxyName())
-                .orderByDesc(MonitorProxyLimitLog::getCreateTime)
-        );
+        Page<MonitorProxyLimitLog> tPage = monitorProxyLimitLogService.pageForLog(page.createPage(), entity);
         return PageResultUtils.ok(tPage);
     }
     /**
@@ -125,18 +114,10 @@ public class MonitorProxyLimitController {
             return ReturnResult.ok();
         }
 
-
-        List<MonitorProxyLimit> monitorProxyLimits = service.listByIds(ids);
         return ReturnResult.of(Boolean.TRUE.equals(transactionTemplate.execute(status -> {
+            MonitorProxyLimit t = service.getById(CollectionUtils.findFirst(ids));
             service.removeBatchByIds(ids);
-            for (MonitorProxyLimit monitorProxyLimit : monitorProxyLimits) {
-                String limitAddress = monitorProxyLimit.getLimitAddress();
-                if(StringUtils.isEmpty(limitAddress)) {
-                    redisson.getRateLimiter("monitor:proxy:limit:token:" + monitorProxyLimit.getProxyId() + ":" + monitorProxyLimit.getLimitUrl()).delete();
-                } else {
-                    redisson.getRateLimiter("monitor:proxy:limit:token:" + monitorProxyLimit.getProxyId() + ":" + monitorProxyLimit.getLimitUrl() + ":" + limitAddress).delete();
-                }
-            }
+            monitorProxyService.refresh(t.getProxyId());
             return true;
         })));
 
@@ -163,30 +144,8 @@ public class MonitorProxyLimitController {
 
 
         return ReturnResult.of(Boolean.TRUE.equals(transactionTemplate.execute(status -> {
-            MonitorProxyLimit monitorProxyLimit2 = service.getById(t.getLimitId());
-            String limitAddress2 = monitorProxyLimit2.getLimitAddress();
-            try {
-                if(!StringUtils.isEmpty(limitAddress2)) {
-                    redisson.getRateLimiter("monitor:proxy:limit:token:" + monitorProxyLimit2.getProxyId() + ":" + monitorProxyLimit2.getLimitUrl() + ":" + limitAddress2).delete();
-                }
-                redisson.getRateLimiter("monitor:proxy:limit:token:" + monitorProxyLimit2.getProxyId() + ":" + monitorProxyLimit2.getLimitUrl()).delete();
-            } catch (Exception ignored) {
-            }
-
             service.updateById(t);
-            MonitorProxyLimit monitorProxyLimit1 = service.getById(t.getLimitId());
-            String limitAddress = monitorProxyLimit.getLimitAddress();
-            RRateLimiter rateLimiter = null;
-            if(StringUtils.isEmpty(limitAddress)) {
-                rateLimiter = redisson.getRateLimiter("monitor:proxy:limit:token:" + monitorProxyLimit1.getProxyId() + ":" + monitorProxyLimit1.getLimitUrl());
-            } else {
-                rateLimiter = redisson.getRateLimiter("monitor:proxy:limit:token:" + monitorProxyLimit1.getProxyId() + ":" + monitorProxyLimit1.getLimitUrl() + ":" + limitAddress);
-            }
-            if(monitorProxyLimit1.getLimitDisable() == 0) {
-                rateLimiter.delete();
-            } else {
-                rateLimiter.trySetRate(RateType.OVERALL, monitorProxyLimit1.getLimitPermitsPerSecond(), 1, RateIntervalUnit.SECONDS);
-            }
+            monitorProxyService.refresh(t.getProxyId());
             return true;
         })));
     }
@@ -207,16 +166,7 @@ public class MonitorProxyLimitController {
         return ReturnResult.success(transactionTemplate.execute(status -> {
             t.setCreateTime(new Date());
             service.save(t);
-            if(t.getLimitDisable() == 1) {
-                RRateLimiter rateLimiter = null;
-                String limitAddress = t.getLimitAddress();
-                if(StringUtils.isEmpty(limitAddress)) {
-                    rateLimiter = redisson.getRateLimiter("monitor:proxy:limit:token:" + t.getProxyId() + ":" + t.getLimitUrl());
-                } else {
-                    rateLimiter = redisson.getRateLimiter("monitor:proxy:limit:token:" + t.getProxyId() + ":" + t.getLimitUrl() + ":" + limitAddress);
-                }
-                rateLimiter.trySetRate(RateType.OVERALL, t.getLimitPermitsPerSecond(), 1, RateIntervalUnit.SECONDS);
-            }
+            monitorProxyService.refresh(t.getProxyId());
             return t;
         }));
     }

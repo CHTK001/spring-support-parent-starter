@@ -18,17 +18,12 @@ import com.chua.common.support.utils.ObjectUtils;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.starter.monitor.server.chain.filter.LimitFactory;
 import com.chua.starter.monitor.server.chain.filter.MonitorLimitChainFilter;
-import com.chua.starter.monitor.server.entity.MonitorProxy;
-import com.chua.starter.monitor.server.entity.MonitorProxyConfig;
-import com.chua.starter.monitor.server.entity.MonitorProxyPlugin;
-import com.chua.starter.monitor.server.entity.MonitorProxyPluginConfig;
+import com.chua.starter.monitor.server.entity.*;
 import com.chua.starter.monitor.server.log.WebLog;
 import com.chua.starter.monitor.server.mapper.MonitorProxyMapper;
-import com.chua.starter.monitor.server.service.MonitorProxyConfigService;
-import com.chua.starter.monitor.server.service.MonitorProxyPluginConfigService;
-import com.chua.starter.monitor.server.service.MonitorProxyPluginService;
-import com.chua.starter.monitor.server.service.MonitorProxyService;
+import com.chua.starter.monitor.server.service.*;
 import jakarta.annotation.Resource;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
@@ -52,6 +47,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, MonitorProxy> implements MonitorProxyService, InitializingBean {
 
     private static final Map<String, Server> SERVER_MAP = new ConcurrentHashMap<>();
+    private static final Map<String, LimitFactory> LIMIT_MAP = new ConcurrentHashMap<>();
     @Resource
     private ApplicationContext applicationContext;
     @Resource
@@ -61,6 +57,8 @@ public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, Mon
 
     @Resource
     private MonitorProxyConfigService monitorProxyConfigService;
+    @Resource
+    private MonitorProxyLimitService monitorproxyLimitService;
 
     @Resource
     private MonitorProxyPluginService monitorProxyPluginService;
@@ -120,11 +118,30 @@ public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, Mon
                     throw new RuntimeException(e);
                 }
                 SERVER_MAP.remove(key);
+                LIMIT_MAP.remove(key);
                 return ReturnResult.success();
             }
 
             return ReturnResult.error("代理停止失败");
         });
+    }
+
+    @Override
+    public void refresh(String proxyId) {
+        MonitorProxy monitorProxy = baseMapper.selectById(proxyId);
+        if(null == monitorProxy) {
+            return;
+        }
+
+        String key = createKey(monitorProxy);
+        LimitFactory limitFactory = LIMIT_MAP.get(key);
+        if(null == limitFactory) {
+            return ;
+        }
+        List<MonitorProxyConfig> list = monitorProxyConfigService.list(Wrappers.<MonitorProxyConfig>lambdaQuery().eq(MonitorProxyConfig::getProxyId, monitorProxy.getProxyId()));
+        if(isLimitOpen(list)) {
+            limitFactory.refresh(monitorproxyLimitService.list(Wrappers.<MonitorProxyLimit>lambdaQuery().eq(MonitorProxyLimit::getProxyId, monitorProxy.getProxyId()).eq(MonitorProxyLimit::getLimitDisable, 1)));
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -182,6 +199,11 @@ public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, Mon
         }
 
         if(isLimitOpen(list)) {
+            //monitorProxyLimits
+            LimitFactory limitFactory = new LimitFactory(monitorproxyLimitService.list(Wrappers.<MonitorProxyLimit>lambdaQuery().eq(MonitorProxyLimit::getProxyId, monitorProxy.getProxyId()).eq(MonitorProxyLimit::getLimitDisable, 1)));
+            limitFactory.initialize();
+            LIMIT_MAP.put(createKey(monitorProxy), limitFactory);
+            server.addDefinition(limitFactory);
             server.addDefinition(new FilterConfigTypeDefinition(MonitorLimitChainFilter.class, FilterOrderType.FIRST));
         }
         return server;
