@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.common.support.validator.group.AddGroup;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -34,6 +35,14 @@ public class MonitorTerminalProject implements Serializable {
     @NotNull(message = "不能为null")
     private Integer terminalProjectId;
 
+    /**
+     * 项目名称
+     */
+    @TableField(value = "terminal_id")
+    @ApiModelProperty(value="終端ID")
+    @Schema(description="終端ID")
+    @NotNull(message = "终端不能为null", groups = {AddGroup.class})
+    private Integer terminalId;
     /**
      * 项目名称
      */
@@ -87,6 +96,14 @@ public class MonitorTerminalProject implements Serializable {
     @Schema(description="日志文件地址")
     @Size(max = 255,message = "日志文件地址最大长度要小于 255")
     private String terminalProjectLog;
+
+    /**
+     * 日志文件地址
+     */
+    @TableField(value = "terminal_project_status")
+    @ApiModelProperty(value="是否开启;0：关闭")
+    @Schema(description = "是否开启;0：关闭")
+    private Integer terminalProjectStatus;
 
     /**
      * 创建地址
