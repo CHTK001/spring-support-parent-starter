@@ -22,7 +22,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("v1/terminal")
-@Tag(name = "代理")
+@Tag(name = "终端")
 @RequiredArgsConstructor
 @Getter
 public class MonitorTerminalController extends AbstractSwaggerController<MonitorTerminalService, MonitorTerminal> {
