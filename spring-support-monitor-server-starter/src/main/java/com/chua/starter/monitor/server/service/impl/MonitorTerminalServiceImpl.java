@@ -10,7 +10,7 @@ import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.ObjectUtils;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.socketio.support.session.SocketSessionTemplate;
-import com.chua.ssh.support.session.TerminalSession;
+import com.chua.ssh.support.ssh.SshSession;
 import com.chua.starter.monitor.server.entity.MonitorTerminal;
 import com.chua.starter.monitor.server.entity.MonitorTerminalBase;
 import com.chua.starter.monitor.server.mapper.MonitorTerminalMapper;
@@ -152,7 +152,7 @@ public class MonitorTerminalServiceImpl extends ServiceImpl<MonitorTerminalMappe
         }
         try {
             Session session = SERVER_MAP.get(key);
-            if(null != session && session instanceof TerminalSession terminalSession) {
+            if((null != session) && (session instanceof SshSession terminalSession)) {
                 String ip = terminalSession.ifconfig();
                 checkRelease( "public-ifconfig", ip, monitorTerminal, "公网IP");
                 return ip;
@@ -179,24 +179,20 @@ public class MonitorTerminalServiceImpl extends ServiceImpl<MonitorTerminalMappe
         List<MonitorTerminalBase> result = new LinkedList<>();
         try {
             Session session = SERVER_MAP.get(key);
-            if(null != session && session instanceof TerminalSession terminalSession) {
-                try {
-                    CollectionUtils.addAll(result, checkRelease( "public-ifconfig", terminalSession.ifconfig(), monitorTerminal, "公网IP"));
-                    CollectionUtils.addAll(result, checkRelease( "release", terminalSession.release(), monitorTerminal, "系统信息"));
-                    CollectionUtils.addAll(result, checkRelease( "ulimit", terminalSession.ulimit() + "", monitorTerminal, "最大连接数"));
-                    CollectionUtils.addAll(result, checkRelease( "mem-total", terminalSession.memInfo().getTotal() + "", monitorTerminal, "最大内存"));
-                    TerminalSession.CpuInfo cpuInfo = terminalSession.cpuInfo();
-                    if(null != cpuInfo) {
-                        CollectionUtils.addAll(result, checkRelease( "cpu-model", cpuInfo.getCpuModel(), monitorTerminal, "cpu型号"));
-                        CollectionUtils.addAll(result, checkRelease( "cpu-num", cpuInfo.getCpuNum() + "", monitorTerminal, "cpu数"));
-                        CollectionUtils.addAll(result, checkRelease( "cpu-core-num", cpuInfo.getCpuCore() + "", monitorTerminal, "cpu core数"));
-                    }
-
-                    CollectionUtils.addAll(result, checkRelease("ipaddress", terminalSession.ipAddr(), monitorTerminal, "ip地址名称"));
-                    return result;
-                } finally {
-                    terminalSession.removeSession("ifconfig.me");
+            if((null != session) && (session instanceof SshSession terminalSession)) {
+                CollectionUtils.addAll(result, checkRelease( "public-ifconfig", terminalSession.ifconfig(), monitorTerminal, "公网IP"));
+                CollectionUtils.addAll(result, checkRelease( "release", terminalSession.release(), monitorTerminal, "系统信息"));
+                CollectionUtils.addAll(result, checkRelease( "ulimit", terminalSession.ulimit() + "", monitorTerminal, "最大连接数"));
+                CollectionUtils.addAll(result, checkRelease( "mem-total", terminalSession.memInfo().getTotal() + "", monitorTerminal, "最大内存"));
+                SshSession.CpuInfo cpuInfo = terminalSession.cpuInfo();
+                if(null != cpuInfo) {
+                    CollectionUtils.addAll(result, checkRelease( "cpu-model", cpuInfo.getCpuModel(), monitorTerminal, "cpu型号"));
+                    CollectionUtils.addAll(result, checkRelease( "cpu-num", cpuInfo.getCpuNum() + "", monitorTerminal, "cpu数"));
+                    CollectionUtils.addAll(result, checkRelease( "cpu-core-num", cpuInfo.getCpuCore() + "", monitorTerminal, "cpu core数"));
                 }
+
+                CollectionUtils.addAll(result, checkRelease("ipaddress", terminalSession.ipAddr(), monitorTerminal, "ip地址名称"));
+                return result;
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -234,7 +230,7 @@ public class MonitorTerminalServiceImpl extends ServiceImpl<MonitorTerminalMappe
     }
 
     private Session createSession(MonitorTerminal monitorTerminal) {
-        return new TerminalSession(DataSourceOptions.newBuilder()
+        return new SshSession(DataSourceOptions.newBuilder()
                 .username(monitorTerminal.getTerminalUser())
                 .password(monitorTerminal.getTerminalPassword())
                 .url(monitorTerminal.getTerminalHost() + ":" + monitorTerminal.getTerminalPort())
@@ -273,7 +269,7 @@ public class MonitorTerminalServiceImpl extends ServiceImpl<MonitorTerminalMappe
     }
 
     private void doIndicator(String terminalId, Session session) {
-        if(session instanceof TerminalSession terminalSession) {
+        if(session instanceof SshSession terminalSession) {
             Set<String> allIndicator = terminalSession.getAllIndicator();
             for (String s : allIndicator) {
                 Object indicator = terminalSession.getIndicator(s);
