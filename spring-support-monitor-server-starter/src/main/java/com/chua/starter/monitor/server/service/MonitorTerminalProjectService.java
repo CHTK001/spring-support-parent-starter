@@ -10,20 +10,36 @@ import com.chua.starter.monitor.server.entity.MonitorTerminalProject;
  */
 public interface MonitorTerminalProjectService extends IService<MonitorTerminalProject> {
 
+    /**
+     * 运行启动脚本。
+     *
+     * @param monitorTerminalProject 监控终端项目对象，包含运行脚本所需的信息。
+     * @return 返回执行结果，成功为true，失败为false。
+     */
+    ReturnResult<Boolean> runStartScript(MonitorTerminalProject monitorTerminalProject);
 
     /**
-     * 开始
+     * 运行停止脚本。
      *
-     * @param monitorTerminalProject monitorTerminalProject
-     * @return boolean
+     * @param monitorProxy 监控代理对象，包含停止脚本所需的信息。
+     * @return 返回执行结果，成功为true，失败为false。
      */
-    ReturnResult<Boolean> start(MonitorTerminalProject monitorTerminalProject);
+    ReturnResult<Boolean> runStopScript(MonitorTerminalProject monitorProxy);
 
     /**
-     * 停止
+     * 启动日志记录。
      *
-     * @param monitorTerminalProject monitorTerminalProject
-     * @return boolean
+     * @param monitorTerminalProject 监控终端项目对象，包含启动日志记录所需的信息。
+     * @param event
+     * @return 返回执行结果，成功为true，失败为false。
      */
-    ReturnResult<Boolean> stop(MonitorTerminalProject monitorProxy);
+    ReturnResult<Boolean> logStart(MonitorTerminalProject monitorTerminalProject, String event);
+
+    /**
+     * 停止日志记录。
+     *
+     * @param monitorTerminalProject 监控终端项目对象，包含停止日志记录所需的信息。
+     * @return 返回执行结果，成功为true，失败为false。
+     */
+    ReturnResult<Boolean> logStop(MonitorTerminalProject monitorTerminalProject);
 }
