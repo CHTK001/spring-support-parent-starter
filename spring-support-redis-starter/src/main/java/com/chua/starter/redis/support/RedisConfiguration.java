@@ -3,7 +3,7 @@ package com.chua.starter.redis.support;
 import com.chua.common.support.protocol.options.ClientSetting;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.redis.support.client.RedisClient;
-import com.chua.redis.support.client.operable.OperableRedis;
+import com.chua.redis.support.client.RedisSession;
 import com.chua.starter.redis.support.listener.RedisListener;
 import com.chua.starter.redis.support.properties.RedisServerProperties;
 import com.chua.starter.redis.support.server.RedisEmbeddedServer;
@@ -58,7 +58,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnClass(name = {"redis.clients.jedis.AbstractPipeline"})
-    public OperableRedis redisSearch(RedisProperties redisProperties) {
+    public RedisSession redisSearch(RedisProperties redisProperties) {
         RedisClient redisClient = new RedisClient(
                 ClientSetting.builder()
                         .database("default")

@@ -6,8 +6,7 @@ import com.chua.common.support.session.query.ExecuteQuery;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.FileUtils;
 import com.chua.socketio.support.session.SocketSessionTemplate;
-import com.chua.ssh.support.session.SshSession;
-import com.chua.ssh.support.session.TerminalSession;
+import com.chua.ssh.support.ssh.SshSession;
 import com.chua.starter.monitor.server.entity.MonitorProject;
 import com.chua.starter.monitor.server.entity.MonitorProjectVersion;
 import com.chua.starter.monitor.server.service.MonitorProjectService;
@@ -35,12 +34,12 @@ public class StartScript {
         }
         Session session = ServiceProvider.of(Session.class).getKeepExtension(monitorProject.getProjectId() + "terminal", "terminal", monitorProject.newDatabaseOptions());
         if(null != session) {
-            TerminalSession terminalSession = (TerminalSession)session;
+            SshSession terminalSession = (SshSession)session;
             if(!terminalSession.isConnect()) {
                 ServiceProvider.of(Session.class).closeKeepExtension(monitorProject.getProjectId()+ "");
                 throw new RuntimeException("当前服务器不可达");
             }
-            SshSession sshSession = terminalSession.getSshSession();
+            com.chua.ssh.support.session.SshSession sshSession = terminalSession.getSshSession();
             session.setListener(message -> {
                 socketSessionTemplate.send(monitorProjectVersion.getVersionId() + "terminal", message);
             });
@@ -53,7 +52,7 @@ public class StartScript {
         }
     }
 
-    private void doStart(SshSession sshSession, MonitorProjectVersion monitorProjectVersion, MonitorProject monitorProject) throws Exception {
+    private void doStart(com.chua.ssh.support.session.SshSession sshSession, MonitorProjectVersion monitorProjectVersion, MonitorProject monitorProject) throws Exception {
         sshSession.executeQuery(
                 "nohup "
                         + getRunScript(monitorProjectVersion, monitorProject)

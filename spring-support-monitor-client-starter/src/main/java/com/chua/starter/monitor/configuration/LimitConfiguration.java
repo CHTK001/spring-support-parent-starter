@@ -1,6 +1,12 @@
 package com.chua.starter.monitor.configuration;
 
-import com.chua.common.support.protocol.boot.*;
+import com.chua.common.support.json.JsonObject;
+import com.chua.common.support.protocol.client.Client;
+import com.chua.common.support.protocol.request.DefaultRequest;
+import com.chua.common.support.protocol.request.Request;
+import com.chua.common.support.protocol.request.RequestBuilder;
+import com.chua.common.support.protocol.request.Response;
+import com.chua.common.support.protocol.server.Server;
 import com.chua.common.support.task.limit.RateLimitMappingFactory;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.monitor.factory.MonitorFactory;
@@ -14,6 +20,8 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.core.env.Environment;
 
+import java.nio.charset.StandardCharsets;
+
 /**
  * 配置文件插件
  *
@@ -23,8 +31,8 @@ import org.springframework.core.env.Environment;
 public class LimitConfiguration implements BeanFactoryAware, EnvironmentAware, ApplicationContextAware {
 
 
-    private BootProtocolServer protocolServer;
-    private BootProtocolClient protocolClient;
+    private Server protocolServer;
+    private Client<?> protocolClient;
 
     private ConfigurableListableBeanFactory beanFactory;
 
@@ -39,16 +47,16 @@ public class LimitConfiguration implements BeanFactoryAware, EnvironmentAware, A
                     "ConfigValueAnnotationBeanPostProcessor requires a ConfigurableListableBeanFactory");
         }
         this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
-        String[] beanNamesForType = this.beanFactory.getBeanNamesForType(BootProtocolServer.class);
+        String[] beanNamesForType = this.beanFactory.getBeanNamesForType(Server.class);
         if(beanNamesForType.length == 0) {
             return;
         }
         if(!MonitorFactory.getInstance().isEnable()) {
             return;
         }
-        this.protocolServer = this.beanFactory.getBean(BootProtocolServer.class);
-        this.protocolClient = this.beanFactory.getBean(BootProtocolClient.class);
-        this.protocolServer.addMapping(RateLimitMappingFactory.getInstance());
+        this.protocolServer = this.beanFactory.getBean(Server.class);
+        this.protocolClient = this.beanFactory.getBean(Client.class);
+        this.protocolServer.addDefinition(RateLimitMappingFactory.getInstance());
         doInjectSubscribe();
     }
 
@@ -56,25 +64,26 @@ public class LimitConfiguration implements BeanFactoryAware, EnvironmentAware, A
         if(!MonitorFactory.getInstance().containsKey("LIMIT")) {
             return;
         }
-        BootResponse response = protocolClient.get(BootRequest.builder()
-                        .moduleType("LIMIT")
-                        .commandType(CommandType.SUBSCRIBE)
-                        .appName(MonitorFactory.getInstance().getAppName())
-                        .profile(MonitorFactory.getInstance().getActive())
-                        .content(MonitorFactory.getInstance().getSubscribeApps())
+        Response response = protocolClient.get(RequestBuilder.newBuilder()
+                        .url("LIMIT")
+                        .attribute("commandType", "SUBSCRIBE")
+                        .attribute("appName", MonitorFactory.getInstance().getAppName())
+                        .attribute("profile", MonitorFactory.getInstance().getActive())
+                        .attribute("content", MonitorFactory.getInstance().getSubscribeApps())
                 .build()
         );
-        if(response.getCommandType() != CommandType.RESPONSE) {
+        JsonObject responseJson =  response.getBody(JsonObject.class);
+        if(responseJson.isEquals("commandType", "RESPONSE")) {
             return;
         }
 
         log.info("LIMIT 订阅成功");
-        register(MapUtils.getString(response.getData(), "data"));
+        register(MapUtils.getString(responseJson, "data"));
     }
 
     private void register(String content) {
-        BootRequest request = new BootRequest();
-        request.setContent(content);
+        Request request = new DefaultRequest();
+        request.setBody(content.getBytes(StandardCharsets.UTF_8));
         RateLimitMappingFactory.getInstance().limitConfig(request);
     }
 

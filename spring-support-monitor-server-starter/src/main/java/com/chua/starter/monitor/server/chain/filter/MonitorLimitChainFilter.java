@@ -5,12 +5,12 @@ import com.chua.common.support.annotations.SpiOptional;
 import com.chua.common.support.chain.ChainContext;
 import com.chua.common.support.chain.FilterChain;
 import com.chua.common.support.chain.filter.ChainFilter;
-import com.chua.common.support.function.request.BussinessResponse;
-import com.chua.common.support.function.request.Request;
 import com.chua.common.support.geo.GeoCity;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.common.support.objects.annotation.Config;
+import com.chua.common.support.protocol.request.BadResponse;
+import com.chua.common.support.protocol.request.Request;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.monitor.server.entity.MonitorProxyLimitLog;
 import com.chua.starter.monitor.server.service.IptablesService;
@@ -64,7 +64,7 @@ public class MonitorLimitChainFilter implements ChainFilter {
         }
 
         doRegisterLog(url, hostString, "deny");
-        context.setResponse(new BussinessResponse(request));
+        context.setResponse(new BadResponse(request, 405, "系统繁忙"));
         filterChain.doFilter(context);
     }
 
