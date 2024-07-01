@@ -2,10 +2,10 @@ package com.chua.starter.monitor.configuration;
 
 import com.chua.common.support.invoke.annotation.RequestLine;
 import com.chua.common.support.json.Json;
-import com.chua.common.support.protocol.boot.BootProtocolServer;
-import com.chua.common.support.protocol.boot.BootRequest;
-import com.chua.common.support.protocol.boot.BootResponse;
-import com.chua.common.support.protocol.boot.CommandType;
+import com.chua.common.support.protocol.request.OkResponse;
+import com.chua.common.support.protocol.request.Request;
+import com.chua.common.support.protocol.request.Response;
+import com.chua.common.support.protocol.server.ProtocolServer;
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.starter.common.support.annotations.Job;
 import com.chua.starter.monitor.factory.MonitorFactory;
@@ -27,8 +27,6 @@ import org.springframework.core.annotation.AnnotatedElementUtils;
 import java.lang.reflect.Method;
 import java.util.Map;
 
-import static com.chua.common.support.lang.message.AbstractMessagePush.OK;
-
 /**
  * 外壳配置
  *
@@ -39,33 +37,31 @@ import static com.chua.common.support.lang.message.AbstractMessagePush.OK;
 @Slf4j
 public class JobConfiguration implements BeanFactoryAware, SmartInstantiationAwareBeanPostProcessor {
 
-    private BootProtocolServer protocolServer;
+    private ProtocolServer protocolServer;
     private ConfigurableListableBeanFactory beanFactory;
 
     @RequestLine("job")
-    public BootResponse listen(BootRequest request) {
-        if(request.getCommandType() != CommandType.REQUEST) {
-            return BootResponse.notSupport("The non-register command is not supported");
+    public Response listen(Request request) {
+        if(!request.match("commandType", "REQUEST")) {
+            return Response.notSupport(request, "The non-register command is not supported");
         }
         JobExecute jobExecute = new DefaultJobExecute();
-        return jobExecute.run(Json.fromJson(request.getContent(), TriggerParam.class));
+        return jobExecute.run(request, Json.fromJson(request.getBody(), TriggerParam.class));
     }
 
     /**
      * bean
      *
      * @param request 要求
-     * @return {@link BootResponse}
+     * @return {@link Response}
      */
     @RequestLine("job-bean")
-    public BootResponse bean(BootRequest request) {
-        if(request.getCommandType() != CommandType.REQUEST) {
-            return BootResponse.notSupport("The non-register command is not supported");
+    public Response bean(Request request) {
+        if(request.match("commandType", "REQUEST")) {
+            return Response.notSupport(request, "The non-register command is not supported");
         }
-        return BootResponse.builder()
-                .code(OK)
-                .data(Json.toJson(JobHandlerFactory.getInstance().keys()))
-                .build();
+
+        return new OkResponse(request, Json.toJson(JobHandlerFactory.getInstance().keys()));
     }
 
     @Override
@@ -82,7 +78,7 @@ public class JobConfiguration implements BeanFactoryAware, SmartInstantiationAwa
                     "ConfigValueAnnotationBeanPostProcessor requires a ConfigurableListableBeanFactory");
         }
         this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
-        String[] beanNamesForType = this.beanFactory.getBeanNamesForType(BootProtocolServer.class);
+        String[] beanNamesForType = this.beanFactory.getBeanNamesForType(ProtocolServer.class);
         if(beanNamesForType.length == 0) {
             return;
         }
@@ -90,8 +86,8 @@ public class JobConfiguration implements BeanFactoryAware, SmartInstantiationAwa
         if(!MonitorFactory.getInstance().isEnable()) {
             return;
         }
-        this.protocolServer = this.beanFactory.getBean(BootProtocolServer.class);
-        this.protocolServer.addMapping(this);
+        this.protocolServer = this.beanFactory.getBean(ProtocolServer.class);
+        this.protocolServer.addDefinition(this);
     }
 
     private void doAnalysisJob(Map<Method, Job> methodJobMap, String beanDefinitionName, Object bean) {

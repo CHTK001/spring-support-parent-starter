@@ -1,8 +1,9 @@
 package com.chua.starter.monitor.job.execute;
 
-import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.protocol.boot.BootResponse;
+import com.chua.common.support.protocol.request.DefaultResponse;
+import com.chua.common.support.protocol.request.Request;
+import com.chua.common.support.protocol.request.Response;
 import com.chua.starter.monitor.factory.MonitorFactory;
 import com.chua.starter.monitor.job.GlueTypeEnum;
 import com.chua.starter.monitor.job.TriggerParam;
@@ -28,7 +29,7 @@ public class DefaultJobExecute implements JobExecute {
 
 
     @Override
-    public BootResponse run(TriggerParam triggerParam) {
+    public Response run(Request request, TriggerParam triggerParam) {
 
         boolean inProfile = MonitorFactory.getInstance().inProfile(triggerParam.getProfile());
 
@@ -37,9 +38,7 @@ public class DefaultJobExecute implements JobExecute {
 
         HandlerResult handler = getJobHandler(triggerParam, glueTypeEnum);
         if (!inProfile || null == handler  || handler.getJobHandler() == null ) {
-            return BootResponse.builder().code(ReturnCode.REQUEST_PARAM_ERROR.getCode())
-                    .msg("job handler [" + triggerParam.getExecutorHandler() + "] not found.")
-                    .build();
+            return Response.notSupport(request, "job handler [" + triggerParam.getExecutorHandler() + "] not found.");
         }
         JobThread jobThread = handler.getJobThread();
         // replace thread (new or exists invalid)
@@ -49,10 +48,7 @@ public class DefaultJobExecute implements JobExecute {
 
         // push data to queue
         ReturnResult<String> pushResult = jobThread.pushTriggerQueue(triggerParam);
-        return BootResponse.builder()
-                .code(pushResult.getCode())
-                .msg(pushResult.getMsg())
-                .build();
+        return new DefaultResponse(request, pushResult.isOk() ? 200 : 400, pushResult.getMsg());
     }
 
     private HandlerResult getJobHandler(TriggerParam triggerParam, GlueTypeEnum glueTypeEnum) {

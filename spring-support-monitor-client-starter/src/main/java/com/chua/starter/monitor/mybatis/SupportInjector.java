@@ -7,7 +7,12 @@ import com.chua.common.support.invoke.annotation.RequestLine;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.json.JsonArray;
 import com.chua.common.support.json.JsonObject;
-import com.chua.common.support.protocol.boot.*;
+import com.chua.common.support.protocol.client.ProtocolClient;
+import com.chua.common.support.protocol.request.BadResponse;
+import com.chua.common.support.protocol.request.ProtocolRequest;
+import com.chua.common.support.protocol.request.Request;
+import com.chua.common.support.protocol.request.Response;
+import com.chua.common.support.protocol.server.ProtocolServer;
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
@@ -33,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static com.chua.common.support.protocol.protocol.CommandType.SUBSCRIBE;
 import static io.lettuce.core.pubsub.PubSubOutput.Type.subscribe;
 
 /**
@@ -44,8 +50,8 @@ import static io.lettuce.core.pubsub.PubSubOutput.Type.subscribe;
 @Slf4j
 public class SupportInjector extends DefaultSqlInjector implements EnvironmentAware, BeanFactoryAware, ApplicationContextAware, CommandLineRunner {
 
-    private BootProtocolClient protocolClient;
-    private BootProtocolServer protocolServer;
+    private ProtocolClient protocolClient;
+    private ProtocolServer protocolServer;
 
 
     private final Map<String, DynamicSqlMethod> methodMap = new ConcurrentHashMap<>();
@@ -68,10 +74,10 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
     }
 
     @RequestLine("mybatis")
-    public BootResponse mybatis(BootRequest request) {
-        String content = request.getContent();
+    public Response mybatis(Request request) {
+        String content = new String(request.getBody());
         if(StringUtils.isBlank(content)) {
-            return BootResponse.empty();
+            return new BadResponse(request, "数据为空");
         }
 
         log.info("监听到Mybatis推送数据");
@@ -79,9 +85,9 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
         try {
             register(jsonObject);
         } catch (Exception e) {
-            return BootResponse.notSupport(e.getMessage());
+            return Response.notSupport(request, e.getMessage());
         }
-        return BootResponse.ok();
+        return Response.ok(request);
     }
 
     @Override
@@ -206,7 +212,7 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
                     "ConfigValueAnnotationBeanPostProcessor requires a ConfigurableListableBeanFactory");
         }
         this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
-        String[] beanNamesForType = this.beanFactory.getBeanNamesForType(BootProtocolServer.class);
+        String[] beanNamesForType = this.beanFactory.getBeanNamesForType(ProtocolServer.class);
         if(beanNamesForType.length == 0) {
             return;
         }
@@ -215,9 +221,9 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
             return;
         }
 
-        this.protocolServer = this.beanFactory.getBean(BootProtocolServer.class);
-        this.protocolClient = this.beanFactory.getBean(BootProtocolClient.class);
-        this.protocolServer.addMapping(this);
+        this.protocolServer = this.beanFactory.getBean(ProtocolServer.class);
+        this.protocolClient = this.beanFactory.getBean(ProtocolClient.class);
+        this.protocolServer.addDefinition(this);
         MonitorFactory monitorFactory = MonitorFactory.getInstance();
         if(!MonitorFactory.getInstance().isEnable()) {
             return;
@@ -227,9 +233,9 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
             return;
         }
 
-        BootResponse response = protocolClient.get(BootRequest.builder()
+        Response response = protocolClient.sendRequestAndReply(ProtocolRequest.builder()
                 .moduleType("MYBATIS")
-                .commandType(CommandType.SUBSCRIBE)
+                .commandType(SUBSCRIBE)
                 .appName(monitorFactory.getAppName())
                 .profile(monitorFactory.getActive())
                 .content(MonitorFactory.getInstance().getSubscribeApps())
@@ -237,14 +243,15 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
         );
 
 
-        if(response.getCommandType() != CommandType.RESPONSE) {
-            log.error("MYBATIS 订阅: {}失败 => {}", subscribe,MapUtils.getString(response.getData(), "data"));
+        JsonObject responseBody = response.getBody(JsonObject.class);
+        if(!responseBody.isEquals("commandType", "RESPONSE")) {
+            log.error("MYBATIS 订阅: {}失败 => {}", subscribe,MapUtils.getString(responseBody, "data"));
             return;
         }
 
         log.info("MYBATIS 订阅: {} 成功", subscribe);
         try {
-            JsonArray jsonArray = Json.getJsonArray(MapUtils.getString(response.getData(), "data"));
+            JsonArray jsonArray = Json.getJsonArray(MapUtils.getString(responseBody, "data"));
             register(jsonArray);
         } catch (Exception ignored) {
         }

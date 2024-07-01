@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.protocol.boot.CommandType;
+import com.chua.common.support.protocol.protocol.CommandType;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.starter.monitor.job.TriggerParam;

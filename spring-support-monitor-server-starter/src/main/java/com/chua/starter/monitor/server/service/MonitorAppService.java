@@ -1,8 +1,8 @@
 package com.chua.starter.monitor.server.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.chua.common.support.protocol.boot.BootResponse;
-import com.chua.common.support.protocol.boot.CommandType;
+import com.chua.common.support.protocol.protocol.CommandType;
+import com.chua.common.support.protocol.request.Response;
 import com.chua.starter.monitor.request.MonitorRequest;
 import com.chua.starter.monitor.server.entity.MonitorApp;
 import com.chua.starter.monitor.server.entity.MonitorConfig;
@@ -23,7 +23,7 @@ public interface MonitorAppService extends IService<MonitorApp>{
      *
      * @param config         配置
      * @param monitorRequest 监视器请求
-     * @return {@link BootResponse}
+     * @return {@link Response}
      */
-    BootResponse upload(MonitorConfig config, MonitorRequest monitorRequest, String content, String moduleType, CommandType commandType);
+    Response upload(MonitorConfig config, MonitorRequest monitorRequest, String content, String moduleType, CommandType commandType);
 }

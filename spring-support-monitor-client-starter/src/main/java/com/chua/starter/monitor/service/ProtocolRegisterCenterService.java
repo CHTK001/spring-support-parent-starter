@@ -1,10 +1,11 @@
 package com.chua.starter.monitor.service;
 
 import com.chua.common.support.json.Json;
-import com.chua.common.support.protocol.boot.BootProtocolClient;
-import com.chua.common.support.protocol.boot.BootRequest;
-import com.chua.common.support.protocol.boot.BootResponse;
-import com.chua.common.support.protocol.boot.CommandType;
+import com.chua.common.support.json.JsonObject;
+import com.chua.common.support.protocol.client.ProtocolClient;
+import com.chua.common.support.protocol.protocol.CommandType;
+import com.chua.common.support.protocol.request.ProtocolRequest;
+import com.chua.common.support.protocol.request.Response;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.monitor.factory.MonitorFactory;
 import jakarta.annotation.Resource;
@@ -22,7 +23,7 @@ import org.springframework.core.env.Environment;
  */
 public class ProtocolRegisterCenterService implements RegisterCenterService, ApplicationContextAware {
 
-    private BootProtocolClient protocolClient;
+    private ProtocolClient protocolClient;
 
     @Resource
     private Environment environment;
@@ -37,7 +38,7 @@ public class ProtocolRegisterCenterService implements RegisterCenterService, App
             throw new NullPointerException("protocolClient is null");
         }
 
-        BootResponse response = protocolClient.get(BootRequest.builder()
+        Response response = protocolClient.sendRequestAndReply(ProtocolRequest.builder()
                 .moduleType("REGISTER_CENTER")
                 .commandType(CommandType.REQUEST)
                 .appName(environment.getProperty("spring.application.name"))
@@ -45,17 +46,18 @@ public class ProtocolRegisterCenterService implements RegisterCenterService, App
                 .content(MonitorFactory.getInstance().getSubscribeApps())
                 .build()
         );
-        if(response.getCommandType() != CommandType.RESPONSE) {
+        JsonObject responseBody = response.getBody(JsonObject.class);
+        if(!responseBody.isEquals("commandType", "RESPONSE")) {
             return null;
         }
 
-        return Json.fromJson(MapUtils.getString(response.getData(), "data"), ServiceInstance.class);
+        return Json.fromJson(MapUtils.getString(responseBody, "data"), ServiceInstance.class);
     }
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         try {
-            this.protocolClient = applicationContext.getAutowireCapableBeanFactory().getBean(BootProtocolClient.class);
+            this.protocolClient = applicationContext.getAutowireCapableBeanFactory().getBean(ProtocolClient.class);
         } catch (Exception ignored) {
         }
 

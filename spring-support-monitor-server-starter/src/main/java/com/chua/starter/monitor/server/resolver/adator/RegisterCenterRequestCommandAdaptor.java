@@ -2,10 +2,13 @@ package com.chua.starter.monitor.server.resolver.adator;
 
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.robin.Node;
 import com.chua.common.support.lang.robin.Robin;
-import com.chua.common.support.protocol.boot.BootRequest;
-import com.chua.common.support.protocol.boot.BootResponse;
+import com.chua.common.support.protocol.request.BadResponse;
+import com.chua.common.support.protocol.request.OkResponse;
+import com.chua.common.support.protocol.request.Request;
+import com.chua.common.support.protocol.request.Response;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.StringUtils;
@@ -17,7 +20,6 @@ import jakarta.annotation.Resource;
 
 import java.util.List;
 
-import static com.chua.common.support.protocol.boot.CommandType.RESPONSE;
 
 /**
  * config-subscribe命令适配器
@@ -36,21 +38,22 @@ public class RegisterCenterRequestCommandAdaptor implements CommandAdaptor{
     private MonitorProtocolProperties monitorProtocolProperties;
 
     @Override
-    public BootResponse resolve(BootRequest request) {
-        String appName = request.getAppName();
+    public Response resolve(Request request) {
+        JsonObject requestBody = request.getBody(JsonObject.class);
+        if(null == requestBody) {
+            return new BadResponse(request, "content is empty");
+        }
+        String appName = requestBody.getString("appName");
         if(StringUtils.isEmpty(appName)) {
-            return BootResponse.empty();
+            return new BadResponse(request, "appName is empty");
         }
 
         ServiceInstance serviceInstance = getServiceInstance(appName);
         if(null == serviceInstance) {
-            return BootResponse.empty();
+            return new BadResponse(request, "appName is empty");
         }
 
-        return BootResponse.builder()
-                .commandType(RESPONSE)
-                .data(Json.toJson(serviceInstance))
-                .build();
+        return new OkResponse(request, Json.toJson(serviceInstance));
     }
 
 
