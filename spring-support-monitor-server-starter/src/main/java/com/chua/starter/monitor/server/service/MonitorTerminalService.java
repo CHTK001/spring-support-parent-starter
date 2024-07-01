@@ -2,7 +2,7 @@ package com.chua.starter.monitor.server.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.session.Session;
+import com.chua.ssh.support.ssh.SshClient;
 import com.chua.starter.monitor.server.entity.MonitorTerminal;
 import com.chua.starter.monitor.server.entity.MonitorTerminalBase;
 
@@ -42,7 +42,7 @@ public interface MonitorTerminalService extends IService<MonitorTerminal> {
      * @param requestId 请求ID，用于唯一标识一个请求。这是检索会话的关键依据。
      * @return 与给定请求ID关联的会话对象。如果找不到匹配的会话，可能返回null。
      */
-    Session getSession(String requestId);
+    SshClient getClient(String requestId);
 
     /**
      * 判断是否需要显示监控终端的指示器。

@@ -3,10 +3,11 @@ package com.chua.starter.monitor.configuration;
 import com.chua.common.support.invoke.annotation.RequestLine;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.json.JsonObject;
-import com.chua.common.support.protocol.boot.BootProtocolClient;
-import com.chua.common.support.protocol.boot.BootProtocolServer;
-import com.chua.common.support.protocol.boot.BootRequest;
-import com.chua.common.support.protocol.boot.BootResponse;
+import com.chua.common.support.protocol.client.ProtocolClient;
+import com.chua.common.support.protocol.request.BadResponse;
+import com.chua.common.support.protocol.request.Request;
+import com.chua.common.support.protocol.request.Response;
+import com.chua.common.support.protocol.server.ProtocolServer;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.factory.MonitorFactory;
 import com.chua.starter.monitor.patch.PatchResolver;
@@ -29,8 +30,8 @@ import org.springframework.core.env.Environment;
 public class PatchConfiguration implements BeanFactoryAware, EnvironmentAware, ApplicationContextAware {
 
 
-    private BootProtocolServer protocolServer;
-    private BootProtocolClient protocolClient;
+    private ProtocolServer protocolServer;
+    private ProtocolClient protocolClient;
 
     private ConfigurableListableBeanFactory beanFactory;
 
@@ -45,7 +46,7 @@ public class PatchConfiguration implements BeanFactoryAware, EnvironmentAware, A
                     "ConfigValueAnnotationBeanPostProcessor requires a ConfigurableListableBeanFactory");
         }
         this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
-        String[] beanNamesForType = this.beanFactory.getBeanNamesForType(BootProtocolServer.class);
+        String[] beanNamesForType = this.beanFactory.getBeanNamesForType(ProtocolServer.class);
         if(beanNamesForType.length == 0) {
             return;
         }
@@ -53,9 +54,9 @@ public class PatchConfiguration implements BeanFactoryAware, EnvironmentAware, A
         if(!MonitorFactory.getInstance().isEnable()) {
             return;
         }
-        this.protocolServer = this.beanFactory.getBean(BootProtocolServer.class);
-        this.protocolClient = this.beanFactory.getBean(BootProtocolClient.class);
-        this.protocolServer.addMapping(this);
+        this.protocolServer = this.beanFactory.getBean(ProtocolServer.class);
+        this.protocolClient = this.beanFactory.getBean(ProtocolClient.class);
+        this.protocolServer.addDefinition(this);
     }
 
 
@@ -63,24 +64,24 @@ public class PatchConfiguration implements BeanFactoryAware, EnvironmentAware, A
      * 补丁
      *
      * @param request 请求
-     * @return {@link BootResponse}
+     * @return {@link Response}
      */
     @RequestLine("patch")
-    public BootResponse patch(BootRequest request ) {
-        String content = request.getContent();
+    public Response patch(Request request ) {
+        String content = new String(request.getBody());
         if(StringUtils.isBlank(content)) {
-            return BootResponse.empty();
+            return new BadResponse(request, "patchFile is null");
         }
         JsonObject jsonObject = Json.getJsonObject(content);
         String patchFile = jsonObject.getString("patchFile");
         String patchFileName = jsonObject.getString("monitorPatchPack");
         if(StringUtils.isBlank(patchFile) || StringUtils.isBlank(patchFileName)) {
-            return BootResponse.empty();
+            return new BadResponse(request, "patchFile is null");
         }
 
         PatchResolver patchResolver = new PatchResolver(patchFileName);
         patchResolver.resolve(patchFile);
-        return BootResponse.ok();
+        return Response.ok(request);
     }
 
 

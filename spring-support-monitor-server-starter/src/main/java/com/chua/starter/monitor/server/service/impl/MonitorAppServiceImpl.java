@@ -2,8 +2,18 @@ package com.chua.starter.monitor.server.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.common.support.bean.BeanUtils;
+import com.chua.common.support.collection.Option;
+import com.chua.common.support.collection.Options;
+import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.json.Json;
-import com.chua.common.support.protocol.boot.*;
+import com.chua.common.support.protocol.ProtocolSetting;
+import com.chua.common.support.protocol.client.ProtocolClient;
+import com.chua.common.support.protocol.protocol.CommandType;
+import com.chua.common.support.protocol.protocol.Protocol;
+import com.chua.common.support.protocol.request.BadResponse;
+import com.chua.common.support.protocol.request.DefaultRequest;
+import com.chua.common.support.protocol.request.ProtocolRequest;
+import com.chua.common.support.protocol.request.Response;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.ThreadUtils;
@@ -62,41 +72,43 @@ public class MonitorAppServiceImpl extends ServiceImpl<MonitorAppMapper, Monitor
      *
      * @param config         配置
      * @param monitorRequest 监视器请求
-     * @return {@link BootResponse}
+     * @return {@linkResponse}
      */
     @Override
-    public BootResponse upload(MonitorConfig config, MonitorRequest monitorRequest, String content, String moduleType, CommandType commandType) {
+    public Response upload(MonitorConfig config, MonitorRequest monitorRequest, String content, String moduleType, CommandType commandType) {
         Object data = monitorRequest.getData();
         if(null == data) {
             return null;
         }
 
         MonitorProtocolProperties monitorProtocolProperties = BeanUtils.copyProperties(data, MonitorProtocolProperties.class);
-        BootSetting bootOption = BootSetting.builder()
-                .address(monitorProtocolProperties.getHost() + ":" + monitorProtocolProperties.getPort())
+        Codec codec = Codec.build(monitorProtocolProperties.getEncryptionSchema(), monitorProtocolProperties.getEncryptionKey());
+        ProtocolSetting bootOption = ProtocolSetting.builder()
+                .host(monitorProtocolProperties.getHost() )
+                .port( monitorProtocolProperties.getPort())
                 .heartbeat(false)
-                .codec(monitorProtocolProperties.getEncryptionSchema())
-                .key(monitorProtocolProperties.getEncryptionKey())
-                .profile(null == config ? "default" : config.getConfigProfile())
-                .appName(null == config ? monitorRequest.getAppName() : config.getConfigAppname()).build();
-        BootProtocol protocol = ServiceProvider.of(BootProtocol.class).getNewExtension(monitorProtocolProperties.getProtocol(), bootOption);
+                .codec(codec)
+                .options(new Options()
+                        .addOption("profile", new Option(null == config ? "default" : config.getConfigProfile()))
+                        .addOption("appName", new Option(null == config ? monitorRequest.getAppName() : config.getConfigAppname()))
+                )
+                .build();
+        Protocol protocol = ServiceProvider.of(Protocol.class).getNewExtension(monitorProtocolProperties.getProtocol(), bootOption);
         if(null == protocol) {
-            return BootResponse.empty();
+            return new BadResponse(new DefaultRequest(null, null, codec), "协议不存在");
         }
 
-        BootProtocolClient protocolClient = protocol.createClient();
-        BootResponse bootResponse = protocolClient.get(BootRequest.builder()
-                .profile(null == config ? "default" : config.getConfigProfile())
+        ProtocolClient protocolClient = protocol.createClient();
+        Response responseCode = protocolClient.sendRequestAndReply(ProtocolRequest.builder()
                 .content(content)
-                .appName(null == config ? monitorRequest.getAppName() : config.getConfigAppname())
                 .moduleType(moduleType)
                 .commandType(commandType)
                 .build());
 
         try {
             MonitorLog monitorLog = new MonitorLog();
-            monitorLog.setLogCode(null == bootResponse ? "-1" : bootResponse.getCode());
-            monitorLog.setLogMsg(null == bootResponse ? null : bootResponse.getMsg());
+            monitorLog.setLogCode(null == responseCode ? "-1" : String.valueOf(responseCode.code()));
+            monitorLog.setLogMsg(null == responseCode ? null : responseCode.message());
             monitorLog.setLogHost(monitorProtocolProperties.getHost());
             monitorLog.setLogPort(monitorProtocolProperties.getPort());
             monitorLog.setLogModuleType(moduleType);
@@ -109,6 +121,6 @@ public class MonitorAppServiceImpl extends ServiceImpl<MonitorAppMapper, Monitor
         } catch (Exception ignored) {
         }
 
-        return bootResponse;
+        return responseCode;
     }
 }

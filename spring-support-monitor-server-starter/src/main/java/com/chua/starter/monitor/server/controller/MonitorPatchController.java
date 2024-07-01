@@ -5,7 +5,7 @@ import com.chua.common.support.annotations.Group;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.code.ErrorResult;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.protocol.boot.CommandType;
+import com.chua.common.support.protocol.protocol.CommandType;
 import com.chua.common.support.utils.ObjectUtils;
 import com.chua.starter.common.support.result.ResultData;
 import com.chua.starter.monitor.request.MonitorRequest;

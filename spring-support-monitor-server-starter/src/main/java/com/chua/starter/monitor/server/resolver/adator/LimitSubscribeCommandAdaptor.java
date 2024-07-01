@@ -4,8 +4,11 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.function.Splitter;
 import com.chua.common.support.json.Json;
-import com.chua.common.support.protocol.boot.BootRequest;
-import com.chua.common.support.protocol.boot.BootResponse;
+import com.chua.common.support.json.JsonObject;
+import com.chua.common.support.protocol.request.BadResponse;
+import com.chua.common.support.protocol.request.OkResponse;
+import com.chua.common.support.protocol.request.Request;
+import com.chua.common.support.protocol.request.Response;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.server.entity.MonitorLimit;
 import com.chua.starter.monitor.server.service.MonitorLimitService;
@@ -13,7 +16,6 @@ import jakarta.annotation.Resource;
 
 import java.util.List;
 
-import static com.chua.common.support.protocol.boot.CommandType.RESPONSE;
 
 /**
  * config-subscribe命令适配器
@@ -29,20 +31,17 @@ public class LimitSubscribeCommandAdaptor implements CommandAdaptor{
 
 
     @Override
-    public BootResponse resolve(BootRequest request) {
-        String content = request.getContent();
-        if(StringUtils.isEmpty(content)) {
-            return BootResponse.empty();
+    public Response resolve(Request request) {
+        JsonObject requestBody = request.getBody(JsonObject.class);
+        if(null == requestBody) {
+            return new BadResponse(request, "content is empty");
         }
 
         List<MonitorLimit> list = monitorLimitService.list(Wrappers.<MonitorLimit>lambdaQuery()
-                .in(MonitorLimit::getLimitProfile, Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(request.getProfile()))
+                .in(MonitorLimit::getLimitProfile, Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(requestBody.getString("profileName")))
                 .eq(MonitorLimit::getLimitStatus, 1)
-                .in(StringUtils.isNotEmpty(content), MonitorLimit::getLimitApp, Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(content))
+                .in(StringUtils.isNotEmpty(requestBody.getString("appName")), MonitorLimit::getLimitApp, Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(requestBody.getString("appName")))
         );
-        return BootResponse.builder()
-                .commandType(RESPONSE)
-                .data(Json.toJson(list))
-                .build();
+        return new OkResponse(request, Json.toJson(list));
     }
 }
