@@ -106,11 +106,16 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
             throw new IllegalArgumentException(
                     "ConfigValueAnnotationBeanPostProcessor requires a ConfigurableListableBeanFactory");
         }
+        if(MonitorFactory.getInstance().isServer()) {
+            return;
+        }
+
         this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
         String[] beanNamesForType = this.beanFactory.getBeanNamesForType(ProtocolServer.class);
         if(beanNamesForType.length == 0) {
             return;
         }
+
         if(!MonitorFactory.getInstance().isEnable()) {
             return;
         }

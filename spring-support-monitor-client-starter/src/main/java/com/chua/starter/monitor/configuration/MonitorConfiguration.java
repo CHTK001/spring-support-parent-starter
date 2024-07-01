@@ -70,9 +70,9 @@ public class MonitorConfiguration  implements BeanDefinitionRegistryPostProcesso
         monitorFactory.register(monitorProtocolProperties);
         monitorFactory.register(monitorSubscribeProperties);
         monitorFactory.register(monitorReportProperties);
+        monitorFactory.isServer(ClassUtils.isPresent("com.chua.starter.monitor.server.properties.MonitorServerProperties"));
 
-
-        if(ClassUtils.isPresent("com.chua.starter.monitor.server.properties.MonitorServerProperties")) {
+        if(monitorFactory.isServer()) {
             return;
         }
         monitorFactory.finish();

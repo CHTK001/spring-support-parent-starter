@@ -57,6 +57,7 @@ public class MonitorFactory implements AutoCloseable {
     private Producer producer;
     private String topic;
     private String reportTopic;
+    private boolean isServer;
 
     public static MonitorFactory getInstance() {
         return INSTANCE;
@@ -254,5 +255,19 @@ public class MonitorFactory implements AutoCloseable {
         return false;
     }
 
+    /**
+     * 是否是服务端
+     * @return
+     */
+    public boolean isServer() {
+        return isServer;
+    }
 
+    /**
+     * 是否是服务端
+     * @param isServer
+     */
+    public void isServer(boolean isServer) {
+        this.isServer = isServer;
+    }
 }
