@@ -6,7 +6,6 @@ import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.protocol.ClientSetting;
 import com.chua.common.support.protocol.channel.Channel;
-import com.chua.common.support.session.Session;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.ObjectUtils;
 import com.chua.common.support.utils.ThreadUtils;
@@ -154,9 +153,9 @@ public class MonitorTerminalServiceImpl extends ServiceImpl<MonitorTerminalMappe
             throw new RuntimeException("代理未启动");
         }
         try {
-            Session session = SERVER_MAP.get(key);
-            if((null != session) && (session instanceof SshSession sshSession)) {
-                Channel channel = sshSession.openChannel("exec");
+            SshClient sshClient = SERVER_MAP.get(key);
+            if((null != sshClient) ) {
+                Channel channel = sshClient.getSession().openChannel(key, "exec");
                 String ip = channel.execute("curl ifconfig.me", 3000);
                 checkRelease( "public-ifconfig", ip, monitorTerminal, "公网IP");
                 return ip;
@@ -182,9 +181,9 @@ public class MonitorTerminalServiceImpl extends ServiceImpl<MonitorTerminalMappe
 
         List<MonitorTerminalBase> result = new LinkedList<>();
         try {
-            Session session = SERVER_MAP.get(key);
-            if((null != session) && (session instanceof SshSession sshSession)) {
-                ExecChannel channel = (ExecChannel) sshSession.openChannel("exec");
+            SshClient sshClient = SERVER_MAP.get(key);
+            if((null != sshClient)) {
+                ExecChannel channel = (ExecChannel) sshClient.getSession().openChannel(key, "exec");
                 CollectionUtils.addAll(result, checkRelease( "public-ifconfig", channel.ifconfig(), monitorTerminal, "公网IP"));
                 CollectionUtils.addAll(result, checkRelease( "release", channel.release(), monitorTerminal, "系统信息"));
                 CollectionUtils.addAll(result, checkRelease( "ulimit", channel.ulimit() + "", monitorTerminal, "最大连接数"));
@@ -266,11 +265,11 @@ public class MonitorTerminalServiceImpl extends ServiceImpl<MonitorTerminalMappe
         });
 
         executorService.scheduleWithFixedDelay(() -> {
-            for (Map.Entry<String, Session> entry : SERVER_MAP.entrySet()) {
+            for (Map.Entry<String, SshClient> entry : SERVER_MAP.entrySet()) {
                 reporterService.execute(() -> {
                     String terminalId = getTerminalId(entry.getKey());
-                    Session session = entry.getValue();
-                    doIndicator(terminalId, session);
+                    SshClient sshClient = entry.getValue();
+                    doIndicator(terminalId, sshClient);
                 });
             }
         }, 0, 10, TimeUnit.SECONDS);
