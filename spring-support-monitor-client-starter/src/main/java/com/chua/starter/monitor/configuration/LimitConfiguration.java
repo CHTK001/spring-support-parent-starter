@@ -47,6 +47,9 @@ public class LimitConfiguration implements BeanFactoryAware, EnvironmentAware, A
             throw new IllegalArgumentException(
                     "ConfigValueAnnotationBeanPostProcessor requires a ConfigurableListableBeanFactory");
         }
+        if(MonitorFactory.getInstance().isServer()) {
+            return;
+        }
         this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
         String[] beanNamesForType = this.beanFactory.getBeanNamesForType(Server.class);
         if(beanNamesForType.length == 0) {
