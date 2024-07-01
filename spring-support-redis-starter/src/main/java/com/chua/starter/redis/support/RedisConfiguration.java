@@ -1,6 +1,6 @@
 package com.chua.starter.redis.support;
 
-import com.chua.common.support.protocol.options.ClientSetting;
+import com.chua.common.support.protocol.ClientSetting;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.redis.support.client.RedisClient;
 import com.chua.redis.support.client.RedisSession;
@@ -65,7 +65,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
                         .host(redisProperties.getHost())
                         .port(redisProperties.getPort())
                         .password(redisProperties.getPassword())
-                        .connectTimeoutMillis(null ==  redisProperties.getTimeout()? 10000:  redisProperties.getTimeout().toMillis())
+                        .connectTimeoutMillis(null ==  redisProperties.getTimeout()? 10000: (int) redisProperties.getTimeout().toMillis())
                         .build()
         );
 

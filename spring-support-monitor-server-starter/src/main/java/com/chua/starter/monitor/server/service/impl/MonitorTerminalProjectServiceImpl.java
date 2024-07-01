@@ -1,8 +1,8 @@
 package com.chua.starter.monitor.server.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.chua.common.support.function.SafeConsumer;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.protocol.channel.Channel;
 import com.chua.common.support.session.Session;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.socketio.support.session.SocketSessionTemplate;
@@ -29,7 +29,7 @@ MonitorTerminalProjectServiceImpl extends ServiceImpl<MonitorTerminalProjectMapp
     private SocketSessionTemplate socketSessionTemplate;
     @Override
     public ReturnResult<Boolean> runStartScript(MonitorTerminalProject monitorTerminalProject) {
-        Session session = monitorTerminalService.getSession(monitorTerminalProject.getTerminalId() + "");
+        Session session = monitorTerminalService.getClient(monitorTerminalProject.getTerminalId() + "");
         if(null == session) {
             return ReturnResult.illegal("会话未开启");
         }
@@ -40,7 +40,8 @@ MonitorTerminalProjectServiceImpl extends ServiceImpl<MonitorTerminalProjectMapp
         }
 
         if(session instanceof SshSession terminalSession) {
-            return ReturnResult.of(terminalSession.execute(startScript, 1000 * 5));
+            Channel channel = terminalSession.openChannel("exec");
+            return ReturnResult.of(channel.execute(startScript, 1000 * 5));
         }
         return null;
     }
@@ -64,7 +65,7 @@ MonitorTerminalProjectServiceImpl extends ServiceImpl<MonitorTerminalProjectMapp
 
     @Override
     public ReturnResult<Boolean> runStopScript(MonitorTerminalProject monitorTerminalProject) {
-        Session session = monitorTerminalService.getSession(monitorTerminalProject.getTerminalId() + "");
+        Session session = monitorTerminalService.getClient(monitorTerminalProject.getTerminalId() + "");
         if(null == session) {
             return ReturnResult.illegal("会话未开启");
         }
@@ -75,14 +76,15 @@ MonitorTerminalProjectServiceImpl extends ServiceImpl<MonitorTerminalProjectMapp
         }
 
         if(session instanceof SshSession terminalSession) {
-            return ReturnResult.of(terminalSession.execute(stopScript, 1000 * 5));
+            Channel channel = terminalSession.openChannel("exec");
+            return ReturnResult.of(channel.execute(stopScript, 1000 * 5));
         }
         return null;
     }
 
     @Override
     public ReturnResult<Boolean> logStart(MonitorTerminalProject monitorTerminalProject, String event) {
-        Session session = monitorTerminalService.getSession(monitorTerminalProject.getTerminalId() + "");
+        Session session = monitorTerminalService.getClient(monitorTerminalProject.getTerminalId() + "");
         if(null == session) {
             return ReturnResult.illegal("会话未开启");
         }
@@ -94,14 +96,9 @@ MonitorTerminalProjectServiceImpl extends ServiceImpl<MonitorTerminalProjectMapp
 
         if(session instanceof SshSession terminalSession) {
             String logEventId = getLogEventId(monitorTerminalProject);
-            SshSession sshSession = terminalSession.getSshSession().getOrCreateSession(logEventId);
-            sshSession.setListener(new SafeConsumer<String>() {
-                @Override
-                public void safeAccept(String s) throws Throwable {
-                    socketSessionTemplate.send(event, s);
-                }
-            });
-            sshSession.executeQuery("tail -f " + logScript);
+            Channel channel = terminalSession.openChannel(logEventId, "shell");
+            channel.setListener(s -> socketSessionTemplate.send(event, s));
+            channel.execute("tail -f " + logScript, 1000);
             return ReturnResult.success();
         }
         return null;
@@ -109,7 +106,7 @@ MonitorTerminalProjectServiceImpl extends ServiceImpl<MonitorTerminalProjectMapp
 
     @Override
     public ReturnResult<Boolean> logStop(MonitorTerminalProject monitorTerminalProject) {
-        Session session = monitorTerminalService.getSession(monitorTerminalProject.getTerminalId() + "");
+        Session session = monitorTerminalService.getClient(monitorTerminalProject.getTerminalId() + "");
         if(null == session) {
             return ReturnResult.illegal("会话未开启");
         }
@@ -121,12 +118,7 @@ MonitorTerminalProjectServiceImpl extends ServiceImpl<MonitorTerminalProjectMapp
 
         if(session instanceof SshSession terminalSession) {
             String logEventId = getLogEventId(monitorTerminalProject);
-            SshSession sshSession = terminalSession.getSshSession().getOrCreateSession(logEventId);
-            try {
-                terminalSession.getSshSession().removeSession(logEventId);
-                sshSession.close();
-            } catch (Exception e) {
-            }
+            terminalSession.closeChannel(logEventId);
             return ReturnResult.success();
         }
         return null;

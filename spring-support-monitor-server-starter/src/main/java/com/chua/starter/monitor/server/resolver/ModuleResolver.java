@@ -1,7 +1,7 @@
 package com.chua.starter.monitor.server.resolver;
 
-import com.chua.common.support.protocol.boot.BootRequest;
-import com.chua.common.support.protocol.boot.BootResponse;
+import com.chua.common.support.protocol.request.Request;
+import com.chua.common.support.protocol.request.Response;
 
 /**
  * 命令解析器
@@ -13,7 +13,7 @@ public interface ModuleResolver {
      * 解释
      *
      * @param request 请求
-     * @return {@link BootResponse}
+     * @return {@link Response}
      */
-    BootResponse resolve(BootRequest request);
+    Response resolve(Request request);
 }

@@ -1,13 +1,13 @@
 package com.chua.starter.monitor.server.configuration;
 
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
-import com.chua.common.support.function.SafeConsumer;
 import com.chua.common.support.json.JsonObject;
-import com.chua.common.support.session.Session;
-import com.chua.common.support.session.query.ExecuteQuery;
+import com.chua.common.support.protocol.channel.Channel;
+import com.chua.common.support.protocol.session.Session;
 import com.chua.socketio.support.SocketIOListener;
 import com.chua.socketio.support.annotations.OnEvent;
 import com.chua.socketio.support.session.SocketSession;
+import com.chua.ssh.support.ssh.SshClient;
 import com.chua.starter.monitor.server.service.MonitorTerminalService;
 import jakarta.annotation.Resource;
 import org.springframework.context.annotation.Configuration;
@@ -33,30 +33,27 @@ public class TerminalSocketIOListener implements SocketIOListener {
             return;
         }
 
-        Session session1 = monitorTerminalService.getSession(requestId);
-        if(null == session1) {
+        SshClient sshClient = monitorTerminalService.getClient(requestId);
+        if(null == sshClient) {
             session.send("terminal-error", JsonObject.create().fluentPut("message", "当前请求不合法").toJSONString());
             return;
         }
 
         String command1 = command.getString("command");
 
-        session1.setListener(new SafeConsumer<String>() {
-            @Override
-            public void safeAccept(String s) throws Throwable {
-                session.send("terminal-" + requestId, JsonObject.create().fluentPut("data", s).toJSONString());
-            }
-        });
+        Session clientSession = sshClient.createSession(requestId);
+        Channel channel = clientSession.openChannel(requestId, "shell");
+        channel.setListener(s ->session.send("terminal-" + requestId, JsonObject.create().fluentPut("data", s).toJSONString()));
 
         if("connect".equalsIgnoreCase(command1)) {
             try {
-                session1.executeQuery("cd /", new ExecuteQuery());
+                channel.execute("cd /", 1000);
             } catch (Exception ignored) {
             }
             return;
         }
         try {
-            session1.executeQuery(command1, new ExecuteQuery());
+            channel.execute(command1, 1000);
         } catch (Exception ignored) {
         }
     }

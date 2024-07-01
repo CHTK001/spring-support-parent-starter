@@ -5,7 +5,11 @@ import com.chua.common.support.invoke.annotation.RequestLine;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.json.JsonArray;
 import com.chua.common.support.json.JsonObject;
-import com.chua.common.support.protocol.boot.*;
+import com.chua.common.support.protocol.client.ProtocolClient;
+import com.chua.common.support.protocol.request.ProtocolRequest;
+import com.chua.common.support.protocol.request.Request;
+import com.chua.common.support.protocol.request.Response;
+import com.chua.common.support.protocol.server.ProtocolServer;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.Md5Utils;
@@ -15,7 +19,6 @@ import com.chua.starter.monitor.annotation.ConfigValue;
 import com.chua.starter.monitor.entity.KeyValue;
 import com.chua.starter.monitor.event.ConfigValueReceivedEvent;
 import com.chua.starter.monitor.factory.MonitorFactory;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.TypeConverter;
@@ -36,6 +39,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.*;
 
+import static com.chua.common.support.protocol.protocol.CommandType.SUBSCRIBE;
 import static org.springframework.core.annotation.AnnotationUtils.getAnnotation;
 
 /**
@@ -57,8 +61,8 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
 
     private static final String VALUE_SEPARATOR = ":";
 
-    private BootProtocolServer protocolServer;
-    private BootProtocolClient protocolClient;
+    private ProtocolServer protocolServer;
+    private ProtocolClient protocolClient;
 
     /**
      * placeholder, ConfigValueTarget
@@ -69,8 +73,6 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
     private ConfigurableListableBeanFactory beanFactory;
 
     private Environment environment;
-    @Setter
-    private ApplicationContext applicationContext;
     private Set<String> actives;
 
     @Override
@@ -105,15 +107,15 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
                     "ConfigValueAnnotationBeanPostProcessor requires a ConfigurableListableBeanFactory");
         }
         this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
-        String[] beanNamesForType = this.beanFactory.getBeanNamesForType(BootProtocolServer.class);
+        String[] beanNamesForType = this.beanFactory.getBeanNamesForType(ProtocolServer.class);
         if(beanNamesForType.length == 0) {
             return;
         }
         if(!MonitorFactory.getInstance().isEnable()) {
             return;
         }
-        this.protocolServer = this.beanFactory.getBean(BootProtocolServer.class);
-        this.protocolClient = this.beanFactory.getBean(BootProtocolClient.class);
+        this.protocolServer = this.beanFactory.getBean(ProtocolServer.class);
+        this.protocolClient = this.beanFactory.getBean(ProtocolClient.class);
     }
 
     @Override
@@ -153,39 +155,41 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
 
 
     @RequestLine("config")
-    public BootResponse listen(BootRequest request) {
-        if(request.getCommandType() != CommandType.REGISTER) {
-            return BootResponse.notSupport("The non-register command is not supported");
+    public Response listen(Request request) {
+        if(request.match("request", "register")) {
+            return Response.notSupport(request,"The non-register command is not supported");
         }
 
         KeyValue keyValue = new KeyValue();
-        JsonObject jsonObject = Json.getJsonObject(request.getContent());
+        JsonObject jsonObject = Json.getJsonObject(request.getBody());
         keyValue.setDataId(jsonObject.getString("configName"));
         keyValue.setData(jsonObject.getString("configValue"));
         keyValue.setProfile(jsonObject.getString("configProfile"));
         onListener(keyValue);
-        return BootResponse.ok();
+        return Response.ok(request);
     }
 
     private void doInjectSubscribe(MutablePropertySources propertySources) {
-        this.protocolServer.addMapping(this);
+        this.protocolServer.addDefinition(this);
         if(!MonitorFactory.getInstance().containsKey("CONFIG")) {
             return;
         }
-        BootResponse response = protocolClient.get(BootRequest.builder()
+        Response response = protocolClient.sendRequestAndReply(ProtocolRequest.builder()
                         .moduleType("CONFIG")
-                        .commandType(CommandType.SUBSCRIBE)
+                        .commandType(SUBSCRIBE)
                         .appName(MonitorFactory.getInstance().getAppName())
                         .profile(MonitorFactory.getInstance().getActive())
                         .content(MonitorFactory.getInstance().getSubscribeApps())
                 .build()
         );
-        if(response.getCommandType() != CommandType.RESPONSE) {
+        JsonObject responseBody = response.getBody(JsonObject.class);
+
+        if(!responseBody.isEquals("commandType", "RESPONSE") ){
             return;
         }
 
         log.info("CONFIG 订阅成功");
-        JsonArray jsonArray = Json.getJsonArray(MapUtils.getString(response.getData(), "data"));
+        JsonArray jsonArray = Json.getJsonArray(MapUtils.getString(responseBody, "data"));
         int size = jsonArray.size();
         Map<String, Object> map = new LinkedHashMap<>();
         for (int i = 0; i < size; i++) {
@@ -417,7 +421,6 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        this.applicationContext = applicationContext;
     }
 
 

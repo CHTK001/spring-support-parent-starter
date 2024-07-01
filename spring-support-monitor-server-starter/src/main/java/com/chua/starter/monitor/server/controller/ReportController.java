@@ -1,10 +1,12 @@
 package com.chua.starter.monitor.server.controller;
 
 
+import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.protocol.boot.BootRequest;
-import com.chua.common.support.protocol.boot.BootResponse;
-import com.chua.common.support.protocol.boot.CommandType;
+import com.chua.common.support.protocol.protocol.CommandType;
+import com.chua.common.support.protocol.request.BadResponse;
+import com.chua.common.support.protocol.request.Request;
+import com.chua.common.support.protocol.request.Response;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.server.factory.MonitorServerFactory;
@@ -40,34 +42,33 @@ public class ReportController {
 
     @PostMapping("/report")
     @Operation(summary = "上报数据")
-    public BootResponse home(@RequestBody RemoteRequest remoteRequest) {
-        BootRequest request = remoteRequest.getRequest(monitorServerProperties);
+    public Response home(@RequestBody RemoteRequest remoteRequest) {
+        Request request = remoteRequest.getRequest(monitorServerProperties);
         if(null == request) {
-            return BootResponse.notSupport();
+            return Response.notSupport(request, "请求不能为空");
         }
 
-        CommandType commandType = request.getCommandType();
+        JsonObject requestBody = request.getBody(JsonObject.class);
+        CommandType commandType = requestBody.getEnum("commandType", CommandType.class);
         if(null == commandType) {
-            return BootResponse.notSupport();
+            return Response.notSupport(request, "请求不能为空");
         }
 
-        String moduleType = request.getModuleType();
+        String moduleType = requestBody.getString("moduleType");
         if(null == moduleType) {
-            return BootResponse.notSupport();
+            return Response.notSupport(request, "请求不能为空");
         }
 
-        String appName = request.getAppName();
+        String appName = requestBody.getString("appName");
         if(StringUtils.isBlank(appName)) {
-            return BootResponse.builder()
-                    .data("appName不能为空")
-                    .build();
+            return new BadResponse(request, "appName不能为空");
         }
 
         try {
             return Optional.ofNullable(ServiceProvider.of(ModuleResolver.class).getNewExtension(moduleType)
-                    .resolve(request)).orElse(BootResponse.notSupport());
+                    .resolve(request)).orElse(Response.notSupport(request, "操作失败"));
         } catch (Exception e) {
-            return BootResponse.notSupport();
+            return Response.notSupport(request, "操作失败");
         }
     }
 

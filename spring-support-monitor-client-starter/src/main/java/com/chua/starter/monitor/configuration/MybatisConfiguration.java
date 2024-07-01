@@ -1,7 +1,7 @@
 package com.chua.starter.monitor.configuration;
 
-import com.chua.common.support.protocol.boot.BootProtocolClient;
-import com.chua.common.support.protocol.boot.BootProtocolServer;
+import com.chua.common.support.protocol.client.ProtocolClient;
+import com.chua.common.support.protocol.server.ProtocolServer;
 import com.chua.starter.monitor.mybatis.SupportInjector;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Bean;
  * @author CH
  */
 @Slf4j
-@AutoConfigureAfter({BootProtocolClient.class, BootProtocolServer.class})
+@AutoConfigureAfter({ProtocolClient.class, ProtocolServer.class})
 public class MybatisConfiguration  {
 
 

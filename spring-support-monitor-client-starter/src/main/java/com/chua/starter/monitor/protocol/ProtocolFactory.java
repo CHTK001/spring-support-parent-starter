@@ -1,8 +1,12 @@
 package com.chua.starter.monitor.protocol;
 
+import com.chua.common.support.collection.Option;
+import com.chua.common.support.collection.Options;
+import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.function.InitializingAware;
-import com.chua.common.support.protocol.boot.BootProtocol;
-import com.chua.common.support.protocol.boot.BootSetting;
+import com.chua.common.support.net.NetAddress;
+import com.chua.common.support.protocol.ProtocolSetting;
+import com.chua.common.support.protocol.protocol.Protocol;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.monitor.factory.MonitorFactory;
 import com.chua.starter.monitor.properties.MonitorProperties;
@@ -26,7 +30,7 @@ public class ProtocolFactory implements InitializingAware {
     private final MonitorProperties monitorProperties;
     private final MonitorProtocolProperties monitorProtocolProperties;
     @Getter
-    private BootProtocol protocol;
+    private Protocol protocol;
     public ProtocolFactory(BeanDefinitionRegistry registry, Environment environment) {
         this.registry = registry;
         this.environment = environment;
@@ -38,28 +42,37 @@ public class ProtocolFactory implements InitializingAware {
     @Override
     public void afterPropertiesSet() {
         String protocol = monitorProtocolProperties.getProtocol();
-        BootSetting bootOption = BootSetting.builder()
-                .codec(monitorProtocolProperties.getEncryptionSchema())
-                .key(monitorProtocolProperties.getEncryptionKey())
+        Codec codec = null;
+        try {
+            codec = Codec.build(monitorProtocolProperties.getEncryptionSchema(), monitorProtocolProperties.getEncryptionKey());
+        } catch (Exception ignored) {
+        }
+        NetAddress netAddress = NetAddress.of(environment.resolvePlaceholders(monitorProperties.getMonitor()));
+        ProtocolSetting protocolSetting = ProtocolSetting.builder()
+                .codec(codec)
                 .host(monitorProtocolProperties.getHost())
                 .port(monitorProtocolProperties.getPort())
-                .address(environment.resolvePlaceholders(monitorProperties.getMonitor()))
-                .appName(monitorFactory.getAppName())
-                .profile(monitorFactory.getActive())
+                .protocol(protocol)
+                .host(netAddress.getHost())
+                .port(netAddress.getPort())
+                .options(new Options()
+                        .addOption("appName", new Option(monitorFactory.getAppName()))
+                        .addOption("profile", new Option(monitorFactory.getActive()))
+                )
                 .heartbeat(false)
                 .build();
-        this.protocol = ServiceProvider.of(BootProtocol.class).getNewExtension(protocol, bootOption);
+        this.protocol = ServiceProvider.of(Protocol.class).getNewExtension(protocol, protocolSetting);
 
         registry.registerBeanDefinition(protocol + "server", BeanDefinitionBuilder
-                .rootBeanDefinition(this.protocol.serverType())
-                .addConstructorArgValue(bootOption)
+                .rootBeanDefinition(this.protocol.getServerType())
+                .addConstructorArgValue(protocolSetting)
                 .setDestroyMethodName("close")
                 .setInitMethodName("start")
                 .getBeanDefinition()
         );
         registry.registerBeanDefinition(protocol + "client", BeanDefinitionBuilder
-                .rootBeanDefinition(this.protocol.clientType())
-                .addConstructorArgValue(bootOption)
+                .rootBeanDefinition(this.protocol.getClientType())
+                .addConstructorArgValue(protocolSetting)
                 .getBeanDefinition()
         );
 

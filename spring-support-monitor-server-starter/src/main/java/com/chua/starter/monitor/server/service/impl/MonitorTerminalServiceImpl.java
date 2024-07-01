@@ -2,14 +2,17 @@ package com.chua.starter.monitor.server.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.chua.common.support.datasource.jdbc.option.DataSourceOptions;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.protocol.ClientSetting;
+import com.chua.common.support.protocol.channel.Channel;
 import com.chua.common.support.session.Session;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.ObjectUtils;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.socketio.support.session.SocketSessionTemplate;
+import com.chua.ssh.support.ssh.ExecChannel;
+import com.chua.ssh.support.ssh.SshClient;
 import com.chua.ssh.support.ssh.SshSession;
 import com.chua.starter.monitor.server.entity.MonitorTerminal;
 import com.chua.starter.monitor.server.entity.MonitorTerminalBase;
@@ -41,7 +44,7 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class MonitorTerminalServiceImpl extends ServiceImpl<MonitorTerminalMapper, MonitorTerminal> implements MonitorTerminalService, InitializingBean {
 
-    private static final Map<String, Session> SERVER_MAP = new ConcurrentHashMap<>();
+    private static final Map<String, SshClient> SERVER_MAP = new ConcurrentHashMap<>();
     @Resource
     private ApplicationContext applicationContext;
     @Resource
@@ -78,8 +81,8 @@ public class MonitorTerminalServiceImpl extends ServiceImpl<MonitorTerminalMappe
             monitorTerminal.setTerminalStatus(1);
             int i = baseMapper.updateById(monitorTerminal);
             if(i > 0) {
-                Session session = createSession(monitorTerminal);
-                SERVER_MAP.put(key, session);
+                SshClient sshClient = createClient(monitorTerminal);
+                SERVER_MAP.put(key, sshClient);
                 return ReturnResult.success();
             }
             return ReturnResult.error("代理启动失败");
@@ -103,9 +106,9 @@ public class MonitorTerminalServiceImpl extends ServiceImpl<MonitorTerminalMappe
             int i = baseMapper.updateById(monitorTerminal);
             if(i > 0) {
                 try {
-                    Session session = SERVER_MAP.get(key);
-                    if(null != session) {
-                        session.close();
+                    SshClient sshClient = SERVER_MAP.get(key);
+                    if(null != sshClient) {
+                        sshClient.close();
                         SERVER_MAP.remove(key);
                     }
                 } catch (Exception e) {
@@ -119,7 +122,7 @@ public class MonitorTerminalServiceImpl extends ServiceImpl<MonitorTerminalMappe
     }
 
     @Override
-    public Session getSession(String requestId) {
+    public SshClient getClient(String requestId) {
         MonitorTerminal monitorTerminal = getById(requestId);
         if(null == monitorTerminal) {
             return null;
@@ -134,9 +137,9 @@ public class MonitorTerminalServiceImpl extends ServiceImpl<MonitorTerminalMappe
             return false;
         }
         try {
-            Session session = SERVER_MAP.get(key);
-            if(null != session) {
-                doIndicator(String.valueOf(monitorTerminal.getTerminalId()), session);
+            SshClient sshClient = SERVER_MAP.get(key);
+            if(null != sshClient) {
+                doIndicator(String.valueOf(monitorTerminal.getTerminalId()), sshClient);
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -152,8 +155,9 @@ public class MonitorTerminalServiceImpl extends ServiceImpl<MonitorTerminalMappe
         }
         try {
             Session session = SERVER_MAP.get(key);
-            if((null != session) && (session instanceof SshSession terminalSession)) {
-                String ip = terminalSession.ifconfig();
+            if((null != session) && (session instanceof SshSession sshSession)) {
+                Channel channel = sshSession.openChannel("exec");
+                String ip = channel.execute("curl ifconfig.me", 3000);
                 checkRelease( "public-ifconfig", ip, monitorTerminal, "公网IP");
                 return ip;
             }
@@ -179,19 +183,20 @@ public class MonitorTerminalServiceImpl extends ServiceImpl<MonitorTerminalMappe
         List<MonitorTerminalBase> result = new LinkedList<>();
         try {
             Session session = SERVER_MAP.get(key);
-            if((null != session) && (session instanceof SshSession terminalSession)) {
-                CollectionUtils.addAll(result, checkRelease( "public-ifconfig", terminalSession.ifconfig(), monitorTerminal, "公网IP"));
-                CollectionUtils.addAll(result, checkRelease( "release", terminalSession.release(), monitorTerminal, "系统信息"));
-                CollectionUtils.addAll(result, checkRelease( "ulimit", terminalSession.ulimit() + "", monitorTerminal, "最大连接数"));
-                CollectionUtils.addAll(result, checkRelease( "mem-total", terminalSession.memInfo().getTotal() + "", monitorTerminal, "最大内存"));
-                SshSession.CpuInfo cpuInfo = terminalSession.cpuInfo();
+            if((null != session) && (session instanceof SshSession sshSession)) {
+                ExecChannel channel = (ExecChannel) sshSession.openChannel("exec");
+                CollectionUtils.addAll(result, checkRelease( "public-ifconfig", channel.ifconfig(), monitorTerminal, "公网IP"));
+                CollectionUtils.addAll(result, checkRelease( "release", channel.release(), monitorTerminal, "系统信息"));
+                CollectionUtils.addAll(result, checkRelease( "ulimit", channel.ulimit() + "", monitorTerminal, "最大连接数"));
+                CollectionUtils.addAll(result, checkRelease( "mem-total", channel.memInfo().getTotal() + "", monitorTerminal, "最大内存"));
+                ExecChannel.CpuInfo cpuInfo = channel.cpuInfo();
                 if(null != cpuInfo) {
                     CollectionUtils.addAll(result, checkRelease( "cpu-model", cpuInfo.getCpuModel(), monitorTerminal, "cpu型号"));
                     CollectionUtils.addAll(result, checkRelease( "cpu-num", cpuInfo.getCpuNum() + "", monitorTerminal, "cpu数"));
                     CollectionUtils.addAll(result, checkRelease( "cpu-core-num", cpuInfo.getCpuCore() + "", monitorTerminal, "cpu core数"));
                 }
 
-                CollectionUtils.addAll(result, checkRelease("ipaddress", terminalSession.ipAddr(), monitorTerminal, "ip地址名称"));
+                CollectionUtils.addAll(result, checkRelease("ipaddress", channel.ipAddr(), monitorTerminal, "ip地址名称"));
                 return result;
             }
         } catch (Exception e) {
@@ -229,13 +234,16 @@ public class MonitorTerminalServiceImpl extends ServiceImpl<MonitorTerminalMappe
         throw new RuntimeException("代理未启动/不支持");
     }
 
-    private Session createSession(MonitorTerminal monitorTerminal) {
-        return new SshSession(DataSourceOptions.newBuilder()
+    private SshClient createClient(MonitorTerminal monitorTerminal) {
+        SshClient sshClient = new SshClient(ClientSetting.builder()
                 .username(monitorTerminal.getTerminalUser())
                 .password(monitorTerminal.getTerminalPassword())
-                .url(monitorTerminal.getTerminalHost() + ":" + monitorTerminal.getTerminalPort())
+                .host(monitorTerminal.getTerminalHost())
+                .port(Integer.valueOf(monitorTerminal.getTerminalPort()))
                 .build()
         );
+        sshClient.connect();
+        return sshClient;
     }
 
     private String createKey(MonitorTerminal monitorTerminal) {
@@ -268,16 +276,15 @@ public class MonitorTerminalServiceImpl extends ServiceImpl<MonitorTerminalMappe
         }, 0, 10, TimeUnit.SECONDS);
     }
 
-    private void doIndicator(String terminalId, Session session) {
-        if(session instanceof SshSession terminalSession) {
-            Set<String> allIndicator = terminalSession.getAllIndicator();
-            for (String s : allIndicator) {
-                Object indicator = terminalSession.getIndicator(s);
-                if(null == indicator) {
-                    continue;
-                }
-                socketSessionTemplate.send("terminal-report-" + terminalId, Json.toJson(indicator));
+    private void doIndicator(String terminalId, SshClient sshClient) {
+       SshSession sshClientSession = (SshSession) sshClient.getSession();
+        Set<String> allIndicator = sshClientSession.getAllIndicator();
+        for (String s : allIndicator) {
+            Object indicator = sshClientSession.getIndicator(s);
+            if(null == indicator) {
+                continue;
             }
+            socketSessionTemplate.send("terminal-report-" + terminalId, Json.toJson(indicator));
         }
     }
 

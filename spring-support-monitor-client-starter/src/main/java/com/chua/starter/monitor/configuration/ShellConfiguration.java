@@ -3,10 +3,10 @@ package com.chua.starter.monitor.configuration;
 import com.chua.common.support.invoke.annotation.RequestLine;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.json.JsonObject;
-import com.chua.common.support.protocol.boot.BootProtocolServer;
-import com.chua.common.support.protocol.boot.BootRequest;
-import com.chua.common.support.protocol.boot.BootResponse;
-import com.chua.common.support.protocol.boot.CommandType;
+import com.chua.common.support.protocol.request.OkResponse;
+import com.chua.common.support.protocol.request.Request;
+import com.chua.common.support.protocol.request.Response;
+import com.chua.common.support.protocol.server.ProtocolServer;
 import com.chua.common.support.shell.BaseShell;
 import com.chua.common.support.shell.Command;
 import com.chua.common.support.shell.WebShell;
@@ -40,27 +40,25 @@ public class ShellConfiguration implements BeanFactoryAware {
         shell.register(new SpringCommand());
         shell.register(new CfrCommand());
     }
-    private BootProtocolServer protocolServer;
+    private ProtocolServer protocolServer;
     public static final String ADDRESS = "IP.ADDRESS";
     private ConfigurableListableBeanFactory beanFactory;
 
     @RequestLine("shell")
-    public BootResponse listen(BootRequest request) {
-        if(request.getCommandType() != CommandType.REQUEST) {
-            return BootResponse.notSupport("The non-register command is not supported");
+    public Response listen(Request request) {
+        if(!request.match("commandType" , "REQUEST")) {
+            return Response.notSupport(request, "The non-register command is not supported");
         }
 
-        JsonObject jsonObject = Json.getJsonObject(request.getContent());
+        JsonObject jsonObject = Json.getJsonObject(request.getBody());
         if(null == jsonObject || !jsonObject.hasKey("command")) {
-            return BootResponse.notSupport("The non-register command is not supported");
+            return Response.notSupport(request, "The non-register command is not supported");
         }
 
         Resolver resolver = ServiceProvider.of(Resolver.class).getNewExtension(jsonObject.getString("command"));
         Command command = new Command();
         command.setCommand(jsonObject.getString("command"));
-        return BootResponse.builder()
-                .data(resolver.execute(command, shell))
-                .build();
+        return new OkResponse(request, resolver.execute(command, shell));
     }
 
     @Override
@@ -70,7 +68,7 @@ public class ShellConfiguration implements BeanFactoryAware {
                     "ConfigValueAnnotationBeanPostProcessor requires a ConfigurableListableBeanFactory");
         }
         this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
-        String[] beanNamesForType = this.beanFactory.getBeanNamesForType(BootProtocolServer.class);
+        String[] beanNamesForType = this.beanFactory.getBeanNamesForType(ProtocolServer.class);
         if(beanNamesForType.length == 0) {
             return;
         }
@@ -78,8 +76,8 @@ public class ShellConfiguration implements BeanFactoryAware {
         if(!MonitorFactory.getInstance().isEnable()) {
             return;
         }
-        this.protocolServer = this.beanFactory.getBean(BootProtocolServer.class);
-        this.protocolServer.addMapping(this);
+        this.protocolServer = this.beanFactory.getBean(ProtocolServer.class);
+        this.protocolServer.addDefinition(this);
     }
 
 }

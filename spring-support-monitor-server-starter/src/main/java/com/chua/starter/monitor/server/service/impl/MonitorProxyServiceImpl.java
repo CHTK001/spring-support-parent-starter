@@ -10,8 +10,8 @@ import com.chua.common.support.log.Log;
 import com.chua.common.support.log.Slf4jLog;
 import com.chua.common.support.objects.constant.FilterOrderType;
 import com.chua.common.support.objects.definition.FilterConfigTypeDefinition;
-import com.chua.common.support.protocol.Server;
-import com.chua.common.support.protocol.options.ServerSetting;
+import com.chua.common.support.protocol.ServerSetting;
+import com.chua.common.support.protocol.server.Server;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.spi.definition.ServiceDefinition;
 import com.chua.common.support.utils.ObjectUtils;
@@ -186,7 +186,7 @@ public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, Mon
                 throw new RuntimeException("未找到代理插件:" + monitorProxyPlugin.getPluginName());
             }
             if(CollectionUtils.isEmpty(monitorProxyPluginConfigList)) {
-                server.addFilter((Class<? extends ChainFilter>) serviceDefinition.getImplClass());
+                server.addFilter(serviceDefinition.getImplClass());
             } else {
                 FilterConfigTypeDefinition filterConfigTypeDefinition =
                         new FilterConfigTypeDefinition(serviceDefinition.getImplClass(), FilterOrderType.NEXT);

@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.job.execute;
 
-import com.chua.common.support.protocol.boot.BootResponse;
+import com.chua.common.support.protocol.request.Request;
+import com.chua.common.support.protocol.request.Response;
 import com.chua.starter.monitor.job.TriggerParam;
 
 /**
@@ -15,8 +16,9 @@ public interface JobExecute {
     /**
      * 運行
      *
+     * @param request
      * @param triggerParam 触发器参数
-     * @return {@link BootResponse}
+     * @return {@link Response}
      */
-    BootResponse run(TriggerParam triggerParam);
+    Response run(Request request, TriggerParam triggerParam);
 }

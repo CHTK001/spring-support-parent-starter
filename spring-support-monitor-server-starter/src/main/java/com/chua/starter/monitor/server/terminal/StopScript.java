@@ -1,8 +1,8 @@
 package com.chua.starter.monitor.server.terminal;
 
 import com.chua.common.support.lang.language.Language;
+import com.chua.common.support.protocol.channel.Channel;
 import com.chua.common.support.session.Session;
-import com.chua.common.support.session.query.ExecuteQuery;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.FileUtils;
 import com.chua.socketio.support.session.SocketSessionTemplate;
@@ -35,30 +35,30 @@ public class StopScript {
         Session session = ServiceProvider.of(Session.class).getKeepExtension(monitorProject.getProjectId() + "terminal", "terminal", monitorProject.newDatabaseOptions());
         if(null != session) {
             SshSession terminalSession = (SshSession)session;
-            if(!terminalSession.isConnect()) {
+            if(terminalSession.isClosed()) {
                 ServiceProvider.of(Session.class).closeKeepExtension(monitorProject.getProjectId()+ "");
                 throw new RuntimeException("当前服务器不可达");
             }
-            com.chua.ssh.support.session.SshSession sshSession = terminalSession.getSshSession();
-            session.setListener(message -> {
+            Channel channel = terminalSession.openChannel("shell");
+            channel.setListener(message -> {
                 socketSessionTemplate.send(monitorProjectVersion.getVersionId() + "terminal", message);
             });
 
             try {
-                doStop(sshSession, monitorProjectVersion, monitorProject);
+                doStop(channel, monitorProjectVersion, monitorProject);
             } catch (Exception e) {
                 throw new RuntimeException("脚本运行失败");
             }
         }
     }
 
-    private void doStop(com.chua.ssh.support.session.SshSession sshSession, MonitorProjectVersion monitorProjectVersion, MonitorProject monitorProject) throws Exception {
-        sshSession.executeQuery(
+    private void doStop(Channel channel, MonitorProjectVersion monitorProjectVersion, MonitorProject monitorProject) throws Exception {
+        channel.execute(
                 "nohup "
                         + getRunScript(monitorProjectVersion, monitorProject)
                         + "> "
                         + getLogPath(monitorProjectVersion, monitorProject)
-                        + " 2>&1 &\r", new ExecuteQuery());
+                        + " 2>&1 &\r", 10000);
 
     }
 
