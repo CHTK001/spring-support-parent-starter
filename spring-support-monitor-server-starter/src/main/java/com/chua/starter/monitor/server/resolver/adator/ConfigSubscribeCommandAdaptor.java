@@ -38,7 +38,7 @@ public class ConfigSubscribeCommandAdaptor implements CommandAdaptor{
         }
 
         List<MonitorConfig> list = monitorConfigService.list(Wrappers.<MonitorConfig>lambdaQuery()
-                .eq(MonitorConfig::getConfigProfile, Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(
+                .in(MonitorConfig::getConfigProfile, Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(
                         reportQuery.getProfileName()))
                 .eq(MonitorConfig::getConfigStatus, 1)
                 .in(StringUtils.isNotEmpty(reportQuery.getSubscribeAppName()), MonitorConfig::getConfigAppname,

@@ -38,7 +38,7 @@ public class MybatisSubscribeCommandAdaptor implements CommandAdaptor{
         }
 
         List<MonitorMybatis> list = monitorMybatisService.list(Wrappers.<MonitorMybatis>lambdaQuery()
-                .eq(MonitorMybatis::getMonitorMybatisProfile, Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(
+                .in(MonitorMybatis::getMonitorMybatisProfile, Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(
                         reportQuery.getProfileName()))
                 .eq(MonitorMybatis::getMonitorMybatisStatus, 1)
                 .in(StringUtils.isNotEmpty(reportQuery.getSubscribeAppName()), MonitorMybatis::getMonitorAppname,
