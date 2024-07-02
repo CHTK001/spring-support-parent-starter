@@ -3,8 +3,8 @@ package com.chua.starter.monitor.configuration;
 import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.protocol.client.ProtocolClient;
 import com.chua.common.support.protocol.request.DefaultRequest;
+import com.chua.common.support.protocol.request.ProtocolRequest;
 import com.chua.common.support.protocol.request.Request;
-import com.chua.common.support.protocol.request.RequestBuilder;
 import com.chua.common.support.protocol.request.Response;
 import com.chua.common.support.protocol.server.ProtocolServer;
 import com.chua.common.support.protocol.server.Server;
@@ -22,6 +22,8 @@ import org.springframework.context.EnvironmentAware;
 import org.springframework.core.env.Environment;
 
 import java.nio.charset.StandardCharsets;
+
+import static com.chua.common.support.protocol.protocol.CommandType.SUBSCRIBE;
 
 /**
  * 配置文件插件
@@ -68,12 +70,12 @@ public class LimitConfiguration implements BeanFactoryAware, EnvironmentAware, A
         if(!MonitorFactory.getInstance().containsKey("LIMIT")) {
             return;
         }
-        Response response = protocolClient.sendRequestAndReply(RequestBuilder.newBuilder()
-                        .url("LIMIT")
-                        .attribute("commandType", "SUBSCRIBE")
-                        .attribute("appName", MonitorFactory.getInstance().getAppName())
-                        .attribute("profile", MonitorFactory.getInstance().getActive())
-                        .attribute("content", MonitorFactory.getInstance().getSubscribeApps())
+        Response response = protocolClient.sendRequestAndReply(ProtocolRequest.builder()
+                    .moduleType("LIMIT")
+                    .commandType(SUBSCRIBE)
+                    .appName(MonitorFactory.getInstance().getAppName())
+                    .profile(MonitorFactory.getInstance().getActive())
+                    .content(MonitorFactory.getInstance().getSubscribeApps())
                 .build()
         );
         JsonObject responseJson =  response.getBody(JsonObject.class);

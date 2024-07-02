@@ -19,9 +19,7 @@ import io.zbus.mq.Producer;
 import lombok.Getter;
 import org.springframework.core.env.Environment;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -58,6 +56,7 @@ public class MonitorFactory implements AutoCloseable {
     private String topic;
     private String reportTopic;
     private boolean isServer;
+    private String activeInclude;
 
     public static MonitorFactory getInstance() {
         return INSTANCE;
@@ -86,6 +85,7 @@ public class MonitorFactory implements AutoCloseable {
         this.environment = environment;
         this.serverPort = environment.resolvePlaceholders("${server.port:8080}");
         this.active = environment.getProperty("spring.profiles.active", "default");
+        this.activeInclude = environment.getProperty("spring.profiles.include", "");
         if(StringUtils.isNotBlank(active)) {
             activeProfiles = new HashSet<>();
             activeProfiles.addAll(Splitter.on(',').splitToSet(active));
@@ -151,7 +151,7 @@ public class MonitorFactory implements AutoCloseable {
         MonitorRequest request = new MonitorRequest();
         request.setAppName(appName);
         request.setProfile(active);
-        request.setSubscribeAppName(Joiner.on(",").join(monitorConfigProperties.getApps()));
+        request.setSubscribeAppName(getSubscribeApps());
         request.setServerPort(serverPort);
         request.setServerHost(StringUtils.defaultString(monitorProtocolProperties.getHost(), serverHost));
         request.setContextPath(contextPath);
@@ -202,7 +202,11 @@ public class MonitorFactory implements AutoCloseable {
         this.openIpPlugin = CollectionUtils.containsIgnoreCase( plugins, "ip");
     }
     public String getSubscribeApps() {
-        return Joiner.on(',').join(monitorConfigProperties.getApps());
+        List<String> includes = new LinkedList<>(Optional.ofNullable(monitorConfigProperties.getApps()).orElse(Collections.emptyList()));
+        if(StringUtils.isNotEmpty(activeInclude)) {
+            includes.addAll(Splitter.on(',').omitEmptyStrings().trimResults().splitToList(activeInclude));
+        }
+        return Joiner.on(',').join(includes);
     }
 
     public String getHotspotPath() {
@@ -210,11 +214,11 @@ public class MonitorFactory implements AutoCloseable {
     }
 
     public boolean hasSubscribers() {
-        return CollectionUtils.isNotEmpty(monitorConfigProperties.getApps());
+        return CollectionUtils.isNotEmpty(monitorConfigProperties.getApps()) || StringUtils.isNotBlank(activeInclude);
     }
 
     public void end() {
-        ThreadUtils.newStaticThreadPool().execute(() -> {
+        ThreadUtils.newVirtualThreadExecutor().execute(() -> {
             try {
                 MonitorRequest request = createMonitorRequest();
                 request.setType(MonitorRequestType.START);

@@ -4,13 +4,12 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.function.Splitter;
 import com.chua.common.support.json.Json;
-import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.protocol.request.BadResponse;
 import com.chua.common.support.protocol.request.OkResponse;
-import com.chua.common.support.protocol.request.Request;
 import com.chua.common.support.protocol.request.Response;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.server.entity.MonitorLimit;
+import com.chua.starter.monitor.server.request.ReportQuery;
 import com.chua.starter.monitor.server.service.MonitorLimitService;
 import jakarta.annotation.Resource;
 
@@ -31,17 +30,17 @@ public class LimitSubscribeCommandAdaptor implements CommandAdaptor{
 
 
     @Override
-    public Response resolve(Request request) {
-        JsonObject requestBody = request.getBody(JsonObject.class);
-        if(null == requestBody) {
-            return new BadResponse(request, "content is empty");
+    public Response resolve(ReportQuery reportQuery) {
+        if(null == reportQuery) {
+            return new BadResponse(null, "content is empty");
         }
 
         List<MonitorLimit> list = monitorLimitService.list(Wrappers.<MonitorLimit>lambdaQuery()
-                .in(MonitorLimit::getLimitProfile, Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(requestBody.getString("profileName")))
+                .in(MonitorLimit::getLimitProfile, Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(reportQuery.getProfileName()))
                 .eq(MonitorLimit::getLimitStatus, 1)
-                .in(StringUtils.isNotEmpty(requestBody.getString("appName")), MonitorLimit::getLimitApp, Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(requestBody.getString("appName")))
+                .in(StringUtils.isNotEmpty(reportQuery.getSubscribeAppName()),
+                        MonitorLimit::getLimitApp, Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(reportQuery.getSubscribeAppName()))
         );
-        return new OkResponse(request, Json.toJson(list));
+        return new OkResponse(null, Json.toJson(list));
     }
 }

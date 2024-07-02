@@ -1,11 +1,10 @@
 package com.chua.starter.monitor.server.resolver;
 
 import com.chua.common.support.annotations.Spi;
-import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.protocol.protocol.CommandType;
-import com.chua.common.support.protocol.request.Request;
 import com.chua.common.support.protocol.request.Response;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.starter.monitor.server.request.ReportQuery;
 import com.chua.starter.monitor.server.resolver.adator.CommandAdaptor;
 
 /**
@@ -19,9 +18,8 @@ public class ConfigModuleResolver implements ModuleResolver{
 
 
     @Override
-    public Response resolve(Request request) {
-        JsonObject requestBody = request.getBody(JsonObject.class);
-        CommandType commandType = requestBody.getEnum("commandType", CommandType.class);
-        return ServiceProvider.of(CommandAdaptor.class).getNewExtension("config_" + commandType).resolve(request);
+    public Response resolve(ReportQuery reportQuery) {
+        CommandType commandType = reportQuery.getCommandType();
+        return ServiceProvider.of(CommandAdaptor.class).getNewExtension("config_" + commandType).resolve(reportQuery);
     }
 }

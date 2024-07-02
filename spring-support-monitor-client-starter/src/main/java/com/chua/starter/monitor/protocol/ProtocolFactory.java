@@ -5,6 +5,7 @@ import com.chua.common.support.collection.Options;
 import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.function.InitializingAware;
 import com.chua.common.support.net.NetAddress;
+import com.chua.common.support.protocol.ClientSetting;
 import com.chua.common.support.protocol.ProtocolSetting;
 import com.chua.common.support.protocol.protocol.Protocol;
 import com.chua.common.support.spi.ServiceProvider;
@@ -53,11 +54,10 @@ public class ProtocolFactory implements InitializingAware {
                 .host(monitorProtocolProperties.getHost())
                 .port(monitorProtocolProperties.getPort())
                 .protocol(protocol)
-                .host(netAddress.getHost())
-                .port(netAddress.getPort())
                 .options(new Options()
                         .addOption("appName", new Option(monitorFactory.getAppName()))
-                        .addOption("profile", new Option(monitorFactory.getActive()))
+                        .addOption("profileName", new Option(monitorFactory.getActive()))
+                        .addOption("subscribeAppName", new Option(monitorFactory.getSubscribeApps()))
                 )
                 .heartbeat(false)
                 .build();
@@ -65,14 +65,22 @@ public class ProtocolFactory implements InitializingAware {
 
         registry.registerBeanDefinition(protocol + "server", BeanDefinitionBuilder
                 .rootBeanDefinition(this.protocol.getServerType())
-                .addConstructorArgValue(protocolSetting)
+                .addConstructorArgValue(protocolSetting.getServerSetting())
                 .setDestroyMethodName("close")
                 .setInitMethodName("start")
                 .getBeanDefinition()
         );
-        registry.registerBeanDefinition(protocol + "client", BeanDefinitionBuilder
-                .rootBeanDefinition(this.protocol.getClientType())
-                .addConstructorArgValue(protocolSetting)
+        //对接的spring restful
+        Protocol httpProtocol = ServiceProvider.of(Protocol.class).getNewExtension(monitorProtocolProperties.getMonitorServerProtocol(), protocolSetting);
+        ClientSetting clientSetting = protocolSetting.getClientSetting();
+        clientSetting.port(netAddress.getPort());
+        clientSetting.host(netAddress.getHost());
+        clientSetting.path(netAddress.getPath());
+        registry.registerBeanDefinition( monitorProtocolProperties.getMonitorServerProtocol() + "client", BeanDefinitionBuilder
+                .rootBeanDefinition(httpProtocol.getClientType())
+                .addConstructorArgValue(clientSetting)
+                .setDestroyMethodName("close")
+                .setInitMethodName("connect")
                 .getBeanDefinition()
         );
 
