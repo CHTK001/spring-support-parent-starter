@@ -248,7 +248,6 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
 
         JsonObject responseBody = response.getBody(JsonObject.class);
         if(!responseBody.isEquals("commandType", "RESPONSE")) {
-            log.error("MYBATIS 订阅: {}失败 => {}", subscribe,MapUtils.getString(responseBody, "data"));
             return;
         }
 

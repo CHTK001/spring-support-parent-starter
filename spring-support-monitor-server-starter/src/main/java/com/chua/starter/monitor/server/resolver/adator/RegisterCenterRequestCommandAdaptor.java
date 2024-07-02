@@ -6,6 +6,7 @@ import com.chua.common.support.lang.robin.Node;
 import com.chua.common.support.lang.robin.Robin;
 import com.chua.common.support.protocol.request.BadResponse;
 import com.chua.common.support.protocol.request.OkResponse;
+import com.chua.common.support.protocol.request.Request;
 import com.chua.common.support.protocol.request.Response;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.CollectionUtils;
@@ -37,21 +38,21 @@ public class RegisterCenterRequestCommandAdaptor implements CommandAdaptor{
     private MonitorProtocolProperties monitorProtocolProperties;
 
     @Override
-    public Response resolve(ReportQuery reportQuery) {
+    public Response resolve(Request request, ReportQuery reportQuery) {
         if(null == reportQuery) {
-            return new BadResponse(null, "content is empty");
+            return new BadResponse(request, "content is empty");
         }
         String appName = reportQuery.getAppName();
         if(StringUtils.isEmpty(appName)) {
-            return new BadResponse(null, "appName is empty");
+            return new BadResponse(request, "appName is empty");
         }
 
         ServiceInstance serviceInstance = getServiceInstance(appName);
         if(null == serviceInstance) {
-            return new BadResponse(null, "appName is empty");
+            return new BadResponse(request, "appName is empty");
         }
 
-        return new OkResponse(null, Json.toJson(serviceInstance));
+        return new OkResponse(request, Json.toJson(serviceInstance));
     }
 
 
