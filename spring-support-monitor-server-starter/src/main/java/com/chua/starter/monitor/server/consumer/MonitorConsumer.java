@@ -9,6 +9,8 @@ import io.zbus.mq.Consumer;
 import io.zbus.mq.ConsumerConfig;
 
 import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * 监控消费者
@@ -18,32 +20,37 @@ import java.io.IOException;
  * @since 2024/02/01
  */
 public class MonitorConsumer implements AutoCloseable{
-    private final Consumer consumer;
+    private final List<Consumer> consumers = new LinkedList<>();
 
     public MonitorConsumer(Router router, Broker broker, String subscribe) {
-        ConsumerConfig config = new ConsumerConfig();
-        config.setBroker(broker);
-        config.setTopic(subscribe);
-        this.consumer = new Consumer(config);
-        try {
-            consumer.start((msg, consumer) -> {
-                MonitorRequest monitorRequest = null;
-                try {
-                    monitorRequest = Json.fromJson(msg.getBody(), MonitorRequest.class);
-                } catch (Exception ignored) {
-                    return;
-                }
-                if(null == monitorRequest) {
-                    return;
-                }
-                router.doRoute(monitorRequest);
-            });
-        } catch (IOException ignored) {
+        for (int i = 0; i < 3; i++) {
+            ConsumerConfig config = new ConsumerConfig();
+            config.setBroker(broker);
+            config.setTopic(subscribe);
+            Consumer consumer1 = new Consumer(config);
+            try {
+                consumer1.start((msg, consumer) -> {
+                    MonitorRequest monitorRequest = null;
+                    try {
+                        monitorRequest = Json.fromJson(msg.getBody(), MonitorRequest.class);
+                    } catch (Exception ignored) {
+                        return;
+                    }
+                    if(null == monitorRequest) {
+                        return;
+                    }
+                    router.doRoute(monitorRequest);
+                });
+                consumers.add(consumer1);
+            } catch (IOException ignored) {
+            }
         }
     }
 
     @Override
     public void close() throws Exception {
-        IoUtils.closeQuietly(consumer);
+        for (Consumer consumer : consumers) {
+            IoUtils.closeQuietly(consumer);
+        }
     }
 }

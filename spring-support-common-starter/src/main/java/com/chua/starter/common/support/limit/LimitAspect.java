@@ -9,6 +9,7 @@ import com.chua.common.support.task.limit.RateLimitMappingFactory;
 import com.chua.common.support.task.limit.resolver.RateLimitResolver;
 import com.chua.common.support.utils.ArrayUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.common.support.properties.LimiterProperties;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.google.common.collect.Maps;
@@ -87,7 +88,7 @@ public class LimitAspect {
             return joinPoint.proceed();
         }
 
-        throw new RuntimeException(ReturnCode.SYSTEM_SERVER_BUSINESS_ERROR.getMsg());
+        throw new BusinessException(ReturnCode.SYSTEM_SERVER_BUSINESS_ERROR.getMsg());
     }
 
     private String[] resolver(String[] url) {

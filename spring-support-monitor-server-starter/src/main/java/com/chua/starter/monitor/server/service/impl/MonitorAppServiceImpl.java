@@ -12,8 +12,8 @@ import com.chua.common.support.protocol.protocol.CommandType;
 import com.chua.common.support.protocol.protocol.Protocol;
 import com.chua.common.support.protocol.request.BadResponse;
 import com.chua.common.support.protocol.request.DefaultRequest;
-import com.chua.common.support.protocol.request.ProtocolRequest;
 import com.chua.common.support.protocol.request.Response;
+import com.chua.common.support.protocol.request.SenderRequest;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.ThreadUtils;
@@ -87,6 +87,7 @@ public class MonitorAppServiceImpl extends ServiceImpl<MonitorAppMapper, Monitor
                 .host(monitorProtocolProperties.getHost() )
                 .port( monitorProtocolProperties.getPort())
                 .heartbeat(false)
+                .path(moduleType.toLowerCase())
                 .codec(codec)
                 .options(new Options()
                         .addOption("profile", new Option(null == config ? "default" : config.getConfigProfile()))
@@ -99,7 +100,7 @@ public class MonitorAppServiceImpl extends ServiceImpl<MonitorAppMapper, Monitor
         }
 
         ProtocolClient protocolClient = protocol.createClient();
-        Response responseCode = protocolClient.sendRequestAndReply(ProtocolRequest.builder()
+        Response responseCode = protocolClient.sendRequestAndReply(SenderRequest.builder()
                 .content(content)
                 .moduleType(moduleType)
                 .commandType(commandType)

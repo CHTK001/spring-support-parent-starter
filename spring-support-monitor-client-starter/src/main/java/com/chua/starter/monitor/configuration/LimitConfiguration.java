@@ -3,13 +3,13 @@ package com.chua.starter.monitor.configuration;
 import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.protocol.client.ProtocolClient;
 import com.chua.common.support.protocol.request.DefaultRequest;
-import com.chua.common.support.protocol.request.ProtocolRequest;
 import com.chua.common.support.protocol.request.Request;
 import com.chua.common.support.protocol.request.Response;
+import com.chua.common.support.protocol.request.SenderRequest;
 import com.chua.common.support.protocol.server.ProtocolServer;
 import com.chua.common.support.protocol.server.Server;
 import com.chua.common.support.task.limit.RateLimitMappingFactory;
-import com.chua.common.support.utils.MapUtils;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.factory.MonitorFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
@@ -70,7 +70,7 @@ public class LimitConfiguration implements BeanFactoryAware, EnvironmentAware, A
         if(!MonitorFactory.getInstance().containsKey("LIMIT")) {
             return;
         }
-        Response response = protocolClient.sendRequestAndReply(ProtocolRequest.builder()
+        Response response = protocolClient.sendRequestAndReply(SenderRequest.builder()
                     .moduleType("LIMIT")
                     .commandType(SUBSCRIBE)
                     .appName(MonitorFactory.getInstance().getAppName())
@@ -78,13 +78,14 @@ public class LimitConfiguration implements BeanFactoryAware, EnvironmentAware, A
                     .content(MonitorFactory.getInstance().getSubscribeApps())
                 .build()
         );
-        JsonObject responseJson =  response.getBody(JsonObject.class);
-        if(!responseJson.isEquals("commandType", "RESPONSE")) {
+
+        String utfed8Str = StringUtils.utf8Str(response.getBody());
+        if(!response.isSuccessful() || StringUtils.isEmpty(utfed8Str)){
             return;
         }
 
         log.info("LIMIT 订阅成功");
-        register(MapUtils.getString(responseJson, "data"));
+        register(JsonObject.create().fluent("content", utfed8Str).toJSONString());
     }
 
     private void register(String content) {

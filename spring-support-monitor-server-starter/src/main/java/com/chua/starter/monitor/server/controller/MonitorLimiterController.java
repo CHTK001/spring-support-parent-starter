@@ -70,7 +70,7 @@ public class MonitorLimiterController {
         if (null == id) {
             return ResultData.failure(REQUEST_PARAM_ERROR, "主键不能为空");
         }
-        return ResultData.success(monitorLimitService.removeBatchByIds(Splitter.on(",").trimResults().omitEmptyStrings().splitToSet(id)));
+        return ResultData.success(monitorLimitService.removeBatchByIdsAndNotify(Splitter.on(",").trimResults().omitEmptyStrings().splitToSet(id)));
     }
 
     /**

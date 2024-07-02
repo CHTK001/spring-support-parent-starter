@@ -71,6 +71,7 @@ public class ReportController {
 
             return response.isSuccessful() ? ReturnResult.success(response.getBody()) : ReturnResult.illegal(response.message());
         } catch (Exception e) {
+            e.printStackTrace();
             return ReturnResult.illegal( "操作失败");
         }
     }
