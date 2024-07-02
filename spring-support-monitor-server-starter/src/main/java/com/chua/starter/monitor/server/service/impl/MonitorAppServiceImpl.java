@@ -90,7 +90,7 @@ public class MonitorAppServiceImpl extends ServiceImpl<MonitorAppMapper, Monitor
                 .path(moduleType.toLowerCase())
                 .codec(codec)
                 .options(new Options()
-                        .addOption("profile", new Option(null == config ? "default" : config.getConfigProfile()))
+                        .addOption("profileName", new Option(null == config ? "default" : config.getConfigProfile()))
                         .addOption("appName", new Option(null == config ? monitorRequest.getAppName() : config.getConfigAppname()))
                 )
                 .build();
