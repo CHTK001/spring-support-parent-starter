@@ -3,29 +3,35 @@ package com.chua.starter.monitor.server.request;
 import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.protocol.request.Request;
-import com.chua.common.support.utils.Hex;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.server.properties.MonitorServerProperties;
 import lombok.Data;
+import org.springframework.stereotype.Component;
 
 /**
  * @author CH
  */
 @Data
+@Component
 public class RemoteRequest {
 
-    private String data;
+    private Codec codec;
+    public RemoteRequest(MonitorServerProperties monitorServerProperties) {
+        codec = getCodec(monitorServerProperties);
+    }
 
+
+    public Codec getCodec(MonitorServerProperties monitorServerProperties) {
+        return Codec.build(monitorServerProperties.getEncryptionSchema(), monitorServerProperties.getEncryptionKey());
+    }
     /**
      * 收到请求
      *
-     * @param monitorServerProperties 统一服务器属性
      * @return {@link Request}
      */
-    public Request getRequest(MonitorServerProperties monitorServerProperties) {
-        Codec decode = Codec.build(monitorServerProperties.getEncryptionSchema(), monitorServerProperties.getEncryptionKey());
+    public ReportQuery getRequest(byte[] data) {
         try {
-            return Json.fromJson(StringUtils.utf8Str(decode.decode(Hex.decodeHex(data))), Request.class);
+            return Json.fromJson(StringUtils.utf8Str(codec.decode(data)), ReportQuery.class);
         } catch (Exception e) {
             return null;
         }
