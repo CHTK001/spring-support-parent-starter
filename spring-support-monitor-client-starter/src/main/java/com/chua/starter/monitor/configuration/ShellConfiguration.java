@@ -46,12 +46,12 @@ public class ShellConfiguration implements BeanFactoryAware {
 
     @RequestLine("shell")
     public Response listen(Request request) {
-        if(!request.match("commandType" , "REQUEST")) {
+        JsonObject jsonObject = Json.getJsonObject(request.getBody()).getJsonObject("content");
+        if(null == jsonObject) {
             return Response.notSupport(request, "The non-register command is not supported");
         }
 
-        JsonObject jsonObject = Json.getJsonObject(request.getBody());
-        if(null == jsonObject || !jsonObject.hasKey("command")) {
+        if(!jsonObject.hasKey("command")) {
             return Response.notSupport(request, "The non-register command is not supported");
         }
 
