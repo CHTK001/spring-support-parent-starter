@@ -14,13 +14,13 @@ import com.chua.starter.monitor.server.resolver.adator.CommandAdaptor;
  * @author CH
  * @since 2023/11/16
  */
-@Spi("register_center")
-public class RegisterCenterModuleResolver implements ModuleResolver{
+@Spi("mybatis")
+public class MybatisModuleResolver implements ModuleResolver{
 
 
     @Override
     public Response resolve(Request request, ReportQuery reportQuery) {
         CommandType commandType = reportQuery.getCommandType();
-        return ServiceProvider.of(CommandAdaptor.class).getNewExtension("register_center_" + commandType).resolve(request, reportQuery);
+        return ServiceProvider.of(CommandAdaptor.class).getNewExtension("mybatis_" + commandType).resolve(request, reportQuery);
     }
 }

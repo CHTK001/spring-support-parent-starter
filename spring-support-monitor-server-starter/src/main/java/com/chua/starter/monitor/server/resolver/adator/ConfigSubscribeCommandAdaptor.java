@@ -6,6 +6,7 @@ import com.chua.common.support.function.Splitter;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.protocol.request.BadResponse;
 import com.chua.common.support.protocol.request.OkResponse;
+import com.chua.common.support.protocol.request.Request;
 import com.chua.common.support.protocol.request.Response;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.server.entity.MonitorConfig;
@@ -31,9 +32,9 @@ public class ConfigSubscribeCommandAdaptor implements CommandAdaptor{
 
 
     @Override
-    public Response resolve(ReportQuery reportQuery) {
+    public Response resolve(Request request, ReportQuery reportQuery) {
         if(null == reportQuery) {
-            return new BadResponse(null, "content is empty");
+            return new BadResponse(request, "content is empty");
         }
 
         List<MonitorConfig> list = monitorConfigService.list(Wrappers.<MonitorConfig>lambdaQuery()
@@ -43,6 +44,6 @@ public class ConfigSubscribeCommandAdaptor implements CommandAdaptor{
                 .in(StringUtils.isNotEmpty(reportQuery.getSubscribeAppName()), MonitorConfig::getConfigAppname,
                         Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(reportQuery.getSubscribeAppName()))
         );
-        return new OkResponse(null, Json.toJson(list));
+        return new OkResponse(request, Json.toJson(list));
     }
 }

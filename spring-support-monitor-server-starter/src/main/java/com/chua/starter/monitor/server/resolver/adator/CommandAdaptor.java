@@ -1,5 +1,6 @@
 package com.chua.starter.monitor.server.resolver.adator;
 
+import com.chua.common.support.protocol.request.Request;
 import com.chua.common.support.protocol.request.Response;
 import com.chua.starter.monitor.server.request.ReportQuery;
 
@@ -12,8 +13,9 @@ public interface CommandAdaptor {
     /**
      * 解释
      *
+     * @param request
      * @param reportQuery 请求
      * @return {@link Response}
      */
-    Response resolve(ReportQuery reportQuery);
+    Response resolve(Request request, ReportQuery reportQuery);
 }

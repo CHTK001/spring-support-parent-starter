@@ -9,9 +9,9 @@ import com.chua.common.support.protocol.request.OkResponse;
 import com.chua.common.support.protocol.request.Request;
 import com.chua.common.support.protocol.request.Response;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.monitor.server.entity.MonitorLimit;
+import com.chua.starter.monitor.server.entity.MonitorMybatis;
 import com.chua.starter.monitor.server.request.ReportQuery;
-import com.chua.starter.monitor.server.service.MonitorLimitService;
+import com.chua.starter.monitor.server.service.MonitorMybatisService;
 import jakarta.annotation.Resource;
 
 import java.util.List;
@@ -23,11 +23,12 @@ import java.util.List;
  * @author CH
  * @since 2023/11/16
  */
-@Spi("limit_subscribe")
-public class LimitSubscribeCommandAdaptor implements CommandAdaptor{
+@Spi("mybatis_subscribe")
+public class MybatisSubscribeCommandAdaptor implements CommandAdaptor{
+
 
     @Resource
-    private MonitorLimitService monitorLimitService;
+    private MonitorMybatisService monitorMybatisService;
 
 
     @Override
@@ -36,11 +37,12 @@ public class LimitSubscribeCommandAdaptor implements CommandAdaptor{
             return new BadResponse(request, "content is empty");
         }
 
-        List<MonitorLimit> list = monitorLimitService.list(Wrappers.<MonitorLimit>lambdaQuery()
-                .in(MonitorLimit::getLimitProfile, Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(reportQuery.getProfileName()))
-                .eq(MonitorLimit::getLimitStatus, 1)
-                .in(StringUtils.isNotEmpty(reportQuery.getSubscribeAppName()),
-                        MonitorLimit::getLimitApp, Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(reportQuery.getSubscribeAppName()))
+        List<MonitorMybatis> list = monitorMybatisService.list(Wrappers.<MonitorMybatis>lambdaQuery()
+                .eq(MonitorMybatis::getMonitorMybatisProfile, Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(
+                        reportQuery.getProfileName()))
+                .eq(MonitorMybatis::getMonitorMybatisStatus, 1)
+                .in(StringUtils.isNotEmpty(reportQuery.getSubscribeAppName()), MonitorMybatis::getMonitorAppname,
+                        Splitter.on(',').trimResults().omitEmptyStrings().splitToSet(reportQuery.getSubscribeAppName()))
         );
         return new OkResponse(request, Json.toJson(list));
     }

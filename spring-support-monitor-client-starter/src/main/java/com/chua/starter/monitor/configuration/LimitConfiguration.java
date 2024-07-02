@@ -79,7 +79,7 @@ public class LimitConfiguration implements BeanFactoryAware, EnvironmentAware, A
                 .build()
         );
         JsonObject responseJson =  response.getBody(JsonObject.class);
-        if(responseJson.isEquals("commandType", "RESPONSE")) {
+        if(!responseJson.isEquals("commandType", "RESPONSE")) {
             return;
         }
 
