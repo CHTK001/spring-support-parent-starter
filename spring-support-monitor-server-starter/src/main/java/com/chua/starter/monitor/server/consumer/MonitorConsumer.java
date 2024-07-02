@@ -39,7 +39,10 @@ public class MonitorConsumer implements AutoCloseable{
                     if(null == monitorRequest) {
                         return;
                     }
-                    router.doRoute(monitorRequest);
+                    try {
+                        router.doRoute(monitorRequest);
+                    } catch (Exception e) {
+                    }
                 });
                 consumers.add(consumer1);
             } catch (IOException ignored) {

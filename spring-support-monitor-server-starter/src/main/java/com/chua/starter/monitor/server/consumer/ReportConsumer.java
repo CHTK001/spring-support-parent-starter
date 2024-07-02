@@ -30,8 +30,11 @@ public class ReportConsumer implements AutoCloseable {
             Consumer consumer1 = new Consumer(config);
             try {
                 consumer1.start((msg, consumer) -> {
-                    MonitorRequest monitorRequest = Json.fromJson(msg.getBody(), MonitorRequest.class);
-                    router.doRoute(monitorRequest);
+                    try {
+                        MonitorRequest monitorRequest = Json.fromJson(msg.getBody(), MonitorRequest.class);
+                        router.doRoute(monitorRequest);
+                    } catch (Exception ignored) {
+                    }
                 });
                 this.consumers.add(consumer1);
             } catch (IOException ignored) {

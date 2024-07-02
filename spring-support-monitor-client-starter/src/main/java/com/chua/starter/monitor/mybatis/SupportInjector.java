@@ -243,7 +243,11 @@ public class SupportInjector extends DefaultSqlInjector implements EnvironmentAw
                 .build()
         );
 
-        JsonArray jsonArray = Optional.ofNullable(Json.getJsonArray(response.getBody())).orElse(JsonArray.empty());
+        JsonArray jsonArray = JsonArray.empty();
+        try {
+            jsonArray = Optional.ofNullable(Json.getJsonArray(response.getBody())).orElse(JsonArray.empty());
+        } catch (Exception ignored) {
+        }
         if(!response.isSuccessful() || CollectionUtils.isEmpty(jsonArray)) {
             return;
         }
