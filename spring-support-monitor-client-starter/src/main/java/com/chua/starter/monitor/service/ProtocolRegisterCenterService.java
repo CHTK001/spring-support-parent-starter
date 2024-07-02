@@ -4,8 +4,8 @@ import com.chua.common.support.json.Json;
 import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.protocol.client.ProtocolClient;
 import com.chua.common.support.protocol.protocol.CommandType;
-import com.chua.common.support.protocol.request.ProtocolRequest;
 import com.chua.common.support.protocol.request.Response;
+import com.chua.common.support.protocol.request.SenderRequest;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.monitor.factory.MonitorFactory;
 import jakarta.annotation.Resource;
@@ -38,7 +38,7 @@ public class ProtocolRegisterCenterService implements RegisterCenterService, App
             throw new NullPointerException("protocolClient is null");
         }
 
-        Response response = protocolClient.sendRequestAndReply(ProtocolRequest.builder()
+        Response response = protocolClient.sendRequestAndReply(SenderRequest.builder()
                 .moduleType("REGISTER_CENTER")
                 .commandType(CommandType.REQUEST)
                 .appName(environment.getProperty("spring.application.name"))

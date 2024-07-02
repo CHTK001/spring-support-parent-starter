@@ -9,6 +9,8 @@ import io.zbus.mq.Consumer;
 import io.zbus.mq.ConsumerConfig;
 
 import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * 监控消费者
@@ -17,25 +19,30 @@ import java.io.IOException;
  * @version 1.0.0
  * @since 2024/02/01
  */
-public class ReportConsumer implements AutoCloseable{
-    private final Consumer consumer;
+public class ReportConsumer implements AutoCloseable {
+    private final List<Consumer> consumers = new LinkedList<>();
 
     public ReportConsumer(Router router, Broker broker, String subscribe) {
-        ConsumerConfig config = new ConsumerConfig();
-        config.setBroker(broker);
-        config.setTopic(subscribe + "#report");
-        this.consumer = new Consumer(config);
-        try {
-            consumer.start((msg, consumer) -> {
-                MonitorRequest monitorRequest = Json.fromJson(msg.getBody(), MonitorRequest.class);
-                router.doRoute(monitorRequest);
-            });
-        } catch (IOException ignored) {
+        for (int i = 0; i < 3; i++) {
+            ConsumerConfig config = new ConsumerConfig();
+            config.setBroker(broker);
+            config.setTopic(subscribe + "#report");
+            Consumer consumer1 = new Consumer(config);
+            try {
+                consumer1.start((msg, consumer) -> {
+                    MonitorRequest monitorRequest = Json.fromJson(msg.getBody(), MonitorRequest.class);
+                    router.doRoute(monitorRequest);
+                });
+                this.consumers.add(consumer1);
+            } catch (IOException ignored) {
+            }
         }
     }
 
     @Override
     public void close() throws Exception {
-        IoUtils.closeQuietly(consumer);
+        for (Consumer consumer : consumers) {
+            IoUtils.closeQuietly(consumer);
+        }
     }
 }

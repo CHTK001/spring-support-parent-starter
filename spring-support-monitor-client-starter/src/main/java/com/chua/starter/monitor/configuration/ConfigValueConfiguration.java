@@ -6,12 +6,11 @@ import com.chua.common.support.json.Json;
 import com.chua.common.support.json.JsonArray;
 import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.protocol.client.ProtocolClient;
-import com.chua.common.support.protocol.request.ProtocolRequest;
 import com.chua.common.support.protocol.request.Request;
 import com.chua.common.support.protocol.request.Response;
+import com.chua.common.support.protocol.request.SenderRequest;
 import com.chua.common.support.protocol.server.ProtocolServer;
 import com.chua.common.support.utils.CollectionUtils;
-import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.Md5Utils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.processor.AnnotationInjectedBeanPostProcessor;
@@ -30,7 +29,10 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ApplicationListener;
 import org.springframework.core.MethodParameter;
-import org.springframework.core.env.*;
+import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.MapPropertySource;
+import org.springframework.core.env.MutablePropertySources;
 import org.springframework.util.ReflectionUtils;
 
 import java.lang.reflect.Field;
@@ -166,7 +168,7 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
         }
 
         KeyValue keyValue = new KeyValue();
-        JsonObject jsonObject = Json.getJsonObject(request.getBody());
+        JsonObject jsonObject = Json.getJsonObject(request.getBody()).getJsonObject("content");
         keyValue.setDataId(jsonObject.getString("configName"));
         keyValue.setData(jsonObject.getString("configValue"));
         keyValue.setProfile(jsonObject.getString("configProfile"));
@@ -179,7 +181,7 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
         if(!MonitorFactory.getInstance().containsKey("CONFIG")) {
             return;
         }
-        Response response = protocolClient.sendRequestAndReply(ProtocolRequest.builder()
+        Response response = protocolClient.sendRequestAndReply(SenderRequest.builder()
                         .moduleType("CONFIG")
                         .commandType(SUBSCRIBE)
                         .appName(MonitorFactory.getInstance().getAppName())
@@ -187,26 +189,25 @@ public class ConfigValueConfiguration extends AnnotationInjectedBeanPostProcesso
                         .content(MonitorFactory.getInstance().getSubscribeApps())
                 .build()
         );
-        JsonObject responseBody = response.getBody(JsonObject.class);
 
-        if(!responseBody.isEquals("commandType", "RESPONSE") ){
+        JsonArray jsonArray = Optional.ofNullable(Json.getJsonArray(response.getBody())).orElse(JsonArray.empty());
+        if(!response.isSuccessful() || CollectionUtils.isEmpty(jsonArray)){
             return;
         }
 
         log.info("CONFIG 订阅成功");
-        JsonArray jsonArray = Json.getJsonArray(MapUtils.getString(responseBody, "data"));
         int size = jsonArray.size();
         Map<String, Object> map = new LinkedHashMap<>();
         for (int i = 0; i < size; i++) {
             register(jsonArray.getJsonObject(i), map);
         }
-        PropertySource propertySource = new MapPropertySource("monitor-cloud", map);
+        MapPropertySource propertySource = new MapPropertySource("monitor-cloud", map);
         propertySources.addFirst(propertySource);
 
     }
 
     private void register(JsonObject jsonObject, Map<String, Object> map) {
-        map.put(jsonObject.getString("unifiedConfigName"), jsonObject.get("unifiedConfigValue"));
+        map.put(jsonObject.getString("configName"), jsonObject.get("configValue"));
     }
 
 
