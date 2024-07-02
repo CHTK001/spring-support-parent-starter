@@ -3,7 +3,8 @@ package com.chua.starter.monitor.server.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.protocol.protocol.CommandType;
-import com.chua.common.support.protocol.request.BadResponse;
+import com.chua.common.support.protocol.request.DefaultRequest;
+import com.chua.common.support.protocol.request.Request;
 import com.chua.common.support.protocol.request.Response;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
@@ -19,7 +20,6 @@ import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 
 /**
@@ -43,32 +43,35 @@ public class ReportController {
     private RemoteRequest remoteRequest;
     @PostMapping("/report")
     @Operation(summary = "上报数据")
-    public Response home(@RequestBody byte[] body) {
+    public ReturnResult<byte[]> home(@RequestBody byte[] body) {
         ReportQuery reportQuery = remoteRequest.getRequest(body);
+        Request request = new DefaultRequest(null, null, remoteRequest.getCodec());
         if(null == reportQuery) {
-            return Response.notSupport(null, "请求不能为空");
+            return ReturnResult.illegal("请求不能为空");
         }
 
         CommandType commandType = reportQuery.getCommandType();
         if(null == commandType) {
-            return Response.notSupport(null, "请求不能为空");
+            return ReturnResult.illegal( "请求不能为空");
         }
 
         String moduleType = reportQuery.getModuleType();
         if(null == moduleType) {
-            return Response.notSupport(null, "请求不能为空");
+            return ReturnResult.illegal( "请求不能为空");
         }
 
         String appName = reportQuery.getAppName();
         if(StringUtils.isBlank(appName)) {
-            return new BadResponse(null, "appName不能为空");
+            return ReturnResult.illegal( "appName不能为空");
         }
 
         try {
-            return Optional.ofNullable(ServiceProvider.of(ModuleResolver.class).getNewExtension(moduleType)
-                    .resolve(reportQuery)).orElse(Response.notSupport(null, "操作失败"));
+            Response response = ServiceProvider.of(ModuleResolver.class).getNewExtension(moduleType)
+                    .resolve(request, reportQuery);
+
+            return response.isSuccessful() ? ReturnResult.success(response.getBody()) : ReturnResult.illegal(response.message());
         } catch (Exception e) {
-            return Response.notSupport(null, "操作失败");
+            return ReturnResult.illegal( "操作失败");
         }
     }
 
