@@ -1,11 +1,9 @@
 package com.chua.starter.monitor.server.controller;
 
 
-import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.protocol.protocol.CommandType;
 import com.chua.common.support.protocol.request.BadResponse;
-import com.chua.common.support.protocol.request.Request;
 import com.chua.common.support.protocol.request.Response;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
@@ -13,6 +11,7 @@ import com.chua.starter.monitor.server.factory.MonitorServerFactory;
 import com.chua.starter.monitor.server.pojo.IpInstance;
 import com.chua.starter.monitor.server.properties.MonitorServerProperties;
 import com.chua.starter.monitor.server.request.RemoteRequest;
+import com.chua.starter.monitor.server.request.ReportQuery;
 import com.chua.starter.monitor.server.resolver.ModuleResolver;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -40,35 +39,36 @@ public class ReportController {
     @Resource
     private MonitorServerFactory monitorServerFactory;
 
+    @Resource
+    private RemoteRequest remoteRequest;
     @PostMapping("/report")
     @Operation(summary = "上报数据")
-    public Response home(@RequestBody RemoteRequest remoteRequest) {
-        Request request = remoteRequest.getRequest(monitorServerProperties);
-        if(null == request) {
-            return Response.notSupport(request, "请求不能为空");
+    public Response home(@RequestBody byte[] body) {
+        ReportQuery reportQuery = remoteRequest.getRequest(body);
+        if(null == reportQuery) {
+            return Response.notSupport(null, "请求不能为空");
         }
 
-        JsonObject requestBody = request.getBody(JsonObject.class);
-        CommandType commandType = requestBody.getEnum("commandType", CommandType.class);
+        CommandType commandType = reportQuery.getCommandType();
         if(null == commandType) {
-            return Response.notSupport(request, "请求不能为空");
+            return Response.notSupport(null, "请求不能为空");
         }
 
-        String moduleType = requestBody.getString("moduleType");
+        String moduleType = reportQuery.getModuleType();
         if(null == moduleType) {
-            return Response.notSupport(request, "请求不能为空");
+            return Response.notSupport(null, "请求不能为空");
         }
 
-        String appName = requestBody.getString("appName");
+        String appName = reportQuery.getAppName();
         if(StringUtils.isBlank(appName)) {
-            return new BadResponse(request, "appName不能为空");
+            return new BadResponse(null, "appName不能为空");
         }
 
         try {
             return Optional.ofNullable(ServiceProvider.of(ModuleResolver.class).getNewExtension(moduleType)
-                    .resolve(request)).orElse(Response.notSupport(request, "操作失败"));
+                    .resolve(reportQuery)).orElse(Response.notSupport(null, "操作失败"));
         } catch (Exception e) {
-            return Response.notSupport(request, "操作失败");
+            return Response.notSupport(null, "操作失败");
         }
     }
 

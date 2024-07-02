@@ -46,5 +46,10 @@ public class MonitorProtocolProperties {
      */
     private String protocol = "http";
 
+    /**
+     * 监控服务器协议
+     */
+    private String monitorServerProtocol = "http";
+
 
 }
