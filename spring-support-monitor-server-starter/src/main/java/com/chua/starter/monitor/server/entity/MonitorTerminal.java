@@ -94,8 +94,8 @@ public class MonitorTerminal implements Serializable {
      * 状态;0:未启动
      */
     @TableField(value = "terminal_status")
-    @ApiModelProperty(value = "状态;0:未启动")
-    @Schema(description = "状态;0:未启动")
+    @ApiModelProperty(value = "状态;0:未启动1:已启动; 2:启动中")
+    @Schema(description = "状态;0:未启动;1:已启动; 2:启动中")
     private Integer terminalStatus;
 
     private static final long serialVersionUID = 1L;
