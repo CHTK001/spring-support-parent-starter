@@ -42,7 +42,7 @@ public class TerminalSocketIOListener implements SocketIOListener {
         String command1 = command.getString("command");
 
         Session clientSession = sshClient.createSession(requestId);
-        Channel channel = clientSession.openChannel(requestId, "shell");
+        Channel channel = clientSession.openChannel(requestId, "terminal");
         channel.setListener(s ->session.send("terminal-" + requestId, JsonObject.create().fluentPut("data", s).toJSONString()));
 
         if("connect".equalsIgnoreCase(command1)) {
