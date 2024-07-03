@@ -76,12 +76,18 @@ public class MonitorTerminalServiceImpl extends ServiceImpl<MonitorTerminalMappe
             return ReturnResult.error("代理已启动, 请刷新页面");
         }
 
+        if(2 == monitorTerminal.getTerminalStatus()) {
+            return ReturnResult.error("代理正在启动中");
+        }
+
         return transactionTemplate.execute(it -> {
-            monitorTerminal.setTerminalStatus(1);
+            monitorTerminal.setTerminalStatus(2);
             int i = baseMapper.updateById(monitorTerminal);
             if(i > 0) {
                 SshClient sshClient = createClient(monitorTerminal);
                 SERVER_MAP.put(key, sshClient);
+                monitorTerminal.setTerminalStatus(1);
+                baseMapper.updateById(monitorTerminal);
                 return ReturnResult.success();
             }
             return ReturnResult.error("代理启动失败");
@@ -96,8 +102,14 @@ public class MonitorTerminalServiceImpl extends ServiceImpl<MonitorTerminalMappe
         }
 
         String key = createKey(monitorTerminal);
-        if(!SERVER_MAP.containsKey(key) && 0 == monitorTerminal.getTerminalStatus()) {
-            return ReturnResult.error("代理已停止");
+        if(!SERVER_MAP.containsKey(key)) {
+            if(0 == monitorTerminal.getTerminalStatus()) {
+                return ReturnResult.error("代理已停止");
+            }
+
+            if(2 == monitorTerminal.getTerminalStatus()) {
+                return ReturnResult.error("代理正在启动中");
+            }
         }
 
         monitorTerminal.setTerminalStatus(0);
@@ -253,9 +265,11 @@ public class MonitorTerminalServiceImpl extends ServiceImpl<MonitorTerminalMappe
     public void afterPropertiesSet() throws Exception {
         ThreadUtils.newStaticThreadPool().execute(() -> {
             try {
-                List<MonitorTerminal> monitorProxies = baseMapper.selectList(Wrappers.<MonitorTerminal>lambdaQuery().eq(MonitorTerminal::getTerminalStatus, 1));
+                List<MonitorTerminal> monitorProxies = baseMapper.selectList(Wrappers.<MonitorTerminal>lambdaQuery()
+                        .in(MonitorTerminal::getTerminalStatus, 1, 2));
                 for (MonitorTerminal monitorTerminal : monitorProxies) {
                     try {
+                        monitorTerminal.setTerminalStatus(1);
                         start(monitorTerminal);
                     } catch (Exception ignored) {
                     }
@@ -266,17 +280,19 @@ public class MonitorTerminalServiceImpl extends ServiceImpl<MonitorTerminalMappe
 
         executorService.scheduleWithFixedDelay(() -> {
             for (Map.Entry<String, SshClient> entry : SERVER_MAP.entrySet()) {
+                String terminalId = getTerminalId(entry.getKey());
+                SshClient sshClient = entry.getValue();
                 reporterService.execute(() -> {
-                    String terminalId = getTerminalId(entry.getKey());
-                    SshClient sshClient = entry.getValue();
-                    doIndicator(terminalId, sshClient);
+                    synchronized (sshClient) {
+                        doIndicator(terminalId, sshClient);
+                    }
                 });
             }
         }, 0, 10, TimeUnit.SECONDS);
     }
 
     private void doIndicator(String terminalId, SshClient sshClient) {
-       SshSession sshClientSession = (SshSession) sshClient.getSession();
+        SshSession sshClientSession = (SshSession) sshClient.getSession();
         Set<String> allIndicator = sshClientSession.getAllIndicator();
         for (String s : allIndicator) {
             Object indicator = sshClientSession.getIndicator(s);
