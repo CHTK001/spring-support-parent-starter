@@ -3,6 +3,9 @@ package com.chua.starter.monitor.server.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.server.entity.MonitorTerminalProject;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 /**
  * @author CH
@@ -42,4 +45,23 @@ public interface MonitorTerminalProjectService extends IService<MonitorTerminalP
      * @return 返回执行结果，成功为true，失败为false。
      */
     ReturnResult<Boolean> logStop(MonitorTerminalProject monitorTerminalProject);
+
+    /**
+     * 暂停日志记录。
+     *
+     * @param monitorTerminalProject 监控终端项目对象，包含暂停日志记录所需的信息。
+     * @param event
+     * @return 返回执行结果，成功为true，失败为false。
+     */
+    ReturnResult<Boolean> logPause(MonitorTerminalProject monitorTerminalProject, String event);
+
+    /**
+     * 上传文件。
+     *
+     * @param monitorTerminalProject 监控终端项目对象，包含上传文件所需的信息。
+     * @param event
+     * @param file
+     * @return 返回执行结果，成功为true，失败为false。
+     */
+    ReturnResult<Boolean> uploadFile(MonitorTerminalProject monitorTerminalProject, String event, List<MultipartFile> file);
 }
