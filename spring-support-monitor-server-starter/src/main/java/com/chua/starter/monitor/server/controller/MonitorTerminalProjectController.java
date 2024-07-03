@@ -9,9 +9,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 /**
  * 终端
@@ -26,6 +27,46 @@ import org.springframework.web.bind.annotation.RestController;
 public class MonitorTerminalProjectController extends AbstractSwaggerController<MonitorTerminalProjectService, MonitorTerminalProject> {
 
     private final MonitorTerminalProjectService service;
+    /**
+     * 日志。
+     *
+     * @param id 监控代理的唯一标识符。
+     * @return 返回操作结果，如果操作成功，返回true；否则返回false，并附带错误信息。
+     */
+    @Operation(summary = "上传文件")
+    @PostMapping("uploadFile")
+    public ReturnResult<Boolean> uploadFile(String id, String event, @RequestParam(value = "file") List<MultipartFile> file) {
+        // 检查ID是否为空
+        if(StringUtils.isEmpty(id)) {
+            return ReturnResult.error("数据不存在, 请刷新后重试");
+        }
+        // 根据ID获取监控代理实例
+        MonitorTerminalProject monitorTerminalProject = service.getById(id);
+        // 检查监控代理实例是否存在
+        if(null == monitorTerminalProject) {
+            return ReturnResult.error("数据不存在, 请刷新后重试");
+        }
+
+        // 开启监控代理，并返回操作结果
+        return service.uploadFile(monitorTerminalProject, event, file);
+    }
+    @Operation(summary = "暂停日志")
+    @GetMapping("log/pause")
+    public ReturnResult<Boolean> logPause(String id, String event) {
+        // 检查ID是否为空
+        if(StringUtils.isEmpty(id)) {
+            return ReturnResult.error("数据不存在, 请刷新后重试");
+        }
+        // 根据ID获取监控代理实例
+        MonitorTerminalProject monitorTerminalProject = service.getById(id);
+        // 检查监控代理实例是否存在
+        if(null == monitorTerminalProject) {
+            return ReturnResult.error("数据不存在, 请刷新后重试");
+        }
+
+        // 开启监控代理，并返回操作结果
+        return service.logPause(monitorTerminalProject, event);
+    }
     /**
      * 日志。
      *
