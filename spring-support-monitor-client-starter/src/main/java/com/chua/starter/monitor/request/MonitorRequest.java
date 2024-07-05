@@ -1,6 +1,9 @@
 package com.chua.starter.monitor.request;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
+
+import java.io.Serializable;
 
 /**
  * 监视器请求
@@ -10,7 +13,7 @@ import lombok.Data;
  * @since 2024/01/31
  */
 @Data
-public class MonitorRequest {
+public class MonitorRequest implements Serializable {
 
     /**
      * 类型
@@ -43,6 +46,10 @@ public class MonitorRequest {
     private Object data;
 
     /**
+     * 值
+     */
+    private double value;
+    /**
      * 消息
      */
     private String msg;
@@ -72,9 +79,31 @@ public class MonitorRequest {
      */
     private String contextPath;
 
+    /**
+     * 时间戳
+     */
+    private long timestamp = System.currentTimeMillis();
+
     private transient volatile String uid;
 
+    /**
+     * 唯一标识
+     *
+     * @return 唯一标识
+     */
+    @JsonIgnore
     public String getUid() {
-        return "monitor:report:" + getAppName()+ ":" + getServerHost() + "_" + getServerPort() + ":" +  getReportType();
+        return "monitor:report:" + getKey();
     }
+
+    /**
+     * 唯一标识
+     *
+     * @return 唯一标识
+     */
+    @JsonIgnore
+    public  String getKey() {
+        return getAppName()+ ":" + getServerHost() + "_" + getServerPort() + ":" +  getReportType();
+    }
+
 }
