@@ -33,6 +33,15 @@ public interface Adaptor<T> {
     default boolean intoDb() {
         return false;
     }
+
+    /**
+     * 进入数据库
+     *
+     * @return boolean
+     */
+    default boolean intoSet() {
+        return false;
+    }
     /**
      * 进入数据库
      *

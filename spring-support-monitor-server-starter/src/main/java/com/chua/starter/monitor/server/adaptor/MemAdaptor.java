@@ -2,9 +2,12 @@ package com.chua.starter.monitor.server.adaptor;
 
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.utils.MapUtils;
 import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.monitor.request.MonitorRequest;
 import jakarta.annotation.Resource;
+
+import java.util.Map;
 
 /**
  * jvm适配器
@@ -20,6 +23,7 @@ public class MemAdaptor implements Adaptor<MonitorRequest> {
     private SocketSessionTemplate socketSessionTemplate;
     @Override
     public void doAdaptor(MonitorRequest mem) {
+        mem.setData(MapUtils.get((Map)mem.getData(), "data"));
         socketSessionTemplate.send("mem", Json.toJson(mem));
     }
 

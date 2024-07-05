@@ -64,6 +64,9 @@ public class Report implements InitializingBean, DisposableBean {
             if(adaptor.intoDb()) {
                 stringRedisTemplate.opsForZSet() .add(request.getUid(), request.getData(), System.currentTimeMillis());
             }
+            if(adaptor.intoSet()) {
+                stringRedisTemplate.opsForValue().set(request.getUid(), request.getData(), System.currentTimeMillis());
+            }
             if(adaptor.intoTimeSeries()) {
                 timeSeriesService.save(RedisConstant.REDIS_TIME_SERIES_PREFIX + "REPORT:" + request.getKey(),
                         request.getTimestamp(),

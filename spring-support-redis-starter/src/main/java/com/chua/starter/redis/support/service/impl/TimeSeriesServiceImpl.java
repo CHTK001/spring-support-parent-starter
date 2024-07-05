@@ -7,7 +7,6 @@ import com.chua.redis.support.client.RedisSession;
 import com.chua.redis.support.client.RedisTimeSeries;
 import com.chua.starter.redis.support.service.TimeSeriesService;
 import jakarta.annotation.Resource;
-import org.springframework.stereotype.Service;
 import redis.clients.jedis.timeseries.TSCreateParams;
 import redis.clients.jedis.timeseries.TSElement;
 import redis.clients.jedis.timeseries.TSRangeParams;
@@ -23,7 +22,6 @@ import java.util.List;
  * @author CH
  * @since 2024/7/4
  */
-@Service
 public class TimeSeriesServiceImpl implements TimeSeriesService {
 
 
