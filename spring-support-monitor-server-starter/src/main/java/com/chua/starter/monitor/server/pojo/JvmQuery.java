@@ -38,6 +38,7 @@ public class JvmQuery extends IdQuery {
      * 截止时间
      */
     private long toTimestamp;
+
     /**
      * 数量
      */
