@@ -25,7 +25,7 @@ public @interface Crypto {
     /**
      * 加密类型
      */
-    CryptoType cryptoType();
+    CryptoType cryptoType() default CryptoType.AES;
 
     /**
      * 加解密模式

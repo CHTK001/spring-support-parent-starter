@@ -44,6 +44,15 @@ public class IptablesServiceImpl implements IptablesService, ApplicationContextA
     }
 
     @Override
+    public GeoCity getGeoCity(String address) {
+        try {
+            return null == ipPosition ? GeoCity.empty() : ipPosition.getCity(address);
+        } catch (Exception e) {
+            return GeoCity.empty();
+        }
+    }
+
+    @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         ipProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate("plugin.ip", IpProperties.class);
 

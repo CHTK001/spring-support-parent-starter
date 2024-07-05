@@ -5,6 +5,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.server.entity.MonitorTerminal;
 import com.chua.starter.monitor.server.entity.MonitorTerminalBase;
 import com.chua.starter.monitor.server.pojo.IdQuery;
+import com.chua.starter.monitor.server.service.MonitorTerminalBaseService;
 import com.chua.starter.monitor.server.service.MonitorTerminalService;
 import com.chua.starter.mybatis.controller.AbstractSwaggerController;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,6 +30,7 @@ public class MonitorTerminalController extends AbstractSwaggerController<Monitor
 
     private final MonitorTerminalService service;
 
+    private final MonitorTerminalBaseService monitorTerminalBaseService;
     /**
      * 查询基本信息。
      *

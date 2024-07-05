@@ -52,7 +52,7 @@ public class MonitorTerminalProjectServiceImpl extends ServiceImpl<MonitorTermin
         Session session = sshClient.getSession();
         try {
            Channel channel = session.openChannel("monitor-script-" +monitorTerminalProject.getTerminalId(), "exec");
-            return ReturnResult.of(channel.execute(startScript, 1000 * 5));
+            return ReturnResult.of(channel.execute(startScript, 1000));
         } finally {
             session.closeChannel("monitor-script-" +monitorTerminalProject.getTerminalId());
         }
@@ -179,7 +179,7 @@ public class MonitorTerminalProjectServiceImpl extends ServiceImpl<MonitorTermin
             try (InputStream inputStream = file.getInputStream()) {
                 channel.changeDirectory(monitorTerminalProject.getTerminalProjectPath());
                 try (OutputStream outputStream = channel.upload(progressListener, file.getOriginalFilename(), (int) file.getSize())) {
-                    IoUtils.copy(inputStream, outputStream, 20*1024*1024);
+                    IoUtils.copy(inputStream, outputStream, 1024 * 1024);
                 }
             } catch (IOException e) {
                 return ReturnResult.error(e);

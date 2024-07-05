@@ -1,7 +1,7 @@
 package com.chua.starter.proxy.server.support.factory;
 
 import com.chua.common.support.discovery.ServiceDiscovery;
-import com.chua.common.support.protocol.Server;
+import com.chua.common.support.protocol.server.Server;
 import com.chua.netty.support.proxy.filter.AsyncHttpRoutingGatewayFilter;
 import com.chua.netty.support.proxy.filter.AsyncWebSocketRoutingGatewayFilter;
 import org.springframework.beans.factory.FactoryBean;
