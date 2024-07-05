@@ -3,7 +3,6 @@ package com.chua.starter.monitor.server.adaptor;
 import com.chua.common.support.json.Json;
 import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.monitor.request.MonitorRequest;
-
 import jakarta.annotation.Resource;
 
 /**
@@ -28,7 +27,7 @@ public class JvmAdaptor implements Adaptor<MonitorRequest> {
     }
 
     @Override
-    public boolean intoDb() {
+    public boolean intoTimeSeries() {
         return true;
     }
 }

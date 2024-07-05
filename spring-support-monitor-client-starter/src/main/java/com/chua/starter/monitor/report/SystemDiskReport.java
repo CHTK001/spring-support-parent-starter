@@ -13,7 +13,7 @@ import com.chua.oshi.support.Oshi;
 @Spi("diskio")
 public class SystemDiskReport implements Report{
     @Override
-    public Object report() {
-        return Oshi.newDisk();
+    public ReportResult report() {
+        return new ReportResult(Oshi.newDisk(), 0);
     }
 }

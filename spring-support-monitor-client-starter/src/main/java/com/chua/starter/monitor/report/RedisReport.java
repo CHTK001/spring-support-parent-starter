@@ -5,6 +5,7 @@ import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.annotations.SpiCondition;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.redis.support.oshi.RedisOshi;
+import jakarta.annotation.Resource;
 import org.springframework.beans.BeansException;
 import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.context.ApplicationContext;
@@ -15,7 +16,6 @@ import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisClientConfig;
 
-import jakarta.annotation.Resource;
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -37,9 +37,9 @@ public class RedisReport implements Report, AutoCloseable{
     private RedisProperties redisProperties;
 
     @Override
-    public Object report() {
+    public ReportResult report() {
         if(null == environment) {
-            return Collections.emptyList();
+            return new ReportResult(Collections.emptyList(), 0);
         }
 
         initialJedis();
@@ -47,7 +47,7 @@ public class RedisReport implements Report, AutoCloseable{
         if(null != redisProperties) {
             redisReport.setPort(redisProperties.getPort());
         }
-        return redisReport;
+        return new ReportResult(redisReport, 0);
     }
 
     private void initialJedis() {

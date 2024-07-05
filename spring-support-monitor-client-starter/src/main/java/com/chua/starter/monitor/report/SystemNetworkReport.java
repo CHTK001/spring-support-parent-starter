@@ -1,7 +1,10 @@
 package com.chua.starter.monitor.report;
 
 import com.chua.common.support.annotations.Spi;
+import com.chua.oshi.support.Network;
 import com.chua.oshi.support.Oshi;
+
+import java.util.List;
 
 /**
  * 系统报告
@@ -13,7 +16,8 @@ import com.chua.oshi.support.Oshi;
 @Spi("network")
 public class SystemNetworkReport implements Report{
     @Override
-    public Object report() {
-        return Oshi.newNetwork();
+    public ReportResult report() {
+        List<Network> networks = Oshi.newNetwork();
+        return new ReportResult(networks, 0);
     }
 }

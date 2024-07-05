@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.report;
 
 import com.chua.common.support.annotations.Spi;
+import com.chua.oshi.support.Jvm;
 import com.chua.oshi.support.Oshi;
 
 /**
@@ -13,7 +14,8 @@ import com.chua.oshi.support.Oshi;
 @Spi("jvm")
 public class SystemJvmReport implements Report{
     @Override
-    public Object report() {
-        return Oshi.newJvm();
+    public ReportResult report() {
+        Jvm jvm = Oshi.newJvm();
+        return new ReportResult(jvm, jvm.getUsage());
     }
 }

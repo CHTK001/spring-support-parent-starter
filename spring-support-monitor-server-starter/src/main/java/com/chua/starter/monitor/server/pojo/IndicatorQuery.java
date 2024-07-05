@@ -28,4 +28,9 @@ public class IndicatorQuery extends IdQuery {
      * 截止时间
      */
     private long toTimestamp;
+
+    /**
+     * 数量
+     */
+    private int count = 1000;
 }

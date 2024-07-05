@@ -6,6 +6,8 @@ import com.chua.redis.support.client.RedisClient;
 import com.chua.starter.redis.support.listener.RedisListener;
 import com.chua.starter.redis.support.properties.RedisServerProperties;
 import com.chua.starter.redis.support.server.RedisEmbeddedServer;
+import com.chua.starter.redis.support.service.TimeSeriesService;
+import com.chua.starter.redis.support.service.impl.TimeSeriesServiceImpl;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
@@ -70,6 +72,12 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
         return redisClient;
     }
 
+
+    @Bean
+    @ConditionalOnMissingBean
+    public TimeSeriesService timeSeriesService() {
+        return new TimeSeriesServiceImpl();
+    }
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {

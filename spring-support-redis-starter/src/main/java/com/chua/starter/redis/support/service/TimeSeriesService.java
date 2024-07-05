@@ -1,4 +1,4 @@
-package com.chua.starter.monitor.server.service;
+package com.chua.starter.redis.support.service;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.session.indicator.TimeIndicator;
@@ -80,9 +80,10 @@ public interface TimeSeriesService {
      * @param indicator 指标名称，用于标识要查询的数据类型或类别。
      * @param fromTimestamp 数据查询的起始时间戳，用于指定查询数据的时间范围。
      * @param toTimestamp 数据查询的结束时间戳，用于指定查询数据的时间范围。
+     * @param count 数据查询结果的数量限制，用于限制返回的数据数量。
      * @return 返回一个表示操作结果的对象，其中包含了操作是否成功的标志。
      */
-    ReturnResult<List<TimeIndicator>> range(String indicator, long fromTimestamp, long toTimestamp);
+    ReturnResult<List<TimeIndicator>> range(String indicator, long fromTimestamp, long toTimestamp, int count);
 
 }
 

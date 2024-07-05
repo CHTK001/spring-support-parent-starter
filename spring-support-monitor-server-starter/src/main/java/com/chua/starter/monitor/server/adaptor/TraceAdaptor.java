@@ -3,7 +3,6 @@ package com.chua.starter.monitor.server.adaptor;
 import com.chua.common.support.json.Json;
 import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.monitor.request.MonitorRequest;
-
 import jakarta.annotation.Resource;
 
 /**
@@ -25,5 +24,9 @@ public class TraceAdaptor implements Adaptor<MonitorRequest> {
     @Override
     public Class<MonitorRequest> getType() {
         return MonitorRequest.class;
+    }
+    @Override
+    public boolean intoTimeSeries() {
+        return true;
     }
 }

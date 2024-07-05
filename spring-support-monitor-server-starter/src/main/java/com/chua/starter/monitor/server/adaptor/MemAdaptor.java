@@ -4,7 +4,6 @@ import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.json.Json;
 import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.monitor.request.MonitorRequest;
-
 import jakarta.annotation.Resource;
 
 /**
@@ -29,8 +28,9 @@ public class MemAdaptor implements Adaptor<MonitorRequest> {
         return MonitorRequest.class;
     }
 
+
     @Override
-    public boolean intoDb() {
+    public boolean intoTimeSeries() {
         return true;
     }
 }

@@ -4,7 +4,8 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.session.indicator.TimeIndicator;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.server.pojo.IndicatorQuery;
-import com.chua.starter.monitor.server.service.TimeSeriesService;
+import com.chua.starter.monitor.server.pojo.JvmQuery;
+import com.chua.starter.redis.support.service.TimeSeriesService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Getter;
@@ -29,7 +30,6 @@ import static com.chua.redis.support.constant.RedisConstant.REDIS_TIME_SERIES_PR
 @Getter
 public class TimeSeriesController {
 
-
     private final TimeSeriesService timeSeriesService;
     /**
      * 查询基本信息。
@@ -44,6 +44,28 @@ public class TimeSeriesController {
         if(StringUtils.isEmpty(indicatorQuery.getId())) {
             return ReturnResult.error("数据不存在, 请刷新后重试");
         }
-        return timeSeriesService.range(REDIS_TIME_SERIES_PREFIX + "INDICATOR:" + indicatorQuery.getId() + ":" + indicatorQuery.getType()+ ":" + indicatorQuery.getName(), indicatorQuery.getFromTimestamp(), indicatorQuery.getToTimestamp());
+        return timeSeriesService.range(REDIS_TIME_SERIES_PREFIX + "INDICATOR:" + indicatorQuery.getId() + ":" + indicatorQuery.getType()+ ":" + indicatorQuery.getName(), indicatorQuery.getFromTimestamp(), indicatorQuery.getToTimestamp(), indicatorQuery.getCount());
+    }
+    /**
+     * 查询基本信息。
+     *
+     * @param jvmQuery 监控代理的唯一标识符。
+     * @return 返回操作结果，如果操作成功，返回true；否则返回false，并附带错误信息。
+     */
+    @Operation(summary = "查询JVM信息")
+    @GetMapping("jvm")
+    public ReturnResult<List<TimeIndicator>> listJvm(JvmQuery jvmQuery) {
+        // 检查ID是否为空
+        if(StringUtils.isEmpty(jvmQuery.getId())) {
+            return ReturnResult.error("数据不存在, 请刷新后重试");
+        }
+        return timeSeriesService.range(REDIS_TIME_SERIES_PREFIX + "REPORT:" +
+                jvmQuery.getAppName() + ":" +
+                jvmQuery.getServerHost()+ "_" +
+                jvmQuery.getServerPort() + ":" +
+                jvmQuery.getType(),
+                jvmQuery.getFromTimestamp(),
+                jvmQuery.getToTimestamp(),
+                jvmQuery.getCount());
     }
 }

@@ -1,7 +1,9 @@
 package com.chua.starter.monitor.report;
 
 import com.chua.common.support.annotations.Spi;
+import com.chua.common.support.lang.page.Page;
 import com.chua.oshi.support.Oshi;
+import com.chua.oshi.support.Process;
 
 import java.util.Collections;
 
@@ -15,7 +17,8 @@ import java.util.Collections;
 @Spi("process")
 public class SystemProcessReport implements Report{
     @Override
-    public Object report() {
-        return Oshi.newProcess(Collections.emptyMap());
+    public ReportResult report() {
+        Page<Process> processPage = Oshi.newProcess(Collections.emptyMap());
+        return new ReportResult(processPage, 0);
     }
 }
