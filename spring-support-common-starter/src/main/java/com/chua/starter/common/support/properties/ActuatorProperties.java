@@ -20,8 +20,23 @@ public class ActuatorProperties {
      *
      * 通过此属性可以动态启用或禁用Actuator插件。当设置为"true"时，插件生效；当设置为"false"时，插件被禁用。
      */
-    private boolean enable;
+    private boolean enable = true;
 
+    /**
+     * Actuator插件的过滤类型。
+     *
+     * 此属性用于指定Actuator插件的过滤类型，可以设置为"ACCOUNT"、"IP" 或 "NONE"。
+     * "ACCOUNT"表示启用用户名和密码认证，"IP"表示启用IP地址认证，"NONE"表示不启用任何认证。
+     */
+    private Type[] filters = new Type[] { Type.IP };
+
+
+    /**
+     * Actuator插件的白名单。
+     *
+     * 此属性用于配置Actuator插件的白名单，可以指定允许访问的IP地址或主机名。
+     */
+    private String[] whitelist = new String[] {};
     /**
      * Actuator插件的用户名。
      *
@@ -35,4 +50,16 @@ public class ActuatorProperties {
      * 此属性用于配置Actuator插件的访问控制，当启用用户名和密码认证时，需要提供正确的密码。
      */
     private String password = "actuator";
+
+
+    public enum Type {
+        /**
+         * 账号
+         */
+        ACCOUNT,
+        /**
+         * IP
+         */
+        IP
+    }
 }
