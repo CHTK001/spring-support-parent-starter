@@ -1,11 +1,11 @@
-package com.chua.starter.monitor.server.service.impl;
+package com.chua.starter.redis.support.service.impl;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.session.indicator.TimeIndicator;
 import com.chua.redis.support.client.RedisClient;
 import com.chua.redis.support.client.RedisSession;
 import com.chua.redis.support.client.RedisTimeSeries;
-import com.chua.starter.monitor.server.service.TimeSeriesService;
+import com.chua.starter.redis.support.service.TimeSeriesService;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import redis.clients.jedis.timeseries.TSCreateParams;
@@ -44,6 +44,7 @@ public class TimeSeriesServiceImpl implements TimeSeriesService {
         }
         TSCreateParams tsCreateParams = new TSCreateParams();
         tsCreateParams.labels(label);
+        tsCreateParams.compressed();
         if(retentionPeriod > 0) {
             tsCreateParams.retention(retentionPeriod);
         }
@@ -68,6 +69,7 @@ public class TimeSeriesServiceImpl implements TimeSeriesService {
         if(retentionPeriod > 0) {
             tsCreateParams.retention(retentionPeriod);
         }
+        tsCreateParams.compressed();
         redisTimeSeries.tsAdd(indicator, timestamp, value, tsCreateParams);
         return ReturnResult.success();
     }
@@ -90,7 +92,7 @@ public class TimeSeriesServiceImpl implements TimeSeriesService {
     }
 
     @Override
-    public ReturnResult<List<TimeIndicator>> range(String indicator, long fromTimestamp, long toTimestamp) {
+    public ReturnResult<List<TimeIndicator>> range(String indicator, long fromTimestamp, long toTimestamp, int count) {
         RedisSession redisSession  = (RedisSession) redisClient.getSession();
 
         if(!redisSession.checkModule("timeseries")) {
@@ -103,14 +105,21 @@ public class TimeSeriesServiceImpl implements TimeSeriesService {
             return ReturnResult.error("指标不存在");
         }
         TSRangeParams tsRangeParams = new TSRangeParams(fromTimestamp, toTimestamp);
-        tsRangeParams.count(1000);
+        tsRangeParams.count(count);
+        tsRangeParams.latest();
 
         List<TSElement> tsElements = redisTimeSeries.tsRange(indicator, tsRangeParams);
         List<TimeIndicator> timeIndicators = new ArrayList<>(1000);
+        String[] split = indicator.split(":");
         for (TSElement element : tsElements) {
-            TimeIndicator timeIndicator = new TimeIndicator("");
+            TimeIndicator timeIndicator = new TimeIndicator(split[3]);
+            timeIndicator.setName(split[4]);
+            timeIndicator.setTimestamp(element.getTimestamp());
+            timeIndicator.setValue(element.getValue());
+
+            timeIndicators.add(timeIndicator);
         }
-        return ReturnResult.success();
+        return ReturnResult.success(timeIndicators);
     }
 
 }

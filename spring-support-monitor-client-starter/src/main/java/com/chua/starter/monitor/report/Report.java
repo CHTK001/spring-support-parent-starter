@@ -13,5 +13,5 @@ public interface Report {
      *
      * @return {@link Object}
      */
-    Object report();
+    ReportResult report();
 }

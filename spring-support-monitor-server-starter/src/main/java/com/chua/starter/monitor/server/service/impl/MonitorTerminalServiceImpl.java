@@ -25,6 +25,7 @@ import com.chua.starter.monitor.server.entity.MonitorTerminal;
 import com.chua.starter.monitor.server.entity.MonitorTerminalBase;
 import com.chua.starter.monitor.server.mapper.MonitorTerminalMapper;
 import com.chua.starter.monitor.server.service.*;
+import com.chua.starter.redis.support.service.TimeSeriesService;
 import jakarta.annotation.Resource;
 import lombok.AllArgsConstructor;
 import lombok.Data;

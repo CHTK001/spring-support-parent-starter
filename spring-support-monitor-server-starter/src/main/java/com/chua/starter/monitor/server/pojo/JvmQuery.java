@@ -10,7 +10,7 @@ import lombok.EqualsAndHashCode;
  */
 @EqualsAndHashCode(callSuper = true)
 @Data
-public class IndicatorQuery extends IdQuery {
+public class JvmQuery extends IdQuery {
     /**
      * 指标类型，默认为"cpu-io"，用于标识指标的类别。
      */
@@ -18,7 +18,17 @@ public class IndicatorQuery extends IdQuery {
     /**
      * 指标名称
      */
-    private String name;
+    private String appName;
+
+    /**
+     * 服务器主机
+     */
+    private String serverHost;
+
+    /**
+     * 服务器端口
+     */
+    private String serverPort;
     /**
      * 开始时间
      */
@@ -28,7 +38,6 @@ public class IndicatorQuery extends IdQuery {
      * 截止时间
      */
     private long toTimestamp;
-
     /**
      * 数量
      */

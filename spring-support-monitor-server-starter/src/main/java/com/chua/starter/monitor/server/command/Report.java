@@ -5,9 +5,11 @@ import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.ThreadUtils;
+import com.chua.redis.support.constant.RedisConstant;
 import com.chua.starter.monitor.request.MonitorRequest;
 import com.chua.starter.monitor.server.adaptor.Adaptor;
 import com.chua.starter.monitor.server.properties.MonitorServerProperties;
+import com.chua.starter.redis.support.service.TimeSeriesService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.DisposableBean;
@@ -38,6 +40,8 @@ public class Report implements InitializingBean, DisposableBean {
     private final ScheduledExecutorService scheduledExecutorService = ThreadUtils.newScheduledThreadPoolExecutor(2, "com-ch-monitor-core-thread");
 
 
+    @Resource
+    private TimeSeriesService timeSeriesService;
     /**
      * 心跳
      *
@@ -59,6 +63,13 @@ public class Report implements InitializingBean, DisposableBean {
             }
             if(adaptor.intoDb()) {
                 stringRedisTemplate.opsForZSet() .add(request.getUid(), request.getData(), System.currentTimeMillis());
+            }
+            if(adaptor.intoTimeSeries()) {
+                timeSeriesService.save(RedisConstant.REDIS_TIME_SERIES_PREFIX + "REPORT:" + request.getKey(),
+                        request.getTimestamp(),
+                        request.getValue(),
+                        RedisConstant.DEFAULT_RETENTION_PERIOD_FOR_WEEK
+                    );
             }
         } catch (Exception ignored) {
         }

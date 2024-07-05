@@ -13,7 +13,7 @@ import com.chua.oshi.support.Oshi;
 @Spi("disk")
 public class SystemFileReport implements Report{
     @Override
-    public Object report() {
-        return Oshi.newSysFile();
+    public ReportResult report() {
+        return new ReportResult(Oshi.newSysFile(), 0);
     }
 }
