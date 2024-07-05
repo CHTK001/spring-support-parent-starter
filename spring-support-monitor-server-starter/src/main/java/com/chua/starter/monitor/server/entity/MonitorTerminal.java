@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.chua.starter.common.support.annotations.PrivacyEncrypt;
+import com.chua.starter.common.support.rule.PrivacyTypeEnum;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -77,7 +79,8 @@ public class MonitorTerminal implements Serializable {
     @TableField(value = "terminal_password")
     @ApiModelProperty(value = "密码")
     @Schema(description = "密码")
-    @JsonIgnore
+    @PrivacyEncrypt(type = PrivacyTypeEnum.PASSWORD)
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Size(max = 255, message = "密码最大长度要小于 255")
     private String terminalPassword;
 
