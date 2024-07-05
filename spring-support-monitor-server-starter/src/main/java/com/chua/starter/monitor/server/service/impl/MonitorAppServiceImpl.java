@@ -16,6 +16,7 @@ import com.chua.common.support.protocol.request.Response;
 import com.chua.common.support.protocol.request.SenderRequest;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.monitor.properties.MonitorProtocolProperties;
 import com.chua.starter.monitor.request.MonitorRequest;
@@ -31,6 +32,7 @@ import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class MonitorAppServiceImpl extends ServiceImpl<MonitorAppMapper, MonitorApp> implements MonitorAppService{
@@ -81,6 +83,7 @@ public class MonitorAppServiceImpl extends ServiceImpl<MonitorAppMapper, Monitor
             return null;
         }
 
+        data = MapUtils.get((Map)data, "config");
         MonitorProtocolProperties monitorProtocolProperties = BeanUtils.copyProperties(data, MonitorProtocolProperties.class);
         Codec codec = Codec.build(monitorProtocolProperties.getEncryptionSchema(), monitorProtocolProperties.getEncryptionKey());
         ProtocolSetting bootOption = ProtocolSetting.builder()
