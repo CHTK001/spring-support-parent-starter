@@ -3,7 +3,6 @@ package com.chua.starter.redis.support;
 import com.chua.common.support.protocol.ClientSetting;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.redis.support.client.RedisClient;
-import com.chua.redis.support.client.RedisSession;
 import com.chua.starter.redis.support.listener.RedisListener;
 import com.chua.starter.redis.support.properties.RedisServerProperties;
 import com.chua.starter.redis.support.server.RedisEmbeddedServer;
@@ -11,7 +10,6 @@ import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
 import org.springframework.beans.BeansException;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
@@ -40,7 +38,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     RedisServerProperties redisServerProperties;
 
 
-    @Bean
+    @Bean(destroyMethod = "shutdown")
     @ConditionalOnMissingBean
     public RedissonClient redissonClient(RedisProperties redisProperties) {
         Config config = new Config();
@@ -55,13 +53,12 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
                 .setClientName(redisProperties.getClientName());
         return Redisson.create(config);
     }
-    @Bean
+    @Bean(destroyMethod = "close")
     @ConditionalOnMissingBean
-    @ConditionalOnClass(name = {"redis.clients.jedis.AbstractPipeline"})
-    public RedisSession redisSearch(RedisProperties redisProperties) {
+    public RedisClient redisClient(RedisProperties redisProperties) {
         RedisClient redisClient = new RedisClient(
                 ClientSetting.builder()
-                        .database("default")
+                        .database(String.valueOf(redisProperties.getDatabase()))
                         .host(redisProperties.getHost())
                         .port(redisProperties.getPort())
                         .password(redisProperties.getPassword())
@@ -70,8 +67,9 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
         );
 
         redisClient.connect();
-        return redisClient.createSession();
+        return redisClient;
     }
+
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {

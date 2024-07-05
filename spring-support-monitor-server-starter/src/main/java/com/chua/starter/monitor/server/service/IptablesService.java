@@ -22,4 +22,10 @@ public interface IptablesService {
      */
     @Cacheable(cacheManager = REDIS_CACHE, cacheNames = REDIS_CACHE, key = "#address")
     ReturnResult<GeoCity> transferAddress(String address);
+    /**
+     * 翻译地址
+     * @param address 地址
+     * @return {@link GeoCity}
+     */
+    GeoCity getGeoCity(String address);
 }
