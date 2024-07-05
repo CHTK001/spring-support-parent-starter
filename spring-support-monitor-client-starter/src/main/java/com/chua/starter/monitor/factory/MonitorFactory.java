@@ -1,5 +1,6 @@
 package com.chua.starter.monitor.factory;
 
+import com.chua.common.support.collection.ImmutableBuilder;
 import com.chua.common.support.function.Joiner;
 import com.chua.common.support.function.Splitter;
 import com.chua.common.support.json.Json;
@@ -17,6 +18,8 @@ import com.chua.zbus.support.protocol.ZbusClient;
 import io.zbus.mq.Message;
 import io.zbus.mq.Producer;
 import lombok.Getter;
+import org.springframework.boot.actuate.autoconfigure.endpoint.web.WebEndpointProperties;
+import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.core.env.Environment;
 
 import java.util.*;
@@ -57,6 +60,7 @@ public class MonitorFactory implements AutoCloseable {
     private String reportTopic;
     private boolean isServer;
     private String activeInclude;
+    private List<String> endpointId;
 
     public static MonitorFactory getInstance() {
         return INSTANCE;
@@ -83,6 +87,7 @@ public class MonitorFactory implements AutoCloseable {
 
     public void register(Environment environment) {
         this.environment = environment;
+        WebEndpointProperties webEndpointProperties = Binder.get(environment).bindOrCreate("management.endpoints.web", WebEndpointProperties.class);
         this.serverPort = environment.resolvePlaceholders("${server.port:8080}");
         this.active = environment.getProperty("spring.profiles.active", "default");
         this.activeInclude = environment.getProperty("spring.profiles.include", "");
@@ -164,7 +169,12 @@ public class MonitorFactory implements AutoCloseable {
             try {
                 MonitorRequest request = createMonitorRequest();
                 request.setType(MonitorRequestType.HEARTBEAT);
-                request.setData(monitorProtocolProperties);
+                request.setData(ImmutableBuilder.builderOfMap()
+                        .put("config", monitorProtocolProperties)
+                        .put("active", plugins)
+                        .put("endpoint", endpointId)
+                        .newHashMap()
+                );
                 Message message = new Message();
                 message.setBody(Json.toJSONBytes(request));
                 message.setTopic(topic);
@@ -273,5 +283,10 @@ public class MonitorFactory implements AutoCloseable {
      */
     public void isServer(boolean isServer) {
         this.isServer = isServer;
+    }
+
+    public void endpoint(List<String> endpointId) {
+
+        this.endpointId = endpointId;
     }
 }
