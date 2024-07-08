@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.server.controller;
 
 
+import com.chua.common.support.annotations.Ignore;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.protocol.protocol.CommandType;
 import com.chua.common.support.protocol.request.DefaultRequest;
@@ -43,36 +44,43 @@ public class ReportController {
     private RemoteRequest remoteRequest;
     @PostMapping("/report")
     @Operation(summary = "上报数据")
-    public ReturnResult<byte[]> home(@RequestBody byte[] body) {
+    @Ignore
+    public byte[] home(@RequestBody byte[] body) {
         ReportQuery reportQuery = remoteRequest.getRequest(body);
         Request request = new DefaultRequest(null, null, remoteRequest.getCodec());
         if(null == reportQuery) {
-            return ReturnResult.illegal("请求不能为空");
+//            return ReturnResult.illegal("请求不能为空");
+            return new byte[0];
         }
 
         CommandType commandType = reportQuery.getCommandType();
         if(null == commandType) {
-            return ReturnResult.illegal( "请求不能为空");
+//            return ReturnResult.illegal( "请求不能为空");
+            return new byte[0];
         }
+
 
         String moduleType = reportQuery.getModuleType();
         if(null == moduleType) {
-            return ReturnResult.illegal( "请求不能为空");
+//            return ReturnResult.illegal( "请求不能为空");
+            return new byte[0];
         }
 
         String appName = reportQuery.getAppName();
         if(StringUtils.isBlank(appName)) {
-            return ReturnResult.illegal( "appName不能为空");
+            //return ReturnResult.illegal( "appName不能为空");
+            return new byte[0];
         }
 
         try {
             Response response = ServiceProvider.of(ModuleResolver.class).getNewExtension(moduleType)
                     .resolve(request, reportQuery);
 
-            return response.isSuccessful() ? ReturnResult.success(response.getBody()) : ReturnResult.illegal(response.message());
+            return response.isSuccessful() ? response.getBody() : new byte[0];//ReturnResult.illegal(response.message());
         } catch (Exception e) {
             e.printStackTrace();
-            return ReturnResult.illegal( "操作失败");
+            //return ReturnResult.illegal( "操作失败");
+            return new byte[0];
         }
     }
 
