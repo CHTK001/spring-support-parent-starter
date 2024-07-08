@@ -25,8 +25,4 @@ public class TraceAdaptor implements Adaptor<MonitorRequest> {
     public Class<MonitorRequest> getType() {
         return MonitorRequest.class;
     }
-    @Override
-    public boolean intoTimeSeries() {
-        return true;
-    }
 }

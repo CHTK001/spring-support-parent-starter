@@ -42,12 +42,4 @@ public interface Adaptor<T> {
     default boolean intoSet() {
         return false;
     }
-    /**
-     * 进入数据库
-     *
-     * @return boolean
-     */
-    default boolean intoTimeSeries() {
-        return false;
-    }
 }

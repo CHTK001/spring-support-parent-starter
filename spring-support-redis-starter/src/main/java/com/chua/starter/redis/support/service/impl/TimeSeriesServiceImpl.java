@@ -106,7 +106,7 @@ public class TimeSeriesServiceImpl implements TimeSeriesService {
         tsRangeParams.count(count);
         tsRangeParams.latest();
 
-        List<TSElement> tsElements = redisTimeSeries.tsRange(indicator, tsRangeParams);
+        List<TSElement> tsElements = redisTimeSeries.tsRevRange(indicator, tsRangeParams);
         List<TimeIndicator> timeIndicators = new ArrayList<>(1000);
         String[] split = indicator.split(":");
         for (TSElement element : tsElements) {
