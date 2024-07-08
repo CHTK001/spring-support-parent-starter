@@ -59,11 +59,12 @@ public class TimeSeriesController {
         if(StringUtils.isEmpty(jvmQuery.getId())) {
             return ReturnResult.error("数据不存在, 请刷新后重试");
         }
+
         return timeSeriesService.range(REDIS_TIME_SERIES_PREFIX + "REPORT:" +
-                jvmQuery.getAppName() + ":" +
-                jvmQuery.getServerHost()+ "_" +
-                jvmQuery.getServerPort() + ":" +
-                jvmQuery.getType(),
+                        jvmQuery.getAppName() + ":" +
+                        jvmQuery.getServerHost() + "_" +
+                        jvmQuery.getServerPort() + ":" +
+                        jvmQuery.getType(),
                 jvmQuery.getFromTimestamp(),
                 jvmQuery.getToTimestamp(),
                 jvmQuery.getCount());
