@@ -12,6 +12,7 @@ import com.chua.common.support.lang.formatter.HighlightingFormatter;
 import com.chua.common.support.lang.formatter.SqlFormatter;
 import com.chua.common.support.media.MediaTypeFactory;
 import com.chua.common.support.session.Session;
+import com.chua.common.support.session.pojo.SessionModule;
 import com.chua.common.support.session.query.*;
 import com.chua.common.support.session.result.SessionInfo;
 import com.chua.common.support.session.result.SessionResult;
@@ -28,6 +29,7 @@ import com.chua.starter.monitor.server.properties.GenProperties;
 import com.chua.starter.monitor.server.query.TableQuery;
 import com.chua.starter.monitor.server.service.MonitorSysGenRemarkService;
 import com.chua.starter.monitor.server.service.MonitorSysGenService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -66,6 +68,7 @@ public class SessionController {
      *
      * @return {@link ReturnPageResult}<{@link Table}>
      */
+    @Operation(summary = "查询子节点")
     @GetMapping("children")
     public ReturnResult<List<?>> children(TableQuery query) {
         MonitorSysGen sysGen = sysGenService.getById(query.getGenId());
@@ -106,6 +109,7 @@ public class SessionController {
      *
      * @return {@link ReturnPageResult}<{@link Table}>
      */
+    @Operation(summary = "关键词列表")
     @GetMapping("keyword")
     public ReturnResult<List<Database>> keyword(TableQuery query) {
         MonitorSysGen sysGen = sysGenService.getById(query.getGenId());
@@ -165,6 +169,7 @@ public class SessionController {
      * @param explainQuery 解释查询
      * @return {@link ReturnResult}<{@link SessionResultSet}>
      */
+    @Operation(summary = "解释表达式")
     @PostMapping("explain")
     public ReturnResult<SessionResult> explain(@RequestBody ExplainQuery explainQuery) {
         if (StringUtils.isEmpty(explainQuery.getGenId())) {
@@ -217,6 +222,7 @@ public class SessionController {
      * @param executeQuery 解释查询
      * @return {@link ReturnResult}<{@link SessionResultSet}>
      */
+    @Operation(summary = "执行表达式")
     @PostMapping("execute")
     public ReturnResult<SessionResult> execute(@RequestBody ExecuteQuery executeQuery) {
         if (StringUtils.isEmpty(executeQuery.getGenId())) {
@@ -287,6 +293,7 @@ public class SessionController {
      * @param executeQuery 解释查询
      * @return {@link ReturnResult}<{@link SessionResultSet}>
      */
+    @Operation(summary = "日志信息")
     @PostMapping("log")
     public ReturnResult<SessionResult> log(@RequestBody ExecuteQuery executeQuery) {
         if (StringUtils.isEmpty(executeQuery.getGenId())) {
@@ -319,13 +326,43 @@ public class SessionController {
         sessionResult.setTotal(sessionResultSet.toTotal());
         return ReturnResult.ok(sessionResult);
     }
-
     /**
      * 基本信息
      *
      * @param executeQuery 解释查询
      * @return {@link ReturnResult}<{@link SessionResultSet}>
      */
+    @Operation(summary = "查询模块")
+    @GetMapping("module")
+    public ReturnResult<List<SessionModule>> module(ExecuteQuery executeQuery) {
+        if (StringUtils.isEmpty(executeQuery.getGenId())) {
+            return ReturnResult.error("未配置生成器");
+        }
+
+        MonitorSysGen sysGen = sysGenService.getById(executeQuery.getGenId());
+        if (StringUtils.isEmpty(sysGen.getGenType())) {
+            return ReturnResult.error("未配置生成器类型");
+        }
+
+        Session session = ServiceProvider.of(Session.class).getKeepExtension(sysGen.getGenId() + "", sysGen.getGenType(), sysGen.newDatabaseOptions());
+        if (!session.isConnect()) {
+            ServiceProvider.of(Session.class).closeKeepExtension(sysGen.getGenId() + "");
+            return ReturnResult.illegal("当前服务器不可达");
+        }
+        try {
+            return ReturnResult.ok(session.moduleList());
+        } catch (Exception e) {
+            log.error("", e);
+            return ReturnResult.illegal(e);
+        }
+    }
+    /**
+     * 基本信息
+     *
+     * @param executeQuery 解释查询
+     * @return {@link ReturnResult}<{@link SessionResultSet}>
+     */
+    @Operation(summary = "基础信息")
     @PostMapping("info")
     public ReturnResult<SessionResult> info(@RequestBody ExecuteQuery executeQuery) {
         if (StringUtils.isEmpty(executeQuery.getGenId())) {
@@ -361,6 +398,7 @@ public class SessionController {
      * @param saveQuery 解释查询
      * @return {@link ReturnResult}<{@link SessionResultSet}>
      */
+    @Operation(summary = "保存基本信息")
     @PostMapping("save")
     public ReturnResult<SessionResult> save(@RequestBody SaveQuery saveQuery) {
         return save(saveQuery, null);
@@ -372,6 +410,7 @@ public class SessionController {
      * @param saveQuery 解释查询
      * @return {@link ReturnResult}<{@link SessionResultSet}>
      */
+    @Operation(summary = "保存文件")
     @PostMapping("saveForm")
     public ReturnResult<SessionResult> save(SaveQuery saveQuery, @RequestParam("file") MultipartFile file) {
         if (StringUtils.isEmpty(saveQuery.getGenId())) {
@@ -417,6 +456,7 @@ public class SessionController {
      * @param deleteQuery 解释查询
      * @return {@link ReturnResult}<{@link SessionResultSet}>
      */
+    @Operation(summary = "删除基本信息")
     @PostMapping("delete")
     public ReturnResult<SessionResult> delete(@RequestBody DeleteQuery deleteQuery) {
         if (StringUtils.isEmpty(deleteQuery.getGenId())) {
@@ -451,6 +491,7 @@ public class SessionController {
      * @param updateQuery 解释查询
      * @return {@link ReturnResult}<{@link SessionResultSet}>
      */
+    @Operation(summary = "更新基本信息")
     @PostMapping("update")
     public ReturnResult<SessionResult> update(@RequestBody UpdateQuery updateQuery) {
         return update(updateQuery, null);
@@ -462,6 +503,7 @@ public class SessionController {
      * @param updateQuery 解释查询
      * @return {@link ReturnResult}<{@link SessionResultSet}>
      */
+    @Operation(summary = "更新文件")
     @PostMapping("updateForm")
     public ReturnResult<SessionResult> update(UpdateQuery updateQuery, @RequestParam("file") MultipartFile file) {
         if (StringUtils.isEmpty(updateQuery.getGenId())) {
@@ -507,6 +549,7 @@ public class SessionController {
      * @param query 执行查询
      * @return {@link ResponseEntity}<{@link byte[]}>
      */
+    @Operation(summary = "预览文档")
     @Ignore
     @GetMapping("previewDoc")
     public ResponseEntity<byte[]> previewDoc(DocQuery query) {
@@ -571,6 +614,7 @@ public class SessionController {
      * @param query 执行查询
      * @return {@link ResponseEntity}<{@link byte[]}>
      */
+    @Operation(summary = "同步文档")
     @PostMapping("syncDoc")
     public ReturnResult<Boolean> syncDoc(@RequestBody DocQuery query) {
         if (StringUtils.isEmpty(query.getGenId())) {
@@ -608,6 +652,7 @@ public class SessionController {
      * @param query 执行查询
      * @return {@link ResponseEntity}<{@link byte[]}>
      */
+    @Operation(summary = "下载文档")
     @GetMapping("downloadDoc")
     public ResponseEntity<byte[]> downloadDoc(DocQuery query) {
         if (StringUtils.isEmpty(query.getGenId())) {
