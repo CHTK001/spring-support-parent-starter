@@ -54,6 +54,7 @@ public class RedisSearchController {
         searchQuery.setIndex(key);
         searchQuery.setLanguage(LANGUAGE);
         searchQuery.setKeyword(jvmQuery.getKeyword());
+        searchQuery.setSort("timestamp");
         return redisSearchService.queryAll(searchQuery, jvmQuery.getOffset(), jvmQuery.getCount());
     }
 }

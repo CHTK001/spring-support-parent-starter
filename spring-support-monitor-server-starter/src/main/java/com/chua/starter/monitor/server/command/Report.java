@@ -5,7 +5,6 @@ import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.ThreadUtils;
-import com.chua.redis.support.constant.RedisConstant;
 import com.chua.starter.monitor.request.MonitorRequest;
 import com.chua.starter.monitor.server.adaptor.Adaptor;
 import com.chua.starter.monitor.server.properties.MonitorServerProperties;
@@ -66,13 +65,6 @@ public class Report implements InitializingBean, DisposableBean {
             }
             if(adaptor.intoSet()) {
                 stringRedisTemplate.opsForValue().set(request.getUid(), request.getData(), System.currentTimeMillis());
-            }
-            if(adaptor.intoTimeSeries()) {
-                timeSeriesService.save(RedisConstant.REDIS_TIME_SERIES_PREFIX + "REPORT:" + request.getKey(),
-                        request.getTimestamp(),
-                        request.getValue(),
-                        RedisConstant.DEFAULT_RETENTION_PERIOD_FOR_WEEK
-                    );
             }
         } catch (Exception ignored) {
         }
