@@ -1,7 +1,7 @@
 package com.chua.starter.monitor.report;
 
 import com.chua.common.support.annotations.Spi;
-import com.chua.oshi.support.Mem;
+import com.chua.oshi.support.JvmMem;
 import com.chua.oshi.support.Oshi;
 
 /**
@@ -12,10 +12,10 @@ import com.chua.oshi.support.Oshi;
  * @since 2024/02/01
  */
 @Spi("memory")
-public class SystemMemReport implements Report{
+public class JvmMemReport implements Report{
     @Override
     public ReportResult report() {
-        Mem mem = Oshi.newMem();
-        return new ReportResult(mem, mem.getFree() / mem.getTotal() * 100D);
+        JvmMem mem = Oshi.newJvmMem();
+        return new ReportResult(mem, mem.getProcess());
     }
 }
