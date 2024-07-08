@@ -5,6 +5,7 @@ import com.chua.common.support.json.Json;
 import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.RandomUtils;
+import com.chua.starter.common.support.annotations.Ignore;
 import com.chua.starter.common.support.provider.CodecProvider;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.SneakyThrows;
@@ -43,6 +44,10 @@ public class CodeResponseBodyAdvice implements ResponseBodyAdvice<Object> {
     @Override
     public Object beforeBodyWrite(Object o, MethodParameter methodParameter, MediaType mediaType, Class<? extends HttpMessageConverter<?>> aClass, ServerHttpRequest serverHttpRequest, ServerHttpResponse serverHttpResponse) {
         if(codecProvider.isPass()) {
+            return o;
+        }
+
+        if(methodParameter.hasMethodAnnotation(Ignore.class) || methodParameter.hasMethodAnnotation(com.chua.common.support.annotations.Ignore.class)) {
             return o;
         }
 
