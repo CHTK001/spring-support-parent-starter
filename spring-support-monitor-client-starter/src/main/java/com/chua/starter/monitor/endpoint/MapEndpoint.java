@@ -1,6 +1,5 @@
 package com.chua.starter.monitor.endpoint;
 
-import com.chua.common.support.constant.Projects;
 import com.chua.common.support.utils.CmdUtils;
 import com.chua.common.support.utils.StringUtils;
 import lombok.Data;
@@ -22,7 +21,7 @@ import java.util.List;
 public class MapEndpoint {
     @ReadOperation
     public List<JavaMap> read() {
-        String exec = CmdUtils.exec("jmap -histo:live " + Projects.getPid() + " "+ (Projects.isLinux() ? " | head -n 20" : ""));
+        String exec = CmdUtils.exec("jmap -histo:live ");
 
         List<JavaMap> javaMaps = new LinkedList<>();
         exec = StringUtils.subAfter(exec, "----------------------------------------------", true).trim();
