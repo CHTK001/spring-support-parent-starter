@@ -141,6 +141,14 @@ public class MonitorSysGen implements Serializable {
     @Size(max = 255,message = "文件数据库数据目录最大长度要小于 255")
     private String genUid;
 
+    /**
+     * 备份状态;0:未开启
+     */
+    @TableField(value = "gen_backup_status")
+    @ApiModelProperty(value="备份状态;0:未开启")
+    @Schema(description="备份状态;0:未开启")
+    private Integer genBackupStatus;
+
     private static final long serialVersionUID = 1L;
     /**
      * 表名称
