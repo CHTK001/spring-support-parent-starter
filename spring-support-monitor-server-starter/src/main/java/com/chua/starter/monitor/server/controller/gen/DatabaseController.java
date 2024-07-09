@@ -2,6 +2,8 @@ package com.chua.starter.monitor.server.controller.gen;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.backup.Backup;
+import com.chua.common.support.datasource.dialect.Dialect;
+import com.chua.common.support.datasource.dialect.DialectFactory;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.session.Session;
@@ -17,12 +19,12 @@ import com.chua.starter.monitor.server.service.MonitorSysGenService;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import jakarta.annotation.Resource;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -89,7 +91,8 @@ public class DatabaseController {
         Map<String, Class<Backup>> stringClassMap = ServiceProvider.of(Backup.class).listType();
         for (MonitorSysGen record : genType.getRecords()) {
             record.setGenPassword("");
-            record.setSupportBackup(stringClassMap.containsKey(record.getGenType().toUpperCase()));
+            Dialect driver = DialectFactory.createDriver(record.getGenDriver());
+            record.setSupportBackup(stringClassMap.containsKey(driver.protocol().toUpperCase()));
         }
         return PageResultUtils.<MonitorSysGen>ok(genType);
     }
