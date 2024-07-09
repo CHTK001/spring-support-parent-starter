@@ -18,6 +18,14 @@ public interface RedisSearchService {
 
 
     /**
+     * 删除Redis搜索引擎索引。
+     *
+     * @param index     索引名称
+     * @param expireTime 索引过期时间(MS)
+     * @return 返回删除索引操作的结果
+     */
+    ReturnResult<Boolean> dropIndex(String index, long expireTime);
+    /**
      * 创建Redis搜索引擎索引。
      *
      * @param searchIndex     索引的模式字段
