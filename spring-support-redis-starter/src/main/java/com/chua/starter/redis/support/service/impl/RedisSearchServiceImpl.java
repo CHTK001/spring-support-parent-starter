@@ -4,6 +4,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.task.cache.Cacheable;
 import com.chua.common.support.task.cache.GuavaCacheable;
 import com.chua.common.support.utils.IdUtils;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.redis.support.client.RedisClient;
 import com.chua.redis.support.client.RedisSearch;
 import com.chua.redis.support.client.RedisSession;
@@ -12,6 +13,7 @@ import com.chua.redis.support.search.SearchQuery;
 import com.chua.redis.support.search.SearchResultItem;
 import com.chua.starter.redis.support.service.RedisSearchService;
 import jakarta.annotation.Resource;
+import redis.clients.jedis.Jedis;
 
 import java.util.Map;
 
@@ -29,6 +31,34 @@ public class RedisSearchServiceImpl implements RedisSearchService {
     private static final Cacheable CACHEABLE = new GuavaCacheable();
 
     @Override
+    public ReturnResult<Boolean> dropIndex(String index, long expireTime) {
+        if(!CACHEABLE.exist(index)) {
+            return ReturnResult.ok();
+        }
+        RedisSession redisSession  = (RedisSession) redisClient.getSession();
+
+        try (Jedis jedis = redisSession.getJedis().getResource()) {
+            String s = jedis.get(index + ":CREATE_INIT");
+            if(StringUtils.isEmpty(s)) {
+                return ReturnResult.ok();
+            }
+
+            long l = 0;
+            try {
+                l = Long.parseLong(s);
+            } catch (NumberFormatException e) {
+                return ReturnResult.error("数据异常");
+            }
+
+            if(System.currentTimeMillis() - l > expireTime) {
+                redisSession.remove(index + ":CREATE_INIT");
+                return ReturnResult.ok();
+            }
+        }
+        return ReturnResult.ok();
+    }
+
+    @Override
     public ReturnResult<Boolean> createIndex(SearchIndex searchIndex) {
         if(CACHEABLE.exist(searchIndex.getName())) {
             return ReturnResult.ok();
@@ -39,6 +69,9 @@ public class RedisSearchServiceImpl implements RedisSearchService {
             return ReturnResult.error("模块未加载");
         }
 
+        try (Jedis jedis = redisSession.getJedis().getResource()) {
+            jedis.set(searchIndex.getName() + ":CREATE_INIT", String.valueOf(System.currentTimeMillis()));
+        }
         RedisSearch redisSearch = redisSession.getRedisSearch();
         try {
             redisSearch.ftInfo(searchIndex.getName());

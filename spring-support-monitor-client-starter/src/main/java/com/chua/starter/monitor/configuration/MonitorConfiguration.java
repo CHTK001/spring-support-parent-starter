@@ -2,7 +2,9 @@ package com.chua.starter.monitor.configuration;
 
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.monitor.endpoint.MapEndpoint;
 import com.chua.starter.monitor.endpoint.RedisEndpoint;
+import com.chua.starter.monitor.endpoint.ThreadEndpoint;
 import com.chua.starter.monitor.factory.MonitorFactory;
 import com.chua.starter.monitor.filter.EmptyFilter;
 import com.chua.starter.monitor.properties.*;
@@ -141,7 +143,25 @@ public class MonitorConfiguration  implements BeanDefinitionRegistryPostProcesso
         this.environment = environment;
     }
 
+    /**
+     * 注解Bean，如果不存在ThreadEndpoint实例则创建ThreadEndpoint实例
+     * @return ThreadEndpoint实例
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public ThreadEndpoint threadEndpoint() {
+        return new ThreadEndpoint();
+    }
 
+    /**
+     * 注解Bean，如果不存在MapEndpoint实例则创建MapEndpoint实例
+     * @return MapEndpoint实例
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public MapEndpoint mapEndpoint() {
+        return new MapEndpoint();
+    }
 
     /**
      * 注解Bean，如果不存在RedisConnection类则创建RedisEndpoint实例
