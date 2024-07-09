@@ -69,7 +69,6 @@ public class DatabaseController {
         sysGenService.updateById(sysGen);
         return ReturnResult.ok();
     }
-
     /**
      * 列表
      *
