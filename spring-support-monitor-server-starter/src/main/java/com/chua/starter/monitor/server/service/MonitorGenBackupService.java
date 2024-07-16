@@ -3,6 +3,8 @@ package com.chua.starter.monitor.server.service;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.server.entity.MonitorSysGen;
 
+import java.util.Date;
+
 /**
  * 数据库备份
  * @author CH
@@ -24,4 +26,14 @@ public interface MonitorGenBackupService {
      * @return ReturnResult<Boolean>
      */
     ReturnResult<Boolean> stop(MonitorSysGen monitorSysGen);
+
+    /**
+     * 下载备份
+     *
+     * @param genId    genId
+     * @param startDay 开始时间
+     * @param endDay   结束时间
+     * @return byte[]
+     */
+    byte[] downloadBackup(Integer genId, Date startDay, Date endDay);
 }
