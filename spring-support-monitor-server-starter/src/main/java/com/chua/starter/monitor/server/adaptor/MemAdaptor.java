@@ -11,6 +11,8 @@ import jakarta.annotation.Resource;
 
 import java.util.Map;
 
+import static com.chua.starter.monitor.server.constant.RedisConstant.REDIS_TIME_SERIES_REPORT_PREFIX;
+
 /**
  * jvm适配器
  *
@@ -31,12 +33,12 @@ public class MemAdaptor implements Adaptor<MonitorRequest> {
         mem.setData(map);
         socketSessionTemplate.send("mem", Json.toJson(mem));
         try {
-            timeSeriesService.save(RedisConstant.REDIS_TIME_SERIES_PREFIX + "REPORT:" + mem.getKey() + ":SYSTEM",
+            timeSeriesService.save(REDIS_TIME_SERIES_REPORT_PREFIX + mem.getKey() + ":SYSTEM",
                     mem.getTimestamp(),
                     MapUtils.getDoubleValue(map, "system"),
                     RedisConstant.DEFAULT_RETENTION_PERIOD_FOR_WEEK
             );
-            timeSeriesService.save(RedisConstant.REDIS_TIME_SERIES_PREFIX + "REPORT:" + mem.getKey() + ":PROCESS",
+            timeSeriesService.save(REDIS_TIME_SERIES_REPORT_PREFIX + mem.getKey() + ":PROCESS",
                     mem.getTimestamp(),
                     MapUtils.getDoubleValue(map, "process"),
                     RedisConstant.DEFAULT_RETENTION_PERIOD_FOR_WEEK

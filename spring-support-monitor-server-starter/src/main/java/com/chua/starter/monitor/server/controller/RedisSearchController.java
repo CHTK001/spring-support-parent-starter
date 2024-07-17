@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import static com.chua.redis.support.constant.RedisConstant.REDIS_SEARCH_PREFIX;
+import static com.chua.starter.monitor.server.constant.RedisConstant.REDIS_SEARCH_MONITOR_REPORT_PREFIX;
 import static com.chua.starter.redis.support.service.impl.RedisSearchServiceImpl.LANGUAGE;
 
 /**
@@ -44,7 +44,7 @@ public class RedisSearchController {
             return ReturnResult.error("数据不存在, 请刷新后重试");
         }
 
-        String key = REDIS_SEARCH_PREFIX + "monitor:report:" +
+        String key = REDIS_SEARCH_MONITOR_REPORT_PREFIX +
                 jvmQuery.getAppName() + ":" +
                 jvmQuery.getServerHost() + "_" +
                 jvmQuery.getServerPort() + ":" +

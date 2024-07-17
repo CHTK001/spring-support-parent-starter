@@ -3,20 +3,28 @@ package com.chua.starter.monitor.server.service.impl;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.backup.Backup;
 import com.chua.common.support.backup.BackupSetting;
-import com.chua.common.support.backup.listener.BackupListener;
+import com.chua.common.support.backup.listener.BackupData;
 import com.chua.common.support.backup.strategy.DayBackupStrategy;
 import com.chua.common.support.constant.EventType;
 import com.chua.common.support.datasource.dialect.Dialect;
 import com.chua.common.support.datasource.dialect.DialectFactory;
 import com.chua.common.support.datasource.jdbc.option.DataSourceOptions;
+import com.chua.common.support.function.Joiner;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.utils.ThreadUtils;
+import com.chua.redis.support.search.SearchIndex;
+import com.chua.redis.support.search.SearchQuery;
+import com.chua.redis.support.search.SearchResultItem;
+import com.chua.redis.support.search.SearchSchema;
 import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.monitor.server.entity.MonitorSysGen;
 import com.chua.starter.monitor.server.properties.GenProperties;
+import com.chua.starter.monitor.server.query.LogTimeQuery;
 import com.chua.starter.monitor.server.service.MonitorGenBackupService;
 import com.chua.starter.monitor.server.service.MonitorSysGenService;
+import com.chua.starter.redis.support.service.RedisSearchService;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
@@ -24,11 +32,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.io.IOException;
-import java.io.Serializable;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static com.chua.starter.monitor.server.constant.RedisConstant.REDIS_SEARCH_MONITOR_GEN_PREFIX;
+import static com.chua.starter.redis.support.service.impl.RedisSearchServiceImpl.LANGUAGE;
 
 /**
  * 数据库备份
@@ -49,7 +60,8 @@ public class MonitorGenBackupServiceImpl implements MonitorGenBackupService, Ini
     private ApplicationContext applicationContext;
 
     private static final Map<Integer, Backup> BACKUP_MAP = new ConcurrentHashMap<>();
-
+    @Resource
+    private RedisSearchService redisSearchService;
     @Resource
     private TransactionTemplate transactionTemplate;
     private static final String MYSQL = "mysql";
@@ -74,11 +86,10 @@ public class MonitorGenBackupServiceImpl implements MonitorGenBackupService, Ini
             Backup backup = ServiceProvider.of(Backup.class).getNewExtension(driver.protocol(), databaseOptions, backupSetting);
             try {
                 backup.addStrategy(new DayBackupStrategy());
-                backup.addListener(new BackupListener() {
-                    @Override
-                    public void listen(EventType event, String from, String message, Serializable[] newValue, Serializable[] oldValue) {
-                        socketSessionTemplate.send("log-gen-" + monitorSysGen.getGenId(), message);
-                    }
+                backup.addListener((event, data) -> {
+                    socketSessionTemplate.send("log-gen-" + monitorSysGen.getGenId(), data.getMessage());
+                    checkIndex(monitorSysGen.getGenId());
+                    registerDocument(event, data, monitorSysGen.getGenId());
                 });
                 backup.start();
             } catch (IOException e) {
@@ -90,11 +101,37 @@ public class MonitorGenBackupServiceImpl implements MonitorGenBackupService, Ini
             return true;
         })));
     }
-
+    private void registerDocument(EventType event, BackupData backupData, Integer genId) {
+        Map<String, String> document = new HashMap<>(2);
+        document.put("text",  backupData.getMessage());
+        document.put("event",  event.name());
+        document.put("threadId", StringUtils.toString(backupData.getId()));
+        document.put("threadAddress", StringUtils.toString(backupData.getAddress()));
+        document.put("from",  backupData.getFrom());
+        document.put("newValue", Joiner.on(",").join(backupData.getNewValue()));
+        document.put("oldValue", Joiner.on(",").join(backupData.getOldValue()));
+        document.put("timestamp", String.valueOf(System.currentTimeMillis()));
+        redisSearchService.addDocument(REDIS_SEARCH_MONITOR_GEN_PREFIX + genId, document);
+    }
+    /**
+     * 检查索引
+     *
+     * @param genId 请求
+     */
+    private void checkIndex(Integer genId) {
+        SearchIndex searchIndex = new SearchIndex();
+        searchIndex.setName(REDIS_SEARCH_MONITOR_GEN_PREFIX + genId);
+        searchIndex.setLanguage("chinese");
+        SearchSchema searchSchema = new SearchSchema();
+        searchSchema.addTextField("text", 10);
+        searchSchema.addSortableNumericField("timestamp");
+        searchIndex.setSchema(searchSchema);
+        redisSearchService.createIndex(searchIndex);
+    }
     @Override
     public ReturnResult<Boolean> stop(MonitorSysGen monitorSysGen) {
         Integer genBackupStatus = monitorSysGen.getGenBackupStatus();
-        if(null == genBackupStatus || genBackupStatus != 0) {
+        if(null == genBackupStatus || genBackupStatus != 1) {
             return ReturnResult.error("已停止");
         }
 
@@ -139,6 +176,44 @@ public class MonitorGenBackupServiceImpl implements MonitorGenBackupService, Ini
             return backup.getBackup(startDay, endDay);
         }
         return new byte[0];
+    }
+
+    @Override
+    public ReturnResult<SearchResultItem> queryForLog(LogTimeQuery timeQuery, MonitorSysGen monitorSysGen) {
+        String key = REDIS_SEARCH_MONITOR_GEN_PREFIX + monitorSysGen.getGenId();
+        SearchQuery searchQuery = new SearchQuery();
+        searchQuery.setIndex(key);
+        searchQuery.setLanguage(LANGUAGE);
+        StringBuilder keyword = createKeyword(timeQuery);
+        searchQuery.setKeyword(keyword.toString());
+        searchQuery.setSort("timestamp");
+        return redisSearchService.queryAll(searchQuery, timeQuery.getPage(), timeQuery.getSize());
+    }
+
+    private StringBuilder createKeyword(LogTimeQuery timeQuery) {
+        StringBuilder keyword = new StringBuilder();
+
+        if(null != timeQuery.getStartDate()) {
+            if(null != timeQuery.getEndDate()) {
+                keyword.append("timestamp:[").append(timeQuery.getStartDate().getTime()).append("~").append(timeQuery.getEndDate().getTime()).append("]");
+            } else {
+                keyword.append("timestamp>=").append(timeQuery.getStartDate().getTime()).append(" ");
+            }
+        } else {
+            if(null != timeQuery.getEndDate()) {
+                keyword.append("timestamp<= ").append(timeQuery.getEndDate().getTime());
+            }
+        }
+
+        if(null != timeQuery.getTableName()) {
+            keyword.append(" table:").append(timeQuery.getTableName());
+        }
+
+        if(null != timeQuery.getAction()) {
+            keyword.append(" event:").append(timeQuery.getAction());
+        }
+
+        return keyword.isEmpty() ? keyword.append("*") : keyword;
     }
 
     @Override
