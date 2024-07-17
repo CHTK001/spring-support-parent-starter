@@ -205,12 +205,12 @@ public class MonitorGenBackupServiceImpl implements MonitorGenBackupService, Ini
             }
         }
 
-        if(null != timeQuery.getTableName()) {
-            keyword.append(" table:").append(timeQuery.getTableName());
+        if(StringUtils.isNotEmpty(timeQuery.getTableName())) {
+            keyword.append(" and table:").append(timeQuery.getTableName());
         }
 
-        if(null != timeQuery.getAction()) {
-            keyword.append(" event:").append(timeQuery.getAction());
+        if(StringUtils.isNotEmpty(timeQuery.getAction())) {
+            keyword.append(" and event:").append(timeQuery.getAction());
         }
 
         return keyword.isEmpty() ? keyword.append("*") : keyword;
