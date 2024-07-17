@@ -10,6 +10,8 @@ import jakarta.annotation.Resource;
 
 import java.util.Map;
 
+import static com.chua.starter.monitor.server.constant.RedisConstant.REDIS_TIME_SERIES_REPORT_PREFIX;
+
 /**
  * jvm适配器
  *
@@ -29,12 +31,12 @@ public class CpuAdaptor implements Adaptor<MonitorRequest> {
         cpu.setData(object);
         socketSessionTemplate.send("cpu", Json.toJson(cpu));
         try {
-            timeSeriesService.save(RedisConstant.REDIS_TIME_SERIES_PREFIX + "REPORT:" + cpu.getKey() + ":SYSTEM",
+            timeSeriesService.save(REDIS_TIME_SERIES_REPORT_PREFIX + cpu.getKey() + ":SYSTEM",
                     cpu.getTimestamp(),
                     MapUtils.getDoubleValue(object, "system"),
                     RedisConstant.DEFAULT_RETENTION_PERIOD_FOR_WEEK
             );
-            timeSeriesService.save(RedisConstant.REDIS_TIME_SERIES_PREFIX + "REPORT:" + cpu.getKey() + ":PROCESS",
+            timeSeriesService.save(REDIS_TIME_SERIES_REPORT_PREFIX + cpu.getKey() + ":PROCESS",
                     cpu.getTimestamp(),
                     MapUtils.getDoubleValue(object, "process"),
                     RedisConstant.DEFAULT_RETENTION_PERIOD_FOR_WEEK

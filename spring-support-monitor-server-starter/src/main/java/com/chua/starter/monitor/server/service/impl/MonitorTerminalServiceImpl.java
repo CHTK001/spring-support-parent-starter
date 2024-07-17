@@ -45,7 +45,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-import static com.chua.redis.support.constant.RedisConstant.REDIS_TIME_SERIES_PREFIX;
+import static com.chua.starter.monitor.server.constant.RedisConstant.REDIS_TIME_SERIES_INDICATOR_PREFIX;
+
 
 /**
  * @author CH
@@ -390,7 +391,7 @@ public class MonitorTerminalServiceImpl extends ServiceImpl<MonitorTerminalMappe
                     if(!mapIndicator.isPersistence()) {
                         return;
                     }
-                    timeSeriesService.save(REDIS_TIME_SERIES_PREFIX + "INDICATOR:" + terminalId + ":" + mapIndicator.getType() +":" + mapIndicator.getName(), mapIndicator.getTimestamp(), mapIndicator.getValue(), mapIndicator.get(), RedisConstant.DEFAULT_RETENTION_PERIOD);
+                    timeSeriesService.save(REDIS_TIME_SERIES_INDICATOR_PREFIX + terminalId + ":" + mapIndicator.getType() +":" + mapIndicator.getName(), mapIndicator.getTimestamp(), mapIndicator.getValue(), mapIndicator.get(), RedisConstant.DEFAULT_RETENTION_PERIOD);
                 }
             });
 

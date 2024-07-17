@@ -16,7 +16,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-import static com.chua.redis.support.constant.RedisConstant.REDIS_TIME_SERIES_PREFIX;
+import static com.chua.starter.monitor.server.constant.RedisConstant.REDIS_TIME_SERIES_INDICATOR_PREFIX;
+import static com.chua.starter.monitor.server.constant.RedisConstant.REDIS_TIME_SERIES_REPORT_PREFIX;
+
 
 /**
  * 终端
@@ -44,7 +46,7 @@ public class TimeSeriesController {
         if(StringUtils.isEmpty(indicatorQuery.getId())) {
             return ReturnResult.error("数据不存在, 请刷新后重试");
         }
-        return timeSeriesService.range(REDIS_TIME_SERIES_PREFIX + "INDICATOR:" + indicatorQuery.getId() + ":" + indicatorQuery.getType()+ ":" + indicatorQuery.getName(), indicatorQuery.getFromTimestamp(), indicatorQuery.getToTimestamp(), indicatorQuery.getCount());
+        return timeSeriesService.range(REDIS_TIME_SERIES_INDICATOR_PREFIX + indicatorQuery.getId() + ":" + indicatorQuery.getType()+ ":" + indicatorQuery.getName(), indicatorQuery.getFromTimestamp(), indicatorQuery.getToTimestamp(), indicatorQuery.getCount());
     }
     /**
      * 查询基本信息。
@@ -60,7 +62,7 @@ public class TimeSeriesController {
             return ReturnResult.error("数据不存在, 请刷新后重试");
         }
 
-        return timeSeriesService.range(REDIS_TIME_SERIES_PREFIX + "REPORT:" +
+        return timeSeriesService.range(REDIS_TIME_SERIES_REPORT_PREFIX +
                         jvmQuery.getAppName() + ":" +
                         jvmQuery.getServerHost() + "_" +
                         jvmQuery.getServerPort() + ":" +
