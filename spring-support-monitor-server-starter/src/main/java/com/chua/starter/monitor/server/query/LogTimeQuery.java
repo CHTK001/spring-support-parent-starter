@@ -26,4 +26,9 @@ public class LogTimeQuery extends TimeQuery{
      */
     @ApiModelProperty("操作类型")
     private String action;
+    /**
+     * 关键词
+     */
+    @ApiModelProperty("关键词")
+    private String keyword;
 }

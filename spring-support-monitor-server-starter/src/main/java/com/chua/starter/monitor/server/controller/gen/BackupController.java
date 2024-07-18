@@ -62,10 +62,14 @@ public class BackupController {
         if (null == genId) {
             throw new RuntimeException("genId不能为空");
         }
+        byte[] bytes = monitorGenBackupService.downloadBackup(genId, startDay, endDay);
+        if(null == bytes || bytes.length == 0) {
+            throw new RuntimeException("备份文件不存在");
+        }
         return ResponseEntity.ok()
                 .header("Content-Disposition", "attachment; filename=backup.zip")
                 .contentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM)
-                .body(monitorGenBackupService.downloadBackup(genId, startDay, endDay))
+                .body(bytes)
                 ;
     }
     /**

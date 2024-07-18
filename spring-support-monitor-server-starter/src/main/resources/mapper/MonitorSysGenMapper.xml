@@ -3,21 +3,29 @@
 <mapper namespace="com.chua.starter.monitor.server.mapper.MonitorSysGenMapper">
   <resultMap id="BaseResultMap" type="com.chua.starter.monitor.server.entity.MonitorSysGen">
     <!--@mbg.generated-->
-    <!--@Table monitor_gen-->
+    <!--@Table monitor_sys_gen-->
     <id column="gen_id" jdbcType="INTEGER" property="genId" />
+    <result column="gen_name" jdbcType="VARCHAR" property="genName" />
     <result column="gen_type" jdbcType="VARCHAR" property="genType" />
     <result column="gen_user" jdbcType="VARCHAR" property="genUser" />
     <result column="gen_password" jdbcType="VARCHAR" property="genPassword" />
-    <result column="gen_url" jdbcType="VARCHAR" property="genUrl" />
+    <result column="gen_host" jdbcType="VARCHAR" property="genHost" />
+    <result column="gen_port" jdbcType="INTEGER" property="genPort" />
     <result column="gen_desc" jdbcType="VARCHAR" property="genDesc" />
     <result column="gen_driver" jdbcType="VARCHAR" property="genDriver" />
     <result column="gen_driver_url" jdbcType="VARCHAR" property="genDriverUrl" />
     <result column="gen_database" jdbcType="VARCHAR" property="genDatabase" />
     <result column="gen_database_file" jdbcType="VARCHAR" property="genDatabaseFile" />
+    <result column="gen_uid" jdbcType="VARCHAR" property="genUid" />
+    <result column="gen_backup_status" jdbcType="INTEGER" property="genBackupStatus" />
+    <result column="gen_jdbc_type" jdbcType="VARCHAR" property="genJdbcType" />
+    <result column="gen_driver_file" jdbcType="VARCHAR" property="genDriverFile" />
+    <result column="gen_driver_remote_url" jdbcType="VARCHAR" property="genDriverRemoteUrl" />
   </resultMap>
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
-    gen_id, gen_type, gen_user, gen_password, gen_url, gen_desc, gen_driver, gen_driver_url, 
-    gen_database, gen_database_file
+    gen_id, gen_name, gen_type, gen_user, gen_password, gen_host, gen_port, gen_desc, 
+    gen_driver, gen_driver_url, gen_database, gen_database_file, gen_uid, gen_backup_status, 
+    gen_jdbc_type, gen_driver_file, gen_driver_remote_url
   </sql>
 </mapper>

@@ -7,14 +7,18 @@ import cn.smallbun.screw.core.process.DataModelProcess;
 import cn.smallbun.screw.core.process.ProcessConfig;
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.datasource.jdbc.option.DataSourceOptions;
+import com.chua.common.support.doc.Document;
+import com.chua.common.support.doc.query.DocQuery;
 import com.chua.common.support.function.Splitter;
-import com.chua.common.support.session.doc.SessionDoc;
-import com.chua.common.support.session.query.DocQuery;
+import com.chua.common.support.media.MediaTypeFactory;
+import com.chua.common.support.oss.result.GetObjectResult;
+import com.chua.common.support.utils.FileUtils;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 
 import static cn.smallbun.screw.core.constant.DefaultConstants.DESCRIPTION;
@@ -26,22 +30,27 @@ import static cn.smallbun.screw.core.constant.DefaultConstants.DESCRIPTION;
  * @since 2023/10/02
  */
 @Spi("JDBC")
-public class JdbcSessionDoc implements SessionDoc {
+public class JdbcDocument implements Document {
 
     private final DataSourceOptions databaseOptions;
+    private HikariDataSource hikariDataSource = null;
 
-    public JdbcSessionDoc(DataSourceOptions databaseOptions) {
+    public JdbcDocument(DataSourceOptions databaseOptions) {
         this.databaseOptions = databaseOptions;
     }
 
 
     @Override
-    public byte[] create(DocQuery query) {
+    public GetObjectResult create(DocQuery query) {
         EngineFileType engineFileType = EngineFileType.HTML;
 
         if(StringUtils.isNotEmpty(query.getType())) {
             try {
-                engineFileType = EngineFileType.valueOf(query.getType());
+                if("DOC".equalsIgnoreCase(query.getType())) {
+                    engineFileType = EngineFileType.WORD;
+                } else {
+                    engineFileType = EngineFileType.valueOf(query.getType());
+                }
             } catch (IllegalArgumentException ignored) {
             }
         }
@@ -60,9 +69,8 @@ public class JdbcSessionDoc implements SessionDoc {
 
         ProcessConfig processConfig = ProcessConfig.builder()
                 // 忽略表名
-                .ignoreTableName(Splitter.on(',').trimResults().omitEmptyStrings().splitToList(query.getIgnoreTableName())).build();
+                .ignoreTableName(Splitter.on(',').trimResults().omitEmptyStrings().splitToList(query.getIgnoreName())).build();
         // 配置
-        HikariDataSource hikariDataSource = null;
         try {
             HikariConfig hikariConfig = new HikariConfig();
             hikariConfig.setUsername(databaseOptions.getUsername());
@@ -91,21 +99,31 @@ public class JdbcSessionDoc implements SessionDoc {
                 //产生文档
                 TemplateEngine produce = new EngineFactory(config.getEngineConfig()).newInstance();
                 produce.produce(dataModel, docName);
-                File file = new File("./doc", docName + "." + engineFileType.name().toLowerCase());
+                File file = new File("./doc", docName + "." + StringUtils.defaultString(query.getType(), "html").toLowerCase());
 
+
+                if(engineFileType != EngineFileType.HTML) {
+                    return GetObjectResult.builder()
+                            .inputStream(new ByteArrayInputStream(FileUtils.toByteArray(file)))
+                            .mediaType(MediaTypeFactory.getNoneMediaType(file.getName()))
+                            .build();
+                }
                 String string = IoUtils.toString(file);
                 string = string.replace("<style type=\"text/css\">", "<style type=\"text/css\">::-webkit-scrollbar {width: 5px;height: 5px;}\n" +
                         "::-webkit-scrollbar-thumb {background-color: rgba(50, 50, 50, 0.3);}\n" +
                         "::-webkit-scrollbar-thumb:hover {background-color: rgba(50, 50, 50, 0.6);}\n" +
                         "::-webkit-scrollbar-track {background-color: rgba(50, 50, 50, 0.1);}\n" +
                         "::-webkit-scrollbar-track:hover {background-color: rgba(50, 50, 50, 0.2);}");
-                return string.getBytes();
+                return GetObjectResult.builder()
+                        .inputStream(new ByteArrayInputStream(string.getBytes()))
+                        .mediaType(MediaTypeFactory.getNoneMediaType(file.getName()))
+                        .build();
             } catch (Exception ignored) {
             }
         } finally {
             IoUtils.closeQuietly(hikariDataSource);
         }
-        return new byte[0];
+        return GetObjectResult.builder().build();
     }
 
     /**
@@ -131,5 +149,10 @@ public class JdbcSessionDoc implements SessionDoc {
             return database + "_" + description;
         }
         return database + "_" + description + "_" + version;
+    }
+
+    @Override
+    public void close() throws Exception {
+        IoUtils.closeQuietly(hikariDataSource);
     }
 }

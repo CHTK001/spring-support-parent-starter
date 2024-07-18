@@ -1,14 +1,20 @@
 package com.chua.starter.monitor.server.controller.gen;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.chua.common.support.annotations.Ignore;
 import com.chua.common.support.backup.Backup;
 import com.chua.common.support.datasource.dialect.Dialect;
 import com.chua.common.support.datasource.dialect.DialectFactory;
+import com.chua.common.support.doc.Document;
+import com.chua.common.support.doc.query.DocQuery;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.oss.result.GetObjectResult;
 import com.chua.common.support.session.Session;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.utils.FileUtils;
+import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.utils.MultipartFileUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
@@ -18,17 +24,20 @@ import com.chua.starter.monitor.server.query.DeleteFileQuery;
 import com.chua.starter.monitor.server.service.MonitorSysGenService;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 生成器控制器
@@ -51,21 +60,22 @@ public class DatabaseController {
     private ApplicationContext applicationContext;
     private static final String MYSQL = "mysql";
     /**
-     * 删除文件
+     * 卸载文件
      *
      * @return {@link ReturnResult}<{@link List}<{@link DataSourceResult}>>
      */
-    @PostMapping("deleteFile")
-    public ReturnResult<Boolean> deleteFile(@RequestBody DeleteFileQuery query) {
+    @ApiOperation(value = "卸载文件")
+    @PostMapping("uninstall")
+    public ReturnResult<Boolean> uninstall(@RequestBody DeleteFileQuery query) {
         MonitorSysGen sysGen = sysGenService.getById(query.getGenId());
-        File mkdir = FileUtils.mkdir(new File(genProperties.getTempPath(), query.getGenId() + ""));
+        File mkdir = genProperties.getTempPathForTemplate(sysGen, query.getType());
         try {
-            FileUtils.forceDelete(new File(sysGen.getGenDatabaseFile()));
+            FileUtils.forceDelete(mkdir);
         } catch (IOException e) {
             log.error("", e);
             return ReturnResult.illegal("卸载失败");
         }
-        sysGen.setGenDatabaseFile("");
+        genProperties.refresh(sysGen, query.getType());
         sysGenService.updateById(sysGen);
         return ReturnResult.ok();
     }
@@ -74,8 +84,9 @@ public class DatabaseController {
      *
      * @return {@link ReturnResult}<{@link List}<{@link DataSourceResult}>>
      */
+    @ApiOperation(value = "列表")
     @GetMapping("list")
-    public ReturnPageResult<MonitorSysGen> list(@RequestParam(value = "page", defaultValue = "1") Integer pageNum,
+    public ReturnPageResult<MonitorSysGen> page(@RequestParam(value = "page", defaultValue = "1") Integer pageNum,
                                          @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize,
                                          @RequestParam(value = "databaseType") String databaseType
                                                 ) {
@@ -87,11 +98,13 @@ public class DatabaseController {
                         .selectAll(MonitorSysGen.class)
                         .eq(MonitorSysGen::getGenType, databaseType)
         );
-        Map<String, Class<Backup>> stringClassMap = ServiceProvider.of(Backup.class).listType();
         for (MonitorSysGen record : genType.getRecords()) {
-            record.setGenPassword("");
-            Dialect driver = DialectFactory.createDriver(record.getGenDriver());
-            record.setSupportBackup(stringClassMap.containsKey(driver.protocol().toUpperCase()));
+            record.setGenPassword(null);
+            String genDriver = record.getGenDriver();
+            Dialect driver = DialectFactory.createDriver(genDriver);
+            record.setSupportBackup(ServiceProvider.of(Backup.class).isSupport(driver.protocol().toUpperCase()));
+            record.setSupportDocument(ServiceProvider.of(Document.class).isSupport(record.getGenType()));
+            record.setSupportDriver(ClassUtils.isPresent(genDriver));
         }
         return PageResultUtils.<MonitorSysGen>ok(genType);
     }
@@ -101,9 +114,15 @@ public class DatabaseController {
      *
      * @return {@link ReturnResult}<{@link List}<{@link DataSourceResult}>>
      */
+    @ApiOperation(value = "保存")
     @PostMapping("save")
     public ReturnResult<MonitorSysGen> save(@RequestBody MonitorSysGen sysGen) {
         String genDriver = sysGen.getGenDriver();
+//        if(StringUtils.isEmpty(genDriver)) {
+//            return ReturnResult.illegal("驱动不能为空");
+//        }
+        Dialect driver = DialectFactory.createDriver(genDriver);
+        sysGen.setGenJdbcType (driver.protocol().toUpperCase());
         sysGenService.save(sysGen);
         return ReturnResult.ok(sysGen);
     }
@@ -113,16 +132,15 @@ public class DatabaseController {
      *
      * @return {@link ReturnResult}<{@link List}<{@link DataSourceResult}>>
      */
+    @ApiOperation(value = "更新")
     @PostMapping("update")
     public ReturnResult<MonitorSysGen> update(@RequestBody MonitorSysGen sysGen) {
         MonitorSysGen sysGen1 = sysGenService.getById(sysGen.getGenId());
         if(null == sysGen1) {
             return ReturnResult.illegal("数据不存在");
         }
-        if(StringUtils.isEmpty(sysGen.getGenPassword())){
-            sysGen.setGenPassword("");
-            sysGen.setGenUid("");
-        }
+        Dialect driver = DialectFactory.createDriver(sysGen1.getGenDriver());
+        sysGen.setGenJdbcType (driver.protocol().toUpperCase());
         ServiceProvider.of(Session.class).closeKeepExtension(sysGen.getGenId() + "");
 
         sysGenService.updateById(sysGen);
@@ -133,10 +151,10 @@ public class DatabaseController {
      *
      * @return {@link ReturnResult}<{@link List}<{@link DataSourceResult}>>
      */
-    @PostMapping("uploadDriver")
-    public ReturnResult<MonitorSysGen> uploadDrvier(MonitorSysGen sysGen, @RequestParam(value = "getDatabaseFile", required = false) MultipartFile getDatabaseFile) {
-        File mkdir = FileUtils.mkdir(new File(genProperties.getTempPath(), sysGen.getGenId() + ""));
-
+    @ApiOperation(value = "安装文件")
+    @PostMapping("install")
+    public ReturnResult<MonitorSysGen> install(MonitorSysGen sysGen, @RequestParam(value = "type") String type, @RequestParam(value = "file", required = false) MultipartFile getDatabaseFile) {
+        File mkdir = genProperties.getTempPathForTemplate(sysGen, type);
         if(null != getDatabaseFile) {
             ReturnResult driver = MultipartFileUtils.transferTo(getDatabaseFile, mkdir, "database", true);
             if(!driver.isOk()) {
@@ -154,6 +172,7 @@ public class DatabaseController {
      *
      * @return {@link ReturnResult}<{@link List}<{@link DataSourceResult}>>
      */
+    @ApiOperation(value = "删除文件")
     @GetMapping("delete")
     public ReturnResult<Boolean> delete(String id) {
         MonitorSysGen sysGen = sysGenService.getById(id);
@@ -168,6 +187,152 @@ public class DatabaseController {
         }
         ServiceProvider.of(Session.class).closeKeepExtension(sysGen.getGenId() + "");
         return ReturnResult.ok(true);
+    }
+    /**
+     * 预览文档
+     * 基本信息
+     *
+     * @param query 执行查询
+     * @return {@link ResponseEntity}<{@link byte[]}>
+     */
+    @Operation(summary = "预览文档")
+    @Ignore
+    @GetMapping("previewDoc")
+    public ResponseEntity<byte[]> previewDoc(String genId) {
+        if (StringUtils.isEmpty(genId)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        MonitorSysGen sysGen = sysGenService.getById(genId);
+        if (StringUtils.isEmpty(sysGen.getGenType())) {
+            return ResponseEntity.notFound().build();
+        }
+
+        File mkdir = FileUtils.mkdir(new File(genProperties.getTempPath(), sysGen.getGenId() + ""));
+        File file = genProperties.getTempPathForDoc(sysGen);
+        file = new File(file, sysGen.getGenId() + ".html");
+        FileUtils.mkParentDirs(file);
+        GetObjectResult result = null;
+        try {
+            if (file.exists() && file.length() > 0) {
+                try (FileInputStream fis = new FileInputStream(file)) {
+                    byte[] result1 = IoUtils.toByteArray(fis);
+                    if (result1.length == 0) {
+                        FileUtils.forceDelete(file);
+                        return ResponseEntity
+                                .ok()
+                                .contentType(MediaType.TEXT_HTML)
+                                .body("文档不存在".getBytes(StandardCharsets.UTF_8));
+                    }
+                    return ResponseEntity
+                            .ok()
+                            .contentType(MediaType.TEXT_HTML)
+                            .contentLength(result1.length)
+                            .body(result1);
+                }
+            }
+            try (Document document = ServiceProvider.of(Document.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions())) {
+                result = document.create(DocQuery.builder().build());
+                try (OutputStream os = new FileOutputStream(file)) {
+                    IoUtils.write(result.getInputStream(), os);
+                }
+            } catch (Exception e) {
+                if (null == result) {
+                    return ResponseEntity
+                            .ok()
+                            .contentType(MediaType.TEXT_HTML)
+                            .body("文档不存在/无权限访问".getBytes(StandardCharsets.UTF_8));
+                }
+            }
+        } catch (Exception e) {
+            log.error("", e);
+            return ResponseEntity.notFound().build();
+        }
+        try {
+            return ResponseEntity
+                    .ok()
+                    .contentType(MediaType.valueOf(result.getMediaType().toString()))
+                    .contentLength(result.getInputStream().available())
+                    .body(IoUtils.toByteArray(result.getInputStream()));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * 预览文档
+     * 基本信息
+     *
+     * @param query 执行查询
+     * @return {@link ResponseEntity}<{@link byte[]}>
+     */
+    @Operation(summary = "同步文档")
+    @GetMapping("syncDoc")
+    public ReturnResult<Boolean> syncDoc(String genId) {
+        if (StringUtils.isEmpty(genId)) {
+            return ReturnResult.error("未配置生成器");
+        }
+
+        MonitorSysGen sysGen = sysGenService.getById(genId);
+        if (StringUtils.isEmpty(sysGen.getGenType())) {
+            return ReturnResult.error("未配置生成器类型");
+        }
+
+        File mkdir = FileUtils.mkdir(new File(genProperties.getTempPath(), sysGen.getGenId() + ""));
+        File file = genProperties.getTempPathForDoc(sysGen);
+        file = new File(file, sysGen.getGenId() + ".html");
+        if (file.exists()) {
+            try {
+                FileUtils.forceDelete(file);
+            } catch (IOException ignored) {
+            }
+        }
+        try (Document document = ServiceProvider.of(Document.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions())) {
+            try (FileOutputStream fileOutputStream = new FileOutputStream(file)) {
+                IoUtils.write(document.create(DocQuery.builder().build()).getInputStream(), fileOutputStream);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return ReturnResult.ok(true);
+    }
+
+    /**
+     * 预览文档
+     * 基本信息
+     *
+     * @param query 执行查询
+     * @return {@link ResponseEntity}<{@link byte[]}>
+     */
+    @Operation(summary = "下载文档")
+    @GetMapping("downloadDoc")
+    public ResponseEntity<byte[]> downloadDoc(String genId, String type) {
+        if (StringUtils.isEmpty(genId)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        MonitorSysGen sysGen = sysGenService.getById(genId);
+        if (StringUtils.isEmpty(sysGen.getGenType())) {
+            return ResponseEntity.notFound().build();
+        }
+        GetObjectResult result;
+        try (Document document = ServiceProvider.of(Document.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions())) {
+            result = null;
+            try {
+                result = document.create(DocQuery.builder().type(type).build());
+            } catch (Exception e) {
+                log.error("", e);
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return ResponseEntity
+                .ok()
+                .header("Content-Disposition", "attachment;filename=" + sysGen.getGenDatabase() + "." + StringUtils.defaultString(type, result.getMediaType().subtype()).toLowerCase())
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .contentLength(result.length())
+                .body(IoUtils.toByteArrayQuietly(result.getInputStream()));
     }
 
 }
