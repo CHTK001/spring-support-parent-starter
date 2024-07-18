@@ -124,6 +124,8 @@ public class MonitorGenBackupServiceImpl implements MonitorGenBackupService, Ini
         searchIndex.setLanguage("chinese");
         SearchSchema searchSchema = new SearchSchema();
         searchSchema.addTextField("text", 10);
+        searchSchema.addTextField("event", 9);
+        searchSchema.addTextField("from", 9);
         searchSchema.addSortableNumericField("timestamp");
         searchIndex.setSchema(searchSchema);
         redisSearchService.createIndex(searchIndex);
