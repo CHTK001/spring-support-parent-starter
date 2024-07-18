@@ -172,10 +172,8 @@ public class MonitorGenBackupServiceImpl implements MonitorGenBackupService, Ini
                     .build();
             backup = ServiceProvider.of(Backup.class).getNewExtension(driver.protocol(), monitorSysGen.newDatabaseOptions(), backupSetting);
             backup.addStrategy(new DayBackupStrategy());
-
-            return backup.getBackup(startDay, endDay);
         }
-        return new byte[0];
+        return backup.getBackup(startDay, endDay);
     }
 
     @Override
@@ -187,7 +185,7 @@ public class MonitorGenBackupServiceImpl implements MonitorGenBackupService, Ini
         StringBuilder keyword = createKeyword(timeQuery);
         searchQuery.setKeyword(keyword.toString());
         searchQuery.setSort("timestamp");
-        return redisSearchService.queryAll(searchQuery, timeQuery.getPage(), timeQuery.getSize());
+        return redisSearchService.queryAll(searchQuery, (timeQuery.getPage() - 1) * timeQuery.getSize(), timeQuery.getSize());
     }
 
     private StringBuilder createKeyword(LogTimeQuery timeQuery) {
@@ -207,6 +205,10 @@ public class MonitorGenBackupServiceImpl implements MonitorGenBackupService, Ini
 
         if(StringUtils.isNotEmpty(timeQuery.getTableName())) {
             keyword.append(" and table:").append(timeQuery.getTableName());
+        }
+
+        if(StringUtils.isNotEmpty(timeQuery.getKeyword())) {
+            keyword.append(" and text:").append(timeQuery.getKeyword());
         }
 
         if(StringUtils.isNotEmpty(timeQuery.getAction())) {

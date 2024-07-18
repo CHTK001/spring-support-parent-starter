@@ -1,7 +1,6 @@
 package com.chua.starter.monitor.server.controller.gen;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.chua.common.support.annotations.Ignore;
 import com.chua.common.support.constant.FileType;
 import com.chua.common.support.datasource.meta.Column;
 import com.chua.common.support.datasource.meta.Database;
@@ -10,7 +9,6 @@ import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.formatter.HighlightingFormatter;
 import com.chua.common.support.lang.formatter.SqlFormatter;
-import com.chua.common.support.media.MediaTypeFactory;
 import com.chua.common.support.session.Session;
 import com.chua.common.support.session.pojo.SessionModule;
 import com.chua.common.support.session.query.*;
@@ -20,7 +18,6 @@ import com.chua.common.support.session.result.SessionResultSet;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.FileUtils;
-import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.utils.MultipartFileUtils;
 import com.chua.starter.monitor.server.entity.MonitorSysGen;
@@ -32,13 +29,11 @@ import com.chua.starter.monitor.server.service.MonitorSysGenService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.*;
-import java.nio.charset.StandardCharsets;
+import java.io.File;
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -542,146 +537,6 @@ public class SessionController {
         return ReturnResult.ok(sessionInfo.toResult());
     }
 
-    /**
-     * 预览文档
-     * 基本信息
-     *
-     * @param query 执行查询
-     * @return {@link ResponseEntity}<{@link byte[]}>
-     */
-    @Operation(summary = "预览文档")
-    @Ignore
-    @GetMapping("previewDoc")
-    public ResponseEntity<byte[]> previewDoc(DocQuery query) {
-        if (StringUtils.isEmpty(query.getGenId())) {
-            return ResponseEntity.notFound().build();
-        }
-
-        MonitorSysGen sysGen = sysGenService.getById(query.getGenId());
-        if (StringUtils.isEmpty(sysGen.getGenType())) {
-            return ResponseEntity.notFound().build();
-        }
-
-        File mkdir = FileUtils.mkdir(new File(genProperties.getTempPath(), sysGen.getGenId() + ""));
-        File file = new File(mkdir, "doc");
-        file = new File(file, sysGen.getGenId() + ".html");
-        FileUtils.mkParentDirs(file);
-        byte[] result = null;
-        try {
-            if (file.exists() && file.length() > 0) {
-                try (FileInputStream fis = new FileInputStream(file)) {
-                    result = IoUtils.toByteArray(fis);
-                }
-                if (result.length == 0) {
-                    FileUtils.forceDelete(file);
-                    return ResponseEntity
-                            .ok()
-                            .contentType(MediaType.TEXT_HTML)
-                            .body("文档不存在".getBytes(StandardCharsets.UTF_8));
-                }
-            } else {
-                try (Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions())) {
-                    result = session.previewDoc(query);
-                    if (session.docCache()) {
-                        try (OutputStream os = new FileOutputStream(file)) {
-                            IoUtils.write(result, os);
-                        }
-                    }
-                } catch (Exception e) {
-                    if (null == result) {
-                        return ResponseEntity
-                                .ok()
-                                .contentType(MediaType.TEXT_HTML)
-                                .body("文档不存在/无权限访问".getBytes(StandardCharsets.UTF_8));
-                    }
-                }
-            }
-        } catch (Exception e) {
-            log.error("", e);
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity
-                .ok()
-                .contentType(MediaType.valueOf(MediaTypeFactory.getMediaType(query.getDataId()).orElse(MediaTypeFactory.parse("text/html")).toString()))
-                .contentLength(result.length)
-                .body(result);
-    }
-
-    /**
-     * 预览文档
-     * 基本信息
-     *
-     * @param query 执行查询
-     * @return {@link ResponseEntity}<{@link byte[]}>
-     */
-    @Operation(summary = "同步文档")
-    @PostMapping("syncDoc")
-    public ReturnResult<Boolean> syncDoc(@RequestBody DocQuery query) {
-        if (StringUtils.isEmpty(query.getGenId())) {
-            return ReturnResult.error("未配置生成器");
-        }
-
-        MonitorSysGen sysGen = sysGenService.getById(query.getGenId());
-        if (StringUtils.isEmpty(sysGen.getGenType())) {
-            return ReturnResult.error("未配置生成器类型");
-        }
-
-        File mkdir = FileUtils.mkdir(new File(genProperties.getTempPath(), sysGen.getGenId() + ""));
-        File file = new File(mkdir, "doc");
-        file = new File(file, sysGen.getGenId() + ".html");
-        if (file.exists()) {
-            try {
-                FileUtils.forceDelete(file);
-            } catch (IOException ignored) {
-            }
-        }
-        try (Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions())) {
-            try (FileOutputStream fileOutputStream = new FileOutputStream(file)) {
-                IoUtils.write(session.previewDoc(query), fileOutputStream);
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        return ReturnResult.ok(true);
-    }
-
-    /**
-     * 预览文档
-     * 基本信息
-     *
-     * @param query 执行查询
-     * @return {@link ResponseEntity}<{@link byte[]}>
-     */
-    @Operation(summary = "下载文档")
-    @GetMapping("downloadDoc")
-    public ResponseEntity<byte[]> downloadDoc(DocQuery query) {
-        if (StringUtils.isEmpty(query.getGenId())) {
-            return ResponseEntity.notFound().build();
-        }
-
-        MonitorSysGen sysGen = sysGenService.getById(query.getGenId());
-        if (StringUtils.isEmpty(sysGen.getGenType())) {
-            return ResponseEntity.notFound().build();
-        }
-        byte[] result;
-        try (Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions())) {
-            result = null;
-            try {
-                result = session.previewDoc(query);
-            } catch (Exception e) {
-                log.error("", e);
-                return ResponseEntity.notFound().build();
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        return ResponseEntity
-                .ok()
-                .header("Content-Disposition", "attachment;filename=" + sysGen.getGenDatabase() + "." + query.getType().toLowerCase())
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .contentLength(result.length)
-                .body(result);
-    }
 
 
 }
