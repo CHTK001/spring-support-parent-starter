@@ -6,6 +6,7 @@ import com.chua.common.support.datasource.jdbc.option.DataSourceOptions;
 import com.chua.common.support.datasource.meta.Column;
 import com.chua.common.support.datasource.meta.Table;
 import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.ObjectUtils;
 import com.chua.common.support.utils.StringUtils;
 
 import java.sql.*;
@@ -20,7 +21,7 @@ import java.util.stream.Collectors;
 public class DatabaseHandler implements AutoCloseable{
 
     private final DataSourceOptions databaseOptions;
-    private Connection connection;
+    private final Connection connection;
     public DatabaseHandler(DataSourceOptions databaseOptions) {
         this.databaseOptions = databaseOptions;
         try {
@@ -266,16 +267,16 @@ public class DatabaseHandler implements AutoCloseable{
         List<Column> rs = new ArrayList<>(columns.size());
         for (Column column : collect) {
             boolean isDiff = false;
-            Column Column = getColumn(column, columns);
-            if(null == Column) {
+            Column dbColumn = getColumn(column, columns);
+            if(null == dbColumn) {
                 continue;
             }
 
-            if(!Column.getName().equals(column.getName()) ||
-                    !Column.getJdbcType().equals(column.getJdbcType()) ||
-                    Column.getPrecision() != Optional.ofNullable(column.getPrecision()).orElse(0) ||
-                    (null != Column.getComment() && !Column.getComment().equals(column.getComment())) ||
-                    Column.getLength() != column.getLength()
+            if(!dbColumn.getName().equals(column.getName()) ||
+                    !dbColumn.getJdbcType().equals(column.getJdbcType()) ||
+                    dbColumn.getPrecision() != Optional.ofNullable(column.getPrecision()).orElse(0) ||
+                    !ObjectUtils.equals(dbColumn.getComment(), column.getComment()) ||
+                    dbColumn.getLength() != column.getLength()
             ) {
                 rs.add(column);
             }
