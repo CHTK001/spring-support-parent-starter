@@ -29,13 +29,13 @@ import com.chua.starter.monitor.server.util.DatabaseHandler;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.annotation.Resource;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -104,13 +104,13 @@ public class TableController {
 
         results = new LinkedList<>(tpl.values());
 
-        List<Table> page = CollectionUtils.page((int) query.getPageNo(), (int) query.getPageSize(), results);
+        List<Table> page = CollectionUtils.page(query.getPageNo(), query.getPageSize(), results);
         return ReturnPageResult.ok(
                 PageResult.<Table>builder()
                         .total(results.size())
                         .data(page)
-                        .pageSize((int) query.getPageSize())
-                        .pageNo((int) query.getPageNo()).build()
+                        .pageSize(query.getPageSize())
+                        .pageNo(query.getPageNo()).build()
         );
     }
 
@@ -174,15 +174,15 @@ public class TableController {
             Table.setComment(sysGen.getTabDesc());
             handler.updateTable(Table);
             handler.updateColumn(sysGenColumns.stream().map(it -> {
-                Column Column = new Column();
-                Column.setDatabaseName(sysGen.getGenDatabase());
-                Column.setPrecision(it.getColColumnDecimal());
-                Column.setLength(it.getColColumnLength());
-                Column.setName(it.getColColumnName());
-                Column.setComment(it.getColColumnComment());
-                Column.setJdbcType(it.getColColumnType());
-                Column.setTableName(sysGen.getTabName());
-                return Column;
+                Column item = new Column();
+                item.setDatabaseName(sysGen.getGenDatabase());
+                item.setPrecision(it.getColColumnDecimal());
+                item.setLength(it.getColColumnLength());
+                item.setName(it.getColColumnName());
+                item.setComment(it.getColColumnComment());
+                item.setJdbcType(it.getColColumnType());
+                item.setTableName(sysGen.getTabName());
+                return item;
             }).collect(Collectors.toSet()));
         } catch (Exception e) {
             if(Validator.hasChinese(e.getMessage())) {
