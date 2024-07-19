@@ -40,7 +40,7 @@ import java.util.concurrent.TimeUnit;
 import static com.chua.common.support.constant.NameConstant.SYMBOL_EXCEPTION;
 
 /**
- * 生成器控制器
+ * 会话控制器
  *
  * @author CH
  */

@@ -9,6 +9,7 @@ import com.chua.common.support.doc.Document;
 import com.chua.common.support.doc.query.DocQuery;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.objects.ConfigureObjectContext;
 import com.chua.common.support.oss.result.GetObjectResult;
 import com.chua.common.support.session.Session;
 import com.chua.common.support.spi.ServiceProvider;
@@ -40,7 +41,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
- * 生成器控制器
+ * 数据库控制器
  *
  * @author CH
  */
@@ -55,10 +56,33 @@ public class DatabaseController {
     private MonitorSysGenService sysGenService;
 
     @Resource
+    private ConfigureObjectContext configureObjectContext;
+
+    @Resource
     private GenProperties genProperties;
     @Resource
     private ApplicationContext applicationContext;
     private static final String MYSQL = "mysql";
+    /**
+     * 列表
+     *
+     * @return {@link ReturnResult}<{@link List}<{@link DataSourceResult}>>
+     */
+    @ApiOperation(value = "安装文件")
+    @PostMapping("install")
+    public ReturnResult<MonitorSysGen> install(MonitorSysGen sysGen, @RequestParam(value = "type") String type, @RequestParam(value = "file", required = false) MultipartFile getDatabaseFile) {
+        File mkdir = genProperties.getTempPathForTemplate(sysGen, type);
+        if(null != getDatabaseFile) {
+            ReturnResult driver = MultipartFileUtils.transferTo(getDatabaseFile, mkdir, "database", true);
+            if(!driver.isOk()) {
+                return driver;
+            }
+            sysGen.setGenDatabaseFile(driver.getData().toString());
+        }
+
+        sysGenService.updateById(sysGen);
+        return ReturnResult.ok(sysGen);
+    }
     /**
      * 卸载文件
      *
@@ -101,14 +125,17 @@ public class DatabaseController {
         for (MonitorSysGen record : genType.getRecords()) {
             record.setGenPassword(null);
             String genDriver = record.getGenDriver();
-            Dialect driver = DialectFactory.createDriver(genDriver);
-            record.setSupportBackup(ServiceProvider.of(Backup.class).isSupport(driver.protocol().toUpperCase()));
+            Dialect dialect = DialectFactory.createDriver(genDriver);
+            record.setSupportBackup(ServiceProvider.of(Backup.class).isSupport(dialect.protocol().toUpperCase()));
             record.setSupportDocument(ServiceProvider.of(Document.class).isSupport(record.getGenType()));
-            record.setSupportDriver(ClassUtils.isPresent(genDriver));
+            record.setSupportDriver(true);
+            if(StringUtils.isBlank(record.getGenDriverFile())) {
+                record.setSupportDriver(ClassUtils.isPresent(genDriver));
+            }
+            record.setIsFileDriver(dialect.isFileDriver());
         }
         return PageResultUtils.<MonitorSysGen>ok(genType);
     }
-
     /**
      * 列表
      *
@@ -118,9 +145,6 @@ public class DatabaseController {
     @PostMapping("save")
     public ReturnResult<MonitorSysGen> save(@RequestBody MonitorSysGen sysGen) {
         String genDriver = sysGen.getGenDriver();
-//        if(StringUtils.isEmpty(genDriver)) {
-//            return ReturnResult.illegal("驱动不能为空");
-//        }
         Dialect driver = DialectFactory.createDriver(genDriver);
         sysGen.setGenJdbcType (driver.protocol().toUpperCase());
         sysGenService.save(sysGen);
@@ -143,29 +167,10 @@ public class DatabaseController {
         sysGen.setGenJdbcType (driver.protocol().toUpperCase());
         ServiceProvider.of(Session.class).closeKeepExtension(sysGen.getGenId() + "");
 
-        sysGenService.updateById(sysGen);
+        sysGenService.updateFor(sysGen, sysGen1);
         return ReturnResult.ok(sysGen);
     }
-    /**
-     * 列表
-     *
-     * @return {@link ReturnResult}<{@link List}<{@link DataSourceResult}>>
-     */
-    @ApiOperation(value = "安装文件")
-    @PostMapping("install")
-    public ReturnResult<MonitorSysGen> install(MonitorSysGen sysGen, @RequestParam(value = "type") String type, @RequestParam(value = "file", required = false) MultipartFile getDatabaseFile) {
-        File mkdir = genProperties.getTempPathForTemplate(sysGen, type);
-        if(null != getDatabaseFile) {
-            ReturnResult driver = MultipartFileUtils.transferTo(getDatabaseFile, mkdir, "database", true);
-            if(!driver.isOk()) {
-                return driver;
-            }
-            sysGen.setGenDatabaseFile(driver.getData().toString());
-        }
 
-        sysGenService.updateById(sysGen);
-        return ReturnResult.ok(sysGen);
-    }
 
     /**
      * 列表
@@ -179,14 +184,7 @@ public class DatabaseController {
         if(null == sysGen) {
             return ReturnResult.illegal("数据信息不存在");
         }
-        sysGenService.removeById(id);
-        File mkdir = FileUtils.mkdir(new File(genProperties.getTempPath(), id));
-        try {
-            FileUtils.forceDelete(mkdir);
-        } catch (IOException e) {
-        }
-        ServiceProvider.of(Session.class).closeKeepExtension(sysGen.getGenId() + "");
-        return ReturnResult.ok(true);
+        return ReturnResult.ok(sysGenService.deleteFor(id, sysGen));
     }
     /**
      * 预览文档

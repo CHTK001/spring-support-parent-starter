@@ -3,6 +3,7 @@ com.chua.starter.common.support.configuration.VersionWebMvbConfigurer
 com.chua.starter.common.support.configuration.ResourceWebMvcConfigurer
 com.chua.starter.common.support.configuration.AsyncThreadPoolConfiguration
 com.chua.starter.common.support.configuration.TypeConverterRegisterConfiguration
+com.chua.starter.common.support.jackson.configuration.JacksonConfiguration
 com.chua.starter.common.support.configuration.CacheConfiguration
 com.chua.starter.common.support.configuration.CaptchaConfiguration
 com.chua.starter.common.support.configuration.AutoCreateTableConfiguration

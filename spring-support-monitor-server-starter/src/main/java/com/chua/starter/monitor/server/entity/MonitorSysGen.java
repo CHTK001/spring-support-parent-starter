@@ -19,11 +19,12 @@ import lombok.Data;
 
 import java.io.Serializable;
 import java.util.Base64;
+import java.util.Objects;
 
 /**
  *
  *
- * @since 2024/7/18 
+ * @since 2024/7/19 
  * @author CH
  */
 
@@ -183,6 +184,23 @@ public class MonitorSysGen implements Serializable {
     @Size(max = 255, message = "驱动文件下载目录最大长度要小于 255")
     private String genDriverRemoteUrl;
 
+    /**
+     * 备份时间分钟(默认720)
+     */
+    @TableField(value = "gen_backup_period")
+    @ApiModelProperty(value = "备份时间分钟(默认720)")
+    @Schema(description = "备份时间分钟(默认720)")
+    private Integer genBackupPeriod;
+
+    /**
+     * 备份事件
+     */
+    @TableField(value = "gen_backup_event")
+    @ApiModelProperty(value = "备份事件")
+    @Schema(description = "备份事件")
+    @Size(max = 255, message = "备份事件最大长度要小于 255")
+    private String genBackupEvent;
+
     private static final long serialVersionUID = 1L;
     /**
      * 表名称
@@ -202,20 +220,24 @@ public class MonitorSysGen implements Serializable {
     @ColumnDesc("是否支持备份")
     @TableField(exist = false)
     private Boolean supportBackup;
-
     /**
      * 是否支持文档
      */
     @ApiModelProperty(value = "是否支持文档")
     @TableField(exist = false)
     private Boolean supportDocument;
-
     /**
      * 是否支持驱动
      */
-    @ColumnDesc("是否支持驱动")
+    @ApiModelProperty("是否支持驱动")
     @TableField(exist = false)
     private Boolean supportDriver;
+    /**
+     * 是否是文件驱动
+     */
+    @ApiModelProperty("是否是文件驱动")
+    @TableField(exist = false)
+    private Boolean isFileDriver;
     /**
      * url
      */
@@ -269,5 +291,16 @@ public class MonitorSysGen implements Serializable {
         }
 
         return genHost + ":" + genPort;
+    }
+
+    /**
+     * 是否用户更改
+     *
+     * @param oldSysGen 旧系统
+     * @return boolean
+     */
+    public boolean isUserChange(MonitorSysGen oldSysGen) {
+        return !Objects.equals(genUser, oldSysGen.getGenUser()) || (null != genPassword && !Objects.equals(genPassword, oldSysGen.getGenPassword()))
+                || !Objects.equals(genHost, oldSysGen.getGenHost()) || !Objects.equals(genPort, oldSysGen.getGenPort());
     }
 }

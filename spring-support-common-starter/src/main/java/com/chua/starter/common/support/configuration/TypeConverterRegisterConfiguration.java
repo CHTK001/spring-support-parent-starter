@@ -3,15 +3,13 @@ package com.chua.starter.common.support.configuration;
 import com.chua.common.support.converter.definition.EnumTypeConverter;
 import com.chua.common.support.converter.definition.TypeConverter;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.starter.common.support.converter.StringToDateTypeConverter;
-import com.chua.starter.common.support.converter.StringToLocalDateTimeTypeConverter;
-import com.chua.starter.common.support.converter.StringToLocalDateTypeConverter;
-import com.chua.starter.common.support.converter.StringToLocalTimeTypeConverter;
+import com.chua.starter.common.support.converter.*;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.core.convert.converter.ConditionalGenericConverter;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.core.convert.converter.ConverterFactory;
 import org.springframework.core.convert.converter.ConverterRegistry;
 
 import java.util.Collections;
@@ -40,8 +38,14 @@ public class TypeConverterRegisterConfiguration {
             converterRegistry.addConverter(new StringToLocalDateTypeConverter());
             converterRegistry.addConverter(new StringToLocalDateTimeTypeConverter());
             converterRegistry.addConverter(new StringToDateTypeConverter());
+            converterRegistry.addConverter(new StringArrayToStringTypeConverter());
 
-
+            converterRegistry.addConverterFactory(new ConverterFactory<Object, Object>() {
+                @Override
+                public <T> Converter<Object, T> getConverter(Class<T> targetType) {
+                    return null;
+                }
+            });
             Map<String, TypeConverter> list = ServiceProvider.of(TypeConverter.class).list();
             for (TypeConverter converter : list.values()) {
                 try {

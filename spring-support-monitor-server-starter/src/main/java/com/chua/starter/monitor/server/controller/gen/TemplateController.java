@@ -10,13 +10,13 @@ import com.chua.starter.monitor.server.service.MonitorSysGenTemplateService;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.annotation.Resource;
 import java.util.List;
 
 /**
- * 生成器控制器
+ * 模板控制器
  *
  * @author CH
  * @since 2023/10/15
@@ -47,7 +47,7 @@ public class TemplateController {
                         .selectAll(MonitorSysGenTemplate.class)
                         .eq(MonitorSysGenTemplate::getGenId, genId).or().isNull(MonitorSysGenTemplate::getGenId)
         );
-        return PageResultUtils.<MonitorSysGenTemplate>ok(genType);
+        return PageResultUtils.ok(genType);
     }
 
     /**

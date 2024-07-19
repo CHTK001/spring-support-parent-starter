@@ -13,15 +13,15 @@ import com.chua.starter.monitor.server.service.MonitorSysGenService;
 import com.chua.starter.monitor.server.service.MonitorSysGenTableService;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.Resource;
 import org.springframework.context.ApplicationContext;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.annotation.Resource;
 import java.util.List;
 
 /**
- * 生成器控制器
+ * 字段控制器
  *
  * @author CH
  */
