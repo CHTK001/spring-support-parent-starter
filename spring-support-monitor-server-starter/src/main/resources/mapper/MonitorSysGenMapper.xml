@@ -18,6 +18,7 @@
     <result column="gen_database_file" jdbcType="VARCHAR" property="genDatabaseFile" />
     <result column="gen_uid" jdbcType="VARCHAR" property="genUid" />
     <result column="gen_backup_status" jdbcType="INTEGER" property="genBackupStatus" />
+    <result column="gen_jdbc_custom_type" jdbcType="VARCHAR" property="genJdbcCustomType" />
     <result column="gen_jdbc_type" jdbcType="VARCHAR" property="genJdbcType" />
     <result column="gen_driver_file" jdbcType="VARCHAR" property="genDriverFile" />
     <result column="gen_driver_remote_url" jdbcType="VARCHAR" property="genDriverRemoteUrl" />
@@ -28,6 +29,7 @@
     <!--@mbg.generated-->
     gen_id, gen_name, gen_type, gen_user, gen_password, gen_host, gen_port, gen_desc, 
     gen_driver, gen_driver_url, gen_database, gen_database_file, gen_uid, gen_backup_status, 
-    gen_jdbc_type, gen_driver_file, gen_driver_remote_url, gen_backup_period, gen_backup_event
+    gen_jdbc_custom_type, gen_jdbc_type, gen_driver_file, gen_driver_remote_url, gen_backup_period, 
+    gen_backup_event
   </sql>
 </mapper>

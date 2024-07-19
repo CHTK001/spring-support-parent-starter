@@ -27,7 +27,7 @@ public class MonitorSysGenServiceImpl extends ServiceImpl<MonitorSysGenMapper, M
         //更新备份
         Integer genBackupStatus = newSysGen.getGenBackupStatus();
         //备份已开启
-        if(newSysGen.isUserChange(oldSysGen)) {
+        if(newSysGen.userHasChange(oldSysGen)) {
             if(null != genBackupStatus && genBackupStatus == 1) {
                 monitorGenBackupService.stop(oldSysGen);
                 monitorGenBackupService.start(newSysGen);

@@ -9,7 +9,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.core.convert.converter.ConditionalGenericConverter;
 import org.springframework.core.convert.converter.Converter;
-import org.springframework.core.convert.converter.ConverterFactory;
 import org.springframework.core.convert.converter.ConverterRegistry;
 
 import java.util.Collections;
@@ -40,12 +39,6 @@ public class TypeConverterRegisterConfiguration {
             converterRegistry.addConverter(new StringToDateTypeConverter());
             converterRegistry.addConverter(new StringArrayToStringTypeConverter());
 
-            converterRegistry.addConverterFactory(new ConverterFactory<Object, Object>() {
-                @Override
-                public <T> Converter<Object, T> getConverter(Class<T> targetType) {
-                    return null;
-                }
-            });
             Map<String, TypeConverter> list = ServiceProvider.of(TypeConverter.class).list();
             for (TypeConverter converter : list.values()) {
                 try {

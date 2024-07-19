@@ -71,17 +71,21 @@ public class DatabaseController {
     @ApiOperation(value = "安装文件")
     @PostMapping("install")
     public ReturnResult<MonitorSysGen> install(MonitorSysGen sysGen, @RequestParam(value = "type") String type, @RequestParam(value = "file", required = false) MultipartFile getDatabaseFile) {
+        MonitorSysGen newSysGen = sysGenService.getById(sysGen.getGenId());
         File mkdir = genProperties.getTempPathForTemplate(sysGen, type);
         if(null != getDatabaseFile) {
-            ReturnResult driver = MultipartFileUtils.transferTo(getDatabaseFile, mkdir, "database", true);
+            ReturnResult driver = MultipartFileUtils.transferTo(getDatabaseFile, mkdir, true);
             if(!driver.isOk()) {
                 return driver;
             }
-            sysGen.setGenDatabaseFile(driver.getData().toString());
+            genProperties.register(newSysGen, type, driver.getData().toString());
+        }
+        if("FILE".equalsIgnoreCase(newSysGen.getGenJdbcCustomType())) {
+            ServiceProvider.of(Session.class).closeKeepExtension(newSysGen.getGenId() + "");
         }
 
-        sysGenService.updateById(sysGen);
-        return ReturnResult.ok(sysGen);
+        sysGenService.updateById(newSysGen);
+        return ReturnResult.ok(newSysGen);
     }
     /**
      * 卸载文件
@@ -128,9 +132,10 @@ public class DatabaseController {
             Dialect dialect = DialectFactory.createDriver(genDriver);
             record.setSupportBackup(ServiceProvider.of(Backup.class).isSupport(dialect.protocol().toUpperCase()));
             record.setSupportDocument(ServiceProvider.of(Document.class).isSupport(record.getGenType()));
-            record.setSupportDriver(true);
-            if(StringUtils.isBlank(record.getGenDriverFile())) {
-                record.setSupportDriver(ClassUtils.isPresent(genDriver));
+            record.setSupportDriver(ClassUtils.isPresent(genDriver));
+
+            if(StringUtils.isNotBlank(record.getGenDatabaseFile())) {
+                record.setGenDatabaseFileName(FileUtils.getName(record.getGenDatabaseFile()));
             }
             record.setIsFileDriver(dialect.isFileDriver());
         }
@@ -249,9 +254,9 @@ public class DatabaseController {
         try {
             return ResponseEntity
                     .ok()
-                    .contentType(MediaType.valueOf(result.getMediaType().toString()))
-                    .contentLength(result.getInputStream().available())
-                    .body(IoUtils.toByteArray(result.getInputStream()));
+                    .contentType(MediaType.valueOf((null == result || null == result.getMediaType()) ? MediaType.TEXT_HTML.toString() : result.getMediaType().toString()))
+                    .contentLength((null == result || null == result.getInputStream()) ? 12 : result.getInputStream().available())
+                    .body((null == result || null == result.getInputStream()) ? "暂无文档".getBytes(StandardCharsets.UTF_8): IoUtils.toByteArray(result.getInputStream()));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

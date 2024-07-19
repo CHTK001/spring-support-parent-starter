@@ -2,9 +2,20 @@ package com.chua.starter.monitor.server.doc;
 
 import cn.smallbun.screw.core.Configuration;
 import cn.smallbun.screw.core.engine.*;
+import cn.smallbun.screw.core.metadata.Column;
+import cn.smallbun.screw.core.metadata.Database;
+import cn.smallbun.screw.core.metadata.PrimaryKey;
+import cn.smallbun.screw.core.metadata.Table;
+import cn.smallbun.screw.core.metadata.model.ColumnModel;
 import cn.smallbun.screw.core.metadata.model.DataModel;
+import cn.smallbun.screw.core.metadata.model.TableModel;
 import cn.smallbun.screw.core.process.DataModelProcess;
 import cn.smallbun.screw.core.process.ProcessConfig;
+import cn.smallbun.screw.core.query.DatabaseQuery;
+import cn.smallbun.screw.core.query.DatabaseQueryFactory;
+import cn.smallbun.screw.core.query.DatabaseType;
+import cn.smallbun.screw.core.util.ExceptionUtils;
+import cn.smallbun.screw.core.util.JdbcUtils;
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.datasource.jdbc.option.DataSourceOptions;
 import com.chua.common.support.doc.Document;
@@ -17,11 +28,21 @@ import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import lombok.extern.slf4j.Slf4j;
 
+import javax.sql.DataSource;
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
-import static cn.smallbun.screw.core.constant.DefaultConstants.DESCRIPTION;
+import static cn.smallbun.screw.core.constant.DefaultConstants.*;
 
 /**
  * jdbc会话文档
@@ -30,6 +51,7 @@ import static cn.smallbun.screw.core.constant.DefaultConstants.DESCRIPTION;
  * @since 2023/10/02
  */
 @Spi("JDBC")
+@Slf4j
 public class JdbcDocument implements Document {
 
     private final DataSourceOptions databaseOptions;
@@ -37,6 +59,11 @@ public class JdbcDocument implements Document {
 
     public JdbcDocument(DataSourceOptions databaseOptions) {
         this.databaseOptions = databaseOptions;
+    }
+
+    public static boolean supportQuery(String genDriver) {
+        DatabaseType dbType = JdbcUtils.getDbType(genDriver);
+        return null != dbType;
     }
 
 
@@ -94,7 +121,7 @@ public class JdbcDocument implements Document {
             try {
                 long start = System.currentTimeMillis();
                 //处理数据
-                DataModel dataModel = new DataModelProcess(config).process();
+                DataModel dataModel = new CustomDataModelProcess(config).process();
                 String docName = getDocName(dataModel.getDatabase(), config);
                 //产生文档
                 TemplateEngine produce = new EngineFactory(config.getEngineConfig()).newInstance();
@@ -154,5 +181,171 @@ public class JdbcDocument implements Document {
     @Override
     public void close() throws Exception {
         IoUtils.closeQuietly(hikariDataSource);
+    }
+
+
+    static class CustomDatabaseQueryFactory extends DatabaseQueryFactory {
+
+        /**
+         * 构造函数
+         *
+         * @param source {@link DataSource}
+         */
+        public CustomDatabaseQueryFactory(DataSource source) {
+            super(source);
+        }
+
+
+        /**
+         * 获取配置的数据库类型实例
+         *
+         * @return {@link DatabaseQuery} 数据库查询对象
+         */
+        public DatabaseQuery newInstance() {
+            try {
+                //获取数据库URL 用于判断数据库类型
+                String url = this.getDataSource().getConnection().getMetaData().getURL();
+                //获取实现类
+                DatabaseType dbType = JdbcUtils.getDbType(url);
+                Class<? extends DatabaseQuery> query = dbType.getImplClass();
+                //获取有参构造
+                Constructor<? extends DatabaseQuery> constructor = query
+                        .getConstructor(DataSource.class);
+                //实例化
+                return constructor.newInstance(getDataSource());
+            } catch (InstantiationException | IllegalAccessException | NoSuchMethodException
+                     | InvocationTargetException | SQLException e) {
+                throw ExceptionUtils.mpe(e);
+            }
+        }
+    }
+
+
+    static class CustomDataModelProcess extends DataModelProcess {
+        volatile Map<String, List<PrimaryKey>> primaryKeysCaching = new ConcurrentHashMap<>();
+        volatile Map<String, List<Column>>          columnsCaching     = new ConcurrentHashMap<>();
+        volatile Map<String, List<? extends Table>> tablesCaching      = new ConcurrentHashMap<>();
+        /**
+         * 构造方法
+         *
+         * @param configuration {@link Configuration}
+         */
+        public CustomDataModelProcess(Configuration configuration) {
+            super(configuration);
+        }
+
+        @Override
+        public DataModel process() {
+            //获取query对象
+            DatabaseQuery query = new CustomDatabaseQueryFactory(config.getDataSource()).newInstance();
+            DataModel model = new DataModel();
+            //Title
+            model.setTitle(config.getTitle());
+            //org
+            model.setOrganization(config.getOrganization());
+            //org url
+            model.setOrganizationUrl(config.getOrganizationUrl());
+            //version
+            model.setVersion(config.getVersion());
+            //description
+            model.setDescription(config.getDescription());
+
+            /*查询操作开始*/
+            long start = System.currentTimeMillis();
+            //获取数据库
+            Database database = query.getDataBase();
+            log.debug("query the database time consuming:{}ms",
+                    (System.currentTimeMillis() - start));
+            model.setDatabase(database.getDatabase());
+            start = System.currentTimeMillis();
+            //获取全部表
+            List<? extends Table> tables = query.getTables();
+            log.debug("query the table time consuming:{}ms", (System.currentTimeMillis() - start));
+            //获取全部列
+            start = System.currentTimeMillis();
+            List<? extends Column> columns = query.getTableColumns();
+            log.debug("query the column time consuming:{}ms", (System.currentTimeMillis() - start));
+            //根据表名获取主键
+            start = System.currentTimeMillis();
+            List<? extends PrimaryKey> primaryKeys = query.getPrimaryKeys();
+            log.debug("query the primary key time consuming:{}ms",
+                    (System.currentTimeMillis() - start));
+            /*查询操作结束*/
+
+            /*处理数据开始*/
+            start = System.currentTimeMillis();
+            List<TableModel> tableModels = new ArrayList<>();
+            tablesCaching.put(database.getDatabase(), tables);
+            for (Table table : tables) {
+                //处理列，表名为key，列名为值
+                columnsCaching.put(table.getTableName(),
+                        columns.stream().filter(i -> i.getTableName().equals(table.getTableName()))
+                                .collect(Collectors.toList()));
+                //处理主键，表名为key，主键为值
+                primaryKeysCaching.put(table.getTableName(),
+                        primaryKeys.stream().filter(i -> i.getTableName().equals(table.getTableName()))
+                                .collect(Collectors.toList()));
+            }
+            for (Table table : tables) {
+                /*封装数据开始*/
+                TableModel tableModel = new TableModel();
+                //表名称
+                tableModel.setTableName(table.getTableName());
+                //说明
+                tableModel.setRemarks(table.getRemarks());
+                //添加表
+                tableModels.add(tableModel);
+                //处理列
+                List<ColumnModel> columnModels = new ArrayList<>();
+                //处理主键
+                List<String> keyList = primaryKeysCaching.get(table.getTableName()).stream()
+                        .map(PrimaryKey::getColumnName).collect(Collectors.toList());
+                for (Column column : columnsCaching.get(table.getTableName())) {
+                    packageColumn(columnModels, keyList, column);
+                }
+                //放入列
+                tableModel.setColumns(columnModels);
+            }
+            //设置表
+            model.setTables(filterTables(tableModels));
+            //优化数据
+            optimizeData(model);
+            /*封装数据结束*/
+            log.debug("encapsulation processing data time consuming:{}ms",
+                    (System.currentTimeMillis() - start));
+            return model;
+        }
+    }
+
+    /**
+     * packageColumn
+     * @param columnModels {@link List}
+     * @param keyList {@link List}
+     * @param column {@link Column}
+     */
+    private static void packageColumn(List<ColumnModel> columnModels, List<String> keyList,
+                                      Column column) {
+        ColumnModel columnModel = new ColumnModel();
+        //表中的列的索引（从 1 开始）
+        columnModel.setOrdinalPosition(column.getOrdinalPosition());
+        //列名称
+        columnModel.setColumnName(column.getColumnName());
+        //类型
+        columnModel.setTypeName(column.getTypeName().toLowerCase());
+        //指定列大小
+        columnModel.setColumnSize(column.getColumnSize());
+        //小数位
+        columnModel.setDecimalDigits(
+                cn.smallbun.screw.core.util.StringUtils.defaultString(column.getDecimalDigits(), ZERO_DECIMAL_DIGITS));
+        //可为空
+        columnModel.setNullable(ZERO.equals(column.getNullable()) ? N : Y);
+        //是否主键
+        columnModel.setPrimaryKey(keyList.contains(column.getColumnName()) ? Y : N);
+        //默认值
+        columnModel.setColumnDef(column.getColumnDef());
+        //说明
+        columnModel.setRemarks(column.getRemarks());
+        //放入集合
+        columnModels.add(columnModel);
     }
 }

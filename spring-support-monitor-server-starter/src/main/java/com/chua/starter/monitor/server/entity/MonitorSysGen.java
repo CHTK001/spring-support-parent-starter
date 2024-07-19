@@ -139,6 +139,14 @@ public class MonitorSysGen implements Serializable {
     @Schema(description = "文件数据库数据目录")
     @Size(max = 255, message = "文件数据库数据目录最大长度要小于 255")
     private String genDatabaseFile;
+    /**
+     * 文件数据库数据目录
+     */
+    @TableField(exist = false)
+    @ApiModelProperty(value = "文件数据库数据目录")
+    @Schema(description = "文件数据库数据目录")
+    @Size(max = 255, message = "文件数据库数据目录最大长度要小于 255")
+    private String genDatabaseFileName;
 
     /**
      * 文件数据库ID
@@ -156,6 +164,15 @@ public class MonitorSysGen implements Serializable {
     @ApiModelProperty(value = "备份状态;0:未开启")
     @Schema(description = "备份状态;0:未开启")
     private Integer genBackupStatus;
+
+    /**
+     * JDBC类型
+     */
+    @TableField(value = "gen_jdbc_custom_type")
+    @ApiModelProperty(value = "JDBC类型")
+    @Schema(description = "JDBC类型")
+    @Size(max = 255, message = "JDBC类型最大长度要小于 255")
+    private String genJdbcCustomType;
 
     /**
      * JDBC类型
@@ -267,7 +284,7 @@ public class MonitorSysGen implements Serializable {
         databaseOptions.setDriver(genDriver);
         databaseOptions.setDatabaseFile(genDatabaseFile);
         databaseOptions.setUsername(genUser);
-        databaseOptions.setDriverPath(genDriverUrl);
+        databaseOptions.setDriverPath(genDriverFile);
         databaseOptions.setPassword(genPassword);
         databaseOptions.setGenType(genType);
         databaseOptions.setSecretKey(genUid);
@@ -299,7 +316,7 @@ public class MonitorSysGen implements Serializable {
      * @param oldSysGen 旧系统
      * @return boolean
      */
-    public boolean isUserChange(MonitorSysGen oldSysGen) {
+    public boolean userHasChange(MonitorSysGen oldSysGen) {
         return !Objects.equals(genUser, oldSysGen.getGenUser()) || (null != genPassword && !Objects.equals(genPassword, oldSysGen.getGenPassword()))
                 || !Objects.equals(genHost, oldSysGen.getGenHost()) || !Objects.equals(genPort, oldSysGen.getGenPort());
     }

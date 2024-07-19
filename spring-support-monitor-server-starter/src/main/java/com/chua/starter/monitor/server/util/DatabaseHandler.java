@@ -5,6 +5,7 @@ import com.chua.common.support.datasource.dialect.DialectFactory;
 import com.chua.common.support.datasource.jdbc.option.DataSourceOptions;
 import com.chua.common.support.datasource.meta.Column;
 import com.chua.common.support.datasource.meta.Table;
+import com.chua.common.support.datasource.utils.JdbcUtils;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.ObjectUtils;
 import com.chua.common.support.utils.StringUtils;
@@ -25,7 +26,7 @@ public class DatabaseHandler implements AutoCloseable{
     public DatabaseHandler(DataSourceOptions databaseOptions) {
         this.databaseOptions = databaseOptions;
         try {
-            this.connection = DriverManager.getConnection(databaseOptions.getUrl(), databaseOptions.getUsername(), databaseOptions.getPassword());
+            this.connection = JdbcUtils.getConnection(databaseOptions.getDriver(), databaseOptions.getUrl(), databaseOptions.getUsername(), databaseOptions.getPassword(), databaseOptions.getDriverPath());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
