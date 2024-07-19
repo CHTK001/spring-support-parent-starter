@@ -1,5 +1,7 @@
 package com.chua.starter.common.support.configuration;
 
+import com.chua.common.support.objects.ConfigureObjectContext;
+import com.chua.common.support.objects.DefaultConfigureObjectContext;
 import com.chua.starter.common.support.debounce.DebounceAspect;
 import com.chua.starter.common.support.external.ExternalController;
 import com.chua.starter.common.support.limit.LimitAspect;
@@ -49,6 +51,11 @@ public class CommonConfiguration {
         return new ExternalController(externalInterfaceProperties);
     }
 
+    @Bean
+    @ConditionalOnMissingBean
+    public ConfigureObjectContext configureObjectContext() {
+        return new DefaultConfigureObjectContext();
+    }
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(name = "plugin.parameter.enable", havingValue = "true", matchIfMissing = false)

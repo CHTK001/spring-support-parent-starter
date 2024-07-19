@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.server.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.common.support.backup.Backup;
 import com.chua.common.support.backup.BackupSetting;
 import com.chua.common.support.backup.listener.BackupData;
@@ -10,8 +11,10 @@ import com.chua.common.support.datasource.dialect.Dialect;
 import com.chua.common.support.datasource.dialect.DialectFactory;
 import com.chua.common.support.datasource.jdbc.option.DataSourceOptions;
 import com.chua.common.support.function.Joiner;
+import com.chua.common.support.function.Splitter;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.NumberUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.redis.support.search.SearchIndex;
@@ -20,14 +23,12 @@ import com.chua.redis.support.search.SearchResultItem;
 import com.chua.redis.support.search.SearchSchema;
 import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.monitor.server.entity.MonitorSysGen;
-import com.chua.starter.monitor.server.properties.GenProperties;
+import com.chua.starter.monitor.server.mapper.MonitorSysGenMapper;
 import com.chua.starter.monitor.server.query.LogTimeQuery;
 import com.chua.starter.monitor.server.service.MonitorGenBackupService;
 import com.chua.starter.monitor.server.service.MonitorSysGenService;
 import com.chua.starter.redis.support.service.RedisSearchService;
-import jakarta.annotation.Resource;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -47,24 +48,43 @@ import static com.chua.starter.redis.support.service.impl.RedisSearchServiceImpl
  * @since 2024/7/9
  */
 @Service
-public class MonitorGenBackupServiceImpl implements MonitorGenBackupService, InitializingBean {
-
-    @Resource
-    private MonitorSysGenService sysGenService;
-    @Resource
-    private SocketSessionTemplate socketSessionTemplate;
-
-    @Resource
-    private GenProperties genProperties;
-    @Resource
-    private ApplicationContext applicationContext;
-
+public class MonitorGenBackupServiceImpl extends ServiceImpl<MonitorSysGenMapper, MonitorSysGen> implements MonitorGenBackupService, InitializingBean {
     private static final Map<Integer, Backup> BACKUP_MAP = new ConcurrentHashMap<>();
-    @Resource
-    private RedisSearchService redisSearchService;
-    @Resource
-    private TransactionTemplate transactionTemplate;
-    private static final String MYSQL = "mysql";
+
+    private final MonitorSysGenService sysGenService;
+    private final SocketSessionTemplate socketSessionTemplate;
+
+    private final RedisSearchService redisSearchService;
+    private final TransactionTemplate transactionTemplate;
+
+    public MonitorGenBackupServiceImpl(MonitorSysGenService sysGenService, SocketSessionTemplate socketSessionTemplate, RedisSearchService redisSearchService, TransactionTemplate transactionTemplate) {
+        this.sysGenService = sysGenService;
+        this.socketSessionTemplate = socketSessionTemplate;
+        this.redisSearchService = redisSearchService;
+        this.transactionTemplate = transactionTemplate;
+        this.initialize();
+    }
+
+    @Override
+    public ReturnResult<Boolean> upgrade(MonitorSysGen newSysGen) {
+        Map<String, Class<Backup>> stringClassMap = ServiceProvider.of(Backup.class).listType();
+        Dialect driver = DialectFactory.createDriver(newSysGen.getGenDriver());
+        if (!stringClassMap.containsKey(driver.protocol().toUpperCase())) {
+            return ReturnResult.error(String.format("不支持备份%s", driver.protocol()));
+        }
+        Backup backup = BACKUP_MAP.get(newSysGen.getGenId());
+        if(null != backup) {
+            backup.upgrade(BackupSetting.builder()
+                    .path("./backup/" + newSysGen.getGenId())
+                    .period(NumberUtils.isPositive(newSysGen.getGenBackupPeriod(), 720))
+                    .event(Splitter.on(",").omitEmptyStringsAndTrim().splitToStream(newSysGen.getGenBackupEvent()).map(EventType::valueOf).toArray(EventType[]::new))
+                    .build());
+        }
+
+        return ReturnResult.ok();
+
+    }
+
     @Override
     public ReturnResult<Boolean> start(MonitorSysGen monitorSysGen) {
         Integer genBackupStatus = monitorSysGen.getGenBackupStatus();
@@ -82,8 +102,11 @@ public class MonitorGenBackupServiceImpl implements MonitorGenBackupService, Ini
             DataSourceOptions databaseOptions = monitorSysGen.newDatabaseOptions();
             BackupSetting backupSetting = BackupSetting.builder()
                     .path("./backup/" + monitorSysGen.getGenId())
+                    .period(NumberUtils.isPositive(monitorSysGen.getGenBackupPeriod(), 720))
+                    .event(Splitter.on(",").omitEmptyStringsAndTrim().splitToStream(monitorSysGen.getGenBackupEvent()).map(EventType::valueOf).toArray(EventType[]::new))
                     .build();
             Backup backup = ServiceProvider.of(Backup.class).getNewExtension(driver.protocol(), databaseOptions, backupSetting);
+
             try {
                 backup.addStrategy(new DayBackupStrategy());
                 backup.addListener((event, data) -> {
@@ -157,7 +180,6 @@ public class MonitorGenBackupServiceImpl implements MonitorGenBackupService, Ini
             return true;
         })));
     }
-
     @Override
     public byte[] downloadBackup(Integer genId, Date startDay, Date endDay) {
         Backup backup = BACKUP_MAP.get(genId);
@@ -190,6 +212,8 @@ public class MonitorGenBackupServiceImpl implements MonitorGenBackupService, Ini
         return redisSearchService.queryAll(searchQuery, (timeQuery.getPage() - 1) * timeQuery.getSize(), timeQuery.getSize());
     }
 
+
+
     private StringBuilder createKeyword(LogTimeQuery timeQuery) {
         StringBuilder keyword = new StringBuilder();
 
@@ -220,9 +244,14 @@ public class MonitorGenBackupServiceImpl implements MonitorGenBackupService, Ini
         return keyword.isEmpty() ? keyword.append("*") : keyword;
     }
 
+    private void initialize() {
+
+    }
+
     @Override
     public void afterPropertiesSet() throws Exception {
         ThreadUtils.newStaticThreadPool().execute(() -> {
+            ThreadUtils.sleep(400);
             List<MonitorSysGen> list = sysGenService.list(Wrappers.<MonitorSysGen>lambdaQuery().eq(MonitorSysGen::getGenBackupStatus, 1));
             for (MonitorSysGen monitorSysGen : list) {
                 try {

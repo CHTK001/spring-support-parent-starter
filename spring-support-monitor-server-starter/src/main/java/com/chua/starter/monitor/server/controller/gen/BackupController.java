@@ -17,7 +17,7 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * 生成器控制器
+ * 备份控制器
  *
  * @author CH
  */

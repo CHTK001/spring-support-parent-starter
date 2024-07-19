@@ -50,4 +50,16 @@ public interface MonitorGenBackupService {
      * @return 返回一个封装了查询结果的 ReturnResult 对象，其中包含一个 SearchResultItem 的列表。
      */
     ReturnResult<SearchResultItem> queryForLog(LogTimeQuery timeQuery, MonitorSysGen monitorSysGen);
+
+    /**
+     * 尝试升级系统生成配置。
+     *
+     * 本方法用于接收一个新的系统生成配置对象，并尝试将其应用为当前系统的配置。升级过程可能涉及读取、验证新配置，
+     * 并与旧配置进行对比，确定是否需要以及如何进行升级。升级结果将通过返回值进行表示。
+     *
+     * @param newSysGen 新的系统生成配置对象，包含了拟应用的配置信息。
+     * @return 返回一个包含升级结果的ReturnResult对象。其中，Boolean值表示升级是否成功，
+     *         可能附带额外的说明信息或错误详情。
+     */
+    ReturnResult<Boolean> upgrade(MonitorSysGen newSysGen);
 }

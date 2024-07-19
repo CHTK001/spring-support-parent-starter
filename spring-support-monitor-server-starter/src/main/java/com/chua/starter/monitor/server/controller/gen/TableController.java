@@ -44,7 +44,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 生成器控制器
+ * 表控制器
  *
  * @author CH
  */

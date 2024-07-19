@@ -18,15 +18,18 @@ import com.chua.starter.mybatis.entity.PageRequest;
 import com.chua.starter.mybatis.utils.ReturnPageResultUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.Resource;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.annotation.Resource;
 import java.util.Set;
 
+/**
+ * 版本接口
+ */
 @RestController
 @SuppressWarnings("ALL")
 @Tag(name = "版本接口")
