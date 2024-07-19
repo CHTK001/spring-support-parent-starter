@@ -90,7 +90,18 @@ public class GenProperties {
      * 刷新数据库文件路径。
      *
      * @param sysGen 监控系统生成器对象，用于获取生成器的唯一标识。
+     * @param url
      */
+    public void register(MonitorSysGen sysGen, String type, String url) {
+        if("data".equalsIgnoreCase(type)) {
+            sysGen.setGenDatabaseFile(url);
+            return ;
+        }
+
+        if("driver".equalsIgnoreCase(type)) {
+            sysGen.setGenDriverFile(url);
+        }
+    }
     public void refresh(MonitorSysGen sysGen, String type) {
         if("data".equalsIgnoreCase(type)) {
             sysGen.setGenDatabaseFile("");

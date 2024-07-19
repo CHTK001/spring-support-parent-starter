@@ -237,7 +237,7 @@ public class SessionController {
             return ReturnResult.illegal("当前服务器不可达");
         }
         SessionResultSet sessionResultSet = null;
-        Map<String, String> remark = new HashMap<>();
+        Map<String, String> remark = new HashMap<>(16);
         try {
             sessionResultSet = session.executeQuery(executeQuery.getContent(), executeQuery);
             if (StringUtils.isNotEmpty(executeQuery.getContent())) {
