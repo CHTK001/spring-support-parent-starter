@@ -3,6 +3,7 @@ package com.chua.starter.common.support.utils;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.FileUtils;
 import com.chua.common.support.utils.IoUtils;
+import com.chua.common.support.utils.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
@@ -108,7 +109,8 @@ public class MultipartFileUtils {
             try {
                 FileUtils.forceDelete(parent);
             } catch (IOException e) {
-                return ReturnResult.illegal("保存驱动清除失败");
+//                return ReturnResult.illegal("保存驱动清除失败, " + StringUtils.subAfter(e.getCause().getMessage(), ":", true));
+
             }
         }
         FileUtils.forceMkdir(parent);
@@ -120,7 +122,7 @@ public class MultipartFileUtils {
         ) {
             IoUtils.copy(is, os);
         } catch (IOException e) {
-            return ReturnResult.illegal("保存驱动失败");
+            return ReturnResult.illegal("保存驱动失败, " + StringUtils.subAfter(e.getCause().getMessage(), ":", true));
         }
 
         return ReturnResult.ok(driverFile.getAbsolutePath());
