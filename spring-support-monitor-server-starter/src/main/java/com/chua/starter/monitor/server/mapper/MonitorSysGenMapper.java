@@ -6,7 +6,7 @@ import org.apache.ibatis.annotations.Mapper;
 
 /**
  * @author CH
- * @since 2024/7/18
+ * @since 2024/7/19
  */
 @Mapper
 public interface MonitorSysGenMapper extends BaseMapper<MonitorSysGen> {

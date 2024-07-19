@@ -24,9 +24,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.concurrent.TimeUnit;
 
+/**
+ * 终端接口
+ *
+ */
 @RestController
 @SuppressWarnings("ALL")
-@Tag(name = "脚本接口")
+@Tag(name = "终端接口")
 @Slf4j
 @RequestMapping("v1/shell")
 public class ShellController extends AbstractSwaggerController<MonitorSysGenShellService, MonitorSysGenShell> {
