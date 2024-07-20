@@ -142,7 +142,7 @@ public class DatabaseController {
         return PageResultUtils.<MonitorSysGen>ok(genType);
     }
     /**
-     * 列表
+     * 列表¬
      *
      * @return {@link ReturnResult}<{@link List}<{@link DataSourceResult}>>
      */
