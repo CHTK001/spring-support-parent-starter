@@ -6,7 +6,7 @@ import com.chua.redis.support.client.RedisClient;
 import com.chua.redis.support.client.RedisSession;
 import com.chua.redis.support.client.RedisTimeSeries;
 import com.chua.starter.redis.support.service.TimeSeriesService;
-import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
 import redis.clients.jedis.timeseries.TSCreateParams;
 import redis.clients.jedis.timeseries.TSElement;
 import redis.clients.jedis.timeseries.TSRangeParams;
@@ -25,7 +25,7 @@ import java.util.List;
 public class TimeSeriesServiceImpl implements TimeSeriesService {
 
 
-    @Resource
+    @Autowired
     private RedisClient redisClient;
     @Override
     public ReturnResult<Boolean> save(String indicator, long timestamp, double value, LinkedHashMap<String, String> label, long retentionPeriod) {

@@ -52,7 +52,6 @@ public class MonitorProxyLimitController {
     /**
      * 分页查询数据
      *
-     * @param entity 结果
      * @return 分页结果
      */
     @ResponseBody

@@ -3,11 +3,10 @@ package com.chua.starter.common.support.configuration;
 import com.chua.starter.common.support.properties.CodecProperties;
 import com.chua.starter.common.support.provider.CodecProvider;
 import com.chua.starter.common.support.result.CodeResponseBodyAdvice;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-
-import jakarta.annotation.Resource;
 
 /**
  * 编解码器配置
@@ -17,10 +16,10 @@ import jakarta.annotation.Resource;
 @EnableConfigurationProperties({
         CodecProperties.class
 })
+@RequiredArgsConstructor
 public class CodecConfiguration {
 
-    @Resource
-    private CodecProperties codecProperties;
+    final CodecProperties codecProperties;
 
     @Bean("codeResponseBodyAdvice")
     @ConditionalOnMissingBean()

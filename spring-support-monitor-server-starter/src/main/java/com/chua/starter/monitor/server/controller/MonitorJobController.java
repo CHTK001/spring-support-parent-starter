@@ -28,7 +28,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import jakarta.annotation.Resource;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -44,10 +43,8 @@ public class MonitorJobController extends AbstractSwaggerController<MonitorJobSe
 
     @Getter
     private final MonitorJobService service;
-    @Resource
-    private MonitorJobLogService monitorJobLogService;
-    @Resource
-    private final MonitorAppService monitorAppService;
+    final MonitorJobLogService monitorJobLogService;
+    final MonitorAppService monitorAppService;
 
 
     /**

@@ -4,13 +4,13 @@ import com.chua.common.support.json.Json;
 import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.monitor.request.MonitorRequest;
 import com.chua.starter.redis.support.listener.RedisListener;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.data.redis.listener.Topic;
 
-import jakarta.annotation.Resource;
 import java.util.Collection;
 import java.util.Collections;
 
@@ -25,12 +25,11 @@ import static com.chua.starter.monitor.server.constant.MonitorConstant.HEART;
  */
 
 @Configuration
+@RequiredArgsConstructor
 public class RedisKeyExpireListener implements RedisListener {
 
-    @Resource
-    private SocketSessionTemplate socketSessionTemplate;
-    @Resource
-    private StringRedisTemplate stringRedisTemplate;
+    private final SocketSessionTemplate socketSessionTemplate;
+    private final StringRedisTemplate stringRedisTemplate;
     @Override
     public void onMessage(Message message, byte[] pattern) {
         String key = message.toString();

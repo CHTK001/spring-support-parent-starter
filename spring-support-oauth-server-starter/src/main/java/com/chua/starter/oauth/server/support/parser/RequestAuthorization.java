@@ -10,7 +10,6 @@ import com.chua.starter.oauth.server.support.check.LoginCheck;
 import com.chua.starter.oauth.server.support.information.AuthInformation;
 import com.chua.starter.oauth.server.support.token.TokenResolver;
 import com.google.common.base.Strings;
-import jakarta.annotation.Resource;
 import jakarta.servlet.http.Cookie;
 import org.springframework.context.ApplicationContext;
 
@@ -29,24 +28,25 @@ public final class RequestAuthorization implements Authorization {
     private final String secretKey;
     private final UpgradeType upgradeType;
 
-    @Resource
-    private ApplicationContext applicationContext;
-
-    @Resource
-    private LoginCheck loginCheck;
+    final ApplicationContext applicationContext;
+    final LoginCheck loginCheck;
 
     public RequestAuthorization(AuthInformation authInformation,
                                 String token,
                                 Cookie[] cookie,
                                 String accessKey,
                                 String secretKey,
-                                UpgradeType upgradeType) {
+                                UpgradeType upgradeType,
+                                ApplicationContext applicationContext,
+                                LoginCheck loginCheck) {
         this.authInformation = authInformation;
         this.token = token;
         this.cookie = cookie;
         this.accessKey = accessKey;
         this.secretKey = secretKey;
         this.upgradeType = upgradeType;
+        this.applicationContext = applicationContext;
+        this.loginCheck = loginCheck;
     }
 
     @Override

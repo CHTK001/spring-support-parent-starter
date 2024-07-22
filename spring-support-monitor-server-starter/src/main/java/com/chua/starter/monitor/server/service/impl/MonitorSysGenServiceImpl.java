@@ -9,18 +9,17 @@ import com.chua.starter.monitor.server.mapper.MonitorSysGenMapper;
 import com.chua.starter.monitor.server.properties.GenProperties;
 import com.chua.starter.monitor.server.service.MonitorGenBackupService;
 import com.chua.starter.monitor.server.service.MonitorSysGenService;
-import jakarta.annotation.Resource;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.IOException;
 
 @Service
+@RequiredArgsConstructor
 public class MonitorSysGenServiceImpl extends ServiceImpl<MonitorSysGenMapper, MonitorSysGen> implements MonitorSysGenService {
-    @Resource
-    private MonitorGenBackupService monitorGenBackupService;
-    @Resource
-    private GenProperties genProperties;
+    final MonitorGenBackupService monitorGenBackupService;
+    final GenProperties genProperties;
     @Override
     public void updateFor(MonitorSysGen newSysGen, MonitorSysGen oldSysGen) {
         baseMapper.updateById(newSysGen);

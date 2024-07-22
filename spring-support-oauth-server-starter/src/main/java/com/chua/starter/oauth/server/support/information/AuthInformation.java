@@ -9,6 +9,7 @@ import com.chua.common.support.utils.Md5Utils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.enums.UpgradeType;
+import com.chua.starter.oauth.server.support.check.LoginCheck;
 import com.chua.starter.oauth.server.support.parser.Authorization;
 import com.chua.starter.oauth.server.support.parser.InvalidAuthorization;
 import com.chua.starter.oauth.server.support.parser.RequestAuthorization;
@@ -16,6 +17,7 @@ import com.chua.starter.oauth.server.support.properties.AuthServerProperties;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.Getter;
+import org.springframework.context.ApplicationContext;
 
 import static com.chua.starter.oauth.client.support.contants.AuthConstant.*;
 
@@ -32,6 +34,8 @@ public class AuthInformation {
     @Getter
     private final String address;
     private final String encryption;
+    private final ApplicationContext applicationContext;
+    private final LoginCheck loginCheck;
     @Getter
     private String accessKey;
     private String secretKey;
@@ -42,12 +46,18 @@ public class AuthInformation {
     @Getter
     private UpgradeType upgradeType;
 
-    public AuthInformation(String data, HttpServletRequest request, AuthServerProperties authServerProperties) {
+    public AuthInformation(String data,
+                           HttpServletRequest request,
+                           AuthServerProperties authServerProperties,
+                           ApplicationContext applicationContext,
+                           LoginCheck loginCheck) {
         this.data = data;
         this.request = request;
         this.authServerProperties = authServerProperties;
         this.address = RequestUtils.getIpAddress(request);
         this.encryption = authServerProperties.getEncryption();
+        this.applicationContext = applicationContext;
+        this.loginCheck = loginCheck;
     }
 
     /**
@@ -87,7 +97,15 @@ public class AuthInformation {
         }
         this.cookie = cookies;
 
-        RequestAuthorization authorization = new RequestAuthorization(this, token, cookie, accessKey, secretKey, upgradeType);
+        RequestAuthorization authorization = new RequestAuthorization(this,
+                token,
+                cookie,
+                accessKey,
+                secretKey,
+                upgradeType,
+                applicationContext,
+                loginCheck
+                );
         SpringBeanUtils.getApplicationContext().getAutowireCapableBeanFactory().autowireBean(authorization);
         return authorization;
     }

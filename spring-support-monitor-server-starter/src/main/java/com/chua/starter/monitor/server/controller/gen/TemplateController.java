@@ -10,7 +10,7 @@ import com.chua.starter.monitor.server.service.MonitorSysGenTemplateService;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.annotation.Resource;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,10 +24,9 @@ import java.util.List;
 @RestController
 @Tag(name = "模板接口")
 @RequestMapping("v1/template")
+@RequiredArgsConstructor
 public class TemplateController {
-
-    @Resource
-    private MonitorSysGenTemplateService sysGenTemplateService;
+    private final MonitorSysGenTemplateService sysGenTemplateService;
 
 
     /**

@@ -11,21 +11,18 @@ import com.chua.starter.monitor.server.service.MonitorProjectVersionService;
 import com.chua.starter.monitor.server.terminal.LogScript;
 import com.chua.starter.monitor.server.terminal.StartScript;
 import com.chua.starter.monitor.server.terminal.StopScript;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import jakarta.annotation.Resource;
-
 @Service
+@RequiredArgsConstructor
 public class MonitorProjectVersionServiceImpl extends ServiceImpl<MonitorProjectVersionMapper, MonitorProjectVersion> implements MonitorProjectVersionService{
 
-    @Resource
-    private TransactionTemplate transactionTemplate;
-    @Resource
-    private MonitorProjectService monitorProjectService;
+    final TransactionTemplate transactionTemplate;
+    final MonitorProjectService monitorProjectService;
 
-    @Resource
-    private SocketSessionTemplate socketSessionTemplate;
+    final SocketSessionTemplate socketSessionTemplate;
     @Override
     public ErrorResult<Boolean> start(MonitorProjectVersion entity) {
         MonitorProjectVersion monitorProjectVersion = baseMapper.selectById(entity.getVersionId());

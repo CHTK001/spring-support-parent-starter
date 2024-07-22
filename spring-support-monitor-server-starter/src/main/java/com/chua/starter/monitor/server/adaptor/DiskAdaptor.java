@@ -1,10 +1,10 @@
 package com.chua.starter.monitor.server.adaptor;
 
 import com.chua.common.support.json.Json;
+import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.monitor.request.MonitorRequest;
-import jakarta.annotation.Resource;
 
 import java.util.Map;
 
@@ -17,7 +17,7 @@ import java.util.Map;
  */
 public class DiskAdaptor implements Adaptor<MonitorRequest> {
 
-    @Resource
+    @AutoInject
     private SocketSessionTemplate socketSessionTemplate;
     @Override
     public void doAdaptor(MonitorRequest sysFile) {

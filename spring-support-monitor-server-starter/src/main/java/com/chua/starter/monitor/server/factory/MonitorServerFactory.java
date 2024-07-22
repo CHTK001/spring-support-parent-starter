@@ -3,6 +3,7 @@ package com.chua.starter.monitor.server.factory;
 import com.chua.common.support.geo.GeoCity;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.common.support.utils.ArrayUtils;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.NumberUtils;
@@ -12,7 +13,6 @@ import com.chua.starter.monitor.server.constant.MonitorConstant;
 import com.chua.starter.monitor.server.pojo.IpInstance;
 import com.chua.starter.monitor.server.pojo.ServiceTarget;
 import com.chua.starter.monitor.server.service.IptablesService;
-import jakarta.annotation.Resource;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -31,10 +31,10 @@ import java.util.stream.Collectors;
 @Service@SuppressWarnings("ALL")
 public class MonitorServerFactory implements MonitorConstant, DisposableBean, InitializingBean {
 
-    @Resource
+    @AutoInject
     private RedisTemplate stringRedisTemplate;
 
-    @Resource
+    @AutoInject
     private IptablesService iptablesService;
 
     /**

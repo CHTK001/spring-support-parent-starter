@@ -28,7 +28,7 @@ import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.annotation.Resource;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
 import org.springframework.http.MediaType;
@@ -49,19 +49,16 @@ import java.util.List;
 @SuppressWarnings("ALL")
 @Tag(name = "数据库接口")
 @Slf4j
+@RequiredArgsConstructor
 @RequestMapping("v1/db")
 public class DatabaseController {
 
-    @Resource
-    private MonitorSysGenService sysGenService;
+    private final MonitorSysGenService sysGenService;
 
-    @Resource
-    private ConfigureObjectContext configureObjectContext;
+    private final ConfigureObjectContext configureObjectContext;
 
-    @Resource
-    private GenProperties genProperties;
-    @Resource
-    private ApplicationContext applicationContext;
+    private final GenProperties genProperties;
+    private final ApplicationContext applicationContext;
     private static final String MYSQL = "mysql";
     /**
      * 列表

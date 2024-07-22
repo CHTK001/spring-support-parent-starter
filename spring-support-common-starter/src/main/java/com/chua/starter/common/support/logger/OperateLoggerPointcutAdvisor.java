@@ -5,13 +5,13 @@ import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.*;
 import com.chua.starter.common.support.annotations.OperateLog;
 import com.chua.starter.common.support.utils.RequestUtils;
-import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.aop.support.StaticMethodMatcherPointcutAdvisor;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.expression.EvaluationContext;
@@ -36,12 +36,10 @@ import static com.chua.common.support.constant.NameConstant.*;
 @Lazy
 public class OperateLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor implements InitializingBean {
 
-    @Resource
-    HttpServletRequest request;
-    @Resource
-    HttpServletResponse response;
+    @Autowired HttpServletRequest request;
+    @Autowired HttpServletResponse response;
 
-    @Resource
+    @Autowired
     private ApplicationContext applicationContext;
 
     private static final Class<? extends Annotation> OPERATION = (Class<? extends Annotation>) ClassUtils.forName("io.swagger.v3.oas.annotations.Operation");

@@ -18,16 +18,16 @@ import com.xxl.job.core.biz.model.ReturnT;
 import com.xxl.job.core.enums.ExecutorBlockStrategyEnum;
 import com.xxl.job.core.glue.GlueTypeEnum;
 import com.xxl.job.core.util.DateUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import jakarta.annotation.Resource;
-import jakarta.servlet.http.HttpServletRequest;
 import java.util.*;
 
 /**
@@ -37,11 +37,11 @@ import java.util.*;
 @Controller
 @RequestMapping("/jobinfo")
 public class JobInfoController {
-	private static Logger logger = LoggerFactory.getLogger(JobInfoController.class);
+	private static final Logger logger = LoggerFactory.getLogger(JobInfoController.class);
 
-	@Resource
+	@Autowired
 	private XxlJobGroupDao xxlJobGroupDao;
-	@Resource
+	@Autowired
 	private XxlJobService xxlJobService;
 	
 	@RequestMapping

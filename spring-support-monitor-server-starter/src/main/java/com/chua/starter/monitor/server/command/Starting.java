@@ -3,11 +3,10 @@ package com.chua.starter.monitor.server.command;
 import com.chua.common.support.annotations.OnRouterEvent;
 import com.chua.starter.monitor.request.MonitorRequest;
 import com.chua.starter.monitor.server.constant.MonitorConstant;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
-
-import jakarta.annotation.Resource;
 
 /**
  * 心跳
@@ -18,10 +17,10 @@ import jakarta.annotation.Resource;
  */
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class Starting implements MonitorConstant {
 
-    @Resource
-    private RedisTemplate stringRedisTemplate;
+    private final RedisTemplate stringRedisTemplate;
 
     /**
      * 心跳

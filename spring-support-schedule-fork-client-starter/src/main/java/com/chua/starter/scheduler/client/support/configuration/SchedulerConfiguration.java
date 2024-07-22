@@ -4,12 +4,11 @@ import com.chua.starter.scheduler.client.support.JobLogService;
 import com.chua.starter.scheduler.client.support.executor.JobSpringExecutor;
 import com.chua.starter.scheduler.client.support.properties.SchedulerProperties;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
-
-import jakarta.annotation.Resource;
 
 /**
  * freemarker
@@ -21,7 +20,7 @@ import jakarta.annotation.Resource;
 @EnableConfigurationProperties(SchedulerProperties.class)
 public class SchedulerConfiguration {
 
-    @Resource
+    @Autowired
     private SchedulerProperties schedulerProperties;
     @Bean
     @ConditionalOnProperty(name = "plugin.scheduler.open", matchIfMissing = true, havingValue = "true")

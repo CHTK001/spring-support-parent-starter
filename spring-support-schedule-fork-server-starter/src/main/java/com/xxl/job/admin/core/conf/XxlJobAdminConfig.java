@@ -5,11 +5,11 @@ import com.xxl.job.admin.core.scheduler.XxlJobScheduler;
 import com.xxl.job.admin.dao.*;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
 
-import jakarta.annotation.Resource;
 import javax.sql.DataSource;
 import java.util.Arrays;
 
@@ -69,20 +69,20 @@ public class XxlJobAdminConfig implements InitializingBean, DisposableBean {
 
     // dao, service
 
-    @Resource
+    @Autowired
     private XxlJobLogDao xxlJobLogDao;
-    @Resource
+    @Autowired
     private XxlJobInfoDao xxlJobInfoDao;
-    @Resource
+    @Autowired
     private XxlJobRegistryDao xxlJobRegistryDao;
-    @Resource
+    @Autowired
     private XxlJobGroupDao xxlJobGroupDao;
-    @Resource
+    @Autowired
     private XxlJobLogReportDao xxlJobLogReportDao;
     private JavaMailSender mailSender;
-    @Resource
+    @Autowired
     private DataSource dataSource;
-    @Resource
+    @Autowired
     private JobAlarmer jobAlarmer;
 
 

@@ -10,7 +10,7 @@ import com.chua.starter.oauth.server.support.properties.AuthServerProperties;
 import com.chua.starter.oauth.server.support.service.UserInfoService;
 import com.chua.starter.oauth.server.support.token.TokenResolver;
 import com.google.common.base.Strings;
-import jakarta.annotation.Resource;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
 import org.springframework.util.ClassUtils;
@@ -24,14 +24,13 @@ import static com.chua.common.support.lang.code.ReturnCode.OK;
  *
  * @author CH
  */
+@RequiredArgsConstructor
 @Slf4j
 public class LoginCheck {
 
-    @Resource
-    private AuthServerProperties authServerProperties;
+    final AuthServerProperties authServerProperties;
 
-    @Resource
-    private ApplicationContext applicationContext;
+    final ApplicationContext applicationContext;
 
     /**
      * 是否匹配类型

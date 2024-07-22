@@ -23,7 +23,7 @@ import jakarta.mail.internet.MimeMessage;
 public class SpringHtmlMailSender extends SpringTextMailSender {
 
     private static final Log log = Log.getLogger(MailSender.class);
-    @Resource
+    @Autowired
     private JavaMailSender javaMailSender;
     public SpringHtmlMailSender(MailConfiguration configuration) {
         super(configuration);

@@ -2,20 +2,19 @@ package com.chua.starter.swagger.support;
 
 import com.chua.common.support.utils.FileUtils;
 import com.google.common.base.Strings;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.env.Environment;
 
-import jakarta.annotation.Resource;
-
 /**
  * @author CH
  */
 @Slf4j
+@RequiredArgsConstructor
 public class Knife4jRunner implements CommandLineRunner {
-    @Resource
-    private Environment environment;
+    private final Environment environment;
 
     @Override
     public void run(String... args) throws Exception {

@@ -6,15 +6,16 @@ import com.baomidou.mybatisplus.extension.plugins.handler.TenantLineHandler;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
+import com.chua.starter.common.support.oauth.AuthService;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.mybatis.endpoint.MybatisEndpoint;
 import com.chua.starter.mybatis.interceptor.MybatisPlusPermissionHandler;
 import com.chua.starter.mybatis.interceptor.MybatisPlusPermissionInterceptor;
-import com.chua.starter.mybatis.interceptor.SqlInterceptor;
 import com.chua.starter.mybatis.method.SupportInjector;
 import com.chua.starter.mybatis.properties.MybatisPlusProperties;
 import com.chua.starter.mybatis.reloader.MapperReload;
 import com.chua.starter.mybatis.reloader.Reload;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.LongValue;
@@ -29,7 +30,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.Ordered;
 
-import jakarta.annotation.Resource;
 import java.util.List;
 
 /**
@@ -43,10 +43,10 @@ import java.util.List;
 @AutoConfigureAfter(SqlSessionFactory.class)
 @EnableConfigurationProperties(MybatisPlusProperties.class)
 @AutoConfigureOrder(Ordered.LOWEST_PRECEDENCE + 10)
+@RequiredArgsConstructor
 public class MybatisPlusConfiguration {
 
-    @Resource
-    private MybatisPlusProperties mybatisProperties;
+    final  MybatisPlusProperties mybatisProperties;
     /**
      * SupportInjector
      *
@@ -79,9 +79,11 @@ public class MybatisPlusConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public MybatisPlusPermissionInterceptor dataPermissionInterceptor(
-            @Autowired(required = false) DataPermissionHandler dataPermissionHandler) {
+            @Autowired(required = false) DataPermissionHandler dataPermissionHandler,
+            @Autowired(required = false) AuthService authService
+            ) {
         if(null == dataPermissionHandler) {
-            dataPermissionHandler = new MybatisPlusPermissionHandler();
+            dataPermissionHandler = new MybatisPlusPermissionHandler(authService);
         }
         return new MybatisPlusPermissionInterceptor(dataPermissionHandler);
     }

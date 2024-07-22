@@ -26,9 +26,9 @@ import com.chua.starter.monitor.server.entity.MonitorTerminalBase;
 import com.chua.starter.monitor.server.mapper.MonitorTerminalMapper;
 import com.chua.starter.monitor.server.service.*;
 import com.chua.starter.redis.support.service.TimeSeriesService;
-import jakarta.annotation.Resource;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
@@ -54,32 +54,19 @@ import static com.chua.starter.monitor.server.constant.RedisConstant.REDIS_TIME_
  */
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class MonitorTerminalServiceImpl extends ServiceImpl<MonitorTerminalMapper, MonitorTerminal> implements MonitorTerminalService, InitializingBean {
 
     private static final Map<String, CacheClient> SERVER_MAP = new ConcurrentHashMap<>();
-    @Resource
-    private ApplicationContext applicationContext;
-    @Resource
-    private SocketSessionTemplate socketSessionTemplate;
-
-    @Resource
-    private TimeSeriesService timeSeriesService;
-
-    @Resource
-    private TransactionTemplate transactionTemplate;
-
-    @Resource
-    private IptablesService iptablesService;
-
-    @Resource
-    private MonitorTerminalBaseService monitorTerminalBaseService;
-    @Resource
-    private MonitorProxyConfigService monitorProxyConfigService;
-
-    @Resource
-    private MonitorProxyPluginService monitorProxyPluginService;
-    @Resource
-    private MonitorProxyPluginConfigService monitorProxyPluginConfigService;
+    final ApplicationContext applicationContext;
+    final SocketSessionTemplate socketSessionTemplate;
+    final TimeSeriesService timeSeriesService;
+    final TransactionTemplate transactionTemplate;
+    final IptablesService iptablesService;
+    final MonitorTerminalBaseService monitorTerminalBaseService;
+    final MonitorProxyConfigService monitorProxyConfigService;
+    final MonitorProxyPluginService monitorProxyPluginService;
+    final MonitorProxyPluginConfigService monitorProxyPluginConfigService;
 
     private final ScheduledExecutorService executorService = ThreadUtils.newScheduledThreadPoolExecutor(1);
     private final ExecutorService reporterService = ThreadUtils.newFixedThreadExecutor(100);

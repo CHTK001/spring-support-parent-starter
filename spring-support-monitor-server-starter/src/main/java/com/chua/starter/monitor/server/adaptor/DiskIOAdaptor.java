@@ -1,10 +1,9 @@
 package com.chua.starter.monitor.server.adaptor;
 
 import com.chua.common.support.json.Json;
+import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.monitor.request.MonitorRequest;
-
-import jakarta.annotation.Resource;
 
 /**
  * jvm适配器
@@ -15,7 +14,7 @@ import jakarta.annotation.Resource;
  */
 public class DiskIOAdaptor implements Adaptor<MonitorRequest> {
 
-    @Resource
+    @AutoInject
     private SocketSessionTemplate socketSessionTemplate;
     @Override
     public void doAdaptor(MonitorRequest monitorRequest) {

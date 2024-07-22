@@ -3,8 +3,8 @@ package com.chua.starter.redis.support.debounce;
 import com.chua.starter.common.support.debounce.DebounceLock;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.springframework.beans.factory.annotation.Autowired;
 
-import jakarta.annotation.Resource;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class RedisDebounceLock implements DebounceLock {
 
-    @Resource
+    @Autowired
     private RedissonClient redissonClient;
     private RLock lock;
     boolean isLocked = false;

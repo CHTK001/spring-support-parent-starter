@@ -24,7 +24,7 @@ import java.util.List;
 public class SpringTextMailSender extends AbstractMailSender {
 
     private static final Log log = Log.getLogger(MailSender.class);
-    @Resource
+    @Autowired
     private JavaMailSender javaMailSender;
 
     public SpringTextMailSender(MailConfiguration configuration) {

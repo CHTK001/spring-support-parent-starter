@@ -12,7 +12,7 @@ import com.chua.redis.support.search.SearchIndex;
 import com.chua.redis.support.search.SearchQuery;
 import com.chua.redis.support.search.SearchResultItem;
 import com.chua.starter.redis.support.service.RedisSearchService;
-import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
 import redis.clients.jedis.Jedis;
 
 import java.util.Map;
@@ -24,7 +24,7 @@ import java.util.Map;
  * @since 2024/7/5
  */
 public class RedisSearchServiceImpl implements RedisSearchService {
-    @Resource
+    @Autowired
     private RedisClient redisClient;
     public static final String LANGUAGE = "chinese";
 

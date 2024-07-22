@@ -17,7 +17,7 @@ import com.chua.starter.monitor.server.pojo.Last;
 import com.chua.starter.monitor.server.service.IptablesService;
 import com.chua.starter.monitor.server.service.MonitorTerminalBaseService;
 import com.chua.starter.monitor.server.service.MonitorTerminalService;
-import jakarta.annotation.Resource;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.LinkedList;
@@ -33,13 +33,11 @@ import static com.chua.common.support.constant.NumberConstant.NUM_8;
  * @author CH
  */
 @Service
+@RequiredArgsConstructor
 public class MonitorTerminalBaseServiceImpl extends ServiceImpl<MonitorTerminalBaseMapper, MonitorTerminalBase> implements MonitorTerminalBaseService{
 
-    @Resource
-    private MonitorTerminalService monitorTerminalService;
-
-    @Resource
-    private IptablesService iptablesService;
+    final MonitorTerminalService monitorTerminalService;
+    final IptablesService iptablesService;
 
     @Override
     public ReturnResult<List<WIndicator>> w(MonitorTerminal monitorProxy) {

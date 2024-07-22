@@ -19,10 +19,10 @@ import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import com.google.common.base.Strings;
-import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.env.Environment;
 import org.springframework.validation.BindingResult;
@@ -50,7 +50,7 @@ import static com.chua.starter.common.support.utils.RequestUtils.getIpAddress;
 public class TempProvider {
 
 
-    @Resource
+    @Autowired
     private AuthClientProperties authProperties;
     /**
      * 登录

@@ -4,6 +4,7 @@ import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.robin.Node;
 import com.chua.common.support.lang.robin.Robin;
+import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.common.support.protocol.request.BadResponse;
 import com.chua.common.support.protocol.request.OkResponse;
 import com.chua.common.support.protocol.request.Request;
@@ -16,7 +17,6 @@ import com.chua.starter.monitor.request.MonitorRequest;
 import com.chua.starter.monitor.server.factory.MonitorServerFactory;
 import com.chua.starter.monitor.server.request.ReportQuery;
 import com.chua.starter.monitor.service.ServiceInstance;
-import jakarta.annotation.Resource;
 
 import java.util.List;
 
@@ -31,10 +31,10 @@ import java.util.List;
 public class RegisterCenterRequestCommandAdaptor implements CommandAdaptor{
 
 
-    @Resource
+    @AutoInject
     private MonitorServerFactory monitorServerFactory;
 
-    @Resource
+    @AutoInject
     private MonitorProtocolProperties monitorProtocolProperties;
 
     @Override

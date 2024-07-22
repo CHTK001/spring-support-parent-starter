@@ -18,7 +18,6 @@ import com.github.xiaoymin.knife4j.annotations.Ignore;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.annotation.Resource;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -45,10 +44,7 @@ public class MonitorPatchController extends AbstractSwaggerController<MonitorPat
 
     @Getter
     private final MonitorPatchService service;
-    @Resource
     private final MonitorAppService monitorAppService;
-
-    @Resource
     private final MonitorServerFactory monitorServerFactory;
     /**
      * 添加数据

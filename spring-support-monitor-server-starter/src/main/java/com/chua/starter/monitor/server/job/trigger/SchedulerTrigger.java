@@ -4,15 +4,16 @@ import com.chua.starter.monitor.server.job.JobConfig;
 import com.chua.starter.monitor.server.job.handler.CoreTriggerHandler;
 import com.chua.starter.monitor.server.job.handler.RingTriggerHandler;
 import com.chua.starter.monitor.server.properties.JobProperties;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
-import jakarta.annotation.Resource;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -23,6 +24,7 @@ import java.util.concurrent.TimeUnit;
  * @since 2024/03/08
  */
 @Slf4j
+@RequiredArgsConstructor
 public class SchedulerTrigger implements InitializingBean, DisposableBean, ApplicationContextAware {
 
     private CoreTriggerHandler coreTriggerHandler;
@@ -30,7 +32,7 @@ public class SchedulerTrigger implements InitializingBean, DisposableBean, Appli
     private RingTriggerHandler ringTriggerHandler;
     private ApplicationContext applicationContext;
 
-    @Resource
+    @Autowired
     private JobProperties jobProperties;
 
 
@@ -49,8 +51,8 @@ public class SchedulerTrigger implements InitializingBean, DisposableBean, Appli
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        coreTriggerHandler = new CoreTriggerHandler();
-        ringTriggerHandler = new RingTriggerHandler();
+        coreTriggerHandler = new CoreTriggerHandler(jobProperties);
+        ringTriggerHandler = new RingTriggerHandler(jobProperties);
         AutowireCapableBeanFactory autowireCapableBeanFactory = applicationContext.getAutowireCapableBeanFactory();
         autowireCapableBeanFactory.autowireBean(coreTriggerHandler);
         autowireCapableBeanFactory.autowireBean(ringTriggerHandler);

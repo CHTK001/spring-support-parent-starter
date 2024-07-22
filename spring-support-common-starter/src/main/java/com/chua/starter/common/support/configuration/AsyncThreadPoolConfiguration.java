@@ -3,7 +3,7 @@ package com.chua.starter.common.support.configuration;
 import com.chua.starter.common.support.constant.Constant;
 import com.chua.starter.common.support.mdc.MdcTaskDecorator;
 import com.chua.starter.common.support.properties.AsyncThreadPoolProperties;
-import jakarta.annotation.Resource;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.task.TaskDecorator;
@@ -21,10 +21,10 @@ import java.util.concurrent.ThreadPoolExecutor;
  */
 @EnableAsync
 @EnableConfigurationProperties(AsyncThreadPoolProperties.class)
+@RequiredArgsConstructor
 public class AsyncThreadPoolConfiguration implements AsyncConfigurer {
 
-    @Resource
-    AsyncThreadPoolProperties asyncProperties;
+    final AsyncThreadPoolProperties asyncProperties;
 
     @Bean(Constant.DEFAULT_EXECUTOR2)
     public ThreadPoolTaskExecutor febsShiroThreadPoolTaskExecutor() {

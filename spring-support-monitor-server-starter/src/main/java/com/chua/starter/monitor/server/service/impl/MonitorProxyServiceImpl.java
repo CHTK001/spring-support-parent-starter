@@ -24,7 +24,7 @@ import com.chua.starter.monitor.server.entity.*;
 import com.chua.starter.monitor.server.log.WebLog;
 import com.chua.starter.monitor.server.mapper.MonitorProxyMapper;
 import com.chua.starter.monitor.server.service.*;
-import jakarta.annotation.Resource;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
@@ -44,26 +44,18 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author CH
  */
 @Service
+@RequiredArgsConstructor
 public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, MonitorProxy> implements MonitorProxyService, InitializingBean {
 
     private static final Map<String, Server> SERVER_MAP = new ConcurrentHashMap<>();
     private static final Map<String, LimitFactory> LIMIT_MAP = new ConcurrentHashMap<>();
-    @Resource
-    private ApplicationContext applicationContext;
-    @Resource
-    private SocketSessionTemplate socketSessionTemplate;
-    @Resource
-    private TransactionTemplate transactionTemplate;
-
-    @Resource
-    private MonitorProxyConfigService monitorProxyConfigService;
-    @Resource
-    private MonitorProxyLimitService monitorproxyLimitService;
-
-    @Resource
-    private MonitorProxyPluginService monitorProxyPluginService;
-    @Resource
-    private MonitorProxyPluginConfigService monitorProxyPluginConfigService;
+    final ApplicationContext applicationContext;
+    final SocketSessionTemplate socketSessionTemplate;
+    final TransactionTemplate transactionTemplate;
+    final MonitorProxyConfigService monitorProxyConfigService;
+    final MonitorProxyLimitService monitorproxyLimitService;
+    final MonitorProxyPluginService monitorProxyPluginService;
+    final MonitorProxyPluginConfigService monitorProxyPluginConfigService;
 
     @Override
     public ReturnResult<Boolean> start(MonitorProxy monitorProxy) {

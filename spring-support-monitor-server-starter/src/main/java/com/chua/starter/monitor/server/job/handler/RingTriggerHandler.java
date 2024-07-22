@@ -3,9 +3,9 @@ package com.chua.starter.monitor.server.job.handler;
 import com.chua.starter.monitor.server.job.TriggerTypeEnum;
 import com.chua.starter.monitor.server.job.trigger.JobTriggerPoolHelper;
 import com.chua.starter.monitor.server.properties.JobProperties;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import jakarta.annotation.Resource;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -18,13 +18,13 @@ import java.util.concurrent.TimeUnit;
  * @since 2024/03/08
  */
 @Slf4j
+@RequiredArgsConstructor
 public class RingTriggerHandler implements TriggerHandler, Runnable{
     private volatile boolean ringThreadToStop = false;
-    private volatile static Map<Integer, List<Integer>> ringData = new ConcurrentHashMap<>();
+    private static final Map<Integer, List<Integer>> ringData = new ConcurrentHashMap<>();
     private Thread ringThread;
 
-    @Resource
-    private JobProperties jobProperties;
+    private final JobProperties jobProperties;
 
     @Override
     public void start() {
@@ -82,7 +82,7 @@ public class RingTriggerHandler implements TriggerHandler, Runnable{
         }
         ringItemData.add(jobId);
 
-        log.debug(">>>>>>>>>>> job, schedule push time-ring : " + ringSecond + " = " + Arrays.asList(ringItemData) );
+        log.debug(">>>>>>>>>>> job, schedule push time-ring : " + ringSecond + " = " + List.of(ringItemData));
     }
 
     @Override

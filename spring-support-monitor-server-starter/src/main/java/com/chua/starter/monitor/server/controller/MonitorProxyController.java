@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
  * @since 2024/5/13
  */
 @RestController
-@RequestMapping("v1/proxy")
+@RequestMapping("v1/proxy/protocol")
 @Tag(name = "代理")
 @RequiredArgsConstructor
 public class MonitorProxyController extends AbstractSwaggerController<MonitorProxyService, MonitorProxy> {

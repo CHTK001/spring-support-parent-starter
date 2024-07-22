@@ -5,12 +5,12 @@ import com.xxl.job.admin.core.model.XxlJobUser;
 import com.xxl.job.admin.core.util.I18nUtil;
 import com.xxl.job.admin.properties.SchedulerProperties;
 import com.xxl.job.admin.service.LoginService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.AsyncHandlerInterceptor;
 
-import jakarta.annotation.Resource;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import java.util.regex.Pattern;
 
 /**
@@ -20,9 +20,9 @@ import java.util.regex.Pattern;
  */
 public class PermissionInterceptor implements AsyncHandlerInterceptor {
 
-	@Resource
+	@Autowired
 	private LoginService loginService;
-	@Resource
+	@Autowired
 	private SchedulerProperties schedulerProperties;
 
 	private static final Pattern LOCAL_IP_PATTERN = Pattern.compile("127(\\.\\d{1,3}){3}$");
@@ -32,15 +32,14 @@ public class PermissionInterceptor implements AsyncHandlerInterceptor {
 	@Override
 	public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
 		
-		if (!(handler instanceof HandlerMethod)) {
+		if (!(handler instanceof HandlerMethod method)) {
 			return true;	// proceed with the next interceptor
 		}
 
 		// if need login
 		boolean needLogin = true;
 		boolean needAdminuser = false;
-		HandlerMethod method = (HandlerMethod)handler;
-		PermissionLimit permission = method.getMethodAnnotation(PermissionLimit.class);
+        PermissionLimit permission = method.getMethodAnnotation(PermissionLimit.class);
 		if (permission!=null) {
 			needLogin = permission.limit();
 			needAdminuser = permission.adminuser();

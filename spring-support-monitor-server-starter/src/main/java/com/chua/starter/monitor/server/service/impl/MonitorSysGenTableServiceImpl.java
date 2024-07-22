@@ -22,12 +22,12 @@ import com.chua.starter.monitor.server.service.MonitorSysGenTableService;
 import com.chua.starter.monitor.server.service.MonitorSysGenTemplateService;
 import com.chua.starter.monitor.server.util.VelocityInitializer;
 import com.chua.starter.monitor.server.util.VelocityUtils;
+import lombok.RequiredArgsConstructor;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
 import org.springframework.stereotype.Service;
 
-import jakarta.annotation.Resource;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.StringWriter;
@@ -43,15 +43,12 @@ import static org.apache.commons.codec.CharEncoding.UTF_8;
  * @author CH
  */     
 @Service
+@RequiredArgsConstructor
 public class MonitorSysGenTableServiceImpl extends ServiceImpl<SysGenTableMapper, MonitorSysGenTable> implements MonitorSysGenTableService {
     private final IdentifierGenerator identifierGenerator = new DefaultIdentifierGenerator(NetUtils.getLocalAddress());
-    @Resource
-    private MonitorSysGenColumnService sysGenColumnService;
-
-    @Resource
-    private MonitorSysGenTemplateService sysGenTemplateService;
-    @Resource
-    private GenProperties genProperties;
+    final MonitorSysGenColumnService sysGenColumnService;
+    final MonitorSysGenTemplateService sysGenTemplateService;
+    final GenProperties genProperties;
 
     @Override
     public byte[] downloadCode(Download download) {

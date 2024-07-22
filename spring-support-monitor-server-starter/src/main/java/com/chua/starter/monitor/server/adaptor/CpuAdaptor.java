@@ -1,12 +1,12 @@
 package com.chua.starter.monitor.server.adaptor;
 
 import com.chua.common.support.json.Json;
+import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.redis.support.constant.RedisConstant;
 import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.monitor.request.MonitorRequest;
 import com.chua.starter.redis.support.service.TimeSeriesService;
-import jakarta.annotation.Resource;
 
 import java.util.Map;
 
@@ -21,9 +21,9 @@ import static com.chua.starter.monitor.server.constant.RedisConstant.REDIS_TIME_
  */
 public class CpuAdaptor implements Adaptor<MonitorRequest> {
 
-    @Resource
+    @AutoInject
     private SocketSessionTemplate socketSessionTemplate;
-    @Resource
+    @AutoInject
     private TimeSeriesService timeSeriesService;
     @Override
     public void doAdaptor(MonitorRequest cpu) {

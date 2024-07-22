@@ -18,8 +18,8 @@ import com.chua.starter.mybatis.entity.PageRequest;
 import com.chua.starter.mybatis.utils.ReturnPageResultUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.annotation.Resource;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
@@ -34,17 +34,15 @@ import java.util.Set;
 @SuppressWarnings("ALL")
 @Tag(name = "版本接口")
 @Slf4j
+@RequiredArgsConstructor
 @RequestMapping("v1/version")
 public class VersionController  {
 
-    @Resource
-    private MonitorProjectVersionService monitorProjectVersionService;
+    private final MonitorProjectVersionService monitorProjectVersionService;
 
     @Getter
-    @Resource
-    private MonitorProjectService service;
-    @Resource
-    private SocketSessionTemplate socketSessionTemplate;
+    private final MonitorProjectService service;
+    private final SocketSessionTemplate socketSessionTemplate;
     /**
      * 分页查询基础数据
      * @param page 分页请求对象
