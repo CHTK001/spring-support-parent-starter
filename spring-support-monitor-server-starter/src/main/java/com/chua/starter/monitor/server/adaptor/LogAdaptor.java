@@ -1,12 +1,12 @@
 package com.chua.starter.monitor.server.adaptor;
 
 import com.chua.common.support.json.Json;
+import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.redis.support.search.SearchIndex;
 import com.chua.redis.support.search.SearchSchema;
 import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.monitor.request.MonitorRequest;
 import com.chua.starter.redis.support.service.RedisSearchService;
-import jakarta.annotation.Resource;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,10 +22,10 @@ import static com.chua.starter.monitor.server.constant.RedisConstant.REDIS_SEARC
  */
 public class LogAdaptor implements Adaptor<MonitorRequest> {
 
-    @Resource
+    @AutoInject
     private SocketSessionTemplate socketSessionTemplate;
 
-    @Resource
+    @AutoInject
     private RedisSearchService redisSearchService;
 
     @Override

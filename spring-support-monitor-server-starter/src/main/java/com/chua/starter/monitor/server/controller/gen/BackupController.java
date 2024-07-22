@@ -7,7 +7,7 @@ import com.chua.starter.monitor.server.service.MonitorGenBackupService;
 import com.chua.starter.monitor.server.service.MonitorSysGenService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.annotation.Resource;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
 import org.springframework.http.ResponseEntity;
@@ -25,18 +25,14 @@ import java.util.List;
 @SuppressWarnings("ALL")
 @Tag(name = "数据库接口")
 @Slf4j
+@RequiredArgsConstructor
 @RequestMapping("v1/backup")
 public class BackupController {
 
-    @Resource
-    private MonitorSysGenService sysGenService;
-    @Resource
-    private MonitorGenBackupService monitorGenBackupService;
-
-    @Resource
-    private GenProperties genProperties;
-    @Resource
-    private ApplicationContext applicationContext;
+    private final MonitorSysGenService sysGenService;
+    private final MonitorGenBackupService monitorGenBackupService;
+    private final GenProperties genProperties;
+    private final ApplicationContext applicationContext;
     private static final String MYSQL = "mysql";
 
     /**

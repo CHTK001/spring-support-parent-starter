@@ -22,11 +22,11 @@ import java.util.List;
  */
 @EnableConfigurationProperties(ElasticSearchProperties.class)
 @Import(DocumentServiceImpl.class)
+@RequiredArgsConstructor
 public class ElasticSearchConfiguration {
 
 
-    @Resource
-    private ElasticSearchProperties elasticSearchProperties;
+    final ElasticSearchProperties elasticSearchProperties;
 
     @Bean
     @ConditionalOnExpression("!T(org.springframework.util.StringUtils).isEmpty('${plugin.elasticsearch.address:}')")

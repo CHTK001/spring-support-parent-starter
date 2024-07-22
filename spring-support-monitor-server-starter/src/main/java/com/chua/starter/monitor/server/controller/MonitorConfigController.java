@@ -16,7 +16,6 @@ import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.annotation.Resource;
 import java.util.Collections;
 
 import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
@@ -32,7 +31,6 @@ public class MonitorConfigController extends AbstractSwaggerController<MonitorCo
 
     @Getter
     private final MonitorConfigService service;
-    @Resource
     private final MonitorAppService monitorAppService;
 
     /**

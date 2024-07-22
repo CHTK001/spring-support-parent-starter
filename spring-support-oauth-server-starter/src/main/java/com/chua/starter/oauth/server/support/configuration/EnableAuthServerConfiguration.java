@@ -14,6 +14,7 @@ import com.chua.starter.oauth.server.support.protocol.Protocol;
 import com.chua.starter.oauth.server.support.provider.LoginProvider;
 import com.chua.starter.oauth.server.support.resolver.SimpleLoggerResolver;
 import com.chua.starter.oauth.server.support.resolver.SimpleUserInfoResolver;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.DisposableBean;
@@ -38,7 +39,6 @@ import org.springframework.http.converter.xml.MappingJackson2XmlHttpMessageConve
 import org.springframework.web.method.support.HandlerMethodReturnValueHandler;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import jakarta.annotation.Resource;
 import java.util.*;
 
 /**
@@ -49,6 +49,7 @@ import java.util.*;
  * @since 2022/7/23 8:51
  */
 @Slf4j
+@RequiredArgsConstructor
 @EnableConfigurationProperties({AuthServerProperties.class, ThirdPartyBinderProperties.class, CasProperties.class, ThirdPartyLoginProperties.class})
 public class EnableAuthServerConfiguration implements BeanDefinitionRegistryPostProcessor,
         EnvironmentPostProcessor,
@@ -56,8 +57,7 @@ public class EnableAuthServerConfiguration implements BeanDefinitionRegistryPost
         ApplicationContextAware,
         DisposableBean, WebMvcConfigurer {
 
-    @Resource
-    private AuthServerProperties authServerProperties;
+    final AuthServerProperties authServerProperties;
     private List<HttpMessageConverter<?>> messageConverters;
 
 

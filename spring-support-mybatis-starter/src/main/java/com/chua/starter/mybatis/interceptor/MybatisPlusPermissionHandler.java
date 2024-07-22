@@ -7,6 +7,7 @@ import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.constant.DataFilterTypeEnum;
 import com.chua.starter.common.support.oauth.AuthService;
 import com.chua.starter.common.support.oauth.CurrentUser;
+import lombok.RequiredArgsConstructor;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.LongValue;
@@ -21,11 +22,9 @@ import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
 import net.sf.jsqlparser.statement.select.SubSelect;
 
-import jakarta.annotation.Resource;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -33,12 +32,12 @@ import java.util.stream.Collectors;
  * 数据处理器
  * @author CH
  */
+@RequiredArgsConstructor
 public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler {
 
     private static final String CREATE_BY = "rule_create_by";
     private static final String DEPT_ID = "rule_dept_id";
-    @Resource
-    private AuthService authService;
+    final  AuthService authService;
 
     @Override
     public Expression getSqlSegment(PlainSelect plainSelect, Expression where, String mappedStatementId) {
@@ -145,11 +144,7 @@ public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler
      * @return boolean
      */
     private static boolean isAdmin(Set<String> roles) {
-        if(roles.contains("ADMIN")) {
-            return true;
-        }
-        
-        return false;
+        return roles.contains("ADMIN");
     }
 
     /**

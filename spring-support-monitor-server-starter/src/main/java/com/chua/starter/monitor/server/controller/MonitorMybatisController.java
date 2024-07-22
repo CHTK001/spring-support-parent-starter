@@ -15,7 +15,6 @@ import com.chua.starter.mybatis.controller.AbstractSwaggerController;
 import com.github.xiaoymin.knife4j.annotations.Ignore;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.annotation.Resource;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.BindingResult;
@@ -37,10 +36,7 @@ public class MonitorMybatisController extends AbstractSwaggerController<MonitorM
 
     @Getter
     private final MonitorMybatisService service;
-    @Resource
     private final MonitorAppService monitorAppService;
-
-    @Resource
     private final MonitorServerFactory monitorServerFactory;
     /**
      * 添加数据

@@ -6,7 +6,7 @@ import com.chua.starter.common.support.mdc.RestTemplateTraceIdInterceptor;
 import com.chua.starter.common.support.processor.ResponseModelViewMethodProcessor;
 import com.chua.starter.common.support.properties.MdcProperties;
 import com.chua.starter.common.support.properties.MessageConverterProperties;
-import jakarta.annotation.Resource;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.boot.autoconfigure.web.servlet.WebMvcRegistrations;
@@ -36,13 +36,12 @@ import java.util.List;
  * @author CH
  */
 @Slf4j
+@RequiredArgsConstructor
 @EnableConfigurationProperties({MessageConverterProperties.class, MdcProperties.class})
 public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, ApplicationContextAware, WebMvcRegistrations {
 
-    @Resource
-    private MessageConverterProperties messageConverterProperties;
-    @Resource
-    private MdcProperties mdcProperties;
+    final MessageConverterProperties messageConverterProperties;
+    final MdcProperties mdcProperties;
     private List<HttpMessageConverter<?>> messageConverters;
 
     public void addReturnValueHandlers(List<HandlerMethodReturnValueHandler> handlers) {

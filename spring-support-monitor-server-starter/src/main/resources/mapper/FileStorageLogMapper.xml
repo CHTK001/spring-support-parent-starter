@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.monitor.server.mapper.FileStorageLogMapper">
+  <resultMap id="BaseResultMap" type="com.chua.starter.monitor.server.entity.FileStorageLog">
+    <!--@mbg.generated-->
+    <!--@Table file_storage_log-->
+    <id column="file_storage_log_id" jdbcType="INTEGER" property="fileStorageLogId" />
+    <result column="file_storage_id" jdbcType="INTEGER" property="fileStorageId" />
+    <result column="file_storage_log_address" jdbcType="VARCHAR" property="fileStorageLogAddress" />
+    <result column="file_storage_log_url" jdbcType="VARCHAR" property="fileStorageLogUrl" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    file_storage_log_id, file_storage_id, file_storage_log_address, file_storage_log_url
+  </sql>
+</mapper>

@@ -28,21 +28,18 @@ import com.chua.starter.monitor.server.mapper.MonitorAppMapper;
 import com.chua.starter.monitor.server.properties.MonitorServerProperties;
 import com.chua.starter.monitor.server.service.MonitorAppService;
 import com.chua.starter.monitor.server.service.MonitorLogService;
-import jakarta.annotation.Resource;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class MonitorAppServiceImpl extends ServiceImpl<MonitorAppMapper, MonitorApp> implements MonitorAppService{
-    @Resource
-    private MonitorServerFactory monitorServerFactory;
-    @Resource
-    private MonitorServerProperties monitorServerProperties;
-
-    @Resource
-    private MonitorLogService monitorLogService;
+    final MonitorServerFactory monitorServerFactory;
+    final MonitorServerProperties monitorServerProperties;
+    final MonitorLogService monitorLogService;
 
     @Override
     public Boolean upload(List<MonitorConfig> monitorConfig) {

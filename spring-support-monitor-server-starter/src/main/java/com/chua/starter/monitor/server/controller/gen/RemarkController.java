@@ -11,10 +11,10 @@ import com.chua.starter.monitor.server.entity.MonitorSysGenRemark;
 import com.chua.starter.monitor.server.service.MonitorSysGenRemarkService;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.annotation.Resource;
 import java.util.Arrays;
 
 /**
@@ -27,10 +27,10 @@ import java.util.Arrays;
 @SuppressWarnings("ALL")
 @Tag(name = "字段备注接口")
 @RequestMapping("v1/remark")
+@RequiredArgsConstructor
 public class RemarkController {
     
-    @Resource
-    private MonitorSysGenRemarkService sysGenRemarkService;
+    private final MonitorSysGenRemarkService sysGenRemarkService;
 
 
     /**

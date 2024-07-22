@@ -9,7 +9,7 @@ import com.chua.starter.monitor.request.MonitorRequest;
 import com.chua.starter.monitor.server.adaptor.Adaptor;
 import com.chua.starter.monitor.server.properties.MonitorServerProperties;
 import com.chua.starter.redis.support.service.TimeSeriesService;
-import jakarta.annotation.Resource;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
@@ -30,17 +30,15 @@ import java.util.concurrent.TimeUnit;
  */
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class Report implements InitializingBean, DisposableBean {
 
-    @Resource
-    private RedisTemplate stringRedisTemplate;
-    @Resource
-    private MonitorServerProperties monitorServerProperties;
+    final  RedisTemplate stringRedisTemplate;
+    final  MonitorServerProperties monitorServerProperties;
     private final ScheduledExecutorService scheduledExecutorService = ThreadUtils.newScheduledThreadPoolExecutor(2, "com-ch-monitor-core-thread");
 
 
-    @Resource
-    private TimeSeriesService timeSeriesService;
+    final  TimeSeriesService timeSeriesService;
     /**
      * 心跳
      *

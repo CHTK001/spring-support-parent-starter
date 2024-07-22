@@ -27,7 +27,7 @@ import com.chua.starter.monitor.server.query.TableQuery;
 import com.chua.starter.monitor.server.service.MonitorSysGenRemarkService;
 import com.chua.starter.monitor.server.service.MonitorSysGenService;
 import io.swagger.v3.oas.annotations.Operation;
-import jakarta.annotation.Resource;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -47,16 +47,12 @@ import static com.chua.common.support.constant.NameConstant.SYMBOL_EXCEPTION;
 @RestController
 @Slf4j
 @RequestMapping("v1/session")
+@RequiredArgsConstructor
 public class SessionController {
 
-    @Resource
-    private MonitorSysGenService sysGenService;
-
-    @Resource
-    private GenProperties genProperties;
-
-    @Resource
-    private MonitorSysGenRemarkService sysGenRemarkService;
+    final MonitorSysGenService sysGenService;
+    final GenProperties genProperties;
+    final MonitorSysGenRemarkService sysGenRemarkService;
 
     /**
      * 表格列表

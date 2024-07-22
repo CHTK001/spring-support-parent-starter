@@ -17,7 +17,7 @@ import com.chua.starter.monitor.server.request.ReportQuery;
 import com.chua.starter.monitor.server.resolver.ModuleResolver;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.annotation.Resource;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -33,15 +33,12 @@ import java.util.List;
 @RequestMapping
 @Tag(name = "上报数据接口")
 @RestController
+@RequiredArgsConstructor
 public class ReportController {
 
-    @Resource
-    private MonitorServerProperties monitorServerProperties;
-    @Resource
-    private MonitorServerFactory monitorServerFactory;
-
-    @Resource
-    private RemoteRequest remoteRequest;
+    private final MonitorServerProperties monitorServerProperties;
+    private final MonitorServerFactory monitorServerFactory;
+    private final RemoteRequest remoteRequest;
     @PostMapping("/report")
     @Operation(summary = "上报数据")
     @Ignore

@@ -1,7 +1,7 @@
 package com.chua.starter.common.support.configuration;
 
 import com.chua.starter.common.support.interceptor.address.AddressHandlerInterceptor;
-import jakarta.annotation.Resource;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -13,10 +13,10 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * @author CH
  * @since 2024/6/21
  */
+@RequiredArgsConstructor
 public class InterceptorWebMvcConfigurer implements WebMvcConfigurer {
 
-    @Resource
-    private ApplicationContext applicationContext;
+    final ApplicationContext applicationContext;
 
     /**
      * 配置拦截器

@@ -9,7 +9,7 @@ import com.chua.socketio.support.annotations.OnEvent;
 import com.chua.socketio.support.session.SocketSession;
 import com.chua.ssh.support.ssh.SshClient;
 import com.chua.starter.monitor.server.service.MonitorTerminalService;
-import jakarta.annotation.Resource;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 
 
@@ -21,10 +21,10 @@ import org.springframework.context.annotation.Configuration;
  * @since 2024/02/06
  */
 @Configuration
+@RequiredArgsConstructor
 public class TerminalSocketIOListener implements SocketIOListener {
 
-    @Resource
-    private MonitorTerminalService monitorTerminalService;
+    final  MonitorTerminalService monitorTerminalService;
     @OnEvent("terminal")
     public void onEvent(SocketSession session, JsonObject command) {
         String requestId = command.getString("requestId");

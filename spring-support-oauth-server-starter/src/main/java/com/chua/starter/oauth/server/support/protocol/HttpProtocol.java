@@ -5,17 +5,19 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.contants.AuthConstant;
 import com.chua.starter.oauth.client.support.entity.AuthRequest;
+import com.chua.starter.oauth.server.support.check.LoginCheck;
 import com.chua.starter.oauth.server.support.condition.OnBeanCondition;
 import com.chua.starter.oauth.server.support.information.AuthInformation;
 import com.chua.starter.oauth.server.support.parser.Authorization;
 import com.chua.starter.oauth.server.support.properties.AuthServerProperties;
 import com.chua.starter.oauth.server.support.provider.LoginProvider;
 import com.chua.starter.oauth.server.support.resolver.LoggerResolver;
-import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -33,16 +35,18 @@ import static com.chua.common.support.lang.code.ReturnCode.RESOURCE_OAUTH_ERROR;
 @Extension("http")
 @Conditional(OnBeanCondition.class)
 @RequestMapping("${plugin.auth.server.context-path:}")
+@RequiredArgsConstructor
 public class HttpProtocol implements Protocol, InitializingBean {
 
-    @Resource
-    private AuthServerProperties authServerProperties;
+    final AuthServerProperties authServerProperties;
 
-    @Resource
-    private LoginProvider loginProvider;
+    final LoginProvider loginProvider;
 
-    @Resource
-    private LoggerResolver loggerResolver;
+    final LoggerResolver loggerResolver;
+
+    final LoginCheck loginCheck;
+
+    final ApplicationContext applicationContext;
 
     @Value("${plugin.auth.server.context-path:}")
     private String contextPath;
@@ -57,7 +61,7 @@ public class HttpProtocol implements Protocol, InitializingBean {
     @ResponseBody
     public ReturnResult<String> oauth(@RequestBody AuthRequest request1, HttpServletRequest request, HttpServletResponse response) {
         String data = request1.getData();
-        AuthInformation authInformation = new AuthInformation(data, request, authServerProperties);
+        AuthInformation authInformation = new AuthInformation(data, request, authServerProperties, applicationContext, loginCheck);
         Authorization authorization = authInformation.resolve();
         String address = RequestUtils.getIpAddress(request);
 
@@ -93,7 +97,7 @@ public class HttpProtocol implements Protocol, InitializingBean {
     @PostMapping("/upgrade")
     @ResponseBody
     public ReturnResult<String> upgrade(@RequestParam("data") String data, HttpServletRequest request, HttpServletResponse response) {
-        AuthInformation authInformation = new AuthInformation(data, request, authServerProperties);
+        AuthInformation authInformation = new AuthInformation(data, request, authServerProperties, applicationContext, loginCheck);
         Authorization authorization = authInformation.resolve();
         String address = RequestUtils.getIpAddress(request);
 

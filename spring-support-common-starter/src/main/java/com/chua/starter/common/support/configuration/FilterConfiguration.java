@@ -4,7 +4,7 @@ import com.chua.starter.common.support.filter.ActuatorAuthenticationFilter;
 import com.chua.starter.common.support.filter.ParameterLogFilter;
 import com.chua.starter.common.support.properties.ActuatorProperties;
 import com.chua.starter.common.support.properties.CorsProperties;
-import jakarta.annotation.Resource;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -24,10 +24,10 @@ import org.springframework.web.filter.CorsFilter;
         CorsProperties.class,
 })
 @Slf4j
+@RequiredArgsConstructor
 public class FilterConfiguration {
 
-    @Resource
-    private CorsProperties corsProperties;
+    final CorsProperties corsProperties;
     /**
      * 跨域
      *

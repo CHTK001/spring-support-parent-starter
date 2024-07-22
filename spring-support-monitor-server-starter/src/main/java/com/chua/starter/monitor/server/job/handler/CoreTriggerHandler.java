@@ -9,9 +9,9 @@ import com.chua.starter.monitor.server.job.lock.JobLock;
 import com.chua.starter.monitor.server.job.scheduler.MisfireStrategyEnum;
 import com.chua.starter.monitor.server.job.trigger.JobTriggerPoolHelper;
 import com.chua.starter.monitor.server.properties.JobProperties;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import jakarta.annotation.Resource;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -27,11 +27,14 @@ import static com.chua.starter.monitor.server.job.handler.RingTriggerHandler.pus
  * @since 2024/03/08
  */
 @Slf4j
+@RequiredArgsConstructor
 public class CoreTriggerHandler implements TriggerHandler, Runnable {
+    private final JobProperties jobProperties;
     private volatile boolean scheduleThreadToStop = false;
 
 
     private Thread scheduleThread;
+
 
     @Override
     public void start() {
@@ -57,9 +60,6 @@ public class CoreTriggerHandler implements TriggerHandler, Runnable {
         }
 
     }
-
-    @Resource
-    private JobProperties jobProperties;
 
     @Override
     public void run() {

@@ -18,8 +18,7 @@ import com.github.xiaoymin.knife4j.annotations.Ignore;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.annotation.Resource;
-import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
@@ -37,17 +36,13 @@ import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
 @SuppressWarnings("ALL")
 @Tag(name = "项目接口")
 @Slf4j
+@RequiredArgsConstructor
 @RequestMapping("v1/project")
 public class ProjectController {
 
-    @Resource
-    private MonitorProjectVersionService monitorProjectVersionService;
-
-    @Getter
-    @Resource
-    private MonitorProjectService service;
-    @Resource
-    private SocketSessionTemplate socketSessionTemplate;
+    private final MonitorProjectVersionService monitorProjectVersionService;
+    private final MonitorProjectService service;
+    private final SocketSessionTemplate socketSessionTemplate;
 
 
     /**

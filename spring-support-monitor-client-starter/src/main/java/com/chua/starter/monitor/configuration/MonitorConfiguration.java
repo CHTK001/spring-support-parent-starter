@@ -179,8 +179,8 @@ public class MonitorConfiguration  implements BeanDefinitionRegistryPostProcesso
      */
     @Bean
     @ConditionalOnMissingBean
-    public RegisterCenterService registerCenterService() {
-        return new ProtocolRegisterCenterService();
+    public RegisterCenterService registerCenterService(Environment environment) {
+        return new ProtocolRegisterCenterService(environment);
     }
 
 
