@@ -14,8 +14,8 @@ import com.chua.starter.monitor.server.service.MonitorSysGenShellService;
 import com.chua.starter.mybatis.controller.AbstractSwaggerController;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.annotation.Resource;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -33,16 +33,13 @@ import java.util.concurrent.TimeUnit;
 @Tag(name = "终端接口")
 @Slf4j
 @RequestMapping("v1/shell")
+@RequiredArgsConstructor
 public class ShellController extends AbstractSwaggerController<MonitorSysGenShellService, MonitorSysGenShell> {
 
-    @Resource
-    private MonitorSysGenService sysGenService;
-
+    private final MonitorSysGenService sysGenService;
     @Getter
-    @Resource
-    private MonitorSysGenShellService service;
-    @Resource
-    private SocketSessionTemplate socketSessionTemplate;
+    private final MonitorSysGenShellService service;
+    private final SocketSessionTemplate socketSessionTemplate;
     /**
      * 关闭
      *

@@ -15,7 +15,6 @@ import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.monitor.server.entity.MonitorProxyLimitLog;
 import com.chua.starter.monitor.server.service.IptablesService;
 import com.chua.starter.monitor.server.service.MonitorProxyLimitLogService;
-import jakarta.annotation.Resource;
 import org.redisson.api.RedissonClient;
 
 import java.util.Date;
@@ -33,7 +32,7 @@ import java.util.concurrent.ExecutorService;
 @SpiOptional({"http-proxy", "proxy"})
 public class MonitorLimitChainFilter implements ChainFilter {
 
-    @Resource
+    @AutoInject
     private RedissonClient redisson;
     @Config("serverId")
     private String serverId;
@@ -42,9 +41,9 @@ public class MonitorLimitChainFilter implements ChainFilter {
     private LimitFactory limitFactory;
     private static final ExecutorService POOL = ThreadUtils.newVirtualThreadExecutor();
 
-    @Resource
+    @AutoInject
     private IptablesService iptablesService;
-    @Resource
+    @AutoInject
     private MonitorProxyLimitLogService monitorProxyLimitLogService;
 
     @Override

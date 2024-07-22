@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.function.Splitter;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.common.support.protocol.request.BadResponse;
 import com.chua.common.support.protocol.request.OkResponse;
 import com.chua.common.support.protocol.request.Request;
@@ -12,7 +13,6 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.server.entity.MonitorMybatis;
 import com.chua.starter.monitor.server.request.ReportQuery;
 import com.chua.starter.monitor.server.service.MonitorMybatisService;
-import jakarta.annotation.Resource;
 
 import java.util.List;
 
@@ -27,7 +27,7 @@ import java.util.List;
 public class MybatisSubscribeCommandAdaptor implements CommandAdaptor{
 
 
-    @Resource
+    @AutoInject
     private MonitorMybatisService monitorMybatisService;
 
 

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.monitor.server.mapper.FileStorageMapper">
+  <resultMap id="BaseResultMap" type="com.chua.starter.monitor.server.entity.FileStorage">
+    <!--@mbg.generated-->
+    <!--@Table file_storage-->
+    <id column="file_storage_id" jdbcType="INTEGER" property="fileStorageId" />
+    <result column="file_storage_name" jdbcType="VARCHAR" property="fileStorageName" />
+    <result column="file_storage_type" jdbcType="VARCHAR" property="fileStorageType" />
+    <result column="file_storage_user" jdbcType="VARCHAR" property="fileStorageUser" />
+    <result column="file_storage_password" jdbcType="VARCHAR" property="fileStoragePassword" />
+    <result column="file_storage_endpoint" jdbcType="VARCHAR" property="fileStorageEndpoint" />
+    <result column="file_storage_bucket" jdbcType="VARCHAR" property="fileStorageBucket" />
+    <result column="file_storage_protocol_id" jdbcType="INTEGER" property="fileStorageProtocolId" />
+    <result column="file_storage_status" jdbcType="INTEGER" property="fileStorageStatus" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    file_storage_id, file_storage_name, file_storage_type, file_storage_user, file_storage_password, 
+    file_storage_endpoint, file_storage_bucket, file_storage_protocol_id, file_storage_status
+  </sql>
+</mapper>

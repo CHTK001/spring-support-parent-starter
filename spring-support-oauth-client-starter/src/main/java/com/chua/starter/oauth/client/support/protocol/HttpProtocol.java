@@ -8,6 +8,7 @@ import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.robin.Node;
 import com.chua.common.support.lang.robin.Robin;
+import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.task.cache.Cacheable;
 import com.chua.common.support.task.cache.GuavaCacheable;
@@ -26,7 +27,6 @@ import com.chua.starter.oauth.client.support.infomation.AuthenticationInformatio
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.google.common.base.Strings;
-import jakarta.annotation.Resource;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import kong.unirest.HttpResponse;
@@ -50,7 +50,7 @@ import static com.chua.starter.oauth.client.support.infomation.Information.*;
 @Extension("http")
 public class HttpProtocol extends AbstractProtocol implements InitializingBean {
 
-    @Resource
+    @AutoInject
     private AuthClientProperties authClientProperties;
     private static Cacheable CACHEABLE;
     private String encryption;

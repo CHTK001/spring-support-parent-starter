@@ -8,7 +8,7 @@ import com.chua.common.support.protocol.request.Response;
 import com.chua.common.support.protocol.request.SenderRequest;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.monitor.factory.MonitorFactory;
-import jakarta.annotation.Resource;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -21,12 +21,12 @@ import org.springframework.core.env.Environment;
  * @version 1.0.0
  * @since 2024/02/05
  */
+@RequiredArgsConstructor
 public class ProtocolRegisterCenterService implements RegisterCenterService, ApplicationContextAware {
 
     private ProtocolClient protocolClient;
 
-    @Resource
-    private Environment environment;
+    final Environment environment;
 
     @Override
     public ServiceInstance getService(String appName) {

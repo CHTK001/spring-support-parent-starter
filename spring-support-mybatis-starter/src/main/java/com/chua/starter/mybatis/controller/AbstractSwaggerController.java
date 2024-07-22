@@ -7,9 +7,12 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.validator.group.SelectGroup;
 import com.chua.starter.mybatis.entity.PageRequest;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import io.swagger.v3.oas.annotations.Operation;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
@@ -31,7 +34,10 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> extend
     @ResponseBody
     @Operation(summary = "分页查询基础数据")
     @GetMapping("page")
-    public ReturnPageResult<T> page(PageRequest<T> page, T entity) {
+    public ReturnPageResult<T> page(PageRequest<T> page, @Validated(SelectGroup.class)  T entity, BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            return ReturnPageResult.error(bindingResult.getFieldError().getDefaultMessage());
+        }
         S service = getService();
         Page<T> tPage = service.page(page.createPage(), createWrapper(entity));
         return PageResultUtils.ok(tPage);
@@ -45,7 +51,10 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> extend
     @ResponseBody
     @Operation(summary = "查询基础数据")
     @GetMapping("list")
-    public ReturnResult<List<T>> list( T entity) {
+    public ReturnResult<List<T>> list(@Validated(SelectGroup.class) T entity, BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            return ReturnResult.error(bindingResult.getFieldError().getDefaultMessage());
+        }
         return ReturnResult.ok(getService().list( createWrapper(entity)));
     }
 

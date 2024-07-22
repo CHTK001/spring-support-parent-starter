@@ -3,9 +3,9 @@ package com.chua.starter.monitor.server.log;
 import com.chua.common.support.constant.Level;
 import com.chua.common.support.lang.date.DateUtils;
 import com.chua.common.support.log.Slf4jLog;
+import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.socketio.support.session.SocketSessionTemplate;
-import jakarta.annotation.Resource;
 
 /**
  * WebLog类实现了Log接口，用于记录网页的访问日志。
@@ -18,7 +18,7 @@ import jakarta.annotation.Resource;
 public class WebLog extends Slf4jLog {
 
     private final String pid;
-    @Resource
+    @AutoInject
     private SocketSessionTemplate socketSessionTemplate;
 
 

@@ -11,21 +11,20 @@ import com.chua.starter.monitor.server.entity.MonitorPatch;
 import com.chua.starter.monitor.server.mapper.MonitorPatchMapper;
 import com.chua.starter.monitor.server.properties.GenProperties;
 import com.chua.starter.monitor.server.service.MonitorPatchService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
-import jakarta.annotation.Resource;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
 @Service
+@RequiredArgsConstructor
 public class MonitorPatchServiceImpl extends ServiceImpl<MonitorPatchMapper, MonitorPatch> implements MonitorPatchService{
-    @Resource
-    private GenProperties genProperties;
-    @Resource
-    private TransactionTemplate transactionTemplate;
+    final GenProperties genProperties;
+    final TransactionTemplate transactionTemplate;
     @Override
     public Boolean removePatch(String id) {
         return transactionTemplate.execute(status -> {

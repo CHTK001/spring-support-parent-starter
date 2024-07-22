@@ -7,6 +7,7 @@ import com.chua.starter.mqtt.support.properties.MqttProperties;
 import com.chua.starter.mqtt.support.template.MqttTemplate;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -17,8 +18,6 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.util.ReflectionUtils;
 
-import jakarta.annotation.Resource;
-
 /**
  * mqtt
  * @author CH
@@ -26,7 +25,7 @@ import jakarta.annotation.Resource;
 @EnableConfigurationProperties(MqttProperties.class)
 public class MqttConfiguration implements ApplicationContextAware, SmartInstantiationAwareBeanPostProcessor {
 
-    @Resource
+    @Autowired
     private MqttProperties mqttProperties;
 
     private static final Log log = Log.getLogger(MqttConfiguration.class);
@@ -62,7 +61,6 @@ public class MqttConfiguration implements ApplicationContextAware, SmartInstanti
             } catch (MqttException e) {
                 throw new RuntimeException(e);
             }
-            return;
         }
     }
 }

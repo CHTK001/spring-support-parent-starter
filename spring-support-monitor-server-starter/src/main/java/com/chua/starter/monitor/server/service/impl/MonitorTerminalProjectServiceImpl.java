@@ -16,7 +16,7 @@ import com.chua.starter.monitor.server.entity.MonitorTerminalProject;
 import com.chua.starter.monitor.server.mapper.MonitorTerminalProjectMapper;
 import com.chua.starter.monitor.server.service.MonitorTerminalProjectService;
 import com.chua.starter.monitor.server.service.MonitorTerminalService;
-import jakarta.annotation.Resource;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -30,12 +30,11 @@ import java.util.List;
  * @since 2024/6/19
  */
 @Service
+@RequiredArgsConstructor
 public class MonitorTerminalProjectServiceImpl extends ServiceImpl<MonitorTerminalProjectMapper, MonitorTerminalProject> implements MonitorTerminalProjectService {
 
-    @Resource
-    private MonitorTerminalService monitorTerminalService;
-    @Resource
-    private SocketSessionTemplate socketSessionTemplate;
+    final MonitorTerminalService monitorTerminalService;
+    final SocketSessionTemplate socketSessionTemplate;
 
     @Override
     public ReturnResult<Boolean> runStartScript(MonitorTerminalProject monitorTerminalProject) {

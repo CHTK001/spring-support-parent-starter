@@ -10,7 +10,7 @@ import com.chua.starter.monitor.server.factory.MonitorServerFactory;
 import com.chua.starter.monitor.server.mapper.MonitorLimitMapper;
 import com.chua.starter.monitor.server.service.MonitorAppService;
 import com.chua.starter.monitor.server.service.MonitorLimitService;
-import jakarta.annotation.Resource;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -18,15 +18,13 @@ import java.util.List;
 import java.util.Set;
 
 @Service
+@RequiredArgsConstructor
 public class MonitorLimitServiceImpl extends ServiceImpl<MonitorLimitMapper, MonitorLimit> implements MonitorLimitService{
-    @Resource
-    private MonitorServerFactory monitorServerFactory;
+    final MonitorServerFactory monitorServerFactory;
 
-    @Resource
-    private MonitorAppService monitorAppService;
+    final MonitorAppService monitorAppService;
 
-    @Resource
-    private TransactionTemplate transactionTemplate;
+    final TransactionTemplate transactionTemplate;
     @Override
     public Boolean removeBatchByIdsAndNotify(Set<String> ids) {
 

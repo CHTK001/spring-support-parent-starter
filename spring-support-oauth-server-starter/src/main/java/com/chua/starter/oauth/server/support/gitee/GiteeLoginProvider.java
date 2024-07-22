@@ -12,6 +12,10 @@ import com.chua.starter.oauth.server.support.properties.AuthServerProperties;
 import com.chua.starter.oauth.server.support.properties.CasProperties;
 import com.chua.starter.oauth.server.support.properties.ThirdPartyLoginProperties;
 import com.chua.starter.oauth.server.support.resolver.LoggerResolver;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import me.zhyd.oauth.cache.AuthDefaultStateCache;
 import me.zhyd.oauth.cache.AuthStateCache;
 import me.zhyd.oauth.config.AuthConfig;
@@ -34,13 +38,9 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 
-import jakarta.annotation.Resource;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 /**
  * gitee绑定账号
@@ -49,24 +49,20 @@ import java.net.URLEncoder;
  */
 @Controller
 @Conditional(OnBeanCondition.class)
+@RequiredArgsConstructor
 @RequestMapping("${plugin.auth.server.context-path:/gitee/login}")
 public class GiteeLoginProvider implements InitializingBean , ApplicationContextAware {
 
     private GiteeService giteeService;
-    @Resource
-    CasProperties casProperties;
-    @Resource
-    private ThirdPartyLoginProperties thirdPartyLoginProperties;
+    final CasProperties casProperties;
+    final  ThirdPartyLoginProperties thirdPartyLoginProperties;
     private AuthGiteeRequest authRequest;
-    @Resource
-    private LoggerResolver loggerResolver;
-    @Resource
-    private LoginCheck loginCheck;
+    final  LoggerResolver loggerResolver;
+    final  LoginCheck loginCheck;
     @Value("${plugin.auth.server.context-path:}")
     private String contextPath;
-    @Resource
-    private AuthServerProperties authServerProperties;
-    private AuthStateCache authStateCache = AuthDefaultStateCache.INSTANCE;
+    final  AuthServerProperties authServerProperties;
+    private final AuthStateCache authStateCache = AuthDefaultStateCache.INSTANCE;
     /**
      * gitee页面
      *
@@ -99,10 +95,7 @@ public class GiteeLoginProvider implements InitializingBean , ApplicationContext
             view.setUrl(StringUtils.defaultString(callback, "/"));
         } else {
             Cookie cookie = null;
-            try {
-                cookie = new Cookie("Access-Message", URLEncoder.encode(URLEncoder.encode(LocaleUtils.getMessage("message.login.binder"), "UTF-8"), "UTF-8"));
-            } catch (UnsupportedEncodingException ignored) {
-            }
+            cookie = new Cookie("Access-Message", URLEncoder.encode(URLEncoder.encode(LocaleUtils.getMessage("message.login.binder"), StandardCharsets.UTF_8), StandardCharsets.UTF_8));
             cookie.setPath("/");
             NetAddress netAddress = NetAddress.of(callback);
             cookie.setDomain(netAddress.getHost());
@@ -121,11 +114,8 @@ public class GiteeLoginProvider implements InitializingBean , ApplicationContext
     @GetMapping("loginCodeType")
     public String gitee(@RequestParam("loginCode") String loginCode, String callback) {
         String state = AuthStateUtils.createState();
-        try {
-            authStateCache.cache(state + "_info", URLDecoder.decode(loginCode, "UTF-8"));
-            authStateCache.cache(state + "_callback", URLDecoder.decode(callback, "UTF-8"));
-        } catch (UnsupportedEncodingException ignored) {
-        }
+        authStateCache.cache(state + "_info", URLDecoder.decode(loginCode, StandardCharsets.UTF_8));
+        authStateCache.cache(state + "_callback", URLDecoder.decode(callback, StandardCharsets.UTF_8));
         return authRequest.authorize(state);
     }
 

@@ -22,6 +22,10 @@ import com.chua.starter.oauth.server.support.properties.AuthServerProperties;
 import com.chua.starter.oauth.server.support.resolver.LoggerResolver;
 import com.chua.starter.oauth.server.support.token.TokenResolver;
 import com.google.common.base.Strings;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Conditional;
@@ -30,10 +34,6 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import jakarta.annotation.Resource;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -52,18 +52,16 @@ import static com.chua.starter.oauth.client.support.contants.AuthConstant.*;
 @Controller
 @Conditional(OnBeanCondition.class)
 @SuppressWarnings("ALL")
+@RequiredArgsConstructor
 @RequestMapping("${plugin.auth.server.context-path:}")
 public class LoginProvider implements InitializingBean {
-    @Resource
-    private AuthServerProperties authServerProperties;
+    final  AuthServerProperties authServerProperties;
 
     @Value("${plugin.auth.server.context-path:}")
     private String contextPath;
 
-    @Resource
-    private LoginCheck loginCheck;
-    @Resource
-    private LoggerResolver loggerResolver;
+    final  LoginCheck loginCheck;
+    final  LoggerResolver loggerResolver;
     private String encryption;
     private String serviceKey;
 

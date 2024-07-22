@@ -2,6 +2,7 @@ package com.chua.starter.monitor.server.command;
 
 import com.chua.common.support.annotations.OnRouterEvent;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.monitor.request.MonitorRequest;
 import com.chua.starter.monitor.server.constant.MonitorConstant;
@@ -9,7 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
-import jakarta.annotation.Resource;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -23,10 +23,10 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class Heartbeat implements MonitorConstant {
 
-    @Resource
+    @AutoInject
     private RedisTemplate stringRedisTemplate;
 
-    @Resource
+    @AutoInject
     private SocketSessionTemplate socketSessionTemplate;
     /**
      * 心跳

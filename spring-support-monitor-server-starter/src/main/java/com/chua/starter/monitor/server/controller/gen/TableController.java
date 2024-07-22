@@ -29,7 +29,7 @@ import com.chua.starter.monitor.server.util.DatabaseHandler;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.annotation.Resource;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -52,18 +52,12 @@ import java.util.stream.Collectors;
 @Slf4j
 @RequestMapping("v1/table")
 @Tag(name = "表信息接口")
+@RequiredArgsConstructor
 public class TableController {
-    @Resource
-    private MonitorSysGenService sysGenService;
-
-    @Resource
-    private MonitorSysGenTableService sysGenTableService;
-
-    @Resource
-    private MonitorSysGenColumnService sysGenColumnService;
-
-    @Resource
-    private GenProperties genProperties;
+    private final MonitorSysGenService sysGenService;
+    private final MonitorSysGenTableService sysGenTableService;
+    private final MonitorSysGenColumnService sysGenColumnService;
+    private final GenProperties genProperties;
 
 
     /**

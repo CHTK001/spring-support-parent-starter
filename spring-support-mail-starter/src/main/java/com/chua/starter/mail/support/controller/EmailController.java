@@ -12,7 +12,7 @@ import jakarta.annotation.Resource;
 @RestController
 public class EmailController {
 
-    @Resource
+    @Autowired
     public EmailProperties emailProperties;
 
 

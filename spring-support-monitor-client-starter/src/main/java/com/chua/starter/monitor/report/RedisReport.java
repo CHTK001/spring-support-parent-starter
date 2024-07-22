@@ -3,9 +3,9 @@ package com.chua.starter.monitor.report;
 
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.annotations.SpiCondition;
+import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.redis.support.oshi.RedisOshi;
-import jakarta.annotation.Resource;
 import org.springframework.beans.BeansException;
 import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.context.ApplicationContext;
@@ -23,12 +23,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @SpiCondition("org.springframework.data.redis.core.RedisTemplate")
 public class RedisReport implements Report, AutoCloseable{
 
-    @Resource
+    @AutoInject
     private Environment environment;
-    @Resource
+    @AutoInject
     private ApplicationContext applicationContext;
 
-    @Resource
+    @AutoInject
     private RedisTemplate redisTemplate;
 
     private Jedis jedis;

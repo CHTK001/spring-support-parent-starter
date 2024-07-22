@@ -8,7 +8,6 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.properties.IpProperties;
 import com.chua.starter.monitor.server.service.IptablesService;
-import jakarta.annotation.Resource;
 import org.springframework.beans.BeansException;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
@@ -24,7 +23,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class IptablesServiceImpl implements IptablesService, ApplicationContextAware {
 
-    @Resource
     private IpProperties ipProperties;
 
     private IpPosition ipPosition;

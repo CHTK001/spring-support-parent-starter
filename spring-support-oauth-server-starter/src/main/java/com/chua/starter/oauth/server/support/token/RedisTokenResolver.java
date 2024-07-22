@@ -3,6 +3,7 @@ package com.chua.starter.oauth.server.support.token;
 import com.chua.common.support.annotations.Extension;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.IdUtils;
 import com.chua.common.support.utils.StringUtils;
@@ -13,7 +14,6 @@ import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.server.support.check.LoginCheck;
 import com.chua.starter.oauth.server.support.generation.TokenGeneration;
 import com.chua.starter.oauth.server.support.properties.AuthServerProperties;
-import jakarta.annotation.Resource;
 import jakarta.servlet.http.Cookie;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -32,12 +32,12 @@ import static com.chua.starter.oauth.client.support.contants.AuthConstant.TOKEN_
 @Extension("redis")
 public class RedisTokenResolver implements TokenResolver {
 
-    @Resource
+    @AutoInject
     private RedisTemplate stringRedisTemplate;
 
-    @Resource
+    @AutoInject
     private AuthServerProperties authServerProperties;
-    @Resource
+    @AutoInject
     private LoginCheck loginCheck;
 
     @Override

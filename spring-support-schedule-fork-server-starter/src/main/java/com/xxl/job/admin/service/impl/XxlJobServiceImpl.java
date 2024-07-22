@@ -15,11 +15,11 @@ import com.xxl.job.core.biz.model.ReturnT;
 import com.xxl.job.core.enums.ExecutorBlockStrategyEnum;
 import com.xxl.job.core.glue.GlueTypeEnum;
 import com.xxl.job.core.util.DateUtil;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import jakarta.annotation.Resource;
 import java.text.MessageFormat;
 import java.util.*;
 
@@ -28,19 +28,15 @@ import java.util.*;
  * @author xuxueli 2016-5-28 15:30:33
  */
 @Service
+@RequiredArgsConstructor
 public class XxlJobServiceImpl implements XxlJobService {
-	private static Logger logger = LoggerFactory.getLogger(XxlJobServiceImpl.class);
+	private static final Logger logger = LoggerFactory.getLogger(XxlJobServiceImpl.class);
 
-	@Resource
-	private XxlJobGroupDao xxlJobGroupDao;
-	@Resource
-	private XxlJobInfoDao xxlJobInfoDao;
-	@Resource
-	public XxlJobLogDao xxlJobLogDao;
-	@Resource
-	private XxlJobLogGlueDao xxlJobLogGlueDao;
-	@Resource
-	private XxlJobLogReportDao xxlJobLogReportDao;
+	final XxlJobGroupDao xxlJobGroupDao;
+	final XxlJobInfoDao xxlJobInfoDao;
+	public final XxlJobLogDao xxlJobLogDao;
+	final XxlJobLogGlueDao xxlJobLogGlueDao;
+	final XxlJobLogReportDao xxlJobLogReportDao;
 	
 	@Override
 	public Map<String, Object> pageList(int start, int length, int jobGroup, int triggerStatus, String jobDesc, String executorHandler, String author) {

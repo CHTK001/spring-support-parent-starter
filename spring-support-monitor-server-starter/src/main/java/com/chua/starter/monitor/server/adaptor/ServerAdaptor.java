@@ -1,9 +1,8 @@
 package com.chua.starter.monitor.server.adaptor;
 
+import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.monitor.server.pojo.ServiceTarget;
-
-import jakarta.annotation.Resource;
 
 /**
  * jvm适配器
@@ -14,7 +13,7 @@ import jakarta.annotation.Resource;
  */
 public class ServerAdaptor implements Adaptor<ServiceTarget> {
 
-    @Resource
+    @AutoInject
     private SocketSessionTemplate socketSessionTemplate;
     @Override
     public void doAdaptor(ServiceTarget serviceTarget) {
