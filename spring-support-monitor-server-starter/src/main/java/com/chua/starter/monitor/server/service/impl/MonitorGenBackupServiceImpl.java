@@ -26,7 +26,6 @@ import com.chua.starter.monitor.server.entity.MonitorSysGen;
 import com.chua.starter.monitor.server.mapper.MonitorSysGenMapper;
 import com.chua.starter.monitor.server.query.LogTimeQuery;
 import com.chua.starter.monitor.server.service.MonitorGenBackupService;
-import com.chua.starter.monitor.server.service.MonitorSysGenService;
 import com.chua.starter.redis.support.service.RedisSearchService;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.stereotype.Service;
@@ -51,14 +50,14 @@ import static com.chua.starter.redis.support.service.impl.RedisSearchServiceImpl
 public class MonitorGenBackupServiceImpl extends ServiceImpl<MonitorSysGenMapper, MonitorSysGen> implements MonitorGenBackupService, InitializingBean {
     private static final Map<Integer, Backup> BACKUP_MAP = new ConcurrentHashMap<>();
 
-    private final MonitorSysGenService sysGenService;
+    private final MonitorSysGenMapper monitorSysGenMapper;
     private final SocketSessionTemplate socketSessionTemplate;
 
     private final RedisSearchService redisSearchService;
     private final TransactionTemplate transactionTemplate;
 
-    public MonitorGenBackupServiceImpl(MonitorSysGenService sysGenService, SocketSessionTemplate socketSessionTemplate, RedisSearchService redisSearchService, TransactionTemplate transactionTemplate) {
-        this.sysGenService = sysGenService;
+    public MonitorGenBackupServiceImpl(MonitorSysGenMapper monitorSysGenMapper, SocketSessionTemplate socketSessionTemplate, RedisSearchService redisSearchService, TransactionTemplate transactionTemplate) {
+        this.monitorSysGenMapper = monitorSysGenMapper;
         this.socketSessionTemplate = socketSessionTemplate;
         this.redisSearchService = redisSearchService;
         this.transactionTemplate = transactionTemplate;
@@ -120,7 +119,7 @@ public class MonitorGenBackupServiceImpl extends ServiceImpl<MonitorSysGenMapper
             }
             BACKUP_MAP.put(monitorSysGen.getGenId(), backup);
             monitorSysGen.setGenBackupStatus(1);
-            sysGenService.updateById(monitorSysGen);
+            monitorSysGenMapper.updateById(monitorSysGen);
             return true;
         })));
     }
@@ -176,7 +175,7 @@ public class MonitorGenBackupServiceImpl extends ServiceImpl<MonitorSysGenMapper
                 }
             }
             monitorSysGen.setGenBackupStatus(0);
-            sysGenService.updateById(monitorSysGen);
+            monitorSysGenMapper.updateById(monitorSysGen);
             return true;
         })));
     }
@@ -184,7 +183,7 @@ public class MonitorGenBackupServiceImpl extends ServiceImpl<MonitorSysGenMapper
     public byte[] downloadBackup(Integer genId, Date startDay, Date endDay) {
         Backup backup = BACKUP_MAP.get(genId);
         if(null == backup) {
-            MonitorSysGen monitorSysGen = sysGenService.getById(genId);
+            MonitorSysGen monitorSysGen = monitorSysGenMapper.selectById(genId);
             Map<String, Class<Backup>> stringClassMap = ServiceProvider.of(Backup.class).listType();
             Dialect driver = DialectFactory.createDriver(monitorSysGen.getGenDriver());
             if (!stringClassMap.containsKey(driver.protocol().toUpperCase())) {
@@ -252,7 +251,7 @@ public class MonitorGenBackupServiceImpl extends ServiceImpl<MonitorSysGenMapper
     public void afterPropertiesSet() throws Exception {
         ThreadUtils.newStaticThreadPool().execute(() -> {
             ThreadUtils.sleep(400);
-            List<MonitorSysGen> list = sysGenService.list(Wrappers.<MonitorSysGen>lambdaQuery().eq(MonitorSysGen::getGenBackupStatus, 1));
+            List<MonitorSysGen> list = monitorSysGenMapper.selectList(Wrappers.<MonitorSysGen>lambdaQuery().eq(MonitorSysGen::getGenBackupStatus, 1));
             for (MonitorSysGen monitorSysGen : list) {
                 try {
                     monitorSysGen.setGenBackupStatus(0);
