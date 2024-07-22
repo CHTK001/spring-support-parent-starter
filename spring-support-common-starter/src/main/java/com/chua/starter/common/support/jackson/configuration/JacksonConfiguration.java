@@ -12,6 +12,10 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.deser.DeserializationProblemHandler;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
+import org.springframework.boot.jackson.JsonMixinModule;
 import org.springframework.context.annotation.Bean;
 
 import java.io.IOException;
@@ -31,6 +35,10 @@ public class JacksonConfiguration  {
 //        objectMapper.configure(DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         // or jackson 2.0
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        objectMapper.registerModule(new Jdk8Module());
+        objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.registerModule(new JsonMixinModule());
+        objectMapper.registerModule(new ParameterNamesModule());
         objectMapper.addHandler(new NullableFieldsDeserializationProblemHandler());
         return objectMapper;
     }
