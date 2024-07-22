@@ -23,6 +23,7 @@ import com.chua.ssh.support.ssh.SshClient;
 import com.chua.ssh.support.ssh.SshSession;
 import com.chua.starter.monitor.server.entity.MonitorTerminal;
 import com.chua.starter.monitor.server.entity.MonitorTerminalBase;
+import com.chua.starter.monitor.server.mapper.MonitorTerminalBaseMapper;
 import com.chua.starter.monitor.server.mapper.MonitorTerminalMapper;
 import com.chua.starter.monitor.server.service.*;
 import com.chua.starter.redis.support.service.TimeSeriesService;
@@ -63,7 +64,7 @@ public class MonitorTerminalServiceImpl extends ServiceImpl<MonitorTerminalMappe
     final TimeSeriesService timeSeriesService;
     final TransactionTemplate transactionTemplate;
     final IptablesService iptablesService;
-    final MonitorTerminalBaseService monitorTerminalBaseService;
+    final MonitorTerminalBaseMapper monitorTerminalBaseMapper;
     final MonitorProxyConfigService monitorProxyConfigService;
     final MonitorProxyPluginService monitorProxyPluginService;
     final MonitorProxyPluginConfigService monitorProxyPluginConfigService;
@@ -190,7 +191,7 @@ public class MonitorTerminalServiceImpl extends ServiceImpl<MonitorTerminalMappe
 
     @Override
     public List<MonitorTerminalBase> base(MonitorTerminal monitorTerminal) {
-        return monitorTerminalBaseService.list(Wrappers.<MonitorTerminalBase>lambdaQuery()
+        return monitorTerminalBaseMapper.selectList(Wrappers.<MonitorTerminalBase>lambdaQuery()
                 .eq(MonitorTerminalBase::getTerminalId, monitorTerminal.getTerminalId()));
     }
 
@@ -280,7 +281,7 @@ public class MonitorTerminalServiceImpl extends ServiceImpl<MonitorTerminalMappe
 
     private MonitorTerminalBase checkRelease(String name, String value, MonitorTerminal monitorTerminal, String desc) {
         try {
-            MonitorTerminalBase monitorTerminalBase = monitorTerminalBaseService.getOne(Wrappers.<MonitorTerminalBase>lambdaQuery()
+            MonitorTerminalBase monitorTerminalBase = monitorTerminalBaseMapper.selectOne(Wrappers.<MonitorTerminalBase>lambdaQuery()
                     .eq(MonitorTerminalBase::getTerminalId, monitorTerminal.getTerminalId())
                     .eq(MonitorTerminalBase::getBaseName, name)
             );
@@ -290,11 +291,11 @@ public class MonitorTerminalServiceImpl extends ServiceImpl<MonitorTerminalMappe
                 monitorTerminalBase.setTerminalId(monitorTerminal.getTerminalId());
                 monitorTerminalBase.setBaseValue(value);
                 monitorTerminalBase.setBaseDesc(desc);
-                monitorTerminalBaseService.save(monitorTerminalBase);
+                monitorTerminalBaseMapper.insert(monitorTerminalBase);
                 return monitorTerminalBase;
             }
             monitorTerminalBase.setBaseValue(value);
-            monitorTerminalBaseService.updateById(monitorTerminalBase);
+            monitorTerminalBaseMapper.updateById(monitorTerminalBase);
             return monitorTerminalBase;
         } catch (Exception ignored) {
         }
