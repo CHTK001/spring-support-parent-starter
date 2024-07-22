@@ -12,9 +12,9 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.monitor.server.entity.FileStorage;
 import com.chua.starter.monitor.server.entity.FileStorageProtocol;
+import com.chua.starter.monitor.server.mapper.FileStorageMapper;
 import com.chua.starter.monitor.server.mapper.FileStorageProtocolMapper;
 import com.chua.starter.monitor.server.service.FileStorageProtocolService;
-import com.chua.starter.monitor.server.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.stereotype.Service;
@@ -35,7 +35,7 @@ public class FileStorageProtocolServiceImpl extends ServiceImpl<FileStorageProto
     private static final Map<String, Server> SERVER_MAP = new ConcurrentHashMap<>();
     private static final Map<String, FileStorageChainFilter.FileStorageFactory> SERVER_FACTORY_FILTER_MAP = new ConcurrentHashMap<>();
     final TransactionTemplate transactionTemplate;
-    final FileStorageService fileStorageService;
+    final FileStorageMapper fileStorageMapper;
 
     @Override
     public ReturnResult<Boolean> start(FileStorageProtocol fileStorageProtocol) {
@@ -75,7 +75,7 @@ public class FileStorageProtocolServiceImpl extends ServiceImpl<FileStorageProto
      * @param fileStorageProtocol
      */
     private void registerFileStorage(FileStorageProtocol fileStorageProtocol) {
-        List<FileStorage> list = fileStorageService.list(Wrappers.<FileStorage>lambdaQuery().eq(FileStorage::getFileStorageProtocolId, fileStorageProtocol.getFileStorageProtocolId())
+        List<FileStorage> list = fileStorageMapper.selectList(Wrappers.<FileStorage>lambdaQuery().eq(FileStorage::getFileStorageProtocolId, fileStorageProtocol.getFileStorageProtocolId())
                 .eq(FileStorage::getFileStorageStatus, 1)
         );
         for (FileStorage fileStorage : list) {
