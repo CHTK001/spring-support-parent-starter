@@ -18,8 +18,9 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.time.Duration;
 
-import static com.chua.starter.common.support.constant.Constant.REDIS_CACHE;
+import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE;
 import static com.chua.starter.common.support.constant.Constant.REDIS_CACHE_HOUR;
+import static com.chua.starter.common.support.constant.Constant.REDIS_CACHE_MIN;
 
 /**
  * 缓存配置
@@ -35,7 +36,7 @@ public class CacheConfiguration {
      * @param factory 工厂
      * @return {@link CacheManager}
      */
-    @Bean(REDIS_CACHE)
+    @Bean(REDIS_CACHE_MIN)
     public CacheManager systemCacheManager600(RedisConnectionFactory factory) {
         return createRedisCacheManager(factory, 600);
     }
@@ -45,9 +46,19 @@ public class CacheConfiguration {
      * @param factory 工厂
      * @return {@link CacheManager}
      */
-    @Bean(REDIS_CACHE_HOUR)
+    @Bean({REDIS_CACHE_HOUR})
     public CacheManager systemCacheManager(RedisConnectionFactory factory) {
         return createRedisCacheManager(factory, 3600);
+    }
+    /**
+     * 系统缓存经理
+     *
+     * @param factory 工厂
+     * @return {@link CacheManager}
+     */
+    @Bean({REDIS_CACHE})
+    public CacheManager redis86400CacheManager(RedisConnectionFactory factory) {
+        return createRedisCacheManager(factory, 86400);
     }
     /**
      * 创建redis缓存管理器

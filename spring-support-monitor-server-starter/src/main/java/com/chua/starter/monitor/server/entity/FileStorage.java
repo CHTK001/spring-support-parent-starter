@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.chua.common.support.oss.setting.BucketSetting;
+import com.chua.common.support.oss.setting.WebdavCookieSetting;
+import com.chua.common.support.utils.StringUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -18,7 +20,7 @@ import java.io.Serializable;
 /**
  *
  *
- * @since 2024/7/22 
+ * @since 2024/7/23 
  * @author CH
  */
 
@@ -37,13 +39,22 @@ public class FileStorage implements Serializable {
     private Integer fileStorageId;
 
     /**
-     * 文件存储名称
+     * 文件存储路径
      */
     @TableField(value = "file_storage_name")
-    @ApiModelProperty(value = "文件存储名称")
-    @Schema(description = "文件存储名称")
-    @Size(max = 255, message = "文件存储名称最大长度要小于 255")
+    @ApiModelProperty(value = "文件存储路径")
+    @Schema(description = "文件存储路径")
+    @Size(max = 255, message = "文件存储路径最大长度要小于 255")
     private String fileStorageName;
+
+    /**
+     * 存储名称
+     */
+    @TableField(value = "file_storage_desc")
+    @ApiModelProperty(value = "存储名称")
+    @Schema(description = "存储名称")
+    @Size(max = 255, message = "存储名称最大长度要小于 255")
+    private String fileStorageDesc;
 
     /**
      * 实现类型
@@ -73,6 +84,15 @@ public class FileStorage implements Serializable {
     private String fileStoragePassword;
 
     /**
+     * 图表
+     */
+    @TableField(value = "file_storage_icon")
+    @ApiModelProperty(value = "图表")
+    @Schema(description = "图表")
+    @Size(max = 255, message = "图表最大长度要小于 255")
+    private String fileStorageIcon;
+
+    /**
      * 远程访问端点
      */
     @TableField(value = "file_storage_endpoint")
@@ -91,11 +111,11 @@ public class FileStorage implements Serializable {
     private String fileStorageBucket;
 
     /**
-     * 服务器协议; HTTP
+     * 服务器协议;
      */
     @TableField(value = "file_storage_protocol_id")
-    @ApiModelProperty(value = "服务器协议; HTTP")
-    @Schema(description = "服务器协议; HTTP")
+    @ApiModelProperty(value = "服务器协议; ")
+    @Schema(description = "服务器协议; ")
     private Integer fileStorageProtocolId;
 
     /**
@@ -106,12 +126,34 @@ public class FileStorage implements Serializable {
     @Schema(description = "状态;0:停用")
     private Integer fileStorageStatus;
 
+    /**
+     * cookie
+     */
+    @TableField(value = "file_storage_cookie")
+    @ApiModelProperty(value = "cookie")
+    @Schema(description = "cookie")
+    private String fileStorageCookie;
+
     private static final long serialVersionUID = 1L;
 
     @JsonIgnore
     public BucketSetting createBucketSetting() {
         return BucketSetting.builder()
                 .accessKeyId(fileStorageUser)
+                .accessKeySecret(fileStoragePassword)
+                .bucket(fileStorageBucket)
+                .endpoint(fileStorageEndpoint)
+                .region(fileStorageEndpoint)
+                .build();
+    }
+    @JsonIgnore
+    public WebdavCookieSetting createBucketCookieSetting() {
+        if(StringUtils.isEmpty(fileStorageCookie)) {
+            throw new IllegalArgumentException("cookie 不能为空");
+        }
+        return WebdavCookieSetting.builder()
+                .accessKeyId(fileStorageUser)
+                .cookie(fileStorageCookie)
                 .accessKeySecret(fileStoragePassword)
                 .bucket(fileStorageBucket)
                 .endpoint(fileStorageEndpoint)

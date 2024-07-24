@@ -2,6 +2,7 @@ package com.chua.starter.common.support.configuration;
 
 import com.chua.starter.common.support.properties.CaptchaProperties;
 import com.chua.starter.common.support.properties.OptionalProperties;
+import com.chua.starter.common.support.properties.SpiProperties;
 import com.chua.starter.common.support.provider.CaptchaProvider;
 import com.chua.starter.common.support.provider.OptionalProvider;
 import lombok.extern.slf4j.Slf4j;
@@ -30,8 +31,8 @@ public class CaptchaConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = OptionalProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = true)
-    public OptionalProvider optionalProvider() {
+    public OptionalProvider optionalProvider(SpiProperties spiProperties) {
         log.info(">>>>>>> 开启SPI选项接口");
-        return new OptionalProvider();
+        return new OptionalProvider(spiProperties);
     }
 }

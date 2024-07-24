@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.server.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.chua.common.support.chain.filter.FileStorageChainFilter;
 import com.chua.common.support.constant.Action;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.server.entity.FileStorage;
@@ -38,7 +39,7 @@ public interface FileStorageProtocolService extends IService<FileStorageProtocol
      *
      * @param fileStorageProtocolId 监控代理实例的ID，不能为空。
      */
-    void refresh(String fileStorageProtocolId);
+    void refresh(Integer fileStorageProtocolId);
 
     /**
      * 更新监控代理。
@@ -57,4 +58,11 @@ public interface FileStorageProtocolService extends IService<FileStorageProtocol
      * @return boolean 返回更新结果，成功为true，失败为false。
      */
     Boolean updateFor(FileStorage t, Action action);
+
+    /**
+     * 获取工厂
+     * @param fileStorage 文件存储
+     * @return 工厂
+     */
+    FileStorageChainFilter.FileStorageFactory getFactory(FileStorage fileStorage);
 }

@@ -11,8 +11,11 @@ import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.properties.OptionalProperties;
+import com.chua.starter.common.support.properties.SpiProperties;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -23,6 +26,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import static com.chua.starter.common.support.constant.CacheConstant.SYSTEM;
+
 /**
  * 获取选项
  *
@@ -32,8 +37,10 @@ import java.util.Map;
 @Slf4j
 @RequestMapping("/v1/option")
 @ConditionalOnProperty(prefix = OptionalProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = true)
+@RequiredArgsConstructor
 public class OptionalProvider {
 
+    private final SpiProperties spiProperties;
     /**
      * 获取选项
      *
@@ -41,13 +48,14 @@ public class OptionalProvider {
      * @return 获取选项
      */
     @GetMapping("objects/get")
+    @Cacheable(cacheManager = SYSTEM, cacheNames = SYSTEM, key = "'OPTION:OBJECT_GET' + #type + '' + #name")
     public ReturnResult<List<SpiOption>> objects(String type, @RequestParam(required =false) String name) {
         if(StringUtils.isBlank(type)) {
             return ReturnResult.error();
         }
 
         type = StringUtils.utf8Str(Base64.getDecoder().decode(type));
-        Class<?> aClass = ClassUtils.toType(type);
+        Class<?> aClass = ClassUtils.toType(getType(type));
         Map<String, ?> beanOfTypes = ObjectContext.getInstance().getBeanOfTypes(aClass);
         List<SpiOption> options = MapUtils.mapToList(beanOfTypes, (key, value) -> {
             ServiceDefinition serviceDefinition = ServiceDefinitionUtils.buildDefinitionAlias(aClass, null, value, value.getClass(), null, key, 0);
@@ -63,6 +71,21 @@ public class OptionalProvider {
 
         return ReturnResult.success(options);
     }
+
+    /**
+     * 获取选项
+     *
+     * @param type 类型
+     * @return 获取选项
+     */
+    private String getType(String type) {
+        if(spiProperties.isEnable()) {
+            return MapUtils.getString(spiProperties.getMapping(), type);
+        }
+
+        return type;
+    }
+
     /**
      * 获取选项
      *
@@ -70,13 +93,14 @@ public class OptionalProvider {
      * @return 获取选项
      */
     @GetMapping("get")
+    @Cacheable(cacheManager = SYSTEM, cacheNames = SYSTEM, key = "'OPTION:GET' + #type + '' + #name")
     public ReturnResult<List<SpiOption>> get(String type, @RequestParam(required =false) String name) {
         if(StringUtils.isBlank(type)) {
             return ReturnResult.error();
         }
 
         type = StringUtils.utf8Str(Base64.getDecoder().decode(type));
-        List<SpiOption> options = ServiceProvider.of(type).options();
+        List<SpiOption> options = ServiceProvider.of(getType(type)).options();
         if(!StringUtils.isBlank(name)) {
             List<SpiOption> collect = options.stream().filter(spiOption -> ArrayUtils.containsIgnoreCase(spiOption.getSupportedTypes(), name) || StringUtils.containsIgnoreCase(spiOption.getName(), name)).toList();
              return ReturnResult.success(collect);
@@ -91,21 +115,21 @@ public class OptionalProvider {
      * @return 获取选项
      */
     @GetMapping("list")
+    @Cacheable(cacheManager = SYSTEM, cacheNames = SYSTEM, key = "'OPTION:LIST' + #type + '' + #name")
     public ReturnResult<Map<String, List<SpiOption>>> list(String type, @RequestParam(required =false) String name) {
         if(StringUtils.isBlank(type)) {
             return ReturnResult.error();
         }
 
-        String[] split = type.split(",");
+        String[] split = StringUtils.utf8Str(Base64.getDecoder().decode(type)).split(",");
         Map<String, List<SpiOption>> map = MapUtils.newHashMap();
         for (String s : split) {
-            s = StringUtils.utf8Str(Base64.getDecoder().decode(s));
-            List<SpiOption> options = ServiceProvider.of(s).options();
+            List<SpiOption> options = ServiceProvider.of(getType(s)).options();
             if(!StringUtils.isBlank(name)) {
                 loop: for (SpiOption option : options) {
                     if(StringUtils.equalsIgnoreCase(option.getName(), name)) {
                         map.put(s, Collections.singletonList(option));
-                        break loop;
+                        break;
                     }
                 }
                 continue;
