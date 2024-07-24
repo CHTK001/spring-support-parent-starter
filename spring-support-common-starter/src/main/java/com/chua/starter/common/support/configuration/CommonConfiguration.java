@@ -30,7 +30,9 @@ import org.springframework.web.client.RestTemplate;
         LogProperties.class,
         ParameterProperties.class,
         ActuatorProperties.class,
-        ExternalInterfaceProperties.class
+        ExternalInterfaceProperties.class,
+        SpiProperties.class,
+        CacheProperties.class
 })
 public class CommonConfiguration {
     @Bean

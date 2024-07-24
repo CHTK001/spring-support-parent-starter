@@ -1,6 +1,9 @@
 package com.chua.starter.monitor.server.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.chua.common.support.chain.filter.FileStorageChainFilter;
+import com.chua.common.support.oss.request.ListObjectRequest;
+import com.chua.common.support.oss.result.ListObjectResult;
 import com.chua.starter.monitor.server.entity.FileStorage;
 import com.chua.starter.monitor.server.mapper.FileStorageMapper;
 import com.chua.starter.monitor.server.service.FileStorageProtocolService;
@@ -61,5 +64,16 @@ public class FileStorageServiceImpl extends ServiceImpl<FileStorageMapper, FileS
             fileStorageProtocolService.updateFor(t, CREATE);
             return true;
         });
+    }
+
+    @Override
+    public ListObjectResult viewer(Integer fileStorageId, String path, Integer limit, String marker) {
+        FileStorage fileStorage = baseMapper.selectById(fileStorageId);
+        FileStorageChainFilter.FileStorageFactory factory = fileStorageProtocolService.getFactory(fileStorage);
+        if(null == factory) {
+            return ListObjectResult.EMPTY;
+        }
+        com.chua.common.support.oss.FileStorage fileStorage1 = factory.get(fileStorage.getFileStorageBucket());
+        return fileStorage1.listObject(ListObjectRequest.builder().filePath(path).limit(limit).marker(marker).build());
     }
 }

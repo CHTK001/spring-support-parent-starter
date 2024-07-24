@@ -6,7 +6,7 @@ import org.apache.ibatis.annotations.Mapper;
 
 /**
  * @author CH
- * @since 2024/7/22
+ * @since 2024/7/23
  */
 @Mapper
 public interface FileStorageProtocolMapper extends BaseMapper<FileStorageProtocol> {

@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.configuration;
 
+import com.chua.starter.common.support.cache.CustomCacheManager;
 import com.chua.starter.common.support.constant.Constant;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
@@ -11,14 +12,14 @@ import org.springframework.cache.interceptor.SimpleCacheErrorHandler;
 import org.springframework.context.annotation.Bean;
 
 /**
- * Cache
+ * Cache缓存
  *
  * @author CH
  */
 @Slf4j
 public class CacheConfiguration extends CachingConfigurerSupport implements Constant {
 
-    public static final String DEFAULT_CACHE_MANAGER = "default-cache-manager";
+    public static final String DEFAULT_CACHE_MANAGER = "default";
 
     private static final CacheManager CACHE_MANAGER = new CaffeineCacheManager();
 
@@ -35,9 +36,9 @@ public class CacheConfiguration extends CachingConfigurerSupport implements Cons
         return CACHE_MANAGER;
     }
 
-    @Bean(SYSTEM)
+    @Bean({SYSTEM})
     public CacheManager systemCacheManager() {
-        return new CaffeineCacheManager();
+        return new CustomCacheManager();
     }
 
     /**
@@ -78,4 +79,5 @@ public class CacheConfiguration extends CachingConfigurerSupport implements Cons
             super.handleCacheClearError(exception, cache);
         }
     }
+
 }
