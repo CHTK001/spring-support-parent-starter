@@ -4,7 +4,7 @@ import com.chua.common.support.geo.GeoCity;
 import com.chua.common.support.lang.code.ReturnResult;
 import org.springframework.cache.annotation.Cacheable;
 
-import static com.chua.starter.common.support.constant.Constant.REDIS_CACHE;
+import static com.chua.starter.common.support.constant.Constant.REDIS_CACHE_MIN;
 
 /**
  * ip
@@ -20,7 +20,7 @@ public interface IptablesService {
      * @param address 地址
      * @return {@link ReturnResult}<{@link GeoCity}>
      */
-    @Cacheable(cacheManager = REDIS_CACHE, cacheNames = REDIS_CACHE, key = "#address")
+    @Cacheable(cacheManager = REDIS_CACHE_MIN, cacheNames = REDIS_CACHE_MIN, key = "#address")
     ReturnResult<GeoCity> transferAddress(String address);
     /**
      * 翻译地址

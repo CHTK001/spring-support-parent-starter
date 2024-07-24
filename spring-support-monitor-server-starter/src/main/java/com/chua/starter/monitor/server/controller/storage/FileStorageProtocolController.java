@@ -30,8 +30,8 @@ import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
  * @since 2024/5/13
  */
 @RestController
-@RequestMapping("v1/file/storage")
-@Tag(name = "文件存储")
+@RequestMapping("v1/file/storage/protocol")
+@Tag(name = "文件存储 - 协议")
 @RequiredArgsConstructor
 public class FileStorageProtocolController {
 
@@ -93,6 +93,9 @@ public class FileStorageProtocolController {
         if(bindingResult.hasErrors()) {
             return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
+        t.setFileStorageProtocolUaOpen(0);
+        t.setFileStorageProtocolPluginOpen(0);
+        t.setFileStorageProtocolSettingOpen(0);
         fileStorageProtocolService.save(t);
         return ReturnResult.ok(t);
     }

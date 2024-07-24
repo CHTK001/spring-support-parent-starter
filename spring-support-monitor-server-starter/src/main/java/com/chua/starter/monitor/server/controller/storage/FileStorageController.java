@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.function.Splitter;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.common.support.validator.group.SelectGroup;
 import com.chua.common.support.validator.group.UpdateGroup;
@@ -31,7 +32,7 @@ import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
  * @since 2024/5/13
  */
 @RestController
-@RequestMapping("v1/file")
+@RequestMapping("v1/file/storage")
 @Tag(name = "文件存储")
 @RequiredArgsConstructor
 public class FileStorageController {
@@ -108,7 +109,10 @@ public class FileStorageController {
         if(bindingResult.hasErrors()) {
             return ReturnPageResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
-        Page<FileStorage> tPage = fileStorageService.page(page.createPage(), Wrappers.<FileStorage>lambdaQuery().eq(FileStorage::getFileStorageProtocolId, entity.getFileStorageProtocolId()));
+        Page<FileStorage> tPage = fileStorageService.page(page.createPage(), Wrappers.<FileStorage>lambdaQuery()
+                .eq(FileStorage::getFileStorageProtocolId, entity.getFileStorageProtocolId())
+                .like(StringUtils.isNotBlank(entity.getFileStorageName()), FileStorage::getFileStorageName, entity.getFileStorageName())
+        );
         return PageResultUtils.ok(tPage);
     }
 

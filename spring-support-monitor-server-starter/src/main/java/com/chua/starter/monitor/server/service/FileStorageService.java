@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.server.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.chua.common.support.oss.result.ListObjectResult;
 import com.chua.starter.monitor.server.entity.FileStorage;
 
 import java.util.Set;
@@ -36,4 +37,16 @@ public interface FileStorageService extends IService<FileStorage> {
      * @return 保存操作的成功与否。
      */
     Boolean saveFor(FileStorage t);
+
+    /**
+     * 分页查询文件存储项。
+     * 提供文件存储ID和分页请求参数，用于分页查询数据库中的文件存储记录。
+     *
+     * @param fileStorageId 文件存储ID。
+     * @param path          文件存储路径。
+     * @param limit         每页记录数。
+     * @param marker        分页标记。
+     * @return 分页查询结果。
+     */
+    ListObjectResult viewer(Integer fileStorageId, String path, Integer limit, String marker);
 }
