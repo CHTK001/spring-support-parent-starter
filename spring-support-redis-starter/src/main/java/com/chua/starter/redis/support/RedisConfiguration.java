@@ -22,6 +22,7 @@ import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.core.Ordered;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -57,7 +58,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
                 .setClientName(redisProperties.getClientName());
         return Redisson.create(config);
     }
-    @Bean(destroyMethod = "close")
+    @Bean(destroyMethod = "close", name = "redisClient")
     @ConditionalOnMissingBean
     public RedisClient redisClient(RedisProperties redisProperties) {
         RedisClient redisClient = new RedisClient(
@@ -76,6 +77,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
 
 
     @Bean
+    @DependsOn("redisClient")
     @ConditionalOnMissingBean
     public TimeSeriesService timeSeriesService() {
         return new TimeSeriesServiceImpl();
