@@ -221,7 +221,12 @@ public class FileStorageProtocolServiceImpl extends ServiceImpl<FileStorageProto
         if (null == fileStorageFactory) {
             return false;
         }
+
         String fileStorageBucket = t.getFileStorageBucket();
+        if(action == Action.DELETE) {
+            fileStorageFactory.removeFileStorage(fileStorageBucket);
+            return true;
+        }
         ServiceDefinition serviceDefinition = ServiceProvider.of(com.chua.common.support.oss.FileStorage.class).getDefinition(t.getFileStorageType());
         com.chua.common.support.oss.FileStorage storage = null;
 
