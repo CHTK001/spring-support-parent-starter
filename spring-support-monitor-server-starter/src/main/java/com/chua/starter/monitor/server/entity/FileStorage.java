@@ -121,13 +121,6 @@ public class FileStorage implements Serializable {
     /**
      * 状态;0:停用
      */
-    @TableField(value = "file_storage_preview_or_download")
-    @ApiModelProperty(value = "0: 全部支持;1:预览; 2:下载")
-    @Schema(description = "0: 全部支持;1:预览; 2:下载")
-    private Integer fileStoragePreviewOrDownload;
-    /**
-     * 状态;0:停用
-     */
     @TableField(value = "file_storage_status")
     @ApiModelProperty(value = "状态;0:停用")
     @Schema(description = "状态;0:停用")
