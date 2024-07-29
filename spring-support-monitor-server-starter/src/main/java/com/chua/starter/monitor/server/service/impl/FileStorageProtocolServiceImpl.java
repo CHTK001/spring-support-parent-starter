@@ -29,6 +29,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.chua.common.support.constant.CommonConstant.SYMBOL_SEMICOLON;
+import static com.chua.common.support.http.HttpHeaders.X_DOWNLOAD_USER_AGENT;
+import static com.chua.common.support.http.HttpHeaders.X_USER_AGENT;
 
 /**
  * @author CH
@@ -109,7 +111,8 @@ public class FileStorageProtocolServiceImpl extends ServiceImpl<FileStorageProto
     private Server createServer(FileStorageProtocol fileStorageProtocol, FileStorageChainFilter.FileStorageFactory fileStorageFactory) {
         Server server = Server.create(fileStorageProtocol.getFileStorageProtocolName(), ServerSetting
                             .builder()
-                            .addCustomHttpHeader("X-User-Agent")
+                            .addCustomHttpHeader(X_USER_AGENT)
+                            .addCustomHttpHeader(X_DOWNLOAD_USER_AGENT)
                             .host(fileStorageProtocol.getFileStorageProtocolHost())
                             .port(fileStorageProtocol.getFileStorageProtocolPort())
                             .build()
@@ -127,6 +130,9 @@ public class FileStorageProtocolServiceImpl extends ServiceImpl<FileStorageProto
                 .openPlugin(null != fileStorageProtocol.getFileStorageProtocolPluginOpen() && fileStorageProtocol.getFileStorageProtocolPluginOpen() == 1)
                 .openSetting(null != fileStorageProtocol.getFileStorageProtocolSettingOpen() && fileStorageProtocol.getFileStorageProtocolSettingOpen() == 1)
                 .openRange(null != fileStorageProtocol.getFileStorageProtocolRangeOpen() && fileStorageProtocol.getFileStorageProtocolRangeOpen() == 1)
+                .openPreview(null != fileStorageProtocol.getFileStorageProtocolPreviewOrDownload() && (fileStorageProtocol.getFileStorageProtocolPreviewOrDownload() == 0 || fileStorageProtocol.getFileStorageProtocolPreviewOrDownload() == 1))
+                .openDownload(null != fileStorageProtocol.getFileStorageProtocolPreviewOrDownload() && (fileStorageProtocol.getFileStorageProtocolPreviewOrDownload() == 0 || fileStorageProtocol.getFileStorageProtocolPreviewOrDownload() == 2))
+                .downloadUserAgent(StringUtils.split(fileStorageProtocol.getFileStorageProtocolUa(), ","))
                 .plugins(StringUtils.split(fileStorageProtocol.getFileStorageProtocolPlugins(), ","))
                 .settings(StringUtils.split(fileStorageProtocol.getFileStorageProtocolSetting(), ","))
                 .build();

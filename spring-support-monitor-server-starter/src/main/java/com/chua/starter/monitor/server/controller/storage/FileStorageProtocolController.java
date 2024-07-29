@@ -96,6 +96,9 @@ public class FileStorageProtocolController {
         t.setFileStorageProtocolUaOpen(0);
         t.setFileStorageProtocolPluginOpen(0);
         t.setFileStorageProtocolSettingOpen(0);
+        if(null == t.getFileStorageProtocolPreviewOrDownload()) {
+            t.setFileStorageProtocolPreviewOrDownload(0);
+        }
         fileStorageProtocolService.save(t);
         return ReturnResult.ok(t);
     }
