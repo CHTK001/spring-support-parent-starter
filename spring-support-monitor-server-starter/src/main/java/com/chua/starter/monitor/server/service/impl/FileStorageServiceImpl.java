@@ -60,9 +60,6 @@ public class FileStorageServiceImpl extends ServiceImpl<FileStorageMapper, FileS
     public Boolean saveFor(FileStorage t) {
         return transactionTemplate.execute(status -> {
             t.setFileStorageStatus(1);
-            if(null == t.getFileStoragePreviewOrDownload()) {
-                t.setFileStoragePreviewOrDownload(0);
-            }
             baseMapper.insert(t);
             fileStorageProtocolService.updateFor(t, CREATE);
             return true;

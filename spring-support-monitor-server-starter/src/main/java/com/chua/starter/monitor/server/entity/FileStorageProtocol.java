@@ -68,7 +68,13 @@ public class FileStorageProtocol implements Serializable {
     @Schema(description = "开启远程服务器主机")
     @Size(max = 255, message = "开启远程服务器主机最大长度要小于 255")
     private String fileStorageProtocolHost;
-
+    /**
+     * 状态;0:停用
+     */
+    @TableField(value = "file_storage_protocol_preview_or_download")
+    @ApiModelProperty(value = "0: 全部支持;1:预览; 2:下载")
+    @Schema(description = "0: 全部支持;1:预览; 2:下载")
+    private Integer fileStorageProtocolPreviewOrDownload;
     /**
      * 远程服务器状态; 0:未开启
      */
@@ -135,6 +141,15 @@ public class FileStorageProtocol implements Serializable {
     @Schema(description = "UA")
     @Size(max = 255, message = "UA最大长度要小于 255")
     private String fileStorageProtocolUa;
+
+    /**
+     * UA
+     */
+    @TableField(value = "file_storage_protocol_download_ua")
+    @ApiModelProperty(value = "UA")
+    @Schema(description = "UA")
+    @Size(max = 255, message = "UA最大长度要小于 255")
+    private String fileStorageProtocolDownloadUa;
 
     private static final long serialVersionUID = 1L;
 
