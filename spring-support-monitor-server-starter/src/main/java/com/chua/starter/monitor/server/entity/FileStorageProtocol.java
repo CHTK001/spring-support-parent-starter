@@ -120,6 +120,14 @@ public class FileStorageProtocol implements Serializable {
     private Integer fileStorageProtocolUaOpen;
 
     /**
+     * 是否开启range；0:不开启
+     */
+    @TableField(value = "file_storage_protocol_rang_open")
+    @ApiModelProperty(value = "是否开启Range；0:不开启")
+    @Schema(description = "是否开启Range；0:不开启")
+    private Integer fileStorageProtocolRangeOpen;
+
+    /**
      * UA
      */
     @TableField(value = "file_storage_protocol_ua")
@@ -129,4 +137,5 @@ public class FileStorageProtocol implements Serializable {
     private String fileStorageProtocolUa;
 
     private static final long serialVersionUID = 1L;
+
 }

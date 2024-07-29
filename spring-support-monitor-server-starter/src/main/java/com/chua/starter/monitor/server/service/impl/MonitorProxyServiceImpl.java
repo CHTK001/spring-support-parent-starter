@@ -3,7 +3,7 @@ package com.chua.starter.monitor.server.service.impl;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.chua.common.support.chain.filter.ChainFilter;
+import com.chua.common.support.chain.filter.Filter;
 import com.chua.common.support.discovery.ServiceDiscovery;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.log.Log;
@@ -173,7 +173,7 @@ public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, Mon
         for (MonitorProxyPlugin monitorProxyPlugin : list1) {
             String key = monitorProxyPlugin.getPluginName() + monitorProxyPlugin.getPluginSort();
             List<MonitorProxyPluginConfig> monitorProxyPluginConfigList = configMap.get(key);
-            ServiceDefinition serviceDefinition = ServiceProvider.of(ChainFilter.class).getDefinitions(monitorProxyPlugin.getPluginName()).first();
+            ServiceDefinition serviceDefinition = ServiceProvider.of(Filter.class).getDefinitions(monitorProxyPlugin.getPluginName()).first();
             if(null == serviceDefinition) {
                 throw new RuntimeException("未找到代理插件:" + monitorProxyPlugin.getPluginName());
             }
