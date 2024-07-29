@@ -8,4 +8,4 @@ target/
 *.iml
 *.html
 *.log
-logs/
+logs/!/patch/

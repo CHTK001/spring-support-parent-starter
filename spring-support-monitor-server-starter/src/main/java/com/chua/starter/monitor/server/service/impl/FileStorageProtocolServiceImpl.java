@@ -2,8 +2,8 @@ package com.chua.starter.monitor.server.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.chua.common.support.chain.filter.storage.FileStorageChainFilter;
 import com.chua.common.support.chain.filter.UserAgentFilter;
+import com.chua.common.support.chain.filter.storage.FileStorageChainFilter;
 import com.chua.common.support.constant.Action;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.oss.WebdavStorage;
@@ -173,7 +173,7 @@ public class FileStorageProtocolServiceImpl extends ServiceImpl<FileStorageProto
     /**
      * 刷新
      *
-     * @param fileStorageProtocol
+     * @param fileStorageProtocol 配置
      */
     private boolean refresh(FileStorageProtocol fileStorageProtocol) {
         String key = createKey(fileStorageProtocol);
