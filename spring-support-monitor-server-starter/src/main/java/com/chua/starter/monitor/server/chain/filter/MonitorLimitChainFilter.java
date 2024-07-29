@@ -4,7 +4,7 @@ import com.chua.common.support.annotations.SpiDescribe;
 import com.chua.common.support.annotations.SpiOptional;
 import com.chua.common.support.chain.ChainContext;
 import com.chua.common.support.chain.FilterChain;
-import com.chua.common.support.chain.filter.ChainFilter;
+import com.chua.common.support.chain.filter.Filter;
 import com.chua.common.support.geo.GeoCity;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.objects.annotation.AutoInject;
@@ -30,7 +30,7 @@ import java.util.concurrent.ExecutorService;
  */
 @SpiDescribe(value = "持久化限流")
 @SpiOptional({"http-proxy", "proxy"})
-public class MonitorLimitChainFilter implements ChainFilter {
+public class MonitorLimitChainFilter implements Filter {
 
     @AutoInject
     private RedissonClient redisson;

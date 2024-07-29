@@ -2,8 +2,8 @@ package com.chua.starter.monitor.server.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.chua.common.support.chain.filter.FileStorageChainFilter;
-import com.chua.common.support.chain.filter.UserAgentChainFilter;
+import com.chua.common.support.chain.filter.storage.FileStorageChainFilter;
+import com.chua.common.support.chain.filter.UserAgentFilter;
 import com.chua.common.support.constant.Action;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.oss.WebdavStorage;
@@ -115,7 +115,7 @@ public class FileStorageProtocolServiceImpl extends ServiceImpl<FileStorageProto
                             .build()
                     );
         if(fileStorageProtocol.getFileStorageProtocolUaOpen() == 1 && StringUtils.isNotBlank(fileStorageProtocol.getFileStorageProtocolUa())) {
-            server.addFilter(new UserAgentChainFilter(StringUtils.splitAndTrim(fileStorageProtocol.getFileStorageProtocolUa(), SYMBOL_SEMICOLON)));
+            server.addFilter(new UserAgentFilter(StringUtils.splitAndTrim(fileStorageProtocol.getFileStorageProtocolUa(), SYMBOL_SEMICOLON)));
         }
 
         server.addFilter(new FileStorageChainFilter(fileStorageFactory));
@@ -126,6 +126,7 @@ public class FileStorageProtocolServiceImpl extends ServiceImpl<FileStorageProto
         return FileStorageChainFilter.FileStorageSetting.builder()
                 .openPlugin(null != fileStorageProtocol.getFileStorageProtocolPluginOpen() && fileStorageProtocol.getFileStorageProtocolPluginOpen() == 1)
                 .openSetting(null != fileStorageProtocol.getFileStorageProtocolSettingOpen() && fileStorageProtocol.getFileStorageProtocolSettingOpen() == 1)
+                .openRange(null != fileStorageProtocol.getFileStorageProtocolRangeOpen() && fileStorageProtocol.getFileStorageProtocolRangeOpen() == 1)
                 .plugins(StringUtils.split(fileStorageProtocol.getFileStorageProtocolPlugins(), ","))
                 .settings(StringUtils.split(fileStorageProtocol.getFileStorageProtocolSetting(), ","))
                 .build();
@@ -217,6 +218,10 @@ public class FileStorageProtocolServiceImpl extends ServiceImpl<FileStorageProto
         String fileStorageBucket = t.getFileStorageBucket();
         ServiceDefinition serviceDefinition = ServiceProvider.of(com.chua.common.support.oss.FileStorage.class).getDefinition(t.getFileStorageType());
         com.chua.common.support.oss.FileStorage storage = null;
+
+        if(null == serviceDefinition) {
+            throw new NullPointerException(t.getFileStorageName() + "(" + t.getFileStorageType() +")文件存储无法创建, 请检查参数!");
+        }
         if(serviceDefinition.isAssignableFrom(WebdavStorage.class)) {
             storage = com.chua.common.support.oss.FileStorage.createStorage(t.getFileStorageType(), t.createBucketCookieSetting());
         } else {
