@@ -1,6 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.chua.starter.monitor.server.mapper.MonitorProxyLimitLogMapper">
+  <resultMap id="BaseResultMap" type="com.chua.starter.monitor.server.entity.MonitorProxyLimitLog">
+    <!--@mbg.generated-->
+    <!--@Table monitor_proxy_limit_log-->
+    <id column="limit_log_id" jdbcType="INTEGER" property="limitLogId" />
+    <result column="limit_log_server_id" jdbcType="VARCHAR" property="limitLogServerId" />
+    <result column="limit_log_from" jdbcType="VARCHAR" property="limitLogFrom" />
+    <result column="limit_log_url" jdbcType="VARCHAR" property="limitLogUrl" />
+    <result column="limit_log_type" jdbcType="VARCHAR" property="limitLogType" />
+    <result column="limit_log_address_geo" jdbcType="VARCHAR" property="limitLogAddressGeo" />
+    <result column="limit_log_address" jdbcType="VARCHAR" property="limitLogAddress" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="create_time_min" jdbcType="BIGINT" property="createTimeMin" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    limit_log_id, limit_log_server_id, limit_log_from, limit_log_url, limit_log_type, 
+    limit_log_address_geo, limit_log_address, create_time, create_time_min
+  </sql>
 
   <select id="pageForLog" resultType="com.chua.starter.monitor.server.pojo.MonitorProxyLimitLogResult">
     SELECT

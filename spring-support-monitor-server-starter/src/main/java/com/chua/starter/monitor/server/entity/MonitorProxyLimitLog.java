@@ -16,9 +16,8 @@ import java.util.Date;
 
 /**
  *
- *
- * @since 2024/6/24 
- * @author CH
+ * @since 2024/7/30
+ * @author CH    
  */
 
 /**
@@ -43,6 +42,15 @@ public class MonitorProxyLimitLog implements Serializable {
     @Schema(description = "日志对应的代理")
     @Size(max = 255, message = "日志对应的代理最大长度要小于 255")
     private String limitLogServerId;
+
+    /**
+     * 来源模块
+     */
+    @TableField(value = "limit_log_from")
+    @ApiModelProperty(value = "来源模块")
+    @Schema(description = "来源模块")
+    @Size(max = 255, message = "来源模块最大长度要小于 255")
+    private String limitLogFrom;
 
     /**
      * 请求地址
@@ -87,12 +95,13 @@ public class MonitorProxyLimitLog implements Serializable {
     @ApiModelProperty(value = "创建时间")
     @Schema(description = "创建时间")
     private Date createTime;
+
     /**
      * 创建时间
      */
     @TableField(value = "create_time_min")
-    @ApiModelProperty(value = "创建时间(min)")
-    @Schema(description = "创建时间(min)")
+    @ApiModelProperty(value = "创建时间")
+    @Schema(description = "创建时间")
     private Long createTimeMin;
 
     private static final long serialVersionUID = 1L;

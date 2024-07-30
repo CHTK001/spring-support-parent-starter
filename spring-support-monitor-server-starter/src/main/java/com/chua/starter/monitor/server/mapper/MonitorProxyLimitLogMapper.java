@@ -8,20 +8,18 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * MonitorProxyLimitLogMapper接口，用于映射MonitorProxyLimitLog实体到数据库的操作。
- * 该接口继承自BaseMapper，实现了对MonitorProxyLimitLog实体的CRUD操作。
  * @author CH
- * @since 2024/6/24
+ * @since 2024/7/30
  */
 @Mapper
 public interface MonitorProxyLimitLogMapper extends BaseMapper<MonitorProxyLimitLog> {
-
     /**
      * 分页查询监控代理限制日志。
      * 该方法用于根据提供的分页信息和查询条件，从数据库中分页查询监控代理限制日志。
-     * @param page 分页信息，包含当前页码和每页条数等信息。
+     *
+     * @param page   分页信息，包含当前页码和每页条数等信息。
      * @param entity 查询条件实体，实体中的属性用于构建查询条件。
      * @return 返回分页后的监控代理限制日志列表。
      */
-    Page<MonitorProxyLimitLogResult> pageForLog(@Param("page")Page<MonitorProxyLimitLog> page, @Param("query")MonitorProxyLimitLog entity);
+    Page<MonitorProxyLimitLogResult> pageForLog(@Param("page") Page<MonitorProxyLimitLog> page, @Param("query") MonitorProxyLimitLog entity);
 }

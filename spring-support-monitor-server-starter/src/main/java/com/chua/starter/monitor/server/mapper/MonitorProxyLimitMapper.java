@@ -6,7 +6,7 @@ import org.apache.ibatis.annotations.Mapper;
 
 /**
  * @author CH
- * @since 2024/6/24
+ * @since 2024/7/30
  */
 @Mapper
 public interface MonitorProxyLimitMapper extends BaseMapper<MonitorProxyLimit> {

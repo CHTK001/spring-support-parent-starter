@@ -83,11 +83,15 @@ public class MonitorProxyLimitController {
     @Operation(summary = "分页查询基础数据")
     @GetMapping("page")
     public ReturnPageResult<MonitorProxyLimit> page(PageRequest<MonitorProxyLimit> page, MonitorProxyLimit entity) {
+        if(null == entity.getProxyId()) {
+            return ReturnPageResult.illegal(REQUEST_PARAM_ERROR, "请选择代理");
+        }
         Page<MonitorProxyLimit> tPage = service.page(page.createPage(), MPJWrappers.<MonitorProxyLimit>lambdaJoin()
                 .selectAll(MonitorProxyLimit.class)
                 .selectAs(MonitorProxy::getProxyName, MonitorProxyLimit::getProxyName)
                 .innerJoin(MonitorProxy.class, MonitorProxy::getProxyId, MonitorProxyLimit::getProxyId)
                 .eq(null != entity.getProxyId() , MonitorProxyLimit::getProxyId, entity.getProxyId())
+                .eq(MonitorProxyLimit::getLimitType, entity.getLimitType())
                 .like(StringUtils.isNotEmpty(entity.getLimitUrl()), MonitorProxyLimit::getLimitUrl, entity.getLimitUrl())
                 .like(StringUtils.isNotEmpty(entity.getProxyName()),MonitorProxy::getProxyName, entity.getProxyName())
                 .orderByDesc(MonitorProxyLimit::getCreateTime)
