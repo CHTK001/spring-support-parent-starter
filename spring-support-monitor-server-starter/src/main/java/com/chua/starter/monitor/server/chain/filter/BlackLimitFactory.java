@@ -36,7 +36,7 @@ public class BlackLimitFactory implements Initializable {
     @Override
     public void initialize() {
         for (MonitorProxyLimitList monitorProxyLimitList : list) {
-            if(monitorProxyLimitList.getListStatus() == 0 || monitorProxyLimitList.getListType() == 1) {
+            if(monitorProxyLimitList.getListStatus() == 0 || monitorProxyLimitList.getListType() != 1) {
                 continue;
             }
 
