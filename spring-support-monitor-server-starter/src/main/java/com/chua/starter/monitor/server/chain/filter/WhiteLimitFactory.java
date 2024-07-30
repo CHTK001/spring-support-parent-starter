@@ -51,6 +51,9 @@ public class WhiteLimitFactory implements Initializable {
      * @return 是否获取
      */
     public boolean tryAcquire(String hostname) {
+        if(ranges.isEmpty()) {
+            return true;
+        }
         for (IpRange range : ranges) {
             if(range.inRange(hostname)) {
                 return true;

@@ -5,6 +5,9 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.common.support.chain.filter.Filter;
 import com.chua.common.support.chain.filter.ServiceDiscoveryFilter;
+import com.chua.common.support.discovery.DefaultServiceDiscovery;
+import com.chua.common.support.discovery.Discovery;
+import com.chua.common.support.discovery.DiscoveryOption;
 import com.chua.common.support.discovery.ServiceDiscovery;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.log.Log;
@@ -57,6 +60,7 @@ public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, Mon
     final MonitorProxyLimitListService monitorproxyLimitListService;
     final MonitorProxyPluginService monitorProxyPluginService;
     final MonitorProxyPluginConfigService monitorProxyPluginConfigService;
+    final MonitorProxyStatisticServiceDiscoveryService monitorProxyStatisticServiceDiscoveryService;
 
     @Override
     public ReturnResult<Boolean> start(MonitorProxy monitorProxy) {
@@ -134,11 +138,19 @@ public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, Mon
         if(null == server) {
             return;
         }
+
         List<MonitorProxyConfig> list = monitorProxyConfigService.list(Wrappers.<MonitorProxyConfig>lambdaQuery().eq(MonitorProxyConfig::getProxyId, monitorProxy.getProxyId()));
 
         for (MonitorProxyConfig monitorProxyConfig : list) {
             server.addConfig(monitorProxyConfig.getConfigName(), monitorProxyConfig.getConfigValue());
         }
+
+        Optional<MonitorProxyConfig> first = list.stream().filter(it -> "serviceDiscovery".equalsIgnoreCase(it.getConfigName())).findFirst();
+        if(first.isPresent()) {
+            MonitorProxyConfig monitorProxyConfig = first.get();
+            upgradeServiceDiscovery(monitorProxyConfig, server);
+        }
+
 
         ServerSetting serverSetting = ServerSetting.builder()
                 .log(createLog(monitorProxy, list))
@@ -227,18 +239,55 @@ public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, Mon
      * @param counter
      */
     private void registerServiceDiscovery(Server server, List<MonitorProxyConfig> list, AtomicInteger counter) {
-        Map<String, ServiceDiscovery> beansOfType = applicationContext.getBeansOfType(ServiceDiscovery.class);
         Optional<MonitorProxyConfig> first = list.stream().filter(it -> "serviceDiscovery".equalsIgnoreCase(it.getConfigName())).findFirst();
         if(first.isEmpty()) {
             return ;
         }
 
+        ServiceDiscovery serviceDiscovery = null;
         MonitorProxyConfig monitorProxyConfig = first.get();
-        ServiceDiscovery serviceDiscovery = beansOfType.get(monitorProxyConfig.getConfigValue());
-        if(null == serviceDiscovery) {
-            serviceDiscovery = beansOfType.entrySet().stream().filter(it -> it.getKey().toUpperCase().endsWith("#" + monitorProxyConfig.getConfigValue())).findFirst().get().getValue();
+        if("statistic".equalsIgnoreCase(monitorProxyConfig.getConfigValue())) {
+            serviceDiscovery = new DefaultServiceDiscovery(new DiscoveryOption());
+            upgradeServiceDiscovery(monitorProxyConfig.getProxyId(), serviceDiscovery);
+        } else {
+            Map<String, ServiceDiscovery> beansOfType = applicationContext.getBeansOfType(ServiceDiscovery.class);
+            serviceDiscovery = beansOfType.get(monitorProxyConfig.getConfigValue());
+            if(null == serviceDiscovery) {
+                serviceDiscovery = beansOfType.entrySet().stream().filter(it -> it.getKey().toUpperCase().endsWith("#" + monitorProxyConfig.getConfigValue())).findFirst().get().getValue();
+            }
         }
         server.addDefinition(new ObjectElementDefinition(new ServiceDiscoveryFilter(serviceDiscovery)).order(counter.getAndIncrement()));
+    }
+
+    private void upgradeServiceDiscovery(MonitorProxyConfig monitorProxyConfig, Server server) {
+        if("statistic".equalsIgnoreCase(monitorProxyConfig.getConfigValue())) {
+            ServiceDiscoveryFilter serviceDiscoveryFilter = (ServiceDiscoveryFilter) server.getFilter(ServiceDiscoveryFilter.class);
+            if(null != serviceDiscoveryFilter) {
+                upgradeServiceDiscovery(monitorProxyConfig.getProxyId(), serviceDiscoveryFilter.getServiceDiscovery());
+            }
+        }
+    }
+
+    private void upgradeServiceDiscovery(String proxyId, ServiceDiscovery serviceDiscovery) {
+        if(null == serviceDiscovery) {
+            return ;
+        }
+
+        List<MonitorProxyStatisticServiceDiscovery> list = monitorProxyStatisticServiceDiscoveryService
+                .list(Wrappers.<MonitorProxyStatisticServiceDiscovery>lambdaQuery().eq(MonitorProxyStatisticServiceDiscovery::getProxyId, proxyId).eq(MonitorProxyStatisticServiceDiscovery::getProxyStatisticStatus, 1));
+
+        if(serviceDiscovery instanceof DefaultServiceDiscovery defaultServiceDiscovery) {
+            defaultServiceDiscovery.reset();
+        }
+        for (MonitorProxyStatisticServiceDiscovery monitorProxyStatisticServiceDiscovery : list) {
+            Discovery discovery = Discovery.builder()
+                    .host(monitorProxyStatisticServiceDiscovery.getProxyStatisticHostname())
+                    .protocol(monitorProxyStatisticServiceDiscovery.getProxyStatisticProtocol())
+                    .weight(monitorProxyStatisticServiceDiscovery.getProxyStatisticWeight())
+                    .build();
+            serviceDiscovery.registerService(monitorProxyStatisticServiceDiscovery.getProxyStatisticUrl(), discovery);
+        }
+
     }
 
     /**
