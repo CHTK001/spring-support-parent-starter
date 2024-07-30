@@ -16,9 +16,8 @@ import java.util.Date;
 
 /**
  *
- *
- * @since 2024/6/24 
- * @author CH
+ * @since 2024/7/30
+ * @author CH    
  */
 
 /**
@@ -45,6 +44,14 @@ public class MonitorProxyLimit implements Serializable {
     private String limitAddress;
 
     /**
+     * 限流类型; 0: url限流; 1: ip限流
+     */
+    @TableField(value = "`limit _type`")
+    @ApiModelProperty(value = "限流类型; 0: url限流; 1: ip限流")
+    @Schema(description = "限流类型; 0: url限流; 1: ip限流")
+    private Integer limitType;
+
+    /**
      * 限流url地址
      */
     @TableField(value = "limit_url")
@@ -60,10 +67,6 @@ public class MonitorProxyLimit implements Serializable {
     @ApiModelProperty(value = "是否开启； 0：未开启")
     @Schema(description = "是否开启； 0：未开启")
     private Integer limitDisable;
-    @TableField(value = "limit_black")
-    @ApiModelProperty(value = "是否黑名单； 0：否")
-    @Schema(description = "是否黑名单； 0：否")
-    private Integer limitBlack;
 
     /**
      * 每秒生产令牌数
