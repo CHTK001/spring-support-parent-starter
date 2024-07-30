@@ -6,6 +6,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.starter.monitor.server.entity.MonitorProxyConfig;
 import com.chua.starter.monitor.server.service.MonitorProxyConfigService;
+import com.chua.starter.monitor.server.service.MonitorProxyService;
 import com.github.xiaoymin.knife4j.annotations.Ignore;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -33,6 +34,7 @@ import static com.chua.starter.common.support.constant.CacheConstant.SYSTEM;
 public class MonitorProxyConfigController {
 
     private final MonitorProxyConfigService monitorProxyConfigService;
+    private final MonitorProxyService monitorProxyService;
 
     /**
      * 添加数据
@@ -58,7 +60,7 @@ public class MonitorProxyConfigController {
         if(null != one) {
             one.setConfigValue(t.getConfigValue());
             one.setConfigDesc(t.getConfigDesc());
-            return ReturnResult.ok(monitorProxyConfigService.updateById(one));
+            return ReturnResult.ok(monitorProxyService.updateConfigForProxy(one));
         }
         return ReturnResult.ok(monitorProxyConfigService.save(t));
     }

@@ -14,4 +14,5 @@ import org.springframework.stereotype.Service;
 @Service
 public class MonitorProxyConfigServiceImpl extends ServiceImpl<MonitorProxyConfigMapper, MonitorProxyConfig> implements MonitorProxyConfigService{
 
+
 }

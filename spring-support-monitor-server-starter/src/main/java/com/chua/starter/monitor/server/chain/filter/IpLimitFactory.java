@@ -11,11 +11,9 @@ import com.chua.starter.monitor.server.entity.MonitorProxyLimit;
 import java.util.LinkedList;
 import java.util.List;
 
-import static com.chua.common.support.constant.CommonConstant.SYMBOL_COLON;
-
 /**
  * 限制工厂类
- *
+ * <p>
  * 该类作为一个工厂，负责生产具有特定限制的物体或服务。
  * 这里的“限制”可以理解为对某些资源的访问限制、数量限制或其他形式的约束。
  * 该类的设计符合工厂模式，旨在通过提供不同的工厂方法来创建具有不同限制的对象。
@@ -23,16 +21,18 @@ import static com.chua.common.support.constant.CommonConstant.SYMBOL_COLON;
  * @author CH
  * @since 2024/6/26
  */
-public class LimitFactory implements Initializable {
+public class IpLimitFactory implements Initializable {
     private final List<MonitorProxyLimit> list;
     private final LimiterProvider limitProvider = new LimiterProvider();
     private final List<String> black = new LinkedList<>();
     private final List<String> black2 = new LinkedList<>();
 
     private final PathMatcher pathMatcher = new AntPathMatcher();
-    public LimitFactory(List<MonitorProxyLimit> list) {
+
+    public IpLimitFactory(List<MonitorProxyLimit> list) {
         this.list = list;
     }
+
     /**
      * 刷新
      * @param list list
@@ -45,52 +45,31 @@ public class LimitFactory implements Initializable {
         this.list.addAll(list);
         initialize();
     }
+
     @Override
     public void initialize() {
         for (MonitorProxyLimit monitorProxyLimit : list) {
-            if(monitorProxyLimit.getLimitBlack() == 1) {
-                String limitAddress = monitorProxyLimit.getLimitAddress();
-                if(limitAddress.contains("*")) {
-                    black2.add(limitAddress);
-                    continue;
-                }
-                black.add(limitAddress);
+            if (monitorProxyLimit.getLimitDisable() == 0 || monitorProxyLimit.getLimitType() == 1 || StringUtils.isEmpty(monitorProxyLimit.getLimitAddress())) {
                 continue;
             }
 
-            String limitAddress = monitorProxyLimit.getLimitAddress();
-            String limitUrl = StringUtils.startWithAppend(monitorProxyLimit.getLimitUrl(), "/");
-            limitProvider.addLimiter(limitUrl, Limiter.of(monitorProxyLimit.getLimitPermitsPerSecond()));
-            if(!StringUtils.isBlank(limitAddress)) {
-                limitProvider.addLimiter(limitUrl + SYMBOL_COLON + limitAddress, Limiter.of(monitorProxyLimit.getLimitPermitsPerSecond()));
-            }
+            limitProvider.addLimiter(monitorProxyLimit.getLimitAddress(), Limiter.of(monitorProxyLimit.getLimitPermitsPerSecond()));
         }
     }
 
 
-    /**
-     * 尝试获取
-     * @param url url
-     * @param address 地址
-     * @return 是否获取
-     */
-    public boolean tryAcquire(String url, String address) {
-        if(black.contains(address)) {
-            return false;
-        }
-
-        for (String s : black2) {
-            if(pathMatcher.match(s, address)) {
-                return false;
-            }
-        }
-
-        if(limitProvider.hasLimiter(url + SYMBOL_COLON + address)) {
-            return limitProvider.tryAcquire(url + SYMBOL_COLON + address);
-        }
-
+/**
+ * 尝试获取
+ * @param url url
+ * @return 是否获取
+ */
+public boolean tryAcquire(String url) {
+    if (limitProvider.hasLimiter(url)) {
         return limitProvider.tryAcquire(url);
     }
+
+    return true;
+}
 
 
 }
