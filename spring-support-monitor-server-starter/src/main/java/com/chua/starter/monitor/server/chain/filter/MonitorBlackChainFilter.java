@@ -51,8 +51,8 @@ public class MonitorBlackChainFilter implements Filter {
         String hostString = request.remoteAddress().getHostString();
         try {
             if(blackLimitFactory.tryAcquire(hostString) ) {
-                filterChain.doFilter(context);
                 doRegisterLog(url, hostString, "allow");
+                filterChain.doFilter(context);
                 return;
             }
         } catch (Exception e) {

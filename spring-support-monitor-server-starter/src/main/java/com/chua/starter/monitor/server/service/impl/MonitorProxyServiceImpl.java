@@ -285,7 +285,6 @@ public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, Mon
             filterConfigTypeDefinition.order(counter.getAndIncrement());
             server.addDefinition(filterConfigTypeDefinition);
             monitorFactory.setIpLimitFactory(ipLimitFactory);
-            return;
         }
 
         if(openUrlLimit.isPresent() && !BooleanUtils.invalid(openUrlLimit.get().getConfigValue())) {
@@ -318,7 +317,6 @@ public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, Mon
             filterConfigTypeDefinition.order(counter.getAndIncrement());
             server.addDefinition(filterConfigTypeDefinition);
             monitorFactory.setBlackLimitFactory(blackLimitFactory);
-            return;
         }
 
         if(openWhite.isPresent() && !BooleanUtils.invalid(openWhite.get().getConfigValue())) {

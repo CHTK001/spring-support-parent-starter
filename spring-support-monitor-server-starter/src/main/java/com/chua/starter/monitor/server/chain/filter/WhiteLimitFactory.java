@@ -36,7 +36,7 @@ public class WhiteLimitFactory implements Initializable {
     @Override
     public void initialize() {
         for (MonitorProxyLimitList monitorProxyLimitList : list) {
-            if(monitorProxyLimitList.getListStatus() == 0 || monitorProxyLimitList.getListType() == 0) {
+            if(monitorProxyLimitList.getListStatus() == 0 || monitorProxyLimitList.getListType() != 0) {
                 continue;
             }
 

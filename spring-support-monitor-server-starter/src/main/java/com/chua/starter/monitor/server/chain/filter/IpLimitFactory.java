@@ -49,7 +49,8 @@ public class IpLimitFactory implements Initializable {
     @Override
     public void initialize() {
         for (MonitorProxyLimit monitorProxyLimit : list) {
-            if (monitorProxyLimit.getLimitDisable() == 0 || monitorProxyLimit.getLimitType() == 1 || StringUtils.isEmpty(monitorProxyLimit.getLimitAddress())) {
+            if (monitorProxyLimit.getLimitDisable() == 0 || monitorProxyLimit.getLimitType() != 1 ||
+                    StringUtils.isEmpty(monitorProxyLimit.getLimitAddress())) {
                 continue;
             }
 
