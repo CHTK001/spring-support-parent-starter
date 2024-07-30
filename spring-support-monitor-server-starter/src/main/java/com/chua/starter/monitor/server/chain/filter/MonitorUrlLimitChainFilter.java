@@ -48,8 +48,8 @@ public class MonitorUrlLimitChainFilter implements Filter {
         String hostString = request.remoteAddress().getHostString();
         try {
             if(urlLimitFactory.tryAcquire(url) ) {
-                filterChain.doFilter(context);
                 doRegisterLog(url, hostString, "allow");
+                filterChain.doFilter(context);
                 return;
             }
         } catch (Exception e) {

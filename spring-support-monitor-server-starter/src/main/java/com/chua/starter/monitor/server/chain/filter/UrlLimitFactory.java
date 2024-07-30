@@ -38,7 +38,7 @@ public class UrlLimitFactory implements Initializable {
     @Override
     public void initialize() {
         for (MonitorProxyLimit monitorProxyLimit : list) {
-            if(monitorProxyLimit.getLimitDisable() == 0 || monitorProxyLimit.getLimitType() == 1) {
+            if(monitorProxyLimit.getLimitDisable() == 0 || monitorProxyLimit.getLimitType() != 0) {
                 continue;
             }
 
