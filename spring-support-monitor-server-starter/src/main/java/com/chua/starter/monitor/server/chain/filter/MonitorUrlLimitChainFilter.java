@@ -11,6 +11,7 @@ import com.chua.common.support.objects.annotation.Config;
 import com.chua.common.support.protocol.request.BadResponse;
 import com.chua.common.support.protocol.request.Request;
 import com.chua.common.support.utils.ThreadUtils;
+import com.chua.netty.support.proxy.filter.LastNettyFinishChainFilter;
 import com.chua.starter.monitor.server.entity.MonitorProxyLimitLog;
 import com.chua.starter.monitor.server.service.IptablesService;
 import com.chua.starter.monitor.server.service.MonitorProxyLimitLogService;
@@ -60,6 +61,8 @@ public class MonitorUrlLimitChainFilter implements Filter {
 
         doRegisterLog(url, hostString, "deny");
         context.setResponse(new BadResponse(request, 405, "系统繁忙"));
+        filterChain.setFinish();
+        filterChain.addLast(new LastNettyFinishChainFilter());
         filterChain.doFilter(context);
     }
 
