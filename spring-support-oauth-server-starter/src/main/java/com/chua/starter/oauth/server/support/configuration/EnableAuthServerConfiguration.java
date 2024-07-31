@@ -57,7 +57,7 @@ public class EnableAuthServerConfiguration implements BeanDefinitionRegistryPost
         ApplicationContextAware,
         DisposableBean, WebMvcConfigurer {
 
-    final AuthServerProperties authServerProperties;
+    AuthServerProperties authServerProperties;
     private List<HttpMessageConverter<?>> messageConverters;
 
 

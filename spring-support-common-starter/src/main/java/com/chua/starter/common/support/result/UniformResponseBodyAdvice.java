@@ -38,7 +38,7 @@ public class UniformResponseBodyAdvice implements ResponseBodyAdvice<Object> {
         }
 
         String url = serverHttpRequest.getURI().toURL().toExternalForm();
-        String typeName = declaringClass.getTypeName().toLowerCase();
+
         if (url.contains("swagger")) {
             return o;
         }

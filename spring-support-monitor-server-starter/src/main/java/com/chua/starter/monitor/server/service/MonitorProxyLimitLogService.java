@@ -3,6 +3,7 @@ package com.chua.starter.monitor.server.service;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.starter.monitor.server.entity.MonitorProxyLimitLog;
+import com.chua.starter.monitor.server.pojo.LogStatistic;
 import com.chua.starter.monitor.server.pojo.MonitorProxyLimitLogResult;
 
 /**
@@ -35,4 +36,16 @@ public interface MonitorProxyLimitLogService extends IService<MonitorProxyLimitL
      *         Page对象包含了分页数据，包括记录列表和分页信息。
      */
     Page<MonitorProxyLimitLogResult> pageForLog(Page<MonitorProxyLimitLog> page, MonitorProxyLimitLog entity);
+
+    /**
+     * 统计地理信息。
+     * 此方法用于统计指定条件的地理信息，并返回统计结果。
+     * 统计地理信息通常用于在统计页面上显示地理信息统计数据，以便用户可以了解数据分布情况。
+     *
+     * @param page    分页条件，包括页码和每页记录数。
+     * @param entity  查询条件，用于过滤结果。
+     * @return 返回一个LogStatistic对象，表示统计结果。
+     *         LogStatistic对象包含了统计数据，包括记录列表和统计信息。
+     */
+    LogStatistic listForGeo(Page<MonitorProxyLimitLog> page, MonitorProxyLimitLog entity);
 }

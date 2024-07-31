@@ -1,6 +1,7 @@
 package com.chua.starter.mybatis.reloader;
 
 import com.chua.common.support.utils.ClassUtils;
+import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.mybatis.properties.MybatisPlusProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.monitor.FileAlterationListenerAdaptor;
@@ -21,7 +22,6 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -37,9 +37,9 @@ import java.util.function.Function;
 public class MapperReload implements Reload, DisposableBean {
 
     final PathMatchingResourcePatternResolver patternResolver = new PathMatchingResourcePatternResolver();
-    private final Map<String, Resource> fileResources = new LinkedHashMap<>();
+    private final Map<String, Resource> fileResources = new ConcurrentHashMap<>();
     private final List<SqlSessionFactory> sqlSessionFactories;
-    private MybatisPlusProperties mybatisProperties;
+    private final MybatisPlusProperties mybatisProperties;
 
     private final Map<String, FileAlterationMonitor> monitorMap = new ConcurrentHashMap<>();
 
@@ -51,17 +51,24 @@ public class MapperReload implements Reload, DisposableBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        Resource[] resources = patternResolver.getResources("classpath*:**/*Mapper.xml");
-        for (Resource resource : resources) {
-            if (resource.isFile()) {
-                fileResources.put(resource.getFilename(), resource);
+        ThreadUtils.newStaticThreadPool().execute(() -> {
+            Resource[] resources = null;
+            try {
+                resources = patternResolver.getResources("classpath*:**/*Mapper.xml");
+            } catch (IOException ignored) {
+                return;
             }
-        }
+            for (Resource resource : resources) {
+                if (resource.isFile()) {
+                    fileResources.put(resource.getFilename(), resource);
+                }
+            }
 
-        MybatisPlusProperties.ReloadType reloadType = mybatisProperties.getReloadType();
-        if (reloadType == MybatisPlusProperties.ReloadType.AUTO) {
-            listener();
-        }
+            MybatisPlusProperties.ReloadType reloadType = mybatisProperties.getReloadType();
+            if (reloadType == MybatisPlusProperties.ReloadType.AUTO) {
+                listener();
+            }
+        });
     }
 
     private void listener() {
@@ -184,7 +191,7 @@ public class MapperReload implements Reload, DisposableBean {
      * @param field               field
      * @return Exception    e
      */
-    private static Object getFieldValue(Configuration targetConfiguration, Class<?> aClass, String field) throws Exception {
+    public static Object getFieldValue(Configuration targetConfiguration, Class<?> aClass, String field) throws Exception {
         Field resultMapsField = aClass.getDeclaredField(field);
         ClassUtils.setAccessible(resultMapsField);
         return resultMapsField.get(targetConfiguration);
