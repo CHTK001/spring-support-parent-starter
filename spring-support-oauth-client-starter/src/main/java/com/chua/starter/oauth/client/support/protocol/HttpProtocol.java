@@ -32,6 +32,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import kong.unirest.HttpResponse;
 import kong.unirest.Unirest;
 import kong.unirest.UnirestException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 
 import java.util.*;
@@ -48,6 +49,7 @@ import static com.chua.starter.oauth.client.support.infomation.Information.*;
  */
 @SpiDefault
 @Extension("http")
+@Slf4j
 public class HttpProtocol extends AbstractProtocol implements InitializingBean {
 
     @AutoInject
@@ -101,7 +103,12 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
 
         Robin balance = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
         Robin stringRobin = balance.create();
-        String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(authClientProperties.getAddress()).split(",");
+        String address = authClientProperties.getAddress();
+        if(null == address) {
+            log.warn("鉴权地址不存在");
+            return AuthenticationInformation.authServerError();
+        }
+        String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(address).split(",");
         stringRobin.addNode(split);
         Node robin = stringRobin.selectNode();
         HttpResponse<String> httpResponse = null;

@@ -283,7 +283,7 @@ public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, Mon
             Discovery discovery = Discovery.builder()
                     .host(monitorProxyStatisticServiceDiscovery.getProxyStatisticHostname())
                     .protocol(monitorProxyStatisticServiceDiscovery.getProxyStatisticProtocol())
-                    .weight(monitorProxyStatisticServiceDiscovery.getProxyStatisticWeight())
+                    .weight(ObjectUtils.defaultIfNull(monitorProxyStatisticServiceDiscovery.getProxyStatisticWeight(), 0))
                     .build();
             serviceDiscovery.registerService(monitorProxyStatisticServiceDiscovery.getProxyStatisticUrl(), discovery);
         }
