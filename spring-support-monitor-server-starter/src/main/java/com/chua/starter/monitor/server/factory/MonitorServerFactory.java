@@ -86,6 +86,9 @@ public class MonitorServerFactory implements MonitorConstant, DisposableBean, In
      * @return 心跳数据的映射表，以应用名称为键，心跳数据列表为值
      */
     public Map<String, List<MonitorRequest>> getHeart() {
+        if(null == stringRedisTemplate) {
+            return Collections.emptyMap();
+        }
         // 获取所有的心跳数据键
         Set<String> keys = stringRedisTemplate.keys(HEART + "*");
         return create(keys);
