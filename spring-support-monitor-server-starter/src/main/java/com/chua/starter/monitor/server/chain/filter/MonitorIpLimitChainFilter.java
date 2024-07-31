@@ -46,7 +46,7 @@ public class MonitorIpLimitChainFilter implements Filter {
     public <T> void doFilter(ChainContext<T> context, FilterChain filterChain) {
         Request request = context.getRequest();
         String url = request.url();
-        String hostString = request.remoteAddress().getHostString();
+        String hostString = request.getIpAddress();
         try {
             if(ipLimitFactory.tryAcquire(hostString) ) {
                 doRegisterLog(url, hostString, "allow");

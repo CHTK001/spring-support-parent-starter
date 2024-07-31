@@ -59,6 +59,7 @@
             limit_log_address_geo,
             limit_log_address,
             limit_log_server_id
+        ORDER BY create_time_min DESC
     </select>
 
     <select id="listForGeo" resultType="com.chua.starter.monitor.server.pojo.MonitorProxyLimitLogResult">

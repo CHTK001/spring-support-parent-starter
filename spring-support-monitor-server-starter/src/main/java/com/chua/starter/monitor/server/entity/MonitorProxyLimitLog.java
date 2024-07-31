@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.common.support.utils.FileUtils;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -129,4 +130,8 @@ public class MonitorProxyLimitLog implements Serializable {
     @TableField(exist = false)
     @ApiModelProperty("结束时间")
     private Date endDate;
+
+    public void setLimitLogUrl(@Size(max = 255, message = "请求地址最大长度要小于 255") String limitLogUrl) {
+        this.limitLogUrl = FileUtils.normalize(limitLogUrl);
+    }
 }
