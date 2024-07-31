@@ -110,13 +110,23 @@ public class MonitorProxyLimitLog implements Serializable {
      */
     @TableField(exist = false)
     @ApiModelProperty(value = "代理名称")
-    @Schema(description = "代理名称")
     private String proxyName;
     /**
      * 每秒生产令牌数
      */
     @TableField(exist = false)
     @ApiModelProperty(value = "每秒生产令牌数")
-    @Schema(description = "每秒生产令牌数")
     private Integer limitPermitsPerSecond;
+    /**
+     * 开始时间
+     */
+    @TableField(exist = false)
+    @ApiModelProperty("开始时间")
+    private Date startDate;
+    /**
+     * 结束时间
+     */
+    @TableField(exist = false)
+    @ApiModelProperty("结束时间")
+    private Date endDate;
 }

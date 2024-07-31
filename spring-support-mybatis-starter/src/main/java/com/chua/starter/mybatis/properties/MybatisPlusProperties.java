@@ -36,7 +36,7 @@ public class MybatisPlusProperties {
     /**
      * xml是否可热加载
      */
-    private boolean openXmlReload = false;
+    private boolean openXmlReload = true;
 
     /**
      * 可访问的IP
@@ -50,7 +50,7 @@ public class MybatisPlusProperties {
     /**
      * 自动热加载方式
      */
-    private ReloadType reloadType = ReloadType.NONE;
+    private ReloadType reloadType = ReloadType.AUTO;
     /**
      * 自动热加载时间
      */
@@ -85,7 +85,7 @@ public class MybatisPlusProperties {
     /**
      * 方法类型
      */
-    public static enum SqlMethodType {
+    public enum SqlMethodType {
         /**
          * 文件
          */
@@ -99,7 +99,7 @@ public class MybatisPlusProperties {
     /**
      * 类型
      */
-    public static enum ReloadType {
+    public enum ReloadType {
         /**
          * 不刷新
          */

@@ -18,10 +18,10 @@ import java.util.Collection;
 @WebEndpoint(id = "mybatis-extension")
 public class MybatisEndpoint {
 
-    private Reload reload;
+    private final Reload reload;
 
-    private Configuration configuration;
-    private SupportInjector supportInjector;
+    private final Configuration configuration;
+    private final SupportInjector supportInjector;
 
     public MybatisEndpoint(Reload reload, Configuration configuration, SupportInjector supportInjector) {
         this.reload = reload;
@@ -38,7 +38,7 @@ public class MybatisEndpoint {
      */
     @WriteOperation
     public String reload(@Selector String name, @Selector String type) {
-        if (null == reload) {
+        if (null == reload || null == supportInjector) {
             return "加载器不存在";
         }
 

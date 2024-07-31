@@ -10,8 +10,6 @@ import com.chua.common.support.validator.group.AddGroup;
 import com.chua.common.support.validator.group.UpdateGroup;
 import com.chua.starter.monitor.server.entity.MonitorProxy;
 import com.chua.starter.monitor.server.entity.MonitorProxyLimit;
-import com.chua.starter.monitor.server.entity.MonitorProxyLimitLog;
-import com.chua.starter.monitor.server.pojo.MonitorProxyLimitLogResult;
 import com.chua.starter.monitor.server.service.MonitorProxyLimitLogService;
 import com.chua.starter.monitor.server.service.MonitorProxyLimitService;
 import com.chua.starter.monitor.server.service.MonitorProxyService;
@@ -49,30 +47,6 @@ public class MonitorProxyLimitController {
     final MonitorProxyLimitLogService monitorProxyLimitLogService;
     final TransactionTemplate transactionTemplate;
 
-    /**
-     * 分页查询数据
-     *
-     * @return 分页结果
-     */
-    @ResponseBody
-    @Operation(summary = "删除")
-    @DeleteMapping("log/delete")
-    public ReturnResult<Boolean> logDelete(@RequestParam(defaultValue = "3")Integer limitMonth ) {
-        return ReturnResult.of(monitorProxyLimitLogService.delete(limitMonth));
-    }
-    /**
-     * 分页查询数据
-     *
-     * @param entity 结果
-     * @return 分页结果
-     */
-    @ResponseBody
-    @Operation(summary = "日志分页查询基础数据")
-    @GetMapping("log/page")
-    public ReturnPageResult<MonitorProxyLimitLogResult> logPage(PageRequest<MonitorProxyLimitLog> page, MonitorProxyLimitLog entity) {
-        Page<MonitorProxyLimitLogResult> tPage = monitorProxyLimitLogService.pageForLog(page.createPage(), entity);
-        return PageResultUtils.ok(tPage);
-    }
     /**
      * 分页查询数据
      *
