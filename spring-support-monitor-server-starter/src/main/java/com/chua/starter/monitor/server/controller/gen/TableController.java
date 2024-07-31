@@ -98,13 +98,13 @@ public class TableController {
 
         results = new LinkedList<>(tpl.values());
 
-        List<Table> page = CollectionUtils.page(query.getPageNo(), query.getPageSize(), results);
+        List<Table> page = CollectionUtils.page(query.getPage(), query.getPageSize(), results);
         return ReturnPageResult.ok(
                 PageResult.<Table>builder()
                         .total(results.size())
                         .data(page)
                         .pageSize(query.getPageSize())
-                        .pageNo(query.getPageNo()).build()
+                        .pageNo(query.getPage()).build()
         );
     }
 
@@ -249,7 +249,7 @@ public class TableController {
         }
 
         return PageResultUtils.ok(sysGenTableService.page(
-                new Page<>(query.getPageNo(), query.getPageSize()),
+                new Page<>(query.getPage(), query.getPageSize()),
                 Wrappers.<MonitorSysGenTable>lambdaQuery()
                         .eq(MonitorSysGenTable::getGenId, query.getGenId())
                         .like(StringUtils.isNotBlank(query.getKeyword()), MonitorSysGenTable::getTabName, query.getKeyword())

@@ -1,5 +1,6 @@
 package com.chua.starter.mybatis.entity;
 
+import com.chua.starter.common.support.annotations.RequestParamMapping;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -27,7 +28,8 @@ public class PageRequest<T>{
     @Schema(description = "页码，从 1 开始", requiredMode = Schema.RequiredMode.REQUIRED,example = "1")
     @NotNull(message = "页码不能为空")
     @Min(value = 1, message = "页码最小值为 1")
-    private Integer pageNo = PAGE_NO;
+    @RequestParamMapping({"page", "pageNo", "current"})
+    private Integer page = PAGE_NO;
 
     @Schema(description = "每页条数，最大值为 100", requiredMode = Schema.RequiredMode.REQUIRED, example = "10")
     @NotNull(message = "每页条数不能为空")
@@ -41,6 +43,6 @@ public class PageRequest<T>{
      * @return {@link com.baomidou.mybatisplus.extension.plugins.pagination.Page}<{@link T}>
      */
     public com.baomidou.mybatisplus.extension.plugins.pagination.Page<T> createPage() {
-        return new com.baomidou.mybatisplus.extension.plugins.pagination.Page<T>(pageNo, pageSize);
+        return new com.baomidou.mybatisplus.extension.plugins.pagination.Page<T>(page, pageSize);
     }
 }

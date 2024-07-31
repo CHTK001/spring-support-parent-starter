@@ -10,6 +10,9 @@ import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.common.support.annotations.RequestParamMapping;
 import com.chua.starter.common.support.filter.CustomHttpServletRequestWrapper;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.Part;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.annotation.AnnotationUtils;
@@ -27,11 +30,9 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MultipartRequest;
 import org.springframework.web.multipart.support.MultipartResolutionDelegate;
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.Part;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
@@ -56,7 +57,7 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
         if (!ClassUtils.isJavaType(type)) {
             Field[] declaredFields = type.getDeclaredFields();
             for (Field declaredField : declaredFields) {
-                if (declaredField.isAnnotationPresent(RequestParamMapping.class)) {
+                if (!Modifier.isStatic(declaredField.getModifiers()) && declaredField.isAnnotationPresent(RequestParamMapping.class)) {
                     return true;
                 }
             }
@@ -81,6 +82,9 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
         Class<?> type = parameter1.getType();
         Object instance = type.newInstance();
         ReflectionUtils.doWithFields(type, field -> {
+            if(Modifier.isStatic(field.getModifiers())) {
+                return;
+            }
             ReflectionUtils.makeAccessible(field);
             doRegister(instance, field, argument);
         });

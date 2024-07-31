@@ -34,7 +34,7 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
             return PageResult.<T>builder()
                     .records(list)
                     .pageSize(pageParam.getPageSize())
-                    .pageNo(pageParam.getPageNo())
+                    .pageNo(pageParam.getPage())
                     .total(list.size())
                     .build();
         }
@@ -46,7 +46,7 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
         return PageResult.<T>builder()
                 .records(mpPage.getRecords())
                 .pageSize(pageParam.getPageSize())
-                .pageNo(pageParam.getPageNo())
+                .pageNo(pageParam.getPage())
                 .total(mpPage.getTotal())
                 .build();
     }
@@ -58,7 +58,7 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
         return PageResult.<DTO>builder()
                 .records(mpPage.getRecords())
                 .pageSize(pageParam.getPageSize())
-                .pageNo(pageParam.getPageNo())
+                .pageNo(pageParam.getPage())
                 .total(mpPage.getTotal())
                 .build();
     }
