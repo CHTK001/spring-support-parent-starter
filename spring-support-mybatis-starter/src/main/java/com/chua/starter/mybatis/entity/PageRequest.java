@@ -35,6 +35,7 @@ public class PageRequest<T>{
     @NotNull(message = "每页条数不能为空")
     @Min(value = 1, message = "每页条数最小值为 1")
     @Max(value = 100, message = "每页条数最大值为 100")
+    @RequestParamMapping({"pageSize", "size", "count"})
     private Integer pageSize = PAGE_SIZE;
 
     /**
