@@ -1,44 +1,95 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.chua.starter.monitor.server.mapper.MonitorProxyLimitLogMapper">
-  <resultMap id="BaseResultMap" type="com.chua.starter.monitor.server.entity.MonitorProxyLimitLog">
-    <!--@mbg.generated-->
-    <!--@Table monitor_proxy_limit_log-->
-    <id column="limit_log_id" jdbcType="INTEGER" property="limitLogId" />
-    <result column="limit_log_server_id" jdbcType="VARCHAR" property="limitLogServerId" />
-    <result column="limit_log_from" jdbcType="VARCHAR" property="limitLogFrom" />
-    <result column="limit_log_url" jdbcType="VARCHAR" property="limitLogUrl" />
-    <result column="limit_log_type" jdbcType="VARCHAR" property="limitLogType" />
-    <result column="limit_log_address_geo" jdbcType="VARCHAR" property="limitLogAddressGeo" />
-    <result column="limit_log_address" jdbcType="VARCHAR" property="limitLogAddress" />
-    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
-    <result column="create_time_min" jdbcType="BIGINT" property="createTimeMin" />
-  </resultMap>
-  <sql id="Base_Column_List">
-    <!--@mbg.generated-->
-    limit_log_id, limit_log_server_id, limit_log_from, limit_log_url, limit_log_type, 
-    limit_log_address_geo, limit_log_address, create_time, create_time_min
-  </sql>
+    <resultMap id="BaseResultMap" type="com.chua.starter.monitor.server.entity.MonitorProxyLimitLog">
+        <!--@mbg.generated-->
+        <!--@Table monitor_proxy_limit_log-->
+        <id column="limit_log_id" jdbcType="INTEGER" property="limitLogId"/>
+        <result column="limit_log_server_id" jdbcType="VARCHAR" property="limitLogServerId"/>
+        <result column="limit_log_from" jdbcType="VARCHAR" property="limitLogFrom"/>
+        <result column="limit_log_url" jdbcType="VARCHAR" property="limitLogUrl"/>
+        <result column="limit_log_type" jdbcType="VARCHAR" property="limitLogType"/>
+        <result column="limit_log_address_geo" jdbcType="VARCHAR" property="limitLogAddressGeo"/>
+        <result column="limit_log_address" jdbcType="VARCHAR" property="limitLogAddress"/>
+        <result column="create_time" jdbcType="TIMESTAMP" property="createTime"/>
+        <result column="create_time_min" jdbcType="BIGINT" property="createTimeMin"/>
+    </resultMap>
+    <sql id="Base_Column_List">
+        <!--@mbg.generated-->
+        limit_log_id,
+        limit_log_server_id,
+        limit_log_from,
+        limit_log_url,
+        limit_log_type,
+        limit_log_address_geo,
+        limit_log_address,
+        create_time,
+        create_time_min
+    </sql>
 
-  <select id="pageForLog" resultType="com.chua.starter.monitor.server.pojo.MonitorProxyLimitLogResult">
-    SELECT
-      create_time_min,
-      limit_log_url,
-      limit_log_type,
-      limit_log_address_geo,
-      limit_log_address,
-      limit_log_server_id,
-      count(*) count,
-      proxy_name proxyName
-    FROM
-      monitor_proxy_limit_log mpll
-        INNER JOIN monitor_proxy mp ON mp.proxy_id = mpll.limit_log_server_id
-    GROUP BY
-      create_time_min,
-      limit_log_url,
-      limit_log_type,
-      limit_log_address_geo,
-      limit_log_address,
-      limit_log_server_id
-  </select>
+    <select id="pageForLog" resultType="com.chua.starter.monitor.server.pojo.MonitorProxyLimitLogResult">
+        SELECT create_time_min,
+               limit_log_url,
+               limit_log_address_geo,
+               limit_log_address,
+               limit_log_server_id,
+               count(*) count,
+                (select count(*) from monitor_proxy_limit_log where create_time_min = mpll.create_time_min and limit_log_server_id = mpll.limit_log_server_id and  limit_log_address = mpll.limit_log_address and limit_log_type = 'allow' and limit_log_url = mpll.limit_log_url) allowCount,
+                (select count(*) from monitor_proxy_limit_log where create_time_min = mpll.create_time_min and limit_log_server_id = mpll.limit_log_server_id and  limit_log_address = mpll.limit_log_address and limit_log_type = 'deny' and limit_log_url = mpll.limit_log_url) denyCount,
+                (select count(*) from monitor_proxy_limit_log where create_time_min = mpll.create_time_min and limit_log_server_id = mpll.limit_log_server_id and  limit_log_address = mpll.limit_log_address and limit_log_type = 'warn' and limit_log_url = mpll.limit_log_url) warnCount,
+               proxy_name proxyName
+        FROM monitor_proxy_limit_log mpll
+            INNER JOIN monitor_proxy mp
+        ON mp.proxy_id = mpll.limit_log_server_id
+        <where>
+            <if test="query.limitLogServerId != null">
+                AND mpll.limit_log_server_id = #{query.limitLogServerId}
+            </if>
+
+            <if test="query.startDate != null">
+                AND mpll.create_time <![CDATA[>=]]> #{query.startDate}
+            </if>
+
+            <if test="query.endDate != null">
+                AND mpll.create_time <![CDATA[<=]]> #{query.endDate}
+            </if>
+        </where>
+        GROUP BY create_time_min,
+            limit_log_url,
+            limit_log_address_geo,
+            limit_log_address,
+            limit_log_server_id
+    </select>
+
+    <select id="listForGeo" resultType="com.chua.starter.monitor.server.pojo.MonitorProxyLimitLogResult">
+        select create_time,
+                sum(allowCount) allowCount,
+                sum(denyCount) denyCount,
+                sum(warnCount) warnCount from(
+                    SELECT DISTINCT create_time,
+                            (select count(*) from monitor_proxy_limit_log where create_time_min = mpll.create_time_min and limit_log_server_id = mpll.limit_log_server_id and  limit_log_address = mpll.limit_log_address and limit_log_type = 'allow' and limit_log_url = mpll.limit_log_url) allowCount,
+                            (select count(*) from monitor_proxy_limit_log where create_time_min = mpll.create_time_min and limit_log_server_id = mpll.limit_log_server_id and  limit_log_address = mpll.limit_log_address and limit_log_type = 'deny' and limit_log_url = mpll.limit_log_url) denyCount,
+                            (select count(*) from monitor_proxy_limit_log where create_time_min = mpll.create_time_min and limit_log_server_id = mpll.limit_log_server_id and  limit_log_address = mpll.limit_log_address and limit_log_type = 'warn' and limit_log_url = mpll.limit_log_url) warnCount
+                    FROM monitor_proxy_limit_log mpll
+                    <where>
+                        <if test="query.limitLogServerId != null">
+                            AND limit_log_server_id = #{query.limitLogServerId}
+                        </if>
+
+                        <if test="query.limitLogAddress != null and query.limitLogAddress != ''">
+                            AND limit_log_address = #{query.limitLogAddress}
+                        </if>
+
+                        <if test="query.startDate != null">
+                            AND create_time <![CDATA[>=]]> #{query.startDate}
+                        </if>
+
+                        <if test="query.endDate != null">
+                            AND mpll.create_time <![CDATA[<=]]> #{query.endDate}
+                        </if>
+                    </where>
+        ) t
+        GROUP BY create_time
+        ORDER BY create_time
+    </select>
 </mapper>

@@ -24,11 +24,39 @@ import lombok.Data;
 public class MonitorProxyLimitLogResult extends MonitorProxyLimitLog {
 
     /**
-     * 创建时间
+     * 总次数
+     * 记录某个操作的总发生次数，单位为分钟。
+     * 用于统计和分析操作的频率。
      */
     @TableField(exist = false)
-    @ApiModelProperty(value = "次数(min)")
-    @Schema(description = "次数(min)")
-    private Long count;
+    @ApiModelProperty(value = "总次数(/min)")
+    private Integer count;
+
+    /**
+     * 总允许次数
+     * 设定某个操作在单位时间内允许的最大次数。
+     * 用于限制操作的频率，防止过度使用或滥用。
+     */
+    @TableField(exist = false)
+    @ApiModelProperty(value = "总允许次数(/min)")
+    private Integer allowCount;
+
+    /**
+     * 总拒绝次数
+     * 记录在单位时间内被拒绝的操作次数。
+     * 用于监控操作的限制效果，评估系统的访问控制能力。
+     */
+    @TableField(exist = false)
+    @ApiModelProperty(value = "总拒绝次数(/min)")
+    private Integer denyCount;
+
+    /**
+     * 总警告次数
+     * 记录在单位时间内产生警告的操作次数。
+     * 用于提示用户或系统管理员关注某些操作的异常或潜在风险。
+     */
+    @TableField(exist = false)
+    @ApiModelProperty(value = "总警告次数(/min)")
+    private Integer warnCount;
 }
 

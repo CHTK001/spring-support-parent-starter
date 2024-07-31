@@ -22,13 +22,11 @@ import net.sf.jsqlparser.expression.LongValue;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
-import org.springframework.boot.autoconfigure.AutoConfigureOrder;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import org.springframework.core.Ordered;
 
 import java.util.List;
 
@@ -42,21 +40,12 @@ import java.util.List;
 @Slf4j
 @AutoConfigureAfter(SqlSessionFactory.class)
 @EnableConfigurationProperties(MybatisPlusProperties.class)
-@AutoConfigureOrder(Ordered.LOWEST_PRECEDENCE + 10)
+//@AutoConfigureOrder(Ordered.LOWEST_PRECEDENCE + 10)
 @RequiredArgsConstructor
 public class MybatisPlusConfiguration {
 
     final  MybatisPlusProperties mybatisProperties;
-    /**
-     * SupportInjector
-     *
-     * @return SupportInjector
-     */
-//    @Bean
-//    @ConditionalOnMissingBean
-    public SupportInjector supportInjector(MybatisPlusProperties mybatisProperties) {
-        return new SupportInjector(mybatisProperties);
-    }
+
 
     /**
      * 分页
@@ -160,11 +149,20 @@ public class MybatisPlusConfiguration {
      */
     @Bean("mapper-reload")
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = MybatisPlusProperties.PRE, name = "open-xml-reload", havingValue = "true", matchIfMissing = false)
+    @ConditionalOnProperty(prefix = MybatisPlusProperties.PRE, name = "open-xml-reload", havingValue = "true", matchIfMissing = true)
     public Reload xmlReload(List<SqlSessionFactory> sqlSessionFactory, MybatisPlusProperties mybatisProperties) {
         return new MapperReload(sqlSessionFactory, mybatisProperties);
     }
-
+    /**
+     * SupportInjector
+     *
+     * @return SupportInjector
+     */
+    @Bean
+    @ConditionalOnMissingBean(name = {"supportInjector"})
+    public SupportInjector supportInjector(MybatisPlusProperties mybatisProperties) {
+        return new SupportInjector(mybatisProperties);
+    }
     /**
      * MybatisEndpoint
      *
@@ -172,8 +170,8 @@ public class MybatisPlusConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnBean(name = "mapper-reload")
-    public MybatisEndpoint mybatisEndpoint(Reload reload, SqlSessionFactory sqlSessionFactory, SupportInjector supportInjector) {
+    @ConditionalOnBean(name = {"mapper-reload", "supportInjector"})
+    public MybatisEndpoint mybatisEndpoint(Reload reload, SqlSessionFactory sqlSessionFactory, @Autowired(required = false) SupportInjector supportInjector ) {
         return new MybatisEndpoint(reload, sqlSessionFactory.getConfiguration(), supportInjector);
     }
 
