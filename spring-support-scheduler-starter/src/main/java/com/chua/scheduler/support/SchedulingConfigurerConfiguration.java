@@ -21,7 +21,7 @@ public class SchedulingConfigurerConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public ScheduleEndpoint scheduleEndpoint(ScheduleCornChangeHandler scheduleCornChangeHandler) {
-        return new ScheduleEndpoint(scheduleCornChangeHandler);
+    public SchedulerEndpoint scheduleEndpoint(ScheduleCornChangeHandler scheduleCornChangeHandler) {
+        return new SchedulerEndpoint(scheduleCornChangeHandler);
     }
 }
