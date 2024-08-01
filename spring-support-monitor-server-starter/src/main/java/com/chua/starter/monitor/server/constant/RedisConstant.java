@@ -33,5 +33,5 @@ public interface RedisConstant {
     /**
      * 监控前缀
      */
-    String REDIS_SEARCH_MONITOR_GEN_PREFIX = REDIS_SEARCH_PREFIX + "monitor:gen:" ;
+    String REDIS_SEARCH_MONITOR_GEN_PREFIX = REDIS_SEARCH_PREFIX + "monitor_gen_" ;
 }
