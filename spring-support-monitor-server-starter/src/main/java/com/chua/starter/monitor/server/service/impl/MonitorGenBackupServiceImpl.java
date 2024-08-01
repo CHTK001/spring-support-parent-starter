@@ -31,7 +31,6 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.io.IOException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -114,7 +113,7 @@ public class MonitorGenBackupServiceImpl extends ServiceImpl<MonitorSysGenMapper
                     registerDocument(event, data, monitorSysGen.getGenId());
                 });
                 backup.start();
-            } catch (IOException e) {
+            } catch (Exception e) {
                 throw new RuntimeException(e);
             }
             BACKUP_MAP.put(monitorSysGen.getGenId(), backup);
@@ -170,7 +169,7 @@ public class MonitorGenBackupServiceImpl extends ServiceImpl<MonitorSysGenMapper
             if(null != backup) {
                 try {
                     backup.stop();
-                } catch (IOException e) {
+                } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
             }

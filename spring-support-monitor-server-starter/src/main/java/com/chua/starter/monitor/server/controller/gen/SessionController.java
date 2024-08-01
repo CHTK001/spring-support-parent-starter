@@ -247,6 +247,10 @@ public class SessionController {
                         .eq(MonitorSysGenRemark::getRemarkTable, currentTable)
                         .eq(StringUtils.isNotEmpty(currentDatabase), MonitorSysGenRemark::getRemarkDatabase, currentDatabase)
                 );
+                List<Column> columns = Optional.ofNullable(session.getColumns(null, currentTable)).orElse(Collections.emptyList());
+                for (Column column : columns) {
+                    remark.put(column.getName(), column.getComment());
+                }
                 for (MonitorSysGenRemark sysGenRemark : list) {
                     remark.put(sysGenRemark.getRemarkColumn(), sysGenRemark.getRemarkName());
                 }
