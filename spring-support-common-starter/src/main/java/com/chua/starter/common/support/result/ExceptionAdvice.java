@@ -14,6 +14,7 @@ import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -108,7 +109,13 @@ public class ExceptionAdvice  {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> processException(ServletException e) {
         log.error(e.getMessage(), e);
-        return Result.failed(e.getMessage());
+        if(e instanceof HttpMediaTypeNotSupportedException httpMediaTypeNotSupportedException) {
+            return Result.failed("当前不支持: {}, 支持: {}",
+                    httpMediaTypeNotSupportedException.getContentType(),
+                    httpMediaTypeNotSupportedException.getSupportedMediaTypes()
+                    );
+        }
+        return Result.failed("当前请求方法不支持{}", e.getMessage());
     }
     /**
      * ServletException
@@ -178,7 +185,7 @@ public class ExceptionAdvice  {
     @ExceptionHandler(BusinessException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> handleBizException(BusinessException e) {
-        log.error("", e);
+        log.error("-->", e);
         if (e.getResultCode() != null) {
             return Result.failed(e.getLocalizedMessage());
         }

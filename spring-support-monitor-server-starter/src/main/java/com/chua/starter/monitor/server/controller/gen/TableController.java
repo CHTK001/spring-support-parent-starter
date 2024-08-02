@@ -18,6 +18,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.server.entity.MonitorSysGen;
 import com.chua.starter.monitor.server.entity.MonitorSysGenColumn;
 import com.chua.starter.monitor.server.entity.MonitorSysGenTable;
+import com.chua.starter.monitor.server.pojo.GenTable;
 import com.chua.starter.monitor.server.properties.GenProperties;
 import com.chua.starter.monitor.server.query.Download;
 import com.chua.starter.monitor.server.query.TableQuery;
@@ -28,6 +29,7 @@ import com.chua.starter.monitor.server.service.MonitorSysGenTableService;
 import com.chua.starter.monitor.server.util.DatabaseHandler;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
+import io.swagger.annotations.ApiOperation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,10 +63,37 @@ public class TableController {
 
 
     /**
+     * 更新表
+     *
+     * @param table 表
+     * @return {@link ReturnResult}<{@link Boolean}>
+     */
+    @ApiOperation("更新表")
+    @PutMapping("updateTable")
+    public ReturnResult<Boolean> updateTable(@RequestBody GenTable table) {
+        if(null == table.getGenId()) {
+            return ReturnResult.error("表不存在");
+        }
+
+        if(null == table.getChildren()) {
+            return ReturnResult.error("表字段不存在");
+        }
+
+        MonitorSysGen sysGen = getSysGen(table.getGenId());
+        if(null == sysGen) {
+            return ReturnResult.illegal("配置不存在");
+        }
+
+        table.setColumn(table.getChildren());
+        return ReturnResult.ok(sysGenTableService.updateTable(sysGen, table));
+
+    }
+    /**
      * 表格列表
      *
      * @return {@link ReturnPageResult}<{@link Table}>
      */
+    @ApiOperation("表格列表")
     @GetMapping("table")
     public ReturnPageResult<Table> tableList(TableQuery query) {
         MonitorSysGen sysGen = getSysGen(query);
@@ -116,6 +145,7 @@ public class TableController {
      * @return {@link ResponseEntity}<{@link byte[]}>
      * @throws IOException IOException
      */
+    @ApiOperation("批生成代码")
     @PostMapping("/batchGenCode")
     public ResponseEntity<byte[]> batchGenCode(@RequestBody Download download) throws IOException {
         byte[] data = sysGenTableService.downloadCode(download);
@@ -136,6 +166,7 @@ public class TableController {
      * @return {@link ResponseEntity}<{@link byte[]}>
      * @throws IOException IOException
      */
+    @ApiOperation("批量生成代码")
     @GetMapping("/template")
     public ReturnResult<List<TemplateResult>> template(Integer tabId) throws IOException {
         return ReturnResult.ok(sysGenTableService.template(tabId));
@@ -148,6 +179,7 @@ public class TableController {
      * @return {@link ResponseEntity}<{@link byte[]}>
      * @throws IOException IOException
      */
+    @ApiOperation("同步表结构")
     @GetMapping("/sync")
     public ReturnResult<Boolean> sync(Integer tabId) throws Exception {
         if(null == tabId) {
@@ -349,9 +381,22 @@ public class TableController {
             return null;
         }
 
+        return getSysGen(query.getGenId());
+    }
+    /**
+     * 获取数据库
+     *
+     * @param genId 查询
+     * @return {@link String}
+     */
+    private MonitorSysGen getSysGen(Object genId) {
+        if (null == genId) {
+            return null;
+        }
+
         return CollectionUtils.findFirst(sysGenService.list(new MPJLambdaWrapper<MonitorSysGen>()
                 .selectAll(MonitorSysGen.class)
-                .eq(MonitorSysGen::getGenId, query.getGenId()))
+                .eq(MonitorSysGen::getGenId, genId))
         );
     }
 
