@@ -6,14 +6,18 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.common.support.function.Splitter;
 import com.chua.common.support.net.NetUtils;
+import com.chua.common.support.session.Session;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.FileUtils;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.monitor.server.entity.MonitorSysGen;
 import com.chua.starter.monitor.server.entity.MonitorSysGenColumn;
 import com.chua.starter.monitor.server.entity.MonitorSysGenTable;
 import com.chua.starter.monitor.server.entity.MonitorSysGenTemplate;
 import com.chua.starter.monitor.server.mapper.SysGenTableMapper;
+import com.chua.starter.monitor.server.pojo.GenTable;
 import com.chua.starter.monitor.server.properties.GenProperties;
 import com.chua.starter.monitor.server.query.Download;
 import com.chua.starter.monitor.server.result.TemplateResult;
@@ -92,6 +96,14 @@ public class MonitorSysGenTableServiceImpl extends ServiceImpl<SysGenTableMapper
         return temp;
     }
 
+    @Override
+    public Boolean updateTable(MonitorSysGen sysGen, GenTable table) {
+        Session session = ServiceProvider.of(Session.class).getKeepExtension(sysGen.getGenId() + "", sysGen.getGenType(), sysGen.newDatabaseOptions());
+        if (session.isConnect()) {
+            return session.updateTable(table).isSuccess();
+        }
+        return false;
+    }
 
 
     /**

@@ -5,10 +5,12 @@ import com.chua.common.support.collection.GuavaHashBasedTable;
 import com.chua.common.support.collection.Table;
 import com.chua.starter.common.support.jackson.handler.JacksonProblemHandler;
 import com.chua.starter.common.support.jackson.handler.JsonArray2StringJacksonProblemHandler;
+import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.deser.DeserializationProblemHandler;
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.ser.std.DateSerializer;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -58,12 +60,28 @@ public class JacksonConfiguration  {
         objectMapper.configure(DeserializationFeature.FAIL_ON_READING_DUP_TREE_KEY, true);
 //        objectMapper.setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE);
 
+        objectMapper.configure(MapperFeature.PROPAGATE_TRANSIENT_MARKER, true);
+
         objectMapper.registerModule(new Jdk8Module());
         objectMapper.registerModule(javaTimeModule);
         objectMapper.registerModule(new JsonMixinModule());
         objectMapper.registerModule(new ParameterNamesModule());
         objectMapper.addHandler(new NullableFieldsDeserializationProblemHandler());
+
         return objectMapper;
+    }
+
+    static class TransientFieldIgnoringDeserializer extends StdDeserializer<Object> {
+        private static final long serialVersionUID = 1L;
+
+        public TransientFieldIgnoringDeserializer() {
+            super(Object.class);
+        }
+
+        @Override
+        public Object deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+           return p.readValuesAs(Object.class);
+        }
     }
 
     static class NullableFieldsDeserializationProblemHandler extends DeserializationProblemHandler {
