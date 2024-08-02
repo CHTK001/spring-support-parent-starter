@@ -284,7 +284,7 @@ public class MonitorSysGen implements Serializable {
         databaseOptions.setDriver(genDriver);
         databaseOptions.setDatabaseFile(genDatabaseFile);
         databaseOptions.setUsername(genUser);
-        databaseOptions.setDriverPath(genDriverFile);
+        databaseOptions.setDriverPath(StringUtils.defaultString(genDriverFile, genDriverRemoteUrl));
         databaseOptions.setPassword(genPassword);
         databaseOptions.setGenType(genType);
         databaseOptions.setSecretKey(genUid);

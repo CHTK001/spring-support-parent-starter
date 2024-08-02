@@ -26,6 +26,7 @@ public class ScheduleCornChangeHandler implements SchedulingConfigurer {
         this.scheduledTasks = findScheduledTasks();
     }
 
+    @SuppressWarnings("unchecked")
     private Map<Object, Set<ScheduledTask>> findScheduledTasks() {
         try {
             Field scheduledTasks1 = processor.getClass().getDeclaredField("scheduledTasks");

@@ -42,6 +42,12 @@
 
         <dependency>
             <groupId>com.chua</groupId>
+            <artifactId>utils-support-ucanaccess-starter</artifactId>
+            <version>4.0.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.chua</groupId>
             <artifactId>utils-support-ssh-starter</artifactId>
         </dependency>
 
@@ -80,18 +86,7 @@
             <groupId>com.chua</groupId>
             <artifactId>utils-support-zbus-starter</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.apache.velocity</groupId>
-            <artifactId>velocity-engine-core</artifactId>
-            <version>2.3</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>cn.smallbun.screw</groupId>
-            <artifactId>screw-core</artifactId>
-            <version>1.0.5</version>
-            <scope>compile</scope>
-        </dependency>
+
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-netty-starter</artifactId>
