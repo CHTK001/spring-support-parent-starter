@@ -226,6 +226,11 @@ public class ExceptionAdvice  {
         } else {
             log.error("handleRuntimeException exception", e);
         }
+
+        if(e instanceof UnsupportedOperationException) {
+            return Result.failed("当前系统版本/软件不支持该功能");
+        }
+
         if(Validator.hasChinese(e.getMessage())) {
             return Result.failed(e);
         }
