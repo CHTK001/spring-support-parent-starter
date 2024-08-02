@@ -22,16 +22,21 @@
             <artifactId>spring-support-monitor-client-starter</artifactId>
         </dependency>
 
-
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-support-redis-starter</artifactId>
+            <artifactId>utils-support-excel-starter</artifactId>
+            <version>4.0.0</version>
         </dependency>
 
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>utils-support-datasource-starter</artifactId>
+            <artifactId>utils-support-calcite-starter</artifactId>
             <version>4.0.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-redis-starter</artifactId>
         </dependency>
 
         <dependency>
