@@ -115,10 +115,10 @@ public class SessionController {
                 ServiceProvider.of(Session.class).closeKeepExtension(query.getGenId() + "");
                 return ReturnResult.illegal("当前服务器不可达");
             }
-            List<Database> database1 = session.getDatabase(query.getKeyword());
-            if (CollectionUtils.isNotEmpty(database1)) {
-                return ReturnResult.ok(database1);
-            }
+//            List<Database> database1 = session.getDatabase(query.getKeyword());
+//            if (CollectionUtils.isNotEmpty(database1)) {
+//                return ReturnResult.ok(database1);
+//            }
 
             List<Table> results = session.getTables(database, "%", query.createSessionQuery());
             Database item = new Database();
