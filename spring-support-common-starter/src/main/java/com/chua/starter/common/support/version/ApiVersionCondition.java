@@ -1,13 +1,14 @@
 package com.chua.starter.common.support.version;
 
 
+import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.common.support.annotations.ApiVersion;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.servlet.mvc.condition.RequestCondition;
 
-import java.util.regex.Matcher;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -59,15 +60,20 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
     @Override
     public ApiVersionCondition getMatchingCondition(HttpServletRequest httpServletRequest) {
         // 通过uri匹配版本号
-        Matcher m = VERSION_PREFIX_PATTERN.matcher(httpServletRequest.getRequestURI());
-        if (m.find()) {
-            // 获得符合匹配条件的ApiVersionCondition
-            double version = Double.parseDouble(m.group(1));
-            ApiVersion currentApiVersion = getApiVersion();
-            double currentVersion = null == currentApiVersion ? version : currentApiVersion.version();
-            if (version >= currentVersion) {
-                return this;
-            }
+        Map<String, String> stringStringMap = MapUtils.asMap(httpServletRequest.getQueryString(), "&", "=");
+        Double urlVersion = MapUtils.getDouble(stringStringMap, "version");
+        if (null == urlVersion) {
+            return this;
+        }
+        // 获得符合匹配条件的ApiVersionCondition
+        ApiVersion currentApiVersion = getApiVersion();
+        if (null == currentApiVersion) {
+            return this;
+        }
+
+        double currentVersion = currentApiVersion.version();
+        if (urlVersion >= currentVersion) {
+            return this;
         }
         return null;
     }
