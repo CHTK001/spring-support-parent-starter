@@ -4,7 +4,7 @@ import com.chua.common.support.utils.ArrayUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.annotations.ApiPlatform;
 import com.chua.starter.common.support.annotations.ApiVersion;
-import com.chua.starter.common.support.properties.VersionProperties;
+import com.chua.starter.common.support.properties.ControlProperties;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.lang.Nullable;
 import org.springframework.web.servlet.mvc.condition.RequestCondition;
@@ -21,16 +21,16 @@ import java.lang.reflect.Method;
  */
 public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandlerMapping {
 
-    private final VersionProperties versionProperties;
+    private final ControlProperties controlProperties;
     private final boolean platformOpen;
     private final boolean versionOpen;
     private final String platform;
 
-    public ApiVersionRequestMappingHandlerMapping(VersionProperties versionProperties) {
-        this.versionProperties = versionProperties;
-        this.versionOpen = versionProperties.isEnable() && StringUtils.isNotBlank(versionProperties.getVersion());
-        this.platformOpen = versionProperties.isEnable() && StringUtils.isNotEmpty(versionProperties.getPlatform());
-        this.platform = versionProperties.getPlatform();
+    public ApiVersionRequestMappingHandlerMapping(ControlProperties controlProperties) {
+        this.controlProperties = controlProperties;
+        this.versionOpen = controlProperties.getVersion().isEnable() && StringUtils.isNotBlank(controlProperties.getVersion().getName());
+        this.platformOpen = controlProperties.getPlatform().isEnable() && StringUtils.isNotEmpty(controlProperties.getPlatform().getName());
+        this.platform = controlProperties.getPlatform().getName();
     }
 
     /**

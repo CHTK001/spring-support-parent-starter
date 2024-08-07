@@ -2,18 +2,18 @@ package com.chua.starter.common.support.common;
 
 import com.chua.common.support.geo.IpPosition;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.common.support.properties.VersionProperties;
+import com.chua.starter.common.support.properties.ControlProperties;
 import com.chua.starter.common.support.utils.RequestUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.Data;
 
-import jakarta.servlet.http.HttpServletRequest;
 import java.util.concurrent.Executor;
 
 @Data
 public class CommonService {
     private IpPosition ipPosition;
 
-    public CommonService(VersionProperties coreProperties, Executor executorService) {
+    public CommonService(ControlProperties coreProperties, Executor executorService) {
 //        executorService.execute(() -> {
 //            CoreProperties.Geo geo = coreProperties.getGeo();
 //            this.ipPosition = IpBuilder.newBuilder().database(geo.getConfig()).build(geo.getImpl());
@@ -41,8 +41,7 @@ public class CommonService {
 //               return LAN;
 //            }
 
-            StringBuilder stringBuilder = new StringBuilder();
-//            if (StringUtils.isNotEmpty(city.country())) {
+            //            if (StringUtils.isNotEmpty(city.country())) {
 //                stringBuilder.append(city.country()).append("/");
 //            }
 //            if(StringUtils.isNotEmpty(city.province())) {
@@ -51,7 +50,7 @@ public class CommonService {
 //            if (StringUtils.isNotEmpty(city.city())) {
 //                stringBuilder.append(city.city());
 //            }
-            return stringBuilder.toString();
+            return "";
         }
 
         return null;
