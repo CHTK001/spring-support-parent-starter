@@ -1,101 +1,53 @@
 package com.chua.starter.common.support.provider;
 
-import com.chua.common.support.crypto.Codec;
-import com.chua.common.support.crypto.CodecKeyPair;
-import com.chua.common.support.matcher.PathMatcher;
-import com.chua.common.support.utils.DigestUtils;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.IoUtils;
+import com.chua.starter.common.support.annotations.Ignore;
+import com.chua.starter.common.support.application.GlobalFactory;
+import com.chua.starter.common.support.application.Sign;
 import com.chua.starter.common.support.properties.CodecProperties;
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import io.swagger.annotations.Api;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import java.nio.charset.StandardCharsets;
 
 /**
- * 编解码器提供程序
- *
+ * 编码
  * @author CH
- * @version 1.0.0
- * @since 2024/01/22
+ * @since 2024/8/6
  */
+@RestController
+@Slf4j
+@Api(tags = "获取脚本")
+@Tag(name = "获取脚本")
+@RequestMapping("/v1/script")
+@ConditionalOnProperty(prefix = CodecProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = true)
 public class CodecProvider {
 
+    @Autowired
+    private CodecProperties codecProperties;
 
-    private final List<String> whiteList;
-    private final Codec codec;
-    private final CodecKeyPair codecKeyPair;
-    private final String publicKeyHex;
-    private boolean enable;
-
-    /**
-     * 编解码器类型
-     */
-    private String codecType = "sm2";
-
-
-    public CodecProvider(CodecProperties codecProperties) {
-        this.enable = codecProperties.isEnable();
-        this.codecType = codecProperties.getCodecType();
-        this.codec = Codec.build(codecType);
-        this.whiteList = codecProperties.getWhiteList();
-        this.codecKeyPair = (CodecKeyPair) codec;
-        this.publicKeyHex = codecKeyPair.getPublicKeyHex();
-
-    }
-
-
-    public boolean isPass() {
-        return !enable;
-    }
-
-    /**
-     * 编码
-     *
-     * @param data 数据
-     * @return {@link Object}
-     */
-    public CodecResult encode(String data) {
-        String encode = codecKeyPair.encode(data, publicKeyHex);
-        String nanoTime = StringUtils.padAfter(System.nanoTime() + "", 16, "0");
-        String encrypt = DigestUtils.aesEncrypt(codecKeyPair.getPrivateKeyHex(), nanoTime);
-        return new CodecResult(encrypt, encode, nanoTime);
-    }
-
-    public void setEnable(boolean parseBoolean) {
-        if(!parseBoolean) {
-            this.enable = false;
-            return;
-        }
-        this.enable = true;
-    }
-
-    public boolean isPass(String requestURI) {
-        for (String s : whiteList) {
-            if(PathMatcher.INSTANCE.match(s, requestURI)) {
-                return true;
+    private static String SCRIPT;
+    static  {
+        {
+            try {
+                String script = IoUtils.toString(CodecProvider.class.getResourceAsStream("uu.js"), StandardCharsets.UTF_8);
+                SCRIPT = script.replace("{{sign1}}",  GlobalFactory.getInstance().get(Sign.class).getSign1());
+            } catch (Exception ignored) {
             }
         }
-
-        return false;
+    }
+    @Ignore
+    @Operation(summary = "获取uu.js")
+    @GetMapping("uu.js")
+    public String getUu() {
+        return SCRIPT;
     }
 
-    public boolean isEnable() {
-        return enable;
-    }
-
-
-
-    @Data
-    @AllArgsConstructor
-    public static class CodecResult {
-
-        private String key;
-
-        private String data;
-
-        /**
-         * 时间戳
-         */
-        private String timestamp;
-    }
 }
