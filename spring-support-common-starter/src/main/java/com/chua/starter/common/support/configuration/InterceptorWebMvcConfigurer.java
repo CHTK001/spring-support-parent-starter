@@ -3,6 +3,9 @@ package com.chua.starter.common.support.configuration;
 import com.chua.starter.common.support.interceptor.address.AddressHandlerInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Import;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -14,6 +17,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * @since 2024/6/21
  */
 @RequiredArgsConstructor
+@Import(VersionWebMvbConfigurer.class)
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class InterceptorWebMvcConfigurer implements WebMvcConfigurer {
 
     final ApplicationContext applicationContext;
