@@ -1,7 +1,7 @@
 package com.chua.starter.common.support.configuration;
 
+import com.chua.starter.common.support.codec.CodecFactory;
 import com.chua.starter.common.support.properties.CodecProperties;
-import com.chua.starter.common.support.provider.CodecProvider;
 import com.chua.starter.common.support.result.CodeResponseBodyAdvice;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -23,12 +23,12 @@ public class CodecConfiguration {
 
     @Bean("codeResponseBodyAdvice")
     @ConditionalOnMissingBean()
-    public CodeResponseBodyAdvice codeResponseBodyAdvice(CodecProvider codecProvider) {
-        return new CodeResponseBodyAdvice(codecProvider);
+    public CodeResponseBodyAdvice codeResponseBodyAdvice(CodecFactory codecFactory) {
+        return new CodeResponseBodyAdvice(codecFactory);
     }
     @Bean("codecProvider")
     @ConditionalOnMissingBean()
-    public CodecProvider codecProvider() {
-        return new CodecProvider(codecProperties);
+    public CodecFactory codecProvider() {
+        return new CodecFactory(codecProperties);
     }
 }

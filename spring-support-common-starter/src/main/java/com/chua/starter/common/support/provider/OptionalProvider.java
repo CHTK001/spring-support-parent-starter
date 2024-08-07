@@ -12,6 +12,8 @@ import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.properties.OptionalProperties;
 import com.chua.starter.common.support.properties.SpiProperties;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -35,6 +37,7 @@ import java.util.Map;
 @RequestMapping("/v1/option")
 @ConditionalOnProperty(prefix = OptionalProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
+@Tag(name = "选项")
 public class OptionalProvider {
 
     private final SpiProperties spiProperties;
@@ -44,6 +47,7 @@ public class OptionalProvider {
      * @param type 类型
      * @return 获取选项
      */
+    @Operation(summary = "获取已经加载选项")
     @GetMapping("objects/get")
 //    @Cacheable(cacheManager = SYSTEM, cacheNames = SYSTEM, key = "'OPTION:OBJECT_GET' + #type + '' + #name")
     public ReturnResult<List<SpiOption>> objects(String type, @RequestParam(required =false) String name) {
@@ -89,6 +93,7 @@ public class OptionalProvider {
      * @param type 类型
      * @return 获取选项
      */
+    @Operation(summary = "获取选项")
     @GetMapping("get")
 //    @Cacheable(cacheManager = SYSTEM, cacheNames = SYSTEM, key = "'OPTION:GET' + #type + '' + #name")
     public ReturnResult<List<SpiOption>> get(String type, @RequestParam(required =false) String name) {
@@ -111,6 +116,7 @@ public class OptionalProvider {
      * @param type 类型
      * @return 获取选项
      */
+    @Operation(summary = "获取选项")
     @GetMapping("list")
 //    @Cacheable(cacheManager = SYSTEM, cacheNames = SYSTEM, key = "'OPTION:LIST' + #type + '' + #name")
     public ReturnResult<Map<String, List<SpiOption>>> list(String type, @RequestParam(required =false) String name) {

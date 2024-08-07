@@ -3,15 +3,11 @@ package com.chua.starter.common.support.configuration;
 import com.chua.common.support.objects.ConfigureObjectContext;
 import com.chua.common.support.objects.DefaultConfigureObjectContext;
 import com.chua.starter.common.support.debounce.DebounceAspect;
-import com.chua.starter.common.support.external.ExternalController;
 import com.chua.starter.common.support.limit.LimitAspect;
 import com.chua.starter.common.support.logger.OperateLoggerPointcutAdvisor;
 import com.chua.starter.common.support.properties.*;
-import com.chua.starter.common.support.provider.SettingProvider;
 import com.chua.starter.common.support.result.ExceptionAdvice;
 import com.chua.starter.common.support.result.UniformResponseBodyAdvice;
-import com.chua.starter.common.support.setting.DefaultSettingService;
-import com.chua.starter.common.support.setting.SettingService;
 import com.chua.starter.common.support.watch.WatchPointcutAdvisor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -30,7 +26,6 @@ import org.springframework.web.client.RestTemplate;
         LogProperties.class,
         ParameterProperties.class,
         ActuatorProperties.class,
-        ExternalInterfaceProperties.class,
         SpiProperties.class,
         CacheProperties.class
 })
@@ -45,12 +40,6 @@ public class CommonConfiguration {
     @ConditionalOnMissingBean
     public DebounceAspect debounceAspect() {
         return new DebounceAspect();
-    }
-    @Bean
-    @ConditionalOnMissingBean
-    @ConditionalOnProperty(name = "plugin.external.enable", havingValue = "true", matchIfMissing = true)
-    public ExternalController externalController(ExternalInterfaceProperties externalInterfaceProperties) {
-        return new ExternalController(externalInterfaceProperties);
     }
 
     @Bean
@@ -94,18 +83,6 @@ public class CommonConfiguration {
     @Lazy
     public WatchPointcutAdvisor watchPointcutAdvisor() {
         return new WatchPointcutAdvisor();
-    }
-    @Bean
-    @ConditionalOnMissingBean
-    @Lazy
-    public SettingProvider settingProvider(SettingService settingService) {
-        return new SettingProvider(settingService);
-    }
-    @Bean
-    @ConditionalOnMissingBean
-    @Lazy
-    public SettingService settingService() {
-        return new DefaultSettingService();
     }
 
 }

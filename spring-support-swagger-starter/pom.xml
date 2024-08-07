@@ -37,11 +37,6 @@
         </dependency>
 
 
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-common-starter</artifactId>
-        </dependency>
-
     </dependencies>
 
 </project>

@@ -18,7 +18,12 @@ public class VersionProperties {
     /**
      * 是否开启版本控制
      */
-    private boolean enable;
+    private boolean enable = true;
+
+    /**
+     * 平台名称
+     */
+    private String platform;
 
     /**
      * 版本号

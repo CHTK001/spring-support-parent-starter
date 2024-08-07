@@ -14,6 +14,10 @@ import lombok.Data;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
+/**
+ * 基础信息
+ * @author CH
+ */
 @Data
 public class SysBase implements Serializable {
     private static final long serialVersionUID = 1L;
