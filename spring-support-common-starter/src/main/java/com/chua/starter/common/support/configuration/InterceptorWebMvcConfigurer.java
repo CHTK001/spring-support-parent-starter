@@ -17,7 +17,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * @since 2024/6/21
  */
 @RequiredArgsConstructor
-@Import(VersionWebMvbConfigurer.class)
+@Import(ControlWebMvbConfigurer.class)
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class InterceptorWebMvcConfigurer implements WebMvcConfigurer {
 
