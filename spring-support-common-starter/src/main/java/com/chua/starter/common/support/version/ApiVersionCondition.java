@@ -1,9 +1,7 @@
 package com.chua.starter.common.support.version;
 
 
-import com.chua.starter.common.support.annotations.ApiPlatform;
 import com.chua.starter.common.support.annotations.ApiVersion;
-import com.chua.starter.common.support.properties.VersionProperties;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -30,14 +28,9 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
      **/
     @Getter
     private ApiVersion apiVersion;
-    @Getter
-    private ApiPlatform apiPlatform;
-    private final VersionProperties versionProperties;
 
-    ApiVersionCondition(ApiVersion apiVersion, ApiPlatform apiPlatform, VersionProperties versionProperties) {
+    ApiVersionCondition(ApiVersion apiVersion) {
         this.apiVersion = apiVersion;
-        this.apiPlatform = apiPlatform;
-        this.versionProperties = versionProperties;
     }
 
     /**
@@ -54,7 +47,7 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
     @Override
     public ApiVersionCondition combine(ApiVersionCondition other) {
         // 此处按优先级，method大于class
-        return new ApiVersionCondition(other.getApiVersion(), apiPlatform, versionProperties);
+        return new ApiVersionCondition(other.getApiVersion());
     }
 
     /**
@@ -69,8 +62,10 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
         Matcher m = VERSION_PREFIX_PATTERN.matcher(httpServletRequest.getRequestURI());
         if (m.find()) {
             // 获得符合匹配条件的ApiVersionCondition
-            double version = Double.valueOf(m.group(1));
-            if (version >= getApiVersion().version()) {
+            double version = Double.parseDouble(m.group(1));
+            ApiVersion currentApiVersion = getApiVersion();
+            double currentVersion = null == currentApiVersion ? version : currentApiVersion.version();
+            if (version >= currentVersion) {
                 return this;
             }
         }

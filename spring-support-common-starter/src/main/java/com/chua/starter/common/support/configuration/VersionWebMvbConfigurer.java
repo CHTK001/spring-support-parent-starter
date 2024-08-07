@@ -3,6 +3,7 @@ package com.chua.starter.common.support.configuration;
 import com.chua.starter.common.support.properties.IpProperties;
 import com.chua.starter.common.support.properties.VersionProperties;
 import com.chua.starter.common.support.version.ApiVersionRequestMappingHandlerMapping;
+import jakarta.annotation.Priority;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.web.servlet.WebMvcRegistrations;
@@ -10,6 +11,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
@@ -24,7 +26,8 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
         IpProperties.class,
 })
 @Slf4j
-@Order(-1)
+@Priority(0)
+@Order(Ordered.HIGHEST_PRECEDENCE + 1)
 public class VersionWebMvbConfigurer implements WebMvcRegistrations, EnvironmentAware {
 
     VersionProperties versionProperties;
@@ -43,7 +46,6 @@ public class VersionWebMvbConfigurer implements WebMvcRegistrations, Environment
         }
         return new RequestMappingHandlerMapping();
     }
-
 
 
     @Override
