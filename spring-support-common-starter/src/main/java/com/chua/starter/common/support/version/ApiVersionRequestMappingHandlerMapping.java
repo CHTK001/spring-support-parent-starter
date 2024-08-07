@@ -1,10 +1,14 @@
 package com.chua.starter.common.support.version;
 
+import com.chua.common.support.utils.ArrayUtils;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.annotations.ApiPlatform;
 import com.chua.starter.common.support.annotations.ApiVersion;
 import com.chua.starter.common.support.properties.VersionProperties;
 import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.lang.Nullable;
 import org.springframework.web.servlet.mvc.condition.RequestCondition;
+import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import java.lang.reflect.Method;
@@ -18,9 +22,15 @@ import java.lang.reflect.Method;
 public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandlerMapping {
 
     private final VersionProperties versionProperties;
+    private final boolean platformOpen;
+    private final boolean versionOpen;
+    private final String platform;
 
     public ApiVersionRequestMappingHandlerMapping(VersionProperties versionProperties) {
         this.versionProperties = versionProperties;
+        this.versionOpen = versionProperties.isEnable() && StringUtils.isNotBlank(versionProperties.getVersion());
+        this.platformOpen = versionProperties.isEnable() && StringUtils.isNotEmpty(versionProperties.getPlatform());
+        this.platform = versionProperties.getPlatform();
     }
 
     /**
@@ -32,10 +42,32 @@ public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandle
      */
     @Override
     protected RequestCondition<?> getCustomTypeCondition(Class<?> handlerType) {
-        ApiVersion apiVersion = AnnotationUtils.findAnnotation(handlerType, ApiVersion.class);
-        return null == apiVersion ? super.getCustomTypeCondition(handlerType) : new ApiVersionCondition(apiVersion,
-                AnnotationUtils.findAnnotation(handlerType, ApiPlatform.class),
-                versionProperties);
+        if(!versionOpen) {
+            return super.getCustomTypeCondition(handlerType);
+        }
+        return new ApiVersionCondition(AnnotationUtils.findAnnotation(handlerType, ApiVersion.class));
+    }
+    @Override
+    @Nullable
+    protected RequestMappingInfo getMappingForMethod(Method method, Class<?> handlerType) {
+        if(!platformOpen) {
+            return super.getMappingForMethod(method, handlerType);
+        }
+
+        ApiPlatform apiPlatform = AnnotationUtils.findAnnotation(method, ApiPlatform.class);
+        if(null == apiPlatform) {
+            apiPlatform = AnnotationUtils.findAnnotation(handlerType, ApiPlatform.class);
+        }
+
+        if(apiPlatform == null || ArrayUtils.isEmpty(apiPlatform.value())) {
+            return super.getMappingForMethod(method, handlerType);
+        }
+
+        if(ArrayUtils.containsIgnoreCase(apiPlatform.value(), platform)) {
+            return super.getMappingForMethod(method, handlerType);
+        }
+
+        return null;
     }
 
     /**
@@ -47,7 +79,9 @@ public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandle
      */
     @Override
     protected RequestCondition<?> getCustomMethodCondition(Method method) {
-        ApiVersion apiVersion = AnnotationUtils.findAnnotation(method, ApiVersion.class);
-        return null == apiVersion ? super.getCustomMethodCondition(method) : new ApiVersionCondition(apiVersion, AnnotationUtils.findAnnotation(method, ApiPlatform.class), versionProperties);
+        if(!versionOpen) {
+            return super.getCustomMethodCondition(method);
+        }
+        return new ApiVersionCondition(AnnotationUtils.findAnnotation(method, ApiVersion.class));
     }
 }

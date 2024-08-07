@@ -1,4 +1,3 @@
-com.chua.starter.common.support.configuration.VersionWebMvbConfigurer
 com.chua.starter.common.support.configuration.MessageConverterWebMvcConfigurer
 com.chua.starter.common.support.configuration.ResourceWebMvcConfigurer
 com.chua.starter.common.support.configuration.AsyncThreadPoolConfiguration

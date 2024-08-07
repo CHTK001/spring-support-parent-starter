@@ -14,5 +14,5 @@ public @interface ApiPlatform {
     /**
      * 平台名称
      */
-    String value() default "";
+    String[] value() default {};
 }

@@ -28,5 +28,5 @@ public class VersionProperties {
     /**
      * 版本号
      */
-    private String no;
+    private String version;
 }
