@@ -1,11 +1,16 @@
 package com.chua.starter.common.support.provider;
 
+import com.chua.common.support.annotations.Ignore;
 import com.chua.common.support.constant.Constants;
 import com.chua.common.support.utils.RandomUtils;
 import com.chua.starter.common.support.constant.CaptchaTypeEnum;
 import com.chua.starter.common.support.properties.CaptchaProperties;
 import com.wf.captcha.*;
 import com.wf.captcha.base.Captcha;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -29,6 +34,9 @@ import java.util.Base64;
  */
 @RestController
 @Slf4j
+@Api(tags = "校验码")
+@Tag(name = "校验码")
+@Ignore
 @RequestMapping("${plugin.captcha.context-path:/v1/}")
 @ConditionalOnProperty(prefix = CaptchaProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = true)
 public class CaptchaProvider {
@@ -109,6 +117,8 @@ public class CaptchaProvider {
      * @param request  请求
      * @param response 响应
      */
+    @ApiOperation("获取验证码")
+    @Operation(summary = "获取验证码")
     @GetMapping("captcha.jpg")
     public void captcha(HttpServletRequest request, HttpServletResponse response) {
         Captcha captcha = createCaptcha();
@@ -139,6 +149,8 @@ public class CaptchaProvider {
      *
      * @param request 请求
      */
+    @ApiOperation("获取验证码")
+    @Operation(summary = "获取验证码")
     @GetMapping("captcha")
     public CaptchaResult captchaBase64(HttpServletRequest request, HttpServletResponse response) {
         Captcha captcha = createCaptcha();

@@ -6,7 +6,7 @@ import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.RandomUtils;
 import com.chua.starter.common.support.annotations.Ignore;
-import com.chua.starter.common.support.provider.CodecProvider;
+import com.chua.starter.common.support.codec.CodecFactory;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -27,11 +27,11 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 @Slf4j
 public class CodeResponseBodyAdvice implements ResponseBodyAdvice<Object> {
 
-    private final CodecProvider codecProvider;
+    private final CodecFactory codecFactory;
 
 
-    public CodeResponseBodyAdvice(CodecProvider codecProvider) {
-        this.codecProvider = codecProvider;
+    public CodeResponseBodyAdvice(CodecFactory codecFactory) {
+        this.codecFactory = codecFactory;
     }
 
 
@@ -43,7 +43,7 @@ public class CodeResponseBodyAdvice implements ResponseBodyAdvice<Object> {
     @SneakyThrows
     @Override
     public Object beforeBodyWrite(Object o, MethodParameter methodParameter, MediaType mediaType, Class<? extends HttpMessageConverter<?>> aClass, ServerHttpRequest serverHttpRequest, ServerHttpResponse serverHttpResponse) {
-        if(codecProvider.isPass()) {
+        if(codecFactory.isPass()) {
             return o;
         }
 
@@ -57,7 +57,7 @@ public class CodeResponseBodyAdvice implements ResponseBodyAdvice<Object> {
             }
 
             HttpServletRequest servletRequest = ((ServletServerHttpRequest) serverHttpRequest).getServletRequest();
-            if(codecProvider.isPass(servletRequest.getRequestURI())) {
+            if(codecFactory.isPass(servletRequest.getRequestURI())) {
                 return o;
             }
 
@@ -70,7 +70,7 @@ public class CodeResponseBodyAdvice implements ResponseBodyAdvice<Object> {
 
             HttpHeaders headers = serverHttpResponse.getHeaders();
             JsonObject jsonObject = new JsonObject();
-            CodecProvider.CodecResult codecResult = codecProvider.encode(Json.toJson(o));
+            CodecFactory.CodecResult codecResult = codecFactory.encode(Json.toJson(o));
             headers.set("access-control-origin-key", codecResult.getKey());
             headers.set("access-control-timestamp-user", codecResult.getTimestamp());
             jsonObject.put("data", RandomUtils.randomInt(1) + "200" + codecResult.getData() + "ffff");

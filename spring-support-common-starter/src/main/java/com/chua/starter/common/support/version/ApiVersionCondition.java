@@ -1,11 +1,14 @@
 package com.chua.starter.common.support.version;
 
 
+import com.chua.starter.common.support.annotations.ApiPlatform;
 import com.chua.starter.common.support.annotations.ApiVersion;
+import com.chua.starter.common.support.properties.VersionProperties;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.servlet.mvc.condition.RequestCondition;
 
-import jakarta.servlet.http.HttpServletRequest;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -25,10 +28,16 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
     /**
      * API VERSION interface
      **/
+    @Getter
     private ApiVersion apiVersion;
+    @Getter
+    private ApiPlatform apiPlatform;
+    private final VersionProperties versionProperties;
 
-    ApiVersionCondition(ApiVersion apiVersion) {
+    ApiVersionCondition(ApiVersion apiVersion, ApiPlatform apiPlatform, VersionProperties versionProperties) {
         this.apiVersion = apiVersion;
+        this.apiPlatform = apiPlatform;
+        this.versionProperties = versionProperties;
     }
 
     /**
@@ -45,7 +54,7 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
     @Override
     public ApiVersionCondition combine(ApiVersionCondition other) {
         // 此处按优先级，method大于class
-        return new ApiVersionCondition(other.getApiVersion());
+        return new ApiVersionCondition(other.getApiVersion(), apiPlatform, versionProperties);
     }
 
     /**
@@ -81,7 +90,4 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
         return other.getApiVersion().version() >= getApiVersion().version() ? 1 : -1;
     }
 
-    public ApiVersion getApiVersion() {
-        return apiVersion;
-    }
 }
