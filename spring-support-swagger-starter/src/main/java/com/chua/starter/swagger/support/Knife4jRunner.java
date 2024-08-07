@@ -7,6 +7,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.env.Environment;
 
 /**
+ * Knife4j日志
  * @author CH
  */
 @Slf4j

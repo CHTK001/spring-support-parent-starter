@@ -1,8 +1,8 @@
 package com.chua.starter.common.support.configuration;
 
+import com.chua.starter.common.support.control.ApiVersionRequestMappingHandlerMapping;
 import com.chua.starter.common.support.properties.ControlProperties;
 import com.chua.starter.common.support.properties.IpProperties;
-import com.chua.starter.common.support.version.ApiVersionRequestMappingHandlerMapping;
 import jakarta.annotation.Priority;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
