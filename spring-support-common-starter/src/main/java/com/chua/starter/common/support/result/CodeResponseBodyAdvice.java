@@ -5,7 +5,6 @@ import com.chua.common.support.json.Json;
 import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.RandomUtils;
-import com.chua.starter.common.support.annotations.Ignore;
 import com.chua.starter.common.support.codec.CodecFactory;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.SneakyThrows;
@@ -47,7 +46,7 @@ public class CodeResponseBodyAdvice implements ResponseBodyAdvice<Object> {
             return o;
         }
 
-        if(methodParameter.hasMethodAnnotation(Ignore.class) || methodParameter.hasMethodAnnotation(com.chua.common.support.annotations.Ignore.class)) {
+        if( methodParameter.hasMethodAnnotation(com.chua.common.support.annotations.Ignore.class)) {
             return o;
         }
 
