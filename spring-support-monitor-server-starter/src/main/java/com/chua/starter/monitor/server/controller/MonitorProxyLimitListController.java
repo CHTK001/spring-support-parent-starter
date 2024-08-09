@@ -14,7 +14,7 @@ import com.chua.starter.monitor.server.entity.MonitorProxyLimitList;
 import com.chua.starter.monitor.server.service.MonitorProxyLimitListService;
 import com.chua.starter.monitor.server.service.MonitorProxyLimitLogService;
 import com.chua.starter.monitor.server.service.MonitorProxyService;
-import com.chua.starter.mybatis.entity.PageRequest;
+import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import com.github.xiaoymin.knife4j.annotations.Ignore;
 import com.github.yulichang.toolkit.MPJWrappers;
@@ -56,7 +56,7 @@ public class MonitorProxyLimitListController {
     @ResponseBody
     @Operation(summary = "分页查询基础数据")
     @GetMapping("page")
-    public ReturnPageResult<MonitorProxyLimitList> page(PageRequest<MonitorProxyLimitList> page, MonitorProxyLimitList entity) {
+    public ReturnPageResult<MonitorProxyLimitList> page(Query<MonitorProxyLimitList> page, MonitorProxyLimitList entity) {
         Page<MonitorProxyLimitList> tPage = service.page(page.createPage(), MPJWrappers.<MonitorProxyLimitList>lambdaJoin()
                 .selectAll(MonitorProxyLimitList.class)
                 .selectAs(MonitorProxy::getProxyName, MonitorProxyLimitList::getProxyName)

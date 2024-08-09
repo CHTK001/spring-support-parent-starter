@@ -17,7 +17,7 @@ import com.chua.starter.monitor.server.service.MonitorAppService;
 import com.chua.starter.monitor.server.service.MonitorJobLogService;
 import com.chua.starter.monitor.server.service.MonitorJobService;
 import com.chua.starter.mybatis.controller.AbstractSwaggerController;
-import com.chua.starter.mybatis.entity.PageRequest;
+import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -56,7 +56,7 @@ public class MonitorJobController extends AbstractSwaggerController<MonitorJobSe
     @ResponseBody
     @Operation(summary = "分页查询日志")
     @GetMapping("log")
-    public ReturnPageResult<MonitorJobLog> page(PageRequest<MonitorJobLog> page, MonitorJobLog entity) {
+    public ReturnPageResult<MonitorJobLog> page(Query<MonitorJobLog> page, MonitorJobLog entity) {
         return PageResultUtils.ok(monitorJobLogService.page(page.createPage(),
                 Wrappers.<MonitorJobLog>lambdaQuery()
                         .eq(StringUtils.isNotEmpty(entity.getJobLogProfile()), MonitorJobLog::getJobLogProfile, entity.getJobLogProfile())
