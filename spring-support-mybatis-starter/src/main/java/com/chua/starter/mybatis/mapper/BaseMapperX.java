@@ -8,8 +8,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.toolkit.Db;
 import com.chua.common.support.utils.CollectionUtils;
-import com.chua.starter.mybatis.entity.PageRequest;
 import com.chua.starter.mybatis.entity.PageResult;
+import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.mybatis.utils.MybatisUtils;
 import com.github.yulichang.base.MPJBaseMapper;
 import com.github.yulichang.interfaces.MPJBaseJoin;
@@ -27,9 +27,9 @@ import java.util.List;
  */
 public interface BaseMapperX<T> extends MPJBaseMapper<T> {
 
-    default PageResult<T> selectPage(PageRequest<T> pageParam, @Param("ew") Wrapper<T> queryWrapper) {
+    default PageResult<T> selectPage(Query<T> pageParam, @Param("ew") Wrapper<T> queryWrapper) {
         // 特殊：不分页，直接查询全部
-        if (PageRequest.PAGE_SIZE_NONE.equals(pageParam.getPageSize())) {
+        if (Query.PAGE_SIZE_NONE.equals(pageParam.getPageSize())) {
             List<T> list = selectList(queryWrapper);
             return PageResult.<T>builder()
                     .records(list)
@@ -51,7 +51,7 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
                 .build();
     }
 
-    default <DTO> PageResult<DTO> selectJoinPage(PageRequest<T> pageParam, Class<DTO> resultTypeClass, MPJBaseJoin<T> joinQueryWrapper) {
+    default <DTO> PageResult<DTO> selectJoinPage(Query<T> pageParam, Class<DTO> resultTypeClass, MPJBaseJoin<T> joinQueryWrapper) {
         IPage<DTO> mpPage = MybatisUtils.buildPage(pageParam);
         selectJoinPage(mpPage, resultTypeClass, joinQueryWrapper);
         // 转换返回

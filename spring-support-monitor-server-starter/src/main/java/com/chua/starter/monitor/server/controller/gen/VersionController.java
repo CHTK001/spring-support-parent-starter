@@ -14,7 +14,7 @@ import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.monitor.server.entity.MonitorProjectVersion;
 import com.chua.starter.monitor.server.service.MonitorProjectService;
 import com.chua.starter.monitor.server.service.MonitorProjectVersionService;
-import com.chua.starter.mybatis.entity.PageRequest;
+import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.mybatis.utils.ReturnPageResultUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -51,7 +51,7 @@ public class VersionController  {
      */
     @GetMapping("page")
     @Operation(summary = "分页查询基础数据")
-    public ReturnPageResult<MonitorProjectVersion> pageItem(PageRequest<MonitorProjectVersion> page, MonitorProjectVersion entity) {
+    public ReturnPageResult<MonitorProjectVersion> pageItem(Query<MonitorProjectVersion> page, MonitorProjectVersion entity) {
         if(null == entity.getProjectId()) {
             return ReturnPageResult.illegal("数据不存在");
         }

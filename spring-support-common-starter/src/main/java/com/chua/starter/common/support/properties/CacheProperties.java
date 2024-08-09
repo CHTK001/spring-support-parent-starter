@@ -15,9 +15,27 @@ import java.util.List;
 public class CacheProperties {
 
     public static final String PRE = "plugin.cache";
-
     /**
      * 缓存类型
      */
     private List<String> type = List.of("default", "redis");
+
+
+    /**
+     * redis
+     */
+    private RedisProperties redis = new RedisProperties();
+
+    /**
+     * redis
+     */
+    @Data
+    public static class RedisProperties {
+
+        /**
+         * 缓存时间
+         */
+        private long ttl = 86400;
+
+    }
 }

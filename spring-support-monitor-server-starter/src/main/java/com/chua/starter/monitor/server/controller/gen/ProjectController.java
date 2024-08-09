@@ -12,7 +12,7 @@ import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.monitor.server.entity.MonitorProject;
 import com.chua.starter.monitor.server.service.MonitorProjectService;
 import com.chua.starter.monitor.server.service.MonitorProjectVersionService;
-import com.chua.starter.mybatis.entity.PageRequest;
+import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import com.github.xiaoymin.knife4j.annotations.Ignore;
 import io.swagger.v3.oas.annotations.Operation;
@@ -54,7 +54,7 @@ public class ProjectController {
     @ResponseBody
     @Operation(summary = "分页查询基础数据")
     @GetMapping("page")
-    public ReturnPageResult<MonitorProject> page(PageRequest<MonitorProject> page, MonitorProject entity) {
+    public ReturnPageResult<MonitorProject> page(Query<MonitorProject> page, MonitorProject entity) {
         return PageResultUtils.ok(service.page(page.createPage(), Wrappers.lambdaQuery(entity)));
     }
 

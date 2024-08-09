@@ -10,7 +10,7 @@ import com.chua.starter.monitor.server.entity.MonitorApp;
 import com.chua.starter.monitor.server.factory.MonitorServerFactory;
 import com.chua.starter.monitor.server.service.MonitorAppService;
 import com.chua.starter.mybatis.controller.AbstractSwaggerUpdateController;
-import com.chua.starter.mybatis.entity.PageRequest;
+import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import com.github.xiaoymin.knife4j.annotations.Ignore;
 import io.swagger.v3.oas.annotations.Operation;
@@ -51,7 +51,7 @@ public class MonitorAppController extends AbstractSwaggerUpdateController<Monito
     @ResponseBody
     @Operation(summary = "分页查询基础数据")
     @GetMapping("page")
-    public ReturnPageResult<MonitorApp> page(PageRequest<MonitorApp> page, @Valid MonitorApp entity, @Ignore BindingResult bindingResult) {
+    public ReturnPageResult<MonitorApp> page(Query<MonitorApp> page, @Valid MonitorApp entity, @Ignore BindingResult bindingResult) {
         Page<MonitorApp> page1 = getService().page(page.createPage(), Wrappers.lambdaQuery(entity));
         mergePage(page1);
         return PageResultUtils.ok(page1);
@@ -66,7 +66,7 @@ public class MonitorAppController extends AbstractSwaggerUpdateController<Monito
     @ResponseBody
     @Operation(summary = "查询基础数据")
     @GetMapping("list")
-    public ReturnResult<List<MonitorApp>> list(PageRequest<MonitorApp> page, @Valid MonitorApp entity, @Ignore BindingResult bindingResult) {
+    public ReturnResult<List<MonitorApp>> list(Query<MonitorApp> page, @Valid MonitorApp entity, @Ignore BindingResult bindingResult) {
         List<MonitorApp> page1 = getService().list(Wrappers.lambdaQuery(entity));
         mergePage(page1);
         return ReturnResult.ok(page1);
