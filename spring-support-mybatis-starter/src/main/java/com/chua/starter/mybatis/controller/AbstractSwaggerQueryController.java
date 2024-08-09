@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.mybatis.entity.PageRequest;
+import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,7 +30,7 @@ public abstract class AbstractSwaggerQueryController<S extends IService<T>, T> e
     @ResponseBody
     @Operation(summary = "分页查询基础数据")
     @GetMapping("page")
-    public ReturnPageResult<T> page(PageRequest<T> page, T entity) {
+    public ReturnPageResult<T> page(Query<T> page, T entity) {
         S service = getService();
         Page<T> tPage = service.page(page.createPage(), createWrapper(entity));
         return PageResultUtils.ok(tPage);

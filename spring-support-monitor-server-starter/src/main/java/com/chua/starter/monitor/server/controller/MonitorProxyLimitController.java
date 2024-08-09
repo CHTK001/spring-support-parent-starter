@@ -13,7 +13,7 @@ import com.chua.starter.monitor.server.entity.MonitorProxyLimit;
 import com.chua.starter.monitor.server.service.MonitorProxyLimitLogService;
 import com.chua.starter.monitor.server.service.MonitorProxyLimitService;
 import com.chua.starter.monitor.server.service.MonitorProxyService;
-import com.chua.starter.mybatis.entity.PageRequest;
+import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import com.github.xiaoymin.knife4j.annotations.Ignore;
 import com.github.yulichang.toolkit.MPJWrappers;
@@ -56,7 +56,7 @@ public class MonitorProxyLimitController {
     @ResponseBody
     @Operation(summary = "分页查询基础数据")
     @GetMapping("page")
-    public ReturnPageResult<MonitorProxyLimit> page(PageRequest<MonitorProxyLimit> page, MonitorProxyLimit entity) {
+    public ReturnPageResult<MonitorProxyLimit> page(Query<MonitorProxyLimit> page, MonitorProxyLimit entity) {
         if(null == entity.getProxyId()) {
             return ReturnPageResult.illegal(REQUEST_PARAM_ERROR, "请选择代理");
         }

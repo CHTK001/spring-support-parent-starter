@@ -8,7 +8,7 @@ import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.validator.group.SelectGroup;
-import com.chua.starter.mybatis.entity.PageRequest;
+import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.validation.BindingResult;
@@ -34,7 +34,7 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> extend
     @ResponseBody
     @Operation(summary = "分页查询基础数据")
     @GetMapping("page")
-    public ReturnPageResult<T> page(PageRequest<T> page, @Validated(SelectGroup.class)  T entity, BindingResult bindingResult) {
+    public ReturnPageResult<T> page(Query<T> page, @Validated(SelectGroup.class)  T entity, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ReturnPageResult.error(bindingResult.getFieldError().getDefaultMessage());
         }

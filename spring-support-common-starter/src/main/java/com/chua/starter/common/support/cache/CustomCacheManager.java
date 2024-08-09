@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
  * @author CH
  * @since 2024/7/22
  */
+@SuppressWarnings("ALL")
 public class CustomCacheManager implements CacheManager, InitializingBean {
 
     private final Map<String, CacheManager> cacheManagerMap = new ConcurrentHashMap<>();
@@ -30,9 +31,7 @@ public class CustomCacheManager implements CacheManager, InitializingBean {
         return cacheMap.computeIfAbsent(name, k -> new CustomCache(name,
                 cacheManagers.stream()
                         .filter(it -> !(it instanceof CustomCacheManager))
-                        .map(it -> {
-                            return it.getCache(name);
-                        })
+                        .map(it -> it.getCache(name))
                         .collect(Collectors.toUnmodifiableList()))
         );
     }

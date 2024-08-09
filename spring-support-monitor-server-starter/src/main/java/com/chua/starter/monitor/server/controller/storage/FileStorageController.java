@@ -11,7 +11,7 @@ import com.chua.common.support.validator.group.SelectGroup;
 import com.chua.common.support.validator.group.UpdateGroup;
 import com.chua.starter.monitor.server.entity.FileStorage;
 import com.chua.starter.monitor.server.service.FileStorageService;
-import com.chua.starter.mybatis.entity.PageRequest;
+import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import com.github.xiaoymin.knife4j.annotations.Ignore;
 import io.swagger.v3.oas.annotations.Operation;
@@ -105,7 +105,7 @@ public class FileStorageController {
     @ResponseBody
     @Operation(summary = "分页查询基础数据")
     @GetMapping("page")
-    public ReturnPageResult<FileStorage> page(PageRequest<FileStorage> page, @Validated(SelectGroup.class) FileStorage entity, BindingResult bindingResult) {
+    public ReturnPageResult<FileStorage> page(Query<FileStorage> page, @Validated(SelectGroup.class) FileStorage entity, BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
             return ReturnPageResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }

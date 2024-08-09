@@ -9,7 +9,7 @@ import com.chua.starter.monitor.server.pojo.MonitorProxyLimitLogResult;
 import com.chua.starter.monitor.server.service.MonitorProxyLimitLogService;
 import com.chua.starter.monitor.server.service.MonitorProxyLimitService;
 import com.chua.starter.monitor.server.service.MonitorProxyService;
-import com.chua.starter.mybatis.entity.PageRequest;
+import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -51,7 +51,7 @@ public class MonitorProxyLimitLogController {
      */
     @Operation(summary = "日志分页查询基础数据")
     @GetMapping("page")
-    public ReturnPageResult<MonitorProxyLimitLogResult> logPage(PageRequest<MonitorProxyLimitLog> page, MonitorProxyLimitLog entity) {
+    public ReturnPageResult<MonitorProxyLimitLogResult> logPage(Query<MonitorProxyLimitLog> page, MonitorProxyLimitLog entity) {
         Page<MonitorProxyLimitLogResult> tPage = monitorProxyLimitLogService.pageForLog(page.createPage(), entity);
         return PageResultUtils.ok(tPage);
     }
@@ -64,7 +64,7 @@ public class MonitorProxyLimitLogController {
      */
     @Operation(summary = "根据IP统计")
     @GetMapping("statistic")
-    public ReturnResult<LogStatistic> statistic(PageRequest<MonitorProxyLimitLog> page, MonitorProxyLimitLog entity) {
+    public ReturnResult<LogStatistic> statistic(Query<MonitorProxyLimitLog> page, MonitorProxyLimitLog entity) {
         return ReturnResult.ok(monitorProxyLimitLogService.listForGeo(page.createPage(), entity));
     }
 

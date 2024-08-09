@@ -1,11 +1,29 @@
 package com.chua.starter.oauth.client.support.contants;
 
+import com.chua.common.support.utils.CollectionUtils;
+
+import java.util.Set;
+
 /**
  * 鉴权常量
  *
  * @author CH
  */
 public interface AuthConstant {
+
+    /**
+     * 超级管理员
+     */
+    String SUPER_ADMIN = "sueradmin";
+
+    /**
+     * ops
+     */
+    String OPS = "ops";
+    /**
+     * 管理员
+     */
+    String ADMIN = "admin";
     /**
      * ak
      */
@@ -47,4 +65,33 @@ public interface AuthConstant {
      * 令牌前缀
      */
     String PRE_KEY = "oauth:key:";
+
+    /**
+     * 是否为管理员
+     *
+     * @param roles 角色
+     * @return 是否为管理员
+     */
+    static boolean isAdmin(Set<String> roles) {
+        return CollectionUtils.containsIgnoreCase(roles, ADMIN) && !isSuperAdmin(roles);
+    }
+
+    /**
+     * 是否为管理员
+     *
+     * @param roles 角色
+     * @return 是否为管理员
+     */
+    static boolean hasAdmin(Set<String> roles) {
+        return CollectionUtils.containsIgnoreCase(roles, ADMIN) && isSuperAdmin(roles);
+    }
+    /**
+     * 是否为超级管理员
+     *
+     * @param roles 角色
+     * @return 是否为超级管理员
+     */
+    static boolean isSuperAdmin(Set<String> roles) {
+        return CollectionUtils.containsIgnoreCase(roles, SUPER_ADMIN);
+    }
 }

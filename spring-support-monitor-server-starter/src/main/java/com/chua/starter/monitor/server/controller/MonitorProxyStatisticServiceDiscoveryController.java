@@ -13,7 +13,7 @@ import com.chua.starter.monitor.server.entity.MonitorProxyStatisticServiceDiscov
 import com.chua.starter.monitor.server.service.MonitorProxyLimitLogService;
 import com.chua.starter.monitor.server.service.MonitorProxyService;
 import com.chua.starter.monitor.server.service.MonitorProxyStatisticServiceDiscoveryService;
-import com.chua.starter.mybatis.entity.PageRequest;
+import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import com.github.xiaoymin.knife4j.annotations.Ignore;
 import com.github.yulichang.toolkit.MPJWrappers;
@@ -55,7 +55,7 @@ public class MonitorProxyStatisticServiceDiscoveryController {
     @ResponseBody
     @Operation(summary = "分页查询基础数据")
     @GetMapping("page")
-    public ReturnPageResult<MonitorProxyStatisticServiceDiscovery> page(PageRequest<MonitorProxyStatisticServiceDiscovery> page, MonitorProxyStatisticServiceDiscovery entity) {
+    public ReturnPageResult<MonitorProxyStatisticServiceDiscovery> page(Query<MonitorProxyStatisticServiceDiscovery> page, MonitorProxyStatisticServiceDiscovery entity) {
         Page<MonitorProxyStatisticServiceDiscovery> tPage = service.page(page.createPage(), MPJWrappers.<MonitorProxyStatisticServiceDiscovery>lambdaJoin()
                 .selectAll(MonitorProxyStatisticServiceDiscovery.class)
                 .innerJoin(MonitorProxy.class, MonitorProxy::getProxyId, MonitorProxyStatisticServiceDiscovery::getProxyId)

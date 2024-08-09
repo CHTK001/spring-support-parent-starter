@@ -9,7 +9,7 @@ import com.chua.common.support.validator.group.AddGroup;
 import com.chua.common.support.validator.group.UpdateGroup;
 import com.chua.starter.monitor.server.entity.FileStorageProtocol;
 import com.chua.starter.monitor.server.service.FileStorageProtocolService;
-import com.chua.starter.mybatis.entity.PageRequest;
+import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import com.github.xiaoymin.knife4j.annotations.Ignore;
 import io.swagger.v3.oas.annotations.Operation;
@@ -114,7 +114,7 @@ public class FileStorageProtocolController {
     @ResponseBody
     @Operation(summary = "分页查询基础数据")
     @GetMapping("page")
-    public ReturnPageResult<FileStorageProtocol> page(PageRequest<FileStorageProtocol> page, FileStorageProtocol entity) {
+    public ReturnPageResult<FileStorageProtocol> page(Query<FileStorageProtocol> page, FileStorageProtocol entity) {
         Page<FileStorageProtocol> tPage = fileStorageProtocolService.page(page.createPage());
         return PageResultUtils.ok(tPage);
     }

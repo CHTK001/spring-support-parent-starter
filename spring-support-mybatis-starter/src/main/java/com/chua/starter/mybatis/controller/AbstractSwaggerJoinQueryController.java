@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.validator.group.SelectGroup;
-import com.chua.starter.mybatis.entity.PageRequest;
+import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,7 +32,7 @@ public abstract class AbstractSwaggerJoinQueryController<S extends IService<T>, 
     @ResponseBody
     @Operation(summary = "分页查询基础数据")
     @GetMapping("page")
-    public ReturnPageResult<T> page(PageRequest<T> page, @Validated(SelectGroup.class)  T entity, BindingResult bindingResult) {
+    public ReturnPageResult<T> page(Query<T> page, @Validated(SelectGroup.class)  T entity, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ReturnPageResult.error();
         }

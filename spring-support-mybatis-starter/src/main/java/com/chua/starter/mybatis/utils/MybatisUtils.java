@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.OrderItem;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.utils.CollectionUtils;
-import com.chua.starter.mybatis.entity.PageRequest;
+import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.mybatis.entity.Sorting;
 
 import java.util.Collection;
@@ -25,7 +25,7 @@ public class MybatisUtils {
      * @param pageParam 分页参数
      * @return {@link Page}<{@link T}>
      */
-    public static <T> Page<T> buildPage(PageRequest pageParam) {
+    public static <T> Page<T> buildPage(Query pageParam) {
         return buildPage(pageParam, null);
     }
 
@@ -36,7 +36,7 @@ public class MybatisUtils {
      * @param sortingFields 排序字段
      * @return {@link Page}<{@link T}>
      */
-    public static <T> Page<T> buildPage(PageRequest pageParam, Collection<Sorting> sortingFields) {
+    public static <T> Page<T> buildPage(Query pageParam, Collection<Sorting> sortingFields) {
         // 页码 + 数量
         Page<T> page = new Page<>(pageParam.getPage(), pageParam.getPageSize());
         // 排序字段
