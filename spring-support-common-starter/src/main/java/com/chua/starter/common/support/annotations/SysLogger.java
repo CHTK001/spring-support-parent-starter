@@ -1,5 +1,7 @@
 package com.chua.starter.common.support.annotations;
 
+import com.chua.common.support.constant.Action;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -15,6 +17,7 @@ import java.lang.annotation.Target;
 public @interface SysLogger {
 
     // ========== 模块字段 ==========
+    Action action() default Action.NONE;
 
     /**
      * 操作模块(e.g.修改, 删除, 更新)
