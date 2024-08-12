@@ -5,6 +5,7 @@ import com.chua.common.support.objects.DefaultConfigureObjectContext;
 import com.chua.starter.common.support.debounce.DebounceAspect;
 import com.chua.starter.common.support.limit.LimitAspect;
 import com.chua.starter.common.support.logger.OperateLoggerPointcutAdvisor;
+import com.chua.starter.common.support.logger.SysLoggerPointcutAdvisor;
 import com.chua.starter.common.support.properties.*;
 import com.chua.starter.common.support.result.ExceptionAdvice;
 import com.chua.starter.common.support.result.UniformResponseBodyAdvice;
@@ -76,6 +77,12 @@ public class CommonConfiguration {
     @Lazy
     public OperateLoggerPointcutAdvisor operateLoggerPointcutAdvisor() {
         return new OperateLoggerPointcutAdvisor();
+    }
+    @Bean
+    @ConditionalOnMissingBean
+    @Lazy
+    public SysLoggerPointcutAdvisor sysLoggerPointcutAdvisor() {
+        return new SysLoggerPointcutAdvisor();
     }
 
     @Bean

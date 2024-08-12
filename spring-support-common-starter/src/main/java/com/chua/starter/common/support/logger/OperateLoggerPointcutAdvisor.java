@@ -4,6 +4,7 @@ import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.*;
 import com.chua.starter.common.support.annotations.OperateLog;
+import com.chua.starter.common.support.annotations.SysLogger;
 import com.chua.starter.common.support.utils.RequestUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -83,27 +84,23 @@ public class OperateLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdv
 
     void createOperateLogger(Object proceed, Throwable throwable, MethodInvocation invocation, long startTime) {
         Method method = invocation.getMethod();
-        OperateLog operateLog = method.getDeclaredAnnotation(OperateLog.class);
-        if(!operateLog.enable()) {
-            return;
-        }
-
-        String name = getName(operateLog, method);
+        SysLogger sysLogger = method.getDeclaredAnnotation(SysLogger.class);
+        String name = getName(sysLogger, method);
         if(null == name) {
             return;
         }
 
         String module = getModule(method);
-        SysLoggerInfo sysLoggerInfo = new SysLoggerInfo(name);
-        sysLoggerInfo.setCreateBy(RequestUtils.getUsername());
-        sysLoggerInfo.setCreateName(RequestUtils.getUserId());
-        sysLoggerInfo.setCreateTime(new Date());
-        sysLoggerInfo.setLogName(name);
-        sysLoggerInfo.setLogModule(StringUtils.defaultString(operateLog.module(), module));
-        sysLoggerInfo.setLogCost((System.currentTimeMillis() - startTime) / 1000D);
-        sysLoggerInfo.setClientIp(RequestUtils.getIpAddress(request));
+        OperateLoggerInfo operateLoggerInfo = new OperateLoggerInfo(name);
+        operateLoggerInfo.setCreateBy(RequestUtils.getUsername());
+        operateLoggerInfo.setCreateName(RequestUtils.getUserId());
+        operateLoggerInfo.setCreateTime(new Date());
+        operateLoggerInfo.setLogName(name);
+        operateLoggerInfo.setLogModule(StringUtils.defaultString(sysLogger.module(), module));
+        operateLoggerInfo.setLogCost((System.currentTimeMillis() - startTime) / 1000D);
+        operateLoggerInfo.setClientIp(RequestUtils.getIpAddress(request));
 
-        if(operateLog.logArgs()) {
+        if(sysLogger.logArgs()) {
             List<Object> params = new LinkedList<>();
             for (Object argument : invocation.getArguments()) {
                 if(null == argument) {
@@ -123,16 +120,16 @@ public class OperateLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdv
             } catch (Exception ignored) {
             }
             if(null != json && json.length() < 2000) {
-                sysLoggerInfo.setLogParam(json);
+                operateLoggerInfo.setLogParam(json);
             }
         }
 
-        String content = operateLog.content();
-        sysLoggerInfo.setLogStatus(null == throwable ? 1 : 0);
-        sysLoggerInfo.setLogMapping(RequestUtils.getUrl(request));
-        sysLoggerInfo.setLogCode(IdUtils.createUlid());
-        sysLoggerInfo.setLogContent(getContent(content, invocation, proceed));
-        applicationContext.publishEvent(sysLoggerInfo);
+        String content = sysLogger.content();
+        operateLoggerInfo.setLogStatus(null == throwable ? 1 : 0);
+        operateLoggerInfo.setLogMapping(RequestUtils.getUrl(request));
+        operateLoggerInfo.setLogCode(IdUtils.createUlid());
+        operateLoggerInfo.setLogContent(getContent(content, invocation, proceed));
+        applicationContext.publishEvent(operateLoggerInfo);
     }
 
     private String getContent(String content, MethodInvocation invocation, Object proceed) {
@@ -173,8 +170,8 @@ public class OperateLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdv
         return "查询";
     }
 
-    private String getName(OperateLog operateLog, Method method) {
-        String name = operateLog.name();
+    private String getName(SysLogger sysLogger, Method method) {
+        String name = sysLogger.name();
         if(StringUtils.isNotBlank(name)) {
             return name;
         }
