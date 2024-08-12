@@ -35,7 +35,7 @@ public class CacheProperties {
         /**
          * 缓存时间
          */
-        private long ttl = 86400;
+        private long ttl = 600;
 
     }
 }
