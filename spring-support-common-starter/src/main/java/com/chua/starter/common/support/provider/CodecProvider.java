@@ -2,7 +2,7 @@ package com.chua.starter.common.support.provider;
 
 import com.chua.common.support.annotations.Ignore;
 import com.chua.common.support.utils.IoUtils;
-import com.chua.starter.common.support.application.GlobalFactory;
+import com.chua.starter.common.support.application.GlobalSettingFactory;
 import com.chua.starter.common.support.application.Sign;
 import com.chua.starter.common.support.properties.CodecProperties;
 import io.swagger.annotations.Api;
@@ -38,7 +38,7 @@ public class CodecProvider {
         {
             try {
                 String script = IoUtils.toString(CodecProvider.class.getResourceAsStream("/uu.js"), StandardCharsets.UTF_8);
-                SCRIPT = script.replace("{{sign1}}",  GlobalFactory.getInstance().get(Sign.class).getSign1());
+                SCRIPT = script.replace("{{sign1}}",  GlobalSettingFactory.getInstance().get(Sign.class).getSign1());
             } catch (Exception ignored) {
             }
         }

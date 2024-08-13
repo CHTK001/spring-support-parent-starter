@@ -163,6 +163,7 @@ public class CaptchaProvider {
             response.addHeader("Access-Control-Captcha", Base64.getEncoder().encodeToString(captchaText.getBytes(StandardCharsets.UTF_8)));
             return CaptchaResult.builder()
                     .verifyCodeBase64(captchaBase64)
+                    .verifyCodeKey(captchaText)
                     .build();
         } catch (Exception e) {
             throw e;

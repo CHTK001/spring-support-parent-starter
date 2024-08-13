@@ -7,6 +7,7 @@ import org.springframework.boot.env.EnvironmentPostProcessor;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MutablePropertySources;
 import org.springframework.core.env.PropertiesPropertySource;
+import org.springframework.util.CollectionUtils;
 
 import java.util.List;
 import java.util.Properties;
@@ -27,9 +28,11 @@ public class SwaggerEnvironmentPostProcessor implements EnvironmentPostProcessor
         Knife4jProperties knife4jProperties = Binder.get(environment).bindOrCreate("plugin.swagger", Knife4jProperties.class);
         properties.setProperty("knife4j.basic.password", "${plugin.swagger.password:root123}");
         List<Knife4jProperties.Knife4j> j = knife4jProperties.getKnife4j();
-        for (int i = 0, jSize = j.size(); i < jSize; i++) {
-            Knife4jProperties.Knife4j knife4j = j.get(i);
-            properties.setProperty("knife4j.documents["+ i +"].group", knife4j.getGroupName());
+        if(!CollectionUtils.isEmpty(j)) {
+            for (int i = 0, jSize = j.size(); i < jSize; i++) {
+                Knife4jProperties.Knife4j knife4j = j.get(i);
+                properties.setProperty("knife4j.documents["+ i +"].group", knife4j.getGroupName());
+            }
         }
         PropertiesPropertySource propertiesPropertySource = new PropertiesPropertySource("knife4j", properties);
         MutablePropertySources propertySources = environment.getPropertySources();
