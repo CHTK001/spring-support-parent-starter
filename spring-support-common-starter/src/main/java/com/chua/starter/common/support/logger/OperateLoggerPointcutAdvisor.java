@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.expression.EvaluationContext;
+import org.springframework.expression.EvaluationException;
 import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.common.TemplateParserContext;
@@ -155,7 +156,12 @@ public class OperateLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdv
         evaluationContext.setVariable("result", proceed);
 
         Expression expression = expressionParser.parseExpression(content, new TemplateParserContext());
-        return Optional.ofNullable( expression.getValue(evaluationContext)).orElse(content).toString();
+        try {
+            return Optional.ofNullable( expression.getValue(evaluationContext)).orElse(content).toString();
+        } catch (EvaluationException e) {
+            e.printStackTrace();
+        }
+        return content;
     }
 
     protected String getModule(Method method) {
