@@ -6,7 +6,7 @@ import com.chua.common.support.function.Upgrade;
 import com.chua.common.support.matcher.PathMatcher;
 import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.common.support.application.GlobalFactory;
+import com.chua.starter.common.support.application.GlobalSettingFactory;
 import com.chua.starter.common.support.properties.CodecProperties;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -36,7 +36,7 @@ public class CodecFactory implements Upgrade<CodecProperties> {
      */
     private String codecType = "sm2";
 
-    private final GlobalFactory globalFactory = GlobalFactory.getInstance();
+    private final GlobalSettingFactory globalSettingFactory = GlobalSettingFactory.getInstance();
 
     public CodecFactory(CodecProperties codecProperties) {
         this.upgrade(codecProperties);

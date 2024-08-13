@@ -76,7 +76,7 @@ public class UserStatisticProvider {
             return Result.failed(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
 
-        String code = loginData.getVerifyCode();
+        String code = loginData.getVerifyCodeKey();
         String sessionKey = Optional.ofNullable(request.getSession().getAttribute(CAPTCHA_SESSION_KEY)).orElse("").toString();
         if (Strings.isNullOrEmpty(code) || !code.equalsIgnoreCase(sessionKey)) {
             return Result.failed(REQUEST_PARAM_ERROR, "校验码错误");
