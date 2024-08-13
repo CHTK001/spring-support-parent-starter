@@ -16,22 +16,21 @@ public enum AuthType {
      * token
      */
     WEB,
+
     /**
-     * 浙里办
+     * 系统
      */
-    ZLB,
+    SYSTEM,
+
     /**
-     * 浙里办-微信小程序
+     * 租户
      */
-    ZLB_WECHAT,
+    TENANT,
+
     /**
-     * 浙政钉
+     * 手机
      */
-    ZZD,
-    /**
-     * 其它
-     */
-    CUSTOM,
+    PHONE,
     /**
      * 根据URL自动判断是WEB还是EMBED
      */
