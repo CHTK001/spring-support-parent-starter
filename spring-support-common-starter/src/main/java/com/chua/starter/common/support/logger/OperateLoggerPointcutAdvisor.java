@@ -2,6 +2,7 @@ package com.chua.starter.common.support.logger;
 
 import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.utils.*;
 import com.chua.starter.common.support.annotations.OperateLog;
 import com.chua.starter.common.support.annotations.SysLogger;
@@ -18,6 +19,8 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
+import org.springframework.expression.common.TemplateParserContext;
+import org.springframework.expression.spel.SpelParserConfiguration;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 
@@ -136,20 +139,22 @@ public class OperateLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdv
         if(StringUtils.isEmpty(content)) {
             return CommonConstant.SYMBOL_EMPTY;
         }
-        ExpressionParser expressionParser = new SpelExpressionParser();
+        ExpressionParser expressionParser = new SpelExpressionParser(new SpelParserConfiguration(true,true));
         EvaluationContext evaluationContext = new StandardEvaluationContext();
 
         Method method = invocation.getMethod();
         Object[] arguments = invocation.getArguments();
         for (int i = 0; i < arguments.length; i++) {
             Object argument = arguments[i];
-            evaluationContext.setVariable("$arg" + i, argument);
+            evaluationContext.setVariable("arg" + i, argument);
         }
+        evaluationContext.setVariable("args", arguments);
 
-        evaluationContext.setVariable("$method", method);
-        evaluationContext.setVariable("$result", proceed);
+        evaluationContext.setVariable("now", DateTime.now().toStandard());
+        evaluationContext.setVariable("method", method);
+        evaluationContext.setVariable("result", proceed);
 
-        Expression expression = expressionParser.parseExpression(content);
+        Expression expression = expressionParser.parseExpression(content, new TemplateParserContext());
         return Optional.ofNullable( expression.getValue(evaluationContext)).orElse(content).toString();
     }
 

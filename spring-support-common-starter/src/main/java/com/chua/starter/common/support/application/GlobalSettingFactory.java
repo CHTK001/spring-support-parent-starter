@@ -1,5 +1,7 @@
 package com.chua.starter.common.support.application;
 
+import com.chua.common.support.utils.ClassUtils;
+
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -8,10 +10,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author CH
  * @since 2024/8/6
  */
-public class GlobalFactory {
+public class GlobalSettingFactory {
 
 
-    private static final GlobalFactory INSTANCE = new GlobalFactory();
+    private static final GlobalSettingFactory INSTANCE = new GlobalSettingFactory();
 
 
     private static final Map<Class<?>, Object> CACHE = new ConcurrentHashMap<>();
@@ -27,7 +29,13 @@ public class GlobalFactory {
      */
     @SuppressWarnings("unchecked")
     public <T> T get(Class<T> clazz) {
-        return (T) CACHE.get(clazz);
+        T t = (T) CACHE.get(clazz);
+        if(t == null) {
+            CACHE.put(clazz, ClassUtils.forObject(clazz));
+            return (T) CACHE.get(clazz);
+        }
+
+        return t;
     }
 
     /**
@@ -54,7 +62,7 @@ public class GlobalFactory {
      * 获取实例
      * @return 实例
      */
-    public static GlobalFactory getInstance() {
+    public static GlobalSettingFactory getInstance() {
         return INSTANCE;
     }
 }

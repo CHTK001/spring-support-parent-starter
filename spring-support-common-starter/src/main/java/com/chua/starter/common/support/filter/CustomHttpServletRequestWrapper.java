@@ -1,10 +1,11 @@
 package com.chua.starter.common.support.filter;
 
 import com.chua.common.support.utils.IoUtils;
-
 import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletRequestWrapper;
+import jakarta.servlet.http.HttpSession;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -18,7 +19,7 @@ import java.nio.charset.StandardCharsets;
  */
 public class CustomHttpServletRequestWrapper extends HttpServletRequestWrapper {
 
-    private byte[] body;
+    private final byte[] body;
 
     public CustomHttpServletRequestWrapper(HttpServletRequest request) throws IOException {
         super(request);
@@ -38,6 +39,11 @@ public class CustomHttpServletRequestWrapper extends HttpServletRequestWrapper {
     @Override
     public BufferedReader getReader() throws IOException {
         return new BufferedReader(new InputStreamReader(getInputStream(), getCharacterEncoding()));
+    }
+
+    @Override
+    public HttpSession getSession() {
+        return super.getSession();
     }
 
     @Override
