@@ -21,4 +21,5 @@ public class LoginData {
     @RequestParamMapping(name = {"verifyCode", "verifyCodeKey"})
     private String verifyCodeKey;
     private String verifyCodeUlid;
+    private String loginType;
 }
