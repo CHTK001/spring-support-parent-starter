@@ -35,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 
 import static com.chua.common.support.constant.NumberConstant.NUM_200;
 import static com.chua.starter.common.support.utils.RequestUtils.*;
+import static com.chua.starter.oauth.client.support.enums.AuthType.AUTO;
 import static com.chua.starter.oauth.client.support.enums.AuthType.STATIC;
 
 /**
@@ -110,13 +111,16 @@ public class AuthClientExecute {
     /**
      * 登出
      *
+     * @param loginType
      * @param logoutType 账号类型
      * @return token
      */
-    public LoginAuthResult logout(String uid, LogoutType logoutType) {
+    public LoginAuthResult logout(String uid, String loginType, LogoutType logoutType) {
         AuthType authType = null;
         if (STATIC.name().equalsIgnoreCase(authClientProperties.getProtocol())) {
             authType = STATIC;
+        } else {
+            authType = AUTO;
         }
 
         ProtocolExecutor protocolExecutor = ServiceProvider.of(ProtocolExecutor.class).getExtension(authType);
