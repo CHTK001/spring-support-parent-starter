@@ -1,12 +1,8 @@
 package com.chua.starter.oauth.server.support.advice;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.Accessors;
-
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.*;
+import lombok.experimental.Accessors;
 
 
 /**
@@ -18,6 +14,7 @@ import jakarta.servlet.http.HttpServletRequest;
 @Accessors(chain = true)
 @RequiredArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
 public class AdviceView<T> {
     /**
      * 数据
@@ -27,5 +24,5 @@ public class AdviceView<T> {
     /**
      * 请求
      */
-    private HttpServletRequest request;
+    private volatile transient HttpServletRequest request;
 }
