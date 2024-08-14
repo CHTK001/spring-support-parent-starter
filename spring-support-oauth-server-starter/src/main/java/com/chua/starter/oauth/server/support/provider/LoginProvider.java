@@ -102,9 +102,6 @@ public class LoginProvider implements InitializingBean {
     public AdviceView logoutWeb(@RequestBody AuthRequest request1,
                                 HttpServletRequest request, HttpServletResponse response) {
         String data = request1.getData();
-        if(null == data) {
-            return new AdviceView(EMPTY, request);
-        }
         LogoutType type = LogoutType.valueOf(request1.getType().toUpperCase());
         String address = RequestUtils.getIpAddress(request);
         String accept = request.getHeader("accept");
@@ -134,7 +131,9 @@ public class LoginProvider implements InitializingBean {
             tokenResolver.logout(uid.toString(), (LogoutType) request.getAttribute("type"));
             return new AdviceView(EMPTY, request);
         }
-
+        if(null == data) {
+            return new AdviceView(EMPTY, request);
+        }
         loggerResolver.register("logout", OK.getCode(), "登出成功", address);
         if (!Strings.isNullOrEmpty(accept) && !accept.contains("text/html")) {
             return new AdviceView(logoutApi(data, type, request, response), request);
