@@ -41,6 +41,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import static com.chua.common.support.constant.CommonConstant.EMPTY;
 import static com.chua.common.support.lang.code.ReturnCode.*;
 import static com.chua.starter.oauth.client.support.contants.AuthConstant.*;
 
@@ -101,6 +102,9 @@ public class LoginProvider implements InitializingBean {
     public AdviceView logoutWeb(@RequestBody AuthRequest request1,
                                 HttpServletRequest request, HttpServletResponse response) {
         String data = request1.getData();
+        if(null == data) {
+            return new AdviceView(EMPTY, request);
+        }
         LogoutType type = LogoutType.valueOf(request1.getType().toUpperCase());
         String address = RequestUtils.getIpAddress(request);
         String accept = request.getHeader("accept");
@@ -128,6 +132,7 @@ public class LoginProvider implements InitializingBean {
         Object uid = request.getAttribute("uid");
         if (null != uid) {
             tokenResolver.logout(uid.toString(), (LogoutType) request.getAttribute("type"));
+            return new AdviceView(EMPTY, request);
         }
 
         loggerResolver.register("logout", OK.getCode(), "登出成功", address);
@@ -157,7 +162,9 @@ public class LoginProvider implements InitializingBean {
         String uid = request1.getString("uid");
         request.setAttribute("uid", uid);
         request.setAttribute("type", type);
-        return logoutWeb(new AuthRequest(), request, response);
+        AuthRequest authRequest = new AuthRequest();
+        authRequest.setType(type.name());
+        return logoutWeb(authRequest, request, response);
     }
 
     /**
