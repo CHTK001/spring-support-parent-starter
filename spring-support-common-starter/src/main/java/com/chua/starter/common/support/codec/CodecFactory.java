@@ -21,13 +21,13 @@ import java.util.List;
  * @version 1.0.0
  * @since 2024/01/22
  */
-public class CodecFactory implements Upgrade<CodecProperties> {
+public class CodecFactory implements Upgrade<CodecSetting> {
 
 
-    private List<String> whiteList;
-    private Codec codec;
-    private CodecKeyPair codecKeyPair;
-    private String publicKeyHex;
+    private final List<String> whiteList;
+    private final Codec codec;
+    private final CodecKeyPair codecKeyPair;
+    private final String publicKeyHex;
     @Getter
     private boolean enable;
 
@@ -36,10 +36,16 @@ public class CodecFactory implements Upgrade<CodecProperties> {
      */
     private String codecType = "sm2";
 
-    private final GlobalSettingFactory globalSettingFactory = GlobalSettingFactory.getInstance();
-
     public CodecFactory(CodecProperties codecProperties) {
-        this.upgrade(codecProperties);
+        GlobalSettingFactory globalSettingFactory = GlobalSettingFactory.getInstance();
+        globalSettingFactory.register("codec", CodecSetting.class);
+        globalSettingFactory.set("codec", "enable", codecProperties.isEnable());
+        this.upgrade(globalSettingFactory.get("codec", CodecSetting.class));
+        this.codecType = codecProperties.getCodecType();
+        this.codec = Codec.build(codecType);
+        this.whiteList = codecProperties.getWhiteList();
+        this.codecKeyPair = (CodecKeyPair) codec;
+        this.publicKeyHex = codecKeyPair.getPublicKeyHex();
     }
 
 
@@ -90,13 +96,8 @@ public class CodecFactory implements Upgrade<CodecProperties> {
     }
 
     @Override
-    public void upgrade(CodecProperties codecProperties) {
-        this.enable = codecProperties.isEnable();
-        this.codecType = codecProperties.getCodecType();
-        this.codec = Codec.build(codecType);
-        this.whiteList = codecProperties.getWhiteList();
-        this.codecKeyPair = (CodecKeyPair) codec;
-        this.publicKeyHex = codecKeyPair.getPublicKeyHex();
+    public void upgrade(CodecSetting codecSetting) {
+        this.enable = codecSetting.isEnable();
     }
 
 

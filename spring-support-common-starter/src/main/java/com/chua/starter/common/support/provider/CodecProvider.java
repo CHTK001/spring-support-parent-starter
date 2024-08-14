@@ -38,7 +38,7 @@ public class CodecProvider {
         {
             try {
                 String script = IoUtils.toString(CodecProvider.class.getResourceAsStream("/uu.js"), StandardCharsets.UTF_8);
-                SCRIPT = script.replace("{{sign1}}",  GlobalSettingFactory.getInstance().get(Sign.class).getSign1());
+                SCRIPT = script.replace("{{sign1}}",  GlobalSettingFactory.getInstance().get("sign", Sign.class).getSign1());
             } catch (Exception ignored) {
             }
         }
