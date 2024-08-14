@@ -159,7 +159,7 @@ public class OperateLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdv
         try {
             return Optional.ofNullable( expression.getValue(evaluationContext)).orElse(content).toString();
         } catch (EvaluationException e) {
-            e.printStackTrace();
+           // e.printStackTrace();
         }
         return content;
     }
