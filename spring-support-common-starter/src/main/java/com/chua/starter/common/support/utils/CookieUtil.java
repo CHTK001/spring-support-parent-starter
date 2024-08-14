@@ -18,7 +18,7 @@ public class CookieUtil {
     /**
      * 默认缓存时间,单位/秒, 2H
      */
-    private static final int COOKIE_MAX_AGE = Integer.MAX_VALUE;
+    public static final int COOKIE_MAX_AGE = Integer.MAX_VALUE;
     /**
      * 保存路径,根路径
      */
@@ -78,7 +78,7 @@ public class CookieUtil {
      * @param maxAge Cookie的生存时间，以秒为单位。设置为0会导致Cookie在浏览器关闭时被删除；负值表示Cookie不会被保存在客户端。
      * @param isHttpOnly 设置是否只能通过HTTP协议访问Cookie，以增强安全性。true表示只能通过HTTP协议访问，false表示可以通过脚本等访问。
      */
-    private static void set(HttpServletResponse response, String key, String value, String domain, String path, int maxAge, boolean isHttpOnly) {
+    public static void set(HttpServletResponse response, String key, String value, String domain, String path, int maxAge, boolean isHttpOnly) {
         Cookie cookie = new Cookie(key, value);
         if (domain != null) {
             cookie.setDomain(domain);
