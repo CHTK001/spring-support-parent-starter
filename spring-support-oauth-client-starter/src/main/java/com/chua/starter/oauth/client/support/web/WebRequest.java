@@ -2,6 +2,7 @@ package com.chua.starter.oauth.client.support.web;
 
 import com.chua.common.support.annotations.Ignore;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.ObjectUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.oauth.client.support.annotation.AuthIgnore;
@@ -162,7 +163,7 @@ public class WebRequest {
         String header = request.getHeader(authProperties.getTokenName());
         return Strings.isNullOrEmpty(header) ? StringUtils.defaultString(
                 request.getParameter(authProperties.getTokenName()),
-                request.getAttribute(authProperties.getTokenName()) + ""
+                ObjectUtils.defaultIfStringNull(request.getAttribute(authProperties.getTokenName()), null)
         ) : header;
     }
 
