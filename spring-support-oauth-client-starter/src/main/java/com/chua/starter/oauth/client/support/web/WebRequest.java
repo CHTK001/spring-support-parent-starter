@@ -11,6 +11,7 @@ import com.chua.starter.oauth.client.support.infomation.AuthenticationInformatio
 import com.chua.starter.oauth.client.support.infomation.Information;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.protocol.Protocol;
+import com.chua.starter.oauth.client.support.user.LoginResult;
 import com.google.common.base.Strings;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -237,10 +238,10 @@ public class WebRequest {
      * 刷新token
      * @param upgradeType 升级类型
      */
-    public void upgrade(UpgradeType upgradeType) {
+    public LoginResult upgrade(UpgradeType upgradeType) {
         Cookie[] cookie = getCookie();
         String token = getToken();
         Protocol protocol = ServiceProvider.of(Protocol.class).getExtension(authProperties.getProtocol());
-        protocol.upgrade(cookie, token, upgradeType);
+        return protocol.upgrade(cookie, token, upgradeType);
     }
 }

@@ -113,12 +113,13 @@ public class HttpProtocol implements Protocol, InitializingBean {
             return ReturnResult.noAuth();
         }
 
-        ReturnResult<String> authentication = authorization.upgrade();
+        ReturnResult<String> authentication = authorization.upgrade(address, authServerProperties.getCookieName());
         if (!OK.getCode().equals(authentication.getCode())) {
             loginProvider.logout(request, response);
             loggerResolver.register(AuthConstant.OAUTH, RESOURCE_OAUTH_ERROR.getCode(), "ak,sk限制登录", address);
             return ReturnResult.noAuth();
         }
+
 
         return authentication;
     }
