@@ -16,8 +16,15 @@ public enum UpgradeType {
     /**
      * 表示基于时间戳的升级。(升级账号信息， 并重置时长)
      */
-    TIMESTAMP;
+    TIMESTAMP,
 
+
+    /**
+     * 表示刷新升级。返回新token
+     */
+    REFRESH,
+
+    ;
     /**
      * 根据给定的升级类型字符串，返回对应的 UpgradeType 枚举值。
      * 如果给定的升级类型字符串为 null，则返回 TIMESTAMP 枚举值。

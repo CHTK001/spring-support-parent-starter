@@ -4,7 +4,9 @@ import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.code.ReturnResultBuilder;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.oauth.client.support.enums.UpgradeType;
+import com.chua.starter.oauth.client.support.user.LoginResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.server.support.check.LoginCheck;
 import com.chua.starter.oauth.server.support.information.AuthInformation;
@@ -23,7 +25,7 @@ import static com.chua.common.support.lang.code.ReturnCode.OK;
 public final class RequestAuthorization implements Authorization {
     private final AuthInformation authInformation;
     private final String token;
-    private final Cookie[] cookie;
+    private final Cookie[] cookies;
     private final String accessKey;
     private final String secretKey;
     private final UpgradeType upgradeType;
@@ -33,7 +35,7 @@ public final class RequestAuthorization implements Authorization {
 
     public RequestAuthorization(AuthInformation authInformation,
                                 String token,
-                                Cookie[] cookie,
+                                Cookie[] cookies,
                                 String accessKey,
                                 String secretKey,
                                 UpgradeType upgradeType,
@@ -41,7 +43,7 @@ public final class RequestAuthorization implements Authorization {
                                 LoginCheck loginCheck) {
         this.authInformation = authInformation;
         this.token = token;
-        this.cookie = cookie;
+        this.cookies = cookies;
         this.accessKey = accessKey;
         this.secretKey = secretKey;
         this.upgradeType = upgradeType;
@@ -51,7 +53,7 @@ public final class RequestAuthorization implements Authorization {
 
     @Override
     public boolean hasCookie() {
-        return cookie.length != 0;
+        return cookies.length != 0;
     }
 
     @Override
@@ -76,7 +78,7 @@ public final class RequestAuthorization implements Authorization {
         if (null == tokenResolver) {
             return ReturnResult.error(null, "认证服务器无法认证");
         }
-        ReturnResult<UserResult> resolve = tokenResolver.resolve(cookie, token);
+        ReturnResult<UserResult> resolve = tokenResolver.resolve(cookies, token);
         ReturnResultBuilder<String> result = ReturnResult.<String>newBuilder().code(resolve.getCode()).msg(resolve.getMsg());
         if (OK.getCode().equals(resolve.getCode())) {
             result.setData(authInformation.getCodec().encodeHex(Json.toJson(resolve.getData())));
@@ -85,26 +87,57 @@ public final class RequestAuthorization implements Authorization {
     }
 
     @Override
-    public ReturnResult<String> upgrade() {
+    public ReturnResult<String> upgrade(String address, String cookieName) {
         String tokenManagement = authInformation.getAuthServerProperties().getTokenManagement();
         TokenResolver tokenResolver = ServiceProvider.of(TokenResolver.class).getExtension(tokenManagement);
         if (null == tokenResolver) {
             return ReturnResult.error(null, "认证服务器无法认证");
         }
 
+        LoginResult loginResult = new LoginResult();
         ReturnResult<UserResult> resolve = null;
         if(upgradeType == UpgradeType.TIMESTAMP) {
-            resolve = tokenResolver.upgradeForTimestamp(cookie, token);
+            resolve = tokenResolver.upgradeForTimestamp(cookies, token);
+            loginResult.setToken(getValidToken(cookieName));
+            loginResult.setUserResult(resolve.getData());
         }
 
          else if(upgradeType == UpgradeType.VERSION) {
-            resolve = tokenResolver.upgradeForVersion(cookie, token);
+            resolve = tokenResolver.upgradeForVersion(cookies, token);
+            loginResult.setToken(getValidToken(cookieName));
+            loginResult.setUserResult(resolve.getData());
+        }
+
+         else if(upgradeType == UpgradeType.REFRESH) {
+            resolve = tokenResolver.upgradeForVersion(cookies, token);
+
+            ReturnResult<LoginResult> token = tokenResolver.createToken(address, resolve.getData(), null);
+            String code = token.getCode();
+            if (OK.getCode().equals(code)) {
+                loginResult = token.getData();
+                loginResult.setUserResult(resolve.getData());
+            }
         }
 
         ReturnResultBuilder<String> result = ReturnResult.<String>newBuilder().code(resolve.getCode()).msg(resolve.getMsg());
         if (OK.getCode().equals(resolve.getCode())) {
-            result.setData(authInformation.getCodec().encodeHex(Json.toJson(resolve.getData())));
+            result.setData(authInformation.getCodec().encodeHex(Json.toJson(loginResult)));
         }
         return result.build();
+    }
+
+    /**
+     * 获取有效的token
+     *
+     * @param cookieName cookieName
+     * @return token
+     */
+    private String getValidToken(String cookieName) {
+        Cookie cookie = CookieUtil.getCookie(cookies, cookieName);
+        if(null != cookie) {
+            return cookie.getValue();
+        }
+
+        return token;
     }
 }

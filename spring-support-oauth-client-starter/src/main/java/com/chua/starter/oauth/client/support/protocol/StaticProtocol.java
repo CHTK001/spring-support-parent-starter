@@ -7,6 +7,8 @@ import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.enums.UpgradeType;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.infomation.Information;
+import com.chua.starter.oauth.client.support.user.LoginAuthResult;
+import com.chua.starter.oauth.client.support.user.LoginResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.google.common.collect.Sets;
@@ -83,7 +85,7 @@ public class StaticProtocol extends AbstractProtocol{
         return new AuthenticationInformation(Information.OK, userResume);
     }
     @Override
-    public void upgrade(Cookie[] cookie, String token, UpgradeType upgradeType) {
-
+    public LoginResult upgrade(Cookie[] cookie, String token, UpgradeType upgradeType) {
+        return new LoginAuthResult(0, null);
     }
 }

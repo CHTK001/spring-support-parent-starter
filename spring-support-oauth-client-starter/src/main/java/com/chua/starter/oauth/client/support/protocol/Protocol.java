@@ -2,6 +2,7 @@ package com.chua.starter.oauth.client.support.protocol;
 
 import com.chua.starter.oauth.client.support.enums.UpgradeType;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
+import com.chua.starter.oauth.client.support.user.LoginResult;
 import jakarta.servlet.http.Cookie;
 
 /**
@@ -25,5 +26,5 @@ public interface Protocol {
      * @param token       用于升级的令牌字符串。
      * @param upgradeType 升级类型。
      */
-    void upgrade(Cookie[] cookie, String token, UpgradeType upgradeType);
+    LoginResult upgrade(Cookie[] cookie, String token, UpgradeType upgradeType);
 }

@@ -37,7 +37,7 @@ public final class InvalidAuthorization implements Authorization {
     }
 
     @Override
-    public ReturnResult<String> upgrade() {
+    public ReturnResult<String> upgrade(String address, String cookieName) {
         return ReturnResult.noAuth();
     }
 }
