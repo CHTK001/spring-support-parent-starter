@@ -273,7 +273,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
             if (ReturnCode.OK.getCode().equals(code)) {
                 body = Codec.build(encryption, key).decodeHex(data.toString());
                 LoginResult loginResult = Json.fromJson(body, LoginResult.class);
-                UserResume userResume = BeanUtils.copyProperties(loginResult, UserResume.class);
+                UserResume userResume = BeanUtils.copyProperties(loginResult.getUserResult(), UserResume.class);
                 inCache(cacheKey, new AuthenticationInformation(Information.OK, userResume));
                 return loginResult;
             }
