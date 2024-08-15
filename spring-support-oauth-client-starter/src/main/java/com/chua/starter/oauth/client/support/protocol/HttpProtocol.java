@@ -2,6 +2,7 @@ package com.chua.starter.oauth.client.support.protocol;
 
 import com.chua.common.support.annotations.Extension;
 import com.chua.common.support.annotations.SpiDefault;
+import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.code.ReturnCode;
@@ -24,7 +25,9 @@ import com.chua.starter.oauth.client.support.contants.AuthConstant;
 import com.chua.starter.oauth.client.support.entity.AuthRequest;
 import com.chua.starter.oauth.client.support.enums.UpgradeType;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
+import com.chua.starter.oauth.client.support.infomation.Information;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
+import com.chua.starter.oauth.client.support.user.LoginResult;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.google.common.base.Strings;
 import jakarta.servlet.http.Cookie;
@@ -163,7 +166,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
                 UserResume userResume = Json.fromJson(body, UserResume.class);
                 RequestUtils.setUsername(userResume.getUsername());
                 RequestUtils.setUserInfo(userResume);
-                return inCache(cacheKey, new AuthenticationInformation(OK, userResume));
+                return inCache(cacheKey, new AuthenticationInformation(Information.OK, userResume));
             }
 
 
@@ -187,7 +190,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
     }
 
     @Override
-    public void upgrade(Cookie[] cookie, String token, UpgradeType upgradeType) {
+    public LoginResult upgrade(Cookie[] cookie, String token, UpgradeType upgradeType) {
         String key = DigestUtils.md5Hex(UUID.randomUUID().toString());
         Map<String, Object> jsonObject = new HashMap<>(2);
         Cookie[] cookies = Optional.ofNullable(cookie).orElse(new Cookie[0]);
@@ -269,10 +272,10 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
 
             if (ReturnCode.OK.getCode().equals(code)) {
                 body = Codec.build(encryption, key).decodeHex(data.toString());
-
-                UserResume userResume = Json.fromJson(body, UserResume.class);
-                inCache(cacheKey, new AuthenticationInformation(OK, userResume));
-                return;
+                LoginResult loginResult = Json.fromJson(body, LoginResult.class);
+                UserResume userResume = BeanUtils.copyProperties(loginResult, UserResume.class);
+                inCache(cacheKey, new AuthenticationInformation(Information.OK, userResume));
+                return loginResult;
             }
 
 

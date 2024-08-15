@@ -57,5 +57,5 @@ public interface Authorization {
      *
      * @return 刷新缓存
      */
-    ReturnResult<String> upgrade();
+    ReturnResult<String> upgrade(String address, String cookieName);
 }

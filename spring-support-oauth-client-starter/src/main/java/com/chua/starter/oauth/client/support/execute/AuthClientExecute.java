@@ -2,6 +2,7 @@ package com.chua.starter.oauth.client.support.execute;
 
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.constant.CommonConstant;
+import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.lang.exception.AuthenticationException;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.Md5Utils;
@@ -17,6 +18,7 @@ import com.chua.starter.oauth.client.support.infomation.AuthenticationInformatio
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.protocol.Protocol;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
+import com.chua.starter.oauth.client.support.user.LoginResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.chua.starter.oauth.client.support.web.WebRequest;
@@ -220,10 +222,10 @@ public class AuthClientExecute {
     /**
      * 刷新token
      */
-    public void upgrade(UpgradeType upgradeType) {
+    public LoginResult upgrade(UpgradeType upgradeType) {
         RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
         if (requestAttributes == null) {
-            return;
+            return new LoginAuthResult(-1, ReturnCode.CLIENT_OTHER_ERROR.getMsg());
         }
 
         ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
@@ -232,7 +234,7 @@ public class AuthClientExecute {
                 authClientProperties,
                 request, null);
 
-        webRequest1.upgrade(upgradeType);
+        return webRequest1.upgrade(upgradeType);
     }
 
     /**
