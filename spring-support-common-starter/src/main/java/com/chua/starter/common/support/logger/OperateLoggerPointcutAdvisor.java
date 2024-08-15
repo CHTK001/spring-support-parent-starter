@@ -89,6 +89,9 @@ public class OperateLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdv
     void createOperateLogger(Object proceed, Throwable throwable, MethodInvocation invocation, long startTime) {
         Method method = invocation.getMethod();
         SysLogger sysLogger = method.getDeclaredAnnotation(SysLogger.class);
+        if(null == sysLogger) {
+            return;
+        }
         String name = getName(sysLogger, method);
         if(null == name) {
             return;

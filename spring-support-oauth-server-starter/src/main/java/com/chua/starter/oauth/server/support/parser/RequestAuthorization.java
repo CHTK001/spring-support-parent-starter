@@ -114,6 +114,7 @@ public final class RequestAuthorization implements Authorization {
             ReturnResult<LoginResult> token = tokenResolver.createToken(address, resolve.getData(), null);
             String code = token.getCode();
             if (OK.getCode().equals(code)) {
+                tokenResolver.logout(cookies, this.token, cookieName);
                 loginResult = token.getData();
                 loginResult.setUserResult(resolve.getData());
             }
