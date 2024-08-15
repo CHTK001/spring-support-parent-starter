@@ -42,6 +42,7 @@ import java.util.*;
 
 import static com.chua.common.support.http.HttpClientUtils.APPLICATION_JSON;
 import static com.chua.common.support.lang.code.ReturnCode.RESOURCE_OAUTH_ERROR;
+import static com.chua.common.support.lang.code.ReturnCode.RESULT_ACCESS_UNAUTHORIZED;
 import static com.chua.starter.oauth.client.support.contants.AuthConstant.OAUTH_UPGRADE_KEY;
 import static com.chua.starter.oauth.client.support.infomation.Information.*;
 
@@ -146,7 +147,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         if (status == 200) {
             ReturnResult returnResult = Json.fromJson(body, ReturnResult.class);
             String code = returnResult.getCode();
-            if (RESOURCE_OAUTH_ERROR.getCode().equals(code)) {
+            if (RESOURCE_OAUTH_ERROR.getCode().equals(code) || RESULT_ACCESS_UNAUTHORIZED.getCode().equals(code)) {
                 HttpServletRequest servletRequest = RequestUtils.getRequest();
                 if (null != servletRequest) {
                     CookieUtil.remove(servletRequest, ResponseUtils.getResponse(), "x-oauth-cookie");

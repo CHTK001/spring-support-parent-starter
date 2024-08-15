@@ -110,14 +110,16 @@ public final class RequestAuthorization implements Authorization {
 
          else if(upgradeType == UpgradeType.REFRESH) {
             resolve = tokenResolver.upgradeForVersion(cookies, token);
-
-            ReturnResult<LoginResult> token = tokenResolver.createToken(address, resolve.getData(), null);
-            String code = token.getCode();
-            if (OK.getCode().equals(code)) {
-                tokenResolver.logout(cookies, this.token, cookieName);
-                loginResult = token.getData();
-                loginResult.setUserResult(resolve.getData());
+            if(resolve.isOk()) {
+                ReturnResult<LoginResult> token = tokenResolver.createToken(address, resolve.getData(), null);
+                String code = token.getCode();
+                if (OK.getCode().equals(code)) {
+                    tokenResolver.logout(cookies, this.token, cookieName);
+                    loginResult = token.getData();
+                    loginResult.setUserResult(resolve.getData());
+                }
             }
+
         }
 
         ReturnResultBuilder<String> result = ReturnResult.<String>newBuilder().code(resolve.getCode()).msg(resolve.getMsg());
