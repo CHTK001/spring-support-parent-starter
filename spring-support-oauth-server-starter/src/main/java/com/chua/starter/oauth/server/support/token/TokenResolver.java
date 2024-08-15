@@ -64,4 +64,13 @@ public interface TokenResolver {
      * @return 登录信息
      */
     ReturnResult<UserResult> upgradeForVersion(Cookie[] cookie, String token);
+
+    /**
+     * 注销
+     *
+     * @param cookies    cookie
+     * @param token      token
+     * @param cookieName cookieName
+     */
+    void logout(Cookie[] cookies, String token, String cookieName);
 }

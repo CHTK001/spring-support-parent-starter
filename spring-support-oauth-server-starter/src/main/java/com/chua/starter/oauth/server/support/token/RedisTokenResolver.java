@@ -1,7 +1,7 @@
 package com.chua.starter.oauth.server.support.token;
 
 import com.chua.common.support.annotations.Extension;
-import com.chua.common.support.json.Json;
+import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.common.support.spi.ServiceProvider;
@@ -163,8 +163,7 @@ public class RedisTokenResolver implements TokenResolver {
         if (null == s) {
             return ReturnResult.noAuth();
         }
-
-        UserResult userResult = Json.fromJson(s.toString(), UserResult.class);
+        UserResult userResult = BeanUtils.copyProperties(s, UserResult.class);
 
         UserResult newUserResult = loginCheck.getUserInfo(userResult);
         if (null == newUserResult) {
@@ -172,6 +171,18 @@ public class RedisTokenResolver implements TokenResolver {
         }
         stringRedisTemplate.opsForValue().set(token, newUserResult);
         return ReturnResult.ok(newUserResult);
+    }
+
+    @Override
+    public void logout(Cookie[] cookies, String token, String cookieName) {
+        Cookie cookie = CookieUtil.getCookie(cookies, cookieName);
+        if(null != cookie) {
+            logout(cookie.getValue());
+        }
+
+        if(StringUtils.isNotBlank(token)) {
+            logout(token);
+        }
     }
 
     /**
