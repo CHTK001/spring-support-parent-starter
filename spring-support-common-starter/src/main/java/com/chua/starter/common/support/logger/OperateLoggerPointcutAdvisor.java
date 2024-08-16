@@ -79,11 +79,13 @@ public class OperateLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdv
         long startTime = System.currentTimeMillis();
         try {
             proceed = invocation.proceed();
+            createOperateLogger(proceed, throwable, invocation, startTime);
+            return proceed;
         } catch (Throwable e) {
             throwable = e;
+            createOperateLogger(proceed, throwable, invocation, startTime);
+            throw e;
         }
-        createOperateLogger(proceed, throwable, invocation, startTime);
-        return proceed;
     }
 
     void createOperateLogger(Object proceed, Throwable throwable, MethodInvocation invocation, long startTime) {
