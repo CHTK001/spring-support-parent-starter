@@ -4,6 +4,7 @@ import com.chua.common.support.utils.ArrayUtils;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.starter.oauth.client.support.contants.AuthConstant;
 import com.chua.starter.oauth.client.support.exception.OauthException;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import org.aopalliance.intercept.MethodInterceptor;
@@ -41,12 +42,17 @@ public class PermissionPointcut extends StaticMethodMatcherPointcutAdvisor imple
             public Object invoke(@Nonnull MethodInvocation invocation) throws Throwable {
                 Method method = invocation.getMethod();
                 Permission permission  = getAnnotation(invocation);
+                UserResume userInfo = RequestUtils.getUserInfo(UserResume.class);
+                if(null == userInfo) {
+                    throw new OauthException("您的账号没有权限, 请联系管理员分配!");
+                }
 
-                if(isAdmin()) {
+                Set<String> roles = userInfo.getRoles();
+                if(AuthConstant.isSuperAdmin(roles)) {
                     return invocation.proceed();
                 }
 
-                if(!isRoleMatch(permission)) {
+                if(!isRoleMatch(permission, roles)) {
                     throw new OauthException("您的账号没有权限, 请联系管理员分配!");
                 }
 
@@ -89,18 +95,12 @@ public class PermissionPointcut extends StaticMethodMatcherPointcutAdvisor imple
 
     }
 
-    private boolean isRoleMatch(Permission permission) {
+    private boolean isRoleMatch(Permission permission, Set<String> roles) {
         String[] role = permission.role();
         if(ArrayUtils.isEmpty(role)) {
             return true;
         }
 
-        UserResume userInfo = RequestUtils.getUserInfo(UserResume.class);
-        if(null == userInfo) {
-            return false;
-        }
-
-        Set<String> roles = userInfo.getRoles();
         for (String s : roles) {
             if(ArrayUtils.containsIgnoreCase(role, s)) {
                 return true;
