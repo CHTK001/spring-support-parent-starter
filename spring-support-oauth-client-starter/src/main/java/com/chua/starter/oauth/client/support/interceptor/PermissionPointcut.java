@@ -40,7 +40,6 @@ public class PermissionPointcut extends StaticMethodMatcherPointcutAdvisor imple
             @Nullable
             @Override
             public Object invoke(@Nonnull MethodInvocation invocation) throws Throwable {
-                Method method = invocation.getMethod();
                 Permission permission  = getAnnotation(invocation);
                 UserResume userInfo = RequestUtils.getUserInfo(UserResume.class);
                 if(null == userInfo) {
