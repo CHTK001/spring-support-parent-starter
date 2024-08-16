@@ -43,7 +43,7 @@ public class PermissionPointcut extends StaticMethodMatcherPointcutAdvisor imple
                 Method method = invocation.getMethod();
                 Permission permission  = getAnnotation(invocation);
                 UserResume userInfo = RequestUtils.getUserInfo(UserResume.class);
-                if(null != userInfo) {
+                if(null == userInfo) {
                     throw new OauthException("您的账号没有权限, 请联系管理员分配!");
                 }
 
