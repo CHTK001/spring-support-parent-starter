@@ -101,6 +101,10 @@ public class PermissionPointcut extends StaticMethodMatcherPointcutAdvisor imple
             return true;
         }
 
+        if(!AuthConstant.isSuperAdmin(roles) && AuthConstant.isAdmin(roles)) {
+            return true;
+        }
+
         for (String s : roles) {
             if(ArrayUtils.containsIgnoreCase(role, s)) {
                 return true;
