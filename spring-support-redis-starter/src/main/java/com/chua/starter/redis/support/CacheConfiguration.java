@@ -34,7 +34,7 @@ public class CacheConfiguration {
      * @return {@link CacheManager}
      */
     @Bean(REDIS_CACHE_MIN)
-    public CacheManager systemCacheManager600(RedisConnectionFactory factory) {
+    public CacheManager systemCacheManager600(ObjectMapper om, RedisConnectionFactory factory) {
         return createRedisCacheManager(om, factory, 600);
     }
     /**
@@ -67,7 +67,7 @@ public class CacheConfiguration {
      */
     private CacheManager createRedisCacheManager(ObjectMapper om, RedisConnectionFactory factory, int seconds) {
         RedisSerializer<String> redisSerializer = new StringRedisSerializer();
-        Jackson2JsonRedisSerializer<Object> jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer(om, Object.class);
+        Jackson2JsonRedisSerializer<Object> jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer<>(om, Object.class);
 
         // 配置序列化（解决乱码的问题）,过期时间600秒
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
