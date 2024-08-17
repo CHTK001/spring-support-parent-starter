@@ -20,8 +20,6 @@ import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import com.google.common.base.Strings;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -49,7 +47,6 @@ import static com.chua.starter.common.support.utils.RequestUtils.getIpAddress;
 @RestController
 @RequestMapping("/v1/users")
 @RequiredArgsConstructor
-@Tag(name = "用户v1接口")
 @ConditionalOnProperty(name = "plugin.oauth.temp.open", havingValue = "true", matchIfMissing = true)
 public class UserStatisticProvider {
 
@@ -66,7 +63,6 @@ public class UserStatisticProvider {
      * @return 结果
      */
     @PostMapping("/login")
-    @Operation(summary = "登录")
     @Ignore
     public Result<LoginResult> login(@Valid @RequestBody LoginData loginData,
                                      HttpServletRequest request,
@@ -152,7 +148,6 @@ public class UserStatisticProvider {
      * @param response 回答
      * @return {@link Result}
      */
-    @Operation(summary = "注销")
     @DeleteMapping("/logout")
     public Result logout(@UserValue("token") String uid, HttpServletRequest request, HttpServletResponse response) {
         if (StringUtils.isEmpty(uid)) {
@@ -177,7 +172,6 @@ public class UserStatisticProvider {
      * @param sysUserSetting 保存用户首页布局
      * @return 保存用户首页布局
      */
-    @Operation(summary = "获取用户首页布局")
     @PostMapping("/grid")
     public ReturnResult<Boolean> grid(@RequestBody JsonObject sysUserSetting,
                                       @UserValue("userDashboardGrid") String userDashboardGrid,
@@ -197,7 +191,6 @@ public class UserStatisticProvider {
      * @param roles         角色
      * @return {@link Result}<{@link UserMenuResult}>
      */
-    @Operation(summary = "我的菜单")
     @GetMapping("/menus/my/**")
     public Result<UserMenuResult> myMenu(@UserValue("userId") String userId,
                                          @UserValue("userDashboardGrid") String userGrid,
