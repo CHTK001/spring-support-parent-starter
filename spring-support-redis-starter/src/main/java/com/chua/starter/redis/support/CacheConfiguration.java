@@ -1,9 +1,6 @@
 package com.chua.starter.redis.support;
 
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.PropertyAccessor;
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Bean;
@@ -38,7 +35,7 @@ public class CacheConfiguration {
      */
     @Bean(REDIS_CACHE_MIN)
     public CacheManager systemCacheManager600(RedisConnectionFactory factory) {
-        return createRedisCacheManager(factory, 600);
+        return createRedisCacheManager(om, factory, 600);
     }
     /**
      * 系统缓存经理
@@ -47,8 +44,8 @@ public class CacheConfiguration {
      * @return {@link CacheManager}
      */
     @Bean({REDIS_CACHE_HOUR})
-    public CacheManager systemCacheManager(RedisConnectionFactory factory) {
-        return createRedisCacheManager(factory, 3600);
+    public CacheManager systemCacheManager(ObjectMapper om, RedisConnectionFactory factory) {
+        return createRedisCacheManager(om, factory, 3600);
     }
     /**
      * 系统缓存经理
@@ -57,26 +54,20 @@ public class CacheConfiguration {
      * @return {@link CacheManager}
      */
     @Bean({REDIS_CACHE_ONE_DAY})
-    public CacheManager redis86400CacheManager(RedisConnectionFactory factory) {
-        return createRedisCacheManager(factory, 86400);
+    public CacheManager redis86400CacheManager(ObjectMapper om, RedisConnectionFactory factory) {
+        return createRedisCacheManager(om, factory, 86400);
     }
     /**
      * 创建redis缓存管理器
      *
+     * @param om
      * @param factory 工厂
      * @param seconds 秒
      * @return {@link CacheManager}
      */
-    private CacheManager createRedisCacheManager(RedisConnectionFactory factory, int seconds) {
+    private CacheManager createRedisCacheManager(ObjectMapper om, RedisConnectionFactory factory, int seconds) {
         RedisSerializer<String> redisSerializer = new StringRedisSerializer();
-        Jackson2JsonRedisSerializer jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer(Object.class);
-
-        //解决查询缓存转换异常的问题
-        ObjectMapper om = new ObjectMapper();
-        om.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
-        om.enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL);
-        om.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        jackson2JsonRedisSerializer.setObjectMapper(om);
+        Jackson2JsonRedisSerializer<Object> jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer(om, Object.class);
 
         // 配置序列化（解决乱码的问题）,过期时间600秒
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
