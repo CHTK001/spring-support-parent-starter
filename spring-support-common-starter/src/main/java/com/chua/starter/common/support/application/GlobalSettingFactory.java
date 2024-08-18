@@ -104,11 +104,11 @@ public class GlobalSettingFactory {
         if(null == t) {
             return ;
         }
+        FieldStation.of(t).setValue(name, value);
         if(t instanceof Upgrade<?>) {
             ((Upgrade) t).upgrade(t);
             return;
         }
-        FieldStation.of(t).setValue(name, value);
     }
 
     /**
@@ -126,10 +126,10 @@ public class GlobalSettingFactory {
             return ;
         }
 
+        FieldStation.of(t).setValue(name, value);
         if(t instanceof Upgrade<?>) {
             ((Upgrade) t).upgrade(t);
             return;
         }
-        FieldStation.of(t).setValue(name, value);
     }
 }
