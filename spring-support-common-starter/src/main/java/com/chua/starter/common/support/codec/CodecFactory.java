@@ -10,7 +10,6 @@ import com.chua.starter.common.support.application.GlobalSettingFactory;
 import com.chua.starter.common.support.properties.CodecProperties;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.Getter;
 
 import java.util.List;
 
@@ -28,13 +27,12 @@ public class CodecFactory implements Upgrade<CodecSetting> {
     private final Codec codec;
     private final CodecKeyPair codecKeyPair;
     private final String publicKeyHex;
-    @Getter
-    private boolean enable;
 
     /**
      * 编解码器类型
      */
     private String codecType = "sm2";
+    private CodecSetting codecSetting;
 
     public CodecFactory(CodecProperties codecProperties) {
         GlobalSettingFactory globalSettingFactory = GlobalSettingFactory.getInstance();
@@ -50,7 +48,7 @@ public class CodecFactory implements Upgrade<CodecSetting> {
 
 
     public boolean isPass() {
-        return !enable;
+        return !codecSetting.isEnable();
     }
 
     /**
@@ -72,11 +70,7 @@ public class CodecFactory implements Upgrade<CodecSetting> {
      * @param parseBoolean 是否启用
      */
     public void setEnable(boolean parseBoolean) {
-        if (!parseBoolean) {
-            this.enable = false;
-            return;
-        }
-        this.enable = true;
+        codecSetting.setEnable(parseBoolean);
     }
 
     /**
@@ -86,7 +80,7 @@ public class CodecFactory implements Upgrade<CodecSetting> {
      * @return {@link boolean}
      */
     public boolean isPass(String requestURI) {
-        if(!isEnable()) {
+        if(isPass()) {
             return true;
         }
         for (String s : whiteList) {
@@ -100,7 +94,7 @@ public class CodecFactory implements Upgrade<CodecSetting> {
 
     @Override
     public void upgrade(CodecSetting codecSetting) {
-        this.enable = codecSetting.isEnable();
+        this.codecSetting = codecSetting;
     }
 
 
