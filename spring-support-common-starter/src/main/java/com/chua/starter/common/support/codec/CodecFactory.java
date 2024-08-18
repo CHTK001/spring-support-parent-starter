@@ -38,7 +38,7 @@ public class CodecFactory implements Upgrade<CodecSetting> {
 
     public CodecFactory(CodecProperties codecProperties) {
         GlobalSettingFactory globalSettingFactory = GlobalSettingFactory.getInstance();
-        globalSettingFactory.register("codec", CodecSetting.class);
+        globalSettingFactory.register("codec", new CodecSetting());
         globalSettingFactory.set("codec", "enable", codecProperties.isEnable());
         this.upgrade(globalSettingFactory.get("codec", CodecSetting.class));
         this.codecType = codecProperties.getCodecType();
