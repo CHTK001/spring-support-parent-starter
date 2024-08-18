@@ -104,7 +104,10 @@ public class GlobalSettingFactory {
         if(null == t) {
             return ;
         }
-
+        if(t instanceof Upgrade<?>) {
+            ((Upgrade) t).upgrade(t);
+            return;
+        }
         FieldStation.of(t).setValue(name, value);
     }
 
