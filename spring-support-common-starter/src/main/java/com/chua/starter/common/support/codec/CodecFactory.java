@@ -86,6 +86,9 @@ public class CodecFactory implements Upgrade<CodecSetting> {
      * @return {@link boolean}
      */
     public boolean isPass(String requestURI) {
+        if(!isEnable()) {
+            return true;
+        }
         for (String s : whiteList) {
             if (PathMatcher.INSTANCE.match(s, requestURI)) {
                 return true;
