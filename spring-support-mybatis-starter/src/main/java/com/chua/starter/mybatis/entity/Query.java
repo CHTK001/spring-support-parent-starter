@@ -1,5 +1,9 @@
 package com.chua.starter.mybatis.entity;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.ArrayUtils;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.starter.common.support.annotations.RequestParamMapping;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
@@ -39,11 +43,65 @@ public class Query<T>{
     private Integer pageSize = PAGE_SIZE;
 
     /**
+     * 查询字段
+     */
+    @Schema(description = "查询字段", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+    @Min(value = 1, message = "查询字段")
+    @Max(value = 100, message = "查询字段")
+    @RequestParamMapping({"prop", "field"})
+    private String[] prop = new String[0];
+
+    /**
+     * 查询字段
+     */
+    @Schema(description = "排序字段", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+    @Min(value = 1, message = "排序字段")
+    @Max(value = 100, message = "排序字段")
+    @RequestParamMapping({"order"})
+    private String[] order = new String[0];
+
+    /**
      * 初始化分页
      *
      * @return {@link com.baomidou.mybatisplus.extension.plugins.pagination.Page}<{@link T}>
      */
     public com.baomidou.mybatisplus.extension.plugins.pagination.Page<T> createPage() {
         return new com.baomidou.mybatisplus.extension.plugins.pagination.Page<T>(page, pageSize);
+    }
+
+    /**
+     * 初始化其它参数
+     *
+     * @return {@link com.baomidou.mybatisplus.core.conditions.query.QueryWrapper}<{@link T}>
+     */
+    public QueryWrapper<T> wrapper(QueryWrapper<T> query) {
+        if(ArrayUtils.isNotEmpty(prop)) {
+           query.select(prop);
+        }
+
+        if(ArrayUtils.isNotEmpty(order)) {
+            for (String s : order) {
+                if(s.endsWith("-")) {
+                    query.orderByDesc(s.substring(0, s.length() - 1));
+                } else if(s.endsWith("+")){
+                    query.orderByAsc(s.substring(0, s.length() - 1));
+                } else {
+                    query.orderByAsc(s);
+                }
+            }
+        }
+        return query;
+    }
+    public QueryWrapper<T> wrapper() {
+        QueryWrapper<T> query = Wrappers.query();
+        return wrapper(query);
+    }
+    /**
+     * 初始化其它参数
+     *
+     * @return {@link com.baomidou.mybatisplus.core.conditions.query.QueryWrapper}<{@link T}>
+     */
+    public LambdaQueryWrapper<T> lambda() {
+        return wrapper().lambda();
     }
 }
