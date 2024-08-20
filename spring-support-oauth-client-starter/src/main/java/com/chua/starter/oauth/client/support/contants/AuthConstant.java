@@ -14,7 +14,7 @@ public interface AuthConstant {
     /**
      * 超级管理员
      */
-    String SUPER_ADMIN = "super_admin";
+    String SUPER_ADMIN = "SUPER_ADMIN";
 
     /**
      * ops
@@ -23,7 +23,7 @@ public interface AuthConstant {
     /**
      * 管理员
      */
-    String ADMIN = "admin";
+    String ADMIN = "ADMIN";
     /**
      * ak
      */
