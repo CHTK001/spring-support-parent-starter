@@ -83,7 +83,7 @@ public interface AuthConstant {
      * @return 是否为管理员
      */
     static boolean hasAdmin(Set<String> roles) {
-        return CollectionUtils.containsIgnoreCase(roles, ADMIN) && isSuperAdmin(roles);
+        return CollectionUtils.containsIgnoreCase(roles, ADMIN) || isSuperAdmin(roles);
     }
     /**
      * 是否为超级管理员
