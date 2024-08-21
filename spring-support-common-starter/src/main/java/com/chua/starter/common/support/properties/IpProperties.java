@@ -14,7 +14,7 @@ public class IpProperties {
 
     public static final String PRE = "plugin.ip";
     /**
-     * 是否开启版本控制
+     * 是否开启控制
      */
     private boolean enable;
 
