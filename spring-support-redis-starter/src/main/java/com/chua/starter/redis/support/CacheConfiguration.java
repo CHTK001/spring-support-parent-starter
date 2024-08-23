@@ -33,7 +33,7 @@ public class CacheConfiguration {
      * 创建jackson对象
      * @return JacksonObjectWriter
      */
-    public JacksonObjectWriter createJacksonObjectWriter() {
+    public static JacksonObjectWriter createJacksonObjectWriter() {
         return (mapper, source) -> {
             Map<String, Object> map = new HashMap<>(2);
             map.put("type", source.getClass().getTypeName());
@@ -46,7 +46,7 @@ public class CacheConfiguration {
      * 创建jackson对象
      * @return JacksonObjectReader
      */
-    public JacksonObjectReader createJacksonObjectReader() {
+    public static JacksonObjectReader createJacksonObjectReader() {
         return (mapper, source, type) -> {
             Object object = mapper.readValue(source, 0, source.length, type);
             if(type.getRawClass() != Object.class) {
@@ -101,7 +101,7 @@ public class CacheConfiguration {
      * @param seconds 秒
      * @return {@link CacheManager}
      */
-    private CacheManager createRedisCacheManager(ObjectMapper om, RedisConnectionFactory factory, int seconds) {
+    public static CacheManager createRedisCacheManager(ObjectMapper om, RedisConnectionFactory factory, int seconds) {
         RedisSerializer<String> redisSerializer = new StringRedisSerializer();
         Jackson2JsonRedisSerializer<Object> jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer<>(om, TypeFactory.defaultInstance().constructType(Object.class), createJacksonObjectReader(), createJacksonObjectWriter());
 
@@ -111,6 +111,7 @@ public class CacheConfiguration {
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(redisSerializer))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(jackson2JsonRedisSerializer))
                 .prefixCacheNameWith("CACHE:")
+                .computePrefixWith(name -> name + ":")
                 .disableCachingNullValues();
 
         return RedisCacheManager.builder(factory)
