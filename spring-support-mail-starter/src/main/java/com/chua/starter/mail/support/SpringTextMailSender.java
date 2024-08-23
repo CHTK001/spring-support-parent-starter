@@ -3,14 +3,14 @@ package com.chua.starter.mail.support;
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.lang.mail.*;
 import com.chua.common.support.log.Log;
+import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.common.support.utils.UrlUtils;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 
-import jakarta.annotation.Resource;
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -24,7 +24,7 @@ import java.util.List;
 public class SpringTextMailSender extends AbstractMailSender {
 
     private static final Log log = Log.getLogger(MailSender.class);
-    @Autowired
+    @AutoInject
     private JavaMailSender javaMailSender;
 
     public SpringTextMailSender(MailConfiguration configuration) {
