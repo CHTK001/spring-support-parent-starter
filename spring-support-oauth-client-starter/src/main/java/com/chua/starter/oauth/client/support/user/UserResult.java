@@ -105,10 +105,6 @@ public class UserResult {
      */
     private AccessSecret accessSecret;
     /**
-     * 实现类
-     */
-    private String beanType;
-    /**
      * 登陆方式
      */
     private String authType;
