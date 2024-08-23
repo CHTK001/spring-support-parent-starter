@@ -73,8 +73,6 @@ public class LoginCheck {
                 continue;
             }
             if (null != userResult && Strings.isNullOrEmpty(userResult.getMessage())) {
-                Class<?> userClass = ClassUtils.getUserClass(userInfoService.getClass());
-                userResult.setBeanType(userClass.getTypeName());
                 userResult.setAuthType(authType);
                 userResult.setUid(createUid(username, authType));
                 break;
