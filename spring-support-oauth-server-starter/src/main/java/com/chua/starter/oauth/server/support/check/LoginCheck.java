@@ -2,7 +2,6 @@ package com.chua.starter.oauth.server.support.check;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.utils.Md5Utils;
 import com.chua.starter.oauth.client.support.annotation.LoginType;
 import com.chua.starter.oauth.client.support.user.LoginResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
@@ -18,6 +17,7 @@ import org.springframework.util.ClassUtils;
 import java.util.Map;
 
 import static com.chua.common.support.lang.code.ReturnCode.OK;
+import static com.chua.starter.oauth.client.support.execute.AuthClientExecute.createUid;
 
 /**
  * 登录检测
@@ -76,11 +76,7 @@ public class LoginCheck {
                 Class<?> userClass = ClassUtils.getUserClass(userInfoService.getClass());
                 userResult.setBeanType(userClass.getTypeName());
                 userResult.setAuthType(authType);
-                userResult.setUid(Md5Utils.getInstance().getMd5String(
-                        userResult.getId() +
-                        userResult.getBeanType() +
-                        username +
-                        userResult.getAuthType()));
+                userResult.setUid(createUid(username, authType));
                 break;
             }
         }
@@ -115,7 +111,7 @@ public class LoginCheck {
             Map<String, UserInfoService> beansOfType = applicationContext.getBeansOfType(UserInfoService.class);
             UserInfoService userInfoService = null;
             for (Map.Entry<String, UserInfoService> entry : beansOfType.entrySet()) {
-                if (ClassUtils.getUserClass(entry.getValue()).getTypeName().equalsIgnoreCase(userResult.getBeanType())) {
+                if (isMatch(entry.getValue(), userResult.getAuthType())) {
                     userInfoService = entry.getValue();
                     break;
                 }
