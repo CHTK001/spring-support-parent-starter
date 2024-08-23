@@ -3,6 +3,7 @@ package com.chua.starter.common.support.logger;
 import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.date.DateTime;
+import com.chua.common.support.net.UserAgent;
 import com.chua.common.support.utils.*;
 import com.chua.starter.common.support.annotations.OperateLog;
 import com.chua.starter.common.support.annotations.SysLogger;
@@ -99,10 +100,13 @@ public class OperateLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdv
             return;
         }
 
+        UserAgent userAgent = UserAgent.parseUserAgentString(request.getHeader("user-agent"));
         String module = getModule(method);
         OperateLoggerInfo operateLoggerInfo = new OperateLoggerInfo(name);
-        operateLoggerInfo.setCreateBy(RequestUtils.getUsername());
-        operateLoggerInfo.setCreateName(RequestUtils.getUserId());
+        operateLoggerInfo.setCreateBy(RequestUtils.getUserId());
+        operateLoggerInfo.setBrowser(userAgent.getBrowser().toString());
+        operateLoggerInfo.setSystem(userAgent.getOperatingSystem().getName());
+        operateLoggerInfo.setCreateName(RequestUtils.getUsername());
         operateLoggerInfo.setCreateTime(new Date());
         operateLoggerInfo.setLogName(name);
         operateLoggerInfo.setLogModule(StringUtils.defaultString(sysLogger.module(), module));

@@ -26,6 +26,15 @@ public class SysLoggerInfo extends ApplicationEvent {
      * 操作名
      */
     private String logName;
+
+    /**
+     * 浏览器
+     */
+    private String system;
+    /**
+     * 浏览器
+     */
+    private String browser;
     /**
      * 访问地址
      */
