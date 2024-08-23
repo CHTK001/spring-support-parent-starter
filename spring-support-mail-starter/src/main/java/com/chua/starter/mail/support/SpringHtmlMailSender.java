@@ -1,19 +1,15 @@
 package com.chua.starter.mail.support;
 
 import com.chua.common.support.annotations.Spi;
-import com.chua.common.support.lang.mail.AbstractMailSender;
 import com.chua.common.support.lang.mail.Mail;
 import com.chua.common.support.lang.mail.MailConfiguration;
 import com.chua.common.support.lang.mail.MailSender;
 import com.chua.common.support.log.Log;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
-
-import jakarta.annotation.Resource;
+import com.chua.common.support.objects.annotation.AutoInject;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 
 /**
  * spring
@@ -23,7 +19,7 @@ import jakarta.mail.internet.MimeMessage;
 public class SpringHtmlMailSender extends SpringTextMailSender {
 
     private static final Log log = Log.getLogger(MailSender.class);
-    @Autowired
+    @AutoInject
     private JavaMailSender javaMailSender;
     public SpringHtmlMailSender(MailConfiguration configuration) {
         super(configuration);
