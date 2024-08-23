@@ -2,6 +2,7 @@ package com.chua.starter.elasticsearch.support;
 
 import com.chua.starter.elasticsearch.support.properties.ElasticSearchProperties;
 import com.chua.starter.elasticsearch.support.service.impl.DocumentServiceImpl;
+import lombok.RequiredArgsConstructor;
 import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestClientBuilder;
@@ -11,7 +12,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 
-import jakarta.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
 
