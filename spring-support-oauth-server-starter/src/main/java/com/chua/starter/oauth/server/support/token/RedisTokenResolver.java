@@ -169,7 +169,7 @@ public class RedisTokenResolver implements TokenResolver {
         if (null == newUserResult) {
             return ReturnResult.ok(userResult);
         }
-        stringRedisTemplate.opsForValue().set(token, newUserResult);
+        stringRedisTemplate.opsForValue().set(newToken, newUserResult);
         return ReturnResult.ok(newUserResult);
     }
 
