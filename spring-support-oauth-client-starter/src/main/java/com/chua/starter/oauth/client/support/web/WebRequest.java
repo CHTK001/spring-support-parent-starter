@@ -242,6 +242,6 @@ public class WebRequest {
         Cookie[] cookie = getCookie();
         String token = getToken();
         Protocol protocol = ServiceProvider.of(Protocol.class).getExtension(authProperties.getProtocol());
-        return protocol.upgrade(cookie, token, upgradeType);
+         return protocol.upgrade(cookie, token, upgradeType);
     }
 }
