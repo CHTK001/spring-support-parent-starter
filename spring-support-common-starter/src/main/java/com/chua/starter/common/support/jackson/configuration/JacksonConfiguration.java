@@ -3,7 +3,6 @@ package com.chua.starter.common.support.jackson.configuration;
 
 import com.chua.common.support.collection.GuavaHashBasedTable;
 import com.chua.common.support.collection.Table;
-import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.common.support.jackson.handler.JacksonProblemHandler;
 import com.chua.starter.common.support.jackson.handler.JsonArray2StringJacksonProblemHandler;
 import com.fasterxml.jackson.core.JsonParser;
@@ -52,8 +51,6 @@ public class JacksonConfiguration {
                 // or jackson 2.0
                 // 反序列化时对字段名的大小写不敏感
                 .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
-                // 默认使用 类上的注解来指导序列化和反序列化
-                .enable(MapperFeature.USE_ANNOTATIONS)
                 // 不存在的字段时，不会抛出异常
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
                 // 当找不解析类型（含子类），不会抛异常，继续尝试反序列化
@@ -65,9 +62,7 @@ public class JacksonConfiguration {
                 .configure(SerializationFeature.FAIL_ON_UNWRAPPED_TYPE_IDENTIFIERS, false)
                 .configure(JsonParser.Feature.AUTO_CLOSE_SOURCE, false)
                 .configure(DeserializationFeature.FAIL_ON_READING_DUP_TREE_KEY, true)
-                .configure(DeserializationFeature.FAIL_ON_READING_DUP_TREE_KEY, true)
                 .addHandler(new NullableFieldsDeserializationProblemHandler())
-                .registerSubtypes(ReturnResult.class)
                 .build();
         objectMapper.setDateFormat(SIMPLE_DATE_FORMAT);
         JavaTimeModule javaTimeModule = new JavaTimeModule();
