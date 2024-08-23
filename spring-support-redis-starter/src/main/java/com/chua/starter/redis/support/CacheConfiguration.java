@@ -110,6 +110,7 @@ public class CacheConfiguration {
                 .entryTtl(Duration.ofSeconds(seconds))
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(redisSerializer))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(jackson2JsonRedisSerializer))
+                .prefixCacheNameWith("CACHE:")
                 .disableCachingNullValues();
 
         return RedisCacheManager.builder(factory)
