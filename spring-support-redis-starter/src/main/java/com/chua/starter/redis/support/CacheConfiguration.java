@@ -34,8 +34,8 @@ public class CacheConfiguration {
      * @return {@link CacheManager}
      */
     @Bean(REDIS_CACHE_MIN)
-    public CacheManager systemCacheManager600(ObjectMapper om, RedisConnectionFactory factory) {
-        return createRedisCacheManager(om, factory, 600);
+    public CacheManager systemCacheManager600(RedisConnectionFactory factory) {
+        return createRedisCacheManager(null, factory, 600);
     }
     /**
      * 系统缓存经理
@@ -44,8 +44,8 @@ public class CacheConfiguration {
      * @return {@link CacheManager}
      */
     @Bean({REDIS_CACHE_HOUR})
-    public CacheManager systemCacheManager(ObjectMapper om, RedisConnectionFactory factory) {
-        return createRedisCacheManager(om, factory, 3600);
+    public CacheManager systemCacheManager( RedisConnectionFactory factory) {
+        return createRedisCacheManager(null, factory, 3600);
     }
     /**
      * 系统缓存经理
@@ -54,8 +54,8 @@ public class CacheConfiguration {
      * @return {@link CacheManager}
      */
     @Bean({REDIS_CACHE_ONE_DAY})
-    public CacheManager redis86400CacheManager(ObjectMapper om, RedisConnectionFactory factory) {
-        return createRedisCacheManager(om, factory, 86400);
+    public CacheManager redis86400CacheManager(RedisConnectionFactory factory) {
+        return createRedisCacheManager(null, factory, 86400);
     }
     /**
      * 创建redis缓存管理器
