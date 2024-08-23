@@ -1,21 +1,19 @@
 package com.chua.starter.redis.support;
 
 
-import com.chua.common.support.converter.Converter;
-import com.chua.common.support.utils.ClassUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.type.TypeFactory;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.serializer.*;
+import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.RedisSerializationContext;
+import org.springframework.data.redis.serializer.RedisSerializer;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
 
 import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE_ONE_DAY;
 import static com.chua.starter.common.support.constant.Constant.REDIS_CACHE_HOUR;
@@ -29,40 +27,6 @@ import static com.chua.starter.common.support.constant.Constant.REDIS_CACHE_MIN;
 @Configuration
 public class CacheConfiguration {
 
-    /**
-     * 创建jackson对象
-     * @return JacksonObjectWriter
-     */
-    public static JacksonObjectWriter createJacksonObjectWriter() {
-        return (mapper, source) -> {
-            Map<String, Object> map = new HashMap<>(2);
-            map.put("type", source.getClass().getTypeName());
-            map.put("data", source);
-            return mapper.writeValueAsBytes(map);
-        };
-    }
-
-    /**
-     * 创建jackson对象
-     * @return JacksonObjectReader
-     */
-    public static JacksonObjectReader createJacksonObjectReader() {
-        return (mapper, source, type) -> {
-            Object object = mapper.readValue(source, 0, source.length, type);
-            if(type.getRawClass() != Object.class) {
-                return object;
-            }
-            if(object instanceof Map map) {
-                Object type1 = map.get("type");
-                if(null == type1) {
-                    return map;
-                }
-                Object object1 = map.get("data");
-                return Converter.convertIfNecessary(object1, ClassUtils.toType(type1));
-            }
-            return object;
-        };
-    }
     /**
      * 系统缓存经理
      *
@@ -103,7 +67,7 @@ public class CacheConfiguration {
      */
     public static CacheManager createRedisCacheManager(ObjectMapper om, RedisConnectionFactory factory, int seconds) {
         RedisSerializer<String> redisSerializer = new StringRedisSerializer();
-        Jackson2JsonRedisSerializer<Object> jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer<>(om, TypeFactory.defaultInstance().constructType(Object.class), createJacksonObjectReader(), createJacksonObjectWriter());
+        GenericJackson2JsonRedisSerializer jackson2JsonRedisSerializer = null == om ? new GenericJackson2JsonRedisSerializer() : new GenericJackson2JsonRedisSerializer(om);
 
         // 配置序列化（解决乱码的问题）,过期时间600秒
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
