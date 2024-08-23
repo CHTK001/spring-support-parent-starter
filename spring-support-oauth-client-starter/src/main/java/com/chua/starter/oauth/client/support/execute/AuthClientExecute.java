@@ -204,18 +204,14 @@ public class AuthClientExecute {
      * 创建UID
      *
      * @param authType 登录方式
-     * @param beanType 认证方式
-     * @param password 密码
      * @param username 账号
      * @return UID
      */
-    public String createUid(String beanType, String username, String password, String authType) {
+    public static String createUid(String username, String authType) {
         UserResult userResult = new UserResult();
-        userResult.setPassword(password).setAuthType(authType).setBeanType(beanType);
+        userResult.setAuthType(authType);
 
-        return Md5Utils.getInstance().getMd5String(userResult.getBeanType() +
-                username +
-                userResult.getPassword() +
+        return Md5Utils.getInstance().getMd5String( username +
                 userResult.getAuthType());
     }
 
