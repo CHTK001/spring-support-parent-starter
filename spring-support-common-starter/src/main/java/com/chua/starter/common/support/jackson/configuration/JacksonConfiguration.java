@@ -47,14 +47,9 @@ public class JacksonConfiguration {
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
     private static final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-    @Bean
-    ObjectMapper objectMapper() {
+
+    public static ObjectMapper createObjectMapper(boolean forEverything ) {
         ObjectMapper objectMapper = JsonMapper.builder()
-//
-//		this.mapper.setDefaultTyping(typer);
-                // jackson 1.9 and before
-//        objectMapper.configure(DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-                // or jackson 2.0
                 // 反序列化时对字段名的大小写不敏感
                 .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
                 // 不存在的字段时，不会抛出异常
@@ -70,11 +65,11 @@ public class JacksonConfiguration {
                 .configure(DeserializationFeature.FAIL_ON_READING_DUP_TREE_KEY, true)
                 .addHandler(new NullableFieldsDeserializationProblemHandler())
                 .build();
-
-        StdTypeResolverBuilder typer = TypeResolverBuilder.forEverything(objectMapper).init(JsonTypeInfo.Id.CLASS, null)
-				.inclusion(JsonTypeInfo.As.PROPERTY);
-
-        objectMapper.setDefaultTyping(typer);
+        if(forEverything) {
+            StdTypeResolverBuilder typer = TypeResolverBuilder.forEverything(objectMapper).init(JsonTypeInfo.Id.CLASS, null)
+                    .inclusion(JsonTypeInfo.As.PROPERTY);
+            objectMapper.setDefaultTyping(typer);
+        }
         objectMapper.setDateFormat(SIMPLE_DATE_FORMAT);
         JavaTimeModule javaTimeModule = new JavaTimeModule();
         javaTimeModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DATE_TIME_FORMATTER));
@@ -89,8 +84,11 @@ public class JacksonConfiguration {
         objectMapper.registerModule(javaTimeModule);
         objectMapper.registerModule(new JsonMixinModule());
         objectMapper.registerModule(new ParameterNamesModule());
-
         return objectMapper;
+    }
+    @Bean
+    ObjectMapper objectMapper() {
+        return createObjectMapper(false);
     }
 
     static class TransientFieldIgnoringDeserializer extends StdDeserializer<Object> {
