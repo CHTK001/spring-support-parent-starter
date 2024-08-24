@@ -3,14 +3,19 @@ package com.chua.starter.common.support.jackson.configuration;
 
 import com.chua.common.support.collection.GuavaHashBasedTable;
 import com.chua.common.support.collection.Table;
+import com.chua.starter.common.support.jackson.NullValueSerializer;
+import com.chua.starter.common.support.jackson.TypeResolverBuilder;
 import com.chua.starter.common.support.jackson.handler.JacksonProblemHandler;
 import com.chua.starter.common.support.jackson.handler.JsonArray2StringJacksonProblemHandler;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.deser.DeserializationProblemHandler;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.jsontype.impl.StdTypeResolverBuilder;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.DateSerializer;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -45,7 +50,8 @@ public class JacksonConfiguration {
     @Bean
     ObjectMapper objectMapper() {
         ObjectMapper objectMapper = JsonMapper.builder()
-
+//
+//		this.mapper.setDefaultTyping(typer);
                 // jackson 1.9 and before
 //        objectMapper.configure(DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES, false);
                 // or jackson 2.0
@@ -64,6 +70,11 @@ public class JacksonConfiguration {
                 .configure(DeserializationFeature.FAIL_ON_READING_DUP_TREE_KEY, true)
                 .addHandler(new NullableFieldsDeserializationProblemHandler())
                 .build();
+
+        StdTypeResolverBuilder typer = TypeResolverBuilder.forEverything(objectMapper).init(JsonTypeInfo.Id.CLASS, null)
+				.inclusion(JsonTypeInfo.As.PROPERTY);
+
+        objectMapper.setDefaultTyping(typer);
         objectMapper.setDateFormat(SIMPLE_DATE_FORMAT);
         JavaTimeModule javaTimeModule = new JavaTimeModule();
         javaTimeModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DATE_TIME_FORMATTER));
@@ -72,6 +83,7 @@ public class JacksonConfiguration {
         javaTimeModule.addSerializer(Date.class, new DateSerializer(true, SIMPLE_DATE_FORMAT));
         objectMapper.setTimeZone(TimeZone.getDefault());
 //        objectMapper.setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE);
+        objectMapper.registerModule(new SimpleModule().addSerializer(new NullValueSerializer(null)));
 
         objectMapper.registerModule(new Jdk8Module());
         objectMapper.registerModule(javaTimeModule);
