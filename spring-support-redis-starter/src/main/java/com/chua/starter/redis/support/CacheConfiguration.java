@@ -18,6 +18,7 @@ import java.time.Duration;
 import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE_ONE_DAY;
 import static com.chua.starter.common.support.constant.Constant.REDIS_CACHE_HOUR;
 import static com.chua.starter.common.support.constant.Constant.REDIS_CACHE_MIN;
+import static com.chua.starter.common.support.jackson.configuration.JacksonConfiguration.createObjectMapper;
 
 /**
  * 缓存配置
@@ -34,8 +35,8 @@ public class CacheConfiguration {
      * @return {@link CacheManager}
      */
     @Bean(REDIS_CACHE_MIN)
-    public CacheManager systemCacheManager600(ObjectMapper om, RedisConnectionFactory factory) {
-        return createRedisCacheManager(om, factory, 600);
+    public CacheManager systemCacheManager600(RedisConnectionFactory factory) {
+        return createRedisCacheManager(null, factory, 600);
     }
     /**
      * 系统缓存经理
@@ -44,8 +45,8 @@ public class CacheConfiguration {
      * @return {@link CacheManager}
      */
     @Bean({REDIS_CACHE_HOUR})
-    public CacheManager systemCacheManager(ObjectMapper om, RedisConnectionFactory factory) {
-        return createRedisCacheManager(om, factory, 3600);
+    public CacheManager systemCacheManager( RedisConnectionFactory factory) {
+        return createRedisCacheManager(null, factory, 3600);
     }
     /**
      * 系统缓存经理
@@ -54,8 +55,8 @@ public class CacheConfiguration {
      * @return {@link CacheManager}
      */
     @Bean({REDIS_CACHE_ONE_DAY})
-    public CacheManager redis86400CacheManager(ObjectMapper om, RedisConnectionFactory factory) {
-        return createRedisCacheManager(om, factory, 86400);
+    public CacheManager redis86400CacheManager(RedisConnectionFactory factory) {
+        return createRedisCacheManager(null, factory, 86400);
     }
     /**
      * 创建redis缓存管理器
@@ -67,7 +68,7 @@ public class CacheConfiguration {
      */
     public static CacheManager createRedisCacheManager(ObjectMapper om, RedisConnectionFactory factory, int seconds) {
         RedisSerializer<String> redisSerializer = new StringRedisSerializer();
-        GenericJackson2JsonRedisSerializer jackson2JsonRedisSerializer = new GenericJackson2JsonRedisSerializer(om);
+        GenericJackson2JsonRedisSerializer jackson2JsonRedisSerializer = new GenericJackson2JsonRedisSerializer(createObjectMapper(true));
 
         // 配置序列化（解决乱码的问题）,过期时间600秒
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
