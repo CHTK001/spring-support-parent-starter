@@ -68,7 +68,8 @@ public class CacheConfiguration {
      */
     public static CacheManager createRedisCacheManager(ObjectMapper om, RedisConnectionFactory factory, int seconds) {
         RedisSerializer<String> redisSerializer = new StringRedisSerializer();
-        GenericJackson2JsonRedisSerializer jackson2JsonRedisSerializer = new GenericJackson2JsonRedisSerializer(createObjectMapper(true));
+        GenericJackson2JsonRedisSerializer jackson2JsonRedisSerializer = new GenericJackson2JsonRedisSerializer(
+                null == om ? createObjectMapper(true) : om);
 
         // 配置序列化（解决乱码的问题）,过期时间600秒
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
