@@ -125,6 +125,7 @@ public class FilterConfiguration {
             if(null != versionArgumentResolver && response instanceof HttpServletResponse httpServletResponse) {
                 httpServletResponse.setHeader(X_HEADER_VERSION, versionArgumentResolver.version());
             }
+            chain.doFilter(request, response);
         }
     }
 }
