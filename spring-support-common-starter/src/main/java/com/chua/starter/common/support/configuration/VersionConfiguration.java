@@ -3,7 +3,6 @@ package com.chua.starter.common.support.configuration;
 import com.chua.starter.common.support.configuration.resolver.VersionArgumentResolver;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -17,7 +16,6 @@ import java.util.Collections;
  * @author CH
  * @since 2024/8/26
  */
-@Data
 public class VersionConfiguration {
     private static final String X_HEADER_VERSION = "x-response-version";
 
