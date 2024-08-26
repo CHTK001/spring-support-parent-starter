@@ -133,7 +133,7 @@ public class GlobalSettingFactory {
      * @param value 要设置的新值，可以是任何类型的对象 如果配置项自上次检查后未改变，将设置此值
      * @param <T>   值的类型，泛型使用以支持各种类型的配置项值
      */
-    public <T> void setIfNoChange(String group, String name, Object value) {
+    public synchronized  <T> void setIfNoChange(String group, String name, Object value) {
         if (CHANGE.containsKey(group + name)) {
             return;
         }
@@ -150,7 +150,7 @@ public class GlobalSettingFactory {
      * @param value 属性值
      * @param <T>   泛型标记
      */
-    public <T> void set(String group, String name, Object value) {
+    public synchronized <T> void set(String group, String name, Object value) {
         List<T> ts = get(group);
         if (null == ts) {
             return;
@@ -173,7 +173,7 @@ public class GlobalSettingFactory {
      * @param <T>   泛型标记
      */
     @SuppressWarnings("ALL")
-    public <T> void set(String group, Class<T> type, String name, Object value) {
+    public synchronized <T> void set(String group, Class<T> type, String name, Object value) {
         T t = get(group, type);
         if (null == t) {
             return;
