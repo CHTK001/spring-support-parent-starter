@@ -103,7 +103,7 @@ public class FilterConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public FilterRegistrationBean<VersionFilter> versionFilter(@Autowired(required = false) VersionArgumentResolver versionArgumentResolver) {
+    public FilterRegistrationBean<VersionFilter> versionFilterRegistrationBeanFilter(@Autowired(required = false) VersionArgumentResolver versionArgumentResolver) {
         FilterRegistrationBean<VersionFilter> filterFilterRegistrationBean = new FilterRegistrationBean<>();
         filterFilterRegistrationBean.setAsyncSupported(true);
         filterFilterRegistrationBean.setName("version filter");
