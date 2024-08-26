@@ -267,6 +267,9 @@ public class AuthClientExecute {
 
         Protocol protocol = ServiceProvider.of(Protocol.class).getExtension(authClientProperties.getProtocol());
         AuthenticationInformation approve = protocol.approve(null, token);
+        if(approve.getInformation().getCode() != 200) {
+            return null;
+        }
         UserResult userResult = BeanUtils.copyProperties(approve.getReturnResult(), UserResult.class);
         CACHE.put(token, Value.of(userResult));
         return userResult;
