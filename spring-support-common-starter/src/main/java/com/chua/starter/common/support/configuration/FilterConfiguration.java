@@ -1,11 +1,15 @@
 package com.chua.starter.common.support.configuration;
 
+import com.chua.starter.common.support.configuration.resolver.VersionArgumentResolver;
 import com.chua.starter.common.support.filter.ActuatorAuthenticationFilter;
 import com.chua.starter.common.support.filter.ParameterLogFilter;
 import com.chua.starter.common.support.properties.ActuatorProperties;
 import com.chua.starter.common.support.properties.CorsProperties;
+import jakarta.servlet.*;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -13,6 +17,9 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
+
+import java.io.IOException;
+import java.util.Collections;
 
 /**
  * FilterConfiguration 类用于管理过滤器的配置。
@@ -26,6 +33,7 @@ import org.springframework.web.filter.CorsFilter;
 @Slf4j
 @RequiredArgsConstructor
 public class FilterConfiguration {
+    private static final String X_HEADER_VERSION = "x-response-version";
 
     final CorsProperties corsProperties;
     /**
@@ -90,5 +98,34 @@ public class FilterConfiguration {
         filterRegistrationBean.setAsyncSupported(true);
 
         return filterRegistrationBean;
+    }
+
+
+    @Bean
+    @ConditionalOnMissingBean
+    public FilterRegistrationBean<VersionFilter> versionFilter(@Autowired(required = false) VersionArgumentResolver versionArgumentResolver) {
+        FilterRegistrationBean<VersionFilter> filterFilterRegistrationBean = new FilterRegistrationBean<>();
+        filterFilterRegistrationBean.setAsyncSupported(true);
+        filterFilterRegistrationBean.setName("version filter");
+        filterFilterRegistrationBean.setFilter(new VersionFilter(versionArgumentResolver));
+        filterFilterRegistrationBean.setUrlPatterns(Collections.singletonList("/*"));
+        filterFilterRegistrationBean.setOrder(Integer.MAX_VALUE);
+        return filterFilterRegistrationBean;
+    }
+
+    public static class VersionFilter implements Filter {
+
+        private final VersionArgumentResolver versionArgumentResolver;
+
+        public VersionFilter(VersionArgumentResolver versionArgumentResolver) {
+            this.versionArgumentResolver = versionArgumentResolver;
+        }
+
+        @Override
+        public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+            if(null != versionArgumentResolver && response instanceof HttpServletResponse httpServletResponse) {
+                httpServletResponse.addHeader(X_HEADER_VERSION, versionArgumentResolver.version());
+            }
+        }
     }
 }
