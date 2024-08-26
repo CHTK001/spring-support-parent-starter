@@ -37,7 +37,7 @@ public class CodecFactory implements Upgrade<CodecSetting> {
     public CodecFactory(CodecProperties codecProperties) {
         GlobalSettingFactory globalSettingFactory = GlobalSettingFactory.getInstance();
         globalSettingFactory.register("config", new CodecSetting());
-        globalSettingFactory.setIfNoChange("config", "enable", codecProperties.isEnable());
+        globalSettingFactory.setIfNoChange("config", "codecOpen", codecProperties.isEnable());
         this.upgrade(globalSettingFactory.get("config", CodecSetting.class));
         this.codecType = codecProperties.getCodecType();
         this.codec = Codec.build(codecType);
@@ -48,7 +48,7 @@ public class CodecFactory implements Upgrade<CodecSetting> {
 
 
     public boolean isPass() {
-        return !codecSetting.isEnable();
+        return !codecSetting.isCodecOpen();
     }
 
     /**
@@ -70,7 +70,7 @@ public class CodecFactory implements Upgrade<CodecSetting> {
      * @param parseBoolean 是否启用
      */
     public void setEnable(boolean parseBoolean) {
-        codecSetting.setEnable(parseBoolean);
+        codecSetting.setCodecOpen(parseBoolean);
     }
 
     /**
