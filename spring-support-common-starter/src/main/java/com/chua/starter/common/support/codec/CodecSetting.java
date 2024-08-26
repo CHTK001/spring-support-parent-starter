@@ -14,10 +14,10 @@ public class CodecSetting implements Upgrade<CodecSetting> {
     /**
      * 开放式编解码器
      */
-    private boolean codecOpen = false;
+    private boolean openCodec = false;
 
     @Override
     public void upgrade(CodecSetting codecSetting) {
-        this.codecOpen = codecSetting.isCodecOpen();
+        this.openCodec = codecSetting.isOpenCodec();
     }
 }
