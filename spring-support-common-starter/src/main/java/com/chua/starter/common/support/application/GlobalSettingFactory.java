@@ -7,6 +7,8 @@ import com.chua.common.support.reflection.FieldStation;
 import com.chua.common.support.utils.ClassUtils;
 
 import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -23,12 +25,12 @@ public class GlobalSettingFactory {
 
 
     // 保存所有全局设置对象的集合，使用ConcurrentHashMap保证线程安全
-    private static final Map<String, Object> GROUP = new ConcurrentHashMap<>();
+    private static final Map<String, List<Object>> GROUP = new ConcurrentHashMap<>();
     private static final Map<String, String> CHANGE = new ConcurrentReferenceHashMap<>(512);
 
     // 静态初始化块，用于初始化全局设置对象集合
     static {
-        GROUP.put("sign", new Sign());
+        GROUP.computeIfAbsent("sign", it -> new LinkedList<>()).add(new Sign());
     }
 
     /**
@@ -39,10 +41,12 @@ public class GlobalSettingFactory {
      * @return 对应的设置对象，如果不存在则返回null
      */
     public <T> T get(Class<T> type) {
-        Collection<Object> values = GROUP.values();
-        for (Object value : values) {
-            if (type.isInstance(value)) {
-                return (T) value;
+        Collection<List<Object>> values = GROUP.values();
+        for (List<Object> value : values) {
+            for (Object item : value) {
+                if (type.isInstance(item)) {
+                    return (T) value;
+                }
             }
         }
 
@@ -56,8 +60,8 @@ public class GlobalSettingFactory {
      * @param <T>   泛型标记
      * @return 对应的设置对象，如果不存在则返回null
      */
-    public <T> T get(String group) {
-        return (T) GROUP.get(group);
+    public <T> List<T> get(String group) {
+        return (List<T>) GROUP.get(group);
     }
 
     /**
@@ -70,13 +74,19 @@ public class GlobalSettingFactory {
      */
     @SuppressWarnings("unchecked")
     public <T> T get(String group, Class<T> clazz) {
-        T t = (T) GROUP.get(group);
+        List<T> t = (List<T>) GROUP.get(group);
         if (t == null) {
-            GROUP.put(group, ClassUtils.forObject(clazz));
-            return (T) GROUP.get(group);
+            T t1 = ClassUtils.forObject(clazz);
+            register(group, t1);
+            return t1;
         }
 
-        return t;
+        for (T t1 : t) {
+            if(clazz.isInstance(t1)) {
+                return t1;
+            }
+        }
+        return null;
     }
 
     /**
@@ -87,10 +97,22 @@ public class GlobalSettingFactory {
      * @param <T>   泛型标记
      */
     public <T> void register(String group, T t) {
-        if (null == t && GROUP.containsKey(group)) {
+        if (null == t) {
             return;
         }
-        GROUP.put(group, t);
+        List<Object> objects = GROUP.get(group);
+        if(null == objects) {
+            GROUP.put(group, new LinkedList<>());
+            objects = GROUP.get(group);
+        }
+
+        for (Object object : objects) {
+            if(object.getClass().isAssignableFrom(t.getClass())) {
+                return;
+            }
+        }
+
+        objects.add(t);
     }
 
     /**
@@ -129,13 +151,15 @@ public class GlobalSettingFactory {
      * @param <T>   泛型标记
      */
     public <T> void set(String group, String name, Object value) {
-        T t = get(group);
-        if (null == t) {
+        List<T> ts = get(group);
+        if (null == ts) {
             return;
         }
-        FieldStation.of(t).setValue(name, value);
-        if (t instanceof Upgrade<?>) {
-            ((Upgrade) t).upgrade(t);
+        for (T t : ts) {
+            FieldStation.of(t).setValue(name, value);
+            if (t instanceof Upgrade<?>) {
+                ((Upgrade) t).upgrade(t);
+            }
         }
     }
 
