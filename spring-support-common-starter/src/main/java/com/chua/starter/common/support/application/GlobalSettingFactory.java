@@ -45,7 +45,7 @@ public class GlobalSettingFactory {
         for (List<Object> value : values) {
             for (Object item : value) {
                 if (type.isInstance(item)) {
-                    return (T) value;
+                    return (T) item;
                 }
             }
         }
