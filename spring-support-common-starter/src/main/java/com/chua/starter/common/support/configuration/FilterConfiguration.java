@@ -108,7 +108,7 @@ public class FilterConfiguration {
         filterFilterRegistrationBean.setName("version filter");
         filterFilterRegistrationBean.setFilter(new VersionFilter(versionArgumentResolver));
         filterFilterRegistrationBean.setUrlPatterns(Collections.singletonList("/*"));
-        filterFilterRegistrationBean.setOrder(Integer.MAX_VALUE);
+        filterFilterRegistrationBean.setOrder(Integer.MIN_VALUE);
         return filterFilterRegistrationBean;
     }
 
@@ -123,7 +123,7 @@ public class FilterConfiguration {
         @Override
         public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
             if(null != versionArgumentResolver && response instanceof HttpServletResponse httpServletResponse) {
-                httpServletResponse.addHeader(X_HEADER_VERSION, versionArgumentResolver.version());
+                httpServletResponse.setHeader(X_HEADER_VERSION, versionArgumentResolver.version());
             }
         }
     }
