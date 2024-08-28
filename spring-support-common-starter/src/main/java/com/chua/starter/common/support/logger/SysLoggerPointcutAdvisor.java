@@ -4,7 +4,7 @@ import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.*;
 import com.chua.starter.common.support.annotations.OperateLog;
-import com.chua.starter.common.support.annotations.SysLogger;
+import com.chua.starter.common.support.annotations.UserLogger;
 import com.chua.starter.common.support.utils.RequestUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -48,7 +48,7 @@ public class SysLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor
 
     @Override
     public boolean matches(Method method, Class<?> targetClass) {
-        return method.isAnnotationPresent(SysLogger.class) && !method.isAnnotationPresent(LoggerIgnore.class);
+        return method.isAnnotationPresent(UserLogger.class) && !method.isAnnotationPresent(LoggerIgnore.class);
     }
 
     @Override
