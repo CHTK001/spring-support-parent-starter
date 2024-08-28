@@ -2,6 +2,8 @@ package com.chua.starter.common.support.logger;
 
 import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.lang.date.DateTime;
+import com.chua.common.support.net.UserAgent;
 import com.chua.common.support.utils.*;
 import com.chua.starter.common.support.annotations.OperateLog;
 import com.chua.starter.common.support.annotations.UserLogger;
@@ -16,8 +18,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.expression.EvaluationContext;
+import org.springframework.expression.EvaluationException;
 import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
+import org.springframework.expression.common.TemplateParserContext;
+import org.springframework.expression.spel.SpelParserConfiguration;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 
@@ -35,7 +40,7 @@ import static com.chua.common.support.constant.NameConstant.*;
  * @author CH
  */
 @Lazy
-public class SysLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor implements InitializingBean {
+public class UserLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor implements InitializingBean {
 
     @Autowired HttpServletRequest request;
     @Autowired HttpServletResponse response;
@@ -48,7 +53,7 @@ public class SysLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor
 
     @Override
     public boolean matches(Method method, Class<?> targetClass) {
-        return method.isAnnotationPresent(UserLogger.class) && !method.isAnnotationPresent(LoggerIgnore.class);
+        return method.isAnnotationPresent(OperateLog.class) && !method.isAnnotationPresent(LoggerIgnore.class);
     }
 
     @Override
@@ -75,36 +80,41 @@ public class SysLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor
         long startTime = System.currentTimeMillis();
         try {
             proceed = invocation.proceed();
+            createOperateLogger(proceed, throwable, invocation, startTime);
+            return proceed;
         } catch (Throwable e) {
             throwable = e;
+            createOperateLogger(proceed, throwable, invocation, startTime);
+            throw e;
         }
-        createOperateLogger(proceed, throwable, invocation, startTime);
-        return proceed;
     }
 
     void createOperateLogger(Object proceed, Throwable throwable, MethodInvocation invocation, long startTime) {
         Method method = invocation.getMethod();
-        OperateLog operateLog = method.getDeclaredAnnotation(OperateLog.class);
-        if(!operateLog.enable()) {
+        UserLogger userLogger = method.getDeclaredAnnotation(UserLogger.class);
+        if(null == userLogger) {
             return;
         }
-
-        String name = getName(operateLog, method);
+        String name = getName(userLogger, method);
         if(null == name) {
             return;
         }
 
+        UserAgent userAgent = UserAgent.parseUserAgentString(request.getHeader("user-agent"));
         String module = getModule(method);
-        SysLoggerInfo sysLoggerInfo = new SysLoggerInfo(name);
-        sysLoggerInfo.setCreateBy(RequestUtils.getUserId());
-        sysLoggerInfo.setCreateName(RequestUtils.getUsername());
-        sysLoggerInfo.setCreateTime(new Date());
-        sysLoggerInfo.setLogName(name);
-        sysLoggerInfo.setLogModule(StringUtils.defaultString(operateLog.module(), module));
-        sysLoggerInfo.setLogCost((System.currentTimeMillis() - startTime) );
-        sysLoggerInfo.setClientIp(RequestUtils.getIpAddress(request));
+        OperateLoggerInfo operateLoggerInfo = new OperateLoggerInfo(name);
+        operateLoggerInfo.setLoginType(userLogger.loginType());
+        operateLoggerInfo.setCreateBy(RequestUtils.getUserId());
+        operateLoggerInfo.setBrowser(userAgent.getBrowser().toString());
+        operateLoggerInfo.setSystem(userAgent.getOperatingSystem().getName());
+        operateLoggerInfo.setCreateName(RequestUtils.getUsername());
+        operateLoggerInfo.setCreateTime(new Date());
+        operateLoggerInfo.setLogName(name);
+        operateLoggerInfo.setLogModule(StringUtils.defaultString(userLogger.module(), module));
+        operateLoggerInfo.setLogCost((System.currentTimeMillis() - startTime));
+        operateLoggerInfo.setClientIp(RequestUtils.getIpAddress(request));
 
-        if(operateLog.logArgs()) {
+        if(userLogger.logArgs()) {
             List<Object> params = new LinkedList<>();
             for (Object argument : invocation.getArguments()) {
                 if(null == argument) {
@@ -124,37 +134,44 @@ public class SysLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor
             } catch (Exception ignored) {
             }
             if(null != json && json.length() < 2000) {
-                sysLoggerInfo.setLogParam(json);
+                operateLoggerInfo.setLogParam(json);
             }
         }
 
-        String content = operateLog.content();
-        sysLoggerInfo.setLogStatus(null == throwable ? 1 : 0);
-        sysLoggerInfo.setLogMapping(RequestUtils.getUrl(request));
-        sysLoggerInfo.setLogCode(IdUtils.createUlid());
-        sysLoggerInfo.setLogContent(getContent(content, invocation, proceed));
-        applicationContext.publishEvent(sysLoggerInfo);
+        String content = userLogger.content();
+        operateLoggerInfo.setLogStatus(null == throwable ? 1 : 0);
+        operateLoggerInfo.setLogMapping(RequestUtils.getUrl(request));
+        operateLoggerInfo.setLogCode(IdUtils.createUlid());
+        operateLoggerInfo.setLogContent(getContent(content, invocation, proceed));
+        applicationContext.publishEvent(operateLoggerInfo);
     }
 
     private String getContent(String content, MethodInvocation invocation, Object proceed) {
         if(StringUtils.isEmpty(content)) {
             return CommonConstant.SYMBOL_EMPTY;
         }
-        ExpressionParser expressionParser = new SpelExpressionParser();
+        ExpressionParser expressionParser = new SpelExpressionParser(new SpelParserConfiguration(true,true));
         EvaluationContext evaluationContext = new StandardEvaluationContext();
 
         Method method = invocation.getMethod();
         Object[] arguments = invocation.getArguments();
         for (int i = 0; i < arguments.length; i++) {
             Object argument = arguments[i];
-            evaluationContext.setVariable("$arg" + i, argument);
+            evaluationContext.setVariable("arg" + i, argument);
         }
+        evaluationContext.setVariable("args", arguments);
 
-        evaluationContext.setVariable("$method", method);
-        evaluationContext.setVariable("$result", proceed);
+        evaluationContext.setVariable("now", DateTime.now().toStandard());
+        evaluationContext.setVariable("method", method);
+        evaluationContext.setVariable("result", proceed);
 
-        Expression expression = expressionParser.parseExpression(content);
-        return Optional.ofNullable( expression.getValue(evaluationContext)).orElse(content).toString();
+        Expression expression = expressionParser.parseExpression(content, new TemplateParserContext());
+        try {
+            return Optional.ofNullable( expression.getValue(evaluationContext)).orElse(content).toString();
+        } catch (EvaluationException e) {
+           // e.printStackTrace();
+        }
+        return content;
     }
 
     protected String getModule(Method method) {
@@ -174,8 +191,8 @@ public class SysLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor
         return "查询";
     }
 
-    private String getName(OperateLog operateLog, Method method) {
-        String name = operateLog.name();
+    private String getName(UserLogger userLogger, Method method) {
+        String name = userLogger.name();
         if(StringUtils.isNotBlank(name)) {
             return name;
         }

@@ -14,11 +14,15 @@ import java.lang.annotation.Target;
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface SysLogger {
+public @interface UserLogger {
 
     // ========== 模块字段 ==========
     Action action() default Action.NONE;
 
+    /**
+     * 登录类型
+     */
+    String loginType() default "";
     /**
      * 操作模块(e.g.修改, 删除, 更新)
      *
