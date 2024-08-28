@@ -10,9 +10,9 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class OperateLoggerInfo extends SysLoggerInfo {
+public class UserLoggerInfo extends SysLoggerInfo {
 
-    public OperateLoggerInfo(Object source) {
+    public UserLoggerInfo(Object source) {
         super(source);
     }
 }
