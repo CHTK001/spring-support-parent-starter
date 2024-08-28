@@ -102,17 +102,17 @@ public class UserLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdviso
 
         UserAgent userAgent = UserAgent.parseUserAgentString(request.getHeader("user-agent"));
         String module = getModule(method);
-        OperateLoggerInfo operateLoggerInfo = new OperateLoggerInfo(name);
-        operateLoggerInfo.setLoginType(userLogger.loginType());
-        operateLoggerInfo.setCreateBy(RequestUtils.getUserId());
-        operateLoggerInfo.setBrowser(userAgent.getBrowser().toString());
-        operateLoggerInfo.setSystem(userAgent.getOperatingSystem().getName());
-        operateLoggerInfo.setCreateName(RequestUtils.getUsername());
-        operateLoggerInfo.setCreateTime(new Date());
-        operateLoggerInfo.setLogName(name);
-        operateLoggerInfo.setLogModule(StringUtils.defaultString(userLogger.module(), module));
-        operateLoggerInfo.setLogCost((System.currentTimeMillis() - startTime));
-        operateLoggerInfo.setClientIp(RequestUtils.getIpAddress(request));
+        UserLoggerInfo userLoggerInfo = new UserLoggerInfo(name);
+        userLoggerInfo.setLoginType(userLogger.loginType());
+        userLoggerInfo.setCreateBy(RequestUtils.getUserId());
+        userLoggerInfo.setBrowser(userAgent.getBrowser().toString());
+        userLoggerInfo.setSystem(userAgent.getOperatingSystem().getName());
+        userLoggerInfo.setCreateName(RequestUtils.getUsername());
+        userLoggerInfo.setCreateTime(new Date());
+        userLoggerInfo.setLogName(name);
+        userLoggerInfo.setLogModule(StringUtils.defaultString(userLogger.module(), module));
+        userLoggerInfo.setLogCost((System.currentTimeMillis() - startTime));
+        userLoggerInfo.setClientIp(RequestUtils.getIpAddress(request));
 
         if(userLogger.logArgs()) {
             List<Object> params = new LinkedList<>();
@@ -134,16 +134,16 @@ public class UserLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdviso
             } catch (Exception ignored) {
             }
             if(null != json && json.length() < 2000) {
-                operateLoggerInfo.setLogParam(json);
+                userLoggerInfo.setLogParam(json);
             }
         }
 
         String content = userLogger.content();
-        operateLoggerInfo.setLogStatus(null == throwable ? 1 : 0);
-        operateLoggerInfo.setLogMapping(RequestUtils.getUrl(request));
-        operateLoggerInfo.setLogCode(IdUtils.createUlid());
-        operateLoggerInfo.setLogContent(getContent(content, invocation, proceed));
-        applicationContext.publishEvent(operateLoggerInfo);
+        userLoggerInfo.setLogStatus(null == throwable ? 1 : 0);
+        userLoggerInfo.setLogMapping(RequestUtils.getUrl(request));
+        userLoggerInfo.setLogCode(IdUtils.createUlid());
+        userLoggerInfo.setLogContent(getContent(content, invocation, proceed));
+        applicationContext.publishEvent(userLoggerInfo);
     }
 
     private String getContent(String content, MethodInvocation invocation, Object proceed) {
