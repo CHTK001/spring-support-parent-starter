@@ -31,7 +31,7 @@ public class CodecFactory implements Upgrade<CodecSetting> {
     /**
      * 编解码器类型
      */
-    private String codecType = "sm2";
+    private final String codecType = "sm2";
     private CodecSetting codecSetting;
 
     public CodecFactory(CodecProperties codecProperties) {
@@ -41,8 +41,14 @@ public class CodecFactory implements Upgrade<CodecSetting> {
             globalSettingFactory.register("config", new CodecSetting());
             globalSettingFactory.setIfNoChange("config", "openCodec", codecProperties.isEnable());
             this.upgrade(globalSettingFactory.get("config", CodecSetting.class));
+
+        } else {
+            CodecSetting codecSetting = new CodecSetting();
+            if(null ==  this.codecSetting) {
+                this.codecSetting = codecSetting;
+                this.codecSetting.setOpenCodec(codecProperties.isEnable());
+            }
         }
-        this.codecType = codecProperties.getCodecType();
         this.codec = Codec.build(codecType);
         this.whiteList = codecProperties.getWhiteList();
         this.codecKeyPair = (CodecKeyPair) codec;
