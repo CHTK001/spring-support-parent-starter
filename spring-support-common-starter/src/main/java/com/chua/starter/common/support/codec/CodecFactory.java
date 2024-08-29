@@ -27,7 +27,7 @@ public class CodecFactory implements Upgrade<CodecSetting> {
     private final Codec codec;
     private final CodecKeyPair codecKeyPair;
     private final String publicKeyHex;
-
+    GlobalSettingFactory globalSettingFactory = GlobalSettingFactory.getInstance();
     /**
      * 编解码器类型
      */
@@ -35,19 +35,12 @@ public class CodecFactory implements Upgrade<CodecSetting> {
     private CodecSetting codecSetting;
 
     public CodecFactory(CodecProperties codecProperties) {
-        GlobalSettingFactory globalSettingFactory = GlobalSettingFactory.getInstance();
         boolean extInject = codecProperties.isExtInject();
         if(!extInject) {
             globalSettingFactory.register("config", new CodecSetting());
             globalSettingFactory.setIfNoChange("config", "openCodec", codecProperties.isEnable());
             this.upgrade(globalSettingFactory.get("config", CodecSetting.class));
 
-        } else {
-            CodecSetting codecSetting = new CodecSetting();
-            if(null ==  this.codecSetting) {
-                this.codecSetting = codecSetting;
-                this.codecSetting.setOpenCodec(codecProperties.isEnable());
-            }
         }
         this.codec = Codec.build(codecType);
         this.whiteList = codecProperties.getWhiteList();
@@ -57,7 +50,18 @@ public class CodecFactory implements Upgrade<CodecSetting> {
 
 
     public boolean isPass() {
+        check();
         return !codecSetting.isOpenCodec();
+    }
+
+    /**
+     *
+     */
+    private void check() {
+        if(null != codecSetting) {
+            return;
+        }
+        this.upgrade(globalSettingFactory.get("config", CodecSetting.class));
     }
 
     /**
@@ -79,6 +83,7 @@ public class CodecFactory implements Upgrade<CodecSetting> {
      * @param parseBoolean 是否启用
      */
     public void setEnable(boolean parseBoolean) {
+        check();
         codecSetting.setOpenCodec(parseBoolean);
     }
 
