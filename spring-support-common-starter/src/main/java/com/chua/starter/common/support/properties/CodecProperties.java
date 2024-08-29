@@ -24,6 +24,11 @@ public class CodecProperties {
     private boolean enable = false;
 
     /**
+     * 是否由其它对象注入参数 {@link #enable}
+     */
+    private boolean extInject = false;
+
+    /**
      * 编解码器类型
      */
     private String codecType = "sm2";
