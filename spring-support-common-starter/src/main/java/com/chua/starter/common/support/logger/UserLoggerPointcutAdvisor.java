@@ -100,12 +100,14 @@ public class UserLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdviso
             return;
         }
 
-        UserAgent userAgent = UserAgent.parseUserAgentString(request.getHeader("user-agent"));
+        String header = request.getHeader("user-agent");
+        UserAgent userAgent = UserAgent.parseUserAgentString(header);
         String module = getModule(method);
         UserLoggerInfo userLoggerInfo = new UserLoggerInfo(name);
         userLoggerInfo.setLoginType(userLogger.loginType());
         userLoggerInfo.setCreateBy(RequestUtils.getUserId());
         userLoggerInfo.setBrowser(userAgent.getBrowser().toString());
+        userLoggerInfo.setUa(header);
         userLoggerInfo.setSystem(userAgent.getOperatingSystem().getName());
         userLoggerInfo.setCreateName(RequestUtils.getUsername());
         userLoggerInfo.setCreateTime(new Date());
