@@ -35,6 +35,11 @@ public class SysLoggerInfo extends ApplicationEvent {
      * 浏览器
      */
     private String system;
+
+    /**
+     * ua
+     */
+    private String ua;
     /**
      * 浏览器
      */
