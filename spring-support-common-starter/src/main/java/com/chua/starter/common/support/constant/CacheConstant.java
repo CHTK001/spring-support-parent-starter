@@ -12,4 +12,5 @@ public interface CacheConstant {
     String REDIS_CACHE_ONE_DAY = "redis-cache-86400";
     String REDIS_CACHE_MIN = "redis-cache-600";
     String REDIS_CACHE_HOUR = "redis-cache-3600";
+    String REDIS_CACHE_ALWAYS = "redis-cache--1";
 }
