@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.ArrayUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.starter.common.support.annotations.RequestParamMapping;
+import com.github.yulichang.query.MPJLambdaQueryWrapper;
+import com.github.yulichang.query.MPJQueryWrapper;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -101,7 +103,39 @@ public class Query<T>{
      *
      * @return {@link com.baomidou.mybatisplus.core.conditions.query.QueryWrapper}<{@link T}>
      */
+    public MPJQueryWrapper<T> mpj() {
+        MPJQueryWrapper<T> wrapper = new MPJQueryWrapper<>();
+        if(ArrayUtils.isNotEmpty(prop)) {
+            wrapper.select(prop);
+        }
+
+        if(ArrayUtils.isNotEmpty(order)) {
+            for (String s : order) {
+                if(s.endsWith("-")) {
+                    wrapper.orderByDesc(s.substring(0, s.length() - 1));
+                } else if(s.endsWith("+")){
+                    wrapper.orderByAsc(s.substring(0, s.length() - 1));
+                } else {
+                    wrapper.orderByAsc(s);
+                }
+            }
+        }
+        return wrapper;
+    }
+    /**
+     * 初始化其它参数
+     *
+     * @return {@link com.baomidou.mybatisplus.core.conditions.query.QueryWrapper}<{@link T}>
+     */
     public LambdaQueryWrapper<T> lambda() {
         return wrapper().lambda();
+    }
+    /**
+     * 初始化其它参数
+     *
+     * @return {@link com.baomidou.mybatisplus.core.conditions.query.QueryWrapper}<{@link T}>
+     */
+    public MPJLambdaQueryWrapper<T> mpjLambda() {
+        return mpj().lambda();
     }
 }
