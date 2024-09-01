@@ -5,8 +5,9 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.ArrayUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.starter.common.support.annotations.RequestParamMapping;
-import com.github.yulichang.query.MPJLambdaQueryWrapper;
 import com.github.yulichang.query.MPJQueryWrapper;
+import com.github.yulichang.toolkit.MPJWrappers;
+import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -135,7 +136,24 @@ public class Query<T>{
      *
      * @return {@link com.baomidou.mybatisplus.core.conditions.query.QueryWrapper}<{@link T}>
      */
-    public MPJLambdaQueryWrapper<T> mpjLambda() {
-        return mpj().lambda();
+    public MPJLambdaWrapper<T> mpjLambda() {
+        MPJLambdaWrapper<T> wrapper = MPJWrappers.lambdaJoin();
+
+        if(ArrayUtils.isNotEmpty(prop)) {
+            wrapper.select(prop);
+        }
+
+        if(ArrayUtils.isNotEmpty(order)) {
+            for (String s : order) {
+                if(s.endsWith("-")) {
+                    wrapper.orderByDesc(s.substring(0, s.length() - 1));
+                } else if(s.endsWith("+")){
+                    wrapper.orderByAsc(s.substring(0, s.length() - 1));
+                } else {
+                    wrapper.orderByAsc(s);
+                }
+            }
+        }
+        return wrapper;
     }
 }
