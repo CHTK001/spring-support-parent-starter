@@ -52,7 +52,46 @@ public class DefaultSseEventBusConfigurer implements SseEventBusConfigurer {
         };
     }
 
+    /**
+     * 注册
+     *
+     * @param emitter emitter
+     */
     public void register(Emitter emitter) {
         sseCache.computeIfAbsent(emitter.getClientId(), it -> new LinkedList<>()).add(emitter);
+    }
+    /**
+     * 获取Emitter
+     *
+     * @param event 事件
+     * @return 结果
+     */
+    public List<Emitter> getEmitter(String event) {
+        List<Emitter> result = new LinkedList<>();
+        for (List<Emitter> emitterList : sseCache.values()) {
+
+            for (Emitter emitter : emitterList) {
+                if (emitter.getEvent().contains(event)) {
+                    result.add(emitter);
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 关闭Emitter
+     *
+     * @param clientIds 客户端id
+     */
+    public void closeEmitter(List<String> clientIds) {
+        for (String clientId : clientIds) {
+            List<Emitter> emitters = sseCache.get(clientId);
+            for (Emitter emitter : emitters) {
+                IoUtils.closeQuietly(emitter.getEntity());
+            }
+
+            sseCache.remove(clientId);
+        }
     }
 }

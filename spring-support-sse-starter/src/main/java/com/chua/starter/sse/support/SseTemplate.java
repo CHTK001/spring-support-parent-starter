@@ -10,6 +10,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.List;
 
 
 /**
@@ -54,12 +55,31 @@ public class SseTemplate {
         this.sseEventBus.handleEvent(builder.build());
 
     }
-
     /**
-     * 创建sse发射器
+     * 通知
+     *
+     * @param id        消息id
+     * @param data      消息
+     * @param retry     重试时间
+     * @param clientIds 通知的客户端
+     */
+    public void emit(String id, String data, String event, Duration retry, String... clientIds) {
+        SseEvent.Builder builder = SseEvent.builder()
+                .id(id)
+                .event(event)
+                .clientIds(Arrays.asList(clientIds))
+                .data(data);
+        if (null != retry) {
+            builder.retry(retry);
+        }
+        this.sseEventBus.handleEvent(builder.build());
+
+    }
+    /**
+     * 创建sse
      * 创建任务
      *
-     * @param emitter 发射器
+     * @param emitter  emitter
      * @return 结果
      */
     public SseEmitter createSseEmitter(Emitter emitter) {
@@ -67,5 +87,28 @@ public class SseTemplate {
         emitter.setSseEmitter(sseEmitter);
         sseEventBusConfigurer.register(emitter);
         return sseEmitter;
+    }
+
+
+    /**
+     * 获取客户端
+     *
+     * @param event 事件
+     * @return 客户端
+     */
+    public List<Emitter> getEmitter(String event) {
+        return sseEventBusConfigurer.getEmitter(event);
+    }
+
+    /**
+     * 关闭Emitter
+     *
+     * @param clientIds 客户端id
+     */
+    public void closeEmitter(List<String> clientIds) {
+        sseEventBusConfigurer.closeEmitter(clientIds);
+        for (String clientId : clientIds) {
+            sseEventBus.unregisterClient(clientId);
+        }
     }
 }
