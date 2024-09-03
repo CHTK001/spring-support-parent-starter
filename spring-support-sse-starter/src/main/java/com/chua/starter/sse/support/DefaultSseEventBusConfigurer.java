@@ -4,7 +4,9 @@ import ch.rasc.sse.eventbus.ClientEvent;
 import ch.rasc.sse.eventbus.SseEventBusListener;
 import ch.rasc.sse.eventbus.config.SseEventBusConfigurer;
 import com.chua.common.support.utils.IoUtils;
+import jakarta.servlet.http.HttpServletResponse;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.LinkedList;
 import java.util.List;
@@ -89,6 +91,13 @@ public class DefaultSseEventBusConfigurer implements SseEventBusConfigurer {
             List<Emitter> emitters = sseCache.get(clientId);
             for (Emitter emitter : emitters) {
                 IoUtils.closeQuietly(emitter.getEntity());
+                HttpServletResponse response = emitter.getResponse();
+                if(null != response) {
+                    try {
+                        IoUtils.closeQuietly(response.getOutputStream());
+                    } catch (IOException ignored) {
+                    }
+                }
             }
 
             sseCache.remove(clientId);

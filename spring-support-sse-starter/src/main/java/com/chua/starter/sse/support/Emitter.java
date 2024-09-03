@@ -1,5 +1,6 @@
 package com.chua.starter.sse.support;
 
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.Builder;
 import lombok.Data;
 import lombok.Singular;
@@ -32,7 +33,10 @@ public class Emitter {
      * 实体
      */
     Object entity;
-
+    /**
+     * 响应
+     */
+    HttpServletResponse response;
     /**
      * 创建时间
      */
