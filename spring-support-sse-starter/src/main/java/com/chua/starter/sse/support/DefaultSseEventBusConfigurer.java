@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @since 2023/09/26
  */
 public class DefaultSseEventBusConfigurer implements SseEventBusConfigurer {
-    private static final Map<String, List<Emitter>> sseCache = new ConcurrentHashMap<>();
+    private static final Map<String, List<Emitter>> SSE_CACHE = new ConcurrentHashMap<>();
 
     @Override
     public Duration clientExpiration() {
@@ -44,7 +44,7 @@ public class DefaultSseEventBusConfigurer implements SseEventBusConfigurer {
             @Override
             public void afterClientsUnregistered(Set<String> clientIds) {
                 for (String clientId : clientIds) {
-                    List<Emitter> emitters = sseCache.get(clientId);
+                    List<Emitter> emitters = SSE_CACHE.get(clientId);
                     for (Emitter emitter : emitters) {
                         IoUtils.closeQuietly(emitter.getEntity());
                     }
@@ -60,7 +60,7 @@ public class DefaultSseEventBusConfigurer implements SseEventBusConfigurer {
      * @param emitter emitter
      */
     public void register(Emitter emitter) {
-        sseCache.computeIfAbsent(emitter.getClientId(), it -> new LinkedList<>()).add(emitter);
+        SSE_CACHE.computeIfAbsent(emitter.getClientId(), it -> new LinkedList<>()).add(emitter);
     }
     /**
      * 获取Emitter
@@ -70,7 +70,7 @@ public class DefaultSseEventBusConfigurer implements SseEventBusConfigurer {
      */
     public List<Emitter> getEmitter(String event) {
         List<Emitter> result = new LinkedList<>();
-        for (List<Emitter> emitterList : sseCache.values()) {
+        for (List<Emitter> emitterList : SSE_CACHE.values()) {
 
             for (Emitter emitter : emitterList) {
                 if (emitter.getEvent().contains(event)) {
@@ -88,7 +88,7 @@ public class DefaultSseEventBusConfigurer implements SseEventBusConfigurer {
      */
     public void closeEmitter(List<String> clientIds) {
         for (String clientId : clientIds) {
-            List<Emitter> emitters = sseCache.get(clientId);
+            List<Emitter> emitters = SSE_CACHE.get(clientId);
             for (Emitter emitter : emitters) {
                 IoUtils.closeQuietly(emitter.getEntity());
                 HttpServletResponse response = emitter.getResponse();
@@ -100,7 +100,7 @@ public class DefaultSseEventBusConfigurer implements SseEventBusConfigurer {
                 }
             }
 
-            sseCache.remove(clientId);
+            SSE_CACHE.remove(clientId);
         }
     }
 }
