@@ -41,6 +41,9 @@ public class CodecRequestBodyAdvice implements RequestBodyAdvice {
 
     @Override
     public HttpInputMessage beforeBodyRead(HttpInputMessage inputMessage, MethodParameter parameter, Type targetType, Class<? extends HttpMessageConverter<?>> converterType) throws IOException {
+        if(!codecFactory.requestCodecOpen()) {
+            return inputMessage;
+        }
         HttpHeaders headers = inputMessage.getHeaders();
         String keyHeader = headers.getFirst(codecFactory.getKeyHeader());
         if(StringUtils.isEmpty(keyHeader)) {
@@ -71,6 +74,9 @@ public class CodecRequestBodyAdvice implements RequestBodyAdvice {
 
         if(StringUtils.isNotBlank(data)) {
             byte[] sourceByteArray = codecFactory.decodeRequest(data);
+            if(sourceByteArray.length > 0) {
+                return new ByteInputMessage(sourceByteArray, headers);
+            }
         }
         return new ByteInputMessage(originByteArray, headers);
     }
