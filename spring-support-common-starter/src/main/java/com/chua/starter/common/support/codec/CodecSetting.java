@@ -12,12 +12,24 @@ import lombok.Data;
 public class CodecSetting implements Upgrade<CodecSetting> {
 
     /**
-     * 开放式编解码器
+     * 是否开启响应加密
      */
-    private boolean codecOpen = false;
+    private boolean codecResponseOpen = false;
+
+    /**
+     * 是否开启请求加密
+     */
+    private boolean codecRequestOpen = false;
+
+    /**
+     * 请求加密key
+     */
+    private String codecRequestKey = null;
 
     @Override
     public void upgrade(CodecSetting codecSetting) {
-        this.codecOpen = codecSetting.isCodecOpen();
+        this.codecResponseOpen = codecSetting.isCodecResponseOpen();
+        this.codecRequestOpen = codecSetting.isCodecRequestOpen();
+        this.codecRequestKey = codecSetting.getCodecRequestKey();
     }
 }
