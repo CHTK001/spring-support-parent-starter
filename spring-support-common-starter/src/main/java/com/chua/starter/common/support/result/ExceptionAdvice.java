@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
 import static com.chua.common.support.lang.code.ReturnCode.*;
 
 /**
+ * 统一异常处理
  * @author CH
  */
 @RestControllerAdvice

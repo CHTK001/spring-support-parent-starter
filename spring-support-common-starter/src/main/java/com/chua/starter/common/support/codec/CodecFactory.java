@@ -38,7 +38,9 @@ public class CodecFactory implements Upgrade<CodecSetting> {
         boolean extInject = codecProperties.isExtInject();
         if(!extInject) {
             globalSettingFactory.register("config", new CodecSetting());
-            globalSettingFactory.setIfNoChange("config", "openCodec", codecProperties.isEnable());
+            globalSettingFactory.setIfNoChange("config", "codecResponseOpen", codecProperties.isRequestEnable());
+            globalSettingFactory.setIfNoChange("config", "codecRequestOpen", codecProperties.isRequestEnable());
+            globalSettingFactory.setIfNoChange("config", "codecRequestKey", codecProperties.getCodecRequestKey());
             this.upgrade(globalSettingFactory.get("config", CodecSetting.class));
 
         }
@@ -51,7 +53,7 @@ public class CodecFactory implements Upgrade<CodecSetting> {
 
     public boolean isPass() {
         check();
-        return !codecSetting.isCodecOpen();
+        return !codecSetting.isCodecResponseOpen();
     }
 
     /**
@@ -84,7 +86,7 @@ public class CodecFactory implements Upgrade<CodecSetting> {
      */
     public void setEnable(boolean parseBoolean) {
         check();
-        codecSetting.setCodecOpen(parseBoolean);
+        codecSetting.setCodecResponseOpen(parseBoolean);
     }
 
     /**
@@ -109,6 +111,14 @@ public class CodecFactory implements Upgrade<CodecSetting> {
     @Override
     public void upgrade(CodecSetting codecSetting) {
         this.codecSetting = codecSetting;
+    }
+
+    /**
+     * 获取密钥头
+     * @return {@link String}
+     */
+    public String getKeyHeader() {
+        return "access-control-origin-key";
     }
 
 
