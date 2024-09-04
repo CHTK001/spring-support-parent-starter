@@ -51,7 +51,7 @@ public class CodecFactory implements Upgrade<CodecSetting> {
 
     public boolean isPass() {
         check();
-        return !codecSetting.isOpenCodec();
+        return !codecSetting.isCodecOpen();
     }
 
     /**
@@ -84,7 +84,7 @@ public class CodecFactory implements Upgrade<CodecSetting> {
      */
     public void setEnable(boolean parseBoolean) {
         check();
-        codecSetting.setOpenCodec(parseBoolean);
+        codecSetting.setCodecOpen(parseBoolean);
     }
 
     /**
