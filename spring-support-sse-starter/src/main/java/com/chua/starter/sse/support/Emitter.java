@@ -8,40 +8,43 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.Set;
 
-
 /**
- * 发射器
- *
- * @author CH
- * @since 2023/09/26
+ * 定义了一种发布者对象，用于SSE (Server-Sent Events) 功能
+ * 该类使用了 Lombok 注解来简化代码
  */
 @Data
 @Builder
 public class Emitter {
 
     /**
-     * 客户端id
+     * 发布者的唯一标识符
      */
-    String clientId;
+    private String clientId;
+
     /**
-     * 事件
+     * 事件类型集合，一个发布者可以支持多种事件类型
      */
     @Singular("event")
-    Set<String> event;
+    private Set<String> event;
 
     /**
-     * 实体
+     * 实体对象，具体事件的数据内容
      */
-    Object entity;
+    private Object entity;
+
     /**
-     * 响应
+     * HTTP 响应对象，用于向客户端发送 SSE 事件
      */
-    HttpServletResponse response;
+    private HttpServletResponse response;
+
     /**
-     * 创建时间
+     * 创建时间，初始化为当前的纳秒数
      */
     @Builder.Default
-    long createTime = System.nanoTime();
+    private long createTime = System.nanoTime();
 
-    SseEmitter sseEmitter;
+    /**
+     * SSE 发送器实例，用于实际的事件推送
+     */
+    private SseEmitter sseEmitter;
 }
