@@ -5,6 +5,7 @@ import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.function.Upgrade;
 import com.chua.common.support.reflection.FieldStation;
 import com.chua.common.support.utils.ClassUtils;
+import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 
 import java.util.Collection;
@@ -143,6 +144,30 @@ public class GlobalSettingFactory {
         CHANGE.put(group + name, CommonConstant.SYMBOL_EMPTY);
     }
 
+    /**
+     * 设置全局设置对象的属性值
+     *
+     * @param group 设置名称
+     * @param params  属性
+     * @param <T>   泛型标记
+     */
+    public synchronized <T> void set(String group, Map<String, Object> params) {
+        if(MapUtils.isEmpty(params)) {
+            return;
+        }
+
+        List<T> ts = get(group);
+        if (null == ts) {
+            return;
+        }
+        for (T t : ts) {
+            params.forEach((name, value) -> FieldStation.of(t).setIgnoreNameValue(name, value));
+            if (t instanceof Upgrade<?>) {
+                ((Upgrade) t).upgrade(t);
+                SpringBeanUtils.getApplicationContext().publishEvent(t);
+            }
+        }
+    }
     /**
      * 设置全局设置对象的属性值
      *
