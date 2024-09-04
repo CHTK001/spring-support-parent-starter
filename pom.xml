@@ -23,7 +23,7 @@
         <module>spring-support-oauth-server-starter</module>
         <module>spring-support-redis-starter</module>
         <module>spring-support-swagger-starter</module>
-        <module>spring-support-mail-starter</module>
+        <module>spring-support-email-starter</module>
         <module>spring-support-mqtt-starter</module>
         <module>spring-support-minio-starter</module>
         <module>spring-support-socketio-starter</module>
