@@ -5,11 +5,14 @@ import com.chua.common.support.crypto.CodecKeyPair;
 import com.chua.common.support.function.Upgrade;
 import com.chua.common.support.matcher.PathMatcher;
 import com.chua.common.support.utils.DigestUtils;
+import com.chua.common.support.utils.Hex;
+import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.application.GlobalSettingFactory;
 import com.chua.starter.common.support.properties.CodecProperties;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import org.springframework.context.ApplicationListener;
 
 import java.util.List;
 
@@ -20,11 +23,12 @@ import java.util.List;
  * @version 1.0.0
  * @since 2024/01/22
  */
-public class CodecFactory implements Upgrade<CodecSetting> {
+public class CodecFactory implements Upgrade<CodecSetting>, ApplicationListener<CodecSetting> {
 
 
     private final List<String> whiteList;
     private final Codec codec;
+    private Codec requestCodec;
     private final CodecKeyPair codecKeyPair;
     private final String publicKeyHex;
     GlobalSettingFactory globalSettingFactory = GlobalSettingFactory.getInstance();
@@ -33,6 +37,7 @@ public class CodecFactory implements Upgrade<CodecSetting> {
      */
     private final String codecType = "sm2";
     private CodecSetting codecSetting;
+    private String requestCodecKey;
 
     public CodecFactory(CodecProperties codecProperties) {
         boolean extInject = codecProperties.isExtInject();
@@ -111,6 +116,23 @@ public class CodecFactory implements Upgrade<CodecSetting> {
     @Override
     public void upgrade(CodecSetting codecSetting) {
         this.codecSetting = codecSetting;
+        if(null != requestCodec) {
+            IoUtils.closeQuietly(requestCodec);
+            requestCodec = null;
+        }
+        if(null == codecSetting.getCodecRequestKey()) {
+            return;
+        }
+
+        if(codecSetting.getCodecRequestKey().equals(this.requestCodecKey)) {
+            return;
+        }
+
+        if(!codecSetting.isCodecRequestOpen()) {
+            return;
+        }
+        this.requestCodecKey = codecSetting.getCodecRequestKey();
+        requestCodec = Codec.build("sm4", this.requestCodecKey);
     }
 
     /**
@@ -119,6 +141,32 @@ public class CodecFactory implements Upgrade<CodecSetting> {
      */
     public String getKeyHeader() {
         return "access-control-origin-key";
+    }
+
+    /**
+     * 获取请求key
+     * @return {@link String}
+     */
+    public String getRequestKey() {
+        return codecSetting.getCodecRequestKey();
+    }
+
+    @Override
+    public void onApplicationEvent(CodecSetting event) {
+        upgrade(event);
+    }
+
+    /**
+     * 解密请求
+     * @param data 数据
+     * @return {@link byte[]}
+     */
+    public byte[] decodeRequest(String data) {
+        try {
+            return requestCodec.decode(Hex.decodeHex(data));
+        } catch (Exception e) {
+            return new byte[0];
+        }
     }
 
 

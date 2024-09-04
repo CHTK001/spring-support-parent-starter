@@ -2,6 +2,7 @@ package com.chua.starter.common.support.codec;
 
 import com.chua.common.support.function.Upgrade;
 import lombok.Data;
+import org.springframework.context.ApplicationEvent;
 
 /**
  * 加密设置
@@ -9,7 +10,7 @@ import lombok.Data;
  * @since 2024/8/14
  */
 @Data
-public class CodecSetting implements Upgrade<CodecSetting> {
+public class CodecSetting extends ApplicationEvent implements Upgrade<CodecSetting> {
 
     /**
      * 是否开启响应加密
@@ -25,6 +26,14 @@ public class CodecSetting implements Upgrade<CodecSetting> {
      * 请求加密key
      */
     private String codecRequestKey = null;
+
+    public CodecSetting() {
+        this(true);
+    }
+
+    public CodecSetting(Object source) {
+        super(source);
+    }
 
     @Override
     public void upgrade(CodecSetting codecSetting) {
