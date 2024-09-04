@@ -179,7 +179,7 @@ public class GlobalSettingFactory {
             return;
         }
 
-        FieldStation.of(t).setValue(name, value);
+        FieldStation.of(t).setIgnoreNameValue(name, value);
         if (t instanceof Upgrade<?>) {
             ((Upgrade) t).upgrade(t);
             return;
