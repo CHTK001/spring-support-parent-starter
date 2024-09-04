@@ -9,7 +9,7 @@
         <version>4.0.0</version>
     </parent>
 
-    <artifactId>spring-support-mail-starter</artifactId>
+    <artifactId>spring-support-email-starter</artifactId>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
@@ -25,7 +25,7 @@
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-mail</artifactId>
+            <artifactId>spring-boot-starter-email</artifactId>
         </dependency>
         <dependency>
             <groupId>javax.annotation</groupId>

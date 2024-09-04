@@ -38,8 +38,8 @@
 
     <dependencies>
         <dependency>
-            <groupId>javax.mail</groupId>
-            <artifactId>mail</artifactId>
+            <groupId>javax.email</groupId>
+            <artifactId>email</artifactId>
             <version>1.4.7</version>
         </dependency>
         <!-- starter-web：spring-webmvc + autoconfigure + logback + yaml + tomcat -->
@@ -60,10 +60,10 @@
             <artifactId>spring-boot-starter-freemarker</artifactId>
         </dependency>
 
-        <!-- mail-starter -->
+        <!-- email-starter -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-mail</artifactId>
+            <artifactId>spring-boot-starter-email</artifactId>
         </dependency>
 
         <!-- starter-actuator -->
