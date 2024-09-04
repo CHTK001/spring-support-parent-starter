@@ -19,9 +19,23 @@ public class CodecProperties {
     public static final String PRE = "plugin.codec";
 
     /**
-     * 开放式编解码器
+     * 是否开启加密
      */
     private boolean enable = false;
+
+    /**
+     * 是否开启响应加密
+     */
+    private boolean responseEnable = false;
+    /**
+     * 是否开启请求加密
+     */
+    private boolean requestEnable = false;
+
+    /**
+     * 请求加密key
+     */
+    private String codecRequestKey = null;
 
     /**
      * 是否由其它对象注入参数 {@link #enable}

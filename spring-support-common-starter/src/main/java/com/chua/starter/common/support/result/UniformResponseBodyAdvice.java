@@ -18,10 +18,12 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 import java.util.concurrent.Callable;
 
 /**
+ * 统一返回值
  * @author CH
  */
 @RestControllerAdvice
 @Slf4j
+@SuppressWarnings("ALL")
 public class UniformResponseBodyAdvice implements ResponseBodyAdvice<Object> {
 
     @Override

@@ -8,6 +8,7 @@ import javax.xml.bind.annotation.*;
 import java.io.Serializable;
 
 /**
+ * xml返回数据
  * @author Administrator
  */
 @Data
