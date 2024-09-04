@@ -165,8 +165,16 @@ public class CodecFactory implements Upgrade<CodecSetting>, ApplicationListener<
         try {
             return requestCodec.decode(Hex.decodeHex(data));
         } catch (Exception e) {
-            return new byte[0];
+            throw new RuntimeException("请求解析失败!");
         }
+    }
+
+    /**
+     * 请求是否开启
+     * @return {@link boolean}
+     */
+    public boolean requestCodecOpen() {
+        return codecSetting.isCodecRequestOpen();
     }
 
 
