@@ -5,6 +5,7 @@ import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.function.Upgrade;
 import com.chua.common.support.reflection.FieldStation;
 import com.chua.common.support.utils.ClassUtils;
+import com.chua.starter.common.support.configuration.SpringBeanUtils;
 
 import java.util.Collection;
 import java.util.LinkedList;
@@ -159,6 +160,7 @@ public class GlobalSettingFactory {
             FieldStation.of(t).setIgnoreNameValue(name, value);
             if (t instanceof Upgrade<?>) {
                 ((Upgrade) t).upgrade(t);
+                SpringBeanUtils.getApplicationContext().publishEvent(t);
             }
         }
     }
