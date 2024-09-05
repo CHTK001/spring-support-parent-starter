@@ -25,6 +25,7 @@ public class SpringHtmlMailSender extends SpringTextMailSender {
         javaMailSender.setHost(configuration.getSmtpHost());
         javaMailSender.setPort(configuration.getSmtpPort());
         javaMailSender.setPassword(configuration.getPassword());
+        javaMailSender.setUsername(configuration.getUsername());
         javaMailSender.setDefaultEncoding("UTF-8");
     }
 
