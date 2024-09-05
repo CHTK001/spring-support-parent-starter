@@ -5,10 +5,9 @@ import com.chua.common.support.lang.mail.Email;
 import com.chua.common.support.lang.mail.MailConfiguration;
 import com.chua.common.support.lang.mail.MailSender;
 import com.chua.common.support.log.Log;
-import com.chua.common.support.objects.annotation.AutoInject;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
-import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
 
 /**
@@ -19,10 +18,14 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 public class SpringHtmlMailSender extends SpringTextMailSender {
 
     private static final Log log = Log.getLogger(MailSender.class);
-    @AutoInject
-    private JavaMailSender javaMailSender;
+    private final JavaMailSenderImpl javaMailSender;
     public SpringHtmlMailSender(MailConfiguration configuration) {
         super(configuration);
+        this.javaMailSender = new JavaMailSenderImpl();
+        javaMailSender.setHost(configuration.getSmtpHost());
+        javaMailSender.setPort(configuration.getSmtpPort());
+        javaMailSender.setPassword(configuration.getPassword());
+        javaMailSender.setDefaultEncoding("UTF-8");
     }
 
     @Override
@@ -31,7 +34,7 @@ public class SpringHtmlMailSender extends SpringTextMailSender {
         try {
             //true表示需要创建一个multipart message
             MimeMessageHelper helper = new MimeMessageHelper(message, true);
-            addAttach(helper, from, email);
+            addAttach(helper, email);
             helper.setFrom(from);
             helper.setTo(email.getTo());
             helper.setSubject(email.getTitle());

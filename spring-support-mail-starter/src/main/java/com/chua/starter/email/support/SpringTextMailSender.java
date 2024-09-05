@@ -7,12 +7,10 @@ import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.common.support.utils.UrlUtils;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
-import org.springframework.core.io.InputStreamSource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URL;
 import java.util.List;
 
@@ -36,7 +34,7 @@ public class SpringTextMailSender extends AbstractMailSender {
         MimeMessage message = javaMailSender.createMimeMessage();
         try {
             MimeMessageHelper helper = new MimeMessageHelper(message, true);
-            addAttach(helper, from, email);
+            addAttach(helper, email);
             helper.setFrom(from);
             helper.setTo(email.getTo());
             helper.setSubject(email.getTitle());
@@ -49,7 +47,7 @@ public class SpringTextMailSender extends AbstractMailSender {
     }
 
 
-    protected void addAttach(MimeMessageHelper helper, String from, Email email) {
+    protected void addAttach(MimeMessageHelper helper, Email email) {
         if(!email.hasAttach()) {
             return;
         }
@@ -57,12 +55,7 @@ public class SpringTextMailSender extends AbstractMailSender {
         for (EmailAttachment emailAttachment : attachment1) {
             URL url = emailAttachment.getUrl();
             try {
-                helper.addAttachment(UrlUtils.getFileName(url.openConnection()), new InputStreamSource() {
-                    @Override
-                    public InputStream getInputStream() throws IOException {
-                        return url.openStream();
-                    }
-                });
+                helper.addAttachment(UrlUtils.getFileName(url.openConnection()), url::openStream);
             } catch (MessagingException ignored) {
             } catch (IOException e) {
                 throw new RuntimeException(e);
