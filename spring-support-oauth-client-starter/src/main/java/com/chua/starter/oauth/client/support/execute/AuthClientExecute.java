@@ -195,6 +195,7 @@ public class AuthClientExecute {
 
         RequestUtils.setUsername(userResult.getUsername());
         RequestUtils.setUserId(userResult.getId());
+        RequestUtils.setTenantId(userResult.getTenantId());
         RequestUtils.setUserInfo(userResult);
         return loginAuthResult;
     }
@@ -276,6 +277,23 @@ public class AuthClientExecute {
     }
 
 
+    /**
+     * 获取租户
+     *
+     * @return {@link String}
+     */
+    public static String getTenantId() {
+        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
+        if (requestAttributes == null) {
+            return null;
+        }
+
+        ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
+
+        HttpServletRequest request = attributes.getRequest();
+        Object attribute = request.getSession().getAttribute(SESSION_TENANT_ID);
+        return null == attribute ? null : attribute.toString();
+    }
     /**
      * 获取用户名
      *
