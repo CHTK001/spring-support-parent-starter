@@ -42,7 +42,7 @@ public class UserResult {
     /**
      * 租户id
      */
-    private Long tenantId;
+    private String tenantId;
     /**
      * 角色
      */

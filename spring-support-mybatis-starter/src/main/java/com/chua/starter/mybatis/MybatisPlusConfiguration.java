@@ -114,7 +114,7 @@ public class MybatisPlusConfiguration {
         mybatisPlusInterceptor.addInnerInterceptor(new TenantLineInnerInterceptor(new TenantLineHandler() {
             @Override
             public Expression getTenantId() {
-                Long tenantId = RequestUtils.getTenantId();
+                String tenantId = RequestUtils.getTenantId();
                 if(null == tenantId) {
                     return new LongValue(0);
                 }
