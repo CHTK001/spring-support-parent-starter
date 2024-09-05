@@ -2,8 +2,10 @@ package com.chua.starter.mybatis.entity;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.OrderItem;
 import com.baomidou.mybatisplus.core.toolkit.ArrayUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.starter.common.support.annotations.RequestParamMapping;
 import com.github.yulichang.query.MPJQueryWrapper;
 import com.github.yulichang.toolkit.MPJWrappers;
@@ -13,6 +15,9 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+
+import java.util.LinkedList;
+import java.util.List;
 
 
 /**
@@ -69,7 +74,22 @@ public class Query<T>{
      * @return {@link com.baomidou.mybatisplus.extension.plugins.pagination.Page}<{@link T}>
      */
     public com.baomidou.mybatisplus.extension.plugins.pagination.Page<T> createPage() {
-        return new com.baomidou.mybatisplus.extension.plugins.pagination.Page<T>(page, pageSize);
+        Page<T> tPage = new Page<>(page, pageSize);
+        if(ArrayUtils.isNotEmpty(order)) {
+            List<OrderItem> orderItem = new LinkedList<>();
+            for (String s : order) {
+                if(s.endsWith("-")) {
+                    orderItem.add(OrderItem.desc(s.substring(0, s.length() - 1)));
+                } else if(s.endsWith("+")){
+                    orderItem.add(OrderItem.asc(s.substring(0, s.length() - 1)));
+                } else {
+                    orderItem.add(OrderItem.asc(s));
+                }
+            }
+            tPage.setOrders(orderItem);
+        }
+
+        return tPage;
     }
 
     /**
