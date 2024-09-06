@@ -86,7 +86,7 @@ public class SocketSession {
         String encrypt = DigestUtils.aesEncrypt(codecKeyPair.getPrivateKeyHex(), nanoTime);
         client.sendEvent(event,
                 new JsonObject()
-                .fluent("data", RandomUtils.randomInt(1) + "200" + encode + "ffff")
+                .fluent("data", "02" + RandomUtils.randomInt(1) + "200" + encode + "ffff")
                 .fluent("uuid", encrypt)
                 .fluent("timestamp", nanoTime).toJSONString()
         );
