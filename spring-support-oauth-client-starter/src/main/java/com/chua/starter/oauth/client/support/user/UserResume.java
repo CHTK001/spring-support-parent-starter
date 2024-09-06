@@ -2,11 +2,9 @@ package com.chua.starter.oauth.client.support.user;
 
 import com.google.common.base.Strings;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.util.CollectionUtils;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -23,6 +21,15 @@ public class UserResume  {
      * 索引
      */
     private String uid;
+
+    /**
+     * 用户id
+     */
+    private String userId;
+    /**
+     * 租户id
+     */
+    private String tenantId;
     /**
      * 名称
      */

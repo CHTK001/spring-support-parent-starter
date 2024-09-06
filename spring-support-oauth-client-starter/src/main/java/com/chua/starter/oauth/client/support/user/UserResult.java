@@ -26,6 +26,11 @@ import java.util.Set;
 @JsonIgnoreProperties({"beanType", "accessSecret", "expire", "password", "salt", "password", "salt", "userEnable", "address", "lastArea", "lastLatitude", "lastIp", "lastLongitude"})
 public class UserResult {
     private String id;
+
+    /**
+     * 用户id
+     */
+    private String userId;
     /**
      * 索引唯一由系统生成
      */
