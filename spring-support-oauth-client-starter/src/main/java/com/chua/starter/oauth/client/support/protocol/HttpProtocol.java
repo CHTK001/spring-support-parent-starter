@@ -78,6 +78,8 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
                     UserResume userResume = authenticationInformation.getReturnResult();
                     RequestUtils.setUsername(userResume.getUsername());
                     RequestUtils.setUserInfo(userResume);
+                    RequestUtils.setUserId(userResume.getUserId());
+                    RequestUtils.setTenantId(userResume.getTenantId());
                     return authenticationInformation;
                 } else {
                     CACHEABLE.remove(cacheKey);
@@ -294,6 +296,13 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
             return authenticationInformation;
         }
 
+        UserResume userResume = authenticationInformation.getReturnResult();
+        if(null != userResume) {
+            RequestUtils.setUsername(userResume.getUsername());
+            RequestUtils.setUserInfo(userResume);
+            RequestUtils.setUserId(userResume.getUserId());
+            RequestUtils.setTenantId(userResume.getTenantId());
+        }
         return CACHEABLE.put(cacheKey, authenticationInformation);
     }
 
