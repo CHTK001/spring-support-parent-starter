@@ -28,6 +28,10 @@ public enum AuthType {
     TENANT,
 
     /**
+     * 三方
+     */
+    THIRD_PARTY,
+    /**
      * 手机
      */
     PHONE,
