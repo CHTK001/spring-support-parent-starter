@@ -32,6 +32,10 @@ public class RedisSearchServiceImpl implements RedisSearchService {
 
     @Override
     public ReturnResult<Boolean> dropIndex(String index, long expireTime) {
+        if(null == redisClient) {
+            return ReturnResult.error("redisClient未初始化");
+        }
+
         if(!CACHEABLE.exist(index)) {
             return ReturnResult.ok();
         }
@@ -60,6 +64,10 @@ public class RedisSearchServiceImpl implements RedisSearchService {
 
     @Override
     public ReturnResult<Boolean> createIndex(SearchIndex searchIndex) {
+        if(null == redisClient) {
+            return ReturnResult.error("redisClient未初始化");
+        }
+
         if(CACHEABLE.exist(searchIndex.getName())) {
             return ReturnResult.ok();
         }
@@ -85,6 +93,10 @@ public class RedisSearchServiceImpl implements RedisSearchService {
 
     @Override
     public ReturnResult<Boolean> addDocument(String key, Map<String, String> document) {
+        if(null == redisClient) {
+            return ReturnResult.error("redisClient未初始化");
+        }
+
         RedisSession redisSession  = (RedisSession) redisClient.getSession();
 
         if(!redisSession.checkModule("search")) {
@@ -110,6 +122,10 @@ public class RedisSearchServiceImpl implements RedisSearchService {
     //where name like 'john%'	                    @name:john*
     @Override
     public ReturnResult<SearchResultItem> queryAll(SearchQuery query, int offset, int limit) {
+        if(null == redisClient) {
+            return ReturnResult.error("redisClient未初始化");
+        }
+
         RedisSession redisSession  = (RedisSession) redisClient.getSession();
 
         if(!redisSession.checkModule("search")) {
