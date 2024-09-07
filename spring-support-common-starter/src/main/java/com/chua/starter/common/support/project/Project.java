@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.project;
 
+import com.chua.common.support.net.NetUtils;
 import com.chua.common.support.utils.NumberUtils;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -57,6 +58,8 @@ public class Project {
         this.environment = environment;
         this.applicationName = environment.getProperty("spring.application.name");
         this.applicationPort = NumberUtils.toInt(environment.resolvePlaceholders("${server.port:8080}"));
+        String localHost = NetUtils.getLocalHost();
+        this.applicationHost = environment.resolvePlaceholders("${server.host:"+ localHost+"}");
         this.applicationActive = environment.getProperty("spring.profiles.active", "default");
         this.applicationActiveInclude = environment.getProperty("spring.profiles.include", "");
         this.contextPath = environment.resolvePlaceholders("${server.servlet.context-path:}");
