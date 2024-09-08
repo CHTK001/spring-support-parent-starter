@@ -1,6 +1,7 @@
 package com.chua.starter.common.support.project;
 
 import com.chua.common.support.net.NetUtils;
+import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.NumberUtils;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -70,4 +71,11 @@ public class Project {
         return INSTANCE;
     }
 
+    /**
+     * 计算应用uuid
+     * @return uuid
+     */
+    public String calcApplicationUuid() {
+        return DigestUtils.md5Hex(applicationHost + applicationPort);
+    }
 }

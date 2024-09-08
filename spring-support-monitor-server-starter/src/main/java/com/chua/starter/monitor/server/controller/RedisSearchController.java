@@ -30,15 +30,7 @@ import static com.chua.starter.redis.support.service.impl.RedisSearchServiceImpl
 public class RedisSearchController {
 
     private final RedisSearchService redisSearchService;
-    /**
-     * 查询基本信息。
-     *
-     * @param jvmQuery 监控代理的唯一标识符。
-     * @return 返回操作结果，如果操作成功，返回true；否则返回false，并附带错误信息。
-     */
-    @Operation(summary = "查询Jvm日志信息")
-    @GetMapping
-    public ReturnResult<SearchResultItem> jvmLog(JvmSearchQuery jvmQuery) {
+
         // 检查ID是否为空
         if(StringUtils.isEmpty(jvmQuery.getId())) {
             return ReturnResult.error("数据不存在, 请刷新后重试");
