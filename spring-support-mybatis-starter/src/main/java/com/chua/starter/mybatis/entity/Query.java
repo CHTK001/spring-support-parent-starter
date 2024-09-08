@@ -176,4 +176,13 @@ public class Query<T>{
         }
         return wrapper;
     }
+
+    /**
+     * 获取偏移量
+     *
+     * @return 偏移量
+     */
+    public int offset() {
+        return (page - 1) * pageSize;
+    }
 }
