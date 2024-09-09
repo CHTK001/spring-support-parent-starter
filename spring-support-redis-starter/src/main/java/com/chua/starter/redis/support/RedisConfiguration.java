@@ -58,6 +58,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
                 .setClientName(redisProperties.getClientName());
         return Redisson.create(config);
     }
+
     @Bean(destroyMethod = "close", name = "redisClient")
     @ConditionalOnMissingBean
     public RedisClient redisClient(RedisProperties redisProperties) {
