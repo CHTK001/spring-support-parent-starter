@@ -2,7 +2,6 @@ package com.chua.starter.common.support.configuration;
 
 import com.chua.starter.common.support.codec.CodecFactory;
 import com.chua.starter.common.support.properties.CodecProperties;
-import com.chua.starter.common.support.provider.CodecProvider;
 import com.chua.starter.common.support.result.CodecRequestBodyAdvice;
 import com.chua.starter.common.support.result.CodecResponseBodyAdvice;
 import lombok.RequiredArgsConstructor;
@@ -61,15 +60,4 @@ public class CodecConfiguration {
         return new CodecFactory(codecProperties);
     }
 
-    /**
-     * 在满足条件时，创建一个编码提供者的Bean
-     *
-     * @return 返回一个CodecProvider实例，用于提供编码服务
-     */
-    @Bean("codecProvider")
-    @ConditionalOnMissingBean
-    @ConditionalOnProperty(name = "plugin.codec.enable", havingValue = "true", matchIfMissing = false)
-    public CodecProvider codecProvider() {
-        return new CodecProvider();
-    }
 }

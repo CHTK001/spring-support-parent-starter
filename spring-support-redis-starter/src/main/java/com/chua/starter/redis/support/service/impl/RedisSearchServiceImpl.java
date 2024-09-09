@@ -103,7 +103,7 @@ public class RedisSearchServiceImpl implements RedisSearchService {
             return ReturnResult.error("模块未加载");
         }
         RedisSearch redisSearch = redisSession.getRedisSearch();
-        redisSearch.addDocument(LANGUAGE, key + ":" + IdUtils.createUuid(), document);
+        redisSearch.addDocument(LANGUAGE, key + ":" + IdUtils.createSimpleUuid(), document);
         return ReturnResult.ok();
     }
 
@@ -131,6 +131,8 @@ public class RedisSearchServiceImpl implements RedisSearchService {
         if(!redisSession.checkModule("search")) {
             return ReturnResult.error("模块未加载");
         }
+
+
         RedisSearch redisSearch = redisSession.getRedisSearch();
         return ReturnResult.ok(redisSearch.queryAll(query, offset, limit));
     }
