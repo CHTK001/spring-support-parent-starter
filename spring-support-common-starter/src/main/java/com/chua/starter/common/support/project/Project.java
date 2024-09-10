@@ -1,11 +1,14 @@
 package com.chua.starter.common.support.project;
 
+import com.chua.common.support.collection.ImmutableBuilder;
 import com.chua.common.support.net.NetUtils;
 import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.NumberUtils;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.core.env.Environment;
+
+import java.util.Map;
 
 /**
  * 项目
@@ -77,5 +80,16 @@ public class Project {
      */
     public String calcApplicationUuid() {
         return DigestUtils.md5Hex(applicationHost + applicationPort);
+    }
+
+    public Map<String, String> getProject() {
+        return ImmutableBuilder.builderOfStringStringMap()
+                .put("applicationName", applicationName)
+                .put("applicationPort", String.valueOf(applicationPort))
+                .put("applicationHost", applicationHost)
+                .put("applicationActive", applicationActive)
+                .put("applicationActiveInclude", applicationActiveInclude)
+                .put("contextPath", contextPath)
+                .put("endpointsUrl", endpointsUrl).asSynchronizedMap();
     }
 }
