@@ -5,17 +5,18 @@ import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.StringUtils;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import static com.chua.common.support.constant.CommonConstant.SYMBOL_EXCEPTION;
-import static com.chua.common.support.lang.code.ReturnCode.SUCCESS;
 import static com.chua.common.support.lang.code.ReturnCode.SYSTEM_EXECUTION_ERROR;
 
 /**
  * 统一响应结构体
  *
- * @author haoxr
+ * @author CH
  * @since 2022/1/30
  **/
+@EqualsAndHashCode(callSuper = true)
 @Data
 public class Result<T> extends ReturnResult<T> {
 
