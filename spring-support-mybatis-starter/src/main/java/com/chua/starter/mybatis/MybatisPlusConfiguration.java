@@ -2,12 +2,10 @@ package com.chua.starter.mybatis;
 
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.handler.DataPermissionHandler;
-import com.baomidou.mybatisplus.extension.plugins.handler.TenantLineHandler;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
 import com.chua.starter.common.support.oauth.AuthService;
-import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.mybatis.endpoint.MybatisEndpoint;
 import com.chua.starter.mybatis.interceptor.MybatisPlusPermissionHandler;
 import com.chua.starter.mybatis.interceptor.MybatisPlusPermissionInterceptor;
@@ -17,8 +15,6 @@ import com.chua.starter.mybatis.reloader.MapperReload;
 import com.chua.starter.mybatis.reloader.Reload;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.expression.LongValue;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
@@ -96,6 +92,7 @@ public class MybatisPlusConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public MybatisPlusInterceptor mybatisPlusInterceptor(
+            @Autowired(required = false) TenantLineInnerInterceptor tenantLineInnerInterceptor,
             OptimisticLockerInnerInterceptor optimisticLockerInnerInterceptor,
             PaginationInnerInterceptor paginationInnerInterceptor,
             MybatisPlusPermissionInterceptor dataPermissionInterceptor
@@ -104,41 +101,10 @@ public class MybatisPlusConfiguration {
         mybatisPlusInterceptor.addInnerInterceptor(optimisticLockerInnerInterceptor);
         mybatisPlusInterceptor.addInnerInterceptor(paginationInnerInterceptor);
         mybatisPlusInterceptor.addInnerInterceptor(dataPermissionInterceptor);
-        if(mybatisProperties.isOpenTenant()) {
-           registerTenant(mybatisPlusInterceptor);
+        if(null != tenantLineInnerInterceptor) {
+            mybatisPlusInterceptor.addInnerInterceptor(tenantLineInnerInterceptor);
         }
         return mybatisPlusInterceptor;
-    }
-
-    private void registerTenant(MybatisPlusInterceptor mybatisPlusInterceptor) {
-        mybatisPlusInterceptor.addInnerInterceptor(new TenantLineInnerInterceptor(new TenantLineHandler() {
-            @Override
-            public Expression getTenantId() {
-                String tenantId = RequestUtils.getTenantId();
-                if(null == tenantId) {
-                    return new LongValue(0);
-                }
-
-                return new LongValue(tenantId);
-            }
-
-            @Override
-            public String getTenantIdColumn() {
-                return mybatisProperties.getTenantColumn();
-            }
-
-            // 这是 default 方法,默认返回 false 表示所有表都需要拼多租户条件
-            @Override
-            public boolean ignoreTable(String tableName) {
-                boolean tenantTableIgnore = mybatisProperties.isTenantTableIgnore();
-                if(!tenantTableIgnore) {
-                    return false;
-                }
-
-                //TODO:
-                return false;
-            }
-        }));
     }
 
 

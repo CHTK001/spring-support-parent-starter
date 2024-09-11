@@ -10,6 +10,7 @@
     </parent>
 
     <artifactId>spring-support-mybatis-starter</artifactId>
+    <description>mybatis-plus模块</description>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>

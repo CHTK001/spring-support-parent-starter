@@ -9,8 +9,8 @@
         <version>4.0.0</version>
     </parent>
 
-    <artifactId>spring-support-tenant-starter</artifactId>
-    <description>基于spring-support-mybatis-starter租户模块</description>
+    <artifactId>spring-support-mybatis-tenant-starter</artifactId>
+    <description>mybatis-plus租户模块</description>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
