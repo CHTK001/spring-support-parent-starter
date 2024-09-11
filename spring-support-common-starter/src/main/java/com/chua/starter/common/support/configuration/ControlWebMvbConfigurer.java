@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.configuration;
 
+import com.chua.starter.common.support.application.GlobalSettingFactory;
 import com.chua.starter.common.support.control.ApiVersionRequestMappingHandlerMapping;
 import com.chua.starter.common.support.properties.ControlProperties;
 import com.chua.starter.common.support.properties.IpProperties;
@@ -51,5 +52,9 @@ public class ControlWebMvbConfigurer implements WebMvcRegistrations, Environment
     @Override
     public void setEnvironment(Environment environment) {
         this.controlProperties = Binder.get(environment).bindOrCreate(ControlProperties.PRE, ControlProperties.class);
+        try {
+            GlobalSettingFactory.PREFIX = controlProperties.getPlatform().getName();
+        } catch (Exception ignored) {
+        }
     }
 }
