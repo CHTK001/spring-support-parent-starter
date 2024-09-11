@@ -10,6 +10,7 @@
     </parent>
 
     <artifactId>spring-support-oauth-server-starter</artifactId>
+    <description>单点登录服务端</description>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>

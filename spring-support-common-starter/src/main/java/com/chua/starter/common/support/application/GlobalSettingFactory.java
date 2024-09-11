@@ -24,6 +24,7 @@ public class GlobalSettingFactory {
 
     // 全局设置工厂类，用于管理和提供全局设置对象
     private static final GlobalSettingFactory INSTANCE = new GlobalSettingFactory();
+    public static String PREFIX = "";
 
 
     // 保存所有全局设置对象的集合，使用ConcurrentHashMap保证线程安全
@@ -32,7 +33,7 @@ public class GlobalSettingFactory {
 
     // 静态初始化块，用于初始化全局设置对象集合
     static {
-        GROUP.computeIfAbsent("sign", it -> new LinkedList<>()).add(new Sign());
+        GROUP.computeIfAbsent(PREFIX + "sign", it -> new LinkedList<>()).add(new Sign());
     }
 
     /**
@@ -63,7 +64,7 @@ public class GlobalSettingFactory {
      * @return 对应的设置对象，如果不存在则返回null
      */
     public <T> List<T> get(String group) {
-        return (List<T>) GROUP.get(group);
+        return (List<T>) GROUP.get(PREFIX + group);
     }
 
     /**
@@ -76,7 +77,7 @@ public class GlobalSettingFactory {
      */
     @SuppressWarnings("unchecked")
     public <T> T get(String group, Class<T> clazz) {
-        List<T> t = (List<T>) GROUP.get(group);
+        List<T> t = (List<T>) GROUP.get(PREFIX + group);
         if (t == null) {
             T t1 = ClassUtils.forObject(clazz);
             register(group, t1);
@@ -102,10 +103,10 @@ public class GlobalSettingFactory {
         if (null == t) {
             return;
         }
-        List<Object> objects = GROUP.get(group);
+        List<Object> objects = GROUP.get(PREFIX + group);
         if(null == objects) {
-            GROUP.put(group, new LinkedList<>());
-            objects = GROUP.get(group);
+            GROUP.put(PREFIX + group, new LinkedList<>());
+            objects = GROUP.get(PREFIX + group);
         }
 
         for (Object object : objects) {
@@ -136,12 +137,12 @@ public class GlobalSettingFactory {
      * @param <T>   值的类型，泛型使用以支持各种类型的配置项值
      */
     public synchronized  <T> void setIfNoChange(String group, String name, Object value) {
-        if (CHANGE.containsKey(group + name)) {
+        if (CHANGE.containsKey(PREFIX + group + name)) {
             return;
         }
 
-        set(group, name, value);
-        CHANGE.put(group + name, CommonConstant.SYMBOL_EMPTY);
+        set(PREFIX + group, name, value);
+        CHANGE.put(PREFIX + group + name, CommonConstant.SYMBOL_EMPTY);
     }
 
     /**
@@ -156,7 +157,7 @@ public class GlobalSettingFactory {
             return;
         }
 
-        List<T> ts = get(group);
+        List<T> ts = get(PREFIX + group);
         if (null == ts) {
             return;
         }
@@ -177,7 +178,7 @@ public class GlobalSettingFactory {
      * @param <T>   泛型标记
      */
     public synchronized <T> void set(String group, String name, Object value) {
-        List<T> ts = get(group);
+        List<T> ts = get(PREFIX + group);
         if (null == ts) {
             return;
         }
@@ -201,7 +202,7 @@ public class GlobalSettingFactory {
      */
     @SuppressWarnings("ALL")
     public synchronized <T> void set(String group, Class<T> type, String name, Object value) {
-        T t = get(group, type);
+        T t = get(PREFIX + group, type);
         if (null == t) {
             return;
         }

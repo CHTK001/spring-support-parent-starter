@@ -40,7 +40,7 @@
         <module>spring-support-proxy-server-starter</module>
         <module>spring-support-scheduler-starter</module>
         <module>spring-support-discovery-starter</module>
-        <module>spring-support-tenant-starter</module>
+        <module>spring-support-mybatis-tenant-starter</module>
     </modules>
 
     <properties>

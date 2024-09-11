@@ -18,22 +18,6 @@ public class MybatisPlusProperties {
     public static final String PRE = "plugin.mybatis";
 
     /**
-     * 开启租户
-     */
-    private boolean openTenant = false;
-
-    /**
-     * 租户字段
-     */
-    private String tenantColumn = "tenant_id";
-
-    /**
-     * false 表示所有表都需要拼多租户条件
-     * true 拼接{@link com.chua.starter.mybatis.pojo.SysTenantBase}
-     * @see com.chua.starter.mybatis.pojo.SysTenantBase
-     */
-    private boolean tenantTableIgnore = false;
-    /**
      * xml是否可热加载
      */
     private boolean openXmlReload = true;
