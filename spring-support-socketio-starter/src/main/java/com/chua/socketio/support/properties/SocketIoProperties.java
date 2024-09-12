@@ -32,7 +32,7 @@ public class SocketIoProperties {
     /**
      * 端口
      */
-    private Integer port = 31256;
+    private Integer port = -1;
     /**
      * 最大每帧处理数据的长度
      */
