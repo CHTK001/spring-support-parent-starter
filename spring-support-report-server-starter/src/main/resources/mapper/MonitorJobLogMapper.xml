@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.report.server.starter.mapper.MonitorJobLogMapper">
+  <select id="time" resultType="com.chua.report.server.starter.job.pojo.JobStatistic">
+      SELECT
+        count( job_log_trigger_code ) cnt,
+        job_log_trigger_code,
+        job_log_trigger_date
+      FROM
+        monitor_job_log
+      WHERE
+        job_log_trigger_time <![CDATA[>=]]> #{query.startDate} AND job_log_trigger_time  <![CDATA[<=]]> #{query.endDate}
+      GROUP BY
+        job_log_trigger_code, job_log_trigger_date
+    </select>
+</mapper>

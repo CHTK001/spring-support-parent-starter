@@ -46,7 +46,7 @@ public class DiscoveryProperties {
     /**
      * uri
      */
-    private String namespace = "discovery";
+    private String namespace;
     /**
      * 连接超时时间
      */
