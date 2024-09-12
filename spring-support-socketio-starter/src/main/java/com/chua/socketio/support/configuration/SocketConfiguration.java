@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.util.StringUtils;
@@ -75,6 +76,7 @@ public class SocketConfiguration {
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = SocketIoProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = false)
     public Configuration configuration(SocketIoProperties properties,
+                                       ServerProperties serverProperties,
                                        @Autowired(required = false) SocketAuthFactory socketAuthFactory) {
         SocketConfig socketConfig = new SocketConfig();
         socketConfig.setReuseAddress(true);
@@ -89,7 +91,7 @@ public class SocketConfiguration {
         configuration.setJsonSupport(new JacksonJsonSupport());
         // host在本地测试可以设置为localhost或者本机IP，在Linux服务器跑可换成服务器IP
         configuration.setHostname(properties.getHost());
-        configuration.setPort(properties.getPort());
+        configuration.setPort(properties.getPort() == -1 ? serverProperties.getPort() + 10011 : properties.getPort());
         configuration.setTransports(Transport.POLLING, Transport.WEBSOCKET);
         // socket连接数大小（如只监听一个端口boss线程组为1即可）
         configuration.setBossThreads(properties.getBossCount());
