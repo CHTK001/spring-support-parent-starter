@@ -53,7 +53,7 @@ public class ControlWebMvbConfigurer implements WebMvcRegistrations, Environment
     public void setEnvironment(Environment environment) {
         this.controlProperties = Binder.get(environment).bindOrCreate(ControlProperties.PRE, ControlProperties.class);
         try {
-            GlobalSettingFactory.PREFIX = controlProperties.getPlatform().getName();
+            GlobalSettingFactory.PREFIX = controlProperties.getPlatform().getName().name();
         } catch (Exception ignored) {
         }
     }

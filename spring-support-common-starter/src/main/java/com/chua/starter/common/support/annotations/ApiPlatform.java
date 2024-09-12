@@ -1,5 +1,7 @@
 package com.chua.starter.common.support.annotations;
 
+import com.chua.starter.common.support.properties.ControlProperties;
+
 import java.lang.annotation.*;
 
 /**
@@ -14,5 +16,5 @@ public @interface ApiPlatform {
     /**
      * 平台名称
      */
-    String[] value() default {};
+    ControlProperties.PlatformKey[] value() default {};
 }

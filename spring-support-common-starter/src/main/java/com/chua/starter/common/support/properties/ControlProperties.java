@@ -1,6 +1,7 @@
 package com.chua.starter.common.support.properties;
 
 import lombok.Data;
+import lombok.Getter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import static com.chua.starter.common.support.properties.ControlProperties.PRE;
@@ -44,7 +45,7 @@ public class ControlProperties {
         /**
          * 版本号
          */
-        private String name;
+        private PlatformKey name = PlatformKey.SYSTEM;
     }
 
     @Data
@@ -61,5 +62,26 @@ public class ControlProperties {
         private String name;
     }
 
+    @Getter
+    public enum PlatformKey {
+        /**
+         * 系统
+         */
+        SYSTEM,
+
+        /**
+         * 租户
+         */
+        TENANT,
+
+        /**
+         * 其他
+         */
+        OTHER,
+        /**
+         * 无
+         */
+        NONE
+    }
 
 }
