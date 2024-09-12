@@ -1,0 +1,2 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+  com.chua.report.server.starter.configuration.ReportServerConfiguration

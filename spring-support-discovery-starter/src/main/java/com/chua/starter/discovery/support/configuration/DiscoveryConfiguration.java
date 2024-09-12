@@ -4,19 +4,19 @@ import com.chua.common.support.discovery.Discovery;
 import com.chua.common.support.discovery.DiscoveryOption;
 import com.chua.common.support.discovery.ServiceDiscovery;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.project.Project;
 import com.chua.starter.discovery.support.properties.DiscoveryListProperties;
 import com.chua.starter.discovery.support.properties.DiscoveryProperties;
+import com.chua.starter.discovery.support.service.DiscoveryService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.FactoryBean;
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.EnvironmentAware;
@@ -36,7 +36,6 @@ import java.util.Map;
 @EnableConfigurationProperties(DiscoveryListProperties.class)
 public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionRegistryPostProcessor {
     private Environment environment;
-    public static final String KEY = "oo00OOOO00ooll11";
 
     @Override
     public void setEnvironment(Environment environment) {
@@ -46,16 +45,15 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         DiscoveryListProperties properties = Binder.get(environment).bindOrCreate(DiscoveryListProperties.PRE, DiscoveryListProperties.class);
-        DataSourceProperties dataSourceProperties = Binder.get(environment).bindOrCreate("spring.datasource", DataSourceProperties.class);
         List<DiscoveryProperties> properties1 = properties.getProperties();
         for (DiscoveryProperties discoveryProperties : properties1) {
             if(discoveryProperties.isEnabled()) {
-                registryBean(registry, discoveryProperties, dataSourceProperties);
+                registryBean(registry, discoveryProperties);
             }
         }
     }
 
-    private void registryBean(BeanDefinitionRegistry registry, DiscoveryProperties discoveryProperties, DataSourceProperties dataSourceProperties) {
+    private void registryBean(BeanDefinitionRegistry registry, DiscoveryProperties discoveryProperties) {
         DiscoveryOption discoveryOption = new DiscoveryOption();
         discoveryOption.setAddress(discoveryProperties.getAddress());
         discoveryOption.setUser(discoveryProperties.getUsername());
@@ -75,10 +73,6 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
             serverId = project.calcApplicationUuid();
         }
         Map<String, String> newMetaData = new LinkedHashMap<>(project.getProject());
-        newMetaData.put("datasource.url", dataSourceProperties.getUrl());
-        newMetaData.put("datasource.driver", dataSourceProperties.getDriverClassName());
-        newMetaData.put("datasource.username", dataSourceProperties.getUsername());
-        newMetaData.put("datasource.password", DigestUtils.aesEncrypt(dataSourceProperties.getPassword(), KEY));
 
         Discovery discovery = Discovery.builder()
                 .id(serverId)
@@ -88,8 +82,12 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
                 .protocol(discoveryProperties.getProtocol())
                 .metadata(newMetaData)
                 .build();
-        registry.registerBeanDefinition(discoveryProperties.getProtocol() + project.calcApplicationUuid(),
+        registry.registerBeanDefinition(discoveryProperties.getNamespace() + discoveryProperties.getProtocol() + project.calcApplicationUuid(),
                 createBeanDefinitionDiscovery(discoveryProperties, serviceDiscovery, discovery));
+
+        registry.registerBeanDefinition("discoveryService#embedd", BeanDefinitionBuilder.rootBeanDefinition(DiscoveryService.class)
+                        .setAutowireMode(AutowireCapableBeanFactory.AUTOWIRE_BY_TYPE)
+                .getBeanDefinition());
     }
 
     private BeanDefinition createBeanDefinitionDiscovery(DiscoveryProperties discoveryProperties, ServiceDiscovery serviceDiscovery, Discovery discovery) {
@@ -101,6 +99,7 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
         beanDefinitionBuilder.setInitMethodName("start");
         return beanDefinitionBuilder.getBeanDefinition();
     }
+
 
 
     static class ServiceDiscovertyFactoryBean implements FactoryBean<ServiceDiscovery>, AutoCloseable{
@@ -128,6 +127,9 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
 
         public void start() throws IOException {
             serviceDiscovery.start();
+            if(StringUtils.isBlank(discoveryProperties.getNamespace())) {
+                return;
+            }
             serviceDiscovery.registerService(discoveryProperties.getNamespace(), discovery);
             if(serviceDiscovery.isSupportSubscribe()) {
                 serviceDiscovery.subscribe(discoveryProperties.getNamespace(), (serverName, discovery, event) -> {

@@ -1,8 +1,0 @@
-com.chua.starter.monitor.configuration.MonitorConfiguration
-com.chua.starter.monitor.configuration.ConfigValueConfiguration
-com.chua.starter.monitor.configuration.ShellConfiguration
-com.chua.starter.monitor.configuration.JobConfiguration
-com.chua.starter.monitor.configuration.MybatisConfiguration
-com.chua.starter.monitor.configuration.PatchConfiguration
-com.chua.starter.monitor.configuration.LimitConfiguration
-com.chua.starter.monitor.configuration.ShellBeanDefinitionRegistryPostProcessor
