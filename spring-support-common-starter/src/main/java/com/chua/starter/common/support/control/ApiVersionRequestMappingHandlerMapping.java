@@ -13,6 +13,8 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 
 import java.lang.reflect.Method;
 
+import static com.chua.starter.common.support.properties.ControlProperties.PlatformKey.NONE;
+
 /**
  * API version setting 配置
  *
@@ -24,12 +26,12 @@ public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandle
     private final ControlProperties controlProperties;
     private final boolean platformOpen;
     private final boolean versionOpen;
-    private final String platform;
+    private final ControlProperties.PlatformKey platform;
 
     public ApiVersionRequestMappingHandlerMapping(ControlProperties controlProperties) {
         this.controlProperties = controlProperties;
         this.versionOpen = controlProperties.getVersion().isEnable() && StringUtils.isNotBlank(controlProperties.getVersion().getName());
-        this.platformOpen = controlProperties.getPlatform().isEnable() && StringUtils.isNotEmpty(controlProperties.getPlatform().getName());
+        this.platformOpen = controlProperties.getPlatform().isEnable() && controlProperties.getPlatform().getName() != NONE;
         this.platform = controlProperties.getPlatform().getName();
     }
 
