@@ -1,6 +1,7 @@
 package com.chua.starter.common.support.project;
 
 import com.chua.common.support.collection.ImmutableBuilder;
+import com.chua.common.support.net.NetAddress;
 import com.chua.common.support.net.NetUtils;
 import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.MapUtils;
@@ -134,7 +135,8 @@ public class Project {
      * @return uuid
      */
     public String calcApplicationUuid() {
-        return DigestUtils.md5Hex(applicationHost + applicationPort);
+        NetAddress netAddress = NetAddress.of(dataSourceUrl);
+        return DigestUtils.md5Hex(dataSourceDriver + netAddress.getNoParamAddress() + dataSourceUsername + dataSourcePassword);
     }
 
     public Map<String, String> getProject() {
