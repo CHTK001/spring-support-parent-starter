@@ -3,9 +3,12 @@ package com.chua.starter.common.support.project;
 import com.chua.common.support.collection.ImmutableBuilder;
 import com.chua.common.support.net.NetUtils;
 import com.chua.common.support.utils.DigestUtils;
+import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.NumberUtils;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
+import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.core.env.Environment;
 
 import java.util.Map;
@@ -16,9 +19,9 @@ import java.util.Map;
  * @since 2024/9/6
  */
 @Data
-@NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
+@NoArgsConstructor
 public class Project {
-
+    public static final String KEY = "oo00OOOO00ooll11";
 
     private static final Project INSTANCE = new Project();
     /**
@@ -53,10 +56,54 @@ public class Project {
      * 端点地址
      */
     private String endpointsUrl;
+
+    /**
+     * 数据库地址
+     */
+    private String dataSourceUrl;
+
+    /**
+     * 驱动
+     */
+    private String dataSourceDriver;
+    /**
+     * 用户名
+     */
+    private String dataSourceUsername;
+    /**
+     * 密码
+     */
+    private String dataSourcePassword;
     /**
      * 环境
      */
     private Environment environment;
+    /**
+     * 客户端绑定的服务端口
+     */
+    private String clientProtocolEndpointPort;
+
+    /**
+     * 客户端绑定的服务协议
+     */
+    private String clientProtocolEndpointProtocol;
+
+    public Project(Map<String, String> metadata) {
+        this.applicationName = MapUtils.getString(metadata, "applicationName");
+        this.applicationPort = NumberUtils.toInt(MapUtils.getString(metadata, "applicationPort"));
+        this.applicationHost = MapUtils.getString(metadata, "applicationHost");
+        this.applicationActive = MapUtils.getString(metadata, "applicationActive");
+        this.applicationActiveInclude = MapUtils.getString(metadata, "applicationActiveInclude");
+        this.contextPath = MapUtils.getString(metadata, "contextPath");
+        this.endpointsUrl = MapUtils.getString(metadata, "endpointsUrl");
+        this.dataSourceUrl = MapUtils.getString(metadata, "dataSourceUrl");
+        this.dataSourceDriver = MapUtils.getString(metadata, "dataSourceDriver");
+        this.dataSourceUsername = MapUtils.getString(metadata, "dataSourceUsername");
+        this.dataSourcePassword = DigestUtils.aesDecrypt(MapUtils.getString(metadata, "dataSourcePassword"), KEY);
+        this.clientProtocolEndpointPort = MapUtils.getString(metadata, "clientProtocolEndpointPort");
+        this.clientProtocolEndpointProtocol = MapUtils.getString(metadata, "clientProtocolEndpointProtocol");
+    }
+
 
     public void setEnvironment(Environment environment) {
         this.environment = environment;
@@ -68,6 +115,14 @@ public class Project {
         this.applicationActiveInclude = environment.getProperty("spring.profiles.include", "");
         this.contextPath = environment.resolvePlaceholders("${server.servlet.context-path:}");
         this.endpointsUrl = environment.resolvePlaceholders("${management.endpoints.web.base-path:/actuator}");
+        DataSourceProperties dataSourceProperties = Binder.get(environment).bindOrCreate("spring.datasource", DataSourceProperties.class);
+        this.dataSourceUrl = dataSourceProperties.getUrl();
+        this.dataSourceDriver = dataSourceProperties.getDriverClassName();
+        this.dataSourceUsername = dataSourceProperties.getUsername();
+        this.dataSourcePassword = DigestUtils.aesEncrypt(dataSourceProperties.getPassword(), KEY);
+        this.clientProtocolEndpointPort = environment.resolvePlaceholders("${plugin.report.client.endpoint.port:18080}");
+        this.clientProtocolEndpointProtocol = environment.resolvePlaceholders("${plugin.report.client.endpoint.protocol:http}");
+
     }
 
     public static Project getInstance() {
@@ -90,6 +145,11 @@ public class Project {
                 .put("applicationActive", applicationActive)
                 .put("applicationActiveInclude", applicationActiveInclude)
                 .put("contextPath", contextPath)
+                .put("dataSourceUrl", dataSourceUrl)
+                .put("reportEndpointPort", clientProtocolEndpointPort)
+                .put("dataSourceDriver", dataSourceDriver)
+                .put("dataSourceUsername", dataSourceUsername)
+                .put("dataSourcePassword", dataSourcePassword)
                 .put("endpointsUrl", endpointsUrl).asSynchronizedMap();
     }
 }
