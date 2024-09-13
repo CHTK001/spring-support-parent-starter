@@ -59,6 +59,11 @@ public class Project {
     private String endpointsUrl;
 
     /**
+     * 端点
+     */
+    private String endpoints;
+
+    /**
      * 数据库地址
      */
     private String dataSourceUrl;
@@ -97,6 +102,7 @@ public class Project {
         this.applicationActiveInclude = MapUtils.getString(metadata, "applicationActiveInclude");
         this.contextPath = MapUtils.getString(metadata, "contextPath");
         this.endpointsUrl = MapUtils.getString(metadata, "endpointsUrl");
+        this.endpoints = MapUtils.getString(metadata, "endpoints");
         this.dataSourceUrl = MapUtils.getString(metadata, "dataSourceUrl");
         this.dataSourceDriver = MapUtils.getString(metadata, "dataSourceDriver");
         this.dataSourceUsername = MapUtils.getString(metadata, "dataSourceUsername");
@@ -116,6 +122,7 @@ public class Project {
         this.applicationActiveInclude = environment.getProperty("spring.profiles.include", "");
         this.contextPath = environment.resolvePlaceholders("${server.servlet.context-path:}");
         this.endpointsUrl = environment.resolvePlaceholders("${management.endpoints.web.base-path:/actuator}");
+        this.endpoints = environment.resolvePlaceholders("${management.endpoints.web.exposure.include:*}");
         DataSourceProperties dataSourceProperties = Binder.get(environment).bindOrCreate("spring.datasource", DataSourceProperties.class);
         this.dataSourceUrl = dataSourceProperties.getUrl();
         this.dataSourceDriver = dataSourceProperties.getDriverClassName();

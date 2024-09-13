@@ -4,6 +4,10 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.report.server.starter.entity.MonitorJobLog;
 import com.chua.report.server.starter.job.pojo.JobStatisticResult;
 
+/**
+ * 监控日志
+ * @author Administrator
+ */
 public interface MonitorJobLogService extends IService<MonitorJobLog>{
 
 
