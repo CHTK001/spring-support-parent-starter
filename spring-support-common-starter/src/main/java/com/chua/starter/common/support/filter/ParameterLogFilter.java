@@ -122,7 +122,7 @@ public class ParameterLogFilter implements Filter {
         log.info("请求URL: {} -> {}", requestWrapper.getMethod(), requestWrapper.getRequestURL());
         String body = IoUtils.toString(requestWrapper.getInputStream(), requestWrapper.getCharacterEncoding());
         if(null != body && body.length() < NumberConstant.TWE_THOUSAND) {
-            log.info("请求参数: {}", body);
+            log.info("请求消息体: {}", body);
         }
 
     }
