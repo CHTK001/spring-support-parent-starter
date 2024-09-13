@@ -10,14 +10,14 @@ import org.springframework.context.annotation.Bean;
  * @author CH
  * @since 2024/9/13
  */
-public class EndpointConfiguration {
+public class CustomEndpointConfiguration {
 
 
     /**
      * map
      * @return MapEndpoint
      */
-    @Bean
+    @Bean("mapEndpoint-1")
     @ConditionalOnMissingBean
     public MapEndpoint mapEndpoint() {
         return new MapEndpoint();
@@ -26,7 +26,7 @@ public class EndpointConfiguration {
      * threadEndpoint
      * @return ThreadEndpoint
      */
-    @Bean
+    @Bean("threadEndpoint-1")
     @ConditionalOnMissingBean
     public ThreadEndpoint threadEndpoint() {
         return new ThreadEndpoint();
