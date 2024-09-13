@@ -7,6 +7,7 @@ import com.chua.report.client.starter.function.ReportXxlJobConfiguration;
 import com.chua.report.client.starter.properties.ReportClientProperties;
 import com.chua.report.client.starter.properties.ReportEndpointProperties;
 import com.chua.report.client.starter.setting.SettingFactory;
+import com.chua.report.client.starter.spring.endpoint.MapEndpoint;
 import lombok.Data;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.DisposableBean;
@@ -18,6 +19,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.EnvironmentAware;
+import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
 
 /**
@@ -28,7 +30,6 @@ import org.springframework.core.env.Environment;
 @Data
 @EnableConfigurationProperties({ReportClientProperties.class, ReportEndpointProperties.class})
 public class ReportClientConfiguration implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware, EnvironmentAware, DisposableBean {
-
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
