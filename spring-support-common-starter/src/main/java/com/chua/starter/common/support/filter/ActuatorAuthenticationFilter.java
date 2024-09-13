@@ -120,8 +120,12 @@ public class ActuatorAuthenticationFilter implements Filter {
             return true;
         }
         String headerAuthorization = request.getHeader(AUTHORIZATION);
-        String encodeString = BASIC + Base64.getEncoder().encodeToString((actuatorName + ":" + actuatorPassword).getBytes(StandardCharsets.UTF_8));
+        String encodeString = getKey(actuatorName, actuatorPassword);
         return headerAuthorization != null && headerAuthorization.equals(encodeString);
+    }
+
+    public static String getKey(String actuatorName, String actuatorPassword) {
+        return BASIC + Base64.getEncoder().encodeToString((actuatorName + ":" + actuatorPassword).getBytes(StandardCharsets.UTF_8));
     }
 
 }
