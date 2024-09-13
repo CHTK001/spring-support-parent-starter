@@ -8,7 +8,7 @@ import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
 
 /**
- * redis端点
+ * 线程端点
  *
  * @author CH
  * @version 1.0.0
