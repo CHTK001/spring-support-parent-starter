@@ -5,6 +5,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.report.server.starter.entity.MonitorJob;
 
 /**
+ * 监控任务
  * @author Administrator
  */
 public interface MonitorJobService extends IService<MonitorJob>{
