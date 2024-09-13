@@ -27,6 +27,7 @@ import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.core.env.Environment;
 
+import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -171,9 +172,14 @@ public class SettingFactory implements AutoCloseable, InitializingBean {
      * @return 协议服务器对象
      */
     public Protocol getProtocol() {
+        InetAddress address = serverProperties.getAddress();
+        String bindHost = "0.0.0.0";
+        if(null != address) {
+            bindHost = address.getHostAddress();
+        }
         Codec codec = new AesCodec("1234567890123456".getBytes(StandardCharsets.UTF_8));
         ProtocolSetting protocolSetting = ProtocolSetting.builder()
-                .host(serverProperties.getAddress().getHostAddress())
+                .host(bindHost)
                 .port(getEndpointPort())
                 .codec(codec)
                 .build();
