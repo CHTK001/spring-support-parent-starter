@@ -4,7 +4,9 @@ import com.chua.common.support.http.HttpClient;
 import com.chua.common.support.http.HttpMethod;
 import com.chua.common.support.http.HttpResponse;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.report.server.starter.pojo.ActuatorRequest;
+import com.chua.starter.common.support.filter.ActuatorAuthenticationFilter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -31,15 +33,15 @@ public class ActuatorController {
      * @return ReturnResult
      */
     @Operation(summary = "获取actuator信息")
-    @PostMapping("get")
+    @PostMapping("call")
     public ReturnResult<String> post(@RequestBody ActuatorRequest request) {
         HttpResponse response = HttpClient.newHttpMethod(HttpMethod.valueOf(request.getMethod()))
                 .body(request.getBody())
+                .header("Authorization", ActuatorAuthenticationFilter.getKey(
+                        StringUtils.defaultString(request.getUsername(), "actuator"),
+                        StringUtils.defaultString(request.getUsername(), "actuator")))
                 .url(request.getUrl())
                 .newInvoker().execute();
-        if(response.isSuccess()) {
-            return ReturnResult.ok(response.content(String.class));
-        }
-        return ReturnResult.error(response.message());
+        return ReturnResult.of(response);
     }
 }

@@ -10,7 +10,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
- * redis端点
+ * 内存端点
  *
  * @author CH
  * @version 1.0.0
