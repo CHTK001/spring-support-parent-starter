@@ -153,12 +153,18 @@ public class Project {
                 .put("applicationHost", applicationHost)
                 .put("applicationActive", applicationActive)
                 .put("applicationActiveInclude", applicationActiveInclude)
+
                 .put("contextPath", contextPath)
+
                 .put("dataSourceUrl", dataSourceUrl)
-                .put("reportEndpointPort", clientProtocolEndpointPort)
                 .put("dataSourceDriver", dataSourceDriver)
                 .put("dataSourceUsername", dataSourceUsername)
                 .put("dataSourcePassword", dataSourcePassword)
+
+                .put("reportEndpointPort", clientProtocolEndpointPort)
+                .put("reportEndpointProtocol", clientProtocolEndpointProtocol)
+
+                .put("endpoints", endpoints)
                 .put("endpointsUrl", endpointsUrl).asSynchronizedMap();
     }
 }
