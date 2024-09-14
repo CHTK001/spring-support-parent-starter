@@ -15,6 +15,7 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.ObjectUtils;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.report.client.starter.endpoint.ModuleType;
+import com.chua.report.server.starter.entity.MonitorJobLog;
 import com.chua.report.server.starter.entity.MonitorLog;
 import com.chua.report.server.starter.service.MonitorLogService;
 import com.chua.report.server.starter.service.MonitorSender;
@@ -24,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -60,6 +62,7 @@ public class MonitorSenderImpl implements MonitorSender, InitializingBean {
                 throw new RuntimeException("未找到对应协议");
             }
 
+            long startTime = System.currentTimeMillis();
             ProtocolClient protocolClient = protocol.createClient();
             Response responseCode = protocolClient.sendRequestAndReply(SenderRequest.builder()
                     .url("/" + moduleType.name().toLowerCase())
@@ -79,6 +82,9 @@ public class MonitorSenderImpl implements MonitorSender, InitializingBean {
                 monitorLog.setLogProfile(project.getApplicationActive());
                 monitorLog.setLogAppname(project.getApplicationName());
                 monitorLog.setLogContent(params);
+                if(o instanceof MonitorJobLog monitorJobLog) {
+                    monitorJobLog.setJobLogCost(BigDecimal.valueOf(System.currentTimeMillis() - startTime));
+                }
 
                 monitorLogService.save(monitorLog);
             } catch (Exception ignored) {
