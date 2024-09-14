@@ -18,6 +18,7 @@ public class CustomEndpointConfiguration {
      * @return MapEndpoint
      */
     @Bean("mapEndpoint-1")
+    @ConditionalOnMissingBean
     public MapEndpoint mapEndpoint() {
         return new MapEndpoint();
     }
@@ -26,6 +27,7 @@ public class CustomEndpointConfiguration {
      * @return ThreadEndpoint
      */
     @Bean("threadEndpoint-1")
+    @ConditionalOnMissingBean
     public ThreadEndpoint threadEndpoint() {
         return new ThreadEndpoint();
     }

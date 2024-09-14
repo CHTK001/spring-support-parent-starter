@@ -66,8 +66,10 @@ public class SettingFactory implements AutoCloseable, InitializingBean {
     private String reportServerHost;
     private int reportServerPort;
     private ZbusClient zbusClient;
+    @Getter
     private String reportTopic;
     private Producer producer;
+    @Getter
     private Producer reportProducer;
     private Integer reportTime;
 
@@ -279,7 +281,7 @@ public class SettingFactory implements AutoCloseable, InitializingBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        if (RUNNING.compareAndSet(false, true)) {
+        if (!RUNNING.compareAndSet(false, true)) {
             return;
         }
         scheduledExecutorService = ThreadUtils.newScheduledThreadPoolExecutor(1, "com-ch-monitor-core-thread");

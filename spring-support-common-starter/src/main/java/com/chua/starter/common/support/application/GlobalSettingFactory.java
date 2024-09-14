@@ -141,7 +141,7 @@ public class GlobalSettingFactory {
             return;
         }
 
-        set(PREFIX + group, name, value);
+        set(group, name, value);
         CHANGE.put(PREFIX + group + name, CommonConstant.SYMBOL_EMPTY);
     }
 
@@ -157,7 +157,7 @@ public class GlobalSettingFactory {
             return;
         }
 
-        List<T> ts = get(PREFIX + group);
+        List<T> ts = get(group);
         if (null == ts) {
             return;
         }
@@ -178,7 +178,7 @@ public class GlobalSettingFactory {
      * @param <T>   泛型标记
      */
     public synchronized <T> void set(String group, String name, Object value) {
-        List<T> ts = get(PREFIX + group);
+        List<T> ts = get(group);
         if (null == ts) {
             return;
         }
@@ -202,7 +202,7 @@ public class GlobalSettingFactory {
      */
     @SuppressWarnings("ALL")
     public synchronized <T> void set(String group, Class<T> type, String name, Object value) {
-        T t = get(PREFIX + group, type);
+        T t = get(group, type);
         if (null == t) {
             return;
         }

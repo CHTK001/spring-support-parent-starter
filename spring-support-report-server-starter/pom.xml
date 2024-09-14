@@ -27,6 +27,11 @@
 
         <dependency>
             <groupId>com.chua</groupId>
+            <artifactId>spring-support-socketio-starter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.chua</groupId>
             <artifactId>spring-support-mybatis-starter</artifactId>
         </dependency>
 
