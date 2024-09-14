@@ -43,47 +43,72 @@ public class MonitorJob extends SysBase implements Serializable {
     /**
      * 任务类型; cron, fixed
      */
-    @TableField(value = "job_type")
+    @TableField(value = "job_schedule_type")
     @ApiModelProperty(value = "任务类型; cron, fixed")
     @Schema(description = "任务类型; cron, fixed")
     @Size(max = 255, message = "任务类型; cron, fixed最大长度要小于 255")
-    private String jobType;
+    private String jobScheduleType;
 
     /**
      * 时间配置
      */
-    @TableField(value = "job_conf")
+    @TableField(value = "job_schedule_time")
     @ApiModelProperty(value = "时间配置")
     @Schema(description = "时间配置")
     @Size(max = 255, message = "时间配置最大长度要小于 255")
-    private String jobConf;
+    private String jobScheduleTime;
+    /**
+     * 时间配置
+     */
+    @TableField(value = "job_author")
+    @ApiModelProperty(value = "负责人")
+    @Schema(description = "负责人")
+    @Size(max = 255, message = "负责人最大长度要小于 255")
+    private String jobAuthor;
+    /**
+     * 时间配置
+     */
+    @TableField(value = "job_alarm_email")
+    @ApiModelProperty(value = "报警邮件")
+    @Schema(description = "报警邮件")
+    @Size(max = 255, message = "报警邮件最大长度要小于 255")
+    private String jobAlarmEmail;
+
 
 
     /**
      * 状态;0: 未启用； 1: 正在运行
      */
-    @TableField(value = "job_status")
+    @TableField(value = "job_trigger_status")
     @ApiModelProperty(value = "状态;0: 未启用； 1: 正在运行")
     @Schema(description = "状态;0: 未启用； 1: 正在运行")
-    private Integer jobStatus;
+    private Integer jobTriggerStatus;
 
     /**
      * 对应的应用ID
      */
-    @TableField(value = "job_app")
+    @TableField(value = "monitor_id")
     @ApiModelProperty(value = "对应的应用ID")
     @Schema(description = "对应的应用ID")
     @Size(max = 255, message = "对应的应用ID最大长度要小于 255")
-    private String jobApp;
+    private Integer monitorId;
+    /**
+     * 对应的应用名称
+     */
+    @TableField(value = "job_application_name")
+    @ApiModelProperty(value = "对应的应用名称")
+    @Schema(description = "对应的应用名称")
+    @Size(max = 255, message = "对应的应用名称最大长度要小于 255")
+    private String jobApplicationName;
 
     /**
      * 环境
      */
-    @TableField(value = "job_profile")
+    @TableField(value = "job_application_active")
     @ApiModelProperty(value = "环境")
     @Schema(description = "环境")
     @Size(max = 255, message = "环境最大长度要小于 255")
-    private String jobProfile;
+    private String jobApplicationActive;
 
     /**
      * 描述

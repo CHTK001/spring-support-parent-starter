@@ -121,7 +121,7 @@ public class CoreTriggerHandler implements TriggerHandler, Runnable {
                             refreshNextValidTime(jobInfo, new Date());
 
                             // next-trigger-time in 5s, pre-read again
-                            if (jobInfo.getJobStatus() == 1 && nowTime + PRE_READ_MS > jobInfo.getJobTriggerNextTime()) {
+                            if (jobInfo.getJobTriggerStatus() == 1 && nowTime + PRE_READ_MS > jobInfo.getJobTriggerNextTime()) {
 
                                 // 1、make ring second
                                 int ringSecond = (int) ((jobInfo.getJobTriggerNextTime() / 1000) % 60);
@@ -194,22 +194,22 @@ public class CoreTriggerHandler implements TriggerHandler, Runnable {
             jobInfo.setJobTriggerLastTime(jobInfo.getJobTriggerNextTime());
             jobInfo.setJobTriggerNextTime(nextValidTime.getTime());
         } else {
-            jobInfo.setJobStatus(0);
+            jobInfo.setJobTriggerStatus(0);
             jobInfo.setJobTriggerLastTime(0L);
             jobInfo.setJobTriggerNextTime(0L);
             log.warn(">>>>>>>>>>> job, refreshNextValidTime fail for job: jobId={}, scheduleType={}, scheduleConf={}",
-                    jobInfo.getJobId(), jobInfo.getJobType(), jobInfo.getJobConf());
+                    jobInfo.getJobId(), jobInfo.getJobScheduleType(), jobInfo.getJobScheduleTime());
         }
     }
 
     // ---------------------- tools ----------------------
     public static Date generateNextValidTime(MonitorJob jobInfo, Date fromTime) throws Exception {
-        SchedulerTypeEnum scheduleTypeEnum = SchedulerTypeEnum.match(jobInfo.getJobType(), null);
+        SchedulerTypeEnum scheduleTypeEnum = SchedulerTypeEnum.match(jobInfo.getJobScheduleType(), null);
         if (SchedulerTypeEnum.CRON == scheduleTypeEnum) {
-            Date nextValidTime = new CronExpression(jobInfo.getJobConf()).getNextValidTimeAfter(fromTime);
+            Date nextValidTime = new CronExpression(jobInfo.getJobScheduleTime()).getNextValidTimeAfter(fromTime);
             return nextValidTime;
         } else if (SchedulerTypeEnum.FIXED == scheduleTypeEnum /*|| ScheduleTypeEnum.FIX_DELAY == scheduleTypeEnum*/) {
-            return new Date(fromTime.getTime() + Integer.valueOf(jobInfo.getJobConf())*1000 );
+            return new Date(fromTime.getTime() + Integer.valueOf(jobInfo.getJobScheduleTime())*1000 );
         }
         return null;
     }

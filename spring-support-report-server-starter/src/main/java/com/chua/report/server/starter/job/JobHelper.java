@@ -24,11 +24,11 @@ public class JobHelper {
      * @throws Exception 例外
      */
     public static Date generateNextValidTime(MonitorJob jobInfo, Date fromTime) throws Exception {
-        SchedulerTypeEnum scheduleTypeEnum = SchedulerTypeEnum.match(jobInfo.getJobType(), null);
+        SchedulerTypeEnum scheduleTypeEnum = SchedulerTypeEnum.match(jobInfo.getJobScheduleType(), null);
         if (SchedulerTypeEnum.CRON == scheduleTypeEnum) {
-            return new CronExpression(jobInfo.getJobConf()).getNextValidTimeAfter(fromTime);
+            return new CronExpression(jobInfo.getJobScheduleTime()).getNextValidTimeAfter(fromTime);
         } else if (SchedulerTypeEnum.FIXED == scheduleTypeEnum /*|| ScheduleTypeEnum.FIX_DELAY == scheduleTypeEnum*/) {
-            return new Date(fromTime.getTime() + Integer.parseInt(jobInfo.getJobConf()) * 1000L);
+            return new Date(fromTime.getTime() + Integer.parseInt(jobInfo.getJobScheduleTime()) * 1000L);
         }
         return null;
     }

@@ -55,7 +55,7 @@ public class MonitorSenderImpl implements MonitorSender {
 
         ProtocolClient protocolClient = protocol.createClient();
         Response responseCode = protocolClient.sendRequestAndReply(SenderRequest.builder()
-                .url("/")
+                .url("/" + moduleType.name().toLowerCase())
                 .content(params)
                 .profile(project.getApplicationActive())
                 .appName(project.getApplicationName())
@@ -64,7 +64,7 @@ public class MonitorSenderImpl implements MonitorSender {
 
         try {
             monitorLog.setLogCode(null == responseCode ? "-1" : String.valueOf(responseCode.code()));
-            monitorLog.setLogMsg(null == responseCode ? null : responseCode.message());
+            monitorLog.setLogMsg(null == responseCode ? null : responseCode.getSource().toString());
             monitorLog.setLogHost(project.getApplicationHost());
             monitorLog.setLogPort(project.getApplicationPort());
             monitorLog.setLogModuleType(moduleType.name());

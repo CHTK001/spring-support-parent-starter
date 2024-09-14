@@ -116,17 +116,17 @@ public class MonitorJobController extends AbstractSwaggerController<MonitorJobSe
     /**
      * 下一次触发时间
      *
-     * @param scheduleType 时间表类型
-     * @param scheduleConf 时间表conf
+     * @param jobScheduleType 时间表类型
+     * @param jobScheduleTime 时间表conf
      * @return {@link ReturnResult}<{@link List}<{@link String}>>
      */
     @GetMapping("/nextTriggerTime")
     @Permission("sys:monitor:job:run")
-    public ReturnResult<List<String>> nextTriggerTime(String scheduleType, String scheduleConf) {
+    public ReturnResult<List<String>> nextTriggerTime(String jobScheduleType, String jobScheduleTime) {
 
         MonitorJob paramXxlJobInfo = new MonitorJob();
-        paramXxlJobInfo.setJobType(scheduleType);
-        paramXxlJobInfo.setJobConf(scheduleConf);
+        paramXxlJobInfo.setJobScheduleType(jobScheduleType);
+        paramXxlJobInfo.setJobScheduleTime(jobScheduleTime);
 
         List<String> result = new ArrayList<>();
         try {

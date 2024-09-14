@@ -6,6 +6,7 @@ import com.chua.common.support.net.NetUtils;
 import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.NumberUtils;
+import com.chua.common.support.utils.StringUtils;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
@@ -128,7 +129,7 @@ public class Project {
         this.dataSourceDriver = dataSourceProperties.getDriverClassName();
         this.dataSourceUsername = dataSourceProperties.getUsername();
         this.dataSourcePassword = DigestUtils.aesEncrypt(dataSourceProperties.getPassword(), KEY);
-        this.clientProtocolEndpointPort = environment.resolvePlaceholders("${plugin.report.client.endpoint.port:18080}");
+        this.clientProtocolEndpointPort = StringUtils.defaultString(environment.resolvePlaceholders("${plugin.report.client.endpoint.port:}"), String.valueOf(NumberUtils.toInt(environment.resolvePlaceholders("${server.port:8080}")) + 10000));
         this.clientProtocolEndpointProtocol = environment.resolvePlaceholders("${plugin.report.client.endpoint.protocol:http}");
 
     }
@@ -161,8 +162,8 @@ public class Project {
                 .put("dataSourceUsername", dataSourceUsername)
                 .put("dataSourcePassword", dataSourcePassword)
 
-                .put("reportEndpointPort", clientProtocolEndpointPort)
-                .put("reportEndpointProtocol", clientProtocolEndpointProtocol)
+                .put("clientProtocolEndpointPort", clientProtocolEndpointPort)
+                .put("clientProtocolEndpointProtocol", clientProtocolEndpointProtocol)
 
                 .put("endpoints", endpoints)
                 .put("endpointsUrl", endpointsUrl).asSynchronizedMap();

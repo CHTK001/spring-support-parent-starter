@@ -2,6 +2,8 @@ package com.chua.report.client.starter.function;
 
 import com.chua.common.support.invoke.annotation.RequestLine;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.json.JsonObject;
+import com.chua.common.support.protocol.request.BadResponse;
 import com.chua.common.support.protocol.request.OkResponse;
 import com.chua.common.support.protocol.request.Request;
 import com.chua.common.support.protocol.request.Response;
@@ -15,6 +17,8 @@ import com.chua.report.client.starter.job.handler.JobHandler;
 import com.chua.report.client.starter.job.handler.JobHandlerFactory;
 import com.chua.report.client.starter.setting.SettingFactory;
 import com.chua.starter.common.support.annotations.Job;
+import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.starter.common.support.project.Project;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
@@ -41,7 +45,16 @@ public class ReportXxlJobConfiguration implements BeanFactoryAware, SmartInstant
 
     @RequestLine("job")
     public Response listen(Request request) {
-        JobValue jobValue = request.getBody(JobValue.class);
+        JsonObject jsonObject = Json.getJsonObject(new String(request.getBody()));
+        String profile = jsonObject.getString("profile");
+        String applicationActive = Project.getInstance().getApplicationActive();
+        String applicationActiveInclude = Project.getInstance().getApplicationActiveInclude();
+        if(!profile.equals(applicationActive) && !applicationActiveInclude.contains(profile)) {
+            return new BadResponse(request, "环境不支持");
+        }
+
+        String content = jsonObject.getString("content");
+        JobValue jobValue = Json.fromJson(content, JobValue.class);
         JobExecute jobExecute = new DefaultJobExecute();
         return jobExecute.run(request, jobValue);
     }
