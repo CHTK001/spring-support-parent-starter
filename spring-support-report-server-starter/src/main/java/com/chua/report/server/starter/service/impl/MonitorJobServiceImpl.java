@@ -25,7 +25,7 @@ public class MonitorJobServiceImpl extends ServiceImpl<MonitorJobMapper, Monitor
     public ReturnResult<String> stop(int jobId) {
         MonitorJob monitorJob = baseMapper.selectById(jobId);
 
-        monitorJob.setJobStatus(0);
+        monitorJob.setJobTriggerStatus(0);
         monitorJob.setJobTriggerLastTime(0L);
         monitorJob.setJobTriggerNextTime(0L);
 
@@ -39,7 +39,7 @@ public class MonitorJobServiceImpl extends ServiceImpl<MonitorJobMapper, Monitor
         MonitorJob monitorJob = baseMapper.selectById(jobId);
 
         // valid
-        SchedulerTypeEnum scheduleTypeEnum = SchedulerTypeEnum.match(monitorJob.getJobType(), SchedulerTypeEnum.NONE);
+        SchedulerTypeEnum scheduleTypeEnum = SchedulerTypeEnum.match(monitorJob.getJobScheduleType(), SchedulerTypeEnum.NONE);
         if (SchedulerTypeEnum.NONE == scheduleTypeEnum) {
             return ReturnResult.illegal("限制启动");
         }
@@ -57,7 +57,7 @@ public class MonitorJobServiceImpl extends ServiceImpl<MonitorJobMapper, Monitor
             return ReturnResult.illegal("限制启动");
         }
 
-        monitorJob.setJobStatus(1);
+        monitorJob.setJobTriggerStatus(1);
         monitorJob.setJobTriggerLastTime(0L);
         monitorJob.setJobTriggerNextTime(nextTriggerTime);
 
