@@ -7,6 +7,7 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
  * 该类用于封装监控代理限制日志的结果。
@@ -17,6 +18,7 @@ import lombok.Data;
  * @author CH
  * @since 2024/6/26
  */
+@EqualsAndHashCode(callSuper = true)
 @ApiModel(description = "限流日志")
 @Schema(description = "限流日志")
 @Data
