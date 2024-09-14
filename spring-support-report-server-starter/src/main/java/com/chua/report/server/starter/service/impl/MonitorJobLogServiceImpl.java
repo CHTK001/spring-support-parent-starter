@@ -30,6 +30,8 @@ public class MonitorJobLogServiceImpl extends ServiceImpl<MonitorJobLogMapper, M
         if(null == startDate || null == endDate) {
             return new JobStatisticResult();
         }
+        endDate = endDate.withHour(0).withMinute(0).withSecond(0).withNano(0).plusDays(1).minusSeconds(1);
+        entity.setEndDate(endDate);
         List<JobStatistic> time = baseMapper.time(entity);
         JobStatisticResult result = new JobStatisticResult();
 

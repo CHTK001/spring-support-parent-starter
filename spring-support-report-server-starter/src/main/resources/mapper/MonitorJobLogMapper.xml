@@ -3,14 +3,26 @@
 <mapper namespace="com.chua.report.server.starter.mapper.MonitorJobLogMapper">
   <select id="time" resultType="com.chua.report.server.starter.job.pojo.JobStatistic">
       SELECT
-        count( job_log_trigger_code ) cnt,
-        job_log_trigger_code,
-        job_log_trigger_date
+          sum(cnt) cnt,
+          job_log_trigger_code,
+          job_log_trigger_date
       FROM
-        monitor_job_log
-      WHERE
-        job_log_trigger_time <![CDATA[>=]]> #{query.startDate} AND job_log_trigger_time  <![CDATA[<=]]> #{query.endDate}
+          (
+          SELECT
+              count(job_log_trigger_code) cnt,
+              case when job_log_trigger_code = '00000' then '00000' else 'S0512C0000' end job_log_trigger_code,
+              job_log_trigger_date
+          FROM
+            monitor_job_log
+          WHERE
+              job_log_trigger_time between #{query.startDate} and #{query.endDate}
+          GROUP BY
+              job_log_trigger_code,
+              job_log_trigger_date
+      ) t
+
       GROUP BY
-        job_log_trigger_code, job_log_trigger_date
+      job_log_trigger_code,
+      job_log_trigger_date
     </select>
 </mapper>
