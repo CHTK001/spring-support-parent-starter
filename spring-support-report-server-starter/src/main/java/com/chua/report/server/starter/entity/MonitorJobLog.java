@@ -4,10 +4,12 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.starter.mybatis.pojo.SysBase;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.hibernate.annotations.ColumnDefault;
 
 import javax.validation.constraints.NotNull;
@@ -20,11 +22,12 @@ import java.util.Date;
 /**
  * 任务日志
  */
+@EqualsAndHashCode(callSuper = true)
 @ApiModel(description="任务日志")
 @Schema(description="任务日志")
 @Data
 @TableName(value = "monitor_job_log")
-public class MonitorJobLog implements Serializable {
+public class MonitorJobLog extends SysBase implements Serializable {
     @TableId(value = "job_log_id", type = IdType.AUTO)
     @ApiModelProperty(value="")
     @Schema(description="")
@@ -126,6 +129,7 @@ public class MonitorJobLog implements Serializable {
 
     @TableField(exist = false)
     private LocalDateTime startDate;
+
     @TableField(exist = false)
     private LocalDateTime endDate;
 
