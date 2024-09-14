@@ -6,8 +6,8 @@ import com.chua.report.client.starter.function.ReportConfigValueConfiguration;
 import com.chua.report.client.starter.function.ReportXxlJobConfiguration;
 import com.chua.report.client.starter.properties.ReportClientProperties;
 import com.chua.report.client.starter.properties.ReportEndpointProperties;
+import com.chua.report.client.starter.service.ReportService;
 import com.chua.report.client.starter.setting.SettingFactory;
-import com.chua.report.client.starter.spring.endpoint.MapEndpoint;
 import lombok.Data;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.DisposableBean;
@@ -19,7 +19,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.EnvironmentAware;
-import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
 
 /**
@@ -35,6 +34,7 @@ public class ReportClientConfiguration implements BeanDefinitionRegistryPostProc
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         //注册协议
         registerProtocol(registry);
+        registerService(registry);
     }
 
     @Override
@@ -45,6 +45,12 @@ public class ReportClientConfiguration implements BeanDefinitionRegistryPostProc
     @Override
     public void setEnvironment(Environment environment) {
         SettingFactory.getInstance().register(environment);
+    }
+
+    private void registerService(BeanDefinitionRegistry registry) {
+        registry.registerBeanDefinition("reportService", BeanDefinitionBuilder
+                .rootBeanDefinition(ReportService.class)
+                .getBeanDefinition());
     }
 
     /**

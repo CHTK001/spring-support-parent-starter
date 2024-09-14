@@ -2,7 +2,7 @@ package com.chua.report.server.starter.consumer;
 
 import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.IoUtils;
-import com.chua.report.client.starter.entity.ReportValue;
+import com.chua.report.client.starter.report.event.ReportEvent;
 import com.chua.report.server.starter.router.Router;
 import io.zbus.mq.Broker;
 import io.zbus.mq.Consumer;
@@ -31,8 +31,8 @@ public class ReportConsumer implements AutoCloseable {
             try {
                 consumer1.start((msg, consumer) -> {
                     try {
-                        ReportValue reportValue = Json.fromJson(msg.getBody(), ReportValue.class);
-                        router.doRoute(reportValue);
+                        ReportEvent reportEvent = Json.fromJson(msg.getBody(), ReportEvent.class);
+                        router.doRoute(reportEvent);
                     } catch (Exception ignored) {
                     }
                 });

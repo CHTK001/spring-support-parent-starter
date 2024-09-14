@@ -41,7 +41,11 @@ import org.springframework.util.ReflectionUtils;
  */
 @Slf4j
 @MapperScan("com.chua.report.server.starter.mapper")
-@ComponentScan({"com.chua.report.server.starter.service", "com.chua.report.server.starter.controller"})
+@ComponentScan({
+        "com.chua.report.server.starter.service",
+        "com.chua.report.server.starter.report.endpoint",
+        "com.chua.report.server.starter.controller"
+})
 @EnableConfigurationProperties({ReportServerProperties.class, JobProperties.class})
 public class ReportServerConfiguration implements BeanDefinitionRegistryPostProcessor, EnvironmentAware, DisposableBean, CommandLineRunner, SmartInstantiationAwareBeanPostProcessor {
     private Integer serverPort;
