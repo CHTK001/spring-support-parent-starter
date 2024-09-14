@@ -106,7 +106,7 @@ public class XxlJobTrigger {
         // 4、trigger remote executor
         ReturnResult<String> triggerResult = null;
         if (address != null) {
-            triggerResult = runExecutor(triggerParam, address);
+            triggerResult = runExecutor(jobLog, triggerParam, address);
         } else {
             triggerResult = ReturnResult.illegal();
         }
@@ -128,14 +128,15 @@ public class XxlJobTrigger {
     /**
      * run executor
      *
+     * @param jobLog
      * @param triggerParam
      * @param address
      * @return
      */
-    public static ReturnResult<String> runExecutor(TriggerParam triggerParam,  Set<Discovery> address) {
+    public static ReturnResult<String> runExecutor(MonitorJobLog jobLog, TriggerParam triggerParam, Set<Discovery> address) {
         ReturnResult<String> runResult = null;
         try {
-            runResult = JobConfig.getInstance().run(address, triggerParam);
+            runResult = JobConfig.getInstance().run(jobLog, address, triggerParam);
         } catch (Exception e) {
             logger.error(">>>>>>>>>>> job trigger error, please check if the executor[{}] is running.", address, e);
             runResult = ReturnResult.illegal(e);
