@@ -2,7 +2,7 @@ package com.chua.report.server.starter.router;
 
 import com.chua.common.support.annotations.OnRouterEvent;
 import com.chua.common.support.utils.ClassUtils;
-import com.chua.report.client.starter.entity.ReportValue;
+import com.chua.report.client.starter.report.event.ReportEvent;
 import lombok.Data;
 
 import java.lang.reflect.Method;
@@ -30,14 +30,14 @@ public class Router {
         }
     }
 
-    public void doRoute(ReportValue reportValue) {
-        String reportType = reportValue.getReportType();
+    public void doRoute(ReportEvent reportEvent) {
+        ReportEvent.ReportType reportType = reportEvent.getReportType();
         if(null == reportType) {
             return;
         }
-        routerInfoMap.getOrDefault(reportType.toUpperCase(), Collections.emptyList()).forEach(it -> {
+        routerInfoMap.getOrDefault(reportType.name(), Collections.emptyList()).forEach(it -> {
             try {
-                it.getMethod().invoke(it.getBean(), reportValue);
+                it.getMethod().invoke(it.getBean(), reportEvent);
             } catch (Exception ignored) {
             }
         });

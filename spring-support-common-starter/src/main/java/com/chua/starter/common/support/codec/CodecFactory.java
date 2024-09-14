@@ -174,7 +174,7 @@ public class CodecFactory implements Upgrade<CodecSetting>, ApplicationListener<
      * @return {@link boolean}
      */
     public boolean requestCodecOpen() {
-        return codecSetting.isCodecRequestOpen();
+        return null != codecSetting && codecSetting.isCodecRequestOpen();
     }
 
 
