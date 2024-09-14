@@ -2,6 +2,7 @@ package com.chua.report.server.starter.job.trigger;
 
 import com.chua.common.support.discovery.Discovery;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.utils.MapUtils;
 import com.chua.report.client.starter.job.TriggerParam;
 import com.chua.report.server.starter.entity.MonitorJob;
 import com.chua.report.server.starter.entity.MonitorJobLog;
@@ -72,10 +73,10 @@ public class XxlJobTrigger {
 
         // 1、save log-id
         MonitorJobLog jobLog = new MonitorJobLog();
-        jobLog.setJobLogApp(jobInfo.getJobApp());
+        jobLog.setJobLogApp(jobInfo.getJobApplicationName());
         jobLog.setJobLogTriggerBean(jobInfo.getJobExecuteBean());
         jobLog.setJobLogTriggerType(triggerType.getName());
-        jobLog.setJobLogProfile(jobInfo.getJobProfile());
+        jobLog.setJobLogProfile(jobInfo.getJobApplicationActive());
         jobLog.setJobLogTriggerTime(new Date());
         jobLog.setJobLogTriggerDate(LocalDate.now());
         JobConfig.getInstance().saveLog(jobLog);
@@ -83,7 +84,7 @@ public class XxlJobTrigger {
 
         // 2、init trigger-param
         TriggerParam triggerParam = new TriggerParam();
-        triggerParam.setProfile(jobInfo.getJobProfile());
+        triggerParam.setProfile(jobInfo.getJobApplicationActive());
         triggerParam.setJobId(jobInfo.getJobId());
         triggerParam.setExecutorHandler(jobInfo.getJobExecuteBean());
         triggerParam.setExecutorParams(jobInfo.getJobExecuteParam());
@@ -97,6 +98,10 @@ public class XxlJobTrigger {
 
         // 3、init address
         Set<Discovery> address = JobConfig.getInstance().getAddress(triggerParam, jobInfo);
+        //3.1 过滤环境
+        address = address.stream().filter(it -> {
+            return jobInfo.getJobApplicationActive().equals(MapUtils.getString(it.getMetadata(), "applicationActive"));
+        }).collect(Collectors.toUnmodifiableSet());
 
         // 4、trigger remote executor
         ReturnResult<String> triggerResult = null;

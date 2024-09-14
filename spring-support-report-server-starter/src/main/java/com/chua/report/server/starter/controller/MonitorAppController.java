@@ -69,7 +69,7 @@ public class MonitorAppController extends AbstractSwaggerUpdateController<Monito
     @ResponseBody
     @Operation(summary = "查询基础数据")
     @GetMapping("list")
-    public ReturnResult<List<MonitorApplication>> list(Query<MonitorApplication> page, @Valid MonitorApplication entity, @Ignore BindingResult bindingResult) {
+    public ReturnResult<List<MonitorApplication>> list(@Valid MonitorApplication entity) {
         List<MonitorApplication> page1 = getService().list(Wrappers.lambdaQuery(entity));
         mergePage(page1);
         return ReturnResult.ok(page1);

@@ -1,6 +1,7 @@
 package com.chua.report.client.starter.job.execute;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.protocol.request.BadResponse;
 import com.chua.common.support.protocol.request.DefaultResponse;
 import com.chua.common.support.protocol.request.Request;
 import com.chua.common.support.protocol.request.Response;
@@ -38,7 +39,7 @@ public class DefaultJobExecute implements JobExecute {
 
         HandlerResult handler = getJobHandler(triggerParam, glueTypeEnum);
         if (!inProfile || null == handler  || handler.getJobHandler() == null ) {
-            return Response.notSupport(request, "job handler [" + triggerParam.getExecutorHandler() + "] not found.");
+            return new BadResponse(request, "job handler [" + triggerParam.getExecutorHandler() + "] not found.");
         }
         JobThread jobThread = handler.getJobThread();
         // replace thread (new or exists invalid)

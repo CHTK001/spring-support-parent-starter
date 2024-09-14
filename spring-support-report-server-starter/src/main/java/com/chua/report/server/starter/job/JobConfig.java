@@ -160,7 +160,7 @@ public class JobConfig {
     }
 
     public List<MonitorJob> scheduleJobQuery(long l, int preReadCount) {
-        return monitorJobService.page(new Page<MonitorJob>(1, preReadCount), Wrappers.<MonitorJob>lambdaQuery().eq(MonitorJob::getJobStatus, 1)
+        return monitorJobService.page(new Page<MonitorJob>(1, preReadCount), Wrappers.<MonitorJob>lambdaQuery().eq(MonitorJob::getJobTriggerStatus, 1)
                 .le(MonitorJob::getJobTriggerNextTime, l)
                 .orderByDesc(MonitorJob::getJobId)
         ).getRecords();
