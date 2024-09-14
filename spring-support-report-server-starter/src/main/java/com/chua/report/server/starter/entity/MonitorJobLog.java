@@ -15,6 +15,7 @@ import org.hibernate.annotations.ColumnDefault;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Date;
@@ -73,6 +74,14 @@ public class MonitorJobLog extends SysBase implements Serializable {
     @ApiModelProperty(value="执行对应的标识")
     @Schema(description="执行对应的标识")
     private String jobLogTriggerBean;
+
+    /**
+     * 耗时
+     */
+    @TableField(value = "job_log_cost")
+    @ApiModelProperty(value="耗时")
+    @Schema(description="耗时")
+    private BigDecimal jobLogCost;
 
     /**
      * 触发消息

@@ -137,14 +137,15 @@ public class JobConfig {
     /**
      * 执行监控任务。
      *
-     * @param address 执行地址列表
+     * @param jobLog
+     * @param address      执行地址列表
      * @param triggerParam 触发参数
      * @return 返回执行结果
      */
-    public ReturnResult<String> run( Set<Discovery> address, TriggerParam triggerParam) {
+    public ReturnResult<String> run(MonitorJobLog jobLog, Set<Discovery> address, TriggerParam triggerParam) {
         // 遍历地址列表，发送触发参数
         for (Discovery monitorRequest : address) {
-            monitorSender.upload(null, monitorRequest, Json.toJSONString(triggerParam), ModuleType.JOB);
+            monitorSender.upload(jobLog, monitorRequest, Json.toJSONString(triggerParam), ModuleType.JOB);
         }
         // 执行成功
         return ReturnResult.success();
