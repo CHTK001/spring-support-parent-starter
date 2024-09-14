@@ -44,6 +44,12 @@
             <groupId>com.chua</groupId>
             <artifactId>spring-support-redis-starter</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-netty-starter</artifactId>
+            <version>4.0.0</version>
+        </dependency>
     </dependencies>
 
 </project>
