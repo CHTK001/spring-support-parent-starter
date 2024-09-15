@@ -17,6 +17,7 @@ import com.chua.common.support.utils.ThreadUtils;
 import com.chua.report.client.starter.endpoint.ModuleType;
 import com.chua.report.server.starter.entity.MonitorJobLog;
 import com.chua.report.server.starter.entity.MonitorLog;
+import com.chua.report.server.starter.job.JobConfig;
 import com.chua.report.server.starter.service.MonitorLogService;
 import com.chua.report.server.starter.service.MonitorSender;
 import com.chua.starter.common.support.project.Project;
@@ -84,6 +85,8 @@ public class MonitorSenderImpl implements MonitorSender, InitializingBean {
                 monitorLog.setLogContent(params);
                 if(o instanceof MonitorJobLog monitorJobLog) {
                     monitorJobLog.setJobLogCost(BigDecimal.valueOf(System.currentTimeMillis() - startTime));
+                    monitorJobLog.setJobLogExecuteCode("SUCCESS");
+                    JobConfig.getInstance().updateLog(monitorJobLog);
                 }
 
                 monitorLogService.save(monitorLog);
