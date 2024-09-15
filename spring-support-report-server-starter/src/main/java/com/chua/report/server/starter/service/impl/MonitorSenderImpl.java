@@ -5,6 +5,7 @@ import com.chua.common.support.crypto.AesCodec;
 import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.discovery.Discovery;
 import com.chua.common.support.lang.code.ReturnCode;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.protocol.ProtocolSetting;
 import com.chua.common.support.protocol.client.ProtocolClient;
 import com.chua.common.support.protocol.protocol.CommandType;
@@ -13,6 +14,7 @@ import com.chua.common.support.protocol.request.Response;
 import com.chua.common.support.protocol.request.SenderRequest;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.ObjectUtils;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.report.client.starter.endpoint.ModuleType;
 import com.chua.report.server.starter.entity.MonitorJobLog;
@@ -47,52 +49,60 @@ public class MonitorSenderImpl implements MonitorSender, InitializingBean {
     @Override
     public void upload(Object o, Discovery discovery, String params, ModuleType moduleType) {
         executorService.execute(() -> {
-            Project project = getProject(discovery);
-            Codec codec = new AesCodec("1234567890123456".getBytes(StandardCharsets.UTF_8));
-            ProtocolSetting bootOption = ProtocolSetting.builder()
-                    .host(project.getApplicationHost())
-                    .port(Converter.createInteger(ObjectUtils.defaultIfNull(project.getClientProtocolEndpointPort(), project.getApplicationPort() + "10000")))
-                    .heartbeat(false)
-                    .codec(codec)
-                    .build();
-            Protocol protocol = ServiceProvider.of(Protocol.class).getNewExtension(project.getClientProtocolEndpointProtocol(), bootOption);
-            MonitorLog monitorLog = new MonitorLog();
-            if(null == protocol) {
-                monitorLog.setLogCode(ReturnCode.RESOURCE_NOT_FOUND.getCode());
-                monitorLog.setLogMsg(ReturnCode.RESOURCE_NOT_FOUND.getMsg());
-                throw new RuntimeException("未找到对应协议");
-            }
-
-            long startTime = System.currentTimeMillis();
-            ProtocolClient protocolClient = protocol.createClient();
-            Response responseCode = protocolClient.sendRequestAndReply(SenderRequest.builder()
-                    .url("/" + moduleType.name().toLowerCase())
-                    .content(params)
-                    .profile(project.getApplicationActive())
-                    .appName(project.getApplicationName())
-                    .build());
-
-
-            try {
-                monitorLog.setLogCode(null == responseCode ? "-1" : String.valueOf(responseCode.code()));
-                monitorLog.setLogMsg(null == responseCode ? null : responseCode.getSource().toString());
-                monitorLog.setLogHost(project.getApplicationHost());
-                monitorLog.setLogPort(project.getApplicationPort());
-                monitorLog.setLogModuleType(moduleType.name());
-                monitorLog.setLogCommandType(CommandType.REQUEST);
-                monitorLog.setLogProfile(project.getApplicationActive());
-                monitorLog.setLogAppname(project.getApplicationName());
-                monitorLog.setLogContent(params);
-                if(o instanceof MonitorJobLog monitorJobLog) {
-                    monitorJobLog.setJobLogCost(BigDecimal.valueOf(System.currentTimeMillis() - startTime));
-                    monitorJobLog.setJobLogExecuteCode("SUCCESS");
-                    JobConfig.getInstance().updateLog(monitorJobLog);
-                }
-
-                monitorLogService.save(monitorLog);
-            } catch (Exception ignored) {
-            }
+            uploadSync(o, discovery, params, moduleType);
         });
+    }
+
+    @Override
+    public ReturnResult<String> uploadSync(Object o, Discovery discovery, String params, ModuleType moduleType) {
+        Project project = getProject(discovery);
+        Codec codec = new AesCodec("1234567890123456".getBytes(StandardCharsets.UTF_8));
+        ProtocolSetting bootOption = ProtocolSetting.builder()
+                .host(project.getApplicationHost())
+                .port(Converter.createInteger(ObjectUtils.defaultIfNull(project.getClientProtocolEndpointPort(),
+                        project.getApplicationPort() + "10000")))
+                .heartbeat(false)
+                .codec(codec)
+                .build();
+        Protocol protocol = ServiceProvider.of(Protocol.class).getNewExtension(project.getClientProtocolEndpointProtocol(), bootOption);
+        MonitorLog monitorLog = new MonitorLog();
+        if(null == protocol) {
+            monitorLog.setLogCode(ReturnCode.RESOURCE_NOT_FOUND.getCode());
+            monitorLog.setLogMsg(ReturnCode.RESOURCE_NOT_FOUND.getMsg());
+            throw new RuntimeException("未找到对应协议");
+        }
+
+        long startTime = System.currentTimeMillis();
+        ProtocolClient protocolClient = protocol.createClient();
+        Response responseCode = protocolClient.sendRequestAndReply(SenderRequest.builder()
+                .url("/" + moduleType.name().toLowerCase())
+                .content(params)
+                .profile(project.getApplicationActive())
+                .appName(project.getApplicationName())
+                .build());
+
+
+        try {
+            monitorLog.setLogCode(null == responseCode ? "-1" : String.valueOf(responseCode.code()));
+            monitorLog.setLogMsg(null == responseCode ? null : StringUtils.utf8Str(responseCode.getSource()));
+            monitorLog.setLogHost(bootOption.getHost());
+            monitorLog.setLogPort(bootOption.getPort());
+            monitorLog.setLogModuleType(moduleType.name());
+            monitorLog.setLogCommandType(CommandType.REQUEST);
+            monitorLog.setLogProfile(project.getApplicationActive());
+            monitorLog.setLogAppname(project.getApplicationName());
+            monitorLog.setLogContent(params);
+            if(o instanceof MonitorJobLog monitorJobLog) {
+                monitorJobLog.setJobLogCost(BigDecimal.valueOf(System.currentTimeMillis() - startTime));
+                monitorJobLog.setJobLogExecuteCode("SUCCESS");
+                JobConfig.getInstance().updateLog(monitorJobLog);
+            }
+
+            monitorLogService.save(monitorLog);
+            return ReturnResult.success(StringUtils.utf8Str(responseCode.getSource()));
+        } catch (Exception ignored) {
+        }
+        return ReturnResult.illegal("读取失败");
     }
 
     @Override

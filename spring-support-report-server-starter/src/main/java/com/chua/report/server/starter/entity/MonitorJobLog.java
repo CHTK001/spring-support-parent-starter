@@ -142,5 +142,11 @@ public class MonitorJobLog extends SysBase implements Serializable {
     @TableField(exist = false)
     private LocalDateTime endDate;
 
+    /**
+     * 清理类型
+     */
+    @TableField(exist = false)
+    private Integer clearType;
+
     private static final long serialVersionUID = 1L;
 }
