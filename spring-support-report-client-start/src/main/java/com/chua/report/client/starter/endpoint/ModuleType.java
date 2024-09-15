@@ -14,5 +14,10 @@ public enum ModuleType {
     /**
      * 任务
      */
-    JOB
+    JOB,
+
+    /**
+     * 任务日志
+     */
+    JOB_LOG_CAT
 }

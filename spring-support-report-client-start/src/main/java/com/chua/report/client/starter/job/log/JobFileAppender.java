@@ -1,5 +1,6 @@
 package com.chua.report.client.starter.job.log;
 
+import com.chua.common.support.utils.FileUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.*;
@@ -91,6 +92,7 @@ public class JobFileAppender {
         }
         File logFile = new File(logFileName);
 
+        FileUtils.mkParentDirs(logFile);
         if (!logFile.exists()) {
             try {
                 logFile.createNewFile();

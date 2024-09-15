@@ -26,4 +26,12 @@ public interface MonitorJobLogService extends IService<MonitorJobLog>{
      * @return {@link JobStatisticResult}
      */
     Boolean clear(MonitorJobLog entity);
+
+    /**
+     * 日志
+     *
+     * @param jobLogId 日志id
+     * @return {@link String}
+     */
+    String logCat(int jobLogId);
 }

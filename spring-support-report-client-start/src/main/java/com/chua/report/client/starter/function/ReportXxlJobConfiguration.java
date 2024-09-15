@@ -9,12 +9,15 @@ import com.chua.common.support.protocol.request.Request;
 import com.chua.common.support.protocol.request.Response;
 import com.chua.common.support.protocol.server.ProtocolServer;
 import com.chua.common.support.utils.ClassUtils;
+import com.chua.report.client.starter.entity.JobCat;
 import com.chua.report.client.starter.entity.JobValue;
 import com.chua.report.client.starter.job.execute.DefaultJobExecute;
 import com.chua.report.client.starter.job.execute.JobExecute;
 import com.chua.report.client.starter.job.handler.BeanJobHandler;
 import com.chua.report.client.starter.job.handler.JobHandler;
 import com.chua.report.client.starter.job.handler.JobHandlerFactory;
+import com.chua.report.client.starter.job.log.JobFileAppender;
+import com.chua.report.client.starter.job.log.LogResult;
 import com.chua.report.client.starter.setting.SettingFactory;
 import com.chua.starter.common.support.annotations.Job;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
@@ -59,6 +62,22 @@ public class ReportXxlJobConfiguration implements BeanFactoryAware, SmartInstant
         return jobExecute.run(request, jobValue);
     }
 
+    /**
+     * bean
+     *
+     * @param request 要求
+     * @return {@link Response}
+     */
+    @RequestLine("job_log_cat")
+    public Response log(Request request) {
+        JsonObject jsonObject = Json.getJsonObject(new String(request.getBody()));
+        String content = jsonObject.getString("content");
+        JobCat jobCat = Json.fromJson(content, JobCat.class);
+
+        String fileName = JobFileAppender.makeLogFileName(jobCat.getDate(), jobCat.getLogId());
+        LogResult logResult = JobFileAppender.readLog(fileName, jobCat.getFromLineNum());
+        return new OkResponse(request, Json.toJson(logResult));
+    }
     /**
      * bean
      *
