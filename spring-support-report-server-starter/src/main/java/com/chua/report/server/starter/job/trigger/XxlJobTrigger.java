@@ -115,7 +115,7 @@ public class XxlJobTrigger {
         String triggerMsgSb = "";
 
         // 6、save log trigger-info
-        jobLog.setJobLogTriggerAddress(null == address ? "" :address.stream().map(it -> it.getHost() + ":" +it.getPort()).collect(Collectors.joining()));
+        jobLog.setJobLogTriggerAddress(address.stream().map(it -> it.getHost() + ":" +it.getPort()).collect(Collectors.joining()));
         jobLog.setJobLogTriggerParam(jobInfo.getJobExecuteParam());
         jobLog.setJobLogTriggerCode(triggerResult.getCode());
         jobLog.setJobLogExecuteCode("PADDING");

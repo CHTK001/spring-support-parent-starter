@@ -25,4 +25,13 @@
       job_log_trigger_code,
       job_log_trigger_date
     </select>
+
+  <delete id="deleteNumber">
+    DELETE FROM
+        monitor_job_log
+    WHERE
+        job_log_id <![CDATA[>]]>
+        (SELECT job_log_id FROM monitor_job_log ORDER BY job_log_id DESC LIMIT 0, #{number} )
+     ORDER BY job_log_id DESC
+    </delete>
 </mapper>

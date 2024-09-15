@@ -51,6 +51,11 @@ public class ReportClientConfiguration implements BeanDefinitionRegistryPostProc
         registry.registerBeanDefinition("reportService", BeanDefinitionBuilder
                 .rootBeanDefinition(ReportService.class)
                 .getBeanDefinition());
+
+        registry.registerBeanDefinition( "reportXxlJobConfiguration", BeanDefinitionBuilder
+                .rootBeanDefinition(ReportXxlJobConfiguration.class)
+                .getBeanDefinition()
+        );
     }
 
     /**

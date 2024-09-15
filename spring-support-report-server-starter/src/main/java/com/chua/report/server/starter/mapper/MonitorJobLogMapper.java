@@ -20,4 +20,12 @@ public interface MonitorJobLogMapper extends BaseMapper<MonitorJobLog> {
      * @return {@link List}<{@link JobStatistic}>
      */
     List<JobStatistic> time(@Param("query") MonitorJobLog entity);
+
+
+    /**
+     * 删除指定类型的数字
+     *
+     * @param number 要删除的数量
+     */
+    void deleteNumber(@Param("number")Integer number);
 }

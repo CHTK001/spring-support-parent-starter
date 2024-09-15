@@ -91,6 +91,18 @@ public class MonitorJobController extends AbstractSwaggerController<MonitorJobSe
         return ReturnResult.ok(monitorJobLogService.time(entity));
     }
 
+    /**
+     * 日志详情
+     *
+     * @param jobLogId 日志id
+     * @return {@link ReturnResult}<{@link String}>
+     */
+    @Operation(summary = "日志详情")
+    @RequestMapping("/logCat")
+    public ReturnResult<String> logCat(int jobLogId) {
+        return ReturnResult.ok(monitorJobLogService.logCat(jobLogId));
+    }
+
     @RequestMapping("/stop")
     @Permission("sys:monitor:job:stop")
     public ReturnResult<String> pause(int jobId) {
