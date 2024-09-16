@@ -3,7 +3,7 @@ package com.chua.report.server.starter.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.report.server.starter.entity.MonitorProxy;
-import com.chua.report.server.starter.entity.MonitorProxyConfig;
+import com.chua.report.server.starter.entity.MonitorProxyPluginConfig;
 
 /**
  * @author CH
@@ -68,5 +68,5 @@ public interface MonitorProxyService extends IService<MonitorProxy> {
      * @param one 一个MonitorProxyConfig对象，包含待更新的代理配置信息。
      * @return 如果配置更新成功，则返回true；否则返回false。
      */
-    Boolean updateConfigForProxy(MonitorProxyConfig one);
+    Boolean updateConfigForProxy(MonitorProxyPluginConfig one);
 }

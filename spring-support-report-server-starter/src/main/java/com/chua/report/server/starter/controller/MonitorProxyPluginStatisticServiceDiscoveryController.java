@@ -9,9 +9,8 @@ import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.common.support.validator.group.UpdateGroup;
 import com.chua.report.server.starter.entity.MonitorProxy;
-import com.chua.report.server.starter.entity.MonitorProxyLimit;
-import com.chua.report.server.starter.service.MonitorProxyLimitLogService;
-import com.chua.report.server.starter.service.MonitorProxyLimitService;
+import com.chua.report.server.starter.entity.MonitorProxyPluginStatisticServiceDiscovery;
+import com.chua.report.server.starter.service.MonitorProxyPluginStatisticServiceDiscoveryService;
 import com.chua.report.server.starter.service.MonitorProxyService;
 import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.mybatis.utils.PageResultUtils;
@@ -26,7 +25,6 @@ import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Date;
 import java.util.Set;
 
 import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
@@ -37,14 +35,13 @@ import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
  * @since 2024/6/21
  */
 @RestController
-@RequestMapping("v1/proxy/limit")
+@RequestMapping("v1/proxy/statistic")
 @Tag(name = "代理限流器")
 @RequiredArgsConstructor
-public class MonitorProxyLimitController {
+public class MonitorProxyPluginStatisticServiceDiscoveryController {
     
-    final MonitorProxyLimitService service;
+    final MonitorProxyPluginStatisticServiceDiscoveryService service;
     final MonitorProxyService monitorProxyService;
-    final MonitorProxyLimitLogService monitorProxyLimitLogService;
     final TransactionTemplate transactionTemplate;
 
     /**
@@ -56,19 +53,13 @@ public class MonitorProxyLimitController {
     @ResponseBody
     @Operation(summary = "分页查询基础数据")
     @GetMapping("page")
-    public ReturnPageResult<MonitorProxyLimit> page(Query<MonitorProxyLimit> page, MonitorProxyLimit entity) {
-        if(null == entity.getProxyId()) {
-            return ReturnPageResult.illegal(REQUEST_PARAM_ERROR, "请选择代理");
-        }
-        Page<MonitorProxyLimit> tPage = service.page(page.createPage(), MPJWrappers.<MonitorProxyLimit>lambdaJoin()
-                .selectAll(MonitorProxyLimit.class)
-                .selectAs(MonitorProxy::getProxyName, MonitorProxyLimit::getProxyName)
-                .innerJoin(MonitorProxy.class, MonitorProxy::getProxyId, MonitorProxyLimit::getProxyId)
-                .eq(null != entity.getProxyId() , MonitorProxyLimit::getProxyId, entity.getProxyId())
-                .eq(MonitorProxyLimit::getLimitType, entity.getLimitType())
-                .like(StringUtils.isNotEmpty(entity.getLimitUrl()), MonitorProxyLimit::getLimitUrl, entity.getLimitUrl())
-                .like(StringUtils.isNotEmpty(entity.getProxyName()),MonitorProxy::getProxyName, entity.getProxyName())
-                .orderByDesc(MonitorProxyLimit::getCreateTime)
+    public ReturnPageResult<MonitorProxyPluginStatisticServiceDiscovery> page(Query<MonitorProxyPluginStatisticServiceDiscovery> page, MonitorProxyPluginStatisticServiceDiscovery entity) {
+        Page<MonitorProxyPluginStatisticServiceDiscovery> tPage = service.page(page.createPage(), MPJWrappers.<MonitorProxyPluginStatisticServiceDiscovery>lambdaJoin()
+                .selectAll(MonitorProxyPluginStatisticServiceDiscovery.class)
+                .innerJoin(MonitorProxy.class, MonitorProxy::getProxyId, MonitorProxyPluginStatisticServiceDiscovery::getProxyId)
+                .eq(null != entity.getProxyId() , MonitorProxyPluginStatisticServiceDiscovery::getProxyId, entity.getProxyId())
+                .like(StringUtils.isNotEmpty(entity.getProxyStatisticUrl()), MonitorProxyPluginStatisticServiceDiscovery::getProxyStatisticUrl, entity.getProxyStatisticUrl())
+                .like(StringUtils.isNotEmpty(entity.getProxyStatisticHostname()),MonitorProxyPluginStatisticServiceDiscovery::getProxyStatisticHostname, entity.getProxyStatisticName())
         );
         return PageResultUtils.ok(tPage);
     }
@@ -93,9 +84,9 @@ public class MonitorProxyLimitController {
         }
 
         return ReturnResult.of(Boolean.TRUE.equals(transactionTemplate.execute(status -> {
-            MonitorProxyLimit t = service.getById(CollectionUtils.findFirst(ids));
+            MonitorProxyPluginStatisticServiceDiscovery t = service.getById(CollectionUtils.findFirst(ids));
             service.removeBatchByIds(ids);
-            monitorProxyService.refresh(t.getProxyId());
+            monitorProxyService.refresh(String.valueOf(t.getProxyId()));
             return true;
         })));
 
@@ -110,12 +101,12 @@ public class MonitorProxyLimitController {
     @ResponseBody
     @Operation(summary = "更新数据")
     @PutMapping("update")
-    public ReturnResult<Boolean> updateById(@Validated(UpdateGroup.class) @RequestBody MonitorProxyLimit t , @Ignore BindingResult bindingResult) {
+    public ReturnResult<Boolean> updateById(@Validated(UpdateGroup.class) @RequestBody MonitorProxyPluginStatisticServiceDiscovery t , @Ignore BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
             return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
 
-        MonitorProxyLimit monitorProxyLimit = service.getById(t.getLimitId());
+        MonitorProxyPluginStatisticServiceDiscovery monitorProxyLimit = service.getById(t.getProxyStatisticId());
         if(null == monitorProxyLimit) {
             return ReturnResult.illegal(REQUEST_PARAM_ERROR, "主键不能为空");
         }
@@ -123,7 +114,7 @@ public class MonitorProxyLimitController {
 
         return ReturnResult.of(Boolean.TRUE.equals(transactionTemplate.execute(status -> {
             service.updateById(t);
-            monitorProxyService.refresh(t.getProxyId());
+            monitorProxyService.refresh(String.valueOf(t.getProxyId()));
             return true;
         })));
     }
@@ -137,14 +128,13 @@ public class MonitorProxyLimitController {
     @ResponseBody
     @Operation(summary = "添加数据")
     @PostMapping("save")
-    public ReturnResult<MonitorProxyLimit> save(@Validated(AddGroup.class) @RequestBody MonitorProxyLimit t, @Ignore BindingResult bindingResult) {
+    public ReturnResult<MonitorProxyPluginStatisticServiceDiscovery> save(@Validated(AddGroup.class) @RequestBody MonitorProxyPluginStatisticServiceDiscovery t, @Ignore BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
             return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
         return ReturnResult.success(transactionTemplate.execute(status -> {
-            t.setCreateTime(new Date());
             service.save(t);
-            monitorProxyService.refresh(t.getProxyId());
+            monitorProxyService.refresh(String.valueOf(t.getProxyId()));
             return t;
         }));
     }

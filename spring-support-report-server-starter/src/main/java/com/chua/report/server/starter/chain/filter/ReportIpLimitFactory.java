@@ -6,7 +6,7 @@ import com.chua.common.support.matcher.PathMatcher;
 import com.chua.common.support.task.limit.Limiter;
 import com.chua.common.support.task.limit.LimiterProvider;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.report.server.starter.entity.MonitorProxyLimit;
+import com.chua.report.server.starter.entity.MonitorProxyPluginLimit;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -22,14 +22,14 @@ import java.util.List;
  * @since 2024/6/26
  */
 public class ReportIpLimitFactory implements Initializable {
-    private final List<MonitorProxyLimit> list;
+    private final List<MonitorProxyPluginLimit> list;
     private final LimiterProvider limitProvider = new LimiterProvider();
     private final List<String> black = new LinkedList<>();
     private final List<String> black2 = new LinkedList<>();
 
     private final PathMatcher pathMatcher = new AntPathMatcher();
 
-    public ReportIpLimitFactory(List<MonitorProxyLimit> list) {
+    public ReportIpLimitFactory(List<MonitorProxyPluginLimit> list) {
         this.list = list;
     }
 
@@ -37,7 +37,7 @@ public class ReportIpLimitFactory implements Initializable {
      * 刷新
      * @param list list
      */
-    public synchronized void refresh(List<MonitorProxyLimit> list) {
+    public synchronized void refresh(List<MonitorProxyPluginLimit> list) {
         limitProvider.clear();
         black.clear();
         black2.clear();
@@ -48,13 +48,13 @@ public class ReportIpLimitFactory implements Initializable {
 
     @Override
     public void initialize() {
-        for (MonitorProxyLimit monitorProxyLimit : list) {
-            if (monitorProxyLimit.getLimitDisable() == 0 || monitorProxyLimit.getLimitType() != 1 ||
-                    StringUtils.isEmpty(monitorProxyLimit.getLimitAddress())) {
+        for (MonitorProxyPluginLimit monitorProxyLimit : list) {
+            if (monitorProxyLimit.getProxyConfigLimitDisabled() == 1 || "IP".equalsIgnoreCase(monitorProxyLimit.getProxyConfigLimitType()) ||
+                    StringUtils.isEmpty(monitorProxyLimit.getProxyConfigLimitPathOrIp())) {
                 continue;
             }
 
-            limitProvider.addLimiter(monitorProxyLimit.getLimitAddress(), Limiter.of(monitorProxyLimit.getLimitPermitsPerSecond()));
+            limitProvider.addLimiter(monitorProxyLimit.getProxyConfigLimitPathOrIp(), Limiter.of(monitorProxyLimit.getProxyConfigLimitPerSeconds()));
         }
     }
 

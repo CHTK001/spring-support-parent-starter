@@ -2,7 +2,7 @@ package com.chua.report.server.starter.chain.filter;
 
 import com.chua.common.support.function.Initializable;
 import com.chua.common.support.range.IpRange;
-import com.chua.report.server.starter.entity.MonitorProxyLimitList;
+import com.chua.report.server.starter.entity.MonitorProxyPluginList;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -18,16 +18,16 @@ import java.util.List;
  * @since 2024/6/26
  */
 public class ReportWhiteLimitFactory implements Initializable {
-    private final List<MonitorProxyLimitList> list;
+    private final List<MonitorProxyPluginList> list;
     private final List<IpRange> ranges = new LinkedList<>();
-    public ReportWhiteLimitFactory(List<MonitorProxyLimitList> list) {
+    public ReportWhiteLimitFactory(List<MonitorProxyPluginList> list) {
         this.list = list;
     }
     /**
      * 刷新
      * @param list list
      */
-    public synchronized void refresh(List<MonitorProxyLimitList> list) {
+    public synchronized void refresh(List<MonitorProxyPluginList> list) {
         this.list.clear();
         ranges.clear();
         this.list.addAll(list);
@@ -35,12 +35,13 @@ public class ReportWhiteLimitFactory implements Initializable {
     }
     @Override
     public void initialize() {
-        for (MonitorProxyLimitList monitorProxyLimitList : list) {
-            if(monitorProxyLimitList.getListStatus() == 0 || monitorProxyLimitList.getListType() != 0) {
+        for (MonitorProxyPluginList monitorProxyLimitList : list) {
+            if(monitorProxyLimitList.getProxyConfigListDisabled() == 1
+                    || "WHITE".equalsIgnoreCase(monitorProxyLimitList.getProxyConfigListType())) {
                 continue;
             }
 
-            ranges.add(new IpRange(monitorProxyLimitList.getListIp()));
+            ranges.add(new IpRange(monitorProxyLimitList.getProxyConfigList()));
         }
     }
 
