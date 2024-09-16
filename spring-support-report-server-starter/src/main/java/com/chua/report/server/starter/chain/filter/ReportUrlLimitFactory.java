@@ -4,7 +4,7 @@ import com.chua.common.support.function.Initializable;
 import com.chua.common.support.task.limit.Limiter;
 import com.chua.common.support.task.limit.LimiterProvider;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.report.server.starter.entity.MonitorProxyLimit;
+import com.chua.report.server.starter.entity.MonitorProxyPluginLimit;
 
 import java.util.List;
 
@@ -19,17 +19,17 @@ import java.util.List;
  * @since 2024/6/26
  */
 public class ReportUrlLimitFactory implements Initializable {
-    private final List<MonitorProxyLimit> list;
+    private final List<MonitorProxyPluginLimit> list;
     private final LimiterProvider limitProvider = new LimiterProvider();
 
-    public ReportUrlLimitFactory(List<MonitorProxyLimit> list) {
+    public ReportUrlLimitFactory(List<MonitorProxyPluginLimit> list) {
         this.list = list;
     }
     /**
      * 刷新
      * @param list list
      */
-    public synchronized void refresh(List<MonitorProxyLimit> list) {
+    public synchronized void refresh(List<MonitorProxyPluginLimit> list) {
         limitProvider.clear();
         this.list.clear();
         this.list.addAll(list);
@@ -37,13 +37,13 @@ public class ReportUrlLimitFactory implements Initializable {
     }
     @Override
     public void initialize() {
-        for (MonitorProxyLimit monitorProxyLimit : list) {
-            if(monitorProxyLimit.getLimitDisable() == 0 || monitorProxyLimit.getLimitType() != 0) {
+        for (MonitorProxyPluginLimit monitorProxyLimit : list) {
+            if(monitorProxyLimit.getProxyConfigLimitDisabled() == 1 || "PATH".equalsIgnoreCase(monitorProxyLimit.getProxyConfigLimitType())) {
                 continue;
             }
 
-            String limitUrl = StringUtils.startWithAppend(monitorProxyLimit.getLimitUrl(), "/");
-            limitProvider.addLimiter(limitUrl, Limiter.of(monitorProxyLimit.getLimitPermitsPerSecond()));
+            String limitUrl = StringUtils.startWithAppend(monitorProxyLimit.getProxyConfigLimitPathOrIp(), "/");
+            limitProvider.addLimiter(limitUrl, Limiter.of(monitorProxyLimit.getProxyConfigLimitPerSeconds()));
         }
     }
 

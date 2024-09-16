@@ -7,68 +7,71 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Data;
-
+import java.io.Serializable;
+import java.util.List;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
-import java.io.Serializable;
-import java.util.Date;
+import lombok.Data;
 
 /**
  *
- *
- * @since 2024/6/18 
- * @author CH
+ * @since 2024/9/16
+ * @author CH    
  */
-@ApiModel(description="monitor_proxy_plugin")
-@Schema
+
+/**
+ * 代理-插件关系表
+ */
+@ApiModel(description = "代理-插件关系表")
+@Schema(description = "代理-插件关系表")
 @Data
 @TableName(value = "monitor_proxy_plugin")
 public class MonitorProxyPlugin implements Serializable {
-    @TableId(value = "plugin_id", type = IdType.AUTO)
-    @ApiModelProperty(value="")
-    @Schema(description="")
+    @TableId(value = "proxy_plugin_id", type = IdType.AUTO)
+    @ApiModelProperty(value = "")
+    @Schema(description = "")
     @NotNull(message = "不能为null")
-    private Integer pluginId;
+    private Integer proxyPluginId;
+
+    /**
+     * 组件实现
+     */
+    @TableField(value = "proxy_plugin_spi")
+    @ApiModelProperty(value = "组件实现")
+    @Schema(description = "组件实现")
+    @Size(max = 11, message = "组件实现最大长度要小于 11")
+    private String proxyPluginSpi;
 
     /**
      * 代理ID
      */
     @TableField(value = "proxy_id")
-    @ApiModelProperty(value="代理ID")
-    @Schema(description="代理ID")
+    @ApiModelProperty(value = "代理ID")
+    @Schema(description = "代理ID")
     private Integer proxyId;
+
     /**
-     * 插件优先级
+     * 优先级
      */
-    @TableField(value = "plugin_sort")
-    @ApiModelProperty(value="插件优先级")
-    @Schema(description="插件优先级")
-    private Integer pluginSort;
+    @TableField(value = "proxy_plugin_sort")
+    @ApiModelProperty(value = "优先级")
+    @Schema(description = "优先级")
+    private Integer proxyPluginSort;
+
     /**
      * 插件名称
      */
-    @TableField(value = "plugin_name")
-    @ApiModelProperty(value="插件名称")
-    @Schema(description="插件名称")
-    @Size(max = 255,message = "插件名称最大长度要小于 255")
-    private String pluginName;
-    /**
-     * 插件描述
-     */
-    @TableField(value = "plugin_desc")
-    @ApiModelProperty(value="插件描述")
-    @Schema(description="插件描述")
-    @Size(max = 255,message = "插件描述最大长度要小于 255")
-    private String pluginDesc;
+    @TableField(value = "proxy_plugin_name")
+    @ApiModelProperty(value = "插件名称")
+    @Schema(description = "插件名称")
+    @Size(max = 255, message = "插件名称最大长度要小于 255")
+    private String proxyPluginName;
 
     /**
-     * 创建时间
+     * 插件配置
      */
-    @TableField(value = "create_time")
-    @ApiModelProperty(value="创建时间")
-    @Schema(description="创建时间")
-    private Date createTime;
+    @TableField(exist = false)
+    private List<MonitorProxyPluginConfig> configList;
 
     private static final long serialVersionUID = 1L;
 }

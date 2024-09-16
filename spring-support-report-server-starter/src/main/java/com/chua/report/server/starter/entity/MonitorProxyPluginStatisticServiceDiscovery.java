@@ -7,15 +7,14 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
-import lombok.Data;
-
 import java.io.Serializable;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+import lombok.Data;
 
 /**
  *
- * @since 2024/7/30
+ * @since 2024/9/16
  * @author CH    
  */
 
@@ -25,8 +24,8 @@ import java.io.Serializable;
 @ApiModel(description = "静态IP")
 @Schema(description = "静态IP")
 @Data
-@TableName(value = "monitor_proxy_statistic_service_discovery")
-public class MonitorProxyStatisticServiceDiscovery implements Serializable {
+@TableName(value = "monitor_proxy_plugin_statistic_service_discovery")
+public class MonitorProxyPluginStatisticServiceDiscovery implements Serializable {
     @TableId(value = "proxy_statistic_id", type = IdType.AUTO)
     @ApiModelProperty(value = "")
     @Schema(description = "")
