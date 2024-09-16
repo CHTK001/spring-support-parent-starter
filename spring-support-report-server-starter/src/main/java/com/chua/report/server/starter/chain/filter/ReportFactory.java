@@ -1,7 +1,7 @@
 package com.chua.report.server.starter.chain.filter;
 
-import com.chua.report.server.starter.entity.MonitorProxyLimit;
-import com.chua.report.server.starter.entity.MonitorProxyLimitList;
+import com.chua.report.server.starter.entity.MonitorProxyPluginLimit;
+import com.chua.report.server.starter.entity.MonitorProxyPluginList;
 import lombok.Data;
 import lombok.Setter;
 
@@ -26,7 +26,7 @@ public class ReportFactory {
      * 升级
      * @param list list
      */
-    public void upgrade(List<MonitorProxyLimit> list) {
+    public void upgrade(List<MonitorProxyPluginLimit> list) {
         if(null != reportUrlLimitFactory) {
             reportUrlLimitFactory.refresh(list);
         }
@@ -40,7 +40,7 @@ public class ReportFactory {
      * 升级
      * @param list list
      */
-    public void upgradeList(List<MonitorProxyLimitList> list) {
+    public void upgradeList(List<MonitorProxyPluginList> list) {
         if(null != reportBlackLimitFactory) {
             reportBlackLimitFactory.refresh(list);
         }

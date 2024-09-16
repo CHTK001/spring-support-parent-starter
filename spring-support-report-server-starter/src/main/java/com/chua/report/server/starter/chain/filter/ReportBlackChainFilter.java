@@ -12,11 +12,15 @@ import com.chua.common.support.protocol.request.BadResponse;
 import com.chua.common.support.protocol.request.Request;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.netty.support.proxy.filter.LastNettyFinishChainFilter;
-import com.chua.report.server.starter.entity.MonitorProxyLimitLog;
-import com.chua.report.server.starter.service.MonitorProxyLimitLogService;
+import com.chua.report.server.starter.entity.MonitorProxyLog;
+import com.chua.report.server.starter.service.MonitorProxyLogService;
 import com.chua.report.server.starter.service.ReportIptablesService;
 import org.redisson.api.RedissonClient;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.concurrent.ExecutorService;
 
@@ -43,7 +47,7 @@ public class ReportBlackChainFilter implements Filter {
     @AutoInject
     private ReportIptablesService reportIptablesService;
     @AutoInject
-    private MonitorProxyLimitLogService monitorProxyLimitLogService;
+    private MonitorProxyLogService monitorProxyLogService;
 
     @Override
     public <T> void doFilter(ChainContext<T> context, FilterChain filterChain) {
@@ -72,22 +76,25 @@ public class ReportBlackChainFilter implements Filter {
     private void doRegisterLog(String url, String hostString, String type) {
         POOL.execute(() -> {
             try {
-                MonitorProxyLimitLog monitorProxyLimitLog = new MonitorProxyLimitLog();
-                monitorProxyLimitLog.setLimitLogUrl(url);
-                monitorProxyLimitLog.setLimitLogServerId(serverId);
-                monitorProxyLimitLog.setLimitLogAddress(hostString);
-                monitorProxyLimitLog.setLimitLogFrom("黑名单");
-                monitorProxyLimitLog.setLimitLogType(type);
+                MonitorProxyLog monitorProxyLimitLog = new MonitorProxyLog();
+                monitorProxyLimitLog.setMonitorProxyLogUrl(url);
+                monitorProxyLimitLog.setMonitorProxyLogServerId(serverId);
+                monitorProxyLimitLog.setMonitorProxyLogAddress(hostString);
+                monitorProxyLimitLog.setMonitorProxyLogType("BLACK");
+                monitorProxyLimitLog.setMonitorProxyLogCode("deny".equals(type) ? "-1" : "0");
                 try {
                     ReturnResult<GeoCity> geoCityReturnResult = reportIptablesService.transferReportAddress(hostString);
                     if(geoCityReturnResult.isOk()) {
-                        monitorProxyLimitLog.setLimitLogAddressGeo(geoCityReturnResult.getData().getCity());
+                        monitorProxyLimitLog.setMonitorProxyLogAddressGeo(geoCityReturnResult.getData().getCity());
                     }
                 } catch (Exception ignored) {
                 }
-                monitorProxyLimitLog.setCreateTimeMin( System.currentTimeMillis() / (60 * 1000) * (60 * 1000));
+                monitorProxyLimitLog.setMonitorProxyLogDate(LocalDate.now().toEpochSecond(LocalTime.of(0, 0, 0), ZoneOffset.UTC));
+                monitorProxyLimitLog.setMonitorProxyLogHour(LocalDateTime.now()
+                        .withMinute(0).withSecond(0).withNano(0)
+                        .toEpochSecond(ZoneOffset.UTC));
                 monitorProxyLimitLog.setCreateTime(new Date());
-                monitorProxyLimitLogService.save(monitorProxyLimitLog);
+                monitorProxyLogService.save(monitorProxyLimitLog);
             } catch (Exception ignored) {
             }
         });

@@ -1,14 +1,14 @@
 package com.chua.report.server.starter.service;
 
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.report.server.starter.entity.MonitorProxyPlugin;
+import com.baomidou.mybatisplus.extension.service.IService;
     /**
  *
- *
- * @since 2024/6/18 
- * @author CH
+ * @since 2024/9/16
+ * @author CH    
  */
 public interface MonitorProxyPluginService extends IService<MonitorProxyPlugin>{
 
 
-}
+    }
