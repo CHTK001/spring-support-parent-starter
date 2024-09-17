@@ -171,5 +171,26 @@ public class MonitorProxyLog implements Serializable {
     @Schema(description = "更新人")
     private Integer updateBy;
 
+
+    /**
+     * 开始时间
+     */
+    @Schema(description = "开始时间")
+    @TableField(exist = false)
+    private Date startDate;
+
+    /**
+     * 结束时间
+     */
+    @Schema(description = "结束时间")
+    @TableField(exist = false)
+    private Date endDate;
+    /**
+     * 代理名称
+     */
+    @Schema(description = "代理名称")
+    @TableField(exist = false)
+    private String proxyName;
+
     private static final long serialVersionUID = 1L;
 }
