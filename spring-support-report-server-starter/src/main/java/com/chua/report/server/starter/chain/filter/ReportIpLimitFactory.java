@@ -30,7 +30,7 @@ public class ReportIpLimitFactory implements Initializable {
     private final PathMatcher pathMatcher = new AntPathMatcher();
 
     public ReportIpLimitFactory(List<MonitorProxyPluginLimit> list) {
-        this.list = list;
+        this.list = new LinkedList<>(list);
     }
 
     /**

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.report.server.starter.mapper.MonitorProxyPluginLimitMapper">
+  <resultMap id="BaseResultMap" type="com.chua.report.server.starter.entity.MonitorProxyPluginLimit">
+    <!--@mbg.generated-->
+    <!--@Table monitor_proxy_plugin_limit-->
+    <id column="proxy_config_limit_id" jdbcType="INTEGER" property="proxyConfigLimitId" />
+    <result column="proxy_config_limit_path_or_ip" jdbcType="VARCHAR" property="proxyConfigLimitPathOrIp" />
+    <result column="proxy_config_limit_per_seconds" jdbcType="INTEGER" property="proxyConfigLimitPerSeconds" />
+    <result column="proxy_config_limit_type" jdbcType="VARCHAR" property="proxyConfigLimitType" />
+    <result column="proxy_config_limit_disabled" jdbcType="INTEGER" property="proxyConfigLimitDisabled" />
+    <result column="proxy_plugin_id" jdbcType="INTEGER" property="proxyPluginId" />
+    <result column="proxy_id" jdbcType="INTEGER" property="proxyId" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    proxy_config_limit_id, proxy_config_limit_path_or_ip, proxy_config_limit_per_seconds, 
+    proxy_config_limit_type, proxy_config_limit_disabled, proxy_plugin_id, proxy_id
+  </sql>
+</mapper>

@@ -1,0 +1,4 @@
+path-limit=com.chua.report.server.starter.chain.filter.ReportUrlLimitChainFilter
+ip-limit=com.chua.report.server.starter.chain.filter.ReportIpLimitChainFilter
+black=com.chua.report.server.starter.chain.filter.ReportBlackChainFilter
+white=com.chua.report.server.starter.chain.filter.ReportWhiteChainFilter
