@@ -142,7 +142,7 @@ public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, Mon
         List<MonitorProxyPlugin> list1 = monitorProxyPluginService.list(Wrappers.<MonitorProxyPlugin>lambdaQuery().eq(MonitorProxyPlugin::getProxyId, proxyId));
         Set<Integer> ids = list1.stream().map(MonitorProxyPlugin::getProxyPluginId).collect(Collectors.toUnmodifiableSet());
         List<MonitorProxyPluginConfig> configList = monitorProxyPluginConfigService.list(Wrappers.<MonitorProxyPluginConfig>lambdaQuery()
-                .in(MonitorProxyPluginConfig::getProxyPluginId, ids));
+                .eq(MonitorProxyPluginConfig::getProxyId, proxyId));
 
         //注册配置|
         registerConfig(server, configList);
@@ -162,9 +162,9 @@ public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, Mon
 
         if(null != reportFactory) {
             reportFactory.upgrade(monitorProxyPluginConfigLimitService.list(Wrappers.<MonitorProxyPluginLimit>lambdaQuery()
-                    .in(MonitorProxyPluginLimit::getProxyPluginId, ids).eq(MonitorProxyPluginLimit::getProxyConfigLimitDisabled, 1)));
+                    .eq(MonitorProxyPluginLimit::getProxyId, proxyId).eq(MonitorProxyPluginLimit::getProxyConfigLimitDisabled, 1)));
             reportFactory.upgradeList(monitorProxyPluginConfigListService.list(Wrappers.<MonitorProxyPluginList>lambdaQuery()
-                    .in(MonitorProxyPluginList::getProxyPluginId, ids).eq(MonitorProxyPluginList::getProxyConfigListDisabled, 1)));
+                    .eq(MonitorProxyPluginList::getProxyId, proxyId).eq(MonitorProxyPluginList::getProxyConfigListDisabled, 1)));
         }
     }
 
@@ -197,14 +197,36 @@ public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, Mon
                 .port(monitorProxy.getProxyPort())
                 .build();
         Server server = Server.create(proxyProtocol, serverSetting);
-        registerLimit(server, monitorProxy, list, reportFactory, counter);
         registerServiceDiscovery(server, list, counter);
 
         for (MonitorProxyPluginConfig monitorProxyConfig : list) {
             server.addConfig(monitorProxyConfig.getProxyConfigName(), monitorProxyConfig.getProxyConfigValue());
         }
+
+        ReportBlackLimitFactory reportBlackLimitFactory = new ReportBlackLimitFactory(Collections.emptyList());
+        reportBlackLimitFactory.initialize();
+        server.addDefinition(reportBlackLimitFactory);
+
+        ReportWhiteLimitFactory reportWhiteLimitFactory = new ReportWhiteLimitFactory(Collections.emptyList());
+        reportWhiteLimitFactory.initialize();
+        server.addDefinition(reportWhiteLimitFactory);
+
+        ReportIpLimitFactory reportIpLimitFactory = new ReportIpLimitFactory(Collections.emptyList());
+        reportIpLimitFactory.initialize();
+        server.addDefinition(reportIpLimitFactory);
+
+        ReportUrlLimitFactory reportUrlLimitFactory = new ReportUrlLimitFactory(Collections.emptyList());
+        reportUrlLimitFactory.initialize();
+        server.addDefinition(reportUrlLimitFactory);
+        reportFactory.setReportBlackLimitFactory(reportBlackLimitFactory);
+        reportFactory.setReportWhiteLimitFactory(reportWhiteLimitFactory);
+        reportFactory.setReportIpLimitFactory(reportIpLimitFactory);
+        reportFactory.setReportUrlLimitFactory(reportUrlLimitFactory);
+        refresh(String.valueOf(monitorProxy.getProxyId()));
+
         server.addConfig("serverId", monitorProxy.getProxyId());
         registerPlugin(server, monitorProxy, counter);
+//        registerLimit(server, monitorProxy, list, reportFactory, counter);
 
         return server;
     }

@@ -6,6 +6,7 @@ import com.chua.common.support.task.limit.LimiterProvider;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.report.server.starter.entity.MonitorProxyPluginLimit;
 
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -23,7 +24,7 @@ public class ReportUrlLimitFactory implements Initializable {
     private final LimiterProvider limitProvider = new LimiterProvider();
 
     public ReportUrlLimitFactory(List<MonitorProxyPluginLimit> list) {
-        this.list = list;
+        this.list = new LinkedList<>(list);
     }
     /**
      * 刷新

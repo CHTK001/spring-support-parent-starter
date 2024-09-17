@@ -21,7 +21,7 @@ public class ReportWhiteLimitFactory implements Initializable {
     private final List<MonitorProxyPluginList> list;
     private final List<IpRange> ranges = new LinkedList<>();
     public ReportWhiteLimitFactory(List<MonitorProxyPluginList> list) {
-        this.list = list;
+        this.list = new LinkedList<>(list);
     }
     /**
      * 刷新

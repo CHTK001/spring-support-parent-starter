@@ -1,6 +1,7 @@
 package com.chua.report.server.starter.controller;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.report.server.starter.entity.MonitorProxyPluginLimit;
 import com.chua.report.server.starter.entity.MonitorProxyPluginList;
@@ -8,6 +9,8 @@ import com.chua.report.server.starter.service.MonitorProxyPluginLimitService;
 import com.chua.report.server.starter.service.MonitorProxyPluginListService;
 import com.chua.report.server.starter.service.MonitorProxyPluginListService;
 import com.chua.report.server.starter.service.MonitorProxyService;
+import com.chua.starter.mybatis.entity.Query;
+import com.chua.starter.mybatis.utils.PageResultUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -44,7 +47,18 @@ public class MonitorProxyPluginListController {
                 .eq(MonitorProxyPluginList::getProxyPluginId, proxyPluginId)
         ));
     }
-
+    /**
+     * 查询代理所有的限流组件
+     * @return
+     */
+    @Operation(summary = "查询代理所有的限流组件")
+    @GetMapping("page")
+    public ReturnPageResult<MonitorProxyPluginList> page(Query<MonitorProxyPluginList> query, MonitorProxyPluginList monitorProxyPluginList) {
+        return PageResultUtils.ok(monitorProxyPluginListService.page(query.createPage(), Wrappers.<MonitorProxyPluginList>lambdaQuery()
+                .eq(MonitorProxyPluginList::getProxyId, monitorProxyPluginList.getProxyId())
+                .eq(MonitorProxyPluginList::getProxyConfigListType, monitorProxyPluginList.getProxyConfigListType())
+        ));
+    }
     /**
      * 更新名单组件配置
      * @param entity
@@ -54,7 +68,7 @@ public class MonitorProxyPluginListController {
     @PutMapping("update")
     public ReturnResult<Boolean> update(@RequestBody MonitorProxyPluginList entity) {
         return ReturnResult.of(Boolean.TRUE.equals(transactionTemplate.execute(status -> {
-            MonitorProxyPluginList byId = monitorProxyPluginListService.getById(entity.getProxyId());
+            MonitorProxyPluginList byId = monitorProxyPluginListService.getById(entity.getProxyConfigListId());
             monitorProxyPluginListService.updateById(entity);
             monitorProxyService.refresh(String.valueOf(byId.getProxyId()));
             return true;

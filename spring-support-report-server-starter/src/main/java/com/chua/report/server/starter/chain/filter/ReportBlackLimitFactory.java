@@ -21,7 +21,7 @@ public class ReportBlackLimitFactory implements Initializable {
     private final List<MonitorProxyPluginList> list;
     private final List<IpRange> ranges = new LinkedList<>();
     public ReportBlackLimitFactory(List<MonitorProxyPluginList> list) {
-        this.list = list;
+        this.list = new LinkedList<>(list);
     }
     /**
      * 刷新

@@ -2,6 +2,7 @@ package com.chua.report.server.starter.pojo;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.report.server.starter.entity.MonitorProxyLog;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -22,7 +23,7 @@ import lombok.EqualsAndHashCode;
 @Schema(description = "限流日志")
 @Data
 @TableName(value = "monitor_proxy_limit_log")
-public class MonitorProxyLimitLogResult extends MonitorProxyLimitLog {
+public class MonitorProxyLimitLogResult extends MonitorProxyLog {
 
     /**
      * 总次数
@@ -59,5 +60,6 @@ public class MonitorProxyLimitLogResult extends MonitorProxyLimitLog {
     @TableField(exist = false)
     @ApiModelProperty(value = "总警告次数(/min)")
     private Integer warnCount;
+
 }
 
