@@ -43,7 +43,10 @@ public class ReportEvent<T>{
      */
     private String applicationActive;
 
-
+    /**
+     * 上报时间
+     */
+    private long timestamp = System.currentTimeMillis();
     /**
      * 上报数据
      */
@@ -53,12 +56,20 @@ public class ReportEvent<T>{
      * 计算事件ID
      * @return
      */
-    public String[] calcEventIds() {
+    public String[] eventIds() {
         return new String[]{
                 reportType.name(),
-                reportType.name() +":" + applicationHost + applicationPort
+                clientEventId()
         };
     }
+    /**
+     * 计算事件ID
+     * @return
+     */
+    public String clientEventId() {
+        return reportType.name() +":" + applicationHost + applicationPort;
+    }
+
 
 
     @Getter

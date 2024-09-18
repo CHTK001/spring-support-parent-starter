@@ -1,6 +1,7 @@
 package com.chua.report.client.starter.report.event;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 
@@ -10,12 +11,9 @@ import java.math.BigDecimal;
  * @author CH
  * @since 2024/9/18
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
-public class MemEvent {
-    /**
-     * 时间戳，记录内存信息的采集时间
-     */
-    private long timestamp;
+public class MemEvent extends TimestampEvent{
     /**
      * 总内存，单位为字节
      */
@@ -29,11 +27,6 @@ public class MemEvent {
      * 已用内存百分比，范围在0到1之间
      */
     private BigDecimal usedPercent;
-
-    /**
-     * 可用内存百分比，范围在0到1之间
-     */
-    private BigDecimal freePercent;
     /**
      * 可用内存，单位为字节
      */

@@ -17,6 +17,7 @@ import com.chua.report.client.starter.endpoint.ModuleType;
 import com.chua.report.client.starter.properties.ReportClientProperties;
 import com.chua.report.client.starter.properties.ReportEndpointProperties;
 import com.chua.report.client.starter.report.Report;
+import com.chua.report.client.starter.report.event.ReportEvent;
 import com.chua.zbus.support.protocol.ZbusClient;
 import com.google.common.reflect.TypeToken;
 import io.zbus.mq.Message;
@@ -131,18 +132,18 @@ public class SettingFactory implements AutoCloseable, InitializingBean {
     }
 
     private void report() {
-        Set<String> reportCollect = reportClientProperties.getReport();
+        Set<ReportEvent.ReportType> reportCollect = reportClientProperties.getReport();
         if (CollectionUtils.isEmpty(reportCollect)) {
             return;
         }
 
         scheduledExecutorService.scheduleAtFixedRate(() -> {
             try {
-                for (String plugin : reportCollect) {
-                    if (StringUtils.isEmpty(plugin)) {
+                for (ReportEvent.ReportType reportType : reportCollect) {
+                    if (null == reportType) {
                         continue;
                     }
-                    Report<?> report = ServiceProvider.of(Report.class).getNewExtension(plugin);
+                    Report<?> report = ServiceProvider.of(Report.class).getNewExtension(reportType);
                     if (null == report) {
                         continue;
                     }

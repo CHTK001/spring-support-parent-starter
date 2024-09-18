@@ -1,6 +1,7 @@
 package com.chua.report.client.starter.report.event;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.util.List;
 
@@ -9,8 +10,9 @@ import java.util.List;
  * @author CH
  * @since 2024/9/18
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
-public class SysEvent {
+public class SysEvent extends TimestampEvent{
 
     /**
      * 主机名
@@ -35,8 +37,4 @@ public class SysEvent {
      * 外网IP
      */
     private String publicAddress;
-    /**
-     * 时间戳
-     */
-    private long timestamp = System.currentTimeMillis();
 }
