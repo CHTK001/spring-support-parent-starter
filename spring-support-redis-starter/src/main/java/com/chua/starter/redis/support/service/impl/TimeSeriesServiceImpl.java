@@ -1,12 +1,16 @@
 package com.chua.starter.redis.support.service.impl;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.protocol.channel.Channel;
+import com.chua.common.support.session.indicator.DataIndicator;
 import com.chua.common.support.session.indicator.TimeIndicator;
 import com.chua.redis.support.client.RedisClient;
 import com.chua.redis.support.client.RedisSession;
 import com.chua.redis.support.client.RedisTimeSeries;
 import com.chua.starter.redis.support.service.TimeSeriesService;
 import org.springframework.beans.factory.annotation.Autowired;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.timeseries.TSCreateParams;
 import redis.clients.jedis.timeseries.TSElement;
 import redis.clients.jedis.timeseries.TSRangeParams;
@@ -27,6 +31,7 @@ public class TimeSeriesServiceImpl implements TimeSeriesService {
 
     @Autowired
     private RedisClient redisClient;
+
     @Override
     public ReturnResult<Boolean> save(String indicator, long timestamp, double value, LinkedHashMap<String, String> label, long retentionPeriod) {
         RedisSession redisSession  = (RedisSession) redisClient.getSession();
@@ -108,16 +113,37 @@ public class TimeSeriesServiceImpl implements TimeSeriesService {
 
         List<TSElement> tsElements = redisTimeSeries.tsRevRange(indicator, tsRangeParams);
         List<TimeIndicator> timeIndicators = new ArrayList<>(1000);
-        String[] split = indicator.split(":");
         for (TSElement element : tsElements) {
-            TimeIndicator timeIndicator = new TimeIndicator(split[3]);
-            timeIndicator.setName(split[4]);
+            TimeIndicator timeIndicator = new TimeIndicator(indicator);
             timeIndicator.setTimestamp(element.getTimestamp());
             timeIndicator.setValue(element.getValue());
 
             timeIndicators.add(timeIndicator);
         }
         return ReturnResult.success(timeIndicators);
+    }
+
+    @Override
+    public ReturnResult<DataIndicator> get(String indicator, long fromTimestamp, long toTimestamp, int count) {
+        RedisSession redisSession  = (RedisSession) redisClient.getSession();
+        JedisPool jedis = redisSession.getJedis();
+        try (Jedis resource = jedis.getResource()) {
+            String s = resource.get(indicator);
+            DataIndicator dataIndicator = new DataIndicator(indicator);
+            dataIndicator.setTimestamp(System.currentTimeMillis());
+            dataIndicator.setPersistence(true);
+            dataIndicator.setValue(s);
+            return ReturnResult.of(dataIndicator);
+        }
+    }
+
+    @Override
+    public void set(String indicator, String value) {
+        RedisSession redisSession  = (RedisSession) redisClient.getSession();
+        JedisPool jedis = redisSession.getJedis();
+        try (Jedis resource = jedis.getResource()) {
+            resource.set(indicator, value);
+        }
     }
 
 }

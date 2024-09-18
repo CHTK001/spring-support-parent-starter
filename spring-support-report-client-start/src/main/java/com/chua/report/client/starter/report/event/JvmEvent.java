@@ -1,6 +1,7 @@
 package com.chua.report.client.starter.report.event;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
  * JVM信息类，用于封装JVM的相关监控数据
@@ -8,8 +9,9 @@ import lombok.Data;
  * @author CH
  * @since 2024/9/18
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
-public class JvmEvent {
+public class JvmEvent extends TimestampEvent{
 
     /**
      * JVM运行时间（毫秒）

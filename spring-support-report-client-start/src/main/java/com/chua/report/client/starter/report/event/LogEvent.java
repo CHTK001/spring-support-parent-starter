@@ -11,9 +11,10 @@ import java.io.Serializable;
  * @author CH
  * @since 2024/9/7
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
 @Schema(description = "事件")
-public class LogEvent implements Serializable {
+public class LogEvent extends TimestampEvent implements Serializable {
 
     /**
      * 日志级别
@@ -50,10 +51,5 @@ public class LogEvent implements Serializable {
      */
     @Schema(description = "行号")
     private Integer line;
-    /**
-     * 时间戳
-     */
-    @Schema(description = "时间戳")
-    private Long timestamp;
 
 }

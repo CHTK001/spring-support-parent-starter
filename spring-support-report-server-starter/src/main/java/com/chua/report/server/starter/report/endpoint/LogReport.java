@@ -52,7 +52,7 @@ public class LogReport {
      * @param reportEvent
      */
     private void reportToSocketIo(LogEvent logEvent, ReportEvent<?> reportEvent) {
-        String[] eventIds = reportEvent.calcEventIds();
+        String[] eventIds = reportEvent.eventIds();
         for (String eventId : eventIds) {
             socketSessionTemplate.send(eventId, Json.toJSONString(logEvent));
         }

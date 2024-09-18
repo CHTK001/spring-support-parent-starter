@@ -8,6 +8,8 @@ import com.chua.report.client.starter.report.event.JvmEvent;
 import com.chua.report.client.starter.report.event.MemEvent;
 import com.chua.report.client.starter.report.event.ReportEvent;
 
+import java.math.BigDecimal;
+
 /**
  * 内存信息
  * @author CH
@@ -21,8 +23,7 @@ public class MemReport implements Report<MemEvent>{
         memEvent.setFree(mem.getFree());
         memEvent.setTotal(mem.getTotal());
         memEvent.setUsed(mem.getUsed());
-        memEvent.setUsedPercent(NumberUtils.reserve(mem.getUsed()/ memEvent.getTotal(), 2));
-        memEvent.setFreePercent(NumberUtils.reserve(mem.getFree()/ memEvent.getTotal(), 2));
+        memEvent.setUsedPercent(mem.getUsedPercent());
         memEvent.setTimestamp(memEvent.getTimestamp());
 
         ReportEvent<MemEvent> objectReportEvent = new ReportEvent<>();

@@ -1,6 +1,7 @@
 package com.chua.starter.redis.support.service;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.session.indicator.DataIndicator;
 import com.chua.common.support.session.indicator.TimeIndicator;
 
 import java.util.LinkedHashMap;
@@ -85,5 +86,28 @@ public interface TimeSeriesService {
      */
     ReturnResult<List<TimeIndicator>> range(String indicator, long fromTimestamp, long toTimestamp, int count);
 
+    /**
+     * 查询指定指标的数据范围。
+     *
+     * 本函数旨在查询指定指标的数据范围，包括时间戳和值。
+     * 它返回一个表示操作成功或失败的结果对象。
+     *
+     * @param indicator 指标名称，用于标识要查询的数据类型或类别。
+     * @param fromTimestamp 数据查询的起始时间戳，用于指定查询数据的时间范围。
+     * @param toTimestamp 数据查询的结束时间戳，用于指定查询数据的时间范围。
+     * @param count 数据查询结果的数量限制，用于限制返回的数据数量。
+     */
+    ReturnResult<DataIndicator> get(String indicator, long fromTimestamp, long toTimestamp, int count);
+
+    /**
+     * 设置指定指标的数据。
+     *
+     * 本函数旨在设置指定指标的数据，包括时间戳和值。
+     * 它返回一个表示操作成功或失败的结果对象。
+     *
+     * @param indicator 指标名称，用于标识要设置的数据类型或类别。
+     * @param value 数据的JSON字符串表示形式，包含时间戳和值。
+     */
+    void set(String indicator, String value);
 }
 

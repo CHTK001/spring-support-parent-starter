@@ -11,9 +11,10 @@ import java.io.Serializable;
  * @author CH
  * @since 2024/9/7
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
-@Schema(description = "事件")
-public class SqlEvent  implements Serializable {
+@Schema(description = "SQL事件")
+public class SqlEvent extends TimestampEvent implements Serializable {
 
     /**
      * sql
@@ -34,9 +35,5 @@ public class SqlEvent  implements Serializable {
      */
     private String className;
 
-    /**
-     * 时间戳
-     */
-    private long timestamp = System.currentTimeMillis();
 
 }
