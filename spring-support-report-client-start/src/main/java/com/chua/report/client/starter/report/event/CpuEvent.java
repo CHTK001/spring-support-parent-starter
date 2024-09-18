@@ -1,6 +1,7 @@
 package com.chua.report.client.starter.report.event;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
  * 系统cpu信息类
@@ -8,8 +9,9 @@ import lombok.Data;
  * @author CH
  * @since 2024/9/18
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
-public class CpuEvent {
+public class CpuEvent extends TimestampEvent{
 
     /**
      * CPU核心数量

@@ -1,6 +1,7 @@
 package com.chua.report.client.starter.report.event;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 
@@ -10,8 +11,9 @@ import java.math.BigDecimal;
  * @author CH
  * @since 2024/9/18
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
-public class DiskEvent {
+public class DiskEvent extends TimestampEvent{
     /**
      * 磁盘目录名称
      */
@@ -27,22 +29,31 @@ public class DiskEvent {
     /**
      * 磁盘的总空间
      */
-    private String total;
+    private double total;
     /**
      * 磁盘的可用空间
      */
-    private String free;
+    private double free;
     /**
      * 磁盘的已用空间
      */
-    private String used;
+    private double used;
+    /**
+     * 磁盘的总空间，以文本形式表示
+     */
+    private String totalText;
+
+    /**
+     * 磁盘已用空间，以文本形式表示
+     */
+    private String usedText;
+    /**
+     * 磁盘可用空间，以文本形式表示
+     */
+    private String freeText;
     /**
      * 磁盘使用率，表示已用空间占总空间的比例
      */
-    private double usage;
-    /**
-     * 时间戳，记录磁盘读写状态的时间
-     */
-    private long timeStamp;
+    private BigDecimal usedPercent;
 
 }

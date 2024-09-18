@@ -1,5 +1,6 @@
 package com.chua.report.client.starter.properties;
 
+import com.chua.report.client.starter.report.event.ReportEvent;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -30,7 +31,7 @@ public class ReportClientProperties {
     /**
      * 上报服务
      */
-    private Set<String> report = new HashSet<>();
+    private Set<ReportEvent.ReportType> report = new HashSet<>();
 
     /**
      * 上报时间间隔(s)

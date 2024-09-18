@@ -24,11 +24,15 @@ public class DiskReport implements Report<List<DiskEvent>>{
             DiskEvent diskEvent = new DiskEvent();
             diskEvent.setDirName(it.getDirName());
             diskEvent.setTypeName(it.getTypeName());
+            diskEvent.setTotal(it.getTotal());
             diskEvent.setFree(it.getFree());
             diskEvent.setUsed(it.getUsed());
+            diskEvent.setUsedPercent(it.getUsedPercent());
+
+            diskEvent.setTotalText(it.getTotalText());
+            diskEvent.setFreeText(it.getFreeText());
+            diskEvent.setUsedText(it.getUsedText());
             diskEvent.setSysTypeName(it.getSysTypeName());
-            diskEvent.setTotal(it.getTotal());
-            diskEvent.setTimeStamp(it.getTimestamp());
             return diskEvent;
         }).toList());
         objectReportEvent.setReportType(ReportEvent.ReportType.DISK);
