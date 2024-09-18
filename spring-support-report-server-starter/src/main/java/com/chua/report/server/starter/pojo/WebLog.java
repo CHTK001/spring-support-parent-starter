@@ -34,7 +34,7 @@ public class WebLog extends Slf4jLog {
     @Override
     public void error(String message, Throwable e) {
         if(null != socketSessionTemplate) {
-            socketSessionTemplate.send("log-" + pid, DateUtils.currentString() +  " " + StringUtils.format(message));
+            socketSessionTemplate.send("PROXY_LOG_" + pid, DateUtils.currentString() +  " " + StringUtils.format(message));
         }
         super.error(message, e);
     }
@@ -42,7 +42,7 @@ public class WebLog extends Slf4jLog {
     @Override
     public void error(String message, Object... args) {
         if(null != socketSessionTemplate) {
-            socketSessionTemplate.send("log-" + pid, DateUtils.currentString() +  " " + StringUtils.format(message, args));
+            socketSessionTemplate.send("PROXY_LOG_" + pid, DateUtils.currentString() +  " " + StringUtils.format(message, args));
         }
         super.error(message, args);
     }
@@ -50,7 +50,7 @@ public class WebLog extends Slf4jLog {
     @Override
     public void debug(String message, Object... args) {
         if(null != socketSessionTemplate) {
-            socketSessionTemplate.send("log-" + pid, DateUtils.currentString() +  " " + StringUtils.format(message, args));
+            socketSessionTemplate.send("PROXY_LOG_" + pid, DateUtils.currentString() +  " " + StringUtils.format(message, args));
         }
         super.debug(message, args);
     }
@@ -58,7 +58,7 @@ public class WebLog extends Slf4jLog {
     @Override
     public void trace(String message, Object... args) {
         if(null != socketSessionTemplate) {
-            socketSessionTemplate.send("log-" + pid, DateUtils.currentString() +  " " + StringUtils.format(message, args));
+            socketSessionTemplate.send("PROXY_LOG_" + pid, DateUtils.currentString() +  " " + StringUtils.format(message, args));
         }
         super.trace(message, args);
     }
@@ -66,7 +66,7 @@ public class WebLog extends Slf4jLog {
     @Override
     public void warn(String message, Object... args) {
         if(null != socketSessionTemplate) {
-            socketSessionTemplate.send("log-" + pid, DateUtils.currentString() +  " " + StringUtils.format(message, args));
+            socketSessionTemplate.send("PROXY_LOG_" + pid, DateUtils.currentString() +  " " + StringUtils.format(message, args));
         }
         super.warn(message, args);
     }
@@ -74,7 +74,7 @@ public class WebLog extends Slf4jLog {
     @Override
     public void info(String message, Object... args) {
         if(null != socketSessionTemplate) {
-            socketSessionTemplate.send("log-" + pid, DateUtils.currentString() +  " " + StringUtils.format(message, args));
+            socketSessionTemplate.send("PROXY_LOG_" + pid, DateUtils.currentString() +  " " + StringUtils.format(message, args));
         }
         super.info(message, args);
     }
