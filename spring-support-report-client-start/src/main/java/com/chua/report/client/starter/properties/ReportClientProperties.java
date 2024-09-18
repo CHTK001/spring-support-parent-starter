@@ -35,5 +35,5 @@ public class ReportClientProperties {
     /**
      * 上报时间间隔(s)
      */
-    private Integer reportTime;
+    private Integer reportTime = 10;
 }

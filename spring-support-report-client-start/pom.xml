@@ -25,6 +25,10 @@
             <artifactId>spring-support-common-starter</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-oshi-starter</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>com.chua</groupId>

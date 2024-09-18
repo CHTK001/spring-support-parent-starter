@@ -74,6 +74,10 @@ public class ReportEvent<T>{
          */
         SQL,
 
+        /**
+         * jvm
+         */
+        JVM,
 
         /**
          * cpu
@@ -81,9 +85,18 @@ public class ReportEvent<T>{
         CPU,
 
         /**
+         * 磁盘
+         */
+        DISK,
+        /**
          * 内存
          */
         MEM,
+
+        /**
+         * 系统
+         */
+        SYS,
         /**
          * agent日志
          */
