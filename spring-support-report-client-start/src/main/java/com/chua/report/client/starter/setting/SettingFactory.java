@@ -30,6 +30,7 @@ import org.springframework.core.env.Environment;
 
 import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
@@ -135,6 +136,11 @@ public class SettingFactory implements AutoCloseable, InitializingBean {
         Set<ReportEvent.ReportType> reportCollect = reportClientProperties.getReport();
         if (CollectionUtils.isEmpty(reportCollect)) {
             return;
+        }
+
+        if(reportCollect.contains(ReportEvent.ReportType.ALL)) {
+            reportCollect.clear();
+            reportCollect.addAll(List.of(ReportEvent.ReportType.values()));
         }
 
         scheduledExecutorService.scheduleAtFixedRate(() -> {
@@ -287,5 +293,24 @@ public class SettingFactory implements AutoCloseable, InitializingBean {
         }
         scheduledExecutorService = ThreadUtils.newScheduledThreadPoolExecutor(1, "com-ch-monitor-core-thread");
         initializeZbus();
+    }
+
+    /**
+     * 检查给定的报告类型是否包含在报告客户端的配置属性中
+     * 通过比较给定的报告类型和报告客户端的配置属性中的报告类型列表来确定给定的报告类型是否包含在报告客户端的配置属性中
+     *
+     * @param reportType 报告类型
+     * @return 如果给定的报告类型包含在报告客户端的配置属性中，则返回true；否则返回false
+     */
+    public boolean contains(ReportEvent.ReportType reportType) {
+        Set<ReportEvent.ReportType> report = reportClientProperties.getReport();
+        if(report.contains(ReportEvent.ReportType.ALL)) {
+            return true;
+        }
+
+        if(null == reportType) {
+            return false;
+        }
+        return report.contains(reportType);
     }
 }

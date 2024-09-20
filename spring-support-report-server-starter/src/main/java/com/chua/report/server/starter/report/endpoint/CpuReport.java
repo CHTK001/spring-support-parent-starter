@@ -3,10 +3,11 @@ package com.chua.report.server.starter.report.endpoint;
 import com.chua.common.support.annotations.OnRouterEvent;
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.json.Json;
-import com.chua.redis.support.constant.RedisConstant;
 import com.chua.report.client.starter.report.event.CpuEvent;
 import com.chua.report.client.starter.report.event.ReportEvent;
+import com.chua.report.client.starter.setting.ReportExpireSetting;
 import com.chua.socketio.support.session.SocketSessionTemplate;
+import com.chua.starter.common.support.application.GlobalSettingFactory;
 import com.chua.starter.redis.support.service.TimeSeriesService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.SpringBootConfiguration;
@@ -68,7 +69,9 @@ public class CpuReport {
      */
     private void registerRedisTime(CpuEvent cpuEvent, ReportEvent<?> reportEvent) {
         // 将CPU事件信息以字符串形式保存到Redis
-        timeSeriesService.save(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(), reportEvent.getTimestamp(), 100 - cpuEvent.getFree(), RedisConstant.DEFAULT_RETENTION_PERIOD_FOR_WEEK * 1000L);
+        ReportExpireSetting expire = GlobalSettingFactory.getInstance().get("expire", ReportExpireSetting.class);
+        timeSeriesService.save(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(), reportEvent.getTimestamp(),
+                100 - cpuEvent.getFree(), expire.getCpu() * 1000L);
     }
 
 }

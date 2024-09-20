@@ -30,7 +30,7 @@ import static com.chua.redis.support.constant.RedisConstant.REDIS_SEARCH_PREFIX;
 public class SqlReport {
 
     public static final String LOG_NAME = "sql";
-    public static final String LOG_INDEX_NAME_PREIX = REDIS_SEARCH_PREFIX + LOG_NAME + ":";
+    public static final String LOG_INDEX_NAME_PREFIX = REDIS_SEARCH_PREFIX + LOG_NAME + ":";
     private final RedisSearchService redisSearchService;
 
     @OnRouterEvent("sql")
@@ -68,7 +68,7 @@ public class SqlReport {
             document.put("applicationName", reportEvent.getApplicationName());
             ReportExpireSetting expire = GlobalSettingFactory.getInstance().get("expire", ReportExpireSetting.class);
             document.put("expire", String.valueOf(NumberUtils.defaultIfNullOrPositive(expire.getSql(), 86400 * 30)));
-            redisSearchService.addDocument(LOG_INDEX_NAME_PREIX + Project.getInstance().calcApplicationUuid(), document);
+            redisSearchService.addDocument(LOG_INDEX_NAME_PREFIX + Project.getInstance().calcApplicationUuid(), document);
         } catch (Exception ignored) {
         }
     }
@@ -76,7 +76,7 @@ public class SqlReport {
     private void registerIndex() {
         try {
             SearchIndex searchIndex = new SearchIndex();
-            searchIndex.setName(LOG_INDEX_NAME_PREIX + Project.getInstance().calcApplicationUuid());
+            searchIndex.setName(LOG_INDEX_NAME_PREFIX + Project.getInstance().calcApplicationUuid());
             searchIndex.setLanguage("chinese");
             SearchSchema searchSchema = new SearchSchema();
             searchSchema.addTextField("text", 10);

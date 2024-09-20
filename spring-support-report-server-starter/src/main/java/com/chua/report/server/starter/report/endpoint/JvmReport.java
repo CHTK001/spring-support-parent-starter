@@ -10,8 +10,6 @@ import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.redis.support.service.TimeSeriesService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.SpringBootConfiguration;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
 
 import static com.chua.redis.support.constant.RedisConstant.REDIS_SIMPLE_SERIES_PREFIX;
 
@@ -68,7 +66,7 @@ public class JvmReport {
      */
     private void registerRedisTime(JvmEvent jvmEvent, ReportEvent<?> reportEvent) {
         // 将JVM事件信息以字符串形式保存到Redis
-        timeSeriesService.set(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(), JSON.toJSONString(jvmEvent));
+        timeSeriesService.put(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(), JSON.toJSONString(jvmEvent));
     }
 
 }

@@ -1,16 +1,18 @@
 package com.chua.report.client.starter.report.event;
 
+import com.chua.common.support.utils.DigestUtils;
 import com.chua.starter.common.support.project.Project;
 import lombok.Data;
 import lombok.Getter;
 
 /**
  * 上报数据
+ *
  * @author CH
  * @since 2024/9/12
  */
 @Data
-public class ReportEvent<T>{
+public class ReportEvent<T> {
 
     public ReportEvent() {
         setApplicationHost(Project.getInstance().getApplicationHost());
@@ -54,6 +56,7 @@ public class ReportEvent<T>{
 
     /**
      * 计算事件ID
+     *
      * @return
      */
     public String[] eventIds() {
@@ -62,14 +65,15 @@ public class ReportEvent<T>{
                 clientEventId()
         };
     }
+
     /**
      * 计算事件ID
+     *
      * @return
      */
     public String clientEventId() {
-        return reportType.name() +":" + applicationHost + applicationPort;
+        return DigestUtils.md5Hex(reportType.name() + ":" + applicationHost + applicationPort);
     }
-
 
 
     @Getter
@@ -85,6 +89,10 @@ public class ReportEvent<T>{
          */
         SQL,
 
+        /**
+         * url
+         */
+        URL,
         /**
          * jvm
          */
@@ -109,6 +117,11 @@ public class ReportEvent<T>{
          */
         MEM,
 
+
+        /**
+         * 服务
+         */
+        SERVER,
         /**
          * 系统
          */
@@ -118,22 +131,19 @@ public class ReportEvent<T>{
          * 网络
          */
         NETWORK,
+
+        /**
+         * trace
+         */
+        TRACE,
         /**
          * 磁盘io
          */
         IO_DISK,
-        /**
-         * agent日志
-         */
-        AGENT_LOG,
 
         /**
-         * agent sql
+         * 全部
          */
-        AGENT_SQL,
-        /**
-         * agent trace
-         */
-        AGENT_TRANCE
+        ALL
     }
 }
