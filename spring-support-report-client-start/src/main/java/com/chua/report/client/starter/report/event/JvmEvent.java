@@ -29,6 +29,11 @@ public class JvmEvent extends TimestampEvent{
      * 可用内存容量（字节）
      */
     private long freeMemory;
+
+    /**
+     * 已使用的内存容量（字节）
+     */
+    private long totalMemory;
     /**
      * 当前加载到JVM的类的数量
      */

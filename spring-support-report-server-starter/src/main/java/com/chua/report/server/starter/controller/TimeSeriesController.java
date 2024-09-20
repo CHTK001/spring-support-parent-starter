@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -40,7 +41,26 @@ public class TimeSeriesController {
     @Operation(summary = "查询指标信息")
     @GetMapping("series")
     public ReturnResult<List<TimeIndicator>> list(IndicatorQuery indicatorQuery) {
-        return timeSeriesService.range(RedisConstant.REDIS_TIME_SERIES_PREFIX + indicatorQuery.getName(), indicatorQuery.getFromTimestamp(), indicatorQuery.getToTimestamp(), indicatorQuery.getCount());
+        return timeSeriesService.range(RedisConstant.REDIS_TIME_SERIES_PREFIX + indicatorQuery.getName(),
+                indicatorQuery.getFromTimestamp(),
+                indicatorQuery.getToTimestamp(),
+                indicatorQuery.isLatest(),
+                indicatorQuery.getCount());
+    }
+    /**
+     * 查询基本信息。
+     *
+     * @param indicatorQuery 监控代理的唯一标识符。
+     * @return 返回操作结果，如果操作成功，返回true；否则返回false，并附带错误信息。
+     */
+    @Operation(summary = "查询指标信息")
+    @GetMapping("multi")
+    public ReturnResult<Map<String, List<TimeIndicator>>> mRange(IndicatorQuery indicatorQuery) {
+        return timeSeriesService.mRange(RedisConstant.REDIS_TIME_SERIES_PREFIX + indicatorQuery.getName(),
+                indicatorQuery.getFromTimestamp(),
+                indicatorQuery.getToTimestamp(),
+                indicatorQuery.isLatest(),
+                indicatorQuery.getCount());
     }
     /**
      * 查询基本信息。

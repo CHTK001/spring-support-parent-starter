@@ -6,6 +6,7 @@ import com.chua.common.support.session.indicator.TimeIndicator;
 
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 时间序列服务接口。
@@ -74,6 +75,21 @@ public interface TimeSeriesService {
 
     /**
      * 查询指定指标的数据范围。
+     * <p>
+     * 本函数旨在查询指定指标的数据范围，包括时间戳和值。
+     * 它返回一个表示操作成功或失败的结果对象。
+     *
+     * @param indicator     指标名称，用于标识要查询的数据类型或类别。
+     * @param fromTimestamp 数据查询的起始时间戳，用于指定查询数据的时间范围。
+     * @param toTimestamp   数据查询的结束时间戳，用于指定查询数据的时间范围。
+     * @param latest        是否最新的放在最前面
+     * @param count         数据查询结果的数量限制，用于限制返回的数据数量。
+     * @return 返回一个表示操作结果的对象，其中包含了操作是否成功的标志。
+     */
+    ReturnResult<List<TimeIndicator>> range(String indicator, long fromTimestamp, long toTimestamp, boolean latest, int count);
+
+    /**
+     * 查询指定指标的数据范围。
      *
      * 本函数旨在查询指定指标的数据范围，包括时间戳和值。
      * 它返回一个表示操作成功或失败的结果对象。
@@ -81,11 +97,10 @@ public interface TimeSeriesService {
      * @param indicator 指标名称，用于标识要查询的数据类型或类别。
      * @param fromTimestamp 数据查询的起始时间戳，用于指定查询数据的时间范围。
      * @param toTimestamp 数据查询的结束时间戳，用于指定查询数据的时间范围。
+     * @param latest 是否最新的放在最前面
      * @param count 数据查询结果的数量限制，用于限制返回的数据数量。
-     * @return 返回一个表示操作结果的对象，其中包含了操作是否成功的标志。
      */
-    ReturnResult<List<TimeIndicator>> range(String indicator, long fromTimestamp, long toTimestamp, int count);
-
+    ReturnResult<Map<String, List<TimeIndicator>>> mRange(String indicator, long fromTimestamp, long toTimestamp, boolean latest,  int count);
     /**
      * 查询指定指标的数据范围。
      *
