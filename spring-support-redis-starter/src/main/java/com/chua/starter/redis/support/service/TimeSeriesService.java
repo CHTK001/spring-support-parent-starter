@@ -31,14 +31,14 @@ public interface TimeSeriesService {
 
     /**
      * 保存数据到指定的存储介质中。
-     *
+     * <p>
      * 本函数旨在将给定的指标、值映射和时间戳保存到某种存储介质中，例如数据库或文件系统。
      * 它返回一个表示操作成功或失败的结果对象。
      *
-     * @param indicator 指标名称，用于标识要保存的数据类型或类别。
-     * @param label 值的映射，包含了具体的数据，以键值对的形式组织。
-     * @param value 要保存的值，可以是任何类型，但通常为数字或字符串。
-     * @param timestamp 数据产生的时间戳，用于记录数据的时间属性。
+     * @param indicator       指标名称，用于标识要保存的数据类型或类别。
+     * @param label           值的映射，包含了具体的数据，以键值对的形式组织。
+     * @param value           要保存的值，可以是任何类型，但通常为数字或字符串。
+     * @param timestamp       数据产生的时间戳，用于记录数据的时间属性。
      * @param retentionPeriod 数据的保留时间，以秒为单位。
      * @return 返回一个表示操作结果的对象，其中包含了操作是否成功的标志。
      */
@@ -47,13 +47,13 @@ public interface TimeSeriesService {
 
     /**
      * 保存数据到指定的存储介质中。
-     *
+     * <p>
      * 本函数旨在将给定的指标、值映射和时间戳保存到某种存储介质中，例如数据库或文件系统。
      * 它返回一个表示操作成功或失败的结果对象。
      *
-     * @param indicator 指标名称，用于标识要保存的数据类型或类别。
-     * @param value 要保存的值，可以是任何类型，但通常为数字或字符串。
-     * @param timestamp 数据产生的时间戳，用于记录数据的时间属性。
+     * @param indicator       指标名称，用于标识要保存的数据类型或类别。
+     * @param value           要保存的值，可以是任何类型，但通常为数字或字符串。
+     * @param timestamp       数据产生的时间戳，用于记录数据的时间属性。
      * @param retentionPeriod 数据的保留时间，以秒为单位。
      * @return 返回一个表示操作结果的对象，其中包含了操作是否成功的标志。
      */
@@ -61,13 +61,13 @@ public interface TimeSeriesService {
 
     /**
      * 删除指定指标的所有数据。
-     *
+     * <p>
      * 本函数旨在删除指定指标的所有数据，包括时间戳和值。
      * 它返回一个表示操作成功或失败的结果对象。
      *
-     * @param indicator 指标名称，用于标识要删除的数据类型或类别。
+     * @param indicator     指标名称，用于标识要删除的数据类型或类别。
      * @param fromTimestamp 数据删除的起始时间戳，用于指定删除数据的时间范围。
-     * @param toTimestamp 数据删除的结束时间戳，用于指定删除数据的时间范围。
+     * @param toTimestamp   数据删除的结束时间戳，用于指定删除数据的时间范围。
      * @return 返回一个表示操作结果的对象，其中包含了操作是否成功的标志。
      */
     ReturnResult<Boolean> delete(String indicator, long fromTimestamp, long toTimestamp);
@@ -90,39 +90,63 @@ public interface TimeSeriesService {
 
     /**
      * 查询指定指标的数据范围。
-     *
+     * <p>
      * 本函数旨在查询指定指标的数据范围，包括时间戳和值。
      * 它返回一个表示操作成功或失败的结果对象。
      *
-     * @param indicator 指标名称，用于标识要查询的数据类型或类别。
+     * @param indicator     指标名称，用于标识要查询的数据类型或类别。
      * @param fromTimestamp 数据查询的起始时间戳，用于指定查询数据的时间范围。
-     * @param toTimestamp 数据查询的结束时间戳，用于指定查询数据的时间范围。
-     * @param latest 是否最新的放在最前面
-     * @param count 数据查询结果的数量限制，用于限制返回的数据数量。
+     * @param toTimestamp   数据查询的结束时间戳，用于指定查询数据的时间范围。
+     * @param latest        是否最新的放在最前面
+     * @param count         数据查询结果的数量限制，用于限制返回的数据数量。
      */
-    ReturnResult<Map<String, List<TimeIndicator>>> mRange(String indicator, long fromTimestamp, long toTimestamp, boolean latest,  int count);
+    ReturnResult<Map<String, List<TimeIndicator>>> mRange(String indicator, long fromTimestamp, long toTimestamp, boolean latest, int count);
+
     /**
      * 查询指定指标的数据范围。
-     *
+     * <p>
      * 本函数旨在查询指定指标的数据范围，包括时间戳和值。
      * 它返回一个表示操作成功或失败的结果对象。
      *
-     * @param indicator 指标名称，用于标识要查询的数据类型或类别。
+     * @param indicator     指标名称，用于标识要查询的数据类型或类别。
      * @param fromTimestamp 数据查询的起始时间戳，用于指定查询数据的时间范围。
-     * @param toTimestamp 数据查询的结束时间戳，用于指定查询数据的时间范围。
-     * @param count 数据查询结果的数量限制，用于限制返回的数据数量。
+     * @param toTimestamp   数据查询的结束时间戳，用于指定查询数据的时间范围。
+     * @param count         数据查询结果的数量限制，用于限制返回的数据数量。
      */
     ReturnResult<DataIndicator> get(String indicator, long fromTimestamp, long toTimestamp, int count);
 
     /**
      * 设置指定指标的数据。
-     *
+     * <p>
      * 本函数旨在设置指定指标的数据，包括时间戳和值。
      * 它返回一个表示操作成功或失败的结果对象。
      *
      * @param indicator 指标名称，用于标识要设置的数据类型或类别。
-     * @param value 数据的JSON字符串表示形式，包含时间戳和值。
+     * @param value     数据的JSON字符串表示形式，包含时间戳和值。
      */
-    void set(String indicator, String value);
+    void put(String indicator, String value);
+
+    /**
+     * 设置指定指标的数据。
+     * <p>
+     * 本函数旨在设置指定指标的数据，包括时间戳和值。
+     * 它返回一个表示操作成功或失败的结果对象。
+     *
+     * @param indicator 指标名称，用于标识要设置的数据类型或类别。
+     * @param key       数据的JSON字符串表示形式，包含时间戳和值。
+     * @param value     数据的JSON字符串表示形式，包含时间戳和值。
+     */
+    void hSet(String indicator, String key, String value);
+
+    /**
+     * 获取指定指标的所有数据。
+     * <p>
+     * 本函数旨在获取指定指标的所有数据，包括时间戳和值。
+     * 它返回一个表示操作成功或失败的结果对象。
+     *
+     * @param indicator 指标名称，用于标识要获取的数据类型或类别。
+     * @return
+     */
+    Map<String, String> hGet(String indicator);
 }
 

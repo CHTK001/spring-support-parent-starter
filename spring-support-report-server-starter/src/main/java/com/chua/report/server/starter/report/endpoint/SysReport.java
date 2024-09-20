@@ -4,15 +4,12 @@ import com.alibaba.fastjson2.JSON;
 import com.chua.common.support.annotations.OnRouterEvent;
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.json.Json;
-import com.chua.report.client.starter.report.event.JvmEvent;
 import com.chua.report.client.starter.report.event.ReportEvent;
 import com.chua.report.client.starter.report.event.SysEvent;
 import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.redis.support.service.TimeSeriesService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.SpringBootConfiguration;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
 
 import static com.chua.redis.support.constant.RedisConstant.REDIS_SIMPLE_SERIES_PREFIX;
 
@@ -69,7 +66,7 @@ public class SysReport {
      */
     private void registerRedisTime(SysEvent sysEvent, ReportEvent<?> reportEvent) {
         // 将SYS事件信息以字符串形式保存到Redis
-        timeSeriesService.set(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(), JSON.toJSONString(sysEvent));
+        timeSeriesService.put(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(), JSON.toJSONString(sysEvent));
     }
 
 }

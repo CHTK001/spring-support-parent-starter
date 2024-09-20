@@ -1,6 +1,7 @@
 package com.chua.report.client.starter.service;
 
 import com.chua.common.support.json.Json;
+import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.report.client.starter.report.event.ReportEvent;
 import com.chua.report.client.starter.setting.SettingFactory;
@@ -35,6 +36,19 @@ public class ReportService {
         Producer reportProducer = settingFactory.getReportProducer();
         if (null == reportProducer) {
             return;
+        }
+
+        ReportEvent.ReportType reportType = value.getReportType();
+        if( !settingFactory.contains(reportType)) {
+            return;
+        }
+
+        if(ClassUtils.isPresent("com.chua.attach.hotspot.support.Agent")) {
+            if(reportType == ReportEvent.ReportType.LOG ||
+                    reportType == ReportEvent.ReportType.SQL ||
+                    reportType == ReportEvent.ReportType.TRACE) {
+                return;
+            }
         }
 
         EXECUTOR_SERVICE.execute(() -> {

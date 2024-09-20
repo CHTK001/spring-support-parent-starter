@@ -12,28 +12,36 @@ import lombok.Data;
 public class ReportExpireSetting implements Upgrade<ReportExpireSetting> {
 
     /**
-     * 日志
+     * 日志(s)
      */
-    private Long log;
+    private Long log =  604800L;
 
     /**
-     * sql
+     * sql(s)
      */
-    private Long sql;
+    private Long sql =  604800L;
 
     /**
-     * cpu
+     * url(s)
      */
-    private Long cpu;
+    private Long url =  604800L;
+    /**
+     * cpu(s)
+     */
+    private Long cpu =  604800L;
 
     /**
-     * 设备
+     * 设备(s)
      */
-    private Long device;
+    private Long device =  604800L;
     /**
-     * 内存
+     * 内存(s)
      */
-    private Long mem;
+    private Long mem =  604800L;
+    /**
+     * 网络(s)
+     */
+    private Long network =  604800L;
 
     @Override
     public void upgrade(ReportExpireSetting reportExpireSetting) {

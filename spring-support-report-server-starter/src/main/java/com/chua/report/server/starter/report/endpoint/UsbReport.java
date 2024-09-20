@@ -4,7 +4,6 @@ import com.alibaba.fastjson2.JSON;
 import com.chua.common.support.annotations.OnRouterEvent;
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.json.Json;
-import com.chua.report.client.starter.report.event.DiskEvent;
 import com.chua.report.client.starter.report.event.ReportEvent;
 import com.chua.report.client.starter.report.event.UsbDeviceEvent;
 import com.chua.socketio.support.session.SocketSessionTemplate;
@@ -71,7 +70,7 @@ public class UsbReport {
      */
     private void registerRedisTime( List<UsbDeviceEvent> usbDeviceEvents, ReportEvent<?> reportEvent) {
         // 将DISK事件信息以字符串形式保存到Redis
-        timeSeriesService.set(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(), JSON.toJSONString(usbDeviceEvents));
+        timeSeriesService.put(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(), JSON.toJSONString(usbDeviceEvents));
     }
 
 }

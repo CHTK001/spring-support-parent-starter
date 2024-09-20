@@ -1,21 +1,19 @@
 package com.chua.report.server.starter.report.endpoint;
 
-import com.alibaba.fastjson2.JSON;
 import com.chua.common.support.annotations.OnRouterEvent;
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.json.Json;
-import com.chua.redis.support.constant.RedisConstant;
-import com.chua.report.client.starter.report.event.DiskEvent;
 import com.chua.report.client.starter.report.event.NetworkEvent;
 import com.chua.report.client.starter.report.event.ReportEvent;
+import com.chua.report.client.starter.setting.ReportExpireSetting;
 import com.chua.socketio.support.session.SocketSessionTemplate;
+import com.chua.starter.common.support.application.GlobalSettingFactory;
 import com.chua.starter.redis.support.service.TimeSeriesService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.SpringBootConfiguration;
 
 import java.util.List;
 
-import static com.chua.redis.support.constant.RedisConstant.REDIS_SIMPLE_SERIES_PREFIX;
 import static com.chua.redis.support.constant.RedisConstant.REDIS_TIME_SERIES_PREFIX;
 
 /**
@@ -72,17 +70,18 @@ public class NetworkReport {
      * @param reportEvent 原始报告事件对象
      */
     private void registerRedisTime( List<NetworkEvent> networkEvents, ReportEvent<?> reportEvent) {
+        ReportExpireSetting expire = GlobalSettingFactory.getInstance().get("expire", ReportExpireSetting.class);
         for (NetworkEvent networkEvent : networkEvents) {
             timeSeriesService.save(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId()
                      + ":READ:" + networkEvent.getName()
                     , reportEvent.getTimestamp(),
                     networkEvent.getReadBytes(),
-                    RedisConstant.DEFAULT_RETENTION_PERIOD_FOR_WEEK * 1000L);
+                    expire.getNetwork() * 1000L);
             timeSeriesService.save(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId()
                      + ":WRITE:" + networkEvent.getName()
                     , reportEvent.getTimestamp(),
                     networkEvent.getReadBytes(),
-                    RedisConstant.DEFAULT_RETENTION_PERIOD_FOR_WEEK * 1000L);
+                    expire.getNetwork() * 1000L);
         }
     }
 

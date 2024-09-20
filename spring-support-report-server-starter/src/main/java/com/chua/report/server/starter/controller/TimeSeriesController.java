@@ -73,4 +73,15 @@ public class TimeSeriesController {
     public ReturnResult<DataIndicator> get(IndicatorQuery indicatorQuery) {
         return timeSeriesService.get(RedisConstant.REDIS_SIMPLE_SERIES_PREFIX + indicatorQuery.getName(), indicatorQuery.getFromTimestamp(), indicatorQuery.getToTimestamp(), indicatorQuery.getCount());
     }
+    /**
+     * 查询基本信息。
+     *
+     * @param indicatorQuery 监控代理的唯一标识符。
+     * @return 返回操作结果，如果操作成功，返回true；否则返回false，并附带错误信息。
+     */
+    @Operation(summary = "查询指标信息")
+    @GetMapping("hGet")
+    public ReturnResult<Map<String, String>> hGet(IndicatorQuery indicatorQuery) {
+        return ReturnResult.of(timeSeriesService.hGet(RedisConstant.REDIS_SIMPLE_SERIES_PREFIX + indicatorQuery.getName()));
+    }
 }

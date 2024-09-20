@@ -4,8 +4,10 @@ import com.alibaba.fastjson2.JSON;
 import com.chua.common.support.annotations.OnRouterEvent;
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.utils.DigestUtils;
 import com.chua.report.client.starter.report.event.JvmEvent;
 import com.chua.report.client.starter.report.event.ReportEvent;
+import com.chua.report.client.starter.report.event.ServerEvent;
 import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.redis.support.service.TimeSeriesService;
 import lombok.RequiredArgsConstructor;
@@ -20,9 +22,9 @@ import static com.chua.redis.support.constant.RedisConstant.REDIS_SIMPLE_SERIES_
  */
 @SpringBootConfiguration
 @RequiredArgsConstructor
-public class JvmReport {
+public class ServerReport {
 
-    public static final String NAME = "jvm";
+    public static final String NAME = "server";
     public static final String LOG_INDEX_NAME_PREFIX = REDIS_SIMPLE_SERIES_PREFIX + NAME + ":";
 
     private final SocketSessionTemplate socketSessionTemplate;
@@ -33,40 +35,45 @@ public class JvmReport {
      *
      * @param reportEvent 包含JVM报告数据的事件对象
      */
-    @OnRouterEvent("jvm")
+    @OnRouterEvent("server")
     public void report(ReportEvent<?> reportEvent) {
         // 将报告数据转换为JvmEvent对象
-        JvmEvent jvmEvent = BeanUtils.copyProperties(reportEvent.getReportData(), JvmEvent.class);
+        ServerEvent serverEvent = BeanUtils.copyProperties(reportEvent.getReportData(), ServerEvent.class);
         // 将JVM事件信息注册到Redis
-        registerRedisTime(jvmEvent, reportEvent);
+        registerRedisTime(serverEvent, reportEvent);
         // 通过Socket.IO发送JVM事件信息
-        reportToSocketIo(jvmEvent, reportEvent);
+        reportToSocketIo(serverEvent, reportEvent);
     }
 
     /**
      * 通过Socket.IO报告JVM事件
      *
-     * @param jvmEvent    包含JVM监控数据的事件对象
+     * @param serverEvent    包含JVM监控数据的事件对象
      * @param reportEvent 原始报告事件对象
      */
-    private void reportToSocketIo(JvmEvent jvmEvent, ReportEvent<?> reportEvent) {
+    private void reportToSocketIo(ServerEvent serverEvent, ReportEvent<?> reportEvent) {
         // 计算事件ID数组
         String[] eventIds = reportEvent.eventIds();
         // 遍历事件ID数组，发送JVM事件信息
         for (String eventId : eventIds) {
-            socketSessionTemplate.send(eventId, Json.toJSONString(jvmEvent));
+            socketSessionTemplate.send(eventId, Json.toJSONString(serverEvent));
         }
     }
 
     /**
      * 将JVM事件信息注册到Redis
      *
-     * @param jvmEvent    包含JVM监控数据的事件对象
+     * @param serverEvent    包含JVM监控数据的事件对象
      * @param reportEvent 原始报告事件对象
      */
-    private void registerRedisTime(JvmEvent jvmEvent, ReportEvent<?> reportEvent) {
+    private void registerRedisTime(ServerEvent serverEvent, ReportEvent<?> reportEvent) {
         // 将JVM事件信息以字符串形式保存到Redis
-        timeSeriesService.put(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(), JSON.toJSONString(jvmEvent));
+        timeSeriesService.hSet(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(),
+                DigestUtils.md5Hex(
+                        serverEvent.getSourceHost() + serverEvent.getSourcePort()
+                        + serverEvent.getTargetHost() + serverEvent.getTargetPort()
+                ),
+                JSON.toJSONString(serverEvent));
     }
 
 }
