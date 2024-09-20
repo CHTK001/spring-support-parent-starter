@@ -1,6 +1,5 @@
 package com.chua.report.server.starter.report.endpoint;
 
-import com.alibaba.fastjson2.JSON;
 import com.chua.common.support.annotations.OnRouterEvent;
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.json.Json;
@@ -12,12 +11,11 @@ import com.chua.starter.redis.support.service.TimeSeriesService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
 
 import static com.chua.redis.support.constant.RedisConstant.REDIS_TIME_SERIES_PREFIX;
 
 /**
- * 日志上报
+ * CPU上报
  * @author CH
  * @since 2024/9/13
  */

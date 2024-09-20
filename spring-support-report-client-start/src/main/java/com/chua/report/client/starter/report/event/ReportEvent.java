@@ -99,6 +99,11 @@ public class ReportEvent<T>{
          * 磁盘
          */
         DISK,
+
+        /**
+         * usb
+         */
+        USB,
         /**
          * 内存
          */
@@ -108,6 +113,15 @@ public class ReportEvent<T>{
          * 系统
          */
         SYS,
+
+        /**
+         * 网络
+         */
+        NETWORK,
+        /**
+         * 磁盘io
+         */
+        IO_DISK,
         /**
          * agent日志
          */

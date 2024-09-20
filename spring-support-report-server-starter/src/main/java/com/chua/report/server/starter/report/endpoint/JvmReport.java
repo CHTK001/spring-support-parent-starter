@@ -16,7 +16,7 @@ import org.springframework.data.redis.core.ValueOperations;
 import static com.chua.redis.support.constant.RedisConstant.REDIS_SIMPLE_SERIES_PREFIX;
 
 /**
- * 日志上报
+ * JVM上报
  * @author CH
  * @since 2024/9/13
  */
@@ -27,8 +27,8 @@ public class JvmReport {
     public static final String NAME = "jvm";
     public static final String LOG_INDEX_NAME_PREFIX = REDIS_SIMPLE_SERIES_PREFIX + NAME + ":";
 
-    private final StringRedisTemplate stringRedisTemplate;
     private final SocketSessionTemplate socketSessionTemplate;
+    private final TimeSeriesService timeSeriesService;
 
     /**
      * 处理JVM相关报告事件
@@ -67,10 +67,8 @@ public class JvmReport {
      * @param reportEvent 原始报告事件对象
      */
     private void registerRedisTime(JvmEvent jvmEvent, ReportEvent<?> reportEvent) {
-        // 获取Redis值操作对象
-        ValueOperations<String, String> stringStringValueOperations = stringRedisTemplate.opsForValue();
         // 将JVM事件信息以字符串形式保存到Redis
-        stringStringValueOperations.set(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(), JSON.toJSONString(jvmEvent));
+        timeSeriesService.set(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(), JSON.toJSONString(jvmEvent));
     }
 
 }

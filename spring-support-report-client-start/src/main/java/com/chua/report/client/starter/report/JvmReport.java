@@ -18,7 +18,8 @@ public class JvmReport implements Report<JvmEvent>{
         JvmEvent jvmEvent = new JvmEvent();
         jvmEvent.setClassLoadedCount(jvm.getClassLoadedCount());
         jvmEvent.setThreadCount(jvm.getThreadCount());
-        jvmEvent.setFreeMemory(jvmEvent.getFreeMemory());
+        jvmEvent.setFreeMemory(jvm.getFreeMemory());
+        jvmEvent.setTotalMemory(jvm.getTotalMemory());
         jvmEvent.setMaxMemory(jvm.getMaxMemory());
         jvmEvent.setElapsedTime(jvm.getElapsedTime());
         ReportEvent<JvmEvent> objectReportEvent = new ReportEvent<>();

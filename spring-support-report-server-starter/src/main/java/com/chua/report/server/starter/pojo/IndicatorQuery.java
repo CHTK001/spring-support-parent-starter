@@ -33,4 +33,9 @@ public class IndicatorQuery extends IdQuery {
      * 数量
      */
     private int count = 1000;
+
+    /**
+     * 最新
+     */
+    private boolean latest;
 }

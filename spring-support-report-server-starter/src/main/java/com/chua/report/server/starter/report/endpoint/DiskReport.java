@@ -17,7 +17,7 @@ import java.util.List;
 import static com.chua.redis.support.constant.RedisConstant.REDIS_SIMPLE_SERIES_PREFIX;
 
 /**
- * 日志上报
+ * 磁盘上报
  * @author CH
  * @since 2024/9/13
  */
