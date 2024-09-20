@@ -13,7 +13,6 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.timeseries.TSCreateParams;
 import redis.clients.jedis.timeseries.TSElement;
-import redis.clients.jedis.timeseries.TSMGetParams;
 import redis.clients.jedis.timeseries.TSRangeParams;
 
 import java.util.*;
@@ -163,11 +162,29 @@ public class TimeSeriesServiceImpl implements TimeSeriesService {
     }
 
     @Override
-    public void set(String indicator, String value) {
+    public void put(String indicator, String value) {
         RedisSession redisSession  = (RedisSession) redisClient.getSession();
         JedisPool jedis = redisSession.getJedis();
         try (Jedis resource = jedis.getResource()) {
             resource.set(indicator, value);
+        }
+    }
+
+    @Override
+    public void hSet(String indicator, String key, String value) {
+        RedisSession redisSession  = (RedisSession) redisClient.getSession();
+        JedisPool jedis = redisSession.getJedis();
+        try (Jedis resource = jedis.getResource()) {
+            resource.hset(indicator, key, value);
+        }
+    }
+
+    @Override
+    public Map<String, String> hGet(String indicator) {
+        RedisSession redisSession  = (RedisSession) redisClient.getSession();
+        JedisPool jedis = redisSession.getJedis();
+        try (Jedis resource = jedis.getResource()) {
+            return resource.hgetAll(indicator);
         }
     }
 

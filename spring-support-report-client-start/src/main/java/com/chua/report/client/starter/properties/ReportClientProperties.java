@@ -37,4 +37,9 @@ public class ReportClientProperties {
      * 上报时间间隔(s)
      */
     private Integer reportTime = 10;
+
+    /**
+     * trace切面(使用agent则会忽略切面实现)
+     */
+    private String traceAop;
 }

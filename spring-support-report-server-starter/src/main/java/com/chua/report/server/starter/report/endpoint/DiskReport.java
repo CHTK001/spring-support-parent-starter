@@ -10,7 +10,6 @@ import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.redis.support.service.TimeSeriesService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.SpringBootConfiguration;
-import org.springframework.data.redis.core.ValueOperations;
 
 import java.util.List;
 
@@ -71,7 +70,7 @@ public class DiskReport {
      */
     private void registerRedisTime( List<DiskEvent> diskEvents, ReportEvent<?> reportEvent) {
         // 将DISK事件信息以字符串形式保存到Redis
-        timeSeriesService.set(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(), JSON.toJSONString(diskEvents));
+        timeSeriesService.put(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(), JSON.toJSONString(diskEvents));
     }
 
 }
