@@ -17,7 +17,7 @@ import org.springframework.data.redis.core.ValueOperations;
 import static com.chua.redis.support.constant.RedisConstant.REDIS_SIMPLE_SERIES_PREFIX;
 
 /**
- * 日志上报
+ * 系统信息上报
  * @author CH
  * @since 2024/9/13
  */
@@ -28,7 +28,7 @@ public class SysReport {
     public static final String NAME = "sys";
     public static final String LOG_INDEX_NAME_PREFIX = REDIS_SIMPLE_SERIES_PREFIX + NAME + ":";
 
-    private final StringRedisTemplate stringRedisTemplate;
+    private final TimeSeriesService timeSeriesService;
     private final SocketSessionTemplate socketSessionTemplate;
 
     /**
@@ -68,10 +68,8 @@ public class SysReport {
      * @param reportEvent 原始报告事件对象
      */
     private void registerRedisTime(SysEvent sysEvent, ReportEvent<?> reportEvent) {
-        // 获取Redis值操作对象
-        ValueOperations<String, String> stringStringValueOperations = stringRedisTemplate.opsForValue();
         // 将SYS事件信息以字符串形式保存到Redis
-        stringStringValueOperations.set(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(), JSON.toJSONString(sysEvent));
+        timeSeriesService.set(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(), JSON.toJSONString(sysEvent));
     }
 
 }

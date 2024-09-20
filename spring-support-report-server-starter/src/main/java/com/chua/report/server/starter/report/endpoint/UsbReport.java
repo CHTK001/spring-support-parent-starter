@@ -6,11 +6,11 @@ import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.json.Json;
 import com.chua.report.client.starter.report.event.DiskEvent;
 import com.chua.report.client.starter.report.event.ReportEvent;
+import com.chua.report.client.starter.report.event.UsbDeviceEvent;
 import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.redis.support.service.TimeSeriesService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.SpringBootConfiguration;
-import org.springframework.data.redis.core.ValueOperations;
 
 import java.util.List;
 
@@ -23,9 +23,9 @@ import static com.chua.redis.support.constant.RedisConstant.REDIS_SIMPLE_SERIES_
  */
 @SpringBootConfiguration
 @RequiredArgsConstructor
-public class DiskReport {
+public class UsbReport {
 
-    public static final String NAME = "disk";
+    public static final String NAME = "usb";
     public static final String LOG_INDEX_NAME_PREFIX = REDIS_SIMPLE_SERIES_PREFIX + NAME + ":";
 
     private final TimeSeriesService timeSeriesService;
@@ -36,42 +36,42 @@ public class DiskReport {
      *
      * @param reportEvent 包含DISK报告数据的事件对象
      */
-    @OnRouterEvent("disk")
+    @OnRouterEvent("usb")
     @SuppressWarnings("ALL")
     public void report(ReportEvent<?> reportEvent) {
         // 将报告数据转换为DiskEvent对象
         List reportData = (List) reportEvent.getReportData();
-        List<DiskEvent> diskEventList = BeanUtils.copyPropertiesList(reportData, DiskEvent.class);
+        List<UsbDeviceEvent> list = BeanUtils.copyPropertiesList(reportData, UsbDeviceEvent.class);
         // 将DISK事件信息注册到Redis
-        registerRedisTime(diskEventList, reportEvent);
+        registerRedisTime(list, reportEvent);
         // 通过Socket.IO发送DISK事件信息
-        reportToSocketIo(diskEventList, reportEvent);
+        reportToSocketIo(list, reportEvent);
     }
 
     /**
      * 通过Socket.IO报告DISK事件
      *
-     * @param diskEvents    包含DISK监控数据的事件对象
+     * @param usbDeviceEvents    包含DISK监控数据的事件对象
      * @param reportEvent 原始报告事件对象
      */
-    private void reportToSocketIo( List<DiskEvent> diskEvents, ReportEvent<?> reportEvent) {
+    private void reportToSocketIo( List<UsbDeviceEvent> usbDeviceEvents, ReportEvent<?> reportEvent) {
         // 计算事件ID数组
         String[] eventIds = reportEvent.eventIds();
         // 遍历事件ID数组，发送DISK事件信息
         for (String eventId : eventIds) {
-            socketSessionTemplate.send(eventId, Json.toJSONString(diskEvents));
+            socketSessionTemplate.send(eventId, Json.toJSONString(usbDeviceEvents));
         }
     }
 
     /**
      * 将DISK事件信息注册到Redis
      *
-     * @param diskEvents    包含DISK监控数据的事件对象
+     * @param usbDeviceEvents    包含DISK监控数据的事件对象
      * @param reportEvent 原始报告事件对象
      */
-    private void registerRedisTime( List<DiskEvent> diskEvents, ReportEvent<?> reportEvent) {
+    private void registerRedisTime( List<UsbDeviceEvent> usbDeviceEvents, ReportEvent<?> reportEvent) {
         // 将DISK事件信息以字符串形式保存到Redis
-        timeSeriesService.set(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(), JSON.toJSONString(diskEvents));
+        timeSeriesService.set(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(), JSON.toJSONString(usbDeviceEvents));
     }
 
 }

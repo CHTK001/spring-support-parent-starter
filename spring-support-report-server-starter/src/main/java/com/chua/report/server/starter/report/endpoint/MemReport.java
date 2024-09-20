@@ -16,7 +16,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import static com.chua.redis.support.constant.RedisConstant.REDIS_TIME_SERIES_PREFIX;
 
 /**
- * 日志上报
+ * 内存上报
  * @author CH
  * @since 2024/9/13
  */

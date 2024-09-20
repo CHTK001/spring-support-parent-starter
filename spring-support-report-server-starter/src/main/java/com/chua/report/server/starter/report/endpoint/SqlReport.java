@@ -5,7 +5,6 @@ import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.utils.NumberUtils;
 import com.chua.redis.support.search.SearchIndex;
 import com.chua.redis.support.search.SearchSchema;
-import com.chua.report.client.starter.report.event.LogEvent;
 import com.chua.report.client.starter.report.event.ReportEvent;
 import com.chua.report.client.starter.report.event.SqlEvent;
 import com.chua.report.client.starter.setting.ReportExpireSetting;
