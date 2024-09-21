@@ -70,10 +70,14 @@ public class MemReport {
     private void registerRedisTime(MemEvent memEvent, ReportEvent<?> reportEvent) {
         // 将MEM事件信息以字符串形式保存到Redis
         ReportExpireSetting expire = GlobalSettingFactory.getInstance().get("expire", ReportExpireSetting.class);
+        Long expireTime = expire.getMem();
+        if(null == expireTime || expireTime <=0 ) {
+            return;
+        }
         timeSeriesService.save(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(),
                 reportEvent.getTimestamp(),
                 memEvent.getUsedPercent().doubleValue(),
-                expire.getMem() * 1000L);
+                expireTime * 1000L);
     }
 
 }
