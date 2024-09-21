@@ -188,5 +188,23 @@ public class TimeSeriesServiceImpl implements TimeSeriesService {
         }
     }
 
+    @Override
+    public void increment(String indicator, String key) {
+        RedisSession redisSession  = (RedisSession) redisClient.getSession();
+        JedisPool jedis = redisSession.getJedis();
+        try (Jedis resource = jedis.getResource()) {
+            resource.hincrBy(indicator ,  key, 1);
+        }
+    }
+
+    @Override
+    public void decrement(String indicator, String key) {
+        RedisSession redisSession  = (RedisSession) redisClient.getSession();
+        JedisPool jedis = redisSession.getJedis();
+        try (Jedis resource = jedis.getResource()) {
+            resource.hincrBy(indicator ,  key, -1);
+        }
+    }
+
 }
 
