@@ -70,8 +70,12 @@ public class CpuReport {
     private void registerRedisTime(CpuEvent cpuEvent, ReportEvent<?> reportEvent) {
         // 将CPU事件信息以字符串形式保存到Redis
         ReportExpireSetting expire = GlobalSettingFactory.getInstance().get("expire", ReportExpireSetting.class);
+        Long expireTime = expire.getCpu();
+        if(null == expireTime || expireTime <=0 ) {
+            return;
+        }
         timeSeriesService.save(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(), reportEvent.getTimestamp(),
-                100 - cpuEvent.getFree(), expire.getCpu() * 1000L);
+                100 - cpuEvent.getFree(), expireTime * 1000L);
     }
 
 }

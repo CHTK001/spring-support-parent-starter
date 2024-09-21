@@ -90,7 +90,11 @@ public class LogReport {
         document.put("applicationPort", String.valueOf(reportEvent.getApplicationPort()));
         document.put("applicationName", reportEvent.getApplicationName());
         ReportExpireSetting expire = GlobalSettingFactory.getInstance().get("expire", ReportExpireSetting.class);
-        document.put("expire", String.valueOf(NumberUtils.defaultIfNullOrPositive(expire.getLog(), 86400 * 7)));
+        Long expireTime = expire.getLog();
+        if(null == expireTime || expireTime <=0 ) {
+            return;
+        }
+        document.put("expire", String.valueOf(NumberUtils.defaultIfNullOrPositive(expireTime, 86400 * 7)));
         redisSearchService.addDocument(LOG_INDEX_NAME_PREIX + Project.getInstance().calcApplicationUuid(), document);
     }
 

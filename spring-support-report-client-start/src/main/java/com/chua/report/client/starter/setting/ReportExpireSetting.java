@@ -15,6 +15,10 @@ public class ReportExpireSetting implements Upgrade<ReportExpireSetting> {
      * 日志(s)
      */
     private Long log =  604800L;
+    /**
+     * trace(s)
+     */
+    private Long trace =  604800L;
 
     /**
      * sql(s)

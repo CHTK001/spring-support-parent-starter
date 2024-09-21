@@ -71,17 +71,21 @@ public class NetworkReport {
      */
     private void registerRedisTime( List<NetworkEvent> networkEvents, ReportEvent<?> reportEvent) {
         ReportExpireSetting expire = GlobalSettingFactory.getInstance().get("expire", ReportExpireSetting.class);
+        Long expireTime = expire.getNetwork();
+        if(null == expireTime || expireTime <=0 ) {
+            return;
+        }
         for (NetworkEvent networkEvent : networkEvents) {
             timeSeriesService.save(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId()
                      + ":READ:" + networkEvent.getName()
                     , reportEvent.getTimestamp(),
                     networkEvent.getReadBytes(),
-                    expire.getNetwork() * 1000L);
+                    expireTime* 1000L);
             timeSeriesService.save(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId()
                      + ":WRITE:" + networkEvent.getName()
                     , reportEvent.getTimestamp(),
                     networkEvent.getReadBytes(),
-                    expire.getNetwork() * 1000L);
+                    expireTime* 1000L);
         }
     }
 
