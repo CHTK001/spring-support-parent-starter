@@ -67,7 +67,11 @@ public class SqlReport {
             document.put("applicationPort", String.valueOf(reportEvent.getApplicationPort()));
             document.put("applicationName", reportEvent.getApplicationName());
             ReportExpireSetting expire = GlobalSettingFactory.getInstance().get("expire", ReportExpireSetting.class);
-            document.put("expire", String.valueOf(NumberUtils.defaultIfNullOrPositive(expire.getSql(), 86400 * 30)));
+            Long expireTime = expire.getSql();
+            if(null == expireTime || expireTime <=0 ) {
+                return;
+            }
+            document.put("expire", String.valueOf(NumberUtils.defaultIfNullOrPositive(expireTime, 86400 * 30)));
             redisSearchService.addDocument(LOG_INDEX_NAME_PREFIX + Project.getInstance().calcApplicationUuid(), document);
         } catch (Exception ignored) {
         }
