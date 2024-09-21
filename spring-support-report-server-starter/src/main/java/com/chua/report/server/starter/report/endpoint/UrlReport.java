@@ -1,5 +1,6 @@
 package com.chua.report.server.starter.report.endpoint;
 
+import com.alibaba.fastjson2.JSON;
 import com.chua.common.support.annotations.OnRouterEvent;
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.utils.NumberUtils;
@@ -11,6 +12,7 @@ import com.chua.report.client.starter.setting.ReportExpireSetting;
 import com.chua.starter.common.support.application.GlobalSettingFactory;
 import com.chua.starter.common.support.project.Project;
 import com.chua.starter.redis.support.service.RedisSearchService;
+import com.chua.starter.redis.support.service.TimeSeriesService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.SpringBootConfiguration;
 
@@ -18,6 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static com.chua.redis.support.constant.RedisConstant.REDIS_SEARCH_PREFIX;
+import static com.chua.redis.support.constant.RedisConstant.REDIS_SIMPLE_SERIES_PREFIX;
 
 /**
  * url上报
@@ -31,7 +34,9 @@ public class UrlReport {
 
     public static final String LOG_NAME = "url";
     public static final String LOG_INDEX_NAME_PREFIX = REDIS_SEARCH_PREFIX + LOG_NAME + ":";
+    public static final String LOG_INDEX_NAME_PREFIX2 = REDIS_SIMPLE_SERIES_PREFIX + LOG_NAME + ":";
     private final RedisSearchService redisSearchService;
+    private final TimeSeriesService timeSeriesService;
 
     @OnRouterEvent("url")
     public void report(ReportEvent<?> reportEvent) {
@@ -50,6 +55,8 @@ public class UrlReport {
             registerDocument(mappingEvent, reportEvent);
         } catch (Exception ignored) {
         }
+
+        timeSeriesService.increment(LOG_INDEX_NAME_PREFIX2 + reportEvent.clientEventId() ,  mappingEvent.getUrl());
     }
 
     private void registerDocument(MappingEvent mappingEvent, ReportEvent<?> reportEvent) {

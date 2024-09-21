@@ -148,5 +148,23 @@ public interface TimeSeriesService {
      * @return
      */
     Map<String, String> hGet(String indicator);
+
+
+
+    /**
+     * 增加指定指标的值
+     *
+     * @param indicator 指标字符串，表示要增加的指标
+     * @param key       键字符串，表示指标下的具体项
+     */
+    void increment(String indicator, String key);
+
+    /**
+     * 减少指定指标的值
+     *
+     * @param indicator 指标字符串，表示要减少的指标
+     * @param key       键字符串，表示指标下的具体项
+     */
+    void decrement(String indicator, String key);
 }
 
