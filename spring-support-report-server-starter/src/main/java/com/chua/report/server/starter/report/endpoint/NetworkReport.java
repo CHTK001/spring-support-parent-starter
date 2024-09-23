@@ -42,6 +42,9 @@ public class NetworkReport {
         // 将报告数据转换为DiskEvent对象
         List reportData = (List) reportEvent.getReportData();
         List<NetworkEvent> networkEvents = BeanUtils.copyPropertiesList(reportData, NetworkEvent.class);
+        for (NetworkEvent networkEvent : networkEvents) {
+            networkEvent.setTimestamp(reportEvent.getTimestamp());
+        }
         // 将NETWORK事件信息注册到Redis
         registerRedisTime(networkEvents, reportEvent);
         // 通过Socket.IO发送NETWORK事件信息

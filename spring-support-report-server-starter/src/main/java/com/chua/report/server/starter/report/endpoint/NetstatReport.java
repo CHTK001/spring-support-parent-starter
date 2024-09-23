@@ -32,9 +32,9 @@ public class NetstatReport {
     private final SocketSessionTemplate socketSessionTemplate;
 
     /**
-     * 处理DISK相关报告事件
+     * 处理NETSTAT相关报告事件
      *
-     * @param reportEvent 包含DISK报告数据的事件对象
+     * @param reportEvent 包含NETSTAT报告数据的事件对象
      */
     @OnRouterEvent("netstat")
     @SuppressWarnings("ALL")
@@ -42,35 +42,35 @@ public class NetstatReport {
         // 将报告数据转换为DiskEvent对象
         List reportData = (List) reportEvent.getReportData();
         List<StateEvent> diskEventList = BeanUtils.copyPropertiesList(reportData, StateEvent.class);
-        // 将DISK事件信息注册到Redis
+        // 将NETSTAT事件信息注册到Redis
         registerRedisTime(diskEventList, reportEvent);
-        // 通过Socket.IO发送DISK事件信息
+        // 通过Socket.IO发送NETSTAT事件信息
         reportToSocketIo(diskEventList, reportEvent);
     }
 
     /**
-     * 通过Socket.IO报告DISK事件
+     * 通过Socket.IO报告NETSTAT事件
      *
-     * @param stateEvents    包含DISK监控数据的事件对象
+     * @param stateEvents    包含NETSTAT监控数据的事件对象
      * @param reportEvent 原始报告事件对象
      */
     private void reportToSocketIo( List<StateEvent> stateEvents, ReportEvent<?> reportEvent) {
         // 计算事件ID数组
         String[] eventIds = reportEvent.eventIds();
-        // 遍历事件ID数组，发送DISK事件信息
+        // 遍历事件ID数组，发送NETSTAT事件信息
         for (String eventId : eventIds) {
             socketSessionTemplate.send(eventId, Json.toJSONString(stateEvents));
         }
     }
 
     /**
-     * 将DISK事件信息注册到Redis
+     * 将NETSTAT事件信息注册到Redis
      *
-     * @param stateEvents    包含DISK监控数据的事件对象
+     * @param stateEvents    包含NETSTAT监控数据的事件对象
      * @param reportEvent 原始报告事件对象
      */
     private void registerRedisTime( List<StateEvent> stateEvents, ReportEvent<?> reportEvent) {
-        // 将DISK事件信息以字符串形式保存到Redis
+        // 将NETSTAT事件信息以字符串形式保存到Redis
         timeSeriesService.put(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(), JSON.toJSONString(stateEvents));
     }
 
