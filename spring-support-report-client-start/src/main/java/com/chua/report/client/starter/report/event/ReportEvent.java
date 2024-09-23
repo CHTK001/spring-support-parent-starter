@@ -80,6 +80,10 @@ public class ReportEvent<T> {
     public static enum ReportType {
 
         /**
+         * 进程
+         */
+        //PROCESS,
+        /**
          * 日志
          */
         LOG,
@@ -116,8 +120,6 @@ public class ReportEvent<T> {
          * 内存
          */
         MEM,
-
-
         /**
          * 服务
          */
@@ -132,6 +134,10 @@ public class ReportEvent<T> {
          */
         NETWORK,
 
+        /**
+         * 网络状态
+         */
+        NETSTAT,
         /**
          * trace
          */
