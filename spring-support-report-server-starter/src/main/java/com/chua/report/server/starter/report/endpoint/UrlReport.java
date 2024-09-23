@@ -1,14 +1,15 @@
 package com.chua.report.server.starter.report.endpoint;
 
-import com.alibaba.fastjson2.JSON;
 import com.chua.common.support.annotations.OnRouterEvent;
 import com.chua.common.support.bean.BeanUtils;
+import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.NumberUtils;
 import com.chua.redis.support.search.SearchIndex;
 import com.chua.redis.support.search.SearchSchema;
 import com.chua.report.client.starter.report.event.MappingEvent;
 import com.chua.report.client.starter.report.event.ReportEvent;
 import com.chua.report.client.starter.setting.ReportExpireSetting;
+import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.common.support.application.GlobalSettingFactory;
 import com.chua.starter.common.support.project.Project;
 import com.chua.starter.redis.support.service.RedisSearchService;
@@ -37,17 +38,32 @@ public class UrlReport {
     public static final String LOG_INDEX_NAME_PREFIX2 = REDIS_SIMPLE_SERIES_PREFIX + LOG_NAME + ":";
     private final RedisSearchService redisSearchService;
     private final TimeSeriesService timeSeriesService;
+    private final SocketSessionTemplate socketSessionTemplate;
 
     @OnRouterEvent("url")
     public void report(ReportEvent<?> reportEvent) {
         MappingEvent mappingEvent = BeanUtils.copyProperties(reportEvent.getReportData(), MappingEvent.class);
         registerRedisSearch(mappingEvent, reportEvent);
-
+        // 通过Socket.IO发送JVM事件信息
+        reportToSocketIo(mappingEvent, reportEvent);
     }
-
+    /**
+     * 通过Socket.IO报告JVM事件
+     *
+     * @param mappingEvent    包含JVM监控数据的事件对象
+     * @param reportEvent 原始报告事件对象
+     */
+    private void reportToSocketIo(MappingEvent mappingEvent, ReportEvent<?> reportEvent) {
+        // 计算事件ID数组
+        String[] eventIds = reportEvent.eventIds();
+        // 遍历事件ID数组，发送JVM事件信息
+        for (String eventId : eventIds) {
+            socketSessionTemplate.send(eventId, Json.toJSONString(mappingEvent));
+        }
+    }
     private void registerRedisSearch(MappingEvent mappingEvent, ReportEvent<?> reportEvent) {
         try {
-            registerIndex();
+            registerIndex(reportEvent);
         } catch (Exception ignored) {
         }
 
@@ -79,15 +95,15 @@ public class UrlReport {
                 return;
             }
             document.put("expire", String.valueOf(NumberUtils.defaultIfNullOrPositive(expireTime, 86400 * 30)));
-            redisSearchService.addDocument(LOG_INDEX_NAME_PREFIX + Project.getInstance().calcApplicationUuid(), document);
+            redisSearchService.addDocument(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(), document);
         } catch (Exception ignored) {
         }
     }
 
-    private void registerIndex() {
+    private void registerIndex(ReportEvent<?> reportEvent) {
         try {
             SearchIndex searchIndex = new SearchIndex();
-            searchIndex.setName(LOG_INDEX_NAME_PREFIX + Project.getInstance().calcApplicationUuid());
+            searchIndex.setName(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId());
             searchIndex.setLanguage("chinese");
             SearchSchema searchSchema = new SearchSchema();
             searchSchema.addTextField("text", 10);

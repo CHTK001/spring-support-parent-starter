@@ -12,7 +12,6 @@ import com.chua.report.client.starter.report.event.ReportEvent;
 import com.chua.report.client.starter.setting.ReportExpireSetting;
 import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.common.support.application.GlobalSettingFactory;
-import com.chua.starter.common.support.project.Project;
 import com.chua.starter.redis.support.service.RedisSearchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.SpringBootConfiguration;
@@ -61,7 +60,7 @@ public class LogReport {
 
     private void registerRedisSearch(LogEvent logEvent, ReportEvent<?> reportEvent) {
         try {
-            registerIndex();
+            registerIndex(reportEvent);
         } catch (Exception ignored) {
         }
 
@@ -95,15 +94,15 @@ public class LogReport {
             return;
         }
         document.put("expire", String.valueOf(NumberUtils.defaultIfNullOrPositive(expireTime, 86400 * 7)));
-        redisSearchService.addDocument(LOG_INDEX_NAME_PREIX + Project.getInstance().calcApplicationUuid(), document);
+        redisSearchService.addDocument(LOG_INDEX_NAME_PREIX + reportEvent.clientEventId(), document);
     }
 
     /**
      * 注册索引
      */
-    private void registerIndex() {
+    private void registerIndex(ReportEvent<?> reportEvent) {
         SearchIndex searchIndex = new SearchIndex();
-        searchIndex.setName(LOG_INDEX_NAME_PREIX + Project.getInstance().calcApplicationUuid() );
+        searchIndex.setName(LOG_INDEX_NAME_PREIX + reportEvent.clientEventId());
         searchIndex.setLanguage("chinese");
         SearchSchema searchSchema = new SearchSchema();
         searchSchema.addTextField("text", 10);
