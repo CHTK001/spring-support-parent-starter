@@ -29,4 +29,9 @@ public class NetworkEvent {
      */
     private long writeBytes;
 
+    /**
+     * 时间戳
+     */
+    private long timestamp;
+
 }
