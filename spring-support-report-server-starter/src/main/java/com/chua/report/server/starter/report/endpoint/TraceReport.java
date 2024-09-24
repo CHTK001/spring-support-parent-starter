@@ -80,7 +80,7 @@ public class TraceReport {
             document.put("stack", Joiner.on("\r\n").join(span.getStack()));
             document.put("header", Joiner.on("\r\n").join(span.getHeader()));
             document.put("method", span.getMethod());
-            document.put("model", span.getModel());
+            document.put("model", StringUtils.defaultString(span.getModel(), ""));
             document.put("typeMethod", StringUtils.defaultString(span.getTypeMethod(), ""));
             document.put("type", span.getType());
             document.put("args", Joiner.on("\r\n").join(span.getArgs()));
