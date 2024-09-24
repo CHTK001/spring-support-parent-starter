@@ -95,6 +95,11 @@ public class Span implements Serializable {
      * 来源信息
      */
     private String from;
+
+    /**
+     * 子Span列表
+     */
+    private List<Span> children;
     /**
      * 父Span的类名集合，用于追踪调用链路
      */

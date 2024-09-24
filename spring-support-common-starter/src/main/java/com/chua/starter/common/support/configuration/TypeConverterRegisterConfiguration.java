@@ -32,6 +32,7 @@ public class TypeConverterRegisterConfiguration {
 
         @SuppressWarnings("ALL")
         public TypeConverterRegistry(ConverterRegistry converterRegistry) {
+            converterRegistry.addConverter(new StringToLongTypeConverter());
             converterRegistry.addConverter(new StringToDateTypeConverter());
             converterRegistry.addConverter(new StringToLocalTimeTypeConverter());
             converterRegistry.addConverter(new StringToLocalDateTypeConverter());

@@ -26,7 +26,7 @@ import java.util.Map;
 public class RedisSearchServiceImpl implements RedisSearchService {
     @Autowired
     private RedisClient redisClient;
-    public static final String LANGUAGE = "chinese";
+    public static final String LANGUAGE = "english";
 
     private static final Cacheable CACHEABLE = new GuavaCacheable();
 

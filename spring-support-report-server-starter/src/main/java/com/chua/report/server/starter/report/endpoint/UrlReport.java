@@ -20,8 +20,7 @@ import org.springframework.boot.SpringBootConfiguration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import static com.chua.redis.support.constant.RedisConstant.REDIS_SEARCH_PREFIX;
-import static com.chua.redis.support.constant.RedisConstant.REDIS_SIMPLE_SERIES_PREFIX;
+import static com.chua.redis.support.constant.RedisConstant.*;
 
 /**
  * url上报
@@ -80,7 +79,7 @@ public class UrlReport {
         try {
             Map<String, String> document = new LinkedHashMap<>();
             document.put("text", mappingEvent.getUrl());
-            document.put("type", "url");
+            document.put("modelType", "url");
             document.put("method", mappingEvent.getMethod());
             document.put("address", mappingEvent.getAddress());
             document.put("cost", String.valueOf(mappingEvent.getCost()));
@@ -104,10 +103,12 @@ public class UrlReport {
         try {
             SearchIndex searchIndex = new SearchIndex();
             searchIndex.setName(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId());
+            searchIndex.setPrefix(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId());
             searchIndex.setLanguage("chinese");
             SearchSchema searchSchema = new SearchSchema();
             searchSchema.addTextField("text", 10);
             searchSchema.addTextField("type", 10);
+            searchSchema.addTextField("modelType", 10);
             searchSchema.addTextField("method", 10);
             searchSchema.addTextField("address", 10);
             searchSchema.addSortableNumericField("cost");
