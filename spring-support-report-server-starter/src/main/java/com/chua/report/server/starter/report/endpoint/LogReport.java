@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static com.chua.common.support.constant.CommonConstant.EMPTY;
+import static com.chua.redis.support.constant.RedisConstant.IDX_PREFIX;
 import static com.chua.redis.support.constant.RedisConstant.REDIS_SEARCH_PREFIX;
 
 /**
@@ -32,7 +33,7 @@ import static com.chua.redis.support.constant.RedisConstant.REDIS_SEARCH_PREFIX;
 public class LogReport {
 
     public static final String LOG_NAME = "log";
-    public static final String LOG_INDEX_NAME_PREIX = REDIS_SEARCH_PREFIX + LOG_NAME + ":";
+    public static final String LOG_INDEX_NAME_PREFIX = REDIS_SEARCH_PREFIX + LOG_NAME + ":";
     private final RedisSearchService redisSearchService;
     private final SocketSessionTemplate socketSessionTemplate;
 
@@ -79,7 +80,7 @@ public class LogReport {
     private void registerDocument(LogEvent logEvent, ReportEvent<?> reportEvent) {
         Map<String, String> document = new HashMap<>(3);
         document.put("text", logEvent.getMessage());
-        document.put("type", "log");
+        document.put("modelType", "log");
         document.put("timestamp", String.valueOf(logEvent.getTimestamp()));
         document.put("level", logEvent.getLevel());
         document.put("traceId", StringUtils.defaultString(logEvent.getTraceId() , EMPTY));
@@ -94,7 +95,7 @@ public class LogReport {
             return;
         }
         document.put("expire", String.valueOf(NumberUtils.defaultIfNullOrPositive(expireTime, 86400 * 7)));
-        redisSearchService.addDocument(LOG_INDEX_NAME_PREIX + reportEvent.clientEventId(), document);
+        redisSearchService.addDocument(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(), document);
     }
 
     /**
@@ -102,11 +103,11 @@ public class LogReport {
      */
     private void registerIndex(ReportEvent<?> reportEvent) {
         SearchIndex searchIndex = new SearchIndex();
-        searchIndex.setName(LOG_INDEX_NAME_PREIX + reportEvent.clientEventId());
-        searchIndex.setLanguage("chinese");
+        searchIndex.setName(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId());
+        searchIndex.setPrefix(reportEvent.clientEventId() + ":");
         SearchSchema searchSchema = new SearchSchema();
         searchSchema.addTextField("text", 10);
-        searchSchema.addTextField("type", 10);
+        searchSchema.addTextField("modelType", 10);
         searchSchema.addTextField("level", 1);
         searchSchema.addTextField("className", 1);
         searchSchema.addTextField("traceId", 10);
