@@ -17,6 +17,7 @@ import org.springframework.boot.SpringBootConfiguration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import static com.chua.redis.support.constant.RedisConstant.IDX_PREFIX;
 import static com.chua.redis.support.constant.RedisConstant.REDIS_SEARCH_PREFIX;
 
 /**
@@ -81,11 +82,10 @@ public class SqlReport {
         try {
             SearchIndex searchIndex = new SearchIndex();
             searchIndex.setName(LOG_INDEX_NAME_PREFIX + Project.getInstance().calcApplicationUuid());
-            searchIndex.setLanguage("chinese");
             SearchSchema searchSchema = new SearchSchema();
             searchSchema.addTextField("text", 10);
             searchSchema.addTextField("event", 10);
-            searchSchema.addTextField("type", 10);
+            searchSchema.addTextField("modelType", 10);
             searchSchema.addTextField("className", 10);
             searchSchema.addTextField("thread", 10);
             searchSchema.addTextField("applicationName", 1);
