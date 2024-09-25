@@ -2,6 +2,9 @@ package com.chua.starter.common.support.codec;
 
 import com.chua.common.support.function.Upgrade;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.context.ApplicationEvent;
 
 /**
@@ -9,7 +12,9 @@ import org.springframework.context.ApplicationEvent;
  * @author CH
  * @since 2024/8/14
  */
-@Data
+@EqualsAndHashCode(callSuper = true)
+@Getter
+@Setter
 public class CodecSetting extends ApplicationEvent implements Upgrade<CodecSetting> {
 
     /**
