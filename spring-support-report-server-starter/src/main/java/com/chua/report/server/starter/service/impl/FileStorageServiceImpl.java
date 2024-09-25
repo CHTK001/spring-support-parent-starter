@@ -74,6 +74,9 @@ public class FileStorageServiceImpl extends ServiceImpl<FileStorageMapper, FileS
             return ListObjectResult.EMPTY;
         }
         com.chua.common.support.oss.FileStorage fileStorage1 = factory.get(fileStorage.getFileStorageBucket());
+        if(null == fileStorage1) {
+            throw new RuntimeException("配置参数错误/现已不持支");
+        }
         return fileStorage1.listObject(ListObjectRequest.builder().filePath(path).limit(limit).marker(marker).build());
     }
 }
