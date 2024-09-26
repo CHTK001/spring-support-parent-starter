@@ -189,6 +189,20 @@ public class FileStorageProtocol implements Serializable {
     @ApiModelProperty(value = "水印y轴位置")
     @Schema(description = "水印y轴位置")
     private Integer fileStorageProtocolWatermarkY;
+    /**
+     * 水印宽度
+     */
+    @TableField(value = "file_storage_protocol_watermark_width")
+    @ApiModelProperty(value = "水印宽度")
+    @Schema(description = "水印宽度")
+    private Integer fileStorageProtocolWatermarkWidth;
+    /**
+     * 水印高度
+     */
+    @TableField(value = "file_storage_protocol_watermark_height")
+    @ApiModelProperty(value = "水印高度")
+    @Schema(description = "水印高度")
+    private Integer fileStorageProtocolWatermarkHeight;
 
     /**
      * 水印alpha
