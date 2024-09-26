@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.common.support.chain.filter.UserAgentFilter;
 import com.chua.common.support.chain.filter.storage.FileStorageChainFilter;
 import com.chua.common.support.constant.Action;
+import com.chua.common.support.image.WatermarkUtils;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.oss.WebdavStorage;
 import com.chua.common.support.protocol.ServerSetting;
@@ -140,6 +141,9 @@ public class FileStorageProtocolServiceImpl extends ServiceImpl<FileStorageProto
                 .plugins(StringUtils.split(fileStorageProtocol.getFileStorageProtocolPlugins(), ","))
                 .settings(StringUtils.split(fileStorageProtocol.getFileStorageProtocolSetting(), ","))
                 .watermark(fileStorageProtocol.getFileStorageProtocolWatermarkContent())
+                .watermarkWay(WatermarkUtils.WatermarkWay.valueOf(StringUtils.defaultString(fileStorageProtocol.getFileStorageProtocolWatermarkWay(), "NORMAL")))
+                .watermarkWidth(null == fileStorageProtocol.getFileStorageProtocolWatermarkWidth() ? 30 : fileStorageProtocol.getFileStorageProtocolWatermarkWidth())
+                .watermarkHeight(null == fileStorageProtocol.getFileStorageProtocolWatermarkHeight() ? 30 : fileStorageProtocol.getFileStorageProtocolWatermarkHeight())
                 .watermarkX(null == fileStorageProtocol.getFileStorageProtocolWatermarkX() ? 0 : fileStorageProtocol.getFileStorageProtocolWatermarkX())
                 .watermarkY(null == fileStorageProtocol.getFileStorageProtocolWatermarkY() ? 0 : fileStorageProtocol.getFileStorageProtocolWatermarkY())
                 .watermarkAlpha(null == fileStorageProtocol.getFileStorageProtocolWatermarkAlpha() ? 0 : fileStorageProtocol.getFileStorageProtocolWatermarkAlpha() / 100f)
