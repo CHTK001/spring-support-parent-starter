@@ -151,6 +151,64 @@ public class FileStorageProtocol implements Serializable {
     @Size(max = 255, message = "UA最大长度要小于 255")
     private String fileStorageProtocolDownloadUa;
 
+    /**
+     * 是否开启水印；0:不开启
+     */
+    @TableField(value = "file_storage_protocol_watermark_open")
+    @ApiModelProperty(value = "是否开启水印；0:不开启")
+    @Schema(description = "是否开启水印；0:不开启")
+    private Integer fileStorageProtocolWatermarkOpen;
+
+    /**
+     * 水印内容
+     */
+    @TableField(value = "file_storage_protocol_watermark_content")
+    @ApiModelProperty(value = "水印内容")
+    @Schema(description = "水印内容")
+    @Size(max = 255, message = "水印内容最大长度要小于 255")
+    private String fileStorageProtocolWatermarkContent;
+    /**
+     *  水印放置方式, NORMAL: 正常, TILE:平铺
+     */
+    @TableField(value = "file_storage_protocol_watermark_way")
+    @ApiModelProperty(value = "水印放置方式, NORMAL: 正常, TILE:平铺")
+    @Schema(description = "水印放置方式, NORMAL: 正常, TILE:平铺")
+    @Size(max = 255, message = "水印放置方式最大长度要小于 255")
+    private String fileStorageProtocolWatermarkWay;
+    /**
+     * 水印x轴位置
+     */
+    @TableField(value = "file_storage_protocol_watermark_x")
+    @ApiModelProperty(value = "水印x轴位置")
+    @Schema(description = "水印x轴位置")
+    private Integer fileStorageProtocolWatermarkX;
+    /**
+     * 水印y轴位置
+     */
+    @TableField(value = "file_storage_protocol_watermark_y")
+    @ApiModelProperty(value = "水印y轴位置")
+    @Schema(description = "水印y轴位置")
+    private Integer fileStorageProtocolWatermarkY;
+
+    /**
+     * 水印alpha
+     */
+    @TableField(value = "file_storage_protocol_watermark_alpha")
+    @ApiModelProperty(value = "水印alpha")
+    @Schema(description = "水印alpha")
+    private Integer fileStorageProtocolWatermarkAlpha;
+
+
+    /**
+     * 水印颜色
+     */
+    @TableField(value = "file_storage_protocol_watermark_color")
+    @ApiModelProperty(value = "水印颜色")
+    @Schema(description = "水印颜色")
+    private String fileStorageProtocolWatermarkColor;
+
+
+
     private static final long serialVersionUID = 1L;
 
 }
