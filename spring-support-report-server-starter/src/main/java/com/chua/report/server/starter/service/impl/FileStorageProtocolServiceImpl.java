@@ -100,7 +100,11 @@ public class FileStorageProtocolServiceImpl extends ServiceImpl<FileStorageProto
                 .eq(FileStorage::getFileStorageStatus, 1)
         );
         for (FileStorage fileStorage : list) {
-            updateFor(fileStorage, Action.UPDATE);
+            try {
+                updateFor(fileStorage, Action.UPDATE);
+            } catch (Exception e) {
+                throw new RuntimeException(StringUtils.format("{}启动失败", fileStorage.getFileStorageType()));
+            }
         }
     }
 
@@ -135,6 +139,12 @@ public class FileStorageProtocolServiceImpl extends ServiceImpl<FileStorageProto
                 .downloadUserAgent(StringUtils.split(fileStorageProtocol.getFileStorageProtocolUa(), ","))
                 .plugins(StringUtils.split(fileStorageProtocol.getFileStorageProtocolPlugins(), ","))
                 .settings(StringUtils.split(fileStorageProtocol.getFileStorageProtocolSetting(), ","))
+                .watermark(fileStorageProtocol.getFileStorageProtocolWatermarkContent())
+                .watermarkX(null == fileStorageProtocol.getFileStorageProtocolWatermarkX() ? 0 : fileStorageProtocol.getFileStorageProtocolWatermarkX())
+                .watermarkY(null == fileStorageProtocol.getFileStorageProtocolWatermarkY() ? 0 : fileStorageProtocol.getFileStorageProtocolWatermarkY())
+                .watermarkAlpha(null == fileStorageProtocol.getFileStorageProtocolWatermarkAlpha() ? 0 : fileStorageProtocol.getFileStorageProtocolWatermarkAlpha() / 100f)
+                .watermarkColor(StringUtils.defaultString(fileStorageProtocol.getFileStorageProtocolWatermarkColor(), "#000000"))
+                .openWatermark(null != fileStorageProtocol.getFileStorageProtocolWatermarkOpen() && fileStorageProtocol.getFileStorageProtocolWatermarkOpen() == 1)
                 .build();
     }
 
@@ -162,6 +172,11 @@ public class FileStorageProtocolServiceImpl extends ServiceImpl<FileStorageProto
                     throw new RuntimeException(e);
                 }
                 SERVER_MAP.remove(key);
+                FileStorageChainFilter.FileStorageFactory fileStorageFactory = SERVER_FACTORY_FILTER_MAP.get(key);
+                try {
+                    fileStorageFactory.close();
+                } catch (Exception ignored) {
+                }
                 SERVER_FACTORY_FILTER_MAP.remove(key);
                 return ReturnResult.success();
             }
