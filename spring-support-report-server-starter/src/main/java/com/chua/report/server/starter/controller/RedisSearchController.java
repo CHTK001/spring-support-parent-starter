@@ -20,13 +20,13 @@ import java.util.List;
 
 
 /**
- * 终端
+ * 全文检索信息
  * @author CH
  * @since 2024/5/13
  */
 @RestController
 @RequestMapping("v1/search")
-@Tag(name = "时序信息")
+@Tag(name = "全文检索信息")
 @RequiredArgsConstructor
 @Getter
 public class RedisSearchController {

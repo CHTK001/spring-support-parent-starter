@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 代理
+ * 代理名单
  * @author CH
  * @since 2024/5/13
  */
