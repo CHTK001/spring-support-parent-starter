@@ -3,7 +3,7 @@ package com.chua.report.server.starter.job.trigger;
 import com.chua.report.server.starter.job.JobConfig;
 import com.chua.report.server.starter.job.handler.CoreTriggerHandler;
 import com.chua.report.server.starter.job.handler.RingTriggerHandler;
-import com.chua.report.server.starter.properties.JobProperties;
+import com.chua.report.server.starter.properties.ReportJobProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
@@ -33,7 +33,7 @@ public class SchedulerTrigger implements InitializingBean, DisposableBean, Appli
     private ApplicationContext applicationContext;
 
     @Autowired
-    private JobProperties jobProperties;
+    private ReportJobProperties reportJobProperties;
 
 
     @Override
@@ -51,12 +51,12 @@ public class SchedulerTrigger implements InitializingBean, DisposableBean, Appli
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        coreTriggerHandler = new CoreTriggerHandler(jobProperties);
-        ringTriggerHandler = new RingTriggerHandler(jobProperties);
+        coreTriggerHandler = new CoreTriggerHandler(reportJobProperties);
+        ringTriggerHandler = new RingTriggerHandler(reportJobProperties);
         AutowireCapableBeanFactory autowireCapableBeanFactory = applicationContext.getAutowireCapableBeanFactory();
         autowireCapableBeanFactory.autowireBean(coreTriggerHandler);
         autowireCapableBeanFactory.autowireBean(ringTriggerHandler);
-        JobConfig.getInstance().register(jobProperties);
+        JobConfig.getInstance().register(reportJobProperties);
         JobConfig.getInstance().register(applicationContext);
         coreTriggerHandler.start();
         ringTriggerHandler.start();

@@ -7,7 +7,8 @@ import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.report.server.starter.consumer.ReportConsumer;
 import com.chua.report.server.starter.job.trigger.SchedulerTrigger;
-import com.chua.report.server.starter.properties.JobProperties;
+import com.chua.report.server.starter.properties.ReportJobProperties;
+import com.chua.report.server.starter.properties.ReportGenProperties;
 import com.chua.report.server.starter.properties.ReportServerProperties;
 import com.chua.report.server.starter.router.Router;
 import com.chua.zbus.support.server.ZbusServer;
@@ -46,7 +47,7 @@ import org.springframework.util.ReflectionUtils;
         "com.chua.report.server.starter.report.endpoint",
         "com.chua.report.server.starter.controller"
 })
-@EnableConfigurationProperties({ReportServerProperties.class, JobProperties.class})
+@EnableConfigurationProperties({ReportServerProperties.class, ReportJobProperties.class, ReportGenProperties.class})
 public class ReportServerConfiguration implements BeanDefinitionRegistryPostProcessor, EnvironmentAware, DisposableBean, CommandLineRunner, SmartInstantiationAwareBeanPostProcessor {
     private Integer serverPort;
     private int reportServerPort;
@@ -104,7 +105,7 @@ public class ReportServerConfiguration implements BeanDefinitionRegistryPostProc
 
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = JobProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = true)
+    @ConditionalOnProperty(prefix = ReportJobProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = true)
     public SchedulerTrigger schedulerTrigger() {
         log.info("开启定时任务功能");
         return new SchedulerTrigger();

@@ -14,7 +14,7 @@ import com.chua.report.server.starter.entity.MonitorJobLog;
 import com.chua.report.server.starter.job.lock.JobLock;
 import com.chua.report.server.starter.job.lock.RedisLock;
 import com.chua.report.server.starter.job.route.ExecutorRouter;
-import com.chua.report.server.starter.properties.JobProperties;
+import com.chua.report.server.starter.properties.ReportJobProperties;
 import com.chua.report.server.starter.service.MonitorJobLogService;
 import com.chua.report.server.starter.service.MonitorJobService;
 import com.chua.report.server.starter.service.MonitorSender;
@@ -35,7 +35,7 @@ import java.util.Set;
 public class JobConfig {
 
     private static final JobConfig INSTANCE = new JobConfig();
-    private JobProperties jobProperties;
+    private ReportJobProperties reportJobProperties;
     private ApplicationContext applicationContext;
 
     private MonitorJobService monitorJobService;
@@ -49,8 +49,8 @@ public class JobConfig {
     }
 
 
-    public void register(JobProperties jobProperties) {
-        this.jobProperties = jobProperties;
+    public void register(ReportJobProperties reportJobProperties) {
+        this.reportJobProperties = reportJobProperties;
     }
 
     /**
@@ -59,7 +59,7 @@ public class JobConfig {
      * @return int
      */
     public int getTriggerPoolFastMax() {
-        return null == jobProperties ? 200 : jobProperties.getTriggerPoolFastMax();
+        return null == reportJobProperties ? 200 : reportJobProperties.getTriggerPoolFastMax();
     }
 
     /**
@@ -68,7 +68,7 @@ public class JobConfig {
      * @return int
      */
     public int getTriggerPoolSlowMax() {
-        return null == jobProperties ? 100 : jobProperties.getTriggerPoolSlowMax();
+        return null == reportJobProperties ? 100 : reportJobProperties.getTriggerPoolSlowMax();
     }
 
     /**

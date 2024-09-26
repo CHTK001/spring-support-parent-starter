@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 代理
+ * 代理限流
  * @author CH
  * @since 2024/5/13
  */
@@ -33,7 +33,7 @@ public class MonitorProxyPluginLimitController {
     final TransactionTemplate transactionTemplate;
     /**
      * 查询代理所有的限流组件
-     * @param proxyId
+     * @param monitorProxyPluginLimit
      * @return
      */
     @Operation(summary = "查询代理所有的限流组件")

@@ -7,8 +7,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @author CH
  */
 @Data
-@ConfigurationProperties(prefix = JobProperties.PRE)
-public class JobProperties {
+@ConfigurationProperties(prefix = ReportJobProperties.PRE)
+public class ReportJobProperties {
 
     public static final String PRE = "plugin.report.server.job";
     /**

@@ -8,7 +8,7 @@ import com.chua.report.server.starter.job.TriggerTypeEnum;
 import com.chua.report.server.starter.job.lock.JobLock;
 import com.chua.report.server.starter.job.scheduler.MisfireStrategyEnum;
 import com.chua.report.server.starter.job.trigger.JobTriggerPoolHelper;
-import com.chua.report.server.starter.properties.JobProperties;
+import com.chua.report.server.starter.properties.ReportJobProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -29,7 +29,7 @@ import static com.chua.report.server.starter.job.handler.RingTriggerHandler.push
 @Slf4j
 @RequiredArgsConstructor
 public class CoreTriggerHandler implements TriggerHandler, Runnable {
-    private final JobProperties jobProperties;
+    private final ReportJobProperties reportJobProperties;
     private volatile boolean scheduleThreadToStop = false;
 
 

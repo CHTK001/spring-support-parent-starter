@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 代理
+ * OSS预览
  * @author CH
  * @since 2024/5/13
  */

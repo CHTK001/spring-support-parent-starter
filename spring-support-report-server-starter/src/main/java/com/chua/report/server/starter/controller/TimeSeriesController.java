@@ -20,7 +20,7 @@ import java.util.Map;
 
 
 /**
- * 终端
+ * 时序信息
  * @author CH
  * @since 2024/5/13
  */

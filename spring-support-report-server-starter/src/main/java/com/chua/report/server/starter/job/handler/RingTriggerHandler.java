@@ -2,7 +2,7 @@ package com.chua.report.server.starter.job.handler;
 
 import com.chua.report.server.starter.job.TriggerTypeEnum;
 import com.chua.report.server.starter.job.trigger.JobTriggerPoolHelper;
-import com.chua.report.server.starter.properties.JobProperties;
+import com.chua.report.server.starter.properties.ReportJobProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -24,7 +24,7 @@ public class RingTriggerHandler implements TriggerHandler, Runnable{
     private static final Map<Integer, List<Integer>> ringData = new ConcurrentHashMap<>();
     private Thread ringThread;
 
-    private final JobProperties jobProperties;
+    private final ReportJobProperties reportJobProperties;
 
     @Override
     public void start() {
