@@ -25,7 +25,7 @@ import java.util.Set;
 import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
 
 /**
- * 代理
+ * OSS代理
  * @author CH
  * @since 2024/5/13
  */

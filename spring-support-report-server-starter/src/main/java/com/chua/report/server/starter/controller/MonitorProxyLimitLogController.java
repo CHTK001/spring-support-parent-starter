@@ -16,13 +16,13 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 代理限流器
+ * 代理限流器日志
  * @author CH
  * @since 2024/6/21
  */
 @RestController
 @RequestMapping("v1/proxy/log")
-@Tag(name = "代理限流器")
+@Tag(name = "代理限流器日志")
 @RequiredArgsConstructor
 public class MonitorProxyLimitLogController {
     

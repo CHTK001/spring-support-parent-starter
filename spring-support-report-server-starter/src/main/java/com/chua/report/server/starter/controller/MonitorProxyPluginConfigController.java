@@ -12,13 +12,13 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 代理
+ * 代理配置参数
  * @author CH
  * @since 2024/5/13
  */
 @RestController
 @RequestMapping("v1/proxy/plugin/config")
-@Tag(name = "代理组件")
+@Tag(name = "代理配置参数")
 @RequiredArgsConstructor
 public class MonitorProxyPluginConfigController {
 
