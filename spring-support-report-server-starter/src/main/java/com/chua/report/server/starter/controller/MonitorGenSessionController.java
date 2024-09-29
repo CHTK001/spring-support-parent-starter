@@ -2,8 +2,6 @@ package com.chua.report.server.starter.controller;
 
 import cn.hutool.core.date.DateTime;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.chua.common.support.constant.FileType;
-import com.chua.common.support.datasource.dialect.Dialect;
 import com.chua.common.support.datasource.dialect.DialectFactory;
 import com.chua.common.support.datasource.meta.Column;
 import com.chua.common.support.datasource.meta.Database;
@@ -41,7 +39,6 @@ import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.w3c.dom.Node;
 
 import java.io.File;
 import java.io.IOException;
@@ -92,7 +89,7 @@ public class MonitorGenSessionController {
     }
 
     @Operation(summary = "删除表结构")
-    @GetMapping("dropTable")
+    @DeleteMapping("dropTable")
     public ReturnResult<Boolean> dropTable(String genId, String tableName) {
         MonitorSysGen sysGen = sysGenService.getById(genId);
         if (null == sysGen) {
@@ -106,8 +103,31 @@ public class MonitorGenSessionController {
             }
             if(session instanceof TableSession tableSession) {
                 return ReturnResult.ok(
-                        tableSession.dropTable(
+                        tableSession.drop(
                                 DialectFactory.createDriver(sysGen.getGenDriver()).getDatabaseName(sysGen.getGenUrl()), tableName));
+            }
+            return ReturnResult.illegal("暂不支持获取");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+    @Operation(summary = "修改表名表结构")
+    @DeleteMapping("renameTable")
+    public ReturnResult<Boolean> dropTable(String genId, String tableName, String newTableName) {
+        MonitorSysGen sysGen = sysGenService.getById(genId);
+        if (null == sysGen) {
+            return ReturnResult.illegal("表不存在");
+        }
+        try {
+            Session session = ServiceProvider.of(Session.class).getKeepExtension(genId + "", sysGen.getGenType(), sysGen.newDatabaseOptions());
+            if (!session.isConnect()) {
+                ServiceProvider.of(Session.class).closeKeepExtension(String.valueOf(sysGen.getGenId()));
+                session = ServiceProvider.of(Session.class).getKeepExtension(genId + "", sysGen.getGenType(), sysGen.newDatabaseOptions());
+            }
+            if(session instanceof TableSession tableSession) {
+                return ReturnResult.ok(
+                        tableSession.rename(
+                                DialectFactory.createDriver(sysGen.getGenDriver()).getDatabaseName(sysGen.getGenUrl()), tableName, newTableName));
             }
             return ReturnResult.illegal("暂不支持获取");
         } catch (Exception e) {
