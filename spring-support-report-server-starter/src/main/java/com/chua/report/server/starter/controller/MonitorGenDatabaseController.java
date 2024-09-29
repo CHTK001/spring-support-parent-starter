@@ -122,7 +122,7 @@ public class MonitorGenDatabaseController {
                 new MPJLambdaWrapper<MonitorSysGen>()
                         .selectAll(MonitorSysGen.class)
                         .eq(null != databaseType, MonitorSysGen::getGenType, databaseType)
-                        .orderByAsc(MonitorSysGen::getGenBackupStatus)
+                        .orderByDesc(MonitorSysGen::getGenBackupStatus)
         );
         for (MonitorSysGen record : genType.getRecords()) {
             record.setGenPassword(null);
@@ -131,7 +131,7 @@ public class MonitorGenDatabaseController {
             record.setSupportBackup(ServiceProvider.of(Backup.class).isSupport(dialect.protocol().toUpperCase()));
             record.setSupportDocument(ServiceProvider.of(Document.class).isSupport(record.getGenType()));
             record.setSupportDriver(ClassUtils.isPresent(genDriver));
-            record.setGenBackupStatus(null == record.getGenBackupStatus() ? 1 : record.getGenBackupStatus());
+            record.setGenBackupStatus(null == record.getGenBackupStatus() ? 0 : record.getGenBackupStatus());
 
             if(StringUtils.isNotBlank(record.getGenDatabaseFile())) {
                 record.setGenDatabaseFileName(FileUtils.getName(record.getGenDatabaseFile()));

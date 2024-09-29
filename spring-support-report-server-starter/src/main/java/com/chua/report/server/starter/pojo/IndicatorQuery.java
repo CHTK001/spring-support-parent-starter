@@ -43,7 +43,7 @@ public class IndicatorQuery extends IdQuery {
      * 偏移量
      */
     @Schema(description = "偏移量; 只针对Search")
-    private int offset = 1;
+    private int offset = 0;
     /**
      * 关键字
      */

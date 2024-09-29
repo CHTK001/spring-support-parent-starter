@@ -1,7 +1,10 @@
 package com.chua.report.server.starter.controller;
 
+import cn.hutool.core.date.DateTime;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.constant.FileType;
+import com.chua.common.support.datasource.dialect.Dialect;
+import com.chua.common.support.datasource.dialect.DialectFactory;
 import com.chua.common.support.datasource.meta.Column;
 import com.chua.common.support.datasource.meta.Database;
 import com.chua.common.support.datasource.meta.Table;
@@ -10,6 +13,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.formatter.HighlightingFormatter;
 import com.chua.common.support.lang.formatter.SqlFormatter;
 import com.chua.common.support.session.Session;
+import com.chua.common.support.session.TableSession;
 import com.chua.common.support.session.pojo.SessionModule;
 import com.chua.common.support.session.query.*;
 import com.chua.common.support.session.result.SessionInfo;
@@ -21,16 +25,23 @@ import com.chua.common.support.utils.FileUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.report.server.starter.entity.MonitorSysGen;
 import com.chua.report.server.starter.entity.MonitorSysGenRemark;
+import com.chua.report.server.starter.pojo.NodeData;
+import com.chua.report.server.starter.pojo.TableHit;
 import com.chua.report.server.starter.properties.ReportGenProperties;
-import com.chua.report.server.starter.query.TableQuery;
+import com.chua.report.server.starter.query.NodeChildrenQuery;
 import com.chua.report.server.starter.service.MonitorSysGenRemarkService;
 import com.chua.report.server.starter.service.MonitorSysGenService;
 import com.chua.starter.common.support.utils.MultipartFileUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.statement.Statement;
+import net.sf.jsqlparser.statement.select.PlainSelect;
+import net.sf.jsqlparser.statement.select.Select;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.w3c.dom.Node;
 
 import java.io.File;
 import java.io.IOException;
@@ -53,7 +64,114 @@ public class MonitorGenSessionController {
     final MonitorSysGenService sysGenService;
     final ReportGenProperties genProperties;
     final MonitorSysGenRemarkService sysGenRemarkService;
+    /**
+     * 查询表信息
+     *
+     * @return {@link ReturnResult}<{@link Table}>
+     */
+    @Operation(summary = "查询表结构")
+    @GetMapping("getTableConstruct")
+    public ReturnResult<Table> getTableConstruct(String genId, String tableName) {
+        MonitorSysGen sysGen = sysGenService.getById(genId);
+        if (null == sysGen) {
+            return ReturnResult.illegal("表不存在");
+        }
+        try {
+            Session session = ServiceProvider.of(Session.class).getKeepExtension(genId + "", sysGen.getGenType(), sysGen.newDatabaseOptions());
+            if (!session.isConnect()) {
+                ServiceProvider.of(Session.class).closeKeepExtension(String.valueOf(sysGen.getGenId()));
+                session = ServiceProvider.of(Session.class).getKeepExtension(genId + "", sysGen.getGenType(), sysGen.newDatabaseOptions());
+            }
+            if(session instanceof TableSession tableSession) {
+                return ReturnResult.ok(tableSession.getTableConstruct(DialectFactory.createDriver(sysGen.getGenDriver()).getDatabaseName(sysGen.getGenUrl()), tableName));
+            }
+            return ReturnResult.illegal("暂不支持获取");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 
+    @Operation(summary = "删除表结构")
+    @GetMapping("dropTable")
+    public ReturnResult<Boolean> dropTable(String genId, String tableName) {
+        MonitorSysGen sysGen = sysGenService.getById(genId);
+        if (null == sysGen) {
+            return ReturnResult.illegal("表不存在");
+        }
+        try {
+            Session session = ServiceProvider.of(Session.class).getKeepExtension(genId + "", sysGen.getGenType(), sysGen.newDatabaseOptions());
+            if (!session.isConnect()) {
+                ServiceProvider.of(Session.class).closeKeepExtension(String.valueOf(sysGen.getGenId()));
+                session = ServiceProvider.of(Session.class).getKeepExtension(genId + "", sysGen.getGenType(), sysGen.newDatabaseOptions());
+            }
+            if(session instanceof TableSession tableSession) {
+                return ReturnResult.ok(
+                        tableSession.dropTable(
+                                DialectFactory.createDriver(sysGen.getGenDriver()).getDatabaseName(sysGen.getGenUrl()), tableName));
+            }
+            return ReturnResult.illegal("暂不支持获取");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+    @Operation(summary = "复制表结构")
+    @GetMapping("copyTableConstruct")
+    public ReturnResult<Boolean> copyTableConstruct(String genId, String tableName) {
+        MonitorSysGen sysGen = sysGenService.getById(genId);
+        if (null == sysGen) {
+            return ReturnResult.illegal("表不存在");
+        }
+        try {
+            Session session = ServiceProvider.of(Session.class).getKeepExtension(genId + "", sysGen.getGenType(), sysGen.newDatabaseOptions());
+            if (!session.isConnect()) {
+                ServiceProvider.of(Session.class).closeKeepExtension(String.valueOf(sysGen.getGenId()));
+                session = ServiceProvider.of(Session.class).getKeepExtension(genId + "", sysGen.getGenType(), sysGen.newDatabaseOptions());
+            }
+            if(session instanceof TableSession tableSession) {
+                return ReturnResult.ok(
+                        tableSession.copyTableConstruct(
+                                DialectFactory.createDriver(sysGen.getGenDriver()).getDatabaseName(sysGen.getGenUrl()), tableName,
+                                tableName + "_copy" + DateTime.now().toString("yyyyMMddHHmmss")).isSuccess());
+            }
+            return ReturnResult.illegal("暂不支持获取");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+    /**
+     * 查询表信息
+     *
+     * @return {@link ReturnResult}<{@link Table}>
+     */
+    @Operation(summary = "查询表信息")
+    @GetMapping("hits")
+    public ReturnResult<List<TableHit>> hits(String genId) {
+        MonitorSysGen sysGen = sysGenService.getById(genId);
+        if (null == sysGen) {
+            return ReturnResult.illegal("表不存在");
+        }
+        try {
+            Session session = ServiceProvider.of(Session.class).getKeepExtension(genId + "", sysGen.getGenType(), sysGen.newDatabaseOptions());
+            if (!session.isConnect()) {
+                ServiceProvider.of(Session.class).closeKeepExtension(String.valueOf(sysGen.getGenId()));
+                session = ServiceProvider.of(Session.class).getKeepExtension(genId + "", sysGen.getGenType(), sysGen.newDatabaseOptions());
+            }
+            List<Table> tables = session.getTables(null, "%", new SessionQuery());
+            Session finalSession = session;
+            return ReturnResult.ok(tables.stream().map(it -> {
+                TableHit tableHit = new TableHit();
+                tableHit.setName(it.getName());
+                try {
+                    List<Column> columns = finalSession.getColumns(null, it.getTableName());
+                    tableHit.setFields(columns.stream().map(Column::getName).toArray(String[]::new));
+                } catch (Exception ignored) {
+                }
+                return tableHit;
+            }).toList());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
     /**
      * 表格列表
      *
@@ -61,34 +179,73 @@ public class MonitorGenSessionController {
      */
     @Operation(summary = "查询子节点")
     @GetMapping("children")
-    public ReturnResult<List<?>> children(TableQuery query) {
+    public ReturnResult<List<NodeData>> children(NodeChildrenQuery query) {
         MonitorSysGen sysGen = sysGenService.getById(query.getGenId());
         if (null == sysGen) {
             return ReturnResult.illegal("表不存在");
         }
 
-        try (Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions())) {
-            if (query.getFileType() == FileType.DATABASE) {
-                return ReturnResult.ok(session.getTables(query.getDatabaseId(), "%", query.createSessionQuery()));
+        try {
+            Session session = ServiceProvider.of(Session.class).getKeepExtension(query.getGenId() + "",sysGen.getGenType(), sysGen.newDatabaseOptions());
+            if (!session.isConnect()) {
+                ServiceProvider.of(Session.class).closeKeepExtension(String.valueOf(sysGen.getGenId()));
+                return ReturnResult.illegal("当前服务器不可达");
+            }
+            if("TABLE".equalsIgnoreCase(query.getNodeType())) {
+                List<Table> tables = session.getTables(StringUtils.defaultString(query.getNodeName(), DialectFactory.createDriver(sysGen.getGenDriver()).getDatabaseName(sysGen.getGenUrl())), "%", new SessionQuery());
+                return ReturnResult.ok(tables.stream().map(it -> {
+                    NodeData nodeData = new NodeData();
+                    nodeData.setNodePid(query.getNodeId());
+                    nodeData.setNodeId(it.getName());
+                    nodeData.setNodeName(it.getTableName());
+                    nodeData.setNodeComment(it.getComment());
+                    nodeData.setNodeType("TABLE");
+                    return nodeData;
+                }).toList());
             }
 
-            List<MonitorSysGenRemark> list = sysGenRemarkService.list(Wrappers.<MonitorSysGenRemark>lambdaQuery()
-                    .eq(MonitorSysGenRemark::getGenId, query.getGenId())
-                    .eq(MonitorSysGenRemark::getRemarkTable, query.getDatabaseId())
-            );
-            Map<String, MonitorSysGenRemark> tpl = new HashMap<>(list.size());
-            for (MonitorSysGenRemark sysGenRemark : list) {
-                tpl.put(sysGenRemark.getRemarkColumn(), sysGenRemark);
+            if("VIEW".equalsIgnoreCase(query.getNodeType())) {
+                List<Table> tables = session.getView(query.getNodeName(), "%");
+                return ReturnResult.ok(tables.stream().map(it -> {
+                    NodeData nodeData = new NodeData();
+                    nodeData.setNodePid(query.getNodeId());
+                    nodeData.setNodeId(it.getName());
+                    nodeData.setNodeName(it.getTableName());
+                    nodeData.setNodeComment(it.getComment());
+                    nodeData.setNodeType("VIEW");
+                    return nodeData;
+                }).toList());
             }
-            List<Column> columns = session.getColumns(query.getDatabase(), query.getDatabaseId());
-            for (Column column : CollectionUtils.wrapper(columns)) {
-                String columnName = column.getName();
-                MonitorSysGenRemark sysGenRemark = tpl.get(columnName);
-                if (null != sysGenRemark) {
-                    column.setComment(sysGenRemark.getRemarkName());
+
+            if("COLUMN".equalsIgnoreCase(query.getNodeType())) {
+                List<Column> columns = session.getColumns(null, query.getNodeName());
+                List<MonitorSysGenRemark> list = sysGenRemarkService.list(Wrappers.<MonitorSysGenRemark>lambdaQuery()
+                        .eq(MonitorSysGenRemark::getGenId, query.getGenId())
+                        .eq(MonitorSysGenRemark::getRemarkTable, query.getNodeName())
+                );
+                Map<String, MonitorSysGenRemark> tpl = new HashMap<>(list.size());
+                for (MonitorSysGenRemark sysGenRemark : list) {
+                    tpl.put(sysGenRemark.getRemarkColumn(), sysGenRemark);
                 }
+                for (Column column : CollectionUtils.wrapper(columns)) {
+                    String columnName = column.getName();
+                    MonitorSysGenRemark sysGenRemark = tpl.get(columnName);
+                    if (null != sysGenRemark) {
+                        column.setComment(sysGenRemark.getRemarkName());
+                    }
+                }
+                return ReturnResult.ok(columns.stream().map(it -> {
+                    NodeData nodeData = new NodeData();
+                    nodeData.setNodePid(query.getNodeId());
+                    nodeData.setNodeId(it.getName());
+                    nodeData.setNodeName(it.getName());
+                    nodeData.setNodeComment(it.getComment());
+                    nodeData.setNodeType("COLUMN");
+                    nodeData.setNodeLeaf(true);
+                    return nodeData;
+                }).toList());
             }
-            return ReturnResult.ok(columns);
+            return ReturnResult.ok(Collections.emptyList());
         } catch (Exception e) {
             log.error("", e);
             return ReturnResult.ok(Collections.emptyList());
@@ -101,41 +258,41 @@ public class MonitorGenSessionController {
      * @return {@link ReturnPageResult}<{@link Table}>
      */
     @Operation(summary = "关键词列表")
-    @GetMapping("keyword")
-    public ReturnResult<List<Database>> keyword(TableQuery query) {
-        MonitorSysGen sysGen = sysGenService.getById(query.getGenId());
+    @GetMapping({"keyword", "root"})
+    public ReturnResult<List<NodeData>> keyword(Integer genId) {
+        MonitorSysGen sysGen = sysGenService.getById(genId);
         if (null == sysGen) {
             return ReturnResult.illegal("表不存在");
         }
-        String database = StringUtils.defaultString(query.getDatabaseId(), sysGen.getGenDatabase());
-        List<Database> results1 = new LinkedList<>();
-        Session session = ServiceProvider.of(Session.class).getKeepExtension(query.getGenId() + "", sysGen.getGenType(), sysGen.newDatabaseOptions());
+        List<NodeData> results1 = new LinkedList<>();
+        Session session = ServiceProvider.of(Session.class).getKeepExtension(genId + "", sysGen.getGenType(), sysGen.newDatabaseOptions());
         try {
             if (!session.isConnect()) {
-                ServiceProvider.of(Session.class).closeKeepExtension(query.getGenId() + "");
-                return ReturnResult.illegal("当前服务器不可达");
+                ServiceProvider.of(Session.class).closeKeepExtension(genId + "");
+                session = ServiceProvider.of(Session.class).getKeepExtension(genId + "", sysGen.getGenType(), sysGen.newDatabaseOptions());
             }
 
-            List<Table> results = session.getTables(database, "%", query.createSessionQuery());
-            Database item = new Database();
-            item.setName("table");
-            item.setLabel("表");
-            item.setChildren(results);
+            List<Database> database = session.getDatabase("%");
+            if(!CollectionUtils.isEmpty(database)) {
+                return ReturnResult.ok(database.stream().map(it -> {
+                    NodeData nodeData = new NodeData();
+                    nodeData.setNodeId(it.getName());
+                    nodeData.setNodeName(it.getLabel());
+                    nodeData.setNodeType("DATABASE");
+                    return nodeData;
+                }).toList());
+            }
+            NodeData item = new NodeData();
+            item.setNodeName("表");
+            item.setNodeType("TABLE");
+            item.setNodeId("0");
+
+            NodeData item1 = new NodeData();
+            item1.setNodeName("视图");
+            item1.setNodeType("VIEW");
+            item1.setNodeId("0");
+
             results1.add(item);
-
-            for (Table tableResult : results) {
-                List<Column> columns = session.getColumns(sysGen.getGenDatabase(), tableResult.getTableName());
-                tableResult.setChildren(columns);
-            }
-
-            List<Table> viewResult = session.getView(database, "%");
-            Database item1 = new Database();
-            item1.setName("view");
-            item1.setLabel("视图");
-            item1.setChildren(Optional.ofNullable(viewResult).orElse(Collections.emptyList()));
-            for (Table child : item1.getChildren()) {
-                child.setType("VIEW");
-            }
             results1.add(item1);
         } catch (NullPointerException e) {
             throw new RuntimeException("请安装" + sysGen.getGenType() + "依赖");
@@ -170,7 +327,12 @@ public class MonitorGenSessionController {
         StringBuilder stringBuffer = new StringBuilder();
         long startTime = System.nanoTime();
         SessionResultSet sessionResultSet;
-        try (Session session = ServiceProvider.of(Session.class).getNewExtension(sysGen.getGenType(), sysGen.newDatabaseOptions())) {
+        try {
+            Session session = ServiceProvider.of(Session.class).getKeepExtension(String.valueOf(sysGen.getGenId()), sysGen.getGenType(), sysGen.newDatabaseOptions());
+            if (!session.isConnect()) {
+                ServiceProvider.of(Session.class).closeKeepExtension(String.valueOf(sysGen.getGenId()));
+                return ReturnResult.illegal("当前服务器不可达");
+            }
             sessionResultSet = null;
             try {
                 sessionResultSet = session.executeQuery("explain " + explainQuery.getContent(), explainQuery);
@@ -235,8 +397,13 @@ public class MonitorGenSessionController {
             if (StringUtils.isNotEmpty(executeQuery.getContent())) {
                 stringBuffer.append(HighlightingFormatter.INSTANCE.format(SqlFormatter.format(executeQuery.getContent())));
             }
-            String currentDatabase = executeQuery.getCurrentDatabase();
-            String currentTable = executeQuery.getCurrentTable();
+            Statement statement = CCJSqlParserUtil.parse(executeQuery.getContent());
+            String currentDatabase = null;
+            String currentTable = null;
+            if(statement instanceof Select select) {
+                currentTable = ((net.sf.jsqlparser.schema.Table)((PlainSelect)select.getSelectBody()).getFromItem()).getName();
+            }
+
             if (StringUtils.isNotBlank(currentTable)) {
                 List<MonitorSysGenRemark> list = sysGenRemarkService.list(Wrappers.<MonitorSysGenRemark>lambdaQuery()
                         .eq(MonitorSysGenRemark::getGenId, executeQuery.getGenId())
@@ -448,7 +615,7 @@ public class MonitorGenSessionController {
      * @return {@link ReturnResult}<{@link SessionResultSet}>
      */
     @Operation(summary = "删除基本信息")
-    @PostMapping("delete")
+    @DeleteMapping("delete")
     public ReturnResult<SessionResult> delete(@RequestBody DeleteQuery deleteQuery) {
         if (StringUtils.isEmpty(deleteQuery.getGenId())) {
             return ReturnResult.error("未配置生成器");
@@ -483,7 +650,7 @@ public class MonitorGenSessionController {
      * @return {@link ReturnResult}<{@link SessionResultSet}>
      */
     @Operation(summary = "更新基本信息")
-    @PostMapping("update")
+    @PutMapping("update")
     public ReturnResult<SessionResult> update(@RequestBody UpdateQuery updateQuery) {
         return update(updateQuery, null);
     }
@@ -495,7 +662,7 @@ public class MonitorGenSessionController {
      * @return {@link ReturnResult}<{@link SessionResultSet}>
      */
     @Operation(summary = "更新文件")
-    @PostMapping("updateForm")
+    @PutMapping("updateForm")
     public ReturnResult<SessionResult> update(UpdateQuery updateQuery, @RequestParam("file") MultipartFile file) {
         if (StringUtils.isEmpty(updateQuery.getGenId())) {
             return ReturnResult.error("未配置生成器");

@@ -19,9 +19,11 @@ import com.chua.report.server.starter.entity.MonitorSysGen;
 import com.chua.report.server.starter.entity.MonitorSysGenColumn;
 import com.chua.report.server.starter.entity.MonitorSysGenTable;
 import com.chua.report.server.starter.pojo.GenTable;
+import com.chua.report.server.starter.pojo.TableHit;
 import com.chua.report.server.starter.pojo.TemplateResult;
 import com.chua.report.server.starter.properties.ReportGenProperties;
 import com.chua.report.server.starter.query.Download;
+import com.chua.report.server.starter.query.NodeChildrenQuery;
 import com.chua.report.server.starter.query.TableQuery;
 import com.chua.report.server.starter.service.MonitorSysGenColumnService;
 import com.chua.report.server.starter.service.MonitorSysGenService;
@@ -147,7 +149,7 @@ public class MonitorGenTableController {
     @Operation(summary = "同步远程表信息")
     @ApiOperation("同步远程表信息")
     @GetMapping("syncTable")
-    public ReturnPageResult<Table> tableList(TableQuery query) {
+    public ReturnPageResult<Table> tableList(NodeChildrenQuery query) {
         MonitorSysGen sysGen = getSysGen(query);
         if(null == sysGen) {
             return ReturnPageResult.illegal("表不存在");
@@ -236,11 +238,11 @@ public class MonitorGenTableController {
     @PostMapping("importColumn")
     @Transactional(rollbackFor = Exception.class)
     public ReturnResult<Boolean> importColumn(@RequestBody TableQuery query) {
-        String[] tableName = query.getTableName();
+        String[] tableName = query.getTableNames();
         if (ArrayUtils.isEmpty(tableName)) {
             return ReturnResult.error(null, "表不存在");
         }
-        MonitorSysGen sysGen = getSysGen(query);
+        MonitorSysGen sysGen = getSysGen(query.getGenId());
         try (DatabaseHandler handler = new DatabaseHandler(sysGen.newDatabaseOptions())) {
             Dialect dialect = handler.guessDialect();
             for (String s : tableName) {
@@ -330,6 +332,7 @@ public class MonitorGenTableController {
         return ReturnResult.ok();
     }
 
+
     /**
      * 查询表信息
      *
@@ -352,7 +355,7 @@ public class MonitorGenTableController {
      * @return {@link Connection}
      * @throws SQLException SQLException
      */
-    private Connection getConnection(TableQuery query) throws SQLException {
+    private Connection getConnection(NodeChildrenQuery query) throws SQLException {
         MonitorSysGen sysGen = sysGenService.getById(query.getGenId());
         return DriverManager.getConnection(sysGen.getGenUrl(), sysGen.getGenUser(), sysGen.getGenPassword());
     }
@@ -364,7 +367,7 @@ public class MonitorGenTableController {
      * @return {@link Connection}
      * @throws SQLException SQLException
      */
-    private Connection getConnection(MonitorSysGen sysGen, TableQuery query) throws SQLException {
+    private Connection getConnection(MonitorSysGen sysGen, NodeChildrenQuery query) throws SQLException {
         return DriverManager.getConnection(sysGen.getGenUrl(), sysGen.getGenUser(), sysGen.getGenPassword());
     }
 
@@ -374,7 +377,7 @@ public class MonitorGenTableController {
      * @param query 查询
      * @return {@link String}
      */
-    private String getDatabase(TableQuery query) {
+    private String getDatabase(NodeChildrenQuery query) {
         if (null == query.getGenId()) {
             return null;
         }
@@ -389,7 +392,7 @@ public class MonitorGenTableController {
      * @param query 查询
      * @return {@link String}
      */
-    private MonitorSysGen getSysGen(TableQuery query) {
+    private MonitorSysGen getSysGen(NodeChildrenQuery query) {
         if (null == query.getGenId()) {
             return null;
         }
