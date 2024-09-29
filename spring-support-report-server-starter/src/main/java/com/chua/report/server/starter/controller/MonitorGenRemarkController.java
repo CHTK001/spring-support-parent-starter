@@ -57,17 +57,6 @@ public class MonitorGenRemarkController {
     }
 
     /**
-     * 获取详细信息
-     *
-     * @param id 主键
-     */
-    @Operation(summary = "获取详细信息")
-    @GetMapping(value = "/info")
-    public ReturnResult<MonitorSysGenRemark> getInfo(Integer id) {
-        return ReturnResult.ok(sysGenRemarkService.getOne(Wrappers.<MonitorSysGenRemark>lambdaQuery().eq(MonitorSysGenRemark::getRemarkId, id)));
-    }
-
-    /**
      * 新增
      */
     @Operation(summary = "新增备注")
@@ -89,21 +78,13 @@ public class MonitorGenRemarkController {
         } else {
             sysGenRemarkService.update(sysGenRemark, Wrappers.<MonitorSysGenRemark>lambdaUpdate()
                     .eq(MonitorSysGenRemark::getGenId, sysGenRemark.getGenId())
-                    .eq(MonitorSysGenRemark::getRemarkDatabase, sysGenRemark.getRemarkDatabase())
+                    .eq(StringUtils.isNotEmpty(sysGenRemark.getRemarkDatabase()), MonitorSysGenRemark::getRemarkDatabase, sysGenRemark.getRemarkDatabase())
                     .eq(MonitorSysGenRemark::getRemarkTable, sysGenRemark.getRemarkTable())
                     .eq(MonitorSysGenRemark::getRemarkColumn, sysGenRemark.getRemarkColumn()));
         }
         return Result.success(sysGenRemark);
     }
 
-    /**
-     * 修改
-     */
-    @Operation(summary = "修改备注")
-    @PutMapping("/update")
-    public ReturnResult<Boolean> update(@RequestBody MonitorSysGenRemark sysGenRemark) {
-        return ReturnResult.ok(sysGenRemarkService.updateById(sysGenRemark));
-    }
 
     /**
      * 删除

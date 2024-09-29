@@ -132,7 +132,7 @@ public class MonitorGenBackupServiceImpl extends ServiceImpl<MonitorSysGenMapper
         document.put("newValue", Joiner.on(",").join(backupData.getNewValue()));
         document.put("oldValue", Joiner.on(",").join(backupData.getOldValue()));
         document.put("timestamp", String.valueOf(System.currentTimeMillis()));
-        redisSearchService.addDocument(RedisConstant.REDIS_SEARCH_PREFIX + genId, document);
+        redisSearchService.addDocument(RedisConstant.REDIS_SEARCH_PREFIX + "GEN" + genId, document);
     }
     /**
      * 检查索引
@@ -141,7 +141,8 @@ public class MonitorGenBackupServiceImpl extends ServiceImpl<MonitorSysGenMapper
      */
     private void checkIndex(Integer genId) {
         SearchIndex searchIndex = new SearchIndex();
-        searchIndex.setName(RedisConstant.REDIS_SEARCH_PREFIX + genId);
+        searchIndex.setName(RedisConstant.REDIS_SEARCH_PREFIX + "GEN" + genId);
+        searchIndex.setPrefix(RedisConstant.REDIS_SEARCH_PREFIX + "GEN" + genId);
         searchIndex.setLanguage("chinese");
         SearchSchema searchSchema = new SearchSchema();
         searchSchema.addTextField("text", 10);
