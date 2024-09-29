@@ -211,7 +211,7 @@ public class MonitorGenSessionController {
                 ServiceProvider.of(Session.class).closeKeepExtension(String.valueOf(sysGen.getGenId()));
                 return ReturnResult.illegal("当前服务器不可达");
             }
-            if("TABLE".equalsIgnoreCase(query.getNodeType())) {
+            if("TABLE".equalsIgnoreCase(query.getNodeType()) || "DATABASE".equalsIgnoreCase(query.getNodeType())) {
                 List<Table> tables = session.getTables(StringUtils.defaultString(query.getNodeName(), DialectFactory.createDriver(sysGen.getGenDriver()).getDatabaseName(sysGen.getGenUrl())), "%", new SessionQuery());
                 return ReturnResult.ok(tables.stream().map(it -> {
                     NodeData nodeData = new NodeData();
