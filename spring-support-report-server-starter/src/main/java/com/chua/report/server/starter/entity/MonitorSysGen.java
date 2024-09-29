@@ -166,6 +166,13 @@ public class MonitorSysGen implements Serializable {
     private Integer genBackupStatus;
 
     /**
+     * 超时时间
+     */
+    @TableField(value = "gen_timeout")
+    @Schema(description = "超时时间")
+    private Integer genTimeout;
+
+    /**
      * JDBC类型
      */
     @TableField(value = "gen_jdbc_custom_type")
@@ -284,6 +291,7 @@ public class MonitorSysGen implements Serializable {
         databaseOptions.setDriver(genDriver);
         databaseOptions.setDatabaseFile(genDatabaseFile);
         databaseOptions.setUsername(genUser);
+        databaseOptions.setTimeout(null == genTimeout ? 30 : genTimeout);
         databaseOptions.setDriverPath(StringUtils.defaultString(genDriverFile, genDriverRemoteUrl));
         databaseOptions.setPassword(genPassword);
         databaseOptions.setGenType(genType);
