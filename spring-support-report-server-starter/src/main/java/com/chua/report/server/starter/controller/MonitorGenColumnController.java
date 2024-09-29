@@ -80,7 +80,7 @@ public class MonitorGenColumnController {
      * @return {@link ReturnPageResult}
      */
     @Operation(summary = "查询表信息")
-    @GetMapping("info")
+    @GetMapping("info")/**/
     public ReturnResult<List<MonitorSysGenColumn>> info(String tabId) {
         if(StringUtils.isEmpty(tabId)) {
             return ReturnResult.illegal("暂无信息");
