@@ -60,6 +60,8 @@ public class ReportServerConfiguration implements BeanDefinitionRegistryPostProc
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         registerZbusServer(registry);
+        registry.registerBeanDefinition("TerminalSocketIOListener", BeanDefinitionBuilder.rootBeanDefinition(TerminalSocketIOListener.class)
+                .getBeanDefinition());
     }
     @Override
     public boolean postProcessAfterInstantiation(Object bean, String beanName) throws BeansException {
@@ -79,6 +81,7 @@ public class ReportServerConfiguration implements BeanDefinitionRegistryPostProc
         });
     }
     private void registerZbusServer(BeanDefinitionRegistry registry) {
+
         if(NetUtils.isPortInUsed(reportServerPort)) {
             log.info("MQ: {}已被占用", reportServerPort);
             return;

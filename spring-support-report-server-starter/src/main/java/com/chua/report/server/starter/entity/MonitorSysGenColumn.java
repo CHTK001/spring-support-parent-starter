@@ -192,7 +192,7 @@ public class MonitorSysGenColumn implements Serializable {
         column.setColJavaType(TYPE_STRING);
         column.setColColumnDecimal(0);
         try {
-            column.setColColumnName(column1.getName());
+            column.setColColumnName(column1.getNodeId());
             column.setColColumnType(column1.getJdbcType());
             column.setColColumnComment(column1.getComment());
             column.setColIsRequired(!column1.isNullable() ? "1" : "0");

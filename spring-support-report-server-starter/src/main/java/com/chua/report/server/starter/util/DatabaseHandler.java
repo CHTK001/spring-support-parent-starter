@@ -109,11 +109,11 @@ public class DatabaseHandler implements AutoCloseable{
         ResultSet resultSet = metaData.getColumns(database, null, table,null);
         while (resultSet.next()) {
             Column column = new Column();
-            column.setName(resultSet.getString("COLUMN_NAME"));
+            column.setNodeId(resultSet.getString("COLUMN_NAME"));
             column.setJdbcType(resultSet.getString("TYPE_NAME"));
             column.setComment(resultSet.getString("REMARKS"));
             column.setNullable(resultSet.getInt("NULLABLE") == 0);
-            column.setTableName(resultSet.getString("TABLE_NAME"));
+            column.setNodeName(resultSet.getString("TABLE_NAME"));
 //            try {
 //                column.setAutoIncrement("YES".equalsIgnoreCase(resultSet.getString("IS_AUTOINCREMENT")) );
 //            } catch (SQLException ignored) {
@@ -137,7 +137,7 @@ public class DatabaseHandler implements AutoCloseable{
             return;
         }
         Column Column = CollectionUtils.findFirst(collect);
-        List<Column> columns = getColumns(Column.getDatabaseName(), Column.getTableName());
+        List<Column> columns = getColumns(Column.getDatabaseName(), Column.getNodeName());
         List<Column> deleteColumn = findDeleteColumn(columns, collect);
         List<Column> addColumn = findAddColumn(columns, collect);
         List<Column> updateColumn = findUpdateColumn(columns, collect);
@@ -173,10 +173,10 @@ public class DatabaseHandler implements AutoCloseable{
         for (Column result : updateColumn) {
             StringBuilder stringBuilder = new StringBuilder("ALTER TABLE ")
                     .append("`").append(Column.getDatabaseName()).append("`")
-                    .append(".`").append(Column.getTableName()).append("`")
+                    .append(".`").append(Column.getNodeName()).append("`")
                     .append(" MODIFY COLUMN ");
 
-            stringBuilder.append("`").append(result.getName()).append("` ");
+            stringBuilder.append("`").append(result.getNodeId()).append("` ");
             stringBuilder.append(result.getJdbcType());
             if(result.getLength() > 0) {
                 stringBuilder.append("(").append(result.getLength());
@@ -208,10 +208,10 @@ public class DatabaseHandler implements AutoCloseable{
         for (Column result : addColumn) {
             StringBuilder stringBuilder = new StringBuilder("ALTER TABLE ")
                     .append("`").append(Column.getDatabaseName()).append("`")
-                    .append(".`").append(Column.getTableName()).append("`")
+                    .append(".`").append(Column.getNodeName()).append("`")
                     .append(" ADD COLUMN ");
 
-            stringBuilder.append("`").append(result.getName()).append("` ");
+            stringBuilder.append("`").append(result.getNodeId()).append("` ");
             stringBuilder.append(result.getJdbcType());
             if(result.getLength() > 0) {
                 stringBuilder.append("(").append(result.getLength());
@@ -242,10 +242,10 @@ public class DatabaseHandler implements AutoCloseable{
     private void deleteTableColumn(Connection connection, Column Column, List<Column> deleteColumn) {
         StringBuilder stringBuilder = new StringBuilder("ALTER TABLE ")
                 .append("`").append(Column.getDatabaseName()).append("`")
-                .append(".`").append(Column.getTableName()).append("`")
+                .append(".`").append(Column.getNodeName()).append("`")
                 .append(" DROP COLUMN ");
 
-        String collect = deleteColumn.stream().map(it -> it.getName()).collect(Collectors.joining("`,`"));
+        String collect = deleteColumn.stream().map(it -> it.getNodeId()).collect(Collectors.joining("`,`"));
         stringBuilder.append("`").append(collect).append("`");
 
         try {
@@ -273,7 +273,7 @@ public class DatabaseHandler implements AutoCloseable{
                 continue;
             }
 
-            if(!dbColumn.getName().equals(column.getName()) ||
+            if(!dbColumn.getNodeId().equals(column.getNodeId()) ||
                     !dbColumn.getJdbcType().equals(column.getJdbcType()) ||
                     dbColumn.getPrecision() != Optional.ofNullable(column.getPrecision()).orElse(0) ||
                     !ObjectUtils.equals(dbColumn.getComment(), column.getComment()) ||
@@ -295,7 +295,7 @@ public class DatabaseHandler implements AutoCloseable{
      */
     private Column getColumn(Column column, List<Column> columns) {
         for (Column Column : columns) {
-            if(Column.getName().equals(column.getName())) {
+            if(Column.getNodeId().equals(column.getNodeId())) {
                 return Column;
             }
         }
@@ -312,9 +312,9 @@ public class DatabaseHandler implements AutoCloseable{
      */
     private List<Column> findAddColumn(List<Column> columns, Set<Column> collect) {
         List<Column> rs = new ArrayList<>(columns.size());
-        Set<String> strings = columns.stream().map(Column::getName).collect(Collectors.toSet());
+        Set<String> strings = columns.stream().map(Column::getNodeId).collect(Collectors.toSet());
         for (Column column : collect) {
-            if(!strings.contains(column.getName())) {
+            if(!strings.contains(column.getNodeId())) {
                 rs.add(column);
             }
         }
@@ -331,9 +331,9 @@ public class DatabaseHandler implements AutoCloseable{
      */
     private List<Column> findDeleteColumn(List<Column> columns, Set<Column> collect) {
         List<Column> rs = new ArrayList<>(columns.size());
-        Set<String> strings = collect.stream().map(Column::getName).collect(Collectors.toSet());
+        Set<String> strings = collect.stream().map(Column::getNodeId).collect(Collectors.toSet());
         for (Column column : columns) {
-            if(!strings.contains(column.getName())) {
+            if(!strings.contains(column.getNodeId())) {
                 rs.add(column);
             }
         }
