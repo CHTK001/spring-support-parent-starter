@@ -212,14 +212,18 @@ public class MonitorGenSessionController {
                 session = ServiceProvider.of(Session.class).getKeepExtension(query.getGenId() + "",sysGen.getGenType(), sysGen.newDatabaseOptions());
             }
             if("TABLE".equalsIgnoreCase(query.getNodeType()) || "DATABASE".equalsIgnoreCase(query.getNodeType())) {
-                List<Table> tables = session.getTables(StringUtils.defaultString(query.getNodeName(), DialectFactory.createDriver(sysGen.getGenDriver()).getDatabaseName(sysGen.getGenUrl())), "%", new SessionQuery());
+                List<Table> tables = session.getTables(StringUtils.defaultString(query.getNodeName(),
+                        DialectFactory.createDriver(sysGen.getGenDriver()).getDatabaseName(sysGen.getGenUrl())), "%",
+                        new SessionQuery(100, query.getKeyword()));
                 return ReturnResult.ok(tables.stream().map(it -> {
                     NodeData nodeData = new NodeData();
                     nodeData.setNodePid(query.getNodeId());
                     nodeData.setNodeId(it.getName());
                     nodeData.setNodeName(it.getTableName());
+                    nodeData.setDataType(it.getDataType());
                     nodeData.setNodeComment(it.getComment());
-                    nodeData.setNodeType("TABLE");
+                    nodeData.setNodeType(StringUtils.defaultString(it.getType(), "TABLE"));
+                    nodeData.setNodeLeaf("LEAF".equalsIgnoreCase(it.getNodeType()));
                     return nodeData;
                 }).toList());
             }

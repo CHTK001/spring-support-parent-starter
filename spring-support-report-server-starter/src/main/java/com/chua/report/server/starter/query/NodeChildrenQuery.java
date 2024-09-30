@@ -39,4 +39,10 @@ public class NodeChildrenQuery extends Query<NodeChildrenQuery> {
     @Schema(description = "节点名称")
     private String nodeName;
 
+    /**
+     * 关键字
+     */
+    @Schema(description = "关键字")
+    private String keyword;
+
 }
