@@ -19,7 +19,6 @@ import com.chua.report.server.starter.entity.MonitorSysGen;
 import com.chua.report.server.starter.entity.MonitorSysGenColumn;
 import com.chua.report.server.starter.entity.MonitorSysGenTable;
 import com.chua.report.server.starter.pojo.GenTable;
-import com.chua.report.server.starter.pojo.TableHit;
 import com.chua.report.server.starter.pojo.TemplateResult;
 import com.chua.report.server.starter.properties.ReportGenProperties;
 import com.chua.report.server.starter.query.Download;
@@ -126,10 +125,10 @@ public class MonitorGenTableController {
                 item.setDatabaseName(sysGen.getGenDatabase());
                 item.setPrecision(it.getColColumnDecimal());
                 item.setLength(it.getColColumnLength());
-                item.setName(it.getColColumnName());
+                item.setNodeId(it.getColColumnName());
                 item.setComment(it.getColColumnComment());
                 item.setJdbcType(it.getColColumnType());
-                item.setTableName(sysGen.getTabName());
+                item.setNodeName(sysGen.getTabName());
                 return item;
             }).collect(Collectors.toSet()));
         } catch (Exception e) {

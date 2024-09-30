@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.common.support.function.Splitter;
 import com.chua.common.support.net.NetUtils;
 import com.chua.common.support.session.Session;
+import com.chua.common.support.session.TableSession;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.FileUtils;
@@ -99,8 +100,8 @@ public class MonitorSysGenTableServiceImpl extends ServiceImpl<MonitorSysGenTabl
     @Override
     public Boolean updateTable(MonitorSysGen sysGen, GenTable table) {
         Session session = ServiceProvider.of(Session.class).getKeepExtension(sysGen.getGenId() + "", sysGen.getGenType(), sysGen.newDatabaseOptions());
-        if (session.isConnect()) {
-            return session.updateTable(table).isSuccess();
+        if (session instanceof TableSession tableSession && session.isConnect()) {
+            return tableSession.updateTableConstruct(table).isSuccess();
         }
         return false;
     }

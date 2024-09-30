@@ -183,7 +183,7 @@ public class MonitorGenSessionController {
                 tableHit.setName(it.getName());
                 try {
                     List<Column> columns = finalSession.getColumns(null, it.getTableName());
-                    tableHit.setFields(columns.stream().map(Column::getName).toArray(String[]::new));
+                    tableHit.setFields(columns.stream().map(Column::getNodeId).toArray(String[]::new));
                 } catch (Exception ignored) {
                 }
                 return tableHit;
@@ -209,7 +209,7 @@ public class MonitorGenSessionController {
             Session session = ServiceProvider.of(Session.class).getKeepExtension(query.getGenId() + "",sysGen.getGenType(), sysGen.newDatabaseOptions());
             if (!session.isConnect()) {
                 ServiceProvider.of(Session.class).closeKeepExtension(String.valueOf(sysGen.getGenId()));
-                return ReturnResult.illegal("当前服务器不可达");
+                session = ServiceProvider.of(Session.class).getKeepExtension(query.getGenId() + "",sysGen.getGenType(), sysGen.newDatabaseOptions());
             }
             if("TABLE".equalsIgnoreCase(query.getNodeType()) || "DATABASE".equalsIgnoreCase(query.getNodeType())) {
                 List<Table> tables = session.getTables(StringUtils.defaultString(query.getNodeName(), DialectFactory.createDriver(sysGen.getGenDriver()).getDatabaseName(sysGen.getGenUrl())), "%", new SessionQuery());
@@ -236,6 +236,19 @@ public class MonitorGenSessionController {
                     return nodeData;
                 }).toList());
             }
+            if("NODE".equalsIgnoreCase(query.getNodeType())) {
+                List<Table> tables = session.getTables(null, query.getNodeId(), new SessionQuery());
+                return ReturnResult.ok(tables.stream().map(it -> {
+                    NodeData nodeData = new NodeData();
+                    nodeData.setNodePid(query.getNodeId());
+                    nodeData.setNodeId(it.getNodeId());
+                    nodeData.setNodeName(it.getTableName());
+                    nodeData.setNodeComment(it.getComment());
+                    nodeData.setNodeType("NODE");
+                    nodeData.setNodeLeaf("LEAF".equalsIgnoreCase(it.getNodeType()));
+                    return nodeData;
+                }).toList());
+            }
 
             if("COLUMN".equalsIgnoreCase(query.getNodeType())) {
                 List<Column> columns = session.getColumns(null, query.getNodeName());
@@ -248,7 +261,7 @@ public class MonitorGenSessionController {
                     tpl.put(sysGenRemark.getRemarkColumn(), sysGenRemark);
                 }
                 for (Column column : CollectionUtils.wrapper(columns)) {
-                    String columnName = column.getName();
+                    String columnName = column.getNodeId();
                     MonitorSysGenRemark sysGenRemark = tpl.get(columnName);
                     if (null != sysGenRemark) {
                         column.setComment(sysGenRemark.getRemarkName());
@@ -257,8 +270,8 @@ public class MonitorGenSessionController {
                 return ReturnResult.ok(columns.stream().map(it -> {
                     NodeData nodeData = new NodeData();
                     nodeData.setNodePid(query.getNodeId());
-                    nodeData.setNodeId(it.getName());
-                    nodeData.setNodeName(it.getName());
+                    nodeData.setNodeId(it.getNodeId());
+                    nodeData.setNodeName(it.getNodeId());
                     nodeData.setNodeComment(it.getComment());
                     nodeData.setNodeType("COLUMN");
                     nodeData.setNodeLeaf(true);
@@ -296,9 +309,9 @@ public class MonitorGenSessionController {
             if(!CollectionUtils.isEmpty(database)) {
                 return ReturnResult.ok(database.stream().map(it -> {
                     NodeData nodeData = new NodeData();
-                    nodeData.setNodeId(it.getName());
-                    nodeData.setNodeName(it.getLabel());
-                    nodeData.setNodeType("DATABASE");
+                    nodeData.setNodeId(it.getNodeId());
+                    nodeData.setNodeName(it.getNodeName());
+                    nodeData.setNodeType(StringUtils.defaultString(it.getDataType(), "DATABASE"));
                     return nodeData;
                 }).toList());
             }
@@ -417,11 +430,13 @@ public class MonitorGenSessionController {
             if (StringUtils.isNotEmpty(executeQuery.getContent())) {
                 stringBuffer.append(HighlightingFormatter.INSTANCE.format(SqlFormatter.format(executeQuery.getContent())));
             }
-            Statement statement = CCJSqlParserUtil.parse(executeQuery.getContent());
             String currentDatabase = null;
             String currentTable = null;
-            if(statement instanceof Select select) {
-                currentTable = ((net.sf.jsqlparser.schema.Table)((PlainSelect)select.getSelectBody()).getFromItem()).getName();
+            if("JDBC".equalsIgnoreCase(sysGen.getGenType())) {
+                Statement statement = CCJSqlParserUtil.parse(executeQuery.getContent());
+                if(statement instanceof Select select) {
+                    currentTable = ((net.sf.jsqlparser.schema.Table)((PlainSelect)select.getSelectBody()).getFromItem()).getName();
+                }
             }
 
             if (StringUtils.isNotBlank(currentTable)) {
@@ -432,7 +447,7 @@ public class MonitorGenSessionController {
                 );
                 List<Column> columns = Optional.ofNullable(session.getColumns(null, currentTable)).orElse(Collections.emptyList());
                 for (Column column : columns) {
-                    remark.put(column.getName(), column.getComment());
+                    remark.put(column.getNodeId(), column.getComment());
                 }
                 for (MonitorSysGenRemark sysGenRemark : list) {
                     remark.put(sysGenRemark.getRemarkColumn(), sysGenRemark.getRemarkName());
@@ -462,6 +477,156 @@ public class MonitorGenSessionController {
         sessionResult.setCost(toMillis);
         sessionResult.setTotal(sessionResultSet.toTotal());
         sessionResult.setRemark(remark);
+        return ReturnResult.ok(sessionResult);
+    }
+    /**
+     * 解释
+     *
+     * @param updateQuery 解释查询
+     * @return {@link ReturnResult}<{@link SessionResultSet}>
+     */
+    @Operation(summary = "执行更新表达式")
+    @PostMapping("executeUpdate")
+    public ReturnResult<SessionResult> execute(@RequestBody UpdateQuery updateQuery) {
+        if (StringUtils.isEmpty(updateQuery.getGenId())) {
+            return ReturnResult.error("未配置生成器");
+        }
+
+        MonitorSysGen sysGen = sysGenService.getById(updateQuery.getGenId());
+        if (StringUtils.isEmpty(sysGen.getGenType())) {
+            return ReturnResult.error("未配置生成器类型");
+        }
+
+        StringBuilder stringBuffer = new StringBuilder();
+        long startTime = System.nanoTime();
+        Session session = ServiceProvider.of(Session.class).getKeepExtension(updateQuery.getGenId(), sysGen.getGenType(), sysGen.newDatabaseOptions());
+        if (!session.isConnect()) {
+            ServiceProvider.of(Session.class).closeKeepExtension(updateQuery.getGenId());
+            return ReturnResult.illegal("当前服务器不可达");
+        }
+        SessionInfo sessionInfo = null;
+        try {
+            sessionInfo = session.executeUpdate(updateQuery);
+        } catch (Exception e) {
+            String localizedMessage = e.getLocalizedMessage();
+            if (null != localizedMessage) {
+                int i = localizedMessage.indexOf(SYMBOL_EXCEPTION);
+                while (i > -1) {
+                    localizedMessage = localizedMessage.substring(SYMBOL_EXCEPTION.length() + i + 1);
+                    i = localizedMessage.indexOf(SYMBOL_EXCEPTION);
+                }
+                stringBuffer.append(localizedMessage);
+            }
+
+            return ReturnResult.illegal(stringBuffer.toString());
+        }
+        long toMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
+        stringBuffer.append("\r\n").append("耗时: ").append(toMillis);
+        stringBuffer.append(" ms");
+
+        SessionResult sessionResult = new SessionResult();
+        sessionResult.setMessage(sessionInfo.getMessage());
+        sessionResult.setCost(toMillis);
+        return ReturnResult.ok(sessionResult);
+    }
+    /**
+     * 解释
+     *
+     * @param saveQuery 解释查询
+     * @return {@link ReturnResult}<{@link SessionResultSet}>
+     */
+    @Operation(summary = "执行新增表达式")
+    @PostMapping("executeSave")
+    public ReturnResult<SessionResult> execute(@RequestBody SaveQuery saveQuery) {
+        if (StringUtils.isEmpty(saveQuery.getGenId())) {
+            return ReturnResult.error("未配置生成器");
+        }
+
+        MonitorSysGen sysGen = sysGenService.getById(saveQuery.getGenId());
+        if (StringUtils.isEmpty(sysGen.getGenType())) {
+            return ReturnResult.error("未配置生成器类型");
+        }
+
+        StringBuilder stringBuffer = new StringBuilder();
+        long startTime = System.nanoTime();
+        Session session = ServiceProvider.of(Session.class).getKeepExtension(saveQuery.getGenId(), sysGen.getGenType(), sysGen.newDatabaseOptions());
+        if (!session.isConnect()) {
+            ServiceProvider.of(Session.class).closeKeepExtension(saveQuery.getGenId());
+            return ReturnResult.illegal("当前服务器不可达");
+        }
+        SessionInfo sessionInfo = null;
+        try {
+            sessionInfo = session.executeSave(saveQuery);
+        } catch (Exception e) {
+            String localizedMessage = e.getLocalizedMessage();
+            if (null != localizedMessage) {
+                int i = localizedMessage.indexOf(SYMBOL_EXCEPTION);
+                while (i > -1) {
+                    localizedMessage = localizedMessage.substring(SYMBOL_EXCEPTION.length() + i + 1);
+                    i = localizedMessage.indexOf(SYMBOL_EXCEPTION);
+                }
+                stringBuffer.append(localizedMessage);
+            }
+
+            return ReturnResult.illegal(stringBuffer.toString());
+        }
+        long toMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
+        stringBuffer.append("\r\n").append("耗时: ").append(toMillis);
+        stringBuffer.append(" ms");
+
+        SessionResult sessionResult = new SessionResult();
+        sessionResult.setMessage(sessionInfo.getMessage());
+        sessionResult.setCost(toMillis);
+        return ReturnResult.ok(sessionResult);
+    }
+    /**
+     * 解释
+     *
+     * @param deleteQuery 解释查询
+     * @return {@link ReturnResult}<{@link SessionResultSet}>
+     */
+    @Operation(summary = "执行删除表达式")
+    @PostMapping("executeDelete")
+    public ReturnResult<SessionResult> execute(@RequestBody DeleteQuery deleteQuery) {
+        if (StringUtils.isEmpty(deleteQuery.getGenId())) {
+            return ReturnResult.error("未配置生成器");
+        }
+
+        MonitorSysGen sysGen = sysGenService.getById(deleteQuery.getGenId());
+        if (StringUtils.isEmpty(sysGen.getGenType())) {
+            return ReturnResult.error("未配置生成器类型");
+        }
+
+        StringBuilder stringBuffer = new StringBuilder();
+        long startTime = System.nanoTime();
+        Session session = ServiceProvider.of(Session.class).getKeepExtension(deleteQuery.getGenId(), sysGen.getGenType(), sysGen.newDatabaseOptions());
+        if (!session.isConnect()) {
+            ServiceProvider.of(Session.class).closeKeepExtension(deleteQuery.getGenId());
+            return ReturnResult.illegal("当前服务器不可达");
+        }
+        SessionInfo sessionInfo = null;
+        try {
+            sessionInfo = session.executeDelete(deleteQuery);
+        } catch (Exception e) {
+            String localizedMessage = e.getLocalizedMessage();
+            if (null != localizedMessage) {
+                int i = localizedMessage.indexOf(SYMBOL_EXCEPTION);
+                while (i > -1) {
+                    localizedMessage = localizedMessage.substring(SYMBOL_EXCEPTION.length() + i + 1);
+                    i = localizedMessage.indexOf(SYMBOL_EXCEPTION);
+                }
+                stringBuffer.append(localizedMessage);
+            }
+
+            return ReturnResult.illegal(stringBuffer.toString());
+        }
+        long toMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
+        stringBuffer.append("\r\n").append("耗时: ").append(toMillis);
+        stringBuffer.append(" ms");
+
+        SessionResult sessionResult = new SessionResult();
+        sessionResult.setMessage(sessionInfo.getMessage());
+        sessionResult.setCost(toMillis);
         return ReturnResult.ok(sessionResult);
     }
 
@@ -612,7 +777,7 @@ public class MonitorGenSessionController {
         } catch (Exception ignored) {
         }
         try {
-            sessionInfo = session.save(saveQuery, file1);
+            sessionInfo = session.executeSave(saveQuery);
         } catch (Exception e) {
             log.error("", e);
             return ReturnResult.illegal(e);
@@ -653,7 +818,7 @@ public class MonitorGenSessionController {
         }
         SessionInfo sessionInfo = null;
         try {
-            sessionInfo = session.delete(deleteQuery);
+            sessionInfo = session.executeDelete(deleteQuery);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -704,7 +869,7 @@ public class MonitorGenSessionController {
         }
         SessionInfo sessionInfo = null;
         try {
-            sessionInfo = session.update(updateQuery, file1);
+            sessionInfo = session.executeUpdate(updateQuery);
         } catch (Exception e) {
             log.error("", e);
             return ReturnResult.illegal();
