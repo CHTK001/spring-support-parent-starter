@@ -41,6 +41,12 @@ public class NodeData {
      */
     @Schema(title = "节点名称")
     private String nodeName;
+
+    /**
+     * 数据类型
+     */
+    @Schema(title= "数据类型")
+    private String dataType;
     /**
      * 节点ID
      */
