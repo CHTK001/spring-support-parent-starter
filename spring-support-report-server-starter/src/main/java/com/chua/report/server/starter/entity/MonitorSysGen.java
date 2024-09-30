@@ -299,9 +299,9 @@ public class MonitorSysGen implements Serializable {
         databaseOptions.setUrl(genHost + ":" + genPort);
         this.genUrl = initialGenUrl(databaseOptions, codecPassword);
         databaseOptions.setUrl(genUrl);
-        if (null != genUid && codecPassword && StringUtils.isNotBlank(genPassword)) {
-            databaseOptions.setPassword(Codec.build(databaseOptions.getSecretKeyType(), genUid).decodeBase64(StringUtils.utf8Str(Base64.getDecoder().decode(genPassword))));
-        }
+//        if (null != genUid && codecPassword && StringUtils.isNotBlank(genPassword)) {
+//            databaseOptions.setPassword(Codec.build(databaseOptions.getSecretKeyType(), genUid).decodeBase64(StringUtils.utf8Str(Base64.getDecoder().decode(genPassword))));
+//        }
 
         return databaseOptions;
     }
