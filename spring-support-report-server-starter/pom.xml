@@ -34,6 +34,12 @@
 
         <dependency>
             <groupId>com.chua</groupId>
+            <artifactId>utils-support-mongodb-starter</artifactId>
+            <version>4.0.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.chua</groupId>
             <artifactId>spring-support-socketio-starter</artifactId>
         </dependency>
 
