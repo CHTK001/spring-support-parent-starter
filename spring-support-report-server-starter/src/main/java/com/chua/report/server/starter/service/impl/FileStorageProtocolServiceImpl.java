@@ -132,6 +132,8 @@ public class FileStorageProtocolServiceImpl extends ServiceImpl<FileStorageProto
 
     private FileStorageChainFilter.FileStorageSetting createSetting(FileStorageProtocol fileStorageProtocol) {
         return FileStorageChainFilter.FileStorageSetting.builder()
+                .webjars(true)
+                .remoteFile(true)
                 .openPlugin(null != fileStorageProtocol.getFileStorageProtocolPluginOpen() && fileStorageProtocol.getFileStorageProtocolPluginOpen() == 1)
                 .openSetting(null != fileStorageProtocol.getFileStorageProtocolSettingOpen() && fileStorageProtocol.getFileStorageProtocolSettingOpen() == 1)
                 .openRange(null != fileStorageProtocol.getFileStorageProtocolRangeOpen() && fileStorageProtocol.getFileStorageProtocolRangeOpen() == 1)
