@@ -79,6 +79,19 @@ public class OptionalProvider {
      * @param type 类型
      * @return 获取选项
      */
+    private String[] getTypes(String type) {
+        if(spiProperties.isEnable()) {
+            return MapUtils.getStringArray(spiProperties.getMapping(), type);
+        }
+
+        return new String[]{type};
+    }
+    /**
+     * 获取选项
+     *
+     * @param type 类型
+     * @return 获取选项
+     */
     private String getType(String type) {
         if(spiProperties.isEnable()) {
             return MapUtils.getString(spiProperties.getMapping(), type);
@@ -127,17 +140,20 @@ public class OptionalProvider {
         String[] split = StringUtils.utf8Str(Base64.getDecoder().decode(type)).split(",");
         Map<String, List<SpiOption>> map = MapUtils.newHashMap();
         for (String s : split) {
-            List<SpiOption> options = ServiceProvider.of(getType(s)).options();
-            if(!StringUtils.isBlank(name)) {
-                for (SpiOption option : options) {
-                    if (StringUtils.equalsIgnoreCase(option.getName(), name)) {
-                        map.put(s, Collections.singletonList(option));
-                        break;
+            String[] types = getTypes(s);
+            for (String item : types) {
+                List<SpiOption> options = ServiceProvider.of(item).options();
+                if(!StringUtils.isBlank(name)) {
+                    for (SpiOption option : options) {
+                        if (StringUtils.equalsIgnoreCase(option.getName(), name)) {
+                            map.put(s, Collections.singletonList(option));
+                            break;
+                        }
                     }
+                    continue;
                 }
-                continue;
+                map.put(s, options);
             }
-            map.put(s, options);
         }
 
         return ReturnResult.success(map);
