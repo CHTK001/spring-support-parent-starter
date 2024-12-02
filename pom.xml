@@ -35,6 +35,7 @@
         <module>spring-support-mybatis-tenant-starter</module>
         <module>spring-support-report-client-start</module>
         <module>spring-support-report-server-starter</module>
+        <module>spring-support-tencent-starter</module>
     </modules>
 
     <properties>
