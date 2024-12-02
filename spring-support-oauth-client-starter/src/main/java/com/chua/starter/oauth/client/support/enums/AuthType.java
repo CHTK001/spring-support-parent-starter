@@ -8,15 +8,19 @@ package com.chua.starter.oauth.client.support.enums;
  * @since 2022/7/26 8:20
  */
 public enum AuthType {
+
     /**
-     * session
+     * 小程序
+     */
+    MINI_APP,
+    /**
+     * app
      */
     APP,
     /**
      * token
      */
     WEB,
-
     /**
      * 系统
      */

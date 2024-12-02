@@ -50,7 +50,7 @@ public class LoginData {
     /**
      * 登录类型
      */
-    @Schema(description = "登录类型, 网页：WEB, 微信:WX等")
-    @ApiModelProperty(value = "登录类型, 网页：WEB, 微信:WX等")
+    @Schema(description = "登录类型, 网页：WEB, 微信:WX, 后管: SYSTEM, 小程序: MINI_APP等")
+    @ApiModelProperty(value = "登录类型, 网页：WEB, 微信:WX, 后管: SYSTEM, 小程序: MINI_APP等")
     private String loginType;
 }
