@@ -15,11 +15,14 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.Ordered;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 /**
  * FilterConfiguration 类用于管理过滤器的配置。
@@ -41,22 +44,25 @@ public class FilterConfiguration {
      *
      * @return CorsFilter
      */
-    @Bean
-    @ConditionalOnMissingBean
+    @Bean("corsFilterFilterRegistrationBean")
     @ConditionalOnProperty(name = "plugin.cors.enable", matchIfMissing = false, havingValue = "true")
-    public CorsFilter corsFilter() {
+    public FilterRegistrationBean<CorsFilter> corsFilterFilterRegistrationBean() {
         //1. 添加 CORS配置信息
         org.springframework.web.cors.CorsConfiguration config = new org.springframework.web.cors.CorsConfiguration();
+        List<String> exposedHeaders = Arrays.asList(X_HEADER_VERSION, "x-oauth-token", "content-type", "X-Requested-With", "XMLHttpRequest");
         //放行哪些原始域
         config.addAllowedOriginPattern("*");
         //是否发送 Cookie
         config.setAllowCredentials(true);
         //放行哪些请求方式
         config.addAllowedMethod("*");
+        config.setExposedHeaders(exposedHeaders);
         //放行哪些原始请求头部信息
         config.addAllowedHeader("*");
         //暴露哪些头部信息
         config.addExposedHeader("*");
+
+        config.setAllowCredentials(true);
         //2. 添加映射路径
         UrlBasedCorsConfigurationSource corsConfigurationSource = new UrlBasedCorsConfigurationSource();
         if (corsProperties.getPattern().isEmpty()) {
@@ -68,7 +74,11 @@ public class FilterConfiguration {
         }
         //3. 返回新的CorsFilter
         log.info(">>>>>>> 开启跨域处理");
-        return new CorsFilter(corsConfigurationSource);
+        CorsFilter corsFilter = new CorsFilter(corsConfigurationSource);
+        FilterRegistrationBean<CorsFilter> filterRegistrationBean = new FilterRegistrationBean<>(corsFilter);
+        filterRegistrationBean.setOrder(Ordered.HIGHEST_PRECEDENCE);
+
+        return filterRegistrationBean;
     }
     /**
      * 参数日志
