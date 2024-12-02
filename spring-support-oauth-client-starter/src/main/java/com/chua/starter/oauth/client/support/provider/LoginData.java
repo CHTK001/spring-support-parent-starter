@@ -21,8 +21,8 @@ public class LoginData {
     /**
      * 账号
      */
-    @ApiModelProperty(value = "账号")
-    @Schema(description = "账号")
+    @ApiModelProperty(value = "账号/微信code")
+    @Schema(description = "账号/微信code")
     @NotNull(message = "账号不能为空")
     private String username;
 
@@ -53,4 +53,18 @@ public class LoginData {
     @Schema(description = "登录类型, 网页：WEB, 微信:WX, 后管: SYSTEM, 小程序: MINI_APP等")
     @ApiModelProperty(value = "登录类型, 网页：WEB, 微信:WX, 后管: SYSTEM, 小程序: MINI_APP等")
     private String loginType;
+
+    /**
+     * 登录凭证
+     */
+    @ApiModelProperty(value = "登录凭证")
+    @Schema(description = "登录凭证")
+    private String wxEncryptedData;
+
+    /**
+     * 登录凭证
+     */
+    @ApiModelProperty(value = "登录凭证")
+    @Schema(description = "登录凭证")
+    private String wxIv;
 }
