@@ -4,8 +4,8 @@ import com.chua.common.support.objects.ConfigureObjectContext;
 import com.chua.common.support.objects.DefaultConfigureObjectContext;
 import com.chua.starter.common.support.debounce.DebounceAspect;
 import com.chua.starter.common.support.limit.LimitAspect;
-import com.chua.starter.common.support.logger.UserLoggerPointcutAdvisor;
 import com.chua.starter.common.support.logger.SysLoggerPointcutAdvisor;
+import com.chua.starter.common.support.logger.UserLoggerPointcutAdvisor;
 import com.chua.starter.common.support.properties.*;
 import com.chua.starter.common.support.result.ExceptionAdvice;
 import com.chua.starter.common.support.result.UniformResponseBodyAdvice;
@@ -28,6 +28,7 @@ import org.springframework.web.client.RestTemplate;
         ParameterProperties.class,
         ActuatorProperties.class,
         SpiProperties.class,
+        JacksonProperties.class,
         CacheProperties.class
 })
 public class CommonConfiguration {
