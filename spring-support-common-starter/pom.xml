@@ -77,7 +77,6 @@
             <artifactId>utils-support-hibernate-starter</artifactId>
         </dependency>
 
-
         <!-- 验证码 -->
         <dependency>
             <groupId>com.github.whvcse</groupId>
