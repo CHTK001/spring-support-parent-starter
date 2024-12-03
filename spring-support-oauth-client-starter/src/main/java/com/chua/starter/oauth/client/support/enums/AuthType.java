@@ -8,11 +8,15 @@ package com.chua.starter.oauth.client.support.enums;
  * @since 2022/7/26 8:20
  */
 public enum AuthType {
+    /**
+     * 微信小程序
+     */
+    WX_MINI_APP,
 
     /**
-     * 小程序
+     * 专家
      */
-    MINI_APP,
+    PROFESSOR,
     /**
      * app
      */
