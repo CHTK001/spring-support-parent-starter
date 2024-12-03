@@ -7,6 +7,8 @@ import com.chua.starter.common.support.jackson.NullValueSerializer;
 import com.chua.starter.common.support.jackson.TypeResolverBuilder;
 import com.chua.starter.common.support.jackson.handler.JacksonProblemHandler;
 import com.chua.starter.common.support.jackson.handler.JsonArray2StringJacksonProblemHandler;
+import com.chua.starter.common.support.properties.JacksonProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
@@ -47,8 +49,11 @@ public class JacksonConfiguration {
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
     private static final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
+    public static ObjectMapper createObjectMapper(boolean forEverything) {
+        return createObjectMapper(forEverything, false);
+    }
 
-    public static ObjectMapper createObjectMapper(boolean forEverything ) {
+    public static ObjectMapper createObjectMapper(boolean forEverything, boolean includeNull) {
         ObjectMapper objectMapper = JsonMapper.builder()
                 // 反序列化时对字段名的大小写不敏感
                 .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
@@ -65,6 +70,11 @@ public class JacksonConfiguration {
                 .configure(DeserializationFeature.FAIL_ON_READING_DUP_TREE_KEY, true)
                 .addHandler(new NullableFieldsDeserializationProblemHandler())
                 .build();
+        if(includeNull) {
+            objectMapper.setDefaultPropertyInclusion(JsonInclude.Include.ALWAYS);
+        } else {
+            objectMapper.setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL);
+        }
         if(forEverything) {
             StdTypeResolverBuilder typer = TypeResolverBuilder.forEverything(objectMapper).init(JsonTypeInfo.Id.CLASS, null)
                     .inclusion(JsonTypeInfo.As.PROPERTY);
@@ -87,8 +97,8 @@ public class JacksonConfiguration {
         return objectMapper;
     }
     @Bean
-    ObjectMapper objectMapper() {
-        return createObjectMapper(false);
+    ObjectMapper objectMapper(JacksonProperties jacksonProperties) {
+        return createObjectMapper(false, jacksonProperties.isIncludeNull());
     }
 
     static class TransientFieldIgnoringDeserializer extends StdDeserializer<Object> {
