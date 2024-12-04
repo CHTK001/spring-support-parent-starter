@@ -72,6 +72,11 @@ public class Knife4jProperties {
     @Data
     @Accessors(chain = true)
     public static class Knife4j {
+
+        /**
+         * 分组
+         */
+        private String group;
         /**
          * 分组名
          */
@@ -85,6 +90,19 @@ public class Knife4jProperties {
          * basePackage
          */
         private String[] basePackage;
+        /**
+         * 标题
+         */
+        private String title = "";
+
+        /**
+         * 描述
+         */
+        private String description = "";
+        /**
+         * 版本
+         */
+        private String version = "v1.0.0";
 
     }
 }
