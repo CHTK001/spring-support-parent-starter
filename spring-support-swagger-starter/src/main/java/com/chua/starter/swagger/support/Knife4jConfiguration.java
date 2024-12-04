@@ -5,10 +5,8 @@ import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import lombok.extern.slf4j.Slf4j;
-import org.springdoc.core.models.GroupedOpenApi;
 import org.springdoc.webmvc.core.configuration.MultipleOpenApiSupportConfiguration;
 import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
@@ -33,7 +31,6 @@ import org.springframework.util.StringUtils;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Knife4j配置
@@ -63,16 +60,16 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
                 .termsOfService(knife4jProperties.getTermsOfService())
         );
         registry.registerBeanDefinition("knife4j-OpenAPI", BeanDefinitionBuilder.genericBeanDefinition(OpenAPI.class, () -> openAPI).getBeanDefinition());
-        for (Knife4jProperties.Knife4j knife4j : knife4j1) {
-            GroupedOpenApi openApi = GroupedOpenApi.builder()
-                    .group(knife4j.getGroupName())
-                    .displayName(knife4j.getGroupName())
-                    .packagesToScan(knife4j.getBasePackage())
-                    .pathsToMatch(Optional.ofNullable(knife4j.getPathsToMatch()).orElse((new String[]{"/**"}))
-                    ).build();
-            BeanDefinition beanDefinition = BeanDefinitionBuilder.genericBeanDefinition(GroupedOpenApi.class, () -> openApi).getBeanDefinition();
-            registry.registerBeanDefinition(String.format("%sGroupedOpenApi",openApi.getGroup()), beanDefinition);
-        }
+//        for (Knife4jProperties.Knife4j knife4j : knife4j1) {
+//            GroupedOpenApi openApi = GroupedOpenApi.builder()
+//                    .group(knife4j.getGroupName())
+//                    .displayName(knife4j.getGroupName())
+//                    .packagesToScan(knife4j.getBasePackage())
+//                    .pathsToMatch(Optional.ofNullable(knife4j.getPathsToMatch()).orElse((new String[]{"/**"}))
+//                    ).build();
+//            BeanDefinition beanDefinition = BeanDefinitionBuilder.genericBeanDefinition(GroupedOpenApi.class, () -> openApi).getBeanDefinition();
+//            registry.registerBeanDefinition(String.format("%sGroupedOpenApi",openApi.getGroup()), beanDefinition);
+//        }
     }
 
 
