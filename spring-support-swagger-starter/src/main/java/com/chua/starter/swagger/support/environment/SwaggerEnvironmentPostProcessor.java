@@ -26,6 +26,7 @@ public class SwaggerEnvironmentPostProcessor implements EnvironmentPostProcessor
     private static final String ATTACHED_PROPERTY_SOURCE_NAME = "configurationProperties";
 
     @Override
+    @SuppressWarnings("ALL")
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         Properties properties = new Properties();
         properties.setProperty("springdoc.api-docs.enabled", "true");

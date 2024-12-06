@@ -14,4 +14,5 @@ org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
   com.chua.starter.common.support.configuration.FilterConfiguration
 org.springframework.boot.env.EnvironmentPostProcessor=\
   com.chua.starter.common.support.configuration.environment.FreemarkerEnvironmentPostProcessor,\
-  com.chua.starter.common.support.configuration.environment.SpringEnvironmentPostProcessor
+  com.chua.starter.common.support.configuration.environment.SpringEnvironmentPostProcessor,\
+  com.chua.starter.common.support.configuration.environment.ProfileEnvironmentPostProcessor
