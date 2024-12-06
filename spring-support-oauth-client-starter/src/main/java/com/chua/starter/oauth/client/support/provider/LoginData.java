@@ -21,17 +21,17 @@ public class LoginData {
     /**
      * 账号
      */
-    @ApiModelProperty(value = "账号/微信code")
-    @Schema(description = "账号/微信code")
+    @ApiModelProperty(value = "账号/微信code/微信openId")
+    @Schema(description = "账号/微信code/微信openId")
     @NotNull(message = "账号不能为空")
     private String username;
 
     /**
      * 密码
      */
-    @ApiModelProperty(value = "密码(md5加密)")
+    @ApiModelProperty(value = "密码(md5加密)/微信getphonenumber(code)")
     @NotNull(message = "密码不能为空")
-    @Schema(description = "密码(md5加密)")
+    @Schema(description = "密码(md5加密)/微信getphonenumber(code")
     private String password;
     /**
      * 校验码
