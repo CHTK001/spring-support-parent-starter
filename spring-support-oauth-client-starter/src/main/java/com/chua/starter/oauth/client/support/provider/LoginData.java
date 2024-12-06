@@ -58,13 +58,21 @@ public class LoginData {
      * 登录凭证
      */
     @ApiModelProperty(value = "登录凭证")
-    @Schema(description = "登录凭证")
+    @Schema(description = "登录凭证(加密数据)")
     private String wxEncryptedData;
 
     /**
      * 登录凭证
      */
     @ApiModelProperty(value = "登录凭证")
-    @Schema(description = "登录凭证")
+    @Schema(description = "登录凭证(Iv)")
     private String wxIv;
+
+
+    /**
+     * 登录凭证
+     */
+    @ApiModelProperty(value = "登录凭证")
+    @Schema(description = "登录凭证(会话Key)")
+    private String wxSessionKey;
 }
