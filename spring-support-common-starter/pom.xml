@@ -10,6 +10,8 @@
     </parent>
 
     <artifactId>spring-support-common-starter</artifactId>
+    <description>基本模块</description>
+    <version>4.0.0.1</version>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>

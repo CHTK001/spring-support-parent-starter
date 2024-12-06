@@ -23,7 +23,7 @@ public class TencentConfiguration {
      * @return TencentMaHandler
      */
     @Bean
-    @ConditionalOnProperty(name = "spring.cloud.starter.tencent.mini-app.enabled", havingValue = "true")
+    @ConditionalOnProperty(name = "plugin.tencent.mini-app.enabled", havingValue = "true")
     public TencentMaHandler tencentMaHandler(TencentMiniAppProperties properties) {
         Tencent tencent = new Tencent(TencentSetting.builder()
                 .appId(properties.getAppId())
