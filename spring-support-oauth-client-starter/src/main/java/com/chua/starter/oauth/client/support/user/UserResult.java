@@ -28,6 +28,24 @@ public class UserResult {
     private String id;
 
     /**
+     * 登录次数
+     */
+    private Integer loginCnt;
+
+    /**
+     * 客户端id
+     */
+    private String clientId;
+    /**
+     * openId
+     */
+    private String openId;
+    /**
+     * 联合id
+     */
+    private String unionId;
+
+    /**
      * 用户id
      */
     private String userId;
