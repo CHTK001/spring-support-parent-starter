@@ -54,6 +54,13 @@ public class LoginData {
     @ApiModelProperty(value = "登录类型, 网页：WEB, 微信:WX, 后管: SYSTEM, 小程序: WX_MINI_APP, WX_MINI_APP_VISITOR等")
     private String loginType;
 
+
+    /**
+     * 谷歌验证码
+     */
+//    @ApiModelProperty(value = "谷歌/其它验证码")
+//    @Schema(description = "谷歌/其它验证码")
+//    private String totpCode;
     /**
      * 登录凭证
      */
