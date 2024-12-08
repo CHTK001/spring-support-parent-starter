@@ -9,7 +9,7 @@ import com.chua.starter.mybatis.pojo.SysBase;
 import lombok.Data;
 
 import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Size;
+import jakarta.validation.constraints.Size;
 import java.io.Serializable;
 
 @Data
