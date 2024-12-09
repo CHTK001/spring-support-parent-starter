@@ -11,7 +11,9 @@ org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
   com.chua.starter.common.support.configuration.ProjectConfiguration,\
   com.chua.starter.common.support.configuration.CodecConfiguration,\
   com.chua.starter.common.support.configuration.InterceptorWebMvcConfigurer,\
-  com.chua.starter.common.support.configuration.FilterConfiguration
+  com.chua.starter.common.support.configuration.FilterConfiguration,\
+  com.chua.starter.common.support.scheduler.CustomSchedulingConfigurer
+
 org.springframework.boot.env.EnvironmentPostProcessor=\
   com.chua.starter.common.support.configuration.environment.FreemarkerEnvironmentPostProcessor,\
   com.chua.starter.common.support.configuration.environment.SpringEnvironmentPostProcessor,\
