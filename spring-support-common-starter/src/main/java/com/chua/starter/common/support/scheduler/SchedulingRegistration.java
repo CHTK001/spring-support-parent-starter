@@ -2,7 +2,9 @@ package com.chua.starter.common.support.scheduler;
 
 import com.chua.common.support.utils.ClassUtils;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
+import org.springframework.context.annotation.Import;
 import org.springframework.scheduling.annotation.ScheduledAnnotationBeanPostProcessor;
+import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.scheduling.config.*;
 
 import java.time.Duration;
@@ -17,23 +19,21 @@ import java.util.Set;
  * @since 2024/12/9
  */
 @SuppressWarnings("ALL")
+@Import(SchedulerEndpoint.class)
 @AutoConfigureAfter( {ScheduledAnnotationBeanPostProcessor.class, ScheduledTaskRegistrar.class})
-public class SchedulingRegistration {
+public class SchedulingRegistration implements SchedulingConfigurer {
 
-    private final ScheduledTaskRegistrar scheduledTaskRegistrar;
+    private  ScheduledTaskRegistrar scheduledTaskRegistrar;
     private final ScheduledAnnotationBeanPostProcessor scheduledAnnotationBeanPostProcessor;
     protected List<CronTask> cacheCronTask;
     protected List<FixedRateTask> cacheFixedRateTasks;
     protected Set<ScheduledTask> scheduledTasks;
 
-    public SchedulingRegistration(ScheduledTaskRegistrar scheduledTaskRegistrar, ScheduledAnnotationBeanPostProcessor scheduledAnnotationBeanPostProcessor) {
-        this.scheduledTaskRegistrar = scheduledTaskRegistrar;
+    public SchedulingRegistration(ScheduledAnnotationBeanPostProcessor scheduledAnnotationBeanPostProcessor) {
         this.scheduledAnnotationBeanPostProcessor = scheduledAnnotationBeanPostProcessor;
-        cacheCronTask = (List<CronTask>) ClassUtils.getFieldValue("cronTasks", scheduledTaskRegistrar);
-        cacheFixedRateTasks = (List<FixedRateTask>) ClassUtils.getFieldValue("fixedRateTasks", scheduledTaskRegistrar);
-        scheduledTasks = (Set<ScheduledTask>) ClassUtils.getFieldValue("scheduledTasks", scheduledTaskRegistrar);
-        registerScheduledTask();
     }
+
+
 
 
     /**
@@ -192,5 +192,14 @@ public class SchedulingRegistration {
         }
 
         return null;
+    }
+
+    @Override
+    public void configureTasks(ScheduledTaskRegistrar taskRegistrar) {
+        this.scheduledTaskRegistrar = taskRegistrar;
+        cacheCronTask = (List<CronTask>) ClassUtils.getFieldValue("cronTasks", scheduledTaskRegistrar);
+        cacheFixedRateTasks = (List<FixedRateTask>) ClassUtils.getFieldValue("fixedRateTasks", scheduledTaskRegistrar);
+        scheduledTasks = (Set<ScheduledTask>) ClassUtils.getFieldValue("scheduledTasks", scheduledTaskRegistrar);
+        registerScheduledTask();
     }
 }
