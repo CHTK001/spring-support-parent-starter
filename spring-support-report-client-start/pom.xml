@@ -43,6 +43,11 @@
 
         <dependency>
             <groupId>com.chua</groupId>
+            <artifactId>spring-support-swagger-starter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.chua</groupId>
             <artifactId>utils-support-vertx-starter</artifactId>
         </dependency>
 
