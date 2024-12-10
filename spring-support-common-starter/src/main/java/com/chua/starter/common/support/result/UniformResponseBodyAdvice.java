@@ -22,6 +22,8 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Callable;
 
+import static com.chua.common.support.lang.code.ReturnCode.SUCCESS;
+
 /**
  * 统一返回值
  * @author CH
@@ -50,7 +52,6 @@ public class UniformResponseBodyAdvice implements ResponseBodyAdvice<Object> {
             return o;
         }
 
-
         String subtype = mediaType.getSubtype();
         if(subtype.contains("spring-boot.actuator")) {
             return o;
@@ -70,6 +71,7 @@ public class UniformResponseBodyAdvice implements ResponseBodyAdvice<Object> {
             return item.getData();
         }
 
+
         if(AnnotationUtils.isAnnotationDeclaredLocally(IgnoreReturnType.class, declaringClass)) {
             return o;
         }
@@ -86,7 +88,10 @@ public class UniformResponseBodyAdvice implements ResponseBodyAdvice<Object> {
             return o;
         }
 
-        if (o instanceof ResultData) {
+        if (o instanceof ResultData resultData) {
+            if(resultData.getData() instanceof byte[] && resultData.getCode().equals(SUCCESS.getCode())) {
+                return resultData.getData();
+            }
             return o;
         }
 
