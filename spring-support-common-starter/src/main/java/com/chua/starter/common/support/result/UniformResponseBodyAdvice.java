@@ -1,8 +1,11 @@
 package com.chua.starter.common.support.result;
 
 import com.chua.common.support.annotations.Ignore;
+import com.chua.common.support.annotations.IgnoreReturnType;
+import com.chua.common.support.lang.code.ReturnBodyResult;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.utils.StringUtils;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.MethodParameter;
@@ -15,6 +18,8 @@ import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Callable;
 
 /**
@@ -55,11 +60,21 @@ public class UniformResponseBodyAdvice implements ResponseBodyAdvice<Object> {
             return o;
         }
 
-        if(AnnotationUtils.isAnnotationDeclaredLocally(Ignore.class, declaringClass)) {
+        if(o instanceof ReturnBodyResult) {
+            ReturnBodyResult item = (ReturnBodyResult) o;
+            serverHttpResponse.getHeaders()
+                    .add("Content-Type", item.getContentType());
+            if(StringUtils.isNotBlank(item.getFileName())) {
+                serverHttpResponse.getHeaders().add("Content-Disposition", "attachment; filename=" + URLEncoder.encode(item.getFileName(), StandardCharsets.UTF_8));
+            }
+            return item.getData();
+        }
+
+        if(AnnotationUtils.isAnnotationDeclaredLocally(IgnoreReturnType.class, declaringClass)) {
             return o;
         }
 
-        if(null != methodParameter.getMethodAnnotation(Ignore.class)) {
+        if(null != methodParameter.getMethodAnnotation(IgnoreReturnType.class)) {
             return o;
         }
 
@@ -70,6 +85,7 @@ public class UniformResponseBodyAdvice implements ResponseBodyAdvice<Object> {
         if (o instanceof ReturnPageResult) {
             return o;
         }
+
         if (o instanceof ResultData) {
             return o;
         }
