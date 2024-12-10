@@ -22,10 +22,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Base64;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * 获取选项
@@ -152,7 +149,7 @@ public class OptionalProvider {
                     }
                     continue;
                 }
-                map.put(s, options);
+                map.computeIfAbsent(s, it -> new LinkedList<>()).addAll(options);
             }
         }
 
