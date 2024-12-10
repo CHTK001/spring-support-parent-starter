@@ -8,6 +8,7 @@ import com.chua.common.support.constant.Action;
 import com.chua.common.support.image.WatermarkUtils;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.oss.WebdavStorage;
+import com.chua.common.support.oss.setting.BucketSetting;
 import com.chua.common.support.protocol.ServerSetting;
 import com.chua.common.support.protocol.server.Server;
 import com.chua.common.support.spi.ServiceProvider;
@@ -254,16 +255,18 @@ public class FileStorageProtocolServiceImpl extends ServiceImpl<FileStorageProto
         if(null == serviceDefinition) {
             throw new NullPointerException(t.getFileStorageName() + "(" + t.getFileStorageType() +")文件存储无法创建, 请检查参数!");
         }
+
+        BucketSetting setting = null;
         if(serviceDefinition.isAssignableFrom(WebdavStorage.class)) {
-            storage = com.chua.common.support.oss.FileStorage.createStorage(t.getFileStorageType(), t.createBucketCookieSetting());
+            storage = com.chua.common.support.oss.FileStorage.createStorage(t.getFileStorageType(), (setting = t.createBucketCookieSetting()));
         } else {
-            storage = com.chua.common.support.oss.FileStorage.createStorage(t.getFileStorageType(), t.createBucketSetting());
+            storage = com.chua.common.support.oss.FileStorage.createStorage(t.getFileStorageType(), (setting = t.createBucketSetting()));
         }
 
         if(storage == null) {
             throw new NullPointerException(t.getFileStorageName() + "(" + t.getFileStorageType() +")文件存储无法创建, 请检查参数!");
         }
-        return fileStorageFactory.upgrade(storage , fileStorageBucket, action);
+        return fileStorageFactory.upgrade(storage , fileStorageBucket, action, setting);
     }
 
     @Override
