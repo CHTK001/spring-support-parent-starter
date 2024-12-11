@@ -45,6 +45,7 @@ public class SocketConfiguration implements BeanDefinitionRegistryPostProcessor,
 
 
     private SocketIoProperties socketIoProperties;
+    private ServerProperties serverProperties;
 
     @Bean
     @ConditionalOnMissingBean
@@ -80,7 +81,7 @@ public class SocketConfiguration implements BeanDefinitionRegistryPostProcessor,
         configuration.setJsonSupport(new JacksonJsonSupport());
         // host在本地测试可以设置为localhost或者本机IP，在Linux服务器跑可换成服务器IP
         configuration.setHostname(socketIoProperties.getHost());
-        configuration.setPort(port);
+        configuration.setPort(port == -1 ? serverProperties.getPort() + 10000 : port);
         configuration.setTransports(Transport.POLLING, Transport.WEBSOCKET);
         // socket连接数大小（如只监听一个端口boss线程组为1即可）
         configuration.setBossThreads(socketIoProperties.getBossCount());
@@ -124,5 +125,7 @@ public class SocketConfiguration implements BeanDefinitionRegistryPostProcessor,
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         socketIoProperties = Binder.get(applicationContext.getEnvironment())
                 .bindOrCreate(SocketIoProperties.PRE, SocketIoProperties.class);
+        serverProperties = Binder.get(applicationContext.getEnvironment())
+                .bindOrCreate("server", ServerProperties.class);
     }
 }
