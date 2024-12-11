@@ -10,6 +10,7 @@ import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.corundumstudio.socketio.Configuration;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.util.StringUtils;
@@ -21,6 +22,7 @@ import java.util.List;
  * @author CH
  * @since 2024/12/11
  */
+@Slf4j
 public class SocketIoRegistration implements InitializingBean, DisposableBean {
 
     private List<Configuration> configurations;
@@ -39,23 +41,29 @@ public class SocketIoRegistration implements InitializingBean, DisposableBean {
     @Override
     public void afterPropertiesSet() throws Exception {
         for (Configuration configuration : configurations) {
-            DelegateSocketIOServer socketIOServer = new DelegateSocketIOServer(configuration);
-            SocketSessionResolver socketSessionResolver = new DefaultSocketSessionResolver(listenerList, properties);
-            socketIOServer.addConnectListener(client -> {
-                socketSessionTemplate.save(String.valueOf(configuration.getPort()), client);
-                socketSessionResolver.doConnect(client);
-            });
-            socketIOServer.addDisconnectListener(client -> {
-                socketSessionTemplate.remove(String.valueOf(configuration.getPort()), client);
-                socketSessionResolver.disConnect(client);
-            });
-            socketSessionResolver.registerEvent(socketIOServer);
-            String namespace = properties.getNamespace();
+            DelegateSocketIOServer socketIOServer = null;
+            try {
+                socketIOServer = new DelegateSocketIOServer(configuration);
+                SocketSessionResolver socketSessionResolver = new DefaultSocketSessionResolver(listenerList, properties);
+                socketIOServer.addConnectListener(client -> {
+                    socketSessionTemplate.save(String.valueOf(configuration.getPort()), client);
+                    socketSessionResolver.doConnect(client);
+                });
+                socketIOServer.addDisconnectListener(client -> {
+                    socketSessionTemplate.remove(String.valueOf(configuration.getPort()), client);
+                    socketSessionResolver.disConnect(client);
+                });
+                socketSessionResolver.registerEvent(socketIOServer);
+                String namespace = properties.getNamespace();
 
-            if(StringUtils.hasText(namespace)) {
-                socketIOServer.addNamespace(namespace.startsWith("/") ? namespace : "/" + namespace);
+                if(StringUtils.hasText(namespace)) {
+                    socketIOServer.addNamespace(namespace.startsWith("/") ? namespace : "/" + namespace);
+                }
+                socketIOServer.start();
+                socketIOServers.add(new SocketInfo(socketIOServer, socketSessionResolver, socketSessionTemplate));
+            } catch (Exception e) {
+                log.error(e.getLocalizedMessage());
             }
-            socketIOServers.add(new SocketInfo(socketIOServer, socketSessionResolver, socketSessionTemplate));
         }
     }
 
