@@ -81,7 +81,7 @@ public class SocketConfiguration implements BeanDefinitionRegistryPostProcessor,
         configuration.setJsonSupport(new JacksonJsonSupport());
         // host在本地测试可以设置为localhost或者本机IP，在Linux服务器跑可换成服务器IP
         configuration.setHostname(socketIoProperties.getHost());
-        configuration.setPort(port == -1 ? serverProperties.getPort() + 10011 : port);
+        configuration.setPort(port < 0 ? port + serverProperties.getPort() + 10012 : port);
         configuration.setTransports(Transport.POLLING, Transport.WEBSOCKET);
         // socket连接数大小（如只监听一个端口boss线程组为1即可）
         configuration.setBossThreads(socketIoProperties.getBossCount());
