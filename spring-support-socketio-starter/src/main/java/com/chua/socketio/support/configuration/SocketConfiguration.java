@@ -5,18 +5,13 @@ import com.chua.socketio.support.SocketIOListener;
 import com.chua.socketio.support.auth.SocketAuthFactory;
 import com.chua.socketio.support.properties.SocketIoProperties;
 import com.chua.socketio.support.register.SocketIoRegistration;
-import com.chua.socketio.support.resolver.DefaultSocketSessionResolver;
-import com.chua.socketio.support.resolver.SocketSessionResolver;
-import com.chua.socketio.support.server.DelegateSocketIOServer;
 import com.chua.socketio.support.session.DelegateSocketSessionFactory;
 import com.chua.socketio.support.session.SocketSessionTemplate;
+import com.chua.socketio.support.wrapper.WrapperConfiguration;
 import com.corundumstudio.socketio.*;
-import com.corundumstudio.socketio.listener.ConnectListener;
-import com.corundumstudio.socketio.listener.DisconnectListener;
 import com.corundumstudio.socketio.protocol.JacksonJsonSupport;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
@@ -28,7 +23,6 @@ import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
-import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Set;
@@ -56,7 +50,7 @@ public class SocketConfiguration implements BeanDefinitionRegistryPostProcessor,
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = SocketIoProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = false)
-    public SocketIoRegistration socketIoRegistration(List<Configuration> configurations,  SocketIoProperties properties,
+    public SocketIoRegistration socketIoRegistration(List<WrapperConfiguration> configurations,  SocketIoProperties properties,
                                                      SocketSessionTemplate socketSessionTemplate,
                                                      List<SocketIOListener> listenerList) {
         return new SocketIoRegistration(configurations, properties, socketSessionTemplate, listenerList);
@@ -67,13 +61,15 @@ public class SocketConfiguration implements BeanDefinitionRegistryPostProcessor,
      * 配置
      * @return
      */
-    private Configuration newConfiguration(Integer port, SocketAuthFactory socketAuthFactory) {
+    private WrapperConfiguration newConfiguration(SocketIoProperties.Room room, SocketAuthFactory socketAuthFactory) {
         com.corundumstudio.socketio.Configuration configuration = new Configuration();
         SocketConfig socketConfig = new SocketConfig();
         socketConfig.setReuseAddress(true);
         socketConfig.setTcpNoDelay(true);
         socketConfig.setSoLinger(0);
 
+        int port = room.getPort();
+        String clientId = room.getClientId();
         configuration.setSocketConfig(socketConfig);
         configuration.setAddVersionHeader(true);
         configuration.setWebsocketCompression(true);
@@ -81,7 +77,7 @@ public class SocketConfiguration implements BeanDefinitionRegistryPostProcessor,
         configuration.setJsonSupport(new JacksonJsonSupport());
         // host在本地测试可以设置为localhost或者本机IP，在Linux服务器跑可换成服务器IP
         configuration.setHostname(socketIoProperties.getHost());
-        configuration.setPort(port < 0 ? port + serverProperties.getPort() + 10012 : port);
+        configuration.setPort(port < 0 ? (-1 * port) + serverProperties.getPort() + 10010 : port);
         configuration.setTransports(Transport.POLLING, Transport.WEBSOCKET);
         // socket连接数大小（如只监听一个端口boss线程组为1即可）
         configuration.setBossThreads(socketIoProperties.getBossCount());
@@ -93,6 +89,14 @@ public class SocketConfiguration implements BeanDefinitionRegistryPostProcessor,
         configuration.setPingTimeout(socketIoProperties.getPingTimeout());
         // Ping消息间隔（毫秒），默认25秒。客户端向服务器发送一条心跳消息间隔
         configuration.setPingInterval(socketIoProperties.getPingInterval());
+        // 允许最大消息内容大小（单位：字节），默认50M
+        configuration.setMaxFramePayloadLength(socketIoProperties.getMaxFramePayloadLength());
+        // HTTP消息最大内容大小（单位：字节），默认50M
+        configuration.setMaxHttpContentLength(socketIoProperties.getMaxHttpContentLength());
+        // 是否启用websocket的Compression（RFC 7692）
+        configuration.setWebsocketCompression(true);
+        // 是否启用Linux的NativeEpoll
+        configuration.setUseLinuxNativeEpoll(socketIoProperties.isUseLinuxNativeEpoll());
 
         if(null != socketAuthFactory) {
             configuration.setAuthorizationListener(new AuthorizationListener() {
@@ -104,7 +108,7 @@ public class SocketConfiguration implements BeanDefinitionRegistryPostProcessor,
             });
         }
 
-        return configuration;
+        return new WrapperConfiguration(configuration, room);
     }
 
     @Override
@@ -113,11 +117,11 @@ public class SocketConfiguration implements BeanDefinitionRegistryPostProcessor,
             return;
         }
 
-        Set<String> port = socketIoProperties.getPort();
+        Set<SocketIoProperties.Room> port = socketIoProperties.getRoom();
         Object object = ClassUtils.forObject(socketIoProperties.getAuthFactory());
-        for (String s : port) {
-            Configuration configuration = newConfiguration(Integer.valueOf(s), (SocketAuthFactory) object);
-            registry.registerBeanDefinition("configuration_" + s, BeanDefinitionBuilder.genericBeanDefinition(Configuration.class, () -> configuration).getBeanDefinition());
+        for (SocketIoProperties.Room s : port) {
+            WrapperConfiguration configuration = newConfiguration(s, (SocketAuthFactory) object);
+            registry.registerBeanDefinition("configuration_" + s, BeanDefinitionBuilder.genericBeanDefinition(WrapperConfiguration.class, () -> configuration).getBeanDefinition());
         }
     }
 

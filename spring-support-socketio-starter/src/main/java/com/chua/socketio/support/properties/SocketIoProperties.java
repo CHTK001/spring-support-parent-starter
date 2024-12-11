@@ -3,6 +3,7 @@ package com.chua.socketio.support.properties;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.util.HashSet;
 import java.util.Set;
 
 import static com.chua.socketio.support.properties.SocketIoProperties.PRE;
@@ -34,7 +35,7 @@ public class SocketIoProperties {
     /**
      * 端口
      */
-    private Set<String> port;
+    private Set<Room> room = new HashSet<>();
     /**
      * 最大每帧处理数据的长度
      */
@@ -43,6 +44,11 @@ public class SocketIoProperties {
      * 设置http交互最大内容长度
      */
     private Integer maxHttpContentLength = 1048576;
+
+    /**
+     * 是否使用epoll模式,默认false
+     */
+    private boolean useLinuxNativeEpoll;
     /**
      * socket连接数大小
      */
@@ -78,4 +84,19 @@ public class SocketIoProperties {
      * 认证工厂
      */
     private String authFactory = "com.chua.socketio.support.auth.SocketAuthFactory";
+
+
+    @Data
+    public static class Room {
+
+        /**
+         * 端口
+         */
+        private int port;
+
+        /**
+         * 客户端ID
+         */
+        private String clientId;
+    }
 }
