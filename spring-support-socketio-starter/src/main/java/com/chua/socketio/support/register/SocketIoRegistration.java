@@ -46,6 +46,7 @@ public class SocketIoRegistration implements InitializingBean, DisposableBean {
         for (WrapperConfiguration wrapperConfiguration : configurations) {
             Configuration configuration = wrapperConfiguration.getConfiguration();
             String clientId = wrapperConfiguration.getClientId();
+            configuration.setContext(wrapperConfiguration.getContentPath());
             DelegateSocketIOServer socketIOServer = null;
             try {
                 socketIOServer = new DelegateSocketIOServer(configuration);

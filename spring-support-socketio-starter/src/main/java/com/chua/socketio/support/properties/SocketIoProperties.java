@@ -98,5 +98,10 @@ public class SocketIoProperties {
          * 客户端ID
          */
         private String clientId;
+
+        /**
+         * 上下文路径
+         */
+        private String contextPath;
     }
 }
