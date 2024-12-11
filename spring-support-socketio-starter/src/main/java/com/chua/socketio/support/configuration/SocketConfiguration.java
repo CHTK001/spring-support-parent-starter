@@ -1,8 +1,10 @@
 package com.chua.socketio.support.configuration;
 
+import com.chua.common.support.utils.ClassUtils;
 import com.chua.socketio.support.SocketIOListener;
 import com.chua.socketio.support.auth.SocketAuthFactory;
 import com.chua.socketio.support.properties.SocketIoProperties;
+import com.chua.socketio.support.register.SocketIoRegistration;
 import com.chua.socketio.support.resolver.DefaultSocketSessionResolver;
 import com.chua.socketio.support.resolver.SocketSessionResolver;
 import com.chua.socketio.support.server.DelegateSocketIOServer;
@@ -13,15 +15,23 @@ import com.corundumstudio.socketio.listener.ConnectListener;
 import com.corundumstudio.socketio.listener.DisconnectListener;
 import com.corundumstudio.socketio.protocol.JacksonJsonSupport;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.support.BeanDefinitionBuilder;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * socket.io配置
@@ -31,8 +41,10 @@ import java.util.List;
 @Slf4j
 @SuppressWarnings("ALL")
 @EnableConfigurationProperties(SocketIoProperties.class)
-public class SocketConfiguration {
+public class SocketConfiguration implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware {
 
+
+    private SocketIoProperties socketIoProperties;
 
     @Bean
     @ConditionalOnMissingBean
@@ -43,66 +55,43 @@ public class SocketConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = SocketIoProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = false)
-    public DelegateSocketIOServer socketIOServer(Configuration configuration,
-                                                 SocketIoProperties properties,
-                                                 SocketSessionTemplate socketSessionTemplate,
-                                                 List<SocketIOListener> listenerList) {
-        DelegateSocketIOServer socketIOServer = new DelegateSocketIOServer(configuration);
-        SocketSessionResolver socketSessionResolver = new DefaultSocketSessionResolver(listenerList, properties);
+    public SocketIoRegistration socketIoRegistration(List<Configuration> configurations,  SocketIoProperties properties,
+                                                     SocketSessionTemplate socketSessionTemplate,
+                                                     List<SocketIOListener> listenerList) {
+        return new SocketIoRegistration(configurations, properties, socketSessionTemplate, listenerList);
 
-        socketIOServer.addConnectListener(new ConnectListener() {
-           @Override
-           public void onConnect(SocketIOClient client) {
-               socketSessionTemplate.save(client);
-               socketSessionResolver.doConnect(client);
-           }
-       });
-        socketIOServer.addDisconnectListener(new DisconnectListener() {
-            @Override
-            public void onDisconnect(SocketIOClient client) {
-                socketSessionTemplate.remove(client);
-                socketSessionResolver.disConnect(client);
-            }
-        });
-        socketSessionResolver.registerEvent(socketIOServer);
-        String namespace = properties.getNamespace();
-
-        if(StringUtils.hasText(namespace)) {
-            socketIOServer.addNamespace(namespace.startsWith("/") ? namespace : "/" + namespace);
-        }
-        return socketIOServer;
     }
-    @Bean
-    @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = SocketIoProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = false)
-    public Configuration configuration(SocketIoProperties properties,
-                                       ServerProperties serverProperties,
-                                       @Autowired(required = false) SocketAuthFactory socketAuthFactory) {
+
+    /**
+     * 配置
+     * @return
+     */
+    private Configuration newConfiguration(Integer port, SocketAuthFactory socketAuthFactory) {
+        com.corundumstudio.socketio.Configuration configuration = new Configuration();
         SocketConfig socketConfig = new SocketConfig();
         socketConfig.setReuseAddress(true);
         socketConfig.setTcpNoDelay(true);
         socketConfig.setSoLinger(0);
 
-        com.corundumstudio.socketio.Configuration configuration = new com.corundumstudio.socketio.Configuration();
         configuration.setSocketConfig(socketConfig);
         configuration.setAddVersionHeader(true);
         configuration.setWebsocketCompression(true);
         configuration.setHttpCompression(true);
         configuration.setJsonSupport(new JacksonJsonSupport());
         // host在本地测试可以设置为localhost或者本机IP，在Linux服务器跑可换成服务器IP
-        configuration.setHostname(properties.getHost());
-        configuration.setPort(properties.getPort() == -1 ? serverProperties.getPort() + 10011 : properties.getPort());
+        configuration.setHostname(socketIoProperties.getHost());
+        configuration.setPort(port);
         configuration.setTransports(Transport.POLLING, Transport.WEBSOCKET);
         // socket连接数大小（如只监听一个端口boss线程组为1即可）
-        configuration.setBossThreads(properties.getBossCount());
-        configuration.setWorkerThreads(properties.getBossCount());
-        configuration.setAllowCustomRequests(properties.isAllowCustomRequests());
+        configuration.setBossThreads(socketIoProperties.getBossCount());
+        configuration.setWorkerThreads(socketIoProperties.getBossCount());
+        configuration.setAllowCustomRequests(socketIoProperties.isAllowCustomRequests());
         // 协议升级超时时间（毫秒），默认10秒。HTTP握手升级为ws协议超时时间
-        configuration.setUpgradeTimeout(properties.getUpgradeTimeout());
+        configuration.setUpgradeTimeout(socketIoProperties.getUpgradeTimeout());
         // Ping消息超时时间（毫秒），默认60秒，这个时间间隔内没有接收到心跳消息就会发送超时事件
-        configuration.setPingTimeout(properties.getPingTimeout());
+        configuration.setPingTimeout(socketIoProperties.getPingTimeout());
         // Ping消息间隔（毫秒），默认25秒。客户端向服务器发送一条心跳消息间隔
-        configuration.setPingInterval(properties.getPingInterval());
+        configuration.setPingInterval(socketIoProperties.getPingInterval());
 
         if(null != socketAuthFactory) {
             configuration.setAuthorizationListener(new AuthorizationListener() {
@@ -115,5 +104,25 @@ public class SocketConfiguration {
         }
 
         return configuration;
+    }
+
+    @Override
+    public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
+        if(!socketIoProperties.isEnable()) {
+            return;
+        }
+
+        Set<String> port = socketIoProperties.getPort();
+        Object object = ClassUtils.forObject(socketIoProperties.getAuthFactory());
+        for (String s : port) {
+            Configuration configuration = newConfiguration(Integer.valueOf(s), (SocketAuthFactory) object);
+            registry.registerBeanDefinition("configuration_" + s, BeanDefinitionBuilder.genericBeanDefinition(Configuration.class, () -> configuration).getBeanDefinition());
+        }
+    }
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        socketIoProperties = Binder.get(applicationContext.getEnvironment())
+                .bindOrCreate(SocketIoProperties.PRE, SocketIoProperties.class);
     }
 }
