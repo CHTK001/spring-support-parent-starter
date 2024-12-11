@@ -33,4 +33,12 @@ public class WrapperConfiguration {
     public String getClientId () {
         return StringUtils.defaultString(room.getClientId(), String.valueOf(room.getPort()));
     }
+
+    /**
+     * 获取内容路径
+     * @return
+     */
+    public String getContentPath() {
+        return StringUtils.defaultString(room.getContextPath(), configuration.getContext());
+    }
 }
