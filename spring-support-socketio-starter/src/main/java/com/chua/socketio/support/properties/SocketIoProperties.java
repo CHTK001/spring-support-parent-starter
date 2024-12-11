@@ -3,6 +3,8 @@ package com.chua.socketio.support.properties;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.util.Set;
+
 import static com.chua.socketio.support.properties.SocketIoProperties.PRE;
 
 /**
@@ -32,7 +34,7 @@ public class SocketIoProperties {
     /**
      * 端口
      */
-    private Integer port = -1;
+    private Set<String> port;
     /**
      * 最大每帧处理数据的长度
      */
@@ -71,4 +73,9 @@ public class SocketIoProperties {
      * 命名空间
      */
     private String namespace;
+
+    /**
+     * 认证工厂
+     */
+    private String authFactory = "com.chua.socketio.support.auth.SocketAuthFactory";
 }
