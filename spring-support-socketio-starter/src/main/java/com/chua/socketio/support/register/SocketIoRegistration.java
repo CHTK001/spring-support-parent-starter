@@ -8,6 +8,7 @@ import com.chua.socketio.support.server.DelegateSocketIOServer;
 import com.chua.socketio.support.session.DelegateSocketSessionFactory;
 import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.corundumstudio.socketio.Configuration;
+import com.google.common.base.Joiner;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +41,7 @@ public class SocketIoRegistration implements InitializingBean, DisposableBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
+        List<Integer> startedPort  = new LinkedList<>();
         for (Configuration configuration : configurations) {
             DelegateSocketIOServer socketIOServer = null;
             try {
@@ -60,11 +62,13 @@ public class SocketIoRegistration implements InitializingBean, DisposableBean {
                     socketIOServer.addNamespace(namespace.startsWith("/") ? namespace : "/" + namespace);
                 }
                 socketIOServer.start();
+                startedPort.add(configuration.getPort());
                 socketIOServers.add(new SocketInfo(socketIOServer, socketSessionResolver, socketSessionTemplate));
             } catch (Exception e) {
                 log.error(e.getLocalizedMessage());
             }
         }
+        log.info("当前启动socket.io端口: {}", Joiner.on(",").join(startedPort));
     }
 
     @Override
