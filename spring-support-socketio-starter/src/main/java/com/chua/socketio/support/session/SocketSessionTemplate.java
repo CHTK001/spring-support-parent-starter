@@ -12,17 +12,19 @@ public interface SocketSessionTemplate {
     /**
      * 保存或更新一个SocketIO客户端的会话。
      *
+     * @param clientId  客户端ID
      * @param client SocketIO客户端实例。
      * @return 保存后的Socket会话实例。
      */
-    SocketSession save(SocketIOClient client);
+    SocketSession save(String clientId, SocketIOClient client);
 
     /**
      * 从会话中移除指定的SocketIO客户端。
      *
+     * @param clientId  客户端ID
      * @param client 需要被移除的SocketIO客户端实例。
      */
-    void remove(SocketIOClient client);
+    void remove(String clientId, SocketIOClient client);
 
     /**
      * 根据会话ID获取对应的Socket会话实例。
@@ -48,5 +50,16 @@ public interface SocketSessionTemplate {
      * @param msg 要发送的消息内容。
      */
     void send(String event, String msg);
+
+
+
+    /**
+     * 向指定客户端发送消息。
+     *
+     * @param clientId 目标客户端的ID。
+     * @param event 触发的事件名称。
+     * @param msg 要发送的消息内容。
+     */
+    void sendClient(String clientId, String event, String msg);
 }
 
