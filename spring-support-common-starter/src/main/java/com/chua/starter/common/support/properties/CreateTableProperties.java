@@ -21,7 +21,7 @@ public class CreateTableProperties {
     private boolean enable;
 
     /**
-     * 异步
+     * 异步建表
      */
     private boolean async;
 
