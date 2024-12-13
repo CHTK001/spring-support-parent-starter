@@ -103,6 +103,7 @@ public class AutoCreateTableConfiguration implements ApplicationContextAware {
         if(null == type) {
             return;
         }
-         engine.createTable().doIt(type, createTableProperties.getType());
+        log.info("开始创建<{}>任务", type.getTypeName());
+        engine.createTable().doIt(type, createTableProperties.getType());
     }
 }
