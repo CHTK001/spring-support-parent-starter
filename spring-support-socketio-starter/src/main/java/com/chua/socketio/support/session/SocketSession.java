@@ -5,8 +5,10 @@ import com.chua.common.support.crypto.CodecKeyPair;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.RandomUtils;
+import com.chua.socketio.support.auth.SocketAuthFactory;
 import com.chua.socketio.support.properties.SocketIoProperties;
 import com.corundumstudio.socketio.SocketIOClient;
 import lombok.Getter;
@@ -24,11 +26,14 @@ public class SocketSession {
     @Getter
     private final String sessionId;
     private final SocketIoProperties socketIoProperties;
+    private final SocketAuthFactory socketAuthFactory;
 
     public SocketSession(SocketIOClient client, SocketIoProperties socketIoProperties) {
         this.client = client;
         this.sessionId = client.getSessionId().toString();
         this.socketIoProperties = socketIoProperties;
+        socketAuthFactory = ClassUtils.forObject(socketIoProperties.getAuthFactory(), SocketAuthFactory.class);
+
     }
 
     /**
@@ -90,5 +95,18 @@ public class SocketSession {
                 .fluent("uuid", encrypt)
                 .fluent("timestamp", nanoTime).toJSONString()
         );
+    }
+
+    /**
+     * 獲取用戶信息
+     *
+     * @return 用戶信息
+     */
+    public SocketUser getUser() {
+        return socketAuthFactory.getUser(client.getHandshakeData());
+    }
+
+    public boolean isValid(String sessionId) {
+        return sessionId.equals(this.sessionId);
     }
 }

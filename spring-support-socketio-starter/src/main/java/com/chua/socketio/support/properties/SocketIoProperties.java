@@ -83,7 +83,7 @@ public class SocketIoProperties {
     /**
      * 认证工厂
      */
-    private String authFactory = "com.chua.socketio.support.auth.SocketAuthFactory";
+    private String authFactory = "com.chua.starter.service.configuration.AdminSocketAuthFactory";
 
 
     @Data

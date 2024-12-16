@@ -2,6 +2,8 @@ package com.chua.socketio.support.session;
 
 import com.corundumstudio.socketio.SocketIOClient;
 
+import java.util.List;
+
 /**
  * SocketSessionTemplate 接口定义了会话管理与消息发送的方法。
  * 用于与SocketIO客户端进行交互。
@@ -61,5 +63,27 @@ public interface SocketSessionTemplate {
      * @param msg 要发送的消息内容。
      */
     void sendClient(String clientId, String event, String msg);
+
+    /**
+     * 获取所有在线用户列表。
+     * @param type 用户类型
+     * @return
+     */
+    List<SocketUser> getOnlineSession(String type);
+
+    /**
+     * 获取指定用户类型的在线用户列表。
+     * @param type 用户类型
+     * @return
+     */
+    SocketSession getOnlineSession(String aDefault, String roomId, String target);
+
+    /**
+     *
+     * @param aDefault
+     * @param roomId
+     * @return
+     */
+    List<SocketSession> getOnlineSession(String aDefault, String roomId);
 }
 

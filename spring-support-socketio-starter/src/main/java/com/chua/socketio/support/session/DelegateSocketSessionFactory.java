@@ -3,10 +3,12 @@ package com.chua.socketio.support.session;
 import com.chua.socketio.support.properties.SocketIoProperties;
 import com.corundumstudio.socketio.SocketIOClient;
 
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * 会话
@@ -14,9 +16,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class DelegateSocketSessionFactory implements SocketSessionTemplate {
 
-    private final Map<String, SocketSession> cache = new ConcurrentHashMap<>();
+    private final Map<String, List<SocketSession>> cache = new ConcurrentHashMap<>();
     private final SocketIoProperties socketIoProperties;
-    private final Map<String, List<String>> clientIdAndSessionId = new ConcurrentHashMap<>();
 
     public DelegateSocketSessionFactory(SocketIoProperties socketIoProperties) {
         this.socketIoProperties = socketIoProperties;
@@ -25,23 +26,25 @@ public class DelegateSocketSessionFactory implements SocketSessionTemplate {
     @Override
     public SocketSession save(String clientId, SocketIOClient client) {
         SocketSession socketSession = new SocketSession(client, socketIoProperties);
-        clientIdAndSessionId.computeIfAbsent(clientId, it -> new LinkedList<>()).add(client.getSessionId().toString());
-        cache.put(client.getSessionId().toString(), socketSession);
+        cache.computeIfAbsent(clientId, it->new CopyOnWriteArrayList<>()).add(socketSession);
         return socketSession;
     }
 
     @Override
     public void remove(String clientId, SocketIOClient client) {
-        List<String> strings = clientIdAndSessionId.get(clientId);
-        if(null != strings) {
-            strings.remove(client.getSessionId().toString());
-        }
         cache.remove(client.getSessionId().toString());
     }
 
     @Override
     public SocketSession getSession(String sessionId) {
-        return cache.get(sessionId);
+        for (List<SocketSession> value : cache.values()) {
+            for (SocketSession socketSession : value) {
+                if(socketSession.isValid(sessionId)) {
+                    return socketSession;
+                }
+            }
+        }
+        return null;
     }
 
     @Override
@@ -52,24 +55,77 @@ public class DelegateSocketSessionFactory implements SocketSessionTemplate {
 
     @Override
     public void send(String event, String msg) {
-        for (SocketSession socketSession : cache.values()) {
-            socketSession.send(event, msg);
+        for (List<SocketSession> list : cache.values()) {
+            for (SocketSession socketSession : list) {
+                socketSession.send(event, msg);
+            }
         }
     }
 
     @Override
     public void sendClient(String clientId, String event, String msg) {
-        List<String> strings = clientIdAndSessionId.get(clientId);
-        if(null == strings) {
+        List<SocketSession> socketSessions = cache.get(clientId);
+        if(null == socketSessions) {
             return;
         }
-
-        for (String string : strings) {
-            SocketSession socketSession = cache.get(string);
-            if(null == socketSession) {
-                continue;
-            }
+        for (SocketSession socketSession : socketSessions) {
             socketSession.send(event, msg);
         }
+
+    }
+
+    @Override
+    public List<SocketUser> getOnlineSession(String type) {
+        List<SocketSession> socketSessions = cache.get(type);
+        if(null == socketSessions) {
+            return Collections.emptyList();
+        }
+
+        List<String> uid = new LinkedList<>();
+        List<SocketUser> rs = new LinkedList<>();
+        for (SocketSession socketSession : socketSessions) {
+            SocketUser sessionUser = socketSession.getUser();
+            if(uid.contains(sessionUser.getUid())) {
+                continue;
+            }
+            rs.add(sessionUser);
+            uid.add(sessionUser.getUid());
+        }
+        return rs;
+    }
+
+    @Override
+    public SocketSession getOnlineSession(String type, String roomId, String target) {
+        List<SocketSession> socketSessions = cache.get(type);
+        if(null == socketSessions) {
+            return null;
+        }
+
+        for (SocketSession socketSession : socketSessions) {
+            SocketUser sessionUser = socketSession.getUser();
+            if(target.contains(sessionUser.getUid()) && roomId.contains(sessionUser.getRoomId())) {
+                return  socketSession;
+            }
+        }
+
+        return null;
+    }
+
+    @Override
+    public List<SocketSession> getOnlineSession(String type, String roomId) {
+        List<SocketSession> socketSessions = cache.get(type);
+        if(null == socketSessions) {
+            return null;
+        }
+
+        List<SocketSession> rs = new LinkedList<>();
+        for (SocketSession socketSession : socketSessions) {
+            SocketUser sessionUser = socketSession.getUser();
+            if( roomId.equals(sessionUser.getRoomId())) {
+                rs.add(socketSession);
+            }
+        }
+
+        return rs;
     }
 }
