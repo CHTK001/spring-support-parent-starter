@@ -26,6 +26,15 @@ public class WebsockfiyProperties {
     /**
      * 端口
      */
-    private int port = 5900;
+    private int port = 15900;
+    /**
+     * 目标地址
+     */
+    private String targetHost = "127.0.0.1";
+
+    /**
+     * 目标端口
+     */
+    private int targetPort = 5900;
 
 }
