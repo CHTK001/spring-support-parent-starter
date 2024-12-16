@@ -10,6 +10,7 @@
     </parent>
 
     <artifactId>spring-support-socketio-starter</artifactId>
+    <description>socket.io服务器</description>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
