@@ -1,5 +1,6 @@
 package com.chua.socketio.support.auth;
 
+import com.chua.socketio.support.session.SocketUser;
 import com.corundumstudio.socketio.HandshakeData;
 
 /**
@@ -15,4 +16,12 @@ public interface SocketAuthFactory {
      * @return boolean
      */
     boolean isAuthorized(HandshakeData data);
+
+    /**
+     * 获取用户
+     *
+     * @param handshakeData 数据
+     * @return SocketUser
+     */
+    SocketUser getUser(HandshakeData handshakeData);
 }
