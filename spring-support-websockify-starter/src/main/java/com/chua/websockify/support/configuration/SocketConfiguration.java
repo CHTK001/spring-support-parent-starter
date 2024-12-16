@@ -1,7 +1,5 @@
 package com.chua.websockify.support.configuration;
 
-import com.chua.common.support.collection.Option;
-import com.chua.common.support.collection.Options;
 import com.chua.common.support.protocol.ServerSetting;
 import com.chua.jetty.support.server.WebsockifyServer;
 import com.chua.websockify.support.properties.WebsockfiyProperties;
@@ -25,15 +23,15 @@ public class SocketConfiguration {
     @Bean(initMethod = "start", destroyMethod = "stop")
     @ConditionalOnProperty(name = "plugin.websockify.enable", havingValue = "true", matchIfMissing = false)
     public WebsockifyServer websockifyServer(WebsockfiyProperties websockfiyProperties) {
-        return new WebsockifyServer(ServerSetting
+        WebsockifyServer websockifyServer = new WebsockifyServer(ServerSetting
                 .builder()
-                .options(new Options()
-                        .addOption("targetHost", new Option(websockfiyProperties.getTargetHost()))
-                        .addOption("targetPort", new Option(String.valueOf(websockfiyProperties.getPort())))
-                )
                 .host(websockfiyProperties.getHost())
                 .port(websockfiyProperties.getPort())
                 .build());
+
+
+        websockifyServer.addFilter(new Stanard)
+        return websockifyServer;
     }
 
 }
