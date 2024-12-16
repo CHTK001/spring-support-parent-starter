@@ -1,5 +1,6 @@
 package com.chua.websockify.support.configuration;
 
+import com.chua.common.support.chain.filter.StandardProxyFilter;
 import com.chua.common.support.protocol.ServerSetting;
 import com.chua.jetty.support.server.WebsockifyServer;
 import com.chua.websockify.support.properties.WebsockfiyProperties;
@@ -30,7 +31,7 @@ public class SocketConfiguration {
                 .build());
 
 
-        websockifyServer.addFilter(new Stanard)
+        websockifyServer.addFilter(new StandardProxyFilter(websockfiyProperties.getTargetHost(), websockfiyProperties.getTargetPort()));
         return websockifyServer;
     }
 
