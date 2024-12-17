@@ -12,6 +12,7 @@ import com.chua.common.support.discovery.ServiceDiscovery;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.log.Log;
 import com.chua.common.support.log.Slf4jLog;
+import com.chua.common.support.net.NetAddress;
 import com.chua.common.support.objects.constant.FilterOrderType;
 import com.chua.common.support.objects.definition.FilterConfigTypeDefinition;
 import com.chua.common.support.objects.definition.ObjectElementDefinition;
@@ -225,6 +226,7 @@ public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, Mon
         refresh(String.valueOf(monitorProxy.getProxyId()));
 
         server.addConfig("serverId", monitorProxy.getProxyId());
+        server.addConfig("protocol", monitorProxy.getProxyProtocol().replace("-proxy", ""));
         registerPlugin(server, monitorProxy, counter);
 //        registerLimit(server, monitorProxy, list, reportFactory, counter);
 
@@ -324,9 +326,18 @@ public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, Mon
             defaultServiceDiscovery.reset();
         }
         for (MonitorProxyPluginStatisticServiceDiscovery monitorProxyStatisticServiceDiscovery : list) {
+            String proxyStatisticProtocol = monitorProxyStatisticServiceDiscovery.getProxyStatisticProtocol();
+            String host = monitorProxyStatisticServiceDiscovery.getProxyStatisticHostname();
+            int port = 0;
+            if("tcp".equalsIgnoreCase(proxyStatisticProtocol)) {
+                NetAddress netAddress = NetAddress.of(host);
+                port = netAddress.getPort(0);
+                host = netAddress.getHost("127.0.0.1");
+            }
             Discovery discovery = Discovery.builder()
-                    .host(monitorProxyStatisticServiceDiscovery.getProxyStatisticHostname())
-                    .protocol(monitorProxyStatisticServiceDiscovery.getProxyStatisticProtocol())
+                    .host(host)
+                    .protocol(proxyStatisticProtocol)
+                    .port(port)
                     .weight(ObjectUtils.defaultIfNull(monitorProxyStatisticServiceDiscovery.getProxyStatisticWeight(), 0))
                     .build();
             serviceDiscovery.registerService(monitorProxyStatisticServiceDiscovery.getProxyStatisticUrl(), discovery);
