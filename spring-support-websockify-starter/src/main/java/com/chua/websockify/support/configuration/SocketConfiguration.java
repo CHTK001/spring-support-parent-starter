@@ -2,7 +2,7 @@ package com.chua.websockify.support.configuration;
 
 import com.chua.common.support.chain.filter.StandardProxyFilter;
 import com.chua.common.support.protocol.ServerSetting;
-import com.chua.jetty.support.server.WebsockifyServer;
+import com.chua.common.support.protocol.server.impl.WebSockifyProxyServer;
 import com.chua.websockify.support.properties.WebsockfiyProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -23,8 +23,8 @@ public class SocketConfiguration {
 
     @Bean(initMethod = "start", destroyMethod = "stop")
     @ConditionalOnProperty(name = "plugin.websockify.enable", havingValue = "true", matchIfMissing = false)
-    public WebsockifyServer websockifyServer(WebsockfiyProperties websockfiyProperties) {
-        WebsockifyServer websockifyServer = new WebsockifyServer(ServerSetting
+    public WebSockifyProxyServer websockifyServer(WebsockfiyProperties websockfiyProperties) {
+        WebSockifyProxyServer websockifyServer = new WebSockifyProxyServer(ServerSetting
                 .builder()
                 .host(websockfiyProperties.getHost())
                 .port(websockfiyProperties.getPort())

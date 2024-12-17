@@ -18,24 +18,11 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
-<dependencies>
-    <dependency>
-        <groupId>com.chua</groupId>
-        <artifactId>spring-support-common-starter</artifactId>
-    </dependency>
+    <dependencies>
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-common-starter</artifactId>
+        </dependency>
 
-    <dependency>
-        <groupId>com.chua</groupId>
-        <artifactId>utils-support-jetty-starter</artifactId>
-        <version>4.0.0.3</version>
-    </dependency>
-
-
-    <dependency>
-        <groupId>org.eclipse.jetty</groupId>
-        <artifactId>jetty-http</artifactId>
-        <version>12.0.6</version>
-    </dependency>
-
-</dependencies>
+    </dependencies>
 </project>
