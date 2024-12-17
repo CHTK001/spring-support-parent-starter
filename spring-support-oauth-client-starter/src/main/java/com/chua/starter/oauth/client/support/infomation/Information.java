@@ -18,7 +18,7 @@ public enum Information {
     /**
      * 300
      */
-    AUTHENTICATION_FAILURE(403, "用户信息不存在"),
+    AUTHENTICATION_FAILURE(403, "用户信息不存在/请重新登录!"),
     /**
      * 400
      */
