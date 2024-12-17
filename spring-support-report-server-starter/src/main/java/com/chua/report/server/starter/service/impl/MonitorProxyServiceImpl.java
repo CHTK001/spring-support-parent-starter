@@ -24,13 +24,13 @@ import com.chua.common.support.spi.definition.ServiceDefinition;
 import com.chua.common.support.utils.BooleanUtils;
 import com.chua.common.support.utils.ObjectUtils;
 import com.chua.common.support.utils.ThreadUtils;
-import com.chua.report.server.starter.pojo.WebLog;
-import com.chua.socketio.support.session.SocketSessionTemplate;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.report.server.starter.chain.filter.*;
 import com.chua.report.server.starter.entity.*;
 import com.chua.report.server.starter.mapper.MonitorProxyMapper;
+import com.chua.report.server.starter.pojo.WebLog;
 import com.chua.report.server.starter.service.*;
+import com.chua.socketio.support.session.SocketSessionTemplate;
+import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
@@ -329,7 +329,7 @@ public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, Mon
             String proxyStatisticProtocol = monitorProxyStatisticServiceDiscovery.getProxyStatisticProtocol();
             String host = monitorProxyStatisticServiceDiscovery.getProxyStatisticHostname();
             int port = 0;
-            if("tcp".equalsIgnoreCase(proxyStatisticProtocol)) {
+            if("tcp".equalsIgnoreCase(proxyStatisticProtocol) || "websockify".equalsIgnoreCase(proxyStatisticProtocol)) {
                 NetAddress netAddress = NetAddress.of(host);
                 port = netAddress.getPort(0);
                 host = netAddress.getHost("127.0.0.1");
