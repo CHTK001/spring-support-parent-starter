@@ -31,8 +31,26 @@ public @interface Crypto {
      * 加解密模式
      */
     CryptoModule cryptoModule();
+
+    /**
+     * 密钥类型
+     */
+    KeyType keyType() default KeyType.NONE;
     /**
      * 密钥
      */
     String key();
+
+
+    public static enum KeyType {
+        /**
+         * 不使用
+         */
+        NONE,
+
+        /**
+         * spel
+         */
+        SPEL
+    }
 }
