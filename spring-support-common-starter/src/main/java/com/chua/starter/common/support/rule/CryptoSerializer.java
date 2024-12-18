@@ -39,6 +39,9 @@ public class CryptoSerializer extends JsonSerializer<String> implements Contextu
      */
     private String key;
 
+
+    private Crypto.KeyType keyType;
+
     @Override
     public void serialize(final String origin, final JsonGenerator jsonGenerator,
                           final SerializerProvider serializerProvider) throws IOException {
@@ -63,7 +66,8 @@ public class CryptoSerializer extends JsonSerializer<String> implements Contextu
                     crypto = beanProperty.getContextAnnotation(Crypto.class);
                 }
                 if (crypto != null) {
-                    return new CryptoSerializer(crypto.cryptoType(), crypto.cryptoModule(), SpringBeanUtils.getEnvironment().resolvePlaceholders(crypto.key()));
+                    String key = SpringBeanUtils.getEnvironment().resolvePlaceholders(crypto.key());
+                    return new CryptoSerializer(crypto.cryptoType(), crypto.cryptoModule(), key, crypto.keyType());
                 }
             }
             return serializerProvider.findValueSerializer(beanProperty.getType(), beanProperty);

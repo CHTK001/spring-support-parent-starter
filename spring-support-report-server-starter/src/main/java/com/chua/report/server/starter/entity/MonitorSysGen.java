@@ -5,11 +5,13 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.chua.common.support.crypto.Codec;
+import com.chua.common.support.crypto.CryptoModule;
 import com.chua.common.support.datasource.annotation.ColumnDesc;
 import com.chua.common.support.datasource.dialect.Dialect;
 import com.chua.common.support.datasource.dialect.DialectFactory;
 import com.chua.common.support.datasource.jdbc.option.DataSourceOptions;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.annotations.Crypto;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -21,11 +23,11 @@ import java.io.Serializable;
 import java.util.Base64;
 import java.util.Objects;
 
+import static com.chua.common.support.crypto.CryptoType.AES;
+
 /**
- *
- *
- * @since 2024/7/19 
  * @author CH
+ * @since 2024/7/19
  */
 
 /**

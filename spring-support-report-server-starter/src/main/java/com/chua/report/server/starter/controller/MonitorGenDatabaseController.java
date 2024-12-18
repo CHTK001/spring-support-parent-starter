@@ -13,10 +13,8 @@ import com.chua.common.support.objects.ConfigureObjectContext;
 import com.chua.common.support.oss.result.GetObjectResult;
 import com.chua.common.support.session.Session;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.utils.ClassUtils;
-import com.chua.common.support.utils.FileUtils;
-import com.chua.common.support.utils.IoUtils;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.*;
+import com.chua.digest.support.Sm2Codec;
 import com.chua.report.server.starter.entity.MonitorSysGen;
 import com.chua.report.server.starter.properties.ReportGenProperties;
 import com.chua.report.server.starter.query.DeleteFileQuery;
@@ -125,7 +123,6 @@ public class MonitorGenDatabaseController {
                         .orderByDesc(MonitorSysGen::getGenBackupStatus)
         );
         for (MonitorSysGen record : genType.getRecords()) {
-            record.setGenPassword(null);
             String genDriver = record.getGenDriver();
             Dialect dialect = DialectFactory.createDriver(genDriver);
             record.setSupportBackup(ServiceProvider.of(Backup.class).isSupport(dialect.protocol().toUpperCase()));
