@@ -68,7 +68,7 @@ public class ReportClientConfiguration implements BeanDefinitionRegistryPostProc
             return;
         }
 
-        if(settingFactory.isServer()) {
+        if(settingFactory.isServer() && !settingFactory.canSelf()) {
             return;
         }
 

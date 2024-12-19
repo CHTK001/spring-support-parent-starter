@@ -7,6 +7,7 @@ import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.annotation.UserValue;
+import com.chua.starter.oauth.client.support.exception.OauthException;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.chua.starter.oauth.client.support.web.WebRequest;
@@ -158,8 +159,8 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
 
         AuthenticationInformation authentication = webRequest1.authentication();
         UserResume returnResult = authentication.getReturnResult();
-        if(null == returnResult) {
-            return Collections.emptyMap();
+        if(null == returnResult || StringUtils.isBlank(returnResult.getUserId())) {
+            throw new OauthException("账号信息不存在, 请重新登录");
         }
         rs.putAll(BeanMap.create(returnResult));
         rs.put("all", returnResult);
