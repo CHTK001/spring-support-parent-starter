@@ -32,6 +32,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 public class ControlWebMvbConfigurer implements WebMvcRegistrations, EnvironmentAware {
 
     ControlProperties controlProperties;
+    private Environment environment;
 
     @Override
     public RequestMappingHandlerMapping getRequestMappingHandlerMapping() {
@@ -43,7 +44,9 @@ public class ControlWebMvbConfigurer implements WebMvcRegistrations, Environment
     public RequestMappingHandlerMapping requestMappingInfoHandlerMapping() {
         if (controlProperties.isEnable()) {
             log.info(">>>>>>> 开启版本控制功能");
-            return new ApiVersionRequestMappingHandlerMapping(controlProperties);
+            log.info(">>>>>>> @ApiProfile 环境控制");
+            log.info(">>>>>>> @ApiVersion 版本控制");
+            return new ApiVersionRequestMappingHandlerMapping(controlProperties, environment);
         }
         return new RequestMappingHandlerMapping();
     }
@@ -51,6 +54,7 @@ public class ControlWebMvbConfigurer implements WebMvcRegistrations, Environment
 
     @Override
     public void setEnvironment(Environment environment) {
+        this.environment = environment;
         this.controlProperties = Binder.get(environment).bindOrCreate(ControlProperties.PRE, ControlProperties.class);
         try {
             GlobalSettingFactory.PREFIX = controlProperties.getPlatform().getName().name();
