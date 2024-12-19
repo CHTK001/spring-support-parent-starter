@@ -3,9 +3,11 @@ package com.chua.starter.common.support.control;
 import com.chua.common.support.utils.ArrayUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.annotations.ApiPlatform;
+import com.chua.starter.common.support.annotations.ApiProfile;
 import com.chua.starter.common.support.annotations.ApiVersion;
 import com.chua.starter.common.support.properties.ControlProperties;
 import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.core.env.Environment;
 import org.springframework.lang.Nullable;
 import org.springframework.web.servlet.mvc.condition.RequestCondition;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
@@ -27,9 +29,11 @@ public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandle
     private final boolean platformOpen;
     private final boolean versionOpen;
     private final ControlProperties.PlatformKey platform;
+    private final String active;
 
-    public ApiVersionRequestMappingHandlerMapping(ControlProperties controlProperties) {
+    public ApiVersionRequestMappingHandlerMapping(ControlProperties controlProperties, Environment environment) {
         this.controlProperties = controlProperties;
+        this.active = environment.resolvePlaceholders("spring.profiles.active");
         this.versionOpen = controlProperties.getVersion().isEnable() && StringUtils.isNotBlank(controlProperties.getVersion().getName());
         this.platformOpen = controlProperties.getPlatform().isEnable() && controlProperties.getPlatform().getName() != NONE;
         this.platform = controlProperties.getPlatform().getName();
@@ -56,6 +60,13 @@ public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandle
             return super.getMappingForMethod(method, handlerType);
         }
 
+
+        if(StringUtils.isNotBlank(active)) {
+            if(!isMatchProfile(method, handlerType)) {
+                return null;
+            }
+        }
+
         ApiPlatform apiPlatform = AnnotationUtils.findAnnotation(method, ApiPlatform.class);
         if(null == apiPlatform) {
             apiPlatform = AnnotationUtils.findAnnotation(handlerType, ApiPlatform.class);
@@ -70,6 +81,26 @@ public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandle
         }
 
         return null;
+    }
+
+    /**
+     * 判断是否匹配环境
+     *
+     * @param method      method object
+     * @param handlerType class type
+     * @return boolean
+     */
+    private boolean isMatchProfile(Method method, Class<?> handlerType) {
+        ApiProfile apiProfile = AnnotationUtils.findAnnotation(method, ApiProfile.class);
+        if(null == apiProfile) {
+            apiProfile = AnnotationUtils.findAnnotation(handlerType, ApiProfile.class);
+        }
+
+        if(null != apiProfile) {
+            return StringUtils.containsIgnoreCase(apiProfile.value(), active);
+        }
+
+        return true;
     }
 
     /**

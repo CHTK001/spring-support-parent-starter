@@ -17,4 +17,5 @@ public @interface ApiPlatform {
      * 平台名称
      */
     ControlProperties.PlatformKey[] value() default {};
+
 }

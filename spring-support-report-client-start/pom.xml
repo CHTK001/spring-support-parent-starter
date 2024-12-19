@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.3</version>
+        <version>4.0.0.4</version>
     </parent>
 
     <artifactId>spring-support-report-client-start</artifactId>
@@ -54,7 +54,7 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-discovery-starter</artifactId>
-            <version>4.0.0.3</version>
+            <version>4.0.0.4</version>
         </dependency>
     </dependencies>
 </project>
