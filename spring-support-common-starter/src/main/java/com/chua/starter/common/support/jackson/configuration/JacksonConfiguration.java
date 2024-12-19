@@ -3,8 +3,7 @@ package com.chua.starter.common.support.jackson.configuration;
 
 import com.chua.common.support.collection.GuavaHashBasedTable;
 import com.chua.common.support.collection.Table;
-import com.chua.starter.common.support.jackson.NullValueSerializer;
-import com.chua.starter.common.support.jackson.TypeResolverBuilder;
+import com.chua.starter.common.support.jackson.*;
 import com.chua.starter.common.support.jackson.handler.JacksonProblemHandler;
 import com.chua.starter.common.support.jackson.handler.JsonArray2StringJacksonProblemHandler;
 import com.chua.starter.common.support.properties.JacksonProperties;
@@ -33,6 +32,7 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.Year;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.TimeZone;
@@ -84,7 +84,12 @@ public class JacksonConfiguration {
         JavaTimeModule javaTimeModule = new JavaTimeModule();
         javaTimeModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DATE_TIME_FORMATTER));
         javaTimeModule.addSerializer(LocalDate.class, new LocalDateSerializer(DATE_FORMATTER));
-        javaTimeModule.addSerializer(LocalTime.class, new LocalTimeSerializer(TIME_FORMATTER));
+        javaTimeModule.addSerializer(LocalTime.class, new  LocalTimeSerializer(TIME_FORMATTER));
+        javaTimeModule.addDeserializer(LocalDateTime.class, new CommonLocalDateTimeDeserializer());
+        javaTimeModule.addDeserializer(LocalDate.class, new CommonLocalDateDeserializer());
+        javaTimeModule.addDeserializer(LocalTime.class, new CommonLocalTimeDeserializer());
+        javaTimeModule.addDeserializer(Year.class, new CommonYearDeserializer());
+
         javaTimeModule.addSerializer(Date.class, new DateSerializer(true, SIMPLE_DATE_FORMAT));
         objectMapper.setTimeZone(TimeZone.getDefault());
 //        objectMapper.setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE);
