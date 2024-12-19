@@ -23,6 +23,12 @@ public class ReportClientProperties {
      */
     private boolean enable = false;
 
+
+    /**
+     * 是否开启自上报
+     */
+    private boolean openSelf = false;
+
     /**
      * 上报服务器地址
      */

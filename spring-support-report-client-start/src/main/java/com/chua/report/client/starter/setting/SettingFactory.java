@@ -94,6 +94,13 @@ public class SettingFactory implements AutoCloseable, InitializingBean {
     }
 
     /**
+     *
+     * @return
+     */
+    public boolean canSelf() {
+return reportClientProperties.isOpenSelf();
+    }
+    /**
      * 注册环境配置
      * 该方法通过接收一个Environment对象来配置报告客户端的环境属性，并初始化报告客户端的配置属性
      *
@@ -313,4 +320,6 @@ public class SettingFactory implements AutoCloseable, InitializingBean {
         }
         return report.contains(reportType);
     }
+
+
 }
