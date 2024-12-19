@@ -3,7 +3,10 @@ package com.chua.starter.common.support.jackson;
 import com.chua.common.support.lang.date.DateUtils;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonTokenId;
+import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalTimeDeserializer;
 
 import java.io.IOException;
@@ -31,5 +34,11 @@ public class CommonLocalTimeDeserializer extends LocalTimeDeserializer {
             }
         }
         throw ex;
+    }
+
+    @Override
+    public JsonDeserializer<?> createContextual(DeserializationContext ctxt,
+                                                BeanProperty property) throws JsonMappingException {
+        return this;
     }
 }
