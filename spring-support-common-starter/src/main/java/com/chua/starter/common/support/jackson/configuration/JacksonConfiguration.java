@@ -3,6 +3,7 @@ package com.chua.starter.common.support.jackson.configuration;
 
 import com.chua.common.support.collection.GuavaHashBasedTable;
 import com.chua.common.support.collection.Table;
+import com.chua.common.support.lang.date.DateTime;
 import com.chua.starter.common.support.jackson.*;
 import com.chua.starter.common.support.jackson.handler.JacksonProblemHandler;
 import com.chua.starter.common.support.jackson.handler.JsonArray2StringJacksonProblemHandler;
@@ -24,8 +25,12 @@ import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jackson.JsonMixinModule;
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.converter.json.AbstractJackson2HttpMessageConverter;
+import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -43,6 +48,7 @@ import java.util.TimeZone;
  * @author CH
  * @since 2024/7/19
  */
+@Slf4j
 public class JacksonConfiguration {
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -85,18 +91,20 @@ public class JacksonConfiguration {
         javaTimeModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DATE_TIME_FORMATTER));
         javaTimeModule.addSerializer(LocalDate.class, new LocalDateSerializer(DATE_FORMATTER));
         javaTimeModule.addSerializer(LocalTime.class, new  LocalTimeSerializer(TIME_FORMATTER));
+
         javaTimeModule.addDeserializer(LocalDateTime.class, new CommonLocalDateTimeDeserializer());
         javaTimeModule.addDeserializer(LocalDate.class, new CommonLocalDateDeserializer());
         javaTimeModule.addDeserializer(LocalTime.class, new CommonLocalTimeDeserializer());
         javaTimeModule.addDeserializer(Year.class, new CommonYearDeserializer());
+        javaTimeModule.addDeserializer(DateTime.class, new DateTimeDeserializer());
 
         javaTimeModule.addSerializer(Date.class, new DateSerializer(true, SIMPLE_DATE_FORMAT));
         objectMapper.setTimeZone(TimeZone.getDefault());
 //        objectMapper.setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE);
         objectMapper.registerModule(new SimpleModule().addSerializer(new NullValueSerializer(null)));
 
-        objectMapper.registerModule(new Jdk8Module());
         objectMapper.registerModule(javaTimeModule);
+        objectMapper.registerModule(new Jdk8Module());
         objectMapper.registerModule(new JsonMixinModule());
         objectMapper.registerModule(new ParameterNamesModule());
         return objectMapper;
@@ -104,6 +112,13 @@ public class JacksonConfiguration {
     @Bean
     ObjectMapper objectMapper(JacksonProperties jacksonProperties) {
         return createObjectMapper(false, jacksonProperties.isIncludeNull());
+    }
+    @Bean
+    public Jackson2ObjectMapperBuilder objectMapperBuilder(ObjectMapper objectMapper) {
+        Jackson2ObjectMapperBuilder builder = new Jackson2ObjectMapperBuilder();
+        builder.configure(objectMapper);
+        // 在这里配置你的 ObjectMapper
+        return builder;
     }
 
     static class TransientFieldIgnoringDeserializer extends StdDeserializer<Object> {

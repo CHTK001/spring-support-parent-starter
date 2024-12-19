@@ -3,7 +3,10 @@ package com.chua.starter.common.support.jackson;
 import com.chua.common.support.lang.date.DateUtils;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.datatype.jsr310.deser.YearDeserializer;
 
 import java.io.IOException;
@@ -48,4 +51,9 @@ public class CommonYearDeserializer extends YearDeserializer {
         return _handleUnexpectedToken(context, parser, JsonToken.VALUE_STRING, JsonToken.VALUE_NUMBER_INT);
     }
 
+    @Override
+    public JsonDeserializer<?> createContextual(DeserializationContext ctxt,
+                                                BeanProperty property) throws JsonMappingException {
+        return this;
+    }
 }
