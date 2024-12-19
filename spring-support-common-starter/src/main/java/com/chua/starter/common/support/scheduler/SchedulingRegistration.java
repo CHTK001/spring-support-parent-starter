@@ -1,6 +1,7 @@
 package com.chua.starter.common.support.scheduler;
 
 import com.chua.common.support.utils.ClassUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.context.annotation.Import;
 import org.springframework.scheduling.annotation.ScheduledAnnotationBeanPostProcessor;
@@ -24,12 +25,12 @@ import java.util.Set;
 public class SchedulingRegistration implements SchedulingConfigurer {
 
     private  ScheduledTaskRegistrar scheduledTaskRegistrar;
-    private final ScheduledAnnotationBeanPostProcessor scheduledAnnotationBeanPostProcessor;
+    private ScheduledAnnotationBeanPostProcessor scheduledAnnotationBeanPostProcessor;
     protected List<CronTask> cacheCronTask;
     protected List<FixedRateTask> cacheFixedRateTasks;
     protected Set<ScheduledTask> scheduledTasks;
 
-    public SchedulingRegistration(ScheduledAnnotationBeanPostProcessor scheduledAnnotationBeanPostProcessor) {
+    public SchedulingRegistration(@Autowired(required = false) ScheduledAnnotationBeanPostProcessor scheduledAnnotationBeanPostProcessor) {
         this.scheduledAnnotationBeanPostProcessor = scheduledAnnotationBeanPostProcessor;
     }
 
