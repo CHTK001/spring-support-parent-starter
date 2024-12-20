@@ -77,6 +77,6 @@ public class LockFactory {
         /**
          * redisson锁
          */
-        REDISSION
+        REDISSON
     }
 }
