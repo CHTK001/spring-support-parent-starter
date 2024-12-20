@@ -10,6 +10,7 @@
     </parent>
 
     <artifactId>spring-support-redis-starter</artifactId>
+    <description>redis模块</description>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>

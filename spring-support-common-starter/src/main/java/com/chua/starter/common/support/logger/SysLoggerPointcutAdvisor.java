@@ -18,6 +18,8 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
+import org.springframework.expression.ParserContext;
+import org.springframework.expression.common.TemplateParserContext;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 
@@ -140,6 +142,7 @@ public class SysLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor
         if(StringUtils.isEmpty(content)) {
             return CommonConstant.SYMBOL_EMPTY;
         }
+        ParserContext parserContext = new TemplateParserContext();
         ExpressionParser expressionParser = new SpelExpressionParser();
         EvaluationContext evaluationContext = new StandardEvaluationContext();
 
@@ -153,7 +156,7 @@ public class SysLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor
         evaluationContext.setVariable("$method", method);
         evaluationContext.setVariable("$result", proceed);
 
-        Expression expression = expressionParser.parseExpression(content);
+        Expression expression = expressionParser.parseExpression(content, parserContext);
         return Optional.ofNullable( expression.getValue(evaluationContext)).orElse(content).toString();
     }
 
