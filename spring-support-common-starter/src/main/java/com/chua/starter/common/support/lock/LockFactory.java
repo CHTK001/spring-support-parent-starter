@@ -39,7 +39,7 @@ public class LockFactory {
      * @param lockType 锁类型
      * @return Lock
      */
-    public Lock createLock(String key, LockType lockType) {
+    protected Lock createLock(String key, LockType lockType) {
         return ServiceProvider.of(Lock.class).getNewExtension(lockType,  key);
     }
     /**
