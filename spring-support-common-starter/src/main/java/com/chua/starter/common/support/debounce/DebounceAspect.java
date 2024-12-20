@@ -94,7 +94,7 @@ public class DebounceAspect implements ApplicationContextAware {
     private Lock getDebounceLock(Debounce debounce, String key) {
         LockFactory.LockType lockType = debounce.lockType();
         if(lockType != LockFactory.LockType.NONE) {
-            return LockFactory.getInstance().createLock(key, lockType);
+            return LockFactory.getInstance().newLock(key, lockType);
         }
         Class<? extends Lock> aClass = debounce.lock();
         Lock debounceLock = null;
