@@ -53,18 +53,22 @@ public class Query<T>{
     /**
      * 查询字段
      */
-    @Schema(description = "查询字段", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
-    @Min(value = 1, message = "查询字段")
-    @Max(value = 100, message = "查询字段")
+    @Schema(description = "查询字段, 多个逗号分隔", requiredMode = Schema.RequiredMode.NOT_REQUIRED, example = "name, age")
+    @Min(value = 1, message = "查询字段, 多个逗号分隔")
+    @Max(value = 100, message = "查询字段, 多个逗号分隔")
     @RequestParamMapping({"prop", "field"})
     private String[] prop = new String[0];
 
     /**
      * 查询字段
      */
-    @Schema(description = "排序字段", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
-    @Min(value = 1, message = "排序字段")
-    @Max(value = 100, message = "排序字段")
+    @Schema(description = "排序字段, 多个逗号分隔", requiredMode = Schema.RequiredMode.NOT_REQUIRED, examples = {
+            "createTime",
+            "+createTime; e.g asc",
+            "-createTime; e.g desc"
+    })
+    @Min(value = 1, message = "排序字段, 多个逗号分隔")
+    @Max(value = 100, message = "排序字段, 多个逗号分隔")
     @RequestParamMapping({"order"})
     private String[] order = new String[0];
 
@@ -78,9 +82,9 @@ public class Query<T>{
         if(ArrayUtils.isNotEmpty(order)) {
             List<OrderItem> orderItem = new LinkedList<>();
             for (String s : order) {
-                if(s.endsWith("-")) {
+                if(s.startsWith("-")) {
                     orderItem.add(OrderItem.desc(s.substring(0, s.length() - 1)));
-                } else if(s.endsWith("+")){
+                } else if(s.startsWith("+")){
                     orderItem.add(OrderItem.asc(s.substring(0, s.length() - 1)));
                 } else {
                     orderItem.add(OrderItem.asc(s));
