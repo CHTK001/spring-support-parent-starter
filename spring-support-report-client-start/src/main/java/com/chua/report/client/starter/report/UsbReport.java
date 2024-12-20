@@ -33,7 +33,9 @@ public class UsbReport implements Report<List<UsbDeviceEvent>>{
             usbDeviceEvent.setUniqueDeviceId(it.getUniqueDeviceId());
             return usbDeviceEvent;
         }).toList());
-        log.info("当前上报设备数量: {}", CollectionUtils.size(objectReportEvent.getReportData()));
+        if(log.isDebugEnabled()) {
+            log.debug("当前上报设备数量: {}", CollectionUtils.size(objectReportEvent.getReportData()));
+        }
         objectReportEvent.setReportType(ReportEvent.ReportType.USB);
         return objectReportEvent;
     }
