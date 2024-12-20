@@ -27,6 +27,13 @@
         </dependency>
 
         <dependency>
+            <groupId>kim.nzxy</groupId>
+            <artifactId>spel-extension</artifactId>
+            <version>1.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-common-starter</artifactId>
         </dependency>

@@ -19,7 +19,7 @@ public class DefaultDebounceKeyGenerator implements DebounceKeyGenerator{
 
 
     @Override
-    public String getKey(String prefix, Method method, Object[] args) {
+    public String getKey(String prefix, Method method, Object[] args, Object[] argsValue) {
         //获取Method对象上所有的注解
         final Parameter[] parameters = method.getParameters();
         StringBuilder sb = new StringBuilder();
@@ -38,7 +38,7 @@ public class DefaultDebounceKeyGenerator implements DebounceKeyGenerator{
             final Annotation[][] parameterAnnotations = method.getParameterAnnotations();
             //循环注解
             for (int i = 0; i < parameterAnnotations.length; i++) {
-                final Object object = args[i];
+                final Object object = argsValue[i];
                 //获取注解类中所有的属性字段
                 final Field[] fields = object.getClass().getDeclaredFields();
                 for (Field field : fields) {
@@ -51,7 +51,7 @@ public class DefaultDebounceKeyGenerator implements DebounceKeyGenerator{
                     //如果有，设置Accessible为true（为true时可以使用反射访问私有变量，否则不能访问私有变量）
                     field.setAccessible(true);
                     //如果属性是RequestKeyParam注解，则拼接 连接符" & + RequestKeyParam"
-                    sb.append('&').append(ReflectionUtils.getField(field, object));
+                    sb.append('&').append(object);
                 }
             }
         }
