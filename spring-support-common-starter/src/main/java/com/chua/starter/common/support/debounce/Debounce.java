@@ -69,4 +69,11 @@ public @interface Debounce {
      * @return {@link Class}<{@link ?} {@link extends} {@link Lock}>
      */
     Class<? extends Lock> lock() default ObjectLock.class;
+
+    /**
+     * 默认异常
+     *
+     * @return {@link Class}<{@link ?} {@link extends} {@link DebounceException}>
+     */
+    Class<? extends DebounceException> defaultException() default ReturnResultDebounceException.class;
 }

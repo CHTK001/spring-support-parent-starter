@@ -14,6 +14,8 @@ import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
+import java.util.Map;
+
 /**
  * DebounceAop类用于实现方法执行的防抖动逻辑。
  * 通过AOP切面编程，对标注了@debounce注解的方法进行拦截，实现防抖功能。
@@ -24,6 +26,7 @@ public class DebounceAspect implements ApplicationContextAware {
     private ApplicationContext applicationContext;
     private AutowireCapableBeanFactory autowireCapableBeanFactory;
 
+    private final Map<Class<?>, DebounceException> debounceExceptionMap = new java.util.concurrent.ConcurrentHashMap<>();
     /**
      * 对标注了@debounce注解的方法进行拦截，实现防抖功能。
      * 如果同一个方法在指定的时间间隔内被多次调用，则只执行第一次调用的方法。
@@ -55,11 +58,29 @@ public class DebounceAspect implements ApplicationContextAware {
                 // 执行被拦截的方法
                 return pjp.proceed();
             } else {
-                // 在防抖时间内，不执行方法，可根据需要处理此处逻辑
-                return null;
+                Class<? extends DebounceException> aClass = debounce.defaultException();
+                if(aClass.isInterface()) {
+                    return null;
+                }
+                DebounceException debounceException = debounceExceptionMap.computeIfAbsent(aClass, it -> createDebounceException(aClass));
+                return debounceException.returnValue();
             }
         } finally {
             lock.unlock(); // 释放锁
+        }
+    }
+
+    /**
+     * 创建一个指定类型的DebounceException实例。
+     *
+     * @param aClass 指定的异常类型。
+     * @return 返回创建的DebounceException实例。
+     */
+    private DebounceException createDebounceException(Class<? extends DebounceException> aClass) {
+        try {
+            return WrapperClassUtils.newInstance(aClass);
+        } catch (Exception e) {
+            return new ReturnResultDebounceException();
         }
     }
 
