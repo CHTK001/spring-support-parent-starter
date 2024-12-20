@@ -1,6 +1,10 @@
 package com.chua.starter.common.support.debounce;
 
+import com.chua.common.support.lang.lock.Lock;
+import com.chua.common.support.lang.lock.ObjectLock;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.wrapper.toolkit.WrapperClassUtils;
+import com.chua.starter.common.support.lock.LockFactory;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -34,14 +38,22 @@ public class DebounceAspect implements ApplicationContextAware {
         // 获取方法签名
         MethodSignature signature = (MethodSignature) pjp.getSignature();
         DebounceKeyGenerator debounceKeyGenerator = getDebounceKeyGenerator(debounce);
-        String key = getKey(debounce, debounceKeyGenerator, signature);
+        String key = null;
+        try {
+            key = getKey(debounce, debounceKeyGenerator, signature, pjp.getArgs());
+        } catch (Exception e) {
+            e.printStackTrace();
+            // 执行被拦截的方法
+            return pjp.proceed();
+        }
         // 根据方法获取对应的锁，如果不存在则创建一个新的ReentrantLock
-        DebounceLock lock = getDebounceLock(debounce);
+        Lock lock = getDebounceLock(debounce, key);
 
         try {
             // 尝试获取锁，如果在指定的时间内获取成功，则执行方法
-            if (lock.tryLock(key, debounce.value())) {
-                return pjp.proceed(); // 执行被拦截的方法
+            if (lock.tryLock(debounce.value(), debounce.unit())) {
+                // 执行被拦截的方法
+                return pjp.proceed();
             } else {
                 // 在防抖时间内，不执行方法，可根据需要处理此处逻辑
                 return null;
@@ -55,17 +67,22 @@ public class DebounceAspect implements ApplicationContextAware {
      * 获取一个特定类型的DebounceLock实例。
      *
      * @param debounce 提供锁类型的Debounce注解实例。
+     * @param key 生成锁的键。
      * @return 返回通过注解指定的类创建的DebounceLock实例。
      */
-    private DebounceLock getDebounceLock(Debounce debounce) {
-        Class<? extends DebounceLock> aClass = debounce.lock();
-        DebounceLock debounceLock = null;
+    private Lock getDebounceLock(Debounce debounce, String key) {
+        LockFactory.LockType lockType = debounce.lockType();
+        if(lockType != LockFactory.LockType.NONE) {
+            return LockFactory.getInstance().createLock(key, lockType);
+        }
+        Class<? extends Lock> aClass = debounce.lock();
+        Lock debounceLock = null;
         try {
             debounceLock = WrapperClassUtils.newInstance(aClass);
         } catch (Exception ignored) {
         }
         if(null == debounceLock) {
-            return new DefaultDebounceLock();
+            return new ObjectLock(key);
         }
         autowireCapableBeanFactory.autowireBean(debounceLock);
         return debounceLock;
@@ -74,13 +91,14 @@ public class DebounceAspect implements ApplicationContextAware {
     /**
      * 根据方法和参数名生成防抖动的键。
      *
-     * @param debounce  提供键生成器类型的Debounce注解实例。
+     * @param debounce             提供键生成器类型的Debounce注解实例。
      * @param debounceKeyGenerator 用于生成防抖动键的生成器实例。
      * @param signature            方法签名，包含方法和参数信息。
+     * @param args
      * @return 返回基于方法和参数名生成的防抖动键。
      */
-    private String getKey(Debounce debounce, DebounceKeyGenerator debounceKeyGenerator, MethodSignature signature) {
-        return debounceKeyGenerator.getKey(debounce.prefix(), signature.getMethod(), signature.getParameterNames());
+    private String getKey(Debounce debounce, DebounceKeyGenerator debounceKeyGenerator, MethodSignature signature, Object[] args) {
+        return debounceKeyGenerator.getKey(debounce.prefix(), signature.getMethod(), signature.getParameterNames(), args);
     }
 
     /**
@@ -90,6 +108,10 @@ public class DebounceAspect implements ApplicationContextAware {
      * @return 返回通过注解指定的类创建的DebounceKeyGenerator实例。
      */
     private DebounceKeyGenerator getDebounceKeyGenerator(Debounce debounce) {
+        String key = debounce.key();
+        if(StringUtils.isNotBlank(key)) {
+            return new StandardDebounceKeyGenerator(key);
+        }
         Class<? extends DebounceKeyGenerator> aClass = debounce.keyGenerator();
         DebounceKeyGenerator debounceKeyGenerator = null;
         try {

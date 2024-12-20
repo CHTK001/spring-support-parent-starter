@@ -1,6 +1,8 @@
 package com.chua.starter.redis.support.debounce;
 
-import com.chua.starter.common.support.debounce.DebounceLock;
+import com.chua.common.support.annotations.Spi;
+import com.chua.common.support.lang.lock.Lock;
+import com.chua.common.support.objects.annotation.AutoInject;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,14 +16,21 @@ import java.util.concurrent.TimeUnit;
  * @version 1.0.0
  * @since 2024/03/10
  */
-public class RedisDebounceLock implements DebounceLock {
+@Spi(value = "redisson", order = 100)
+public class RedissonLock implements Lock {
 
-    @Autowired
+    @AutoInject
     private RedissonClient redissonClient;
     private RLock lock;
     boolean isLocked = false;
+    private String key;
+
+    public RedissonLock(String key) {
+        this.key = key;
+    }
+
     @Override
-    public boolean tryLock(String key, long timeout) throws Exception {
+    public boolean tryLock(int timeout, TimeUnit timeUnit)  {
         this.lock = redissonClient.getLock(key);
         //尝试抢占锁
         this.isLocked = lock.tryLock();
@@ -30,7 +39,7 @@ public class RedisDebounceLock implements DebounceLock {
             throw new RuntimeException("您的操作太快了,请稍后重试");
         }
         //拿到锁后设置过期时间
-        lock.lock(timeout, TimeUnit.SECONDS);
+        lock.lock(timeout, timeUnit);
         try {
             return true;
         } catch (Throwable ignored) {
@@ -44,4 +53,5 @@ public class RedisDebounceLock implements DebounceLock {
             lock.unlock();
         }
     }
+
 }
