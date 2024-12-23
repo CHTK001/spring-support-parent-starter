@@ -115,7 +115,7 @@ public class ReportEvent<T> {
         /**
          * usb
          */
-        USB,
+        //USB,
         /**
          * 内存
          */
@@ -132,12 +132,12 @@ public class ReportEvent<T> {
         /**
          * 网络
          */
-        NETWORK,
+       // NETWORK,
 
         /**
          * 网络状态
          */
-        NETSTAT,
+       // NETSTAT,
         /**
          * trace
          */
@@ -145,8 +145,12 @@ public class ReportEvent<T> {
         /**
          * 磁盘io
          */
-        IO_DISK,
+//        IO_DISK,
 
+        /**
+         * 网络io
+         */
+        IO_NETWORK,
         /**
          * 全部
          */
