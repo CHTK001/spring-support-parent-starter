@@ -33,7 +33,7 @@
         <module>spring-support-subscribe-starter</module>
         <module>spring-support-discovery-starter</module>
         <module>spring-support-mybatis-tenant-starter</module>
-        <module>spring-support-report-client-start</module>
+        <module>spring-support-report-client-starter</module>
         <module>spring-support-report-server-starter</module>
         <module>spring-support-tencent-starter</module>
         <module>spring-support-websockify-starter</module>
@@ -128,7 +128,7 @@
 
             <dependency>
                 <groupId>com.chua</groupId>
-                <artifactId>spring-support-report-client-start</artifactId>
+                <artifactId>spring-support-report-client-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
 
