@@ -104,6 +104,35 @@
         <dependencies>
             <dependency>
                 <groupId>com.chua</groupId>
+                <artifactId>utils-support-netty-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-datasource-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-calcite-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-report-client-start</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-report-server-start</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
                 <artifactId>utils-support-zbus-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
@@ -270,7 +299,7 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-common-starter</artifactId>
-                <version>4.0.0.4</version>
+                <version>${module.version}</version>
             </dependency>
 
             <dependency>

@@ -11,6 +11,7 @@
 
     <artifactId>spring-support-report-client-start</artifactId>
     <description>上报信息客户端模块</description>
+    <version>4.0.0.4</version>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
@@ -54,7 +55,6 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-discovery-starter</artifactId>
-            <version>4.0.0.4</version>
         </dependency>
     </dependencies>
 </project>

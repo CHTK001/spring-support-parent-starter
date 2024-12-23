@@ -156,7 +156,8 @@ return reportClientProperties.isOpenSelf();
                     if (null == reportType) {
                         continue;
                     }
-                    Report<?> report = ServiceProvider.of(Report.class).getNewExtension(reportType);
+                    String name = reportType.name();
+                    Report<?> report = ServiceProvider.of(Report.class).getNewExtension(name.replace("_", ""));
                     if (null == report) {
                         continue;
                     }

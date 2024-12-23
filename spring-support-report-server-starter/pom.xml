@@ -11,6 +11,7 @@
 
     <artifactId>spring-support-report-server-starter</artifactId>
     <description>上报信息服务端模块</description>
+    <version>4.0.0.4</version>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
@@ -23,13 +24,11 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-report-client-start</artifactId>
-            <version>4.0.0.4</version>
         </dependency>
 
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-calcite-starter</artifactId>
-            <version>4.0.0.4</version>
         </dependency>
 
         <dependency>
@@ -40,7 +39,6 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-datasource-starter</artifactId>
-            <version>4.0.0.4</version>
         </dependency>
 
         <dependency>
@@ -61,7 +59,6 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-netty-starter</artifactId>
-            <version>4.0.0.4</version>
         </dependency>
         <dependency>
             <groupId>com.chua</groupId>
