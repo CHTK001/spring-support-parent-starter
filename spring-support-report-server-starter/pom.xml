@@ -23,7 +23,7 @@
 
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-support-report-client-start</artifactId>
+            <artifactId>spring-support-report-client-starter</artifactId>
         </dependency>
 
         <dependency>
