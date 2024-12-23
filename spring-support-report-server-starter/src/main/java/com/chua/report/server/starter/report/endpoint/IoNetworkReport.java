@@ -20,7 +20,7 @@ import static com.chua.redis.support.constant.RedisConstant.REDIS_TIME_SERIES_PR
  * @author CH
  * @since 2024/12/23
  */
-@SpringBootConfiguration(proxyBeanMethods = false)
+@SpringBootConfiguration
 @RequiredArgsConstructor
 public class IoNetworkReport {
 

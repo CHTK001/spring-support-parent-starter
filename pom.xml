@@ -104,9 +104,16 @@
         <dependencies>
             <dependency>
                 <groupId>com.chua</groupId>
+                <artifactId>spring-support-discovery-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
                 <artifactId>utils-support-netty-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
+
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-datasource-starter</artifactId>
