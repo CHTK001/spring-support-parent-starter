@@ -18,9 +18,7 @@ import com.chua.report.client.starter.job.handler.JobHandler;
 import com.chua.report.client.starter.job.handler.JobHandlerFactory;
 import com.chua.report.client.starter.job.log.JobFileAppender;
 import com.chua.report.client.starter.job.log.LogResult;
-import com.chua.report.client.starter.setting.SettingFactory;
 import com.chua.starter.common.support.annotations.Job;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.project.Project;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
@@ -105,10 +103,6 @@ public class ReportXxlJobConfiguration implements BeanFactoryAware, SmartInstant
         this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
         String[] beanNamesForType = this.beanFactory.getBeanNamesForType(ProtocolServer.class);
         if(beanNamesForType.length == 0) {
-            return;
-        }
-
-        if(!SettingFactory.getInstance().isEnable()) {
         }
     }
 
