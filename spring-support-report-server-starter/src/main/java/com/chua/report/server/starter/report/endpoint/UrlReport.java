@@ -11,16 +11,16 @@ import com.chua.report.client.starter.report.event.ReportEvent;
 import com.chua.report.client.starter.setting.ReportExpireSetting;
 import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.common.support.application.GlobalSettingFactory;
-import com.chua.starter.common.support.project.Project;
 import com.chua.starter.redis.support.service.RedisSearchService;
-import com.chua.starter.redis.support.service.TimeSeriesService;
+import com.chua.starter.redis.support.service.SimpleRedisService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.SpringBootConfiguration;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import static com.chua.redis.support.constant.RedisConstant.*;
+import static com.chua.redis.support.constant.RedisConstant.REDIS_SEARCH_PREFIX;
+import static com.chua.redis.support.constant.RedisConstant.REDIS_SIMPLE_SERIES_PREFIX;
 
 /**
  * url上报
@@ -36,7 +36,7 @@ public class UrlReport {
     public static final String LOG_INDEX_NAME_PREFIX = REDIS_SEARCH_PREFIX + LOG_NAME + ":";
     public static final String LOG_INDEX_NAME_PREFIX2 = REDIS_SIMPLE_SERIES_PREFIX + LOG_NAME + ":";
     private final RedisSearchService redisSearchService;
-    private final TimeSeriesService timeSeriesService;
+    private final SimpleRedisService simpleRedisService;
     private final SocketSessionTemplate socketSessionTemplate;
 
     @OnRouterEvent("url")
@@ -71,7 +71,7 @@ public class UrlReport {
         } catch (Exception ignored) {
         }
 
-        timeSeriesService.increment(LOG_INDEX_NAME_PREFIX2 + reportEvent.clientEventId() ,  mappingEvent.getUrl());
+        simpleRedisService.incrementDay(LOG_INDEX_NAME_PREFIX2 + reportEvent.clientEventId() ,  mappingEvent.getUrl());
     }
 
     private void registerDocument(MappingEvent mappingEvent, ReportEvent<?> reportEvent) {

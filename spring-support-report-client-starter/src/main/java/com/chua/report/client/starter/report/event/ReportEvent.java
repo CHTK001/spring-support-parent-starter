@@ -61,7 +61,7 @@ public class ReportEvent<T> {
      */
     public String[] eventIds() {
         return new String[]{
-                reportType.name(),
+//                reportType.name(),
                 clientEventId()
         };
     }
@@ -77,12 +77,8 @@ public class ReportEvent<T> {
 
 
     @Getter
-    public static enum ReportType {
+    public enum ReportType {
 
-        /**
-         * 进程
-         */
-        //PROCESS,
         /**
          * 日志
          */
@@ -111,11 +107,6 @@ public class ReportEvent<T> {
          * 磁盘
          */
         DISK,
-
-        /**
-         * usb
-         */
-        //USB,
         /**
          * 内存
          */
@@ -128,24 +119,10 @@ public class ReportEvent<T> {
          * 系统
          */
         SYS,
-
-        /**
-         * 网络
-         */
-       // NETWORK,
-
-        /**
-         * 网络状态
-         */
-       // NETSTAT,
         /**
          * trace
          */
         TRACE,
-        /**
-         * 磁盘io
-         */
-//        IO_DISK,
 
         /**
          * 网络io

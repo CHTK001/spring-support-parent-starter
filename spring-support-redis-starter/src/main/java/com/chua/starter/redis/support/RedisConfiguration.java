@@ -7,8 +7,10 @@ import com.chua.starter.redis.support.listener.RedisListener;
 import com.chua.starter.redis.support.properties.RedisServerProperties;
 import com.chua.starter.redis.support.server.RedisEmbeddedServer;
 import com.chua.starter.redis.support.service.RedisSearchService;
+import com.chua.starter.redis.support.service.SimpleRedisService;
 import com.chua.starter.redis.support.service.TimeSeriesService;
 import com.chua.starter.redis.support.service.impl.RedisSearchServiceImpl;
+import com.chua.starter.redis.support.service.impl.SimpleRedisServiceImpl;
 import com.chua.starter.redis.support.service.impl.TimeSeriesServiceImpl;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
@@ -88,6 +90,12 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     @ConditionalOnMissingBean
     public RedisSearchService redisSearchService() {
         return new RedisSearchServiceImpl();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public SimpleRedisService simpleRedisService() {
+        return new SimpleRedisServiceImpl();
     }
 
     @Override
