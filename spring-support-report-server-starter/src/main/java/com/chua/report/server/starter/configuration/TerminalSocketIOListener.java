@@ -4,14 +4,13 @@ import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.protocol.channel.Channel;
-import com.chua.common.support.protocol.session.Session;
+import com.chua.common.support.protocol.session.ChannelSession;
 import com.chua.report.server.starter.service.TerminalService;
 import com.chua.socketio.support.SocketIOListener;
 import com.chua.socketio.support.annotations.OnEvent;
 import com.chua.socketio.support.session.SocketSession;
 import com.chua.ssh.support.ssh.SshClient;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.annotation.Configuration;
 
 
 /**
@@ -48,7 +47,7 @@ public class TerminalSocketIOListener implements SocketIOListener {
 
         String command1 = command.getString("command");
 
-        Session clientSession = sshClient.getSession();
+        ChannelSession clientSession = (ChannelSession) sshClient.getSession();
         Channel channel = clientSession.openChannel(genId, "terminal");
 //        clientSession.closeChannel(requestId);
         channel.setListener(s -> {
