@@ -1,6 +1,5 @@
 package com.chua.report.server.starter.report.endpoint;
 
-import com.alibaba.fastjson2.JSON;
 import com.chua.common.support.annotations.OnRouterEvent;
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.json.Json;
@@ -70,7 +69,7 @@ public class UsbReport {
      */
     private void registerRedisTime( List<UsbDeviceEvent> usbDeviceEvents, ReportEvent<?> reportEvent) {
         // 将DISK事件信息以字符串形式保存到Redis
-        timeSeriesService.put(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(), JSON.toJSONString(usbDeviceEvents));
+        timeSeriesService.put(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(), Json.toJSONString(usbDeviceEvents));
     }
 
 }

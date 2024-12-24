@@ -1,6 +1,5 @@
 package com.chua.report.server.starter.report.endpoint;
 
-import com.alibaba.fastjson2.JSON;
 import com.chua.common.support.annotations.OnRouterEvent;
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.json.Json;
@@ -66,7 +65,7 @@ public class JvmReport {
      */
     private void registerRedisTime(JvmEvent jvmEvent, ReportEvent<?> reportEvent) {
         // 将JVM事件信息以字符串形式保存到Redis
-        timeSeriesService.put(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(), JSON.toJSONString(jvmEvent));
+        timeSeriesService.put(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(), Json.toJSONString(jvmEvent));
     }
 
 }
