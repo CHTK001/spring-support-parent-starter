@@ -4,8 +4,8 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.session.indicator.DataIndicator;
 import com.chua.common.support.session.indicator.TimeIndicator;
 import com.chua.common.support.utils.CollectionUtils;
+import com.chua.redis.support.client.RedisChanelSession;
 import com.chua.redis.support.client.RedisClient;
-import com.chua.redis.support.client.RedisSession;
 import com.chua.redis.support.client.RedisTimeSeries;
 import com.chua.starter.redis.support.service.TimeSeriesService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,13 +32,13 @@ public class TimeSeriesServiceImpl implements TimeSeriesService {
 
     @Override
     public ReturnResult<Boolean> save(String indicator, long timestamp, double value, LinkedHashMap<String, String> label, long retentionPeriod) {
-        RedisSession redisSession  = (RedisSession) redisClient.getSession();
+        RedisChanelSession redisSession  = (RedisChanelSession) redisClient.getSession();
 
         if(!redisSession.checkModule("timeseries")) {
             return ReturnResult.error("模块未加载");
         }
 
-        RedisTimeSeries redisTimeSeries = ((RedisSession) redisClient.getSession()).getRedisTimeSeries();
+        RedisTimeSeries redisTimeSeries = ((RedisChanelSession) redisClient.getSession()).getRedisTimeSeries();
         TSElement tsElement = redisTimeSeries.tsGet(indicator);
         if(null == tsElement) {
             redisTimeSeries.tsCreate(indicator);
@@ -55,13 +55,13 @@ public class TimeSeriesServiceImpl implements TimeSeriesService {
 
     @Override
     public ReturnResult<Boolean> save(String indicator, long timestamp, double value, long retentionPeriod) {
-        RedisSession redisSession  = (RedisSession) redisClient.getSession();
+        RedisChanelSession redisSession  = (RedisChanelSession) redisClient.getSession();
 
         if(!redisSession.checkModule("timeseries")) {
             return ReturnResult.error("模块未加载");
         }
 
-        RedisTimeSeries redisTimeSeries = ((RedisSession) redisClient.getSession()).getRedisTimeSeries();
+        RedisTimeSeries redisTimeSeries = ((RedisChanelSession) redisClient.getSession()).getRedisTimeSeries();
         TSElement tsElement = redisTimeSeries.tsGet(indicator);
         if(null == tsElement) {
             redisTimeSeries.tsCreate(indicator);
@@ -77,13 +77,13 @@ public class TimeSeriesServiceImpl implements TimeSeriesService {
 
     @Override
     public ReturnResult<Boolean> delete(String indicator, long fromTimestamp, long toTimestamp) {
-        RedisSession redisSession  = (RedisSession) redisClient.getSession();
+        RedisChanelSession redisSession  = (RedisChanelSession) redisClient.getSession();
 
         if(!redisSession.checkModule("timeseries")) {
             return ReturnResult.error("模块未加载");
         }
 
-        RedisTimeSeries redisTimeSeries = ((RedisSession) redisClient.getSession()).getRedisTimeSeries();
+        RedisTimeSeries redisTimeSeries = ((RedisChanelSession) redisClient.getSession()).getRedisTimeSeries();
         TSElement tsElement = redisTimeSeries.tsGet(indicator);
         if(null == tsElement) {
             return ReturnResult.error("指标不存在");
@@ -94,13 +94,13 @@ public class TimeSeriesServiceImpl implements TimeSeriesService {
 
     @Override
     public ReturnResult<List<TimeIndicator>> range(String indicator, long fromTimestamp, long toTimestamp, boolean latest, int count) {
-        RedisSession redisSession  = (RedisSession) redisClient.getSession();
+        RedisChanelSession redisSession  = (RedisChanelSession) redisClient.getSession();
 
         if(!redisSession.checkModule("timeseries")) {
             return ReturnResult.error("模块未加载");
         }
 
-        RedisTimeSeries redisTimeSeries = ((RedisSession) redisClient.getSession()).getRedisTimeSeries();
+        RedisTimeSeries redisTimeSeries = ((RedisChanelSession) redisClient.getSession()).getRedisTimeSeries();
         TSElement tsElement = redisTimeSeries.tsGet(indicator);
         if(null == tsElement) {
             return ReturnResult.error("指标不存在");
@@ -123,7 +123,7 @@ public class TimeSeriesServiceImpl implements TimeSeriesService {
 
     @Override
     public ReturnResult<Map<String, List<TimeIndicator>>> mRange(String indicator, long fromTimestamp, long toTimestamp, boolean latest, int count) {
-        RedisSession redisSession  = (RedisSession) redisClient.getSession();
+        RedisChanelSession redisSession  = (RedisChanelSession) redisClient.getSession();
 
         if(!redisSession.checkModule("timeseries")) {
             return ReturnResult.error("模块未加载");
@@ -149,7 +149,7 @@ public class TimeSeriesServiceImpl implements TimeSeriesService {
 
     @Override
     public ReturnResult<DataIndicator> get(String indicator, long fromTimestamp, long toTimestamp, int count) {
-        RedisSession redisSession  = (RedisSession) redisClient.getSession();
+        RedisChanelSession redisSession  = (RedisChanelSession) redisClient.getSession();
         JedisPool jedis = redisSession.getJedis();
         try (Jedis resource = jedis.getResource()) {
             String s = resource.get(indicator);
@@ -163,7 +163,7 @@ public class TimeSeriesServiceImpl implements TimeSeriesService {
 
     @Override
     public void put(String indicator, String value) {
-        RedisSession redisSession  = (RedisSession) redisClient.getSession();
+        RedisChanelSession redisSession  = (RedisChanelSession) redisClient.getSession();
         JedisPool jedis = redisSession.getJedis();
         try (Jedis resource = jedis.getResource()) {
             resource.set(indicator, value);
@@ -172,7 +172,7 @@ public class TimeSeriesServiceImpl implements TimeSeriesService {
 
     @Override
     public void hSet(String indicator, String key, String value) {
-        RedisSession redisSession  = (RedisSession) redisClient.getSession();
+        RedisChanelSession redisSession  = (RedisChanelSession) redisClient.getSession();
         JedisPool jedis = redisSession.getJedis();
         try (Jedis resource = jedis.getResource()) {
             resource.hset(indicator, key, value);
@@ -181,7 +181,7 @@ public class TimeSeriesServiceImpl implements TimeSeriesService {
 
     @Override
     public Map<String, String> hGet(String indicator) {
-        RedisSession redisSession  = (RedisSession) redisClient.getSession();
+        RedisChanelSession redisSession  = (RedisChanelSession) redisClient.getSession();
         JedisPool jedis = redisSession.getJedis();
         try (Jedis resource = jedis.getResource()) {
             return resource.hgetAll(indicator);
@@ -190,7 +190,7 @@ public class TimeSeriesServiceImpl implements TimeSeriesService {
 
     @Override
     public void increment(String indicator, String key) {
-        RedisSession redisSession  = (RedisSession) redisClient.getSession();
+        RedisChanelSession redisSession  = (RedisChanelSession) redisClient.getSession();
         JedisPool jedis = redisSession.getJedis();
         try (Jedis resource = jedis.getResource()) {
             resource.hincrBy(indicator ,  key, 1);
@@ -199,7 +199,7 @@ public class TimeSeriesServiceImpl implements TimeSeriesService {
 
     @Override
     public void decrement(String indicator, String key) {
-        RedisSession redisSession  = (RedisSession) redisClient.getSession();
+        RedisChanelSession redisSession  = (RedisChanelSession) redisClient.getSession();
         JedisPool jedis = redisSession.getJedis();
         try (Jedis resource = jedis.getResource()) {
             resource.hincrBy(indicator ,  key, -1);

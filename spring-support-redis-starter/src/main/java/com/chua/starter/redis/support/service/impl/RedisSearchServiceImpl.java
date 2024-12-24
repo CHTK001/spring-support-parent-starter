@@ -5,9 +5,9 @@ import com.chua.common.support.task.cache.Cacheable;
 import com.chua.common.support.task.cache.GuavaCacheable;
 import com.chua.common.support.utils.IdUtils;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.redis.support.client.RedisChanelSession;
 import com.chua.redis.support.client.RedisClient;
 import com.chua.redis.support.client.RedisSearch;
-import com.chua.redis.support.client.RedisSession;
 import com.chua.redis.support.search.SearchIndex;
 import com.chua.redis.support.search.SearchQuery;
 import com.chua.redis.support.search.SearchResultItem;
@@ -39,7 +39,7 @@ public class RedisSearchServiceImpl implements RedisSearchService {
         if(!CACHEABLE.exist(index)) {
             return ReturnResult.ok();
         }
-        RedisSession redisSession  = (RedisSession) redisClient.getSession();
+        RedisChanelSession redisSession  = (RedisChanelSession) redisClient.getSession();
 
         try (Jedis jedis = redisSession.getJedis().getResource()) {
             String s = jedis.get(index + ":CREATE_INIT");
@@ -71,7 +71,7 @@ public class RedisSearchServiceImpl implements RedisSearchService {
         if(CACHEABLE.exist(searchIndex.getName())) {
             return ReturnResult.ok();
         }
-        RedisSession redisSession  = (RedisSession) redisClient.getSession();
+        RedisChanelSession redisSession  = (RedisChanelSession) redisClient.getSession();
 
         if(!redisSession.checkModule("search")) {
             return ReturnResult.error("模块未加载");
@@ -97,7 +97,7 @@ public class RedisSearchServiceImpl implements RedisSearchService {
             return ReturnResult.error("redisClient未初始化");
         }
 
-        RedisSession redisSession  = (RedisSession) redisClient.getSession();
+        RedisChanelSession redisSession  = (RedisChanelSession) redisClient.getSession();
 
         if(!redisSession.checkModule("search")) {
             return ReturnResult.error("模块未加载");
@@ -126,7 +126,7 @@ public class RedisSearchServiceImpl implements RedisSearchService {
             return ReturnResult.error("redisClient未初始化");
         }
 
-        RedisSession redisSession  = (RedisSession) redisClient.getSession();
+        RedisChanelSession redisSession  = (RedisChanelSession) redisClient.getSession();
 
         if(!redisSession.checkModule("search")) {
             return ReturnResult.error("模块未加载");
