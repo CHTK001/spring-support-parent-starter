@@ -1,11 +1,9 @@
 package com.chua.report.server.starter.report.endpoint;
 
-import com.alibaba.fastjson2.JSON;
 import com.chua.common.support.annotations.OnRouterEvent;
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.DigestUtils;
-import com.chua.report.client.starter.report.event.JvmEvent;
 import com.chua.report.client.starter.report.event.ReportEvent;
 import com.chua.report.client.starter.report.event.ServerEvent;
 import com.chua.socketio.support.session.SocketSessionTemplate;
@@ -73,7 +71,7 @@ public class ServerReport {
                         serverEvent.getSourceHost() + serverEvent.getSourcePort()
                         + serverEvent.getTargetHost() + serverEvent.getTargetPort()
                 ),
-                JSON.toJSONString(serverEvent));
+                Json.toJSONString(serverEvent));
     }
 
 }
