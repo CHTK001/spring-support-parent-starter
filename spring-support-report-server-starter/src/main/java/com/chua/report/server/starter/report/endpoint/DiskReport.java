@@ -1,6 +1,5 @@
 package com.chua.report.server.starter.report.endpoint;
 
-import com.alibaba.fastjson2.JSON;
 import com.chua.common.support.annotations.OnRouterEvent;
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.json.Json;
@@ -70,7 +69,7 @@ public class DiskReport {
      */
     private void registerRedisTime( List<DiskEvent> diskEvents, ReportEvent<?> reportEvent) {
         // 将DISK事件信息以字符串形式保存到Redis
-        timeSeriesService.put(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(), JSON.toJSONString(diskEvents));
+        timeSeriesService.put(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(), Json.toJSONString(diskEvents));
     }
 
 }
