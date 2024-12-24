@@ -4,17 +4,14 @@ import com.chua.common.support.annotations.OnRouterEvent;
 import com.chua.common.support.net.NetUtils;
 import com.chua.common.support.protocol.ServerSetting;
 import com.chua.common.support.utils.IoUtils;
-import com.chua.common.support.utils.StringUtils;
-import com.chua.report.server.starter.consumer.ReportConsumer;
+import com.chua.mica.support.client.MicaClient;
+import com.chua.mica.support.server.MicaServer;
+import com.chua.report.server.starter.consumer.ReportFilter;
 import com.chua.report.server.starter.job.trigger.SchedulerTrigger;
-import com.chua.report.server.starter.properties.ReportJobProperties;
 import com.chua.report.server.starter.properties.ReportGenProperties;
+import com.chua.report.server.starter.properties.ReportJobProperties;
 import com.chua.report.server.starter.properties.ReportServerProperties;
 import com.chua.report.server.starter.router.Router;
-import com.chua.zbus.support.server.ZbusServer;
-import io.zbus.mq.Broker;
-import io.zbus.mq.BrokerConfig;
-import io.zbus.mq.Consumer;
 import lombok.extern.slf4j.Slf4j;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.BeansException;
@@ -51,11 +48,10 @@ import org.springframework.util.ReflectionUtils;
 public class ReportServerConfiguration implements BeanDefinitionRegistryPostProcessor, EnvironmentAware, DisposableBean, CommandLineRunner, SmartInstantiationAwareBeanPostProcessor {
     private Integer serverPort;
     private int reportServerPort;
-    private Broker broker;
-    private Consumer consumer;
-    private ReportConsumer reportConsumer;
     private ReportServerProperties reportServerProperties;
     private final Router router = new Router();
+    private MicaClient micaClient;
+    private MicaServer micaServer;
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
@@ -87,15 +83,17 @@ public class ReportServerConfiguration implements BeanDefinitionRegistryPostProc
             return;
         }
         log.info("当前服务器 MQ: 127.0.0.1:{}", reportServerPort);
-        registry.registerBeanDefinition("mqServer", BeanDefinitionBuilder.rootBeanDefinition(ZbusServer.class)
-                .addConstructorArgValue(ServerSetting.builder()
-                        .port(reportServerPort)
-                        .host("0.0.0.0")
-                        .build())
-                .setDestroyMethodName("stop")
-                .setInitMethodName("start")
-                .getBeanDefinition()
-        );
+        micaServer = new MicaServer(ServerSetting.builder()
+                .host("0.0.0.0")
+                .port(reportServerPort)
+                .build());
+
+        try {
+            micaServer.addFilter(new ReportFilter(router, this.reportServerPort + "#report"));
+            micaServer.start();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
@@ -116,30 +114,30 @@ public class ReportServerConfiguration implements BeanDefinitionRegistryPostProc
 
     @Override
     public void destroy() throws Exception {
-        IoUtils.closeQuietly(reportConsumer);
-        IoUtils.closeQuietly(broker);
+        IoUtils.closeQuietly(micaClient);
+        IoUtils.closeQuietly(micaServer);
     }
 
     @Override
     public void run(String... args) throws Exception {
         Thread.sleep(1000);
-        registerZbusClient();
+//        registerZbusClient();
     }
 
 
-    private void registerZbusClient() {
-        BrokerConfig brokerConfig = new BrokerConfig();
-        String reportEndpointHost = reportServerProperties.getReportEndpointHost();
-        String endpoint = "";
-        int reportEndpointPort = this.reportServerPort;
-        if(StringUtils.isNotBlank(reportEndpointHost)) {
-            endpoint = reportEndpointHost + ":" + reportServerProperties.getReportEndpointPort();
-            reportServerPort = reportServerProperties.getReportEndpointPort();
-        } else {
-            endpoint = "127.0.0.1:" + reportServerPort;
-        }
-        brokerConfig.addTracker(endpoint);
-        this.broker = new Broker(brokerConfig);
-        this.reportConsumer = new ReportConsumer(router, broker, reportEndpointPort + "#report");
-    }
+//    private void registerZbusClient() {
+//        String reportEndpointHost = reportServerProperties.getReportEndpointHost();
+//        String endpoint = "";
+//        int reportEndpointPort = this.reportServerPort;
+//        if(StringUtils.isNotBlank(reportEndpointHost)) {
+//            endpoint = reportEndpointHost + ":" + reportServerProperties.getReportEndpointPort();
+//            reportServerPort = reportServerProperties.getReportEndpointPort();
+//        } else {
+//            endpoint = "127.0.0.1:" + reportServerPort;
+//        }
+//        micaClient = new MicaClient(ClientSetting.builder()
+//                .url(endpoint)
+//                .build());
+//        this.reportConsumer = new ReportConsumer(router, micaClient, reportEndpointPort + "#report");
+//    }
 }

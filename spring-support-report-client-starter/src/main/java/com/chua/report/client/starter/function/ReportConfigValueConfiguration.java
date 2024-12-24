@@ -106,10 +106,6 @@ public class ReportConfigValueConfiguration extends AnnotationInjectedBeanPostPr
         this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
         String[] beanNamesForType = this.beanFactory.getBeanNamesForType(ProtocolServer.class);
         if(beanNamesForType.length == 0) {
-            return;
-        }
-
-        if(!SettingFactory.getInstance().isEnable()) {
         }
     }
 

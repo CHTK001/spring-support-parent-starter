@@ -13,15 +13,14 @@ import com.chua.common.support.protocol.ProtocolSetting;
 import com.chua.common.support.protocol.protocol.Protocol;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.*;
+import com.chua.mica.support.client.MicaClient;
+import com.chua.mica.support.client.session.MicaSession;
 import com.chua.report.client.starter.endpoint.ModuleType;
 import com.chua.report.client.starter.properties.ReportClientProperties;
 import com.chua.report.client.starter.properties.ReportEndpointProperties;
 import com.chua.report.client.starter.report.Report;
 import com.chua.report.client.starter.report.event.ReportEvent;
-import com.chua.zbus.support.protocol.ZbusClient;
 import com.google.common.reflect.TypeToken;
-import io.zbus.mq.Message;
-import io.zbus.mq.Producer;
 import lombok.Getter;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
@@ -67,12 +66,12 @@ public class SettingFactory implements AutoCloseable, InitializingBean {
     private ServerProperties serverProperties;
     private String reportServerHost;
     private int reportServerPort;
-    private ZbusClient zbusClient;
     @Getter
     private String reportTopic;
-    private Producer producer;
+
+    private MicaClient micaClient;
     @Getter
-    private Producer reportProducer;
+    private MicaSession reportProducer;
     private Integer reportTime;
 
     public SettingFactory() {
@@ -127,15 +126,14 @@ return reportClientProperties.isOpenSelf();
 
 
     private void initializeZbus() {
-        zbusClient = new ZbusClient(ClientSetting.builder()
+        micaClient = new MicaClient(ClientSetting.builder()
                 .host(reportServerHost)
                 .port(reportServerPort)
                 .build());
 
-        zbusClient.connect();
+        micaClient.connect();
         this.reportTopic = reportServerPort + "#report";
-        producer = zbusClient.createProducer();
-        reportProducer = zbusClient.createProducer();
+        reportProducer = (MicaSession) micaClient.createSession(reportTopic);
         this.report();
     }
 
@@ -161,10 +159,7 @@ return reportClientProperties.isOpenSelf();
                     if (null == report) {
                         continue;
                     }
-                    Message message = new Message();
-                    message.setTopic(reportTopic);
-                    message.setBody(Json.toJSONBytes(report.report()));
-                    reportProducer.publish(message);
+                    reportProducer.publish(reportTopic, Json.toJSONBytes(report.report()));
                 }
             } catch (Throwable ignored) {
             }
@@ -291,7 +286,7 @@ return reportClientProperties.isOpenSelf();
     @Override
     public void close() throws Exception {
         IoUtils.closeQuietly(scheduledExecutorService);
-        zbusClient.close();
+        IoUtils.closeQuietly(micaClient);
     }
 
     @Override
