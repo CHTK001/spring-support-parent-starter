@@ -1,10 +1,8 @@
 package com.chua.report.server.starter.report.endpoint;
 
-import com.alibaba.fastjson2.JSON;
 import com.chua.common.support.annotations.OnRouterEvent;
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.json.Json;
-import com.chua.report.client.starter.report.event.DiskEvent;
 import com.chua.report.client.starter.report.event.ReportEvent;
 import com.chua.report.client.starter.report.event.StateEvent;
 import com.chua.socketio.support.session.SocketSessionTemplate;
@@ -71,7 +69,7 @@ public class NetstatReport {
      */
     private void registerRedisTime( List<StateEvent> stateEvents, ReportEvent<?> reportEvent) {
         // 将NETSTAT事件信息以字符串形式保存到Redis
-        timeSeriesService.put(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(), JSON.toJSONString(stateEvents));
+        timeSeriesService.put(LOG_INDEX_NAME_PREFIX + reportEvent.clientEventId(), Json.toJSONString(stateEvents));
     }
 
 }
