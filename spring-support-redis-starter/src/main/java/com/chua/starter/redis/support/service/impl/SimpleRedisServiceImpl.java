@@ -1,6 +1,6 @@
 package com.chua.starter.redis.support.service.impl;
 
-import com.chua.redis.support.client.RedisChanelSession;
+import com.chua.redis.support.client.RedisChannelSession;
 import com.chua.redis.support.client.RedisClient;
 import com.chua.starter.redis.support.service.SimpleRedisService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +18,7 @@ public class SimpleRedisServiceImpl implements SimpleRedisService {
     private RedisClient redisClient;
     @Override
     public void increment(String indicator, String key, long expire) {
-        RedisChanelSession redisSession  = (RedisChanelSession) redisClient.getSession();
+        RedisChannelSession redisSession  = (RedisChannelSession) redisClient.getSession();
         JedisPool jedis = redisSession.getJedis();
         try (Jedis resource = jedis.getResource()) {
             resource.hincrBy(indicator ,  key, 1);
@@ -28,7 +28,7 @@ public class SimpleRedisServiceImpl implements SimpleRedisService {
 
     @Override
     public void increment(String indicator, String key) {
-        RedisChanelSession redisSession  = (RedisChanelSession) redisClient.getSession();
+        RedisChannelSession redisSession  = (RedisChannelSession) redisClient.getSession();
         JedisPool jedis = redisSession.getJedis();
         try (Jedis resource = jedis.getResource()) {
             resource.hincrBy(indicator ,  key, 1);
@@ -37,7 +37,7 @@ public class SimpleRedisServiceImpl implements SimpleRedisService {
 
     @Override
     public void decrement(String indicator, String key, long expire) {
-        RedisChanelSession redisSession  = (RedisChanelSession) redisClient.getSession();
+        RedisChannelSession redisSession  = (RedisChannelSession) redisClient.getSession();
         JedisPool jedis = redisSession.getJedis();
         try (Jedis resource = jedis.getResource()) {
             resource.hincrBy(indicator ,  key, -1);
@@ -47,7 +47,7 @@ public class SimpleRedisServiceImpl implements SimpleRedisService {
 
     @Override
     public void decrement(String indicator, String key) {
-        RedisChanelSession redisSession  = (RedisChanelSession) redisClient.getSession();
+        RedisChannelSession redisSession  = (RedisChannelSession) redisClient.getSession();
         JedisPool jedis = redisSession.getJedis();
         try (Jedis resource = jedis.getResource()) {
             resource.hincrBy(indicator ,  key, -1);
