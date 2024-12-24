@@ -3,10 +3,9 @@ package com.chua.report.client.starter.service;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.utils.ThreadUtils;
+import com.chua.mica.support.client.session.MicaSession;
 import com.chua.report.client.starter.report.event.ReportEvent;
 import com.chua.report.client.starter.setting.SettingFactory;
-import io.zbus.mq.Message;
-import io.zbus.mq.Producer;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.ExecutorService;
@@ -33,7 +32,7 @@ public class ReportService {
         if (settingFactory.isServer() || !settingFactory.isEnable()) {
             return;
         }
-        Producer reportProducer = settingFactory.getReportProducer();
+        MicaSession reportProducer = settingFactory.getReportProducer();
         if (null == reportProducer) {
             return;
         }
@@ -52,11 +51,8 @@ public class ReportService {
         }
 
         EXECUTOR_SERVICE.execute(() -> {
-            Message message = new Message();
-            message.setBody(Json.toJSONBytes(value));
-            message.setTopic(settingFactory.getReportTopic());
             try {
-                reportProducer.publish(message);
+                reportProducer.publish(settingFactory.getReportTopic(), Json.toJSONBytes(value));
             } catch (Exception ignored) {
             }
         });
