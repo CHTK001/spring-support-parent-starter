@@ -80,6 +80,14 @@ public class ReportEvent<T> {
     public enum ReportType {
 
         /**
+         * 下线
+         */
+        OFFLINE,
+        /**
+         * 上线
+         */
+        ONLINE,
+        /**
          * 日志
          */
         LOG,
