@@ -33,4 +33,14 @@ public class MappingEvent  extends TimestampEvent implements Serializable {
      * 耗时
      */
     private long cost;
+
+    /**
+     * 纬度
+     */
+    private Double longitude;
+
+    /**
+     * 经度
+     */
+    private Double latitude;
 }
