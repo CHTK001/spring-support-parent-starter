@@ -17,7 +17,7 @@ import org.springframework.stereotype.Service;
  * @version 1.0.0
  * @since 2024/01/19
  */
-@Service
+@Service("IptablesServiceNew")
 @RequiredArgsConstructor
 public class IptablesServiceImpl implements IptablesService {
 
@@ -43,6 +43,7 @@ public class IptablesServiceImpl implements IptablesService {
                             .databaseFile(ipProperties.getDatabaseFile())
                             .build();
                     ipPosition = ServiceProvider.of(IpPosition.class).getNewExtension(ipProperties.getIpType(), geoSetting);
+                    ipPosition.afterPropertiesSet();
                 }
             }
         }
@@ -50,7 +51,6 @@ public class IptablesServiceImpl implements IptablesService {
         if(null == ipPosition) {
             return ReturnResult.illegal("解析失败");
         }
-        ipPosition.afterPropertiesSet();
         return ReturnResult.ok(ipPosition.getCity(address));
     }
 }
