@@ -32,11 +32,23 @@ public class ReportFilter implements Filter {
                 .name("virtual-" + topic)
                 .start(() -> {
                     try {
-                        ReportEvent reportEvent = Json.fromJson(request.getBody(), ReportEvent.class);
+                        ReportEvent reportEvent = createEvent(request);
                         router.doRoute(reportEvent);
                     } catch (Exception ignored) {
                     }
                 }).start();
         filterChain.doFilter(context);
     }
+
+    private ReportEvent createEvent(Request request) {
+        String method = request.method();
+        if ("topic".equals(method)) {
+            return Json.fromJson(request.getBody(), ReportEvent.class);
+        }
+
+        ReportEvent reportEvent = new ReportEvent();
+        reportEvent.setReportType(ReportEvent.ReportType.valueOf(method.toUpperCase()));
+        return reportEvent;
+    }
 }
+
