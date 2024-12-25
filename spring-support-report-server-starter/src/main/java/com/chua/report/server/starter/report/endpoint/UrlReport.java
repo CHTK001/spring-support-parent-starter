@@ -2,13 +2,16 @@ package com.chua.report.server.starter.report.endpoint;
 
 import com.chua.common.support.annotations.OnRouterEvent;
 import com.chua.common.support.bean.BeanUtils;
+import com.chua.common.support.geo.GeoCity;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.NumberUtils;
 import com.chua.redis.support.search.SearchIndex;
 import com.chua.redis.support.search.SearchSchema;
 import com.chua.report.client.starter.report.event.MappingEvent;
 import com.chua.report.client.starter.report.event.ReportEvent;
 import com.chua.report.client.starter.setting.ReportExpireSetting;
+import com.chua.report.server.starter.service.IptablesService;
 import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.starter.common.support.application.GlobalSettingFactory;
 import com.chua.starter.redis.support.service.RedisSearchService;
@@ -38,19 +41,26 @@ public class UrlReport {
     private final RedisSearchService redisSearchService;
     private final SimpleRedisService simpleRedisService;
     private final SocketSessionTemplate socketSessionTemplate;
-
+    private final IptablesService iptablesService;
     @OnRouterEvent("url")
     public void report(ReportEvent<?> reportEvent) {
         MappingEvent mappingEvent = BeanUtils.copyProperties(reportEvent.getReportData(), MappingEvent.class);
+        ReturnResult<GeoCity> geoCityReturnResult = iptablesService.transferAddress(mappingEvent.getAddress());
+        GeoCity geoCity = null;
+        if(geoCityReturnResult.isOk()) {
+            geoCity = geoCityReturnResult.getData();
+            mappingEvent.setLatitude(geoCity.getLongitude());
+            mappingEvent.setLongitude(geoCity.getLatitude());
+        }
         registerRedisSearch(mappingEvent, reportEvent);
         // 通过Socket.IO发送JVM事件信息
-        reportToSocketIo(mappingEvent, reportEvent);
+        reportToSocketIo( mappingEvent, reportEvent);
     }
     /**
      * 通过Socket.IO报告JVM事件
      *
-     * @param mappingEvent    包含JVM监控数据的事件对象
-     * @param reportEvent 原始报告事件对象
+     * @param mappingEvent 包含JVM监控数据的事件对象
+     * @param reportEvent  原始报告事件对象
      */
     private void reportToSocketIo(MappingEvent mappingEvent, ReportEvent<?> reportEvent) {
         // 计算事件ID数组
@@ -84,6 +94,8 @@ public class UrlReport {
             document.put("address", mappingEvent.getAddress());
             document.put("cost", String.valueOf(mappingEvent.getCost()));
             document.put("timestamp", String.valueOf(System.currentTimeMillis()));
+            document.put("longitude", null == mappingEvent.getLongitude() ? "0" : String.valueOf(mappingEvent.getLongitude()));
+            document.put("latitude", null == mappingEvent.getLatitude() ? "0" : String.valueOf(mappingEvent.getLatitude()));
             document.put("applicationActive", reportEvent.getApplicationActive());
             document.put("applicationHost", reportEvent.getApplicationHost());
             document.put("applicationPort", String.valueOf(reportEvent.getApplicationPort()));
@@ -112,6 +124,8 @@ public class UrlReport {
             searchSchema.addTextField("method", 10);
             searchSchema.addTextField("address", 10);
             searchSchema.addSortableNumericField("cost");
+            searchSchema.addTextField("longitude", 10);
+            searchSchema.addTextField("latitude", 10);
             searchSchema.addTextField("applicationName", 1);
             searchSchema.addTextField("applicationPort", 1);
             searchSchema.addTextField("applicationHost", 1);
