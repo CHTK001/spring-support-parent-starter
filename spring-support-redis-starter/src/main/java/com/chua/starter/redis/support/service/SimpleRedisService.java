@@ -1,8 +1,10 @@
 package com.chua.starter.redis.support.service;
 
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.date.ComparableDateTime;
 import com.chua.common.support.lang.date.DateTime;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -64,4 +66,13 @@ public interface SimpleRedisService {
      * @param key       键字符串，表示指标下的具体项
      */
     void decrement(String indicator, String key);
+
+    /**
+     * 获取指定指标的值
+     *
+     * @param indicator 指标字符串，表示要获取的指标
+     * @param key       键字符串，表示指标下的具体项
+     * @return 指标值
+     */
+    ReturnResult<BigDecimal> qps(String key);
 }

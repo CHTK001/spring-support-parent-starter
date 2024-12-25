@@ -7,8 +7,11 @@ import com.chua.common.support.json.Json;
 import com.chua.common.support.protocol.request.OkResponse;
 import com.chua.common.support.protocol.request.Request;
 import com.chua.common.support.protocol.request.Response;
+import com.chua.common.support.utils.ThreadUtils;
 import com.chua.report.client.starter.report.event.ReportEvent;
 import com.chua.report.server.starter.router.Router;
+
+import java.util.concurrent.ExecutorService;
 
 /**
  * 注册器
@@ -19,6 +22,8 @@ public class ReportFilter implements Filter {
     private final Router router;
     private final String topic;
 
+    private final ExecutorService executorService = ThreadUtils.newVirtualThreadExecutor();
+
     public ReportFilter(Router router, String topic) {
         this.router = router;
         this.topic = topic;
@@ -28,15 +33,16 @@ public class ReportFilter implements Filter {
     public <T> void doFilter(ChainContext<T> context, FilterChain filterChain) {
         Request request = context.getRequest();
         context.setResponse(new OkResponse(request));
-        Thread.ofVirtual()
-                .name("virtual-" + topic)
-                .start(() -> {
-                    try {
-                        ReportEvent reportEvent = createEvent(request);
-                        router.doRoute(reportEvent);
-                    } catch (Exception ignored) {
-                    }
-                }).start();
+        try {
+            executorService.execute(() -> {
+                try {
+                    ReportEvent reportEvent = createEvent(request);
+                    router.doRoute(reportEvent);
+                } catch (Exception ignored) {
+                }
+            });
+        } catch (Exception ignored) {
+        }
         filterChain.doFilter(context);
     }
 
@@ -46,7 +52,7 @@ public class ReportFilter implements Filter {
             return Json.fromJson(request.getBody(), ReportEvent.class);
         }
 
-        ReportEvent reportEvent = new ReportEvent();
+        ReportEvent reportEvent = Json.fromJson(request.getBody(), ReportEvent.class);
         reportEvent.setReportType(ReportEvent.ReportType.valueOf(method.toUpperCase()));
         return reportEvent;
     }
