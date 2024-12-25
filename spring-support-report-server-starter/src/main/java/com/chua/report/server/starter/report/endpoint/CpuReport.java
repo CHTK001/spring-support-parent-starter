@@ -32,7 +32,7 @@ public class CpuReport {
     private final SocketSessionTemplate socketSessionTemplate;
 
     /**
-     * 处理JVM相关报告事件
+     * 处理CPU相关报告事件
      *
      * @param reportEvent 包含JVM报告数据的事件对象
      */

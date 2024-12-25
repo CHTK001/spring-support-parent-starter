@@ -1,11 +1,17 @@
 package com.chua.starter.redis.support.service.impl;
 
+import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.utils.NumberUtils;
 import com.chua.redis.support.client.RedisChannelSession;
 import com.chua.redis.support.client.RedisClient;
 import com.chua.starter.redis.support.service.SimpleRedisService;
 import org.springframework.beans.factory.annotation.Autowired;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.Map;
 
 /**
  * 简单的redis服务
@@ -51,6 +57,22 @@ public class SimpleRedisServiceImpl implements SimpleRedisService {
         JedisPool jedis = redisSession.getJedis();
         try (Jedis resource = jedis.getResource()) {
             resource.hincrBy(indicator ,  key, -1);
+        }
+    }
+
+    @Override
+    public ReturnResult<BigDecimal> qps(String key) {
+        RedisChannelSession redisSession  = (RedisChannelSession) redisClient.getSession();
+        JedisPool jedis = redisSession.getJedis();
+        try (Jedis resource = jedis.getResource()) {
+            Map<String, String> stringStringMap = resource.hgetAll(key);
+            BigDecimal sum = new BigDecimal(0);
+            for (String string : stringStringMap.values()) {
+                if(NumberUtils.isNumber(string)) {
+                    sum = sum.add(new BigDecimal(string));
+                }
+            }
+            return ReturnResult.success(sum.divide(BigDecimal.valueOf(86400), 5, RoundingMode.HALF_UP));
         }
     }
 }

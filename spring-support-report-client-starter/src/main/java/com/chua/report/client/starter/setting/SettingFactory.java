@@ -19,6 +19,7 @@ import com.chua.mica.support.client.session.MicaSession;
 import com.chua.report.client.starter.endpoint.ModuleType;
 import com.chua.report.client.starter.properties.ReportClientProperties;
 import com.chua.report.client.starter.properties.ReportEndpointProperties;
+import com.chua.report.client.starter.report.OnlineReport;
 import com.chua.report.client.starter.report.Report;
 import com.chua.report.client.starter.report.event.ReportEvent;
 import com.google.common.reflect.TypeToken;
@@ -138,6 +139,15 @@ return reportClientProperties.isOpenSelf();
         this.report();
     }
 
+
+    public void publish(Report<?> report) {
+        if(null == this.reportProducer) {
+            return;
+        }
+
+        this.reportProducer.publish(this.reportTopic,Json.toJSONBytes(report.report()));
+    }
+
     private void report() {
         Set<ReportEvent.ReportType> reportCollect = reportClientProperties.getReport();
         if (CollectionUtils.isEmpty(reportCollect)) {
@@ -152,7 +162,7 @@ return reportClientProperties.isOpenSelf();
         scheduledExecutorService.scheduleAtFixedRate(() -> {
             try {
                 for (ReportEvent.ReportType reportType : reportCollect) {
-                    if (null == reportType) {
+                    if (null == reportType || reportType == ReportEvent.ReportType.ONLINE || reportType == ReportEvent.ReportType.OFFLINE) {
                         continue;
                     }
                     String name = reportType.name();
@@ -165,6 +175,8 @@ return reportClientProperties.isOpenSelf();
             } catch (Throwable ignored) {
             }
         }, 0, reportTime, TimeUnit.SECONDS);
+
+        reportProducer.publish(reportTopic, Json.toJSONBytes(new OnlineReport().report()));
     }
 
 

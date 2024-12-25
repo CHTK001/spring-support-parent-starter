@@ -6,6 +6,7 @@ import com.chua.report.client.starter.function.ReportConfigValueConfiguration;
 import com.chua.report.client.starter.function.ReportXxlJobConfiguration;
 import com.chua.report.client.starter.properties.ReportClientProperties;
 import com.chua.report.client.starter.properties.ReportEndpointProperties;
+import com.chua.report.client.starter.report.OfflineReport;
 import com.chua.report.client.starter.service.ReportService;
 import com.chua.report.client.starter.setting.SettingFactory;
 import lombok.Data;
@@ -89,6 +90,7 @@ public class ReportClientConfiguration implements BeanDefinitionRegistryPostProc
     @Override
     public void destroy() throws Exception {
         SettingFactory.getInstance().close();
+        SettingFactory.getInstance().publish(new OfflineReport());
     }
 
     static class ProtocolServerFactoryBean implements FactoryBean<ProtocolServer>, AutoCloseable {
