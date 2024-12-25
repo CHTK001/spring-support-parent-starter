@@ -8,6 +8,7 @@ import com.chua.common.support.http.HttpClient;
 import com.chua.common.support.http.HttpResponse;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.net.NetAddress;
+import com.chua.common.support.net.NetUtils;
 import com.chua.common.support.protocol.ClientSetting;
 import com.chua.common.support.protocol.ProtocolSetting;
 import com.chua.common.support.protocol.protocol.Protocol;
@@ -132,8 +133,8 @@ return reportClientProperties.isOpenSelf();
                 .build());
 
         micaClient.connect();
-        this.reportTopic = reportServerPort + "#report";
-        reportProducer = (MicaSession) micaClient.createSession(reportTopic);
+        this.reportTopic = "/" + DigestUtils.md5Hex(reportServerPort + "#report");
+        reportProducer = (MicaSession) micaClient.createSession("default");
         this.report();
     }
 

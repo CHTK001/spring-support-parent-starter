@@ -4,7 +4,9 @@ import com.chua.common.support.chain.ChainContext;
 import com.chua.common.support.chain.FilterChain;
 import com.chua.common.support.chain.filter.Filter;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.protocol.request.OkResponse;
 import com.chua.common.support.protocol.request.Request;
+import com.chua.common.support.protocol.request.Response;
 import com.chua.report.client.starter.report.event.ReportEvent;
 import com.chua.report.server.starter.router.Router;
 
@@ -25,6 +27,7 @@ public class ReportFilter implements Filter {
     @Override
     public <T> void doFilter(ChainContext<T> context, FilterChain filterChain) {
         Request request = context.getRequest();
+        context.setResponse(new OkResponse(request));
         Thread.ofVirtual()
                 .name("virtual-" + topic)
                 .start(() -> {
