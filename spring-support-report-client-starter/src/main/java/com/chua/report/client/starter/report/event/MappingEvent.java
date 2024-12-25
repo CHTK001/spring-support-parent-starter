@@ -35,6 +35,10 @@ public class MappingEvent  extends TimestampEvent implements Serializable {
     private long cost;
 
     /**
+     * 城市
+     */
+    private String city;
+    /**
      * 纬度
      */
     private Double longitude;

@@ -51,6 +51,7 @@ public class UrlReport {
             geoCity = geoCityReturnResult.getData();
             mappingEvent.setLatitude(geoCity.getLongitude());
             mappingEvent.setLongitude(geoCity.getLatitude());
+            mappingEvent.setCity(geoCity.getCity());
         }
         registerRedisSearch(mappingEvent, reportEvent);
         // 通过Socket.IO发送JVM事件信息
@@ -95,6 +96,7 @@ public class UrlReport {
             document.put("cost", String.valueOf(mappingEvent.getCost()));
             document.put("timestamp", String.valueOf(System.currentTimeMillis()));
             document.put("longitude", null == mappingEvent.getLongitude() ? "0" : String.valueOf(mappingEvent.getLongitude()));
+            document.put("city", mappingEvent.getCity());
             document.put("latitude", null == mappingEvent.getLatitude() ? "0" : String.valueOf(mappingEvent.getLatitude()));
             document.put("applicationActive", reportEvent.getApplicationActive());
             document.put("applicationHost", reportEvent.getApplicationHost());
@@ -124,6 +126,7 @@ public class UrlReport {
             searchSchema.addTextField("method", 10);
             searchSchema.addTextField("address", 10);
             searchSchema.addSortableNumericField("cost");
+            searchSchema.addTextField("city", 10);
             searchSchema.addTextField("longitude", 10);
             searchSchema.addTextField("latitude", 10);
             searchSchema.addTextField("applicationName", 1);
