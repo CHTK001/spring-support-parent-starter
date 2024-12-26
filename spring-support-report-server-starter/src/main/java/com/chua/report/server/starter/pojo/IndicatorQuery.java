@@ -55,4 +55,10 @@ public class IndicatorQuery extends IdQuery {
      */
     @Schema(description = "最新; 只针对Time")
     private boolean latest;
+
+    /**
+     * 排序
+     */
+    @Schema(description = "排序")
+    private String sort;
 }

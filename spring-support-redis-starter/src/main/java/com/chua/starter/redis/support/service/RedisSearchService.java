@@ -1,9 +1,7 @@
 package com.chua.starter.redis.support.service;
 
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.redis.support.search.SearchIndex;
-import com.chua.redis.support.search.SearchQuery;
-import com.chua.redis.support.search.SearchResultItem;
+import com.chua.redis.support.search.*;
 
 import java.util.Map;
 
@@ -20,23 +18,25 @@ public interface RedisSearchService {
     /**
      * 删除Redis搜索引擎索引。
      *
-     * @param index     索引名称
+     * @param index      索引名称
      * @param expireTime 索引过期时间(MS)
      * @return 返回删除索引操作的结果
      */
     ReturnResult<Boolean> dropIndex(String index, long expireTime);
+
     /**
      * 创建Redis搜索引擎索引。
      *
-     * @param searchIndex     索引的模式字段
+     * @param searchIndex 索引的模式字段
      * @return 返回创建索引操作的结果
      */
     ReturnResult<Boolean> createIndex(SearchIndex searchIndex);
+
     /**
      * 添加文档到Redis搜索引擎。
      *
-     * @param key       文档的键
-     * @param document  要添加的文档内容
+     * @param key      文档的键
+     * @param document 要添加的文档内容
      * @return 返回添加操作的结果
      */
     ReturnResult<Boolean> addDocument(String key, Map<String, String> document);
@@ -44,10 +44,21 @@ public interface RedisSearchService {
     /**
      * 查询Redis搜索引擎中的文档。
      *
-     * @param query     查询条件
-     * @param offset    查询偏移量
-     * @param limit     查询限制数量
+     * @param query  查询条件
+     * @param offset 查询偏移量
+     * @param limit  查询限制数量
      * @return 返回查询操作的结果
      */
     ReturnResult<SearchResultItem> queryAll(SearchQuery query, int offset, int limit);
+
+    /**
+     * 聚合Redis搜索引擎中的文档。
+     *
+     * @param query          查询条件
+     * @param aggregateQuery 聚合查询条件
+     * @param offset         查询偏移量
+     * @param count          查询限制数量
+     * @return 返回聚合操作的结果
+     */
+    ReturnResult<AggregationResultItem> aggregate(SearchQuery query, AggregateQuery aggregateQuery, int offset, int count);
 }
