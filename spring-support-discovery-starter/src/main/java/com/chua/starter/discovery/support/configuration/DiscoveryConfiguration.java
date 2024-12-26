@@ -1,12 +1,12 @@
 package com.chua.starter.discovery.support.configuration;
 
-import com.chua.common.support.discovery.Discovery;
-import com.chua.common.support.discovery.DiscoveryOption;
-import com.chua.common.support.discovery.ServiceDiscovery;
+import com.chua.common.support.discovery.*;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.IdUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.project.Project;
 import com.chua.starter.discovery.support.properties.DiscoveryListProperties;
+import com.chua.starter.discovery.support.properties.DiscoveryNodeProperties;
 import com.chua.starter.discovery.support.properties.DiscoveryProperties;
 import com.chua.starter.discovery.support.service.DiscoveryService;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +24,7 @@ import org.springframework.core.env.Environment;
 
 import java.io.IOException;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -51,6 +52,10 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
                 registryBean(registry, discoveryProperties);
             }
         }
+
+        registry.registerBeanDefinition("discoveryService#embedd", BeanDefinitionBuilder.rootBeanDefinition(DiscoveryService.class)
+                .setAutowireMode(AutowireCapableBeanFactory.AUTOWIRE_BY_TYPE)
+                .getBeanDefinition());
     }
 
     private void registryBean(BeanDefinitionRegistry registry, DiscoveryProperties discoveryProperties) {
@@ -67,32 +72,38 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
             log.warn("未发现可用的 discovery 服务");
             return;
         }
+
+        List<Discovery> discoveryList = new LinkedList<>();
+        List<DiscoveryNodeProperties> node = discoveryProperties.getNode();
+        for (DiscoveryNodeProperties discoveryNodeProperties : node) {
+            discoveryList.add(registryNode(discoveryNodeProperties));
+        }
+        registry.registerBeanDefinition(
+                        discoveryProperties.getProtocol() +
+                        IdUtils.createTid(),
+                createBeanDefinitionDiscovery(serviceDiscovery, discoveryList));
+    }
+
+    private Discovery registryNode(DiscoveryNodeProperties discoveryNodeProperties) {
         Project project = Project.getInstance();
-        String serverId = discoveryProperties.getServerId();
+        String serverId = discoveryNodeProperties.getServerId();
         if(StringUtils.isEmpty(serverId)) {
             serverId = project.calcApplicationUuid();
         }
         Map<String, String> newMetaData = new LinkedHashMap<>(project.getProject());
 
-        Discovery discovery = Discovery.builder()
+        return Discovery.builder()
                 .id(serverId)
-                .uriSpec(discoveryProperties.getNamespace())
+                .uriSpec(discoveryNodeProperties.getNamespace())
                 .port(project.getApplicationPort())
                 .host(project.getApplicationHost())
-                .protocol(discoveryProperties.getProtocol())
+                .protocol(discoveryNodeProperties.getProtocol())
                 .metadata(newMetaData)
                 .build();
-        registry.registerBeanDefinition(discoveryProperties.getNamespace() + discoveryProperties.getProtocol() + project.calcApplicationUuid(),
-                createBeanDefinitionDiscovery(discoveryProperties, serviceDiscovery, discovery));
-
-        registry.registerBeanDefinition("discoveryService#embedd", BeanDefinitionBuilder.rootBeanDefinition(DiscoveryService.class)
-                        .setAutowireMode(AutowireCapableBeanFactory.AUTOWIRE_BY_TYPE)
-                .getBeanDefinition());
     }
 
-    private BeanDefinition createBeanDefinitionDiscovery(DiscoveryProperties discoveryProperties, ServiceDiscovery serviceDiscovery, Discovery discovery) {
+    private BeanDefinition createBeanDefinitionDiscovery(ServiceDiscovery serviceDiscovery, List<Discovery> discovery) {
         BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.rootBeanDefinition(ServiceDiscovertyFactoryBean.class);
-        beanDefinitionBuilder.addConstructorArgValue(discoveryProperties);
         beanDefinitionBuilder.addConstructorArgValue(serviceDiscovery);
         beanDefinitionBuilder.addConstructorArgValue(discovery);
         beanDefinitionBuilder.setDestroyMethodName("close");
@@ -104,14 +115,12 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
 
     static class ServiceDiscovertyFactoryBean implements FactoryBean<ServiceDiscovery>, AutoCloseable{
 
-        private final DiscoveryProperties discoveryProperties;
         final ServiceDiscovery serviceDiscovery;
-        private final Discovery discovery;
+        private final List<Discovery> discoveryList;
 
-        public ServiceDiscovertyFactoryBean(DiscoveryProperties discoveryProperties, ServiceDiscovery serviceDiscovery, Discovery discovery) {
-            this.discoveryProperties = discoveryProperties;
+        public ServiceDiscovertyFactoryBean(ServiceDiscovery serviceDiscovery, List<Discovery> discoveryList) {
             this.serviceDiscovery = serviceDiscovery;
-            this.discovery = discovery;
+            this.discoveryList = discoveryList;
         }
 
         @Override
@@ -127,14 +136,16 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
 
         public void start() throws IOException {
             serviceDiscovery.start();
-            if(StringUtils.isBlank(discoveryProperties.getNamespace())) {
-                return;
-            }
-            serviceDiscovery.registerService(discoveryProperties.getNamespace(), discovery);
-            if(serviceDiscovery.isSupportSubscribe()) {
-                serviceDiscovery.subscribe(discoveryProperties.getNamespace(), (serverName, discovery, event) -> {
-                    log.info("发现服务:{} -> {}", discovery, event);
-                });
+            for (Discovery discovery : discoveryList) {
+                serviceDiscovery.registerService(discovery.getUriSpec(), discovery);
+                if(serviceDiscovery.isSupportSubscribe()) {
+                    serviceDiscovery.subscribe(discovery.getUriSpec(), new ServiceDiscoveryListener() {
+                        @Override
+                        public void listen(String s, Discovery discovery, Event event) {
+                            log.info("发现服务:{} -> {}", discovery, event);
+                        }
+                    });
+                }
             }
         }
 

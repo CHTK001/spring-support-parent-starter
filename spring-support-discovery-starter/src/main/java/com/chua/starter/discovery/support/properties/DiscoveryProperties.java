@@ -2,6 +2,9 @@ package com.chua.starter.discovery.support.properties;
 
 import lombok.Data;
 
+import java.util.LinkedList;
+import java.util.List;
+
 /**
  * 发现配置
  * @author CH
@@ -11,19 +14,14 @@ import lombok.Data;
 public class DiscoveryProperties {
 
     /**
-     * 订阅服务
-     */
-    private String subscribe;
-
-    /**
-     * 服务id
-     */
-    private String serverId;
-
-    /**
      * 是否启用
      */
     private boolean enabled = true;
+
+    /**
+     * 协议
+     */
+    private String protocol;
     /**
      * 地址
      */
@@ -37,16 +35,7 @@ public class DiscoveryProperties {
      * 密码
      */
     private String password;
-    /**
-     * 协议
-     */
-    private String protocol;
 
-
-    /**
-     * uri
-     */
-    private String namespace;
     /**
      * 连接超时时间
      */
@@ -55,5 +44,10 @@ public class DiscoveryProperties {
      * 会话超时时间
      */
     private int sessionTimeoutMillis = 10_000;
+
+    /**
+     * 节点
+     */
+    private List<DiscoveryNodeProperties> node = new LinkedList<>();
 
 }

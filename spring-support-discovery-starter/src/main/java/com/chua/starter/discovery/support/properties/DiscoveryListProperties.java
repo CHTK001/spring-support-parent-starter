@@ -24,4 +24,5 @@ public class DiscoveryListProperties {
     private List<DiscoveryProperties> properties = new LinkedList<>();
 
 
+
 }
