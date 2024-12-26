@@ -79,8 +79,7 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
             discoveryList.add(registryNode(discoveryNodeProperties));
         }
         registry.registerBeanDefinition(
-                        discoveryProperties.getProtocol() +
-                        IdUtils.createTid(),
+                        discoveryProperties.getProtocol(),
                 createBeanDefinitionDiscovery(serviceDiscovery, discoveryList));
     }
 
