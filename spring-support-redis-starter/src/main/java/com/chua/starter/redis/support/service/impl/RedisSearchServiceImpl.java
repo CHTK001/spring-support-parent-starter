@@ -8,9 +8,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.redis.support.client.RedisChannelSession;
 import com.chua.redis.support.client.RedisClient;
 import com.chua.redis.support.client.RedisSearch;
-import com.chua.redis.support.search.SearchIndex;
-import com.chua.redis.support.search.SearchQuery;
-import com.chua.redis.support.search.SearchResultItem;
+import com.chua.redis.support.search.*;
 import com.chua.starter.redis.support.service.RedisSearchService;
 import org.springframework.beans.factory.annotation.Autowired;
 import redis.clients.jedis.Jedis;
@@ -135,5 +133,22 @@ public class RedisSearchServiceImpl implements RedisSearchService {
 
         RedisSearch redisSearch = redisSession.getRedisSearch();
         return ReturnResult.ok(redisSearch.queryAll(query, offset, limit));
+    }
+
+    @Override
+    public ReturnResult<AggregationResultItem> aggregate(SearchQuery query, AggregateQuery aggregateQuery, int offset, int count) {
+        if(null == redisClient) {
+            return ReturnResult.error("redisClient未初始化");
+        }
+
+        RedisChannelSession redisSession  = (RedisChannelSession) redisClient.getSession();
+
+        if(!redisSession.checkModule("search")) {
+            return ReturnResult.error("模块未加载");
+        }
+
+
+        RedisSearch redisSearch = redisSession.getRedisSearch();
+        return ReturnResult.ok(redisSearch.aggregate(query, aggregateQuery, offset, count));
     }
 }
