@@ -6,6 +6,6 @@
         FROM pay_merchant_config_wechat pmcw
             INNER JOIN pay_merchant pm ON pm.pay_merchant_id = pmcw.pay_merchant_id
         WHERE pm.pay_merchant_code = #{payMerchantCode}
-          AND pmcw.pay_merchant_config_wechat_trade_type = #{payMerchantTradeType}
+          AND pmcw.pay_merchant_config_wechat_trade_type = #{payMerchantOrderTradeType}
     </select>
 </mapper>

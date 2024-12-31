@@ -9,6 +9,7 @@ import com.chua.starter.pay.support.mapper.PayMerchantMapper;
 import com.chua.starter.pay.support.mapper.PayMerchantOrderMapper;
 import com.chua.starter.pay.support.pojo.OrderCallbackRequest;
 import com.chua.starter.pay.support.pojo.WechatOrderCallbackRequest;
+import com.chua.starter.pay.support.service.PayMerchantService;
 import com.wechat.pay.java.core.RSAAutoCertificateConfig;
 import com.wechat.pay.java.core.notification.NotificationConfig;
 import com.wechat.pay.java.core.notification.NotificationParser;
@@ -33,9 +34,19 @@ public class WebchatCallbackNotificationParser implements CallbackNotificationPa
     private final String wechatpaySignatureType;
     private final OrderCallbackRequest request = new OrderCallbackRequest();
     private final WechatOrderCallbackRequest wechatOrderCallbackRequest;
+    private final String payMerchantOrderId;
+    private final String payMerchantOrderCode;
     private PayMerchantOrder payMerchantOrder;
 
-    public WebchatCallbackNotificationParser(PayMerchantConfigWechatMapper payMerchantConfigWechatMapper, String requestBody, String wechatSignature, String wechatpayNonce, String wechatPaySerial, String wechatTimestamp, String wechatpaySignatureType) {
+    public WebchatCallbackNotificationParser(PayMerchantConfigWechatMapper payMerchantConfigWechatMapper,
+                                             String requestBody,
+                                             String wechatSignature,
+                                             String wechatpayNonce,
+                                             String wechatPaySerial,
+                                             String wechatTimestamp,
+                                             String wechatpaySignatureType,
+                                             String payMerchantOrderId,
+                                             String payMerchantOrderCode) {
         this.payMerchantConfigWechatMapper = payMerchantConfigWechatMapper;
         this.requestBody = requestBody;
         this.wechatSignature = wechatSignature;
@@ -44,10 +55,11 @@ public class WebchatCallbackNotificationParser implements CallbackNotificationPa
         this.wechatTimestamp = wechatTimestamp;
         this.wechatpaySignatureType = wechatpaySignatureType;
         this.wechatOrderCallbackRequest = Json.fromJson(requestBody, WechatOrderCallbackRequest.class);
+        this.payMerchantOrderId = payMerchantOrderId;
+        this.payMerchantOrderCode = payMerchantOrderCode;
         request.setStatus("TRANSACTION.SUCCESS".equals(wechatOrderCallbackRequest.getEventType()) ? OrderCallbackRequest.Status.SUCCESS : OrderCallbackRequest.Status.FAILURE);
-        request.setId(wechatOrderCallbackRequest.getId());
-        request.setSignNonce(wechatpayNonce);
-        request.setTransactionId(wechatSignature);
+        request.setDataId(payMerchantOrderCode);
+        request.setOutTradeId(payMerchantOrderCode);
     }
 
     @Override
@@ -62,16 +74,16 @@ public class WebchatCallbackNotificationParser implements CallbackNotificationPa
 
     @Override
     public String id() {
-        return request.getId();
+        return request.getDataId();
     }
 
     @Override
-    public boolean parser(PayMerchantMapper payMerchantMapper, PayMerchantOrderMapper payMerchantOrderMapper) {
+    public boolean parser(PayMerchantService payMerchantService, PayMerchantOrderMapper payMerchantOrderMapper) {
         this.payMerchantOrder = CallbackNotificationParser.getPayMerchantOrder(payMerchantOrderMapper, getRequest());
         if(null == payMerchantOrder) {
             return false;
         }
-        PayMerchantConfigWechat payMerchantConfigWechat = payMerchantConfigWechatMapper.getConfig(payMerchantOrder.getPayMerchantCode(), payMerchantOrder.getPayMerchantOrderTradeType());
+        PayMerchantConfigWechat payMerchantConfigWechat = payMerchantConfigWechatMapper.getConfig(payMerchantOrder.getPayMerchantCode(), payMerchantOrder.getPayMerchantOrderTradeType().replace("wechat_", ""));
         if(null == payMerchantConfigWechat) {
             return false;
         }

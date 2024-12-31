@@ -8,11 +8,11 @@ import com.chua.starter.pay.support.entity.PayMerchant;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.handler.PayConfigDetector;
 import com.chua.starter.pay.support.handler.PayOrderRefundCreator;
-import com.chua.starter.pay.support.mapper.PayMerchantMapper;
 import com.chua.starter.pay.support.mapper.PayMerchantOrderMapper;
 import com.chua.starter.pay.support.pojo.PayRefundRequest;
 import com.chua.starter.pay.support.result.PayRefundResponse;
 import com.chua.starter.pay.support.result.PayRefundStatus;
+import com.chua.starter.pay.support.service.PayMerchantService;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -22,12 +22,12 @@ import org.springframework.transaction.support.TransactionTemplate;
  */
 public class RefundOrder {
     private final TransactionTemplate transactionTemplate;
-    private final PayMerchantMapper payMerchantMapper;
+    private final PayMerchantService payMerchantService;
     private final PayMerchantOrderMapper payMerchantOrderMapper;
 
-    public RefundOrder(TransactionTemplate transactionTemplate, PayMerchantMapper payMerchantMapper, PayMerchantOrderMapper payMerchantOrderMapper) {
+    public RefundOrder(TransactionTemplate transactionTemplate, PayMerchantService payMerchantService, PayMerchantOrderMapper payMerchantOrderMapper) {
         this.transactionTemplate = transactionTemplate;
-        this.payMerchantMapper = payMerchantMapper;
+        this.payMerchantService = payMerchantService;
         this.payMerchantOrderMapper = payMerchantOrderMapper;
     }
 
@@ -95,6 +95,6 @@ public class RefundOrder {
      * @return 商户
      */
     private PayMerchant getPayMerchant(PayMerchantOrder payMerchantOrder, boolean force) {
-        return payMerchantMapper.getMerchant(payMerchantOrder.getPayMerchantCode(), force);
+        return payMerchantService.getOneByCode(payMerchantOrder.getPayMerchantCode(), force);
     }
 }

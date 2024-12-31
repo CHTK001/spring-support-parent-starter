@@ -11,10 +11,10 @@ import com.chua.starter.pay.support.entity.PayMerchant;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.handler.PayConfigDetector;
 import com.chua.starter.pay.support.handler.PayOrderCreator;
-import com.chua.starter.pay.support.mapper.PayMerchantMapper;
 import com.chua.starter.pay.support.mapper.PayMerchantOrderMapper;
 import com.chua.starter.pay.support.pojo.PayOrderRequest;
 import com.chua.starter.pay.support.result.PayOrderResponse;
+import com.chua.starter.pay.support.service.PayMerchantService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -26,17 +26,17 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class CreateOrder {
 
     private final TransactionTemplate transactionTemplate;
-    private final PayMerchantMapper payMerchantMapper;
+    private final PayMerchantService payMerchantService;
     private final PayMerchantOrderMapper payMerchantOrderMapper;
 
-    public CreateOrder(TransactionTemplate transactionTemplate, PayMerchantMapper payMerchantMapper, PayMerchantOrderMapper payMerchantOrderMapper) {
+    public CreateOrder(TransactionTemplate transactionTemplate, PayMerchantService payMerchantService, PayMerchantOrderMapper payMerchantOrderMapper) {
         this.transactionTemplate = transactionTemplate;
-        this.payMerchantMapper = payMerchantMapper;
+        this.payMerchantService = payMerchantService;
         this.payMerchantOrderMapper = payMerchantOrderMapper;
     }
 
     public ReturnResult<PayOrderResponse> create(PayOrderRequest request) {
-        PayMerchant payMerchant = payMerchantMapper.selectOne(Wrappers.<PayMerchant>lambdaQuery().eq(PayMerchant::getPayMerchantCode, request.getMerchantCode()));
+        PayMerchant payMerchant = payMerchantService.getOneByCode(request.getMerchantCode());
         if(null == payMerchant) {
             return ReturnResult.illegal("商户不存在");
         }
@@ -83,8 +83,8 @@ public class CreateOrder {
                 return ReturnResult.illegal("当前系统不支持该"+ payMerchantOrder.getPayMerchantOrderTradeType() +"下单方式");
             }
 
-            ReturnResult<PayOrderResponse> handle = payOrderCreator.handle(payMerchantOrder);
             payMerchantOrderMapper.insert(payMerchantOrder);
+            ReturnResult<PayOrderResponse> handle = payOrderCreator.handle(payMerchantOrder);
             if(handle.isOk()) {
                 return handle;
             }

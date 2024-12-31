@@ -16,19 +16,11 @@ public class OrderCallbackRequest implements Serializable {
     /**
      * 订单号
      */
-    private String id;
+    private String dataId;
     /**
      * 业务订单号
      */
     private String outTradeId;
-    /**
-     * 签名中的随机数
-     */
-    private String signNonce;
-    /**
-     * 签名中时间戳
-     */
-    private String signTimestamp;
     /**
      * 状态
      */
@@ -43,13 +35,6 @@ public class OrderCallbackRequest implements Serializable {
      * 错误信息
      */
     private String message;
-
-    /**
-     * 判断参数是否正确
-     */
-    public boolean isValid() {
-        return StringUtils.isNotBlank(signNonce) && StringUtils.isNotBlank(signTimestamp);
-    }
 
 
     public enum Status {
