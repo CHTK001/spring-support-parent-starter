@@ -47,7 +47,7 @@ public class RefundOrder {
             return ReturnResult.error("订单正在退款");
         }
 
-        if("4001".equals(payMerchantOrderStatus)) {
+        if(payMerchantOrderStatus.startsWith("500")) {
             return ReturnResult.error("订单已关闭");
         }
 
@@ -98,7 +98,13 @@ public class RefundOrder {
             payMerchantOrder.setPayMerchantOrderRefundSuccessTime(payRefundResponse.getSuccessTime());
             PayRefundStatus refundStatus = payRefundResponse.getStatus();
             if(refundStatus == PayRefundStatus.CLOSED) {
-                payMerchantOrder.setPayMerchantOrderStatus("5001");
+                payMerchantOrder.setPayMerchantOrderStatus("5000");
+            } else if(refundStatus == PayRefundStatus.PROCESSING) {
+                payMerchantOrder.setPayMerchantOrderStatus("4000");
+            } else if(refundStatus == PayRefundStatus.SUCCESS) {
+                payMerchantOrder.setPayMerchantOrderStatus("4002");
+            } else if(refundStatus == PayRefundStatus.ABNORMAL) {
+                payMerchantOrder.setPayMerchantOrderStatus("4003");
             }
             payMerchantOrderMapper.updateById(payMerchantOrder);
             return handle;
