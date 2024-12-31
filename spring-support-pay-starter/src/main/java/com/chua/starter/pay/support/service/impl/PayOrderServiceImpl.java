@@ -5,6 +5,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.JakartaValidationUtils;
+import com.chua.starter.pay.support.configuration.PayListenerService;
 import com.chua.starter.pay.support.constant.PayConstant;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.handler.CallbackNotificationParser;
@@ -18,7 +19,6 @@ import com.chua.starter.pay.support.result.PayRefundResponse;
 import com.chua.starter.pay.support.result.PaySignResponse;
 import com.chua.starter.pay.support.service.PayMerchantService;
 import com.chua.starter.pay.support.service.PayOrderService;
-import com.chua.starter.pay.support.service.payMerchantOrderCallbackService;
 import com.chua.starter.pay.support.sign.CreateSign;
 import lombok.RequiredArgsConstructor;
 import org.redisson.api.RLock;
@@ -41,6 +41,7 @@ public class PayOrderServiceImpl implements PayOrderService {
     final PayMerchantService payMerchantService;
     final PayMerchantOrderMapper payMerchantOrderMapper;
     final RedissonClient redissonClient;
+    final PayListenerService payListenerService;
     final TransactionTemplate transactionTemplate;
     final ApplicationContext applicationContext;
 
@@ -87,11 +88,7 @@ public class PayOrderServiceImpl implements PayOrderService {
                 return updateOrder.failure(request, parser.getOrder());
             }
 
-            payMerchantOrderCallbackService payMerchantOrderCallbackService = SpringBeanUtils.getBean(payMerchantOrderCallbackService.class);
-            if(null != payMerchantOrderCallbackService) {
-                payMerchantOrderCallbackService.listen(parser.getOrder());
-            }
-
+            payListenerService.listen(parser.getOrder());
             return updateOrder.success(request, parser.getOrder());
         } catch (Exception e) {
             throw new RuntimeException("通知失败，订单处理异常");

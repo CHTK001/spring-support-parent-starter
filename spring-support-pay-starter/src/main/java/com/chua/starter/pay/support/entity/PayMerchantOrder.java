@@ -92,8 +92,8 @@ public class PayMerchantOrder extends SysBase implements Serializable {
 
              0000: 新建;
              1000:待支付;
+             1003:支付失败(订单创建失败);
              2000:支付成功;
-             2003:支付失败(订单创建失败);
              2005:支付成功(订单解析失败)
              3000:订单超时
              4000:退款中;
@@ -101,6 +101,7 @@ public class PayMerchantOrder extends SysBase implements Serializable {
              4003:退款失败;
              5000:订单已关闭
              5001:订单已关闭(手动)
+             5002:订单取消
          </code>
      </pre>
      */
@@ -108,15 +109,16 @@ public class PayMerchantOrder extends SysBase implements Serializable {
     @Schema(description = "订单状态; " +
             "0000: 新建; " +
             "1000:待支付; " +
+            "1003:支付失败(订单创建失败);" +
             "2000:支付成功;" +
-            "2003:支付失败(订单创建失败);" +
             "2005:支付成功(订单解析失败);" +
             "3000:订单超时;" +
             "4000:退款中;" +
             "4002:退款成功；" +
             "4003:退款失败;" +
             "5000:订单已关闭;" +
-            "5001:订单已关闭(手动)"
+            "5001:订单已关闭(手动)" +
+            "5002:订单取消"
             )
     private String payMerchantOrderStatus;
 
