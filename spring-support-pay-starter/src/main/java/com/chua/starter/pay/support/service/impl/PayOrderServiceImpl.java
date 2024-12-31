@@ -7,7 +7,6 @@ import com.chua.starter.common.support.utils.JakartaValidationUtils;
 import com.chua.starter.pay.support.constant.PayConstant;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.handler.CallbackNotificationParser;
-import com.chua.starter.pay.support.mapper.PayMerchantMapper;
 import com.chua.starter.pay.support.mapper.PayMerchantOrderMapper;
 import com.chua.starter.pay.support.order.CreateOrder;
 import com.chua.starter.pay.support.order.RefundOrder;
@@ -16,6 +15,7 @@ import com.chua.starter.pay.support.pojo.*;
 import com.chua.starter.pay.support.result.PayOrderResponse;
 import com.chua.starter.pay.support.result.PayRefundResponse;
 import com.chua.starter.pay.support.result.PaySignResponse;
+import com.chua.starter.pay.support.service.PayMerchantService;
 import com.chua.starter.pay.support.service.PayOrderService;
 import com.chua.starter.pay.support.sign.CreateSign;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +35,7 @@ import org.springframework.validation.Errors;
 @RequiredArgsConstructor
 public class PayOrderServiceImpl implements PayOrderService {
 
-    final PayMerchantMapper payMerchantMapper;
+    final PayMerchantService payMerchantService;
     final PayMerchantOrderMapper payMerchantOrderMapper;
     final RedissonClient redissonClient;
     final TransactionTemplate transactionTemplate;
@@ -54,7 +54,7 @@ public class PayOrderServiceImpl implements PayOrderService {
 
         rLock.lock();
         try {
-            return new CreateOrder(transactionTemplate, payMerchantMapper, payMerchantOrderMapper).create(request);
+            return new CreateOrder(transactionTemplate, payMerchantService, payMerchantOrderMapper).create(request);
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
@@ -73,19 +73,16 @@ public class PayOrderServiceImpl implements PayOrderService {
 
         rLock.lock();
         try {
-            if (!parser.parser(payMerchantMapper, payMerchantOrderMapper)) {
+            if (!parser.parser(payMerchantService, payMerchantOrderMapper)) {
                 return new WechatOrderCallbackResponse("FAIL", "订单不存在", null);
             }
 
             OrderCallbackRequest request = parser.getRequest();
             if (request.getStatus() == OrderCallbackRequest.Status.FAILURE) {
-                return new UpdateOrder(transactionTemplate, payMerchantMapper, payMerchantOrderMapper).failure(request, parser.getOrder());
+                return new UpdateOrder(transactionTemplate, payMerchantService, payMerchantOrderMapper).failure(request, parser.getOrder());
             }
 
-            if (!request.isValid()) {
-                return new WechatOrderCallbackResponse("FAIL", "订单不存在", null);
-            }
-            return new UpdateOrder(transactionTemplate, payMerchantMapper, payMerchantOrderMapper).update(request, parser.getOrder());
+            return new UpdateOrder(transactionTemplate, payMerchantService, payMerchantOrderMapper).update(request, parser.getOrder());
         } catch (Exception e) {
             throw new RuntimeException("通知失败，订单处理异常");
         } finally {
@@ -102,7 +99,7 @@ public class PayOrderServiceImpl implements PayOrderService {
 
         rLock.lock();
         try {
-            return new RefundOrder(transactionTemplate, payMerchantMapper, payMerchantOrderMapper).update(refundRequest);
+            return new RefundOrder(transactionTemplate, payMerchantService, payMerchantOrderMapper).update(refundRequest);
         } catch (Exception e) {
             throw new RuntimeException("退款操作失败，请稍后重试");
         } finally {
@@ -128,7 +125,7 @@ public class PayOrderServiceImpl implements PayOrderService {
         }
         rLock.lock();
         try {
-            return new CreateSign(transactionTemplate, payMerchantMapper, payMerchantOrderMapper).create(request, payMerchantOrder);
+            return new CreateSign(transactionTemplate, payMerchantService, payMerchantOrderMapper).create(request, payMerchantOrder);
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
