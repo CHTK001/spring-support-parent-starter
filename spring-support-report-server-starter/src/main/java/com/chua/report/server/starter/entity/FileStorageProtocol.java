@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.common.support.function.Splitter;
+import com.chua.common.support.utils.ObjectUtils;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -12,6 +14,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.util.Set;
 
 /**
  *
@@ -155,9 +158,39 @@ public class FileStorageProtocol implements Serializable {
      * 是否开启水印；0:不开启
      */
     @TableField(value = "file_storage_protocol_watermark_open")
-    @ApiModelProperty(value = "是否开启水印；0:不开启")
-    @Schema(description = "是否开启水印；0:不开启")
+    @ApiModelProperty(value = "是否开启水印；0:不开启; 1: 下载水印;2:预览水印;3: 两者")
+    @Schema(description = "是否开启水印；0:不开启; 1: 下载水印;2:预览水印;3: 两者")
     private Integer fileStorageProtocolWatermarkOpen;
+    /**
+     * 是否开启远程服务器；0:不开启
+     */
+    @TableField(value = "file_storage_protocol_remote_open")
+    @ApiModelProperty(value = "是否开启远程服务器；0:不开启")
+    @Schema(description = "是否开启远程服务器；0:不开启")
+    private Integer fileStorageProtocolRemoteOpen;
+    /**
+     * 是否转化数据缓存；0:不开启
+     */
+    @TableField(value = "file_storage_protocol_transfer_cache_open")
+    @ApiModelProperty(value = "是否转化数据缓存；0:不开启")
+    @Schema(description = "是否转化数据缓存；0:不开启")
+    private Integer fileStorageProtocolTransferCacheOpen;
+
+    /**
+     * 转化数据缓存时间
+     */
+    @TableField(value = "file_storage_protocol_transfer_cache_time")
+    @ApiModelProperty(value = "转化数据缓存时间(s)")
+    @Schema(description = "转化数据缓存时间(s)")
+    private Integer fileStorageProtocolTransferCacheTime;
+
+    /**
+     * 转化数据缓存路径
+     */
+    @TableField(value = "file_storage_protocol_transfer_cache_path")
+    @ApiModelProperty(value = "转化数据缓存路径")
+    @Schema(description = "转化数据缓存路径")
+    private String fileStorageProtocolTransferCachePath;
 
     /**
      * 水印内容
@@ -225,4 +258,16 @@ public class FileStorageProtocol implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    public String[] getFullFileStorageProtocolPlugins() {
+        Set<String> strings = Splitter.on(",").omitEmptyStrings().trimResults().splitToSet(getFileStorageProtocolPlugins());
+        return strings.toArray(new String[0]);
+    }
+
+    public String[] getFullFileStorageProtocolSetting() {
+        Set<String> strings = Splitter.on(",").omitEmptyStrings().trimResults().splitToSet(getFileStorageProtocolSetting());
+        if(ObjectUtils.equals(getFileStorageProtocolRemoteOpen(), 1)) {
+            strings.add("url");
+        }
+        return strings.toArray(new String[0]);
+    }
 }

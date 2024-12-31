@@ -134,15 +134,14 @@ public class FileStorageProtocolServiceImpl extends ServiceImpl<FileStorageProto
     private FileStorageChainFilter.FileStorageSetting createSetting(FileStorageProtocol fileStorageProtocol) {
         return FileStorageChainFilter.FileStorageSetting.builder()
                 .webjars(true)
-                .remoteFile(true)
                 .openPlugin(null != fileStorageProtocol.getFileStorageProtocolPluginOpen() && fileStorageProtocol.getFileStorageProtocolPluginOpen() == 1)
                 .openSetting(null != fileStorageProtocol.getFileStorageProtocolSettingOpen() && fileStorageProtocol.getFileStorageProtocolSettingOpen() == 1)
                 .openRange(null != fileStorageProtocol.getFileStorageProtocolRangeOpen() && fileStorageProtocol.getFileStorageProtocolRangeOpen() == 1)
                 .openPreview(null != fileStorageProtocol.getFileStorageProtocolPreviewOrDownload() && (fileStorageProtocol.getFileStorageProtocolPreviewOrDownload() == 0 || fileStorageProtocol.getFileStorageProtocolPreviewOrDownload() == 1))
                 .openDownload(null != fileStorageProtocol.getFileStorageProtocolPreviewOrDownload() && (fileStorageProtocol.getFileStorageProtocolPreviewOrDownload() == 0 || fileStorageProtocol.getFileStorageProtocolPreviewOrDownload() == 2))
                 .downloadUserAgent(StringUtils.split(fileStorageProtocol.getFileStorageProtocolUa(), ","))
-                .plugins(StringUtils.split(fileStorageProtocol.getFileStorageProtocolPlugins(), ","))
-                .settings(StringUtils.split(fileStorageProtocol.getFileStorageProtocolSetting(), ","))
+                .plugins(fileStorageProtocol.getFullFileStorageProtocolPlugins())
+                .settings(fileStorageProtocol.getFullFileStorageProtocolSetting() )
                 .watermark(fileStorageProtocol.getFileStorageProtocolWatermarkContent())
                 .watermarkWay(WatermarkUtils.WatermarkWay.valueOf(StringUtils.defaultString(fileStorageProtocol.getFileStorageProtocolWatermarkWay(), "NORMAL")))
                 .watermarkWidth(null == fileStorageProtocol.getFileStorageProtocolWatermarkWidth() ? 30 : fileStorageProtocol.getFileStorageProtocolWatermarkWidth())
@@ -151,7 +150,13 @@ public class FileStorageProtocolServiceImpl extends ServiceImpl<FileStorageProto
                 .watermarkY(null == fileStorageProtocol.getFileStorageProtocolWatermarkY() ? 0 : fileStorageProtocol.getFileStorageProtocolWatermarkY())
                 .watermarkAlpha(null == fileStorageProtocol.getFileStorageProtocolWatermarkAlpha() ? 0 : fileStorageProtocol.getFileStorageProtocolWatermarkAlpha() / 100f)
                 .watermarkColor(StringUtils.defaultString(fileStorageProtocol.getFileStorageProtocolWatermarkColor(), "#000000"))
-                .openWatermark(null != fileStorageProtocol.getFileStorageProtocolWatermarkOpen() && fileStorageProtocol.getFileStorageProtocolWatermarkOpen() == 1)
+                .watermarkStatus(ObjectUtils.defaultIfNull(fileStorageProtocol.getFileStorageProtocolWatermarkOpen(), 0) )
+                .remoteFile(ObjectUtils.equal(fileStorageProtocol.getFileStorageProtocolRemoteOpen(), 1))
+                .cacheSetting(new FileStorageChainFilter.FileStorageCacheSetting(
+                        ObjectUtils.equals(fileStorageProtocol.getFileStorageProtocolTransferCacheOpen(), 1),
+                        StringUtils.defaultString(fileStorageProtocol.getFileStorageProtocolTransferCachePath(), "./cache"),
+                        fileStorageProtocol.getFileStorageProtocolTransferCacheTime()
+                ))
                 .build();
     }
 
