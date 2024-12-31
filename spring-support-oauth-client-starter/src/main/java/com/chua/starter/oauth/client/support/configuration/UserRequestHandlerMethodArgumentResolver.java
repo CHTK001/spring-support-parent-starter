@@ -7,10 +7,11 @@ import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.annotation.UserValue;
-import com.chua.starter.oauth.client.support.exception.OauthException;
+import com.chua.starter.oauth.client.support.entity.RoleJudge;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.chua.starter.oauth.client.support.web.WebRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.Setter;
 import org.springframework.beans.factory.config.BeanExpressionContext;
 import org.springframework.beans.factory.config.BeanExpressionResolver;
@@ -24,9 +25,7 @@ import org.springframework.web.context.request.RequestScope;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
-import jakarta.servlet.http.HttpServletRequest;
 import java.lang.reflect.Parameter;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -74,13 +73,30 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
     }
 
     @Override
-    public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer, NativeWebRequest webRequest, WebDataBinderFactory binderFactory) throws Exception {
-        UserValue requestValue = parameter.getParameterAnnotation(UserValue.class);
-        Map<String, Object> cacheValue = analysisAsParamMap(webRequest);
-        Parameter parameter1 = parameter.getParameter();
-        String paramName = StringUtils.defaultString(requestValue.name(), StringUtils.defaultString(parameter1.getName(), parameter.getParameterName()));
+    @SuppressWarnings("ALL")
+    public Object resolveArgument(MethodParameter methodParameter, ModelAndViewContainer mavContainer, NativeWebRequest webRequest, WebDataBinderFactory binderFactory) throws Exception {
+        UserValue requestValue = methodParameter.getParameterAnnotation(UserValue.class);
+        WebRequest webRequest1 = new WebRequest(
+                this.webRequest.getAuthProperties(),
+                webRequest.getNativeRequest(HttpServletRequest.class), null);
+        UserResume userResume = analysis(webRequest1);
+        Parameter parameter = methodParameter.getParameter();
+        Class<?> parameterType = parameter.getType();
 
-        Class<?> parameterType = parameter.getParameterType();
+        if(RoleJudge.class.isAssignableFrom(parameterType)) {
+            return new RoleJudge(userResume.getRoles());
+        }
+
+        if(UserResume.class.isAssignableFrom(parameterType)) {
+            return userResume;
+        }
+        String paramName = StringUtils.defaultString(requestValue.name(), StringUtils.defaultString(parameter.getName(), methodParameter.getParameterName()));
+        if("userId".equalsIgnoreCase(paramName)) {
+            return userResume.getUserId();
+        }
+
+        Map<String, Object> cacheValue = asMap(webRequest, userResume);
+
         Object o = cacheValue.get(paramName);
 
         if (null == o) {
@@ -128,6 +144,25 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
         return convert;
     }
 
+    /**
+     * 转为map
+     *
+     * @param returnResult 结果
+     * @param webRequest
+     * @return 结果
+     */
+    @SuppressWarnings("ALL")
+    private Map<String, Object> asMap(NativeWebRequest webRequest, UserResume returnResult) {
+        Map<String , Object> rs = new LinkedHashMap<>();
+        rs.putAll(BeanMap.create(returnResult));
+        rs.put("all", returnResult);
+        rs.put("token", StringUtils.defaultString(
+                webRequest.getHeader(this.webRequest.getAuthProperties().getTokenName()),
+                CookieUtil.getValue(RequestUtils.getRequest(), "x-oauth-cookie")
+        ));
+        return rs;
+    }
+
     private Object resolveEmbeddedValuesAndExpressions(String value) {
         if (this.configurableBeanFactory == null || this.expressionContext == null) {
             return value;
@@ -146,24 +181,9 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
      * @param webRequest 请求参数
      * @return 结果
      */
-    private Map<String, Object> analysisAsParamMap(NativeWebRequest webRequest) {
-        WebRequest webRequest1 = new WebRequest(
-                this.webRequest.getAuthProperties(),
-                webRequest.getNativeRequest(HttpServletRequest.class), null);
+    private UserResume analysis(WebRequest webRequest) {
+        AuthenticationInformation authentication = webRequest.authentication();
+        return authentication.getReturnResult();
 
-        Map<String, Object> rs = new LinkedHashMap<>();
-        rs.put("token", StringUtils.defaultString(
-                webRequest.getHeader(this.webRequest.getAuthProperties().getTokenName()),
-                        CookieUtil.getValue(RequestUtils.getRequest(), "x-oauth-cookie")
-                ));
-
-        AuthenticationInformation authentication = webRequest1.authentication();
-        UserResume returnResult = authentication.getReturnResult();
-        if(null == returnResult || StringUtils.isBlank(returnResult.getUserId())) {
-            throw new OauthException("账号信息不存在, 请重新登录");
-        }
-        rs.putAll(BeanMap.create(returnResult));
-        rs.put("all", returnResult);
-        return rs;
     }
 }

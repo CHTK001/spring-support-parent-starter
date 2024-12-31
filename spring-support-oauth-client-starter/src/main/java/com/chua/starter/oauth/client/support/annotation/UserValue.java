@@ -2,7 +2,6 @@ package com.chua.starter.oauth.client.support.annotation;
 
 
 import org.springframework.core.annotation.AliasFor;
-import org.springframework.web.bind.annotation.ValueConstants;
 
 import java.lang.annotation.*;
 
@@ -49,4 +48,5 @@ public @interface UserValue {
      * {@code false}.
      */
     String defaultValue() default "";
+
 }
