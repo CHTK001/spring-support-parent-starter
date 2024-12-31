@@ -46,6 +46,9 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         DiscoveryListProperties properties = Binder.get(environment).bindOrCreate(DiscoveryListProperties.PRE, DiscoveryListProperties.class);
+        if(!properties.isEnable()) {
+            return;
+        }
         List<DiscoveryProperties> properties1 = properties.getProperties();
         for (DiscoveryProperties discoveryProperties : properties1) {
             if(discoveryProperties.isEnabled()) {
