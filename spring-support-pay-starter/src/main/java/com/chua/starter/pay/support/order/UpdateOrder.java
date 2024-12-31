@@ -2,10 +2,10 @@ package com.chua.starter.pay.support.order;
 
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.handler.CallbackNotificationParser;
-import com.chua.starter.pay.support.mapper.PayMerchantMapper;
 import com.chua.starter.pay.support.mapper.PayMerchantOrderMapper;
 import com.chua.starter.pay.support.pojo.OrderCallbackRequest;
 import com.chua.starter.pay.support.pojo.WechatOrderCallbackResponse;
+import com.chua.starter.pay.support.service.PayMerchantService;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -16,12 +16,12 @@ import org.springframework.transaction.support.TransactionTemplate;
  */
 public class UpdateOrder {
     private final TransactionTemplate transactionTemplate;
-    private final PayMerchantMapper payMerchantMapper;
+    private final PayMerchantService payMerchantService;
     private final PayMerchantOrderMapper payMerchantOrderMapper;
 
-    public UpdateOrder(TransactionTemplate transactionTemplate, PayMerchantMapper payMerchantMapper, PayMerchantOrderMapper payMerchantOrderMapper) {
+    public UpdateOrder(TransactionTemplate transactionTemplate, PayMerchantService payMerchantService, PayMerchantOrderMapper payMerchantOrderMapper) {
         this.transactionTemplate = transactionTemplate;
-        this.payMerchantMapper = payMerchantMapper;
+        this.payMerchantService = payMerchantService;
         this.payMerchantOrderMapper = payMerchantOrderMapper;
     }
 
