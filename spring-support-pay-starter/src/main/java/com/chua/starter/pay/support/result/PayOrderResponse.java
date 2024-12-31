@@ -23,4 +23,10 @@ public class PayOrderResponse {
      */
     @Schema(description = "支付地址")
     private String url;
+
+    /**
+     * 订单编号
+     */
+    @Schema(description = "订单编号")
+    private String payMerchantCode;
 }

@@ -1,9 +1,6 @@
 package com.chua.starter.pay.support.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import com.chua.starter.mybatis.pojo.SysBase;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -157,6 +154,7 @@ public class PayMerchantOrder extends SysBase implements Serializable {
     @TableField(value = "pay_merchant_order_version")
     @ApiModelProperty(value = "锁")
     @Schema(description = "锁")
+    @Version
     private Integer payMerchantOrderVersion;
 
     /**
@@ -177,6 +175,18 @@ public class PayMerchantOrder extends SysBase implements Serializable {
     @Size(max = 255, message = "支付服务提供商订单号最大长度要小于 255")
     private String payMerchantOrderTransactionId;
 
+    /**
+     * 签名随机串
+     */
+    @TableField(value = "pay_merchant_order_sign_nonce")
+    @ApiModelProperty(value = "签名随机串")
+    private String payMerchantOrderSignNonce;
+    /**
+     * 签名时间戳
+     */
+    @TableField(value = "pay_merchant_order_sign_timestamp")
+    @ApiModelProperty(value = "签名时间戳")
+    private String payMerchantOrderSignTimestamp;
     /**
      * 退款理由
      */

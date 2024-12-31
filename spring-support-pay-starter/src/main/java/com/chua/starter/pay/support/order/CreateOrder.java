@@ -78,13 +78,13 @@ public class CreateOrder {
         payMerchantOrder.setPayMerchantOrderTotalPrice(request.getTotalPrice());
         payMerchantOrder.setPayMerchantOrderStatus("1000");
         return transactionTemplate.execute(status -> {
-            payMerchantOrderMapper.insert(payMerchantOrder);
             PayOrderCreator payOrderCreator = ServiceProvider.of(PayOrderCreator.class).getNewExtension(tradeType, checked.getData());
             if(null == payOrderCreator) {
                 return ReturnResult.illegal("当前系统不支持该"+ payMerchantOrder.getPayMerchantOrderTradeType() +"下单方式");
             }
 
             ReturnResult<PayOrderResponse> handle = payOrderCreator.handle(payMerchantOrder);
+            payMerchantOrderMapper.insert(payMerchantOrder);
             if(handle.isOk()) {
                 return handle;
             }

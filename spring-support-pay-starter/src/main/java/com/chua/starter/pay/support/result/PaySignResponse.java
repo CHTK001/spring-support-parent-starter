@@ -24,5 +24,5 @@ public class PaySignResponse {
     /**
      * 时间戳，用于生成签名，表示支付请求的生成时间
      */
-    private long timeStamp;
+    private Long timeStamp;
 }

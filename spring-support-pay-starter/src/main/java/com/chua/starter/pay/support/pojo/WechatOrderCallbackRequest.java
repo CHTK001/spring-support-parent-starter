@@ -1,97 +1,84 @@
 package com.chua.starter.pay.support.pojo;
 
 
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
-
-import java.io.Serializable;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 
 /**
  * 微信支付通知回调接收
+ *
  * @author Administrator
  */
+@EqualsAndHashCode(callSuper = true)
+@NoArgsConstructor
 @JacksonXmlRootElement
-@ApiModel("微信支付通知回调接收")
+@ApiModel("支付通知回调接收")
 @Data
-public class WechatOrderCallbackRequest implements Serializable {
-
-    @JacksonXmlProperty(localName = "return_code")
-    @ApiModelProperty("此字段是通信标识，非交易标识，交易是否成功需要查看result_code来判断")
-    private String returnCode;
+public class WechatOrderCallbackRequest extends OrderCallbackRequest {
 
 
-    @JacksonXmlProperty(localName = "return_msg")
-    @ApiModelProperty("返回信息，如非空，为错误原因签名失败参数格式校验错误")
-    private String returnMsg;
+    /**
+     * 事件记录的唯一标识符
+     */
+    private String id;
 
+    /**
+     * 事件创建的时间戳，用于记录事件发生的时间
+     */
+    private String createTime;
 
-    @JacksonXmlProperty(localName = "appid")
-    @ApiModelProperty("微信分配的小程序ID")
-    private String appId;
+    /**
+     * 资源类型，标识事件相关的资源种类
+     */
+    private String resourceType;
 
-    @JacksonXmlProperty(localName = "mch_id")
-    @ApiModelProperty("微信支付分配的商户号")
-    private String mchId;
+    /**
+     * 事件类型，描述事件的性质或类别
+     */
+    private String eventType;
 
-    @JacksonXmlProperty(localName = "device_info")
-    @ApiModelProperty("微信支付分配的终端设备号")
-    private String deviceInfo;
+    /**
+     * 事件摘要，简要说明事件的内容或影响
+     */
+    private String summary;
 
-    @JacksonXmlProperty(localName = "nonce_str")
-    @ApiModelProperty("随机字符串，长度要求在32位以内")
-    private String nonceStr;
+    /**
+     * 关联的资源详细信息，包含对资源的具体描述
+     */
+    private ResourceDTO resource;
 
-    @JacksonXmlProperty(localName = "sign")
-    @ApiModelProperty("通过签名算法计算得出的签名值")
-    private String sign;
+    /**
+     * 资源数据传输对象，用于封装资源的相关信息
+     */
+    @NoArgsConstructor
+    @Data
+    public static class ResourceDTO {
+        /**
+         * 资源的原始类型，表示资源未加工前的类型
+         */
+        private String originalType;
 
-    @JacksonXmlProperty(localName = "result_code")
-    @ApiModelProperty("SUCCESS/FAIL")
-    private String resultCode;
+        /**
+         * 使用的算法类型，用于资源加密或处理时所用的算法
+         */
+        private String algorithm;
 
-    @JacksonXmlProperty(localName = "err_code")
-    @ApiModelProperty("通过签名算法计算得出的签名值")
-    private String errCode;
+        /**
+         * 密文，资源内容经过加密后的形式
+         */
+        private String ciphertext;
 
-    @JacksonXmlProperty(localName = "err_code_des")
-    @ApiModelProperty("错误返回的信息描述")
-    private String errCodeDes;
+        /**
+         * 关联数据，与加密资源相关的附加信息
+         */
+        private String associatedData;
 
-    @JacksonXmlProperty(localName = "openid")
-    @ApiModelProperty("用户在商户appid下的唯一标识")
-    private String openId;
-
-
-    @JacksonXmlProperty(localName = "bank_type")
-    @ApiModelProperty("用户在商户appid下的唯一标识")
-    private String bankType;
-
-    @JacksonXmlProperty(localName = "total_fee")
-    @ApiModelProperty("订单金额")
-    private int totalFee;
-
-    @JacksonXmlProperty(localName = "cash_fee")
-    @ApiModelProperty("订单金额")
-    private int cashFee;
-
-    @JacksonXmlProperty(localName = "time_end")
-    @ApiModelProperty("支付完成时间，格式为yyyyMMddHHmmss")
-    private String timeEnd;
-
-    @JacksonXmlProperty(localName = "out_trade_no")
-    @ApiModelProperty("商户系统内部订单号，要求32个字符内，只能是数字、大小写字母_-|*且在同一个商户号下唯一")
-    private String outTradeNo;
-
-    @JacksonXmlProperty(localName = "trade_type")
-    @ApiModelProperty("小程序取值如下：JSAPI")
-    private String tradeType;
-
-    @JacksonXmlProperty(localName = "transaction_id")
-    @ApiModelProperty("微信的订单号")
-    private String transactionId;
-
-
+        /**
+         * 随机数，加密过程中使用的非重复数值，增强安全性
+         */
+        private String nonce;
+    }
 }
