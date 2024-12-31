@@ -65,6 +65,15 @@ public class PayMerchantOrder extends SysBase implements Serializable {
     private String payMerchantOrderOrigin;
 
     /**
+     * 附加参数
+     */
+    @TableField(value = "pay_merchant_order_attach")
+    @ApiModelProperty(value = "附加参数")
+    @Schema(description = "附加参数")
+    @Size(max = 255, message = "附加参数最大长度要小于 255")
+    private String payMerchantOrderAttach;
+
+    /**
      * 单价
      */
     @TableField(value = "pay_merchant_order_price")

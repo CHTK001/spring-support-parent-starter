@@ -1,27 +1,32 @@
 package com.chua.starter.pay.support.service.impl;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.starter.common.support.utils.JakartaValidationUtils;
 import com.chua.starter.pay.support.constant.PayConstant;
+import com.chua.starter.pay.support.entity.PayMerchant;
 import com.chua.starter.pay.support.mapper.PayMerchantMapper;
 import com.chua.starter.pay.support.mapper.PayMerchantOrderMapper;
 import com.chua.starter.pay.support.order.CreateOrder;
 import com.chua.starter.pay.support.order.RefundOrder;
 import com.chua.starter.pay.support.order.UpdateOrder;
-import com.chua.starter.pay.support.pojo.PayOrderRequest;
-import com.chua.starter.pay.support.pojo.PayRefundRequest;
-import com.chua.starter.pay.support.pojo.WechatOrderCallbackRequest;
-import com.chua.starter.pay.support.pojo.WechatOrderCallbackResponse;
+import com.chua.starter.pay.support.pojo.*;
 import com.chua.starter.pay.support.result.PayOrderResponse;
 import com.chua.starter.pay.support.result.PayRefundResponse;
+import com.chua.starter.pay.support.result.PaySignResponse;
 import com.chua.starter.pay.support.service.PayOrderService;
+import com.chua.starter.pay.support.sign.CreateSign;
 import lombok.RequiredArgsConstructor;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.validation.Errors;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 支付订单
@@ -100,6 +105,23 @@ public class PayOrderServiceImpl implements PayOrderService {
     @Override
     public WechatOrderCallbackResponse refundOrder(WechatOrderCallbackRequest wechatOrderCallbackRequest, String s) {
         return null;
+    }
+
+    @Override
+    public ReturnResult<PaySignResponse> createSign(PaySignCreateRequest request) {
+        RLock rLock = redissonClient.getLock(PayConstant.ORDER_CREATE_PREFIX + request.getTradeType() + request.getMerchantCode());
+        if(!rLock.tryLock()) {
+            return ReturnResult.illegal("签名正在生成, 请勿重复点击");
+        }
+
+        rLock.lock();
+        try {
+            return new CreateSign(transactionTemplate, payMerchantMapper, payMerchantOrderMapper).create(request);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            rLock.unlock();
+        }
     }
 
 }
