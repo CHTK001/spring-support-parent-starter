@@ -27,6 +27,11 @@ public class OrderCallbackRequest implements Serializable {
     private Status status;
 
     /**
+     * 业务状态
+     */
+    private Status businessStatus;
+
+    /**
      * 支付单号
      */
     private String transactionId;

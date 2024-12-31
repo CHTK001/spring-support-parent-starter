@@ -94,6 +94,7 @@ public class PayMerchantOrder extends SysBase implements Serializable {
              1000:待支付;
              2000:支付成功;
              2003:支付失败(订单创建失败);
+             2005:支付成功(订单解析失败)
              3000:订单超时
              4000:退款中;
              4001:退款失败(已关闭)
@@ -108,6 +109,7 @@ public class PayMerchantOrder extends SysBase implements Serializable {
             "1000:待支付; " +
             "2000:支付成功;" +
             "2003:支付失败(订单创建失败);" +
+            "2005:支付成功(订单解析失败);" +
             "3000:订单超时;" +
             "4000:退款中;" +
             "4001:退款失败(已关闭)" +
