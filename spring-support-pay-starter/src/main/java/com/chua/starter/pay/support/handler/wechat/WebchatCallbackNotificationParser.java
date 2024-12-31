@@ -34,7 +34,7 @@ public class WebchatCallbackNotificationParser implements CallbackNotificationPa
     private final String wechatpaySignatureType;
     private final OrderCallbackRequest request = new OrderCallbackRequest();
     private final WechatOrderCallbackRequest wechatOrderCallbackRequest;
-    private final String payMerchantOrderId;
+    private final String payMerchantCode;
     private final String payMerchantOrderCode;
     private PayMerchantOrder payMerchantOrder;
 
@@ -45,7 +45,7 @@ public class WebchatCallbackNotificationParser implements CallbackNotificationPa
                                              String wechatPaySerial,
                                              String wechatTimestamp,
                                              String wechatpaySignatureType,
-                                             String payMerchantOrderId,
+                                             String payMerchantCode,
                                              String payMerchantOrderCode) {
         this.payMerchantConfigWechatMapper = payMerchantConfigWechatMapper;
         this.requestBody = requestBody;
@@ -55,7 +55,7 @@ public class WebchatCallbackNotificationParser implements CallbackNotificationPa
         this.wechatTimestamp = wechatTimestamp;
         this.wechatpaySignatureType = wechatpaySignatureType;
         this.wechatOrderCallbackRequest = Json.fromJson(requestBody, WechatOrderCallbackRequest.class);
-        this.payMerchantOrderId = payMerchantOrderId;
+        this.payMerchantCode = payMerchantCode;
         this.payMerchantOrderCode = payMerchantOrderCode;
         request.setStatus("TRANSACTION.SUCCESS".equals(wechatOrderCallbackRequest.getEventType()) ? OrderCallbackRequest.Status.SUCCESS : OrderCallbackRequest.Status.FAILURE);
         request.setDataId(payMerchantOrderCode);
@@ -83,7 +83,8 @@ public class WebchatCallbackNotificationParser implements CallbackNotificationPa
         if(null == payMerchantOrder) {
             return false;
         }
-        PayMerchantConfigWechat payMerchantConfigWechat = payMerchantConfigWechatMapper.getConfig(payMerchantOrder.getPayMerchantCode(), payMerchantOrder.getPayMerchantOrderTradeType().replace("wechat_", ""));
+        PayMerchantConfigWechat payMerchantConfigWechat = payMerchantConfigWechatMapper
+                .getConfig(payMerchantOrder.getPayMerchantCode(), payMerchantOrder.getPayMerchantOrderTradeType().replace("wechat_", ""));
         if(null == payMerchantConfigWechat) {
             return false;
         }
