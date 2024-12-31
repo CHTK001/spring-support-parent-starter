@@ -53,12 +53,6 @@ public class CreateSign {
             return handle;
         }
         PaySignResponse paySignResponse = handle.getData();
-        payMerchantOrder.setPayMerchantOrderSignNonce(paySignResponse.getNonceStr());
-        payMerchantOrder.setPayMerchantOrderSignTimestamp(String.valueOf(paySignResponse.getTimeStamp()));
-
-        return transactionTemplate.execute(status -> {
-            payMerchantOrderMapper.updateById(payMerchantOrder);
-            return ReturnResult.success(paySignResponse);
-        });
+        return ReturnResult.success(paySignResponse);
     }
 }

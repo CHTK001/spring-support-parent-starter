@@ -110,11 +110,13 @@ public class WebchatCallbackNotificationParser implements CallbackNotificationPa
             // 以支付通知回调为例，验签、解密并转换成 Transaction
             Transaction transaction = parser.parse(requestParam, Transaction.class);
             request.setTransactionId(transaction.getTransactionId());
+            request.setStatus(OrderCallbackRequest.Status.SUCCESS);
             return true;
         } catch (Exception e) {
             // 签名验证失败，返回 401 UNAUTHORIZED 状态码
             log.error("sign verification failed", e);
         }
+        request.setStatus(OrderCallbackRequest.Status.FAILURE);
         return false;
     }
 }

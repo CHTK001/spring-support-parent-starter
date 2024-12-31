@@ -55,7 +55,6 @@ public final class WechatNativePayOrderCreator implements PayOrderCreator {
         PayOrderResponse payOrderResponse = new PayOrderResponse();
         payOrderResponse.setPrepayId(null);
         payOrderResponse.setUrl(response.getCodeUrl());
-        payOrderResponse.setPayMerchantCode(payMerchantOrder.getPayMerchantOrderCode());
         return ReturnResult.ok(payOrderResponse);
     }
 

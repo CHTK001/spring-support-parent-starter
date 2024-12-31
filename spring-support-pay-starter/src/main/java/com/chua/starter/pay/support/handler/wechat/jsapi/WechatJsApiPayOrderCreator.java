@@ -55,7 +55,6 @@ public class WechatJsApiPayOrderCreator implements PayOrderCreator {
 
         PayOrderResponse payOrderResponse = new PayOrderResponse();
         payOrderResponse.setPrepayId(response.getPrepayId());
-        payOrderResponse.setPayMerchantCode(payMerchantOrder.getPayMerchantOrderCode());
         return ReturnResult.ok(payOrderResponse);
     }
 

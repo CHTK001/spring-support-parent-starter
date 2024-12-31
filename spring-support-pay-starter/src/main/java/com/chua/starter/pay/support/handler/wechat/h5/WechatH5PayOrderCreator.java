@@ -57,7 +57,6 @@ public final class WechatH5PayOrderCreator implements PayOrderCreator {
         PayOrderResponse payOrderResponse = new PayOrderResponse();
         payOrderResponse.setPrepayId(null);
         payOrderResponse.setUrl(response.getH5Url());
-        payOrderResponse.setPayMerchantCode(payMerchantOrder.getPayMerchantOrderCode());
         return ReturnResult.ok(payOrderResponse);
     }
 
