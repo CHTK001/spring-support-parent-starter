@@ -85,15 +85,37 @@ public class PayMerchantOrder extends SysBase implements Serializable {
     @ApiModelProperty(value = "总价")
     @Schema(description = "总价")
     private BigDecimal payMerchantOrderTotalPrice;
-
     /**
-     * 订单状态; \n0000: 新建; \n1000:待支付; \n2000: 支付成功;\n2003:退款失败;\n3000:支付失败(订单创建失败);\n4000: 退款中;\n5000:已退款；\n5001:退款失败(已关闭)
+     订单状态;
+     <pre>
+         <code>
+
+             0000: 新建;
+             1000:待支付;
+             2000:支付成功;
+             2003:支付失败(订单创建失败);
+             3000:订单超时
+             4000:退款中;
+             4001:退款失败(已关闭)
+             4002:退款成功；
+             4003:退款失败;
+         </code>
+     </pre>
      */
     @TableField(value = "pay_merchant_order_status")
-    @ApiModelProperty(value = "订单状态; \n0000: 新建; \n1000:待支付; \n2000: 支付成功;\n2003:退款失败;\n3000:支付失败(订单创建失败);\n4000: 退款中;\n5000:已退款；\n5001:退款失败(已关闭)")
-    @Schema(description = "订单状态; \n0000: 新建; \n1000:待支付; \n2000: 支付成功;\n2003:退款失败;\n3000:支付失败(订单创建失败);\n4000: 退款中;\n5000:已退款；\n5001:退款失败(已关闭)")
-    @Size(max = 6, message = "订单状态; \n0000: 新建; \n1000:待支付; \n2000: 支付成功;\n2003:退款失败;\n3000:支付失败(订单创建失败);\n4000: 退款中;\n5000:已退款；\n5001:退款失败(已关闭)最大长度要小于 6")
+    @Schema(description = "订单状态; " +
+            "0000: 新建; " +
+            "1000:待支付; " +
+            "2000:支付成功;" +
+            "2003:支付失败(订单创建失败);" +
+            "3000:订单超时;" +
+            "4000:退款中;" +
+            "4001:退款失败(已关闭)" +
+            "4002:退款成功；" +
+            "4003:退款失败;"
+            )
     private String payMerchantOrderStatus;
+
 
     /**
      * 交易方式；
@@ -174,19 +196,6 @@ public class PayMerchantOrder extends SysBase implements Serializable {
     @Schema(description = "支付服务提供商订单号")
     @Size(max = 255, message = "支付服务提供商订单号最大长度要小于 255")
     private String payMerchantOrderTransactionId;
-
-    /**
-     * 签名随机串
-     */
-    @TableField(value = "pay_merchant_order_sign_nonce")
-    @ApiModelProperty(value = "签名随机串")
-    private String payMerchantOrderSignNonce;
-    /**
-     * 签名时间戳
-     */
-    @TableField(value = "pay_merchant_order_sign_timestamp")
-    @ApiModelProperty(value = "签名时间戳")
-    private String payMerchantOrderSignTimestamp;
     /**
      * 退款理由
      */
