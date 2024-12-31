@@ -11,4 +11,6 @@ import com.chua.common.support.lang.code.ReturnPageResult;
  */
 public class ReturnPageResultUtils extends PageResultUtils{
 
+    private ReturnPageResultUtils() {
+    }
 }
