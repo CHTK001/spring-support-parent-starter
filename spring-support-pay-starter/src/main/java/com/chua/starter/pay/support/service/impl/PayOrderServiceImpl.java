@@ -78,11 +78,12 @@ public class PayOrderServiceImpl implements PayOrderService {
             }
 
             OrderCallbackRequest request = parser.getRequest();
+            UpdateOrder updateOrder = new UpdateOrder(payMerchantOrderMapper);
             if (request.getStatus() == OrderCallbackRequest.Status.FAILURE) {
-                return new UpdateOrder(transactionTemplate, payMerchantService, payMerchantOrderMapper).failure(request, parser.getOrder());
+                return updateOrder.failure(request, parser.getOrder());
             }
 
-            return new UpdateOrder(transactionTemplate, payMerchantService, payMerchantOrderMapper).update(request, parser.getOrder());
+            return updateOrder.success(request, parser.getOrder());
         } catch (Exception e) {
             throw new RuntimeException("通知失败，订单处理异常");
         } finally {

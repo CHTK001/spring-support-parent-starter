@@ -86,6 +86,8 @@ public class CreateOrder {
             payMerchantOrderMapper.insert(payMerchantOrder);
             ReturnResult<PayOrderResponse> handle = payOrderCreator.handle(payMerchantOrder);
             if(handle.isOk()) {
+                PayOrderResponse handleData = handle.getData();
+                handleData.setPayMerchantCode(payMerchantOrder.getPayMerchantOrderCode());
                 return handle;
             }
             throw new RuntimeException(handle.getMsg());

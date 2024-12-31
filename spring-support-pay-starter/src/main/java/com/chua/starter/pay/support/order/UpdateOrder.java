@@ -5,8 +5,6 @@ import com.chua.starter.pay.support.handler.CallbackNotificationParser;
 import com.chua.starter.pay.support.mapper.PayMerchantOrderMapper;
 import com.chua.starter.pay.support.pojo.OrderCallbackRequest;
 import com.chua.starter.pay.support.pojo.WechatOrderCallbackResponse;
-import com.chua.starter.pay.support.service.PayMerchantService;
-import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 更新订单
@@ -15,13 +13,9 @@ import org.springframework.transaction.support.TransactionTemplate;
  * @since 2024/12/30
  */
 public class UpdateOrder {
-    private final TransactionTemplate transactionTemplate;
-    private final PayMerchantService payMerchantService;
     private final PayMerchantOrderMapper payMerchantOrderMapper;
 
-    public UpdateOrder(TransactionTemplate transactionTemplate, PayMerchantService payMerchantService, PayMerchantOrderMapper payMerchantOrderMapper) {
-        this.transactionTemplate = transactionTemplate;
-        this.payMerchantService = payMerchantService;
+    public UpdateOrder(PayMerchantOrderMapper payMerchantOrderMapper) {
         this.payMerchantOrderMapper = payMerchantOrderMapper;
     }
 
@@ -31,9 +25,9 @@ public class UpdateOrder {
      * @param request   回调
      * @return 回调
      */
-    public WechatOrderCallbackResponse update(OrderCallbackRequest request, PayMerchantOrder payMerchantOrder) {
-        payMerchantOrder.setPayMerchantOrderStatus("2000");
+    public WechatOrderCallbackResponse success(OrderCallbackRequest request, PayMerchantOrder payMerchantOrder) {
         payMerchantOrder.setPayMerchantOrderTransactionId(request.getTransactionId());
+        payMerchantOrder.setPayMerchantOrderStatus("2000");
         try {
             payMerchantOrderMapper.updateById(payMerchantOrder);
             return new WechatOrderCallbackResponse("SUCCESS", "OK", null);
