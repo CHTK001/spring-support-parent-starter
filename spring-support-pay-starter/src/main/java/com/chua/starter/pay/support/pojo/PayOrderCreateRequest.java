@@ -20,6 +20,11 @@ public class PayOrderCreateRequest {
 
 
     /**
+     * 用户id
+     */
+    @Schema(description = "用户id(非必填)")
+    private String openId;
+    /**
      * 订单id
      */
     @Schema(description = "订单id")
@@ -74,4 +79,11 @@ public class PayOrderCreateRequest {
      */
     @Schema(description = "备注")
     private String remark;
+
+
+    /**
+     * 附加信息
+     */
+    @Schema(description = "附加信息")
+    private String attach;
 }
