@@ -5,8 +5,8 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.pay.support.emuns.TradeType;
 import com.chua.starter.pay.support.entity.PayMerchant;
+import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.handler.PayConfigDetector;
-import com.chua.starter.pay.support.handler.PayOrderCreator;
 import com.chua.starter.pay.support.handler.PaySignCreator;
 import com.chua.starter.pay.support.mapper.PayMerchantMapper;
 import com.chua.starter.pay.support.mapper.PayMerchantOrderMapper;
@@ -30,14 +30,14 @@ public class CreateSign {
         this.payMerchantOrderMapper = payMerchantOrderMapper;
     }
 
-    public ReturnResult<PaySignResponse> create(PaySignCreateRequest request) {
-        String merchantCode = request.getMerchantCode();
+    public ReturnResult<PaySignResponse> create(PaySignCreateRequest request, PayMerchantOrder payMerchantOrder) {
+        String merchantCode = payMerchantOrder.getPayMerchantCode();
         PayMerchant payMerchant = payMerchantMapper.selectOne(Wrappers.<PayMerchant>lambdaQuery().eq(PayMerchant::getPayMerchantCode, merchantCode));
         if(null == payMerchant) {
             return ReturnResult.error("商户不存在");
         }
 
-        String tradeType = request.getTradeType();
+        String tradeType = payMerchantOrder.getPayMerchantOrderTradeType();
         PayConfigDetector<?> payConfigDetector = ServiceProvider.of(PayConfigDetector.class).getNewExtension(tradeType);
         if(null == payConfigDetector) {
             return ReturnResult.illegal("当前系统不支持该下单方式");
@@ -48,6 +48,17 @@ public class CreateSign {
             return ReturnResult.illegal(checked.getMsg());
         }
         PaySignCreator paySignCreator = ServiceProvider.of(PaySignCreator.class).getNewExtension(tradeType, checked.getData());
-        return paySignCreator.handle(request);
+        ReturnResult<PaySignResponse> handle = paySignCreator.handle(request);
+        if(!handle.isOk()) {
+            return handle;
+        }
+        PaySignResponse paySignResponse = handle.getData();
+        payMerchantOrder.setPayMerchantOrderSignNonce(paySignResponse.getNonceStr());
+        payMerchantOrder.setPayMerchantOrderSignTimestamp(String.valueOf(paySignResponse.getTimeStamp()));
+
+        return transactionTemplate.execute(status -> {
+            payMerchantOrderMapper.updateById(payMerchantOrder);
+            return ReturnResult.success(paySignResponse);
+        });
     }
 }

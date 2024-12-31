@@ -5,7 +5,8 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.starter.common.support.utils.JakartaValidationUtils;
 import com.chua.starter.pay.support.constant.PayConstant;
-import com.chua.starter.pay.support.entity.PayMerchant;
+import com.chua.starter.pay.support.entity.PayMerchantOrder;
+import com.chua.starter.pay.support.handler.CallbackNotificationParser;
 import com.chua.starter.pay.support.mapper.PayMerchantMapper;
 import com.chua.starter.pay.support.mapper.PayMerchantOrderMapper;
 import com.chua.starter.pay.support.order.CreateOrder;
@@ -24,12 +25,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.validation.Errors;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  * 支付订单
+ *
  * @author CH
  * @since 2024/12/30
  */
@@ -41,15 +39,16 @@ public class PayOrderServiceImpl implements PayOrderService {
     final PayMerchantOrderMapper payMerchantOrderMapper;
     final RedissonClient redissonClient;
     final TransactionTemplate transactionTemplate;
+
     @Override
     public ReturnResult<PayOrderResponse> createOrder(PayOrderRequest request) {
         Errors errors = JakartaValidationUtils.validate(request, AddGroup.class);
-        if(errors.hasErrors()) {
+        if (errors.hasErrors()) {
             return ReturnResult.illegal(errors.getAllErrors().get(0).getDefaultMessage());
         }
 
         RLock rLock = redissonClient.getLock(PayConstant.ORDER_CREATE_PREFIX + request.getTradeType().getName() + request.getOrderId());
-        if(!rLock.tryLock()) {
+        if (!rLock.tryLock()) {
             return ReturnResult.illegal("订单已存在, 请勿重复下单");
         }
 
@@ -64,20 +63,29 @@ public class PayOrderServiceImpl implements PayOrderService {
     }
 
     @Override
-    public WechatOrderCallbackResponse notifyOrder(WechatOrderCallbackRequest wechatOrderCallbackRequest, String tradeType) {
-        if ("FAIL".equals(wechatOrderCallbackRequest.getReturnCode())) {
-           return new UpdateOrder(transactionTemplate, payMerchantMapper, payMerchantOrderMapper).failure(wechatOrderCallbackRequest, tradeType);
-        }
-        //微信订单号
-        String transactionId = wechatOrderCallbackRequest.getTransactionId();
-        RLock rLock = redissonClient.getLock(PayConstant.ORDER_CREATE_PREFIX + tradeType + transactionId);
-        if(!rLock.tryLock()) {
-            return new WechatOrderCallbackResponse("SUCCESS", "OK", null);
+    public WechatOrderCallbackResponse notifyOrder(CallbackNotificationParser parser) {
+        //订单号
+        String id = parser.id();
+        RLock rLock = redissonClient.getLock(PayConstant.ORDER_CALLBACK_PREFIX + id);
+        if (!rLock.tryLock()) {
+            return new WechatOrderCallbackResponse("FAIL", "正在处理", null);
         }
 
         rLock.lock();
         try {
-            return new UpdateOrder(transactionTemplate, payMerchantMapper, payMerchantOrderMapper).update(wechatOrderCallbackRequest, tradeType);
+            if (!parser.parser(payMerchantMapper, payMerchantOrderMapper)) {
+                return new WechatOrderCallbackResponse("FAIL", "订单不存在", null);
+            }
+
+            OrderCallbackRequest request = parser.getRequest();
+            if (request.getStatus() == OrderCallbackRequest.Status.FAILURE) {
+                return new UpdateOrder(transactionTemplate, payMerchantMapper, payMerchantOrderMapper).failure(request, parser.getOrder());
+            }
+
+            if (!request.isValid()) {
+                return new WechatOrderCallbackResponse("FAIL", "订单不存在", null);
+            }
+            return new UpdateOrder(transactionTemplate, payMerchantMapper, payMerchantOrderMapper).update(request, parser.getOrder());
         } catch (Exception e) {
             throw new RuntimeException("通知失败，订单处理异常");
         } finally {
@@ -88,7 +96,7 @@ public class PayOrderServiceImpl implements PayOrderService {
     @Override
     public ReturnResult<PayRefundResponse> refund(PayRefundRequest refundRequest) {
         RLock rLock = redissonClient.getLock(PayConstant.ORDER_REFUND_PREFIX);
-        if(!rLock.tryLock()) {
+        if (!rLock.tryLock()) {
             return ReturnResult.illegal("订单正在退款, 请勿重复操作");
         }
 
@@ -103,20 +111,24 @@ public class PayOrderServiceImpl implements PayOrderService {
     }
 
     @Override
-    public WechatOrderCallbackResponse refundOrder(WechatOrderCallbackRequest wechatOrderCallbackRequest, String s) {
+    public WechatOrderCallbackResponse refundOrder(CallbackNotificationParser wechatOrderCallbackRequest) {
         return null;
     }
 
+
     @Override
     public ReturnResult<PaySignResponse> createSign(PaySignCreateRequest request) {
-        RLock rLock = redissonClient.getLock(PayConstant.ORDER_CREATE_PREFIX + request.getTradeType() + request.getMerchantCode());
-        if(!rLock.tryLock()) {
+        RLock rLock = redissonClient.getLock(PayConstant.ORDER_SIGN_PREFIX + request.getPayMerchantCode());
+        if (!rLock.tryLock()) {
             return ReturnResult.illegal("签名正在生成, 请勿重复点击");
         }
-
+        PayMerchantOrder payMerchantOrder = payMerchantOrderMapper.selectOne(Wrappers.lambdaQuery(PayMerchantOrder.class).eq(PayMerchantOrder::getPayMerchantOrderCode, request.getPayMerchantCode()));
+        if (null == payMerchantOrder) {
+            return ReturnResult.illegal("订单不存在");
+        }
         rLock.lock();
         try {
-            return new CreateSign(transactionTemplate, payMerchantMapper, payMerchantOrderMapper).create(request);
+            return new CreateSign(transactionTemplate, payMerchantMapper, payMerchantOrderMapper).create(request, payMerchantOrder);
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {

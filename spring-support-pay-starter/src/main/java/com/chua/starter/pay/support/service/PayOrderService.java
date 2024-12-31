@@ -1,7 +1,11 @@
 package com.chua.starter.pay.support.service;
 
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.starter.pay.support.pojo.*;
+import com.chua.starter.pay.support.handler.CallbackNotificationParser;
+import com.chua.starter.pay.support.pojo.PayOrderRequest;
+import com.chua.starter.pay.support.pojo.PayRefundRequest;
+import com.chua.starter.pay.support.pojo.PaySignCreateRequest;
+import com.chua.starter.pay.support.pojo.WechatOrderCallbackResponse;
 import com.chua.starter.pay.support.result.PayOrderResponse;
 import com.chua.starter.pay.support.result.PayRefundResponse;
 import com.chua.starter.pay.support.result.PaySignResponse;
@@ -24,11 +28,10 @@ public interface PayOrderService {
     /**
      * 支付订单微信回调
      *
-     * @param wechatOrderCallbackRequest 回调请求
-     * @param tradeType 交易类型
+     * @param parser 解析器
      * @return 结果
      */
-    WechatOrderCallbackResponse notifyOrder(WechatOrderCallbackRequest wechatOrderCallbackRequest, String tradeType);
+    WechatOrderCallbackResponse notifyOrder(CallbackNotificationParser parser);
 
     /**
      * 退款
@@ -45,7 +48,7 @@ public interface PayOrderService {
      * @param s 交易类型
      * @return 结果
      */
-    WechatOrderCallbackResponse refundOrder(WechatOrderCallbackRequest wechatOrderCallbackRequest, String s);
+    WechatOrderCallbackResponse refundOrder(CallbackNotificationParser wechatOrderCallbackRequest);
 
     /**
      * 创建签名

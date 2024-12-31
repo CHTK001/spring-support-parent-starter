@@ -1,8 +1,7 @@
-package com.chua.starter.pay.support.handler.wechat;
+package com.chua.starter.pay.support.handler.wechat.jsapi;
 
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.pay.support.entity.PayMerchantConfigWechat;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.handler.PayOrderCreator;
@@ -10,11 +9,11 @@ import com.chua.starter.pay.support.result.PayOrderResponse;
 import com.wechat.pay.java.core.Config;
 import com.wechat.pay.java.core.RSAAutoCertificateConfig;
 import com.wechat.pay.java.core.exception.ServiceException;
-import com.wechat.pay.java.service.payments.h5.H5Service;
-import com.wechat.pay.java.service.payments.h5.model.Amount;
-import com.wechat.pay.java.service.payments.h5.model.PrepayRequest;
-import com.wechat.pay.java.service.payments.h5.model.PrepayResponse;
-import com.wechat.pay.java.service.payments.h5.model.SceneInfo;
+import com.wechat.pay.java.service.payments.jsapi.JsapiService;
+import com.wechat.pay.java.service.payments.jsapi.model.Amount;
+import com.wechat.pay.java.service.payments.jsapi.model.Payer;
+import com.wechat.pay.java.service.payments.jsapi.model.PrepayRequest;
+import com.wechat.pay.java.service.payments.jsapi.model.PrepayResponse;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -24,12 +23,12 @@ import java.math.RoundingMode;
  * @author CH
  * @since 2024/12/30
  */
-@Spi("wechat_h5")
-public final class WechatH5PayOrderCreator implements PayOrderCreator {
+@Spi("wechat_js_api")
+public class WechatJsApiPayOrderCreator implements PayOrderCreator {
 
     final PayMerchantConfigWechat payMerchantConfigWechat;
 
-    public WechatH5PayOrderCreator(PayMerchantConfigWechat payMerchantConfigWechat) {
+    public WechatJsApiPayOrderCreator(PayMerchantConfigWechat payMerchantConfigWechat) {
         this.payMerchantConfigWechat = payMerchantConfigWechat;
     }
 
@@ -44,7 +43,7 @@ public final class WechatH5PayOrderCreator implements PayOrderCreator {
                         .build();
 
         // 构建service
-        H5Service service = new H5Service.Builder().config(config).build();
+        JsapiService service = new JsapiService.Builder().config(config).build();
         PrepayRequest request = getPrepayRequest(payMerchantOrder);
 
         PrepayResponse response = null;
@@ -55,8 +54,8 @@ public final class WechatH5PayOrderCreator implements PayOrderCreator {
         }
 
         PayOrderResponse payOrderResponse = new PayOrderResponse();
-        payOrderResponse.setPrepayId(null);
-        payOrderResponse.setUrl(response.getH5Url());
+        payOrderResponse.setPrepayId(response.getPrepayId());
+        payOrderResponse.setPayMerchantCode(payMerchantOrder.getPayMerchantCode());
         return ReturnResult.ok(payOrderResponse);
     }
 
@@ -71,15 +70,16 @@ public final class WechatH5PayOrderCreator implements PayOrderCreator {
         amount.setTotal(payMerchantOrder.getPayMerchantOrderTotalPrice().multiply(new BigDecimal(100))
                 .setScale(0, RoundingMode.HALF_UP).intValue());
         request.setAmount(amount);
-        request.setAppid(payMerchantOrder.getPayMerchantOrderUserId());
+        request.setAppid(payMerchantConfigWechat.getPayMerchantConfigWechatAppId());
         request.setMchid(payMerchantConfigWechat.getPayMerchantConfigWechatMchId());
         request.setDescription(payMerchantOrder.getPayMerchantOrderProductName());
         request.setNotifyUrl(payMerchantConfigWechat.getPayMerchantConfigWechatNotifyUrl());
         request.setOutTradeNo(payMerchantOrder.getPayMerchantOrderCode());
         request.setAttach(payMerchantOrder.getPayMerchantOrderAttach());
-        SceneInfo sceneInfo = new SceneInfo();
-        sceneInfo.setPayerClientIp(RequestUtils.getIpAddress());
-        request.setSceneInfo(sceneInfo);
+
+        Payer payer = new Payer();
+        payer.setOpenid(payMerchantOrder.getPayMerchantOrderUserId());
+        request.setPayer(payer);
         return request;
     }
 }

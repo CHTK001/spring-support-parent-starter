@@ -1,4 +1,4 @@
-package com.chua.starter.pay.support.handler.wechat;
+package com.chua.starter.pay.support.handler.wechat.jsapi;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.annotations.Spi;
