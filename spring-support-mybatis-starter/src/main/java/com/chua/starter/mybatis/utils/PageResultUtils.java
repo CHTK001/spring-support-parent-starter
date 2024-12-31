@@ -21,6 +21,8 @@ public class PageResultUtils {
             return PageResult.empty();
         }
         return PageResult.<T>builder()
+                .pageNo((int) result.getCurrent())
+                .totalPages((int) result.getPages())
                 .pageSize((int) result.getSize())
                 .total(result.getTotal())
                 .data(result.getRecords())

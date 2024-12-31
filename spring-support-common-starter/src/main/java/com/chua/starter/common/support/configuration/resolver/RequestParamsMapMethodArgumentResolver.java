@@ -37,6 +37,7 @@ import java.lang.reflect.Parameter;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -55,7 +56,7 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
 
         Class<?> type = parameter.getParameterType();
         if (!ClassUtils.isJavaType(type)) {
-            Field[] declaredFields = type.getDeclaredFields();
+            List<Field> declaredFields = ClassUtils.getFields(type);
             for (Field declaredField : declaredFields) {
                 if (!Modifier.isStatic(declaredField.getModifiers()) && declaredField.isAnnotationPresent(RequestParamMapping.class)) {
                     return true;

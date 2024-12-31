@@ -1,7 +1,8 @@
-package com.chua.starter.pay.support.handler.wechat;
+package com.chua.starter.pay.support.handler.wechat.h5;
 
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.pay.support.entity.PayMerchantConfigWechat;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.handler.PayOrderCreator;
@@ -9,10 +10,11 @@ import com.chua.starter.pay.support.result.PayOrderResponse;
 import com.wechat.pay.java.core.Config;
 import com.wechat.pay.java.core.RSAAutoCertificateConfig;
 import com.wechat.pay.java.core.exception.ServiceException;
-import com.wechat.pay.java.service.payments.nativepay.NativePayService;
-import com.wechat.pay.java.service.payments.nativepay.model.Amount;
-import com.wechat.pay.java.service.payments.nativepay.model.PrepayRequest;
-import com.wechat.pay.java.service.payments.nativepay.model.PrepayResponse;
+import com.wechat.pay.java.service.payments.h5.H5Service;
+import com.wechat.pay.java.service.payments.h5.model.Amount;
+import com.wechat.pay.java.service.payments.h5.model.PrepayRequest;
+import com.wechat.pay.java.service.payments.h5.model.PrepayResponse;
+import com.wechat.pay.java.service.payments.h5.model.SceneInfo;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -22,12 +24,12 @@ import java.math.RoundingMode;
  * @author CH
  * @since 2024/12/30
  */
-@Spi("wechat_native")
-public final class WechatNativePayOrderCreator implements PayOrderCreator {
+@Spi("wechat_h5")
+public final class WechatH5PayOrderCreator implements PayOrderCreator {
 
     final PayMerchantConfigWechat payMerchantConfigWechat;
 
-    public WechatNativePayOrderCreator(PayMerchantConfigWechat payMerchantConfigWechat) {
+    public WechatH5PayOrderCreator(PayMerchantConfigWechat payMerchantConfigWechat) {
         this.payMerchantConfigWechat = payMerchantConfigWechat;
     }
 
@@ -42,7 +44,7 @@ public final class WechatNativePayOrderCreator implements PayOrderCreator {
                         .build();
 
         // 构建service
-        NativePayService service = new NativePayService.Builder().config(config).build();
+        H5Service service = new H5Service.Builder().config(config).build();
         PrepayRequest request = getPrepayRequest(payMerchantOrder);
 
         PrepayResponse response = null;
@@ -54,7 +56,8 @@ public final class WechatNativePayOrderCreator implements PayOrderCreator {
 
         PayOrderResponse payOrderResponse = new PayOrderResponse();
         payOrderResponse.setPrepayId(null);
-        payOrderResponse.setUrl(response.getCodeUrl());
+        payOrderResponse.setUrl(response.getH5Url());
+        payOrderResponse.setPayMerchantCode(payMerchantOrder.getPayMerchantCode());
         return ReturnResult.ok(payOrderResponse);
     }
 
@@ -75,6 +78,9 @@ public final class WechatNativePayOrderCreator implements PayOrderCreator {
         request.setNotifyUrl(payMerchantConfigWechat.getPayMerchantConfigWechatNotifyUrl());
         request.setOutTradeNo(payMerchantOrder.getPayMerchantOrderCode());
         request.setAttach(payMerchantOrder.getPayMerchantOrderAttach());
+        SceneInfo sceneInfo = new SceneInfo();
+        sceneInfo.setPayerClientIp(RequestUtils.getIpAddress());
+        request.setSceneInfo(sceneInfo);
         return request;
     }
 }

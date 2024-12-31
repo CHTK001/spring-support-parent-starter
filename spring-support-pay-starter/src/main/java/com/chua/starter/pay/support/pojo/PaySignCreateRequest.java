@@ -1,8 +1,6 @@
 package com.chua.starter.pay.support.pojo;
 
-import com.chua.common.support.validator.group.AddGroup;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 /**
@@ -15,18 +13,14 @@ import lombok.Data;
 public class PaySignCreateRequest {
 
     /**
-     * 交易类型
+     * 预处理ID
      */
-    private String tradeType;
+    @Schema(title = "prepay_id")
+    private String prepayId;
+
     /**
-     * 商户编码
+     * 订单编号
      */
-    @Schema(description = "商户编码")
-    @NotBlank(message = "商户编码不能为空", groups = {AddGroup.class})
-    private String merchantCode;
-    /**
-     * 签名
-     */
-    @Schema(title = "prepay_id=xxx这种格式")
-    private String packageStr;
+    @Schema(description = "订单编号")
+    private String payMerchantCode;
 }
