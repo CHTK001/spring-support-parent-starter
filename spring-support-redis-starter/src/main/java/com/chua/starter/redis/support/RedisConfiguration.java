@@ -133,6 +133,8 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
         return container;
     }
 
+
+
     @Bean("stringRedisTemplate")
     public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory factory) {
         StringRedisTemplate template = new StringRedisTemplate();

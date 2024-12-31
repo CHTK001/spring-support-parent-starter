@@ -288,7 +288,10 @@ public class MonitorProxyServiceImpl extends ServiceImpl<MonitorProxyMapper, Mon
             upgradeServiceDiscovery(String.valueOf(monitorProxyConfig.getProxyId()), serviceDiscovery);
         } else {
             Map<String, ServiceDiscovery> beansOfType = applicationContext.getBeansOfType(ServiceDiscovery.class);
-            serviceDiscovery = beansOfType.get(monitorProxyConfig.getProxyConfigValue());
+            serviceDiscovery = beansOfType.get(monitorProxyConfig.getProxyConfigValue().toLowerCase());
+            if(null == serviceDiscovery) {
+                serviceDiscovery = beansOfType.get(monitorProxyConfig.getProxyConfigValue().toUpperCase());
+            }
             if(null == serviceDiscovery) {
                 serviceDiscovery = beansOfType.entrySet().stream().filter(it -> it.getKey().toUpperCase().endsWith("#" +
                         monitorProxyConfig.getProxyConfigValue())).findFirst().get().getValue();

@@ -12,9 +12,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -61,6 +63,20 @@ public class ExceptionAdvice  {
     }
 
 
+    /**
+     * RequestBody参数的校验
+     *
+     * @param e
+     * @param <T>
+     * @return
+     */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public <T> Result<T> processException(HttpRequestMethodNotSupportedException e) {
+        log.error("HttpRequestMethodNotSupportedException:{}", e.getMessage());
+        ProblemDetail body = e.getBody();
+        return Result.failed(REQUEST_PARAM_ERROR, body.getDetail());
+    }
     /**
      * RequestBody参数的校验
      *

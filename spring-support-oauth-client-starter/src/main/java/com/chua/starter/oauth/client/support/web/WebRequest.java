@@ -21,6 +21,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.AntPathMatcher;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
@@ -96,6 +97,12 @@ public class WebRequest {
             HandlerMethod handlerMethod = null;
             try {
                 handlerMethod = (HandlerMethod) requestMappingHandlerMapping.getHandler(request).getHandler();
+            } catch (HttpRequestMethodNotSupportedException exception) {
+                try {
+                    throw exception;
+                } catch (HttpRequestMethodNotSupportedException e) {
+                    throw new RuntimeException(e);
+                }
             } catch (Exception ignored) {
             }
             if (null != handlerMethod) {

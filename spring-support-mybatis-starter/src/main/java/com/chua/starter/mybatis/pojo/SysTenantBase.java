@@ -19,7 +19,7 @@ public class SysTenantBase extends SysBase{
      * 多租户编号
      */
     @Column(defaultValue = "0", comment = "租户ID", refresh = true)
-    @Schema(title = "租户ID")
+    @Schema(description = "租户ID")
     @ApiModelProperty("租户ID")
     private Long tenantId;
 }

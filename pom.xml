@@ -14,7 +14,7 @@
     <groupId>com.chua</groupId>
     <artifactId>spring-support-parent-starter</artifactId>
     <packaging>pom</packaging>
-    <version>4.0.0.6</version>
+    <version>4.0.0.7</version>
     <modules>
         <module>spring-support-datasource-starter</module>
         <module>spring-support-common-starter</module>
@@ -37,6 +37,7 @@
         <module>spring-support-report-server-starter</module>
         <module>spring-support-tencent-starter</module>
         <module>spring-support-websockify-starter</module>
+        <module>spring-support-pay-starter</module>
     </modules>
 
     <properties>
@@ -44,7 +45,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
-        <module.version>4.0.0.6</module.version>
+        <module.version>4.0.0.7</module.version>
         <spring-boot.version>3.2.3</spring-boot.version>
 
         <mybatis-plus.version>3.4.0</mybatis-plus.version>
@@ -286,6 +287,12 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-email-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-nginx-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
 

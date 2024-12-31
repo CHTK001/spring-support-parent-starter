@@ -9,7 +9,7 @@ import lombok.Data;
  * @since 2024/9/13
  */
 @Data
-@Schema(title = "actuator请求")
+@Schema(description = "actuator请求")
 public class ActuatorRequest {
 
 
