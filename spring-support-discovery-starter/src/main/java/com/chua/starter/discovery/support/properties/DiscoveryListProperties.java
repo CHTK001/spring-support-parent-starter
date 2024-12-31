@@ -17,6 +17,10 @@ public class DiscoveryListProperties {
 
     public static final String PRE = "plugin.discovery";
 
+    /**
+     * 是否启用
+     */
+    private boolean enable;
 
     /**
      * 发现配置
