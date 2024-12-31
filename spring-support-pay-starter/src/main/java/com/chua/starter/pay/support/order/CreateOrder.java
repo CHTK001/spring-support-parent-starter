@@ -70,6 +70,7 @@ public class CreateOrder {
         payMerchantOrder.setPayMerchantCode(request.getMerchantCode());
         payMerchantOrder.setPayMerchantOrderUserId(request.getUserId());
         payMerchantOrder.setPayMerchantOrderOrigin(request.getOrigin());
+        payMerchantOrder.setPayMerchantOrderAttach(request.getAttach());
         payMerchantOrder.setPayMerchantOrderProductName(request.getProductName());
         payMerchantOrder.setPayMerchantOrderRemark(request.getRemark());
         payMerchantOrder.setPayMerchantOrderPrice(request.getPrice());

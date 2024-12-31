@@ -40,7 +40,7 @@ public class Query<T>{
     @Schema(description = "页码，从 1 开始", requiredMode = Schema.RequiredMode.REQUIRED,example = "1")
     @NotNull(message = "页码不能为空")
     @Min(value = 1, message = "页码最小值为 1")
-    @RequestParamMapping({"page", "pageNo", "current"})
+    @RequestParamMapping({"page", "pageNo", "pageNumber", "pageNum", "current"})
     private Integer page = PAGE_NO;
 
     @Schema(description = "每页条数，最大值为 100", requiredMode = Schema.RequiredMode.REQUIRED, example = "10")

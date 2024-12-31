@@ -74,7 +74,7 @@ public final class WechatNativePayOrderCreator implements PayOrderCreator {
         request.setDescription(payMerchantOrder.getPayMerchantOrderProductName());
         request.setNotifyUrl(payMerchantConfigWechat.getPayMerchantConfigWechatNotifyUrl());
         request.setOutTradeNo(payMerchantOrder.getPayMerchantOrderCode());
-        request.setAttach(payMerchantOrder.getPayMerchantOrderRemark());
+        request.setAttach(payMerchantOrder.getPayMerchantOrderAttach());
         return request;
     }
 }

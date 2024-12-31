@@ -78,4 +78,10 @@ public class PayOrderRequest {
      */
     @Schema(description = "备注")
     private String remark;
+
+    /**
+     * 附加信息
+     */
+    @Schema(description = "附加信息")
+    private String attach;
 }
