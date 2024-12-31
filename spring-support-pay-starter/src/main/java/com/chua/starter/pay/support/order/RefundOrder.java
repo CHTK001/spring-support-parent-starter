@@ -42,15 +42,32 @@ public class RefundOrder {
             return ReturnResult.error("订单不存在");
         }
 
-        if(payMerchantOrder.getPayMerchantOrderStatus().startsWith("400")) {
+        String payMerchantOrderStatus = payMerchantOrder.getPayMerchantOrderStatus();
+        if("4000".equals(payMerchantOrderStatus)) {
+            return ReturnResult.error("订单正在退款");
+        }
+
+        if("4001".equals(payMerchantOrderStatus)) {
+            return ReturnResult.error("订单已关闭");
+        }
+
+        if("4002".equals(payMerchantOrderStatus)) {
             return ReturnResult.error("订单已退款");
         }
 
-        if(!payMerchantOrder.getPayMerchantOrderStatus().startsWith("200")) {
+        if("2003".equals(payMerchantOrderStatus)) {
             return ReturnResult.error("订单未支付");
         }
 
-        PayMerchant payMerchant = getPayMerchant(payMerchantOrder, refundRequest.isForce());
+        if(!payMerchantOrderStatus.startsWith("100")) {
+            return ReturnResult.error("订单未支付");
+        }
+
+        if(!payMerchantOrderStatus.startsWith("300")) {
+            return ReturnResult.error("订单已超时");
+        }
+
+        PayMerchant payMerchant = getPayMerchant(payMerchantOrder);
         if(null == payMerchant) {
             return ReturnResult.illegal("商户不存在, 请联系管理员");
         }
@@ -91,10 +108,9 @@ public class RefundOrder {
     /**
      * 获取商户
      * @param payMerchantOrder 订单
-     * @param force 强制
      * @return 商户
      */
-    private PayMerchant getPayMerchant(PayMerchantOrder payMerchantOrder, boolean force) {
-        return payMerchantService.getOneByCode(payMerchantOrder.getPayMerchantCode(), force);
+    private PayMerchant getPayMerchant(PayMerchantOrder payMerchantOrder) {
+        return payMerchantService.getOneByCode(payMerchantOrder.getPayMerchantCode());
     }
 }

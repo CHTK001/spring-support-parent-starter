@@ -3,6 +3,7 @@ package com.chua.starter.pay.support.service.impl;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.validator.group.AddGroup;
+import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.JakartaValidationUtils;
 import com.chua.starter.pay.support.constant.PayConstant;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
@@ -17,10 +18,12 @@ import com.chua.starter.pay.support.result.PayRefundResponse;
 import com.chua.starter.pay.support.result.PaySignResponse;
 import com.chua.starter.pay.support.service.PayMerchantService;
 import com.chua.starter.pay.support.service.PayOrderService;
+import com.chua.starter.pay.support.service.payMerchantOrderCallbackService;
 import com.chua.starter.pay.support.sign.CreateSign;
 import lombok.RequiredArgsConstructor;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.validation.Errors;
@@ -39,6 +42,7 @@ public class PayOrderServiceImpl implements PayOrderService {
     final PayMerchantOrderMapper payMerchantOrderMapper;
     final RedissonClient redissonClient;
     final TransactionTemplate transactionTemplate;
+    final ApplicationContext applicationContext;
 
     @Override
     public ReturnResult<PayOrderResponse> createOrder(PayOrderRequest request) {
@@ -79,8 +83,13 @@ public class PayOrderServiceImpl implements PayOrderService {
 
             OrderCallbackRequest request = parser.getRequest();
             UpdateOrder updateOrder = new UpdateOrder(payMerchantOrderMapper);
-            if (request.getStatus() == OrderCallbackRequest.Status.FAILURE) {
+            if (request.getBusinessStatus() == OrderCallbackRequest.Status.FAILURE) {
                 return updateOrder.failure(request, parser.getOrder());
+            }
+
+            payMerchantOrderCallbackService payMerchantOrderCallbackService = SpringBeanUtils.getBean(payMerchantOrderCallbackService.class);
+            if(null != payMerchantOrderCallbackService) {
+                payMerchantOrderCallbackService.listen(parser.getOrder());
             }
 
             return updateOrder.success(request, parser.getOrder());

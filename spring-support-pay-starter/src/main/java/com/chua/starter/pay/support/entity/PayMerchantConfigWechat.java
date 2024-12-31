@@ -4,10 +4,13 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.common.support.validator.group.AddGroup;
+import com.chua.common.support.validator.group.UpdateGroup;
 import com.chua.starter.mybatis.pojo.SysBase;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -34,6 +37,7 @@ public class PayMerchantConfigWechat extends SysBase implements Serializable {
     @ApiModelProperty(value = "")
     @Schema(description = "")
     @NotNull(message = "不能为null")
+    @NotBlank(message = "配置编码不能为空", groups = {UpdateGroup.class})
     private Integer payMerchantConfigWechatId;
 
     /**
@@ -43,6 +47,7 @@ public class PayMerchantConfigWechat extends SysBase implements Serializable {
     @ApiModelProperty(value = "微信appId")
     @Schema(description = "微信appId")
     @Size(max = 255, message = "微信appId最大长度要小于 255")
+    @NotBlank(message = "微信appId不能为空", groups = {AddGroup.class})
     private String payMerchantConfigWechatAppId;
 
     /**
@@ -52,6 +57,7 @@ public class PayMerchantConfigWechat extends SysBase implements Serializable {
     @ApiModelProperty(value = "机器ID")
     @Schema(description = "机器ID")
     @Size(max = 255, message = "机器ID最大长度要小于 255")
+    @NotBlank(message = "机器ID不能为空", groups = {AddGroup.class})
     private String payMerchantConfigWechatMchId;
 
     /**
@@ -61,6 +67,7 @@ public class PayMerchantConfigWechat extends SysBase implements Serializable {
     @ApiModelProperty(value = "序列")
     @Schema(description = "序列")
     @Size(max = 255, message = "序列最大长度要小于 255")
+    @NotBlank(message = "序列不能为空", groups = {AddGroup.class})
     private String payMerchantConfigWechatMchSerialNo;
 
     /**
@@ -70,6 +77,7 @@ public class PayMerchantConfigWechat extends SysBase implements Serializable {
     @ApiModelProperty(value = "微信Secret")
     @Schema(description = "微信Secret")
     @Size(max = 255, message = "微信Secret最大长度要小于 255")
+    @NotBlank(message = "微信Secret不能为空", groups = {AddGroup.class})
     private String payMerchantConfigWechatAppSecret;
 
     /**
@@ -79,6 +87,7 @@ public class PayMerchantConfigWechat extends SysBase implements Serializable {
     @ApiModelProperty(value = "支付类型; ")
     @Schema(description = "支付类型; ")
     @Size(max = 255, message = "支付类型; 最大长度要小于 255")
+    @NotBlank(message = "支付类型不能为空", groups = {AddGroup.class})
     private String payMerchantConfigWechatTradeType;
 
     /**
@@ -88,6 +97,7 @@ public class PayMerchantConfigWechat extends SysBase implements Serializable {
     @ApiModelProperty(value = "回调地址")
     @Schema(description = "回调地址")
     @Size(max = 255, message = "回调地址最大长度要小于 255")
+    @NotBlank(message = "回调地址不能为空", groups = {AddGroup.class})
     private String payMerchantConfigWechatNotifyUrl;
 
     /**
@@ -97,6 +107,7 @@ public class PayMerchantConfigWechat extends SysBase implements Serializable {
     @ApiModelProperty(value = "api v3Key")
     @Schema(description = "api v3Key")
     @Size(max = 255, message = "api v3Key最大长度要小于 255")
+    @NotBlank(message = "api v3Key不能为空", groups = {AddGroup.class})
     private String payMerchantConfigWechatApiKeyV3;
 
     @TableField(value = "pay_merchant_config_wechat_private_key_path")
@@ -119,6 +130,7 @@ public class PayMerchantConfigWechat extends SysBase implements Serializable {
     @TableField(value = "pay_merchant_id")
     @ApiModelProperty(value = "商户ID")
     @Schema(description = "商户ID")
+    @NotBlank(message = "商户ID不能为空", groups = {AddGroup.class})
     private Integer payMerchantId;
 
     /**
