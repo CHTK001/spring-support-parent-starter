@@ -47,6 +47,10 @@ public class RefundOrder {
             return ReturnResult.error("订单正在退款");
         }
 
+        if("5002".equals(payMerchantOrderStatus)) {
+            return ReturnResult.error("订单已取消");
+        }
+
         if(payMerchantOrderStatus.startsWith("500")) {
             return ReturnResult.error("订单已关闭");
         }
