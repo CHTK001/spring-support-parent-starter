@@ -67,14 +67,29 @@ public class UpdateOrder {
      * @return 回调
      */
     public WechatOrderCallbackResponse failure(OrderCallbackRequest wechatOrderCallbackRequest, PayMerchantOrder payMerchantOrder) {
-        payMerchantOrder.setPayMerchantOrderFailMessage(wechatOrderCallbackRequest.getMessage());
-        payMerchantOrder.setPayMerchantOrderStatus("3000");
+        registerFailure(wechatOrderCallbackRequest, payMerchantOrder);
         try {
             payMerchantOrderMapper.updateById(payMerchantOrder);
             return new WechatOrderCallbackResponse("SUCCESS", wechatOrderCallbackRequest.getMessage(), null);
         } catch (Exception e) {
             return tryFailureUpdate(payMerchantOrder, wechatOrderCallbackRequest, 1, 3);
         }
+    }
+
+    /**
+     * 注册失败
+     *
+     * @param wechatOrderCallbackRequest 回调
+     * @param payMerchantOrder           订单
+     */
+    private void registerFailure(OrderCallbackRequest wechatOrderCallbackRequest, PayMerchantOrder payMerchantOrder) {
+        OrderCallbackRequest.Status status = wechatOrderCallbackRequest.getStatus();
+        payMerchantOrder.setPayMerchantOrderFailMessage(wechatOrderCallbackRequest.getMessage());
+        if(status == OrderCallbackRequest.Status.SUCCESS) {
+            payMerchantOrder.setPayMerchantOrderStatus("2005");
+            return;
+        }
+        payMerchantOrder.setPayMerchantOrderStatus("2003");
     }
 
     /**
@@ -92,8 +107,7 @@ public class UpdateOrder {
         }
         try {
             payMerchantOrder = getPayMerchantOrder(wechatOrderCallbackRequest);
-            payMerchantOrder.setPayMerchantOrderFailMessage(wechatOrderCallbackRequest.getMessage());
-            payMerchantOrder.setPayMerchantOrderStatus("3000");
+            registerFailure(wechatOrderCallbackRequest, payMerchantOrder);
             payMerchantOrderMapper.updateById(payMerchantOrder);
             return new WechatOrderCallbackResponse("SUCCESS", wechatOrderCallbackRequest.getMessage(), null);
         } catch (Exception ex) {
