@@ -1,50 +1,116 @@
 package com.chua.starter.common.support.rule;
 
+import com.chua.common.support.utils.ArrayUtils;
+import com.chua.starter.common.support.annotations.ApiGroup;
 import com.chua.starter.common.support.annotations.ApiIgnore;
 import com.chua.starter.common.support.annotations.PrivacyEncrypt;
+import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.starter.common.support.utils.RequestUtils;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.ContextualSerializer;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.servlet.HandlerExecutionChain;
+import org.springframework.web.servlet.handler.MatchableHandlerMapping;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import java.io.IOException;
 import java.util.Objects;
+import java.util.logging.Handler;
 
 /**
  * 忽略字段
+ *
  * @author CH
- * @since 2025/1/1
  * @see com.chua.starter.common.support.annotations.ApiIgnore
  * @see com.chua.starter.common.support.annotations.ApiGroup
+ * @since 2025/1/1
  */
-public class ApiIgnoreSerializer extends JsonSerializer<String> implements ContextualSerializer {
-    private final Class<?>[] group;
+public class ApiIgnoreSerializer extends JsonSerializer<Object> implements ContextualSerializer {
+    private final RequestMappingHandlerMapping requestMappingHandlerMapping;
+    private Class<?>[] group;
 
     public ApiIgnoreSerializer(Class<?>[] group) {
+        this();
         this.group = group;
     }
 
+    public ApiIgnoreSerializer() {
+        requestMappingHandlerMapping = SpringBeanUtils.getRequestMappingHandlerMapping();
+    }
+
     @Override
-    public void serialize(String value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
-        System.out.println();
+    public void serialize(Object value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+        gen.writeNull();
     }
 
     @Override
     public JsonSerializer<?> createContextual(SerializerProvider serializerProvider, BeanProperty beanProperty) throws JsonMappingException {
         if (beanProperty != null) {
-            if (Objects.equals(beanProperty.getType().getRawClass(), String.class)) {
-                ApiIgnore apiIgnore = beanProperty.getAnnotation(ApiIgnore.class);
-                if (apiIgnore == null) {
-                    apiIgnore = beanProperty.getContextAnnotation(ApiIgnore.class);
-                }
-                if (apiIgnore != null) {
-                    return new ApiIgnoreSerializer(apiIgnore.value());
-                }
+            ApiIgnore apiIgnore = beanProperty.getAnnotation(ApiIgnore.class);
+            if (apiIgnore == null) {
+                apiIgnore = beanProperty.getContextAnnotation(ApiIgnore.class);
+            }
+            if (apiIgnore != null&& isMatch(apiIgnore)) {
+                return new ApiIgnoreSerializer(apiIgnore.value());
             }
             return serializerProvider.findValueSerializer(beanProperty.getType(), beanProperty);
         }
         return serializerProvider.findNullValueSerializer(null);
+    }
+
+    private boolean isMatch(ApiIgnore apiIgnore) {
+        Class<?>[] value = apiIgnore.value();
+        if(value.length == 0) {
+            return true;
+        }
+
+        HttpServletRequest servletRequest = RequestUtils.getRequest();
+        if(null == servletRequest) {
+            return false;
+        }
+
+        HandlerExecutionChain handler = null;
+        try {
+            handler = requestMappingHandlerMapping.getHandler(servletRequest);
+        } catch (Exception ignored) {
+            return false;
+        }
+
+        if(null == handler) {
+            return false;
+        }
+
+        Object handler1 = handler.getHandler();
+        if(null == handler1 || !(handler1 instanceof HandlerMethod)) {
+            return false;
+        }
+        HandlerMethod handlerMethod = (HandlerMethod) handler1;
+        ApiGroup apiGroup = handlerMethod.getMethodAnnotation(ApiGroup.class);
+        if(null == apiGroup) {
+            return false;
+        }
+        Class<?>[] group = apiGroup.value();
+        return isMatch(value, group);
+    }
+
+    /**
+     * 是否匹配
+     *
+     * @param value value
+     * @param group group
+     * @return 是否匹配
+     */
+    private boolean isMatch(Class<?>[] value, Class<?>[] group) {
+        for (Class<?> aClass : group) {
+            if(ArrayUtils.contains(value, aClass)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
