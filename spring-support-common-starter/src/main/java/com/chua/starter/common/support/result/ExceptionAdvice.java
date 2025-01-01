@@ -236,7 +236,7 @@ public class ExceptionAdvice  {
         return Result.failed(e.getSQLState());
     }
     @ExceptionHandler(RuntimeException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public <T> Result<T> handleRuntimeException(RuntimeException e) {
         if("org.apache.ibatis.exceptions.TooManyResultsException".equals(e.getClass().getName())) {
             log.error("SQL只允许返回一条数据, 但是查询到多条数据", e);
