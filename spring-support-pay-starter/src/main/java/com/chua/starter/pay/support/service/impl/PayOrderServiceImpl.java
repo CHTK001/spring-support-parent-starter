@@ -88,8 +88,9 @@ public class PayOrderServiceImpl implements PayOrderService {
                 return updateOrder.failure(request, parser.getOrder());
             }
 
+            WechatOrderCallbackResponse success = updateOrder.success(request, parser.getOrder());
             payListenerService.listen(parser.getOrder());
-            return updateOrder.success(request, parser.getOrder());
+            return success;
         } catch (Exception e) {
             throw new RuntimeException("通知失败，订单处理异常");
         } finally {
