@@ -2,6 +2,7 @@ package com.chua.starter.common.support.annotations;
 
 import com.chua.starter.common.support.rule.ApiIgnoreSerializer;
 import com.chua.starter.common.support.rule.PrivacySerializer;
+import com.fasterxml.jackson.annotation.JacksonAnnotationsInside;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 import java.lang.annotation.*;
@@ -14,6 +15,7 @@ import java.lang.annotation.*;
 @Target({ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
+@JacksonAnnotationsInside
 @JsonSerialize(using = ApiIgnoreSerializer.class)
 public @interface ApiIgnore {
 

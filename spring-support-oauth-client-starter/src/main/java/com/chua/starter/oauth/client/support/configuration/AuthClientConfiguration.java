@@ -1,5 +1,6 @@
 package com.chua.starter.oauth.client.support.configuration;
 
+import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.oauth.client.support.filter.AuthFilter;
 import com.chua.starter.oauth.client.support.interceptor.PermissionPointcut;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
@@ -67,6 +68,7 @@ public class AuthClientConfiguration implements ApplicationContextAware, BeanDef
         authFilterFilterRegistrationBean.setUrlPatterns(authProperties.getBlockAddress());
         authFilterFilterRegistrationBean.setName("authFilterFilterRegistrationBean");
         authFilterFilterRegistrationBean.setAsyncSupported(true);
+        SpringBeanUtils.setRequestMappingHandlerMapping(requestMappingHandlerMapping);
         authFilterFilterRegistrationBean.setFilter(new AuthFilter(new WebRequest(authProperties), requestMappingHandlerMapping));
 
         return authFilterFilterRegistrationBean;
