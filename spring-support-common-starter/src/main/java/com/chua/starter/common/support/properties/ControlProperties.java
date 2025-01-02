@@ -1,6 +1,5 @@
 package com.chua.starter.common.support.properties;
 
-import com.chua.common.support.os.PlatformKey;
 import lombok.Data;
 import lombok.Getter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -46,7 +45,9 @@ public class ControlProperties {
         /**
          * 当前平台名称
          */
+        @Getter
         private String name = "system";
+
     }
 
     @Data
