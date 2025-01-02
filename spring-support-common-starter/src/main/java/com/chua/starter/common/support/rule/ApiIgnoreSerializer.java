@@ -3,7 +3,6 @@ package com.chua.starter.common.support.rule;
 import com.chua.common.support.utils.ArrayUtils;
 import com.chua.starter.common.support.annotations.ApiGroup;
 import com.chua.starter.common.support.annotations.ApiIgnore;
-import com.chua.starter.common.support.annotations.PrivacyEncrypt;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -15,12 +14,9 @@ import com.fasterxml.jackson.databind.ser.ContextualSerializer;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerExecutionChain;
-import org.springframework.web.servlet.handler.MatchableHandlerMapping;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import java.io.IOException;
-import java.util.Objects;
-import java.util.logging.Handler;
 
 /**
  * 忽略字段
@@ -44,8 +40,8 @@ public class ApiIgnoreSerializer extends JsonSerializer<Object> implements Conte
     }
 
     @Override
-    public void serialize(Object value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
-        gen.writeNull();
+    public void serialize(Object value, JsonGenerator jsonGenerator, SerializerProvider serializers) throws IOException {
+        jsonGenerator.writeNull();
     }
 
     @Override
@@ -86,10 +82,9 @@ public class ApiIgnoreSerializer extends JsonSerializer<Object> implements Conte
         }
 
         Object handler1 = handler.getHandler();
-        if(null == handler1 || !(handler1 instanceof HandlerMethod)) {
+        if(null == handler1 || !(handler1 instanceof HandlerMethod handlerMethod)) {
             return false;
         }
-        HandlerMethod handlerMethod = (HandlerMethod) handler1;
         ApiGroup apiGroup = handlerMethod.getMethodAnnotation(ApiGroup.class);
         if(null == apiGroup) {
             return false;
