@@ -1,5 +1,6 @@
 package com.chua.starter.oauth.client.support.configuration;
 
+import com.chua.common.support.converter.Converter;
 import com.chua.common.support.unit.name.NamingCase;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
@@ -92,7 +93,7 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
         }
         String paramName = StringUtils.defaultString(requestValue.name(), StringUtils.defaultString(parameter.getName(), methodParameter.getParameterName()));
         if("userId".equalsIgnoreCase(paramName)) {
-            return userResume.getUserId();
+            return Converter.convertIfNecessary(userResume.getUserId(), parameterType);
         }
 
         Map<String, Object> cacheValue = asMap(webRequest, userResume);
