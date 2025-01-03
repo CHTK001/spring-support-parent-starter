@@ -6,10 +6,11 @@ import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.pojo.PayMerchantOrderQueryRequest;
 
+
 /**
  *
  * @since 2024/12/30
- * @author CH    
+ * @author CH
  */
 public interface PayMerchantOrderService extends IService<PayMerchantOrder>{
 

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.rpc.RpcService;
 import com.chua.starter.common.support.annotations.ApiCacheKey;
 import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.pay.support.entity.PayMerchant;
