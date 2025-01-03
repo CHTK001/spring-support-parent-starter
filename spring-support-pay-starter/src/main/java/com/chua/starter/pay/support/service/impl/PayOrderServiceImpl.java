@@ -2,6 +2,7 @@ package com.chua.starter.pay.support.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.rpc.RpcService;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.starter.common.support.utils.JakartaValidationUtils;
 import com.chua.starter.pay.support.configuration.PayListenerService;
@@ -18,6 +19,7 @@ import com.chua.starter.pay.support.result.PayRefundResponse;
 import com.chua.starter.pay.support.result.PaySignResponse;
 import com.chua.starter.pay.support.service.PayMerchantService;
 import com.chua.starter.pay.support.service.PayOrderService;
+import com.chua.starter.pay.support.service.PayService;
 import com.chua.starter.pay.support.sign.CreateSign;
 import lombok.RequiredArgsConstructor;
 import org.redisson.api.RLock;
@@ -35,6 +37,7 @@ import org.springframework.validation.Errors;
  */
 @Service
 @RequiredArgsConstructor
+@RpcService(interfaceClass = PayService.class)
 public class PayOrderServiceImpl implements PayOrderService {
 
     final PayMerchantService payMerchantService;
