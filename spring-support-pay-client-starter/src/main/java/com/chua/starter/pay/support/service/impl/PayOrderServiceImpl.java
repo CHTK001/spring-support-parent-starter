@@ -3,7 +3,6 @@ package com.chua.starter.pay.support.service.impl;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.validator.group.AddGroup;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.JakartaValidationUtils;
 import com.chua.starter.pay.support.configuration.PayListenerService;
 import com.chua.starter.pay.support.constant.PayConstant;
@@ -107,7 +106,11 @@ public class PayOrderServiceImpl implements PayOrderService {
 
         rLock.lock();
         try {
-            return new RefundOrder(transactionTemplate, payMerchantService, payMerchantOrderMapper).update(refundRequest);
+            ReturnResult<PayRefundResponse> update = new RefundOrder(transactionTemplate, payMerchantService, payMerchantOrderMapper).update(refundRequest);
+            if(update.isOk()) {
+                payListenerService.listen(update.getData().getOrder());
+            }
+            return update;
         } catch (Exception e) {
             throw new RuntimeException("退款操作失败，请稍后重试");
         } finally {

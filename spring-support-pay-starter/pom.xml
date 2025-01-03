@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.10</version>
+        <version>4.0.0.12</version>
     </parent>
 
     <artifactId>spring-support-pay-starter</artifactId>
@@ -21,45 +21,7 @@
     <dependencies>
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>utils-support-tencent-starter</artifactId>
-            <version>4.0.0.10</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-common-starter</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-swagger-starter</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-mybatis-starter</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-datasource-starter</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-redis-starter</artifactId>
-            <exclusions>
-                <exclusion>
-                    <artifactId>jredisearch</artifactId>
-                    <groupId>com.redislabs</groupId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
-
-        <dependency>
-            <groupId>com.fasterxml.jackson.dataformat</groupId>
-            <artifactId>jackson-dataformat-xml</artifactId>
+            <artifactId>spring-support-pay-client-starter</artifactId>
         </dependency>
     </dependencies>
 

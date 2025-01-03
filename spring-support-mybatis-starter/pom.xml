@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.10</version>
+        <version>4.0.0.12</version>
     </parent>
 
     <artifactId>spring-support-mybatis-starter</artifactId>

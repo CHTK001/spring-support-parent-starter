@@ -312,7 +312,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         }
 
         for (Cookie cookie : cookies) {
-            if (cookie.getName().equals("x-oauth-cookie")) {
+            if ("x-oauth-cookie".equals(cookie.getName())) {
                 return cookie.getValue();
             }
         }

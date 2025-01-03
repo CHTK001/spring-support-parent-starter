@@ -1,5 +1,6 @@
 package com.chua.starter.pay.support.result;
 
+import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.google.gson.annotations.SerializedName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -17,6 +18,11 @@ public class PayRefundResponse {
      * 退款单号
      */
     private PayRefundStatus status;
+
+    /**
+     * 订单
+     */
+    private PayMerchantOrder order;
 
     /**
      * 退款成功时间
