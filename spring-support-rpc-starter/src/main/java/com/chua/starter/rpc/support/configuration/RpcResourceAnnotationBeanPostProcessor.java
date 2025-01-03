@@ -15,6 +15,7 @@ import org.springframework.beans.factory.config.*;
 import org.springframework.beans.factory.support.AbstractBeanFactory;
 import org.springframework.beans.factory.support.GenericBeanDefinition;
 import org.springframework.beans.factory.support.RootBeanDefinition;
+import org.springframework.boot.context.properties.bind.BindResult;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.core.annotation.AnnotationAttributes;
 import org.springframework.core.env.Environment;
@@ -226,8 +227,15 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
     @Override
     public void setEnvironment(Environment environment) {
         super.setEnvironment(environment);
-        rpcProperties = Binder.get(environment).bind(RpcProperties.PRE, RpcProperties.class).get();
-        this.rpcClient = RpcClient.createClient(rpcProperties.getType().name(), rpcProperties.getRegistry(), rpcProperties.getApplicationName());
+        BindResult<RpcProperties> bindResult = Binder.get(environment).bind(RpcProperties.PRE, RpcProperties.class);
+        if(bindResult.isBound()) {
+            rpcProperties = bindResult.get();
+            this.rpcClient = RpcClient.createClient(rpcProperties.getType().name(), rpcProperties.getRegistry(), rpcProperties.getApplicationName());
+            return;
+        }
+        rpcProperties = new RpcProperties();
+        rpcProperties.setOpen(false);
+        rpcProperties.setEnable(false);
 
     }
 }

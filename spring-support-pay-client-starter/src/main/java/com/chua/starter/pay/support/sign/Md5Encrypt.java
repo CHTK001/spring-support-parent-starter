@@ -3,6 +3,7 @@ package com.chua.starter.pay.support.sign;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
@@ -27,15 +28,10 @@ public class Md5Encrypt {
             throw new IllegalStateException("System doesn't support MD5 algorithm.");
         }
 
-        try {
-            msgDigest.update(text.getBytes("utf-8"));
-        } catch (UnsupportedEncodingException var4) {
-            throw new IllegalStateException("System doesn't support your  EncodingException.");
-        }
+        msgDigest.update(text.getBytes(StandardCharsets.UTF_8));
 
         byte[] bytes = msgDigest.digest();
-        String md5Str = new String(encodeHex(bytes));
-        return md5Str;
+        return new String(encodeHex(bytes));
     }
 
     public static char[] encodeHex(byte[] data) {
@@ -62,9 +58,9 @@ public class Md5Encrypt {
         try {
             md5 = MessageDigest.getInstance("MD5");
             byte[] md5Bytes = md5.digest(encryptStr.getBytes());
-            StringBuffer hexValue = new StringBuffer();
-            for (int i = 0; i < md5Bytes.length; i++) {
-                int val = ((int) md5Bytes[i]) & 0xff;
+            StringBuilder hexValue = new StringBuilder();
+            for (byte md5Byte : md5Bytes) {
+                int val = ((int) md5Byte) & 0xff;
                 if (val < 16) {
                     hexValue.append("0");
                 }

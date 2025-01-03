@@ -5,10 +5,9 @@
     <parent>
         <artifactId>spring-support-parent-starter</artifactId>
         <groupId>com.chua</groupId>
-        <version>4.0.0.10</version>
+        <version>4.0.0.12</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
-
     <artifactId>spring-support-datasource-starter</artifactId>
 
     <properties>

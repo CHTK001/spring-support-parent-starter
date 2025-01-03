@@ -98,6 +98,7 @@ public class RefundOrder {
             payMerchantOrder.setPayMerchantOrderRefundCode("R" + payMerchantOrder.getPayMerchantOrderCode());
             ReturnResult<PayRefundResponse> handle = orderRefundCreator.handle(payMerchantOrder, refundRequest);
             PayRefundResponse payRefundResponse = handle.getData();
+            payRefundResponse.setOrder(payMerchantOrder);
             payMerchantOrder.setPayMerchantOrderRefundCreateTime(payRefundResponse.getCreateTime());
             payMerchantOrder.setPayMerchantOrderRefundSuccessTime(payRefundResponse.getSuccessTime());
             PayRefundStatus refundStatus = payRefundResponse.getStatus();

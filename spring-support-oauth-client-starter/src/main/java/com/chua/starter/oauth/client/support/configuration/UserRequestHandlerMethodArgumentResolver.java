@@ -10,6 +10,7 @@ import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.annotation.UserValue;
 import com.chua.starter.oauth.client.support.entity.RoleJudge;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
+import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.chua.starter.oauth.client.support.web.WebRequest;
 import jakarta.servlet.http.HttpServletRequest;
@@ -91,6 +92,7 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
         if(UserResume.class.isAssignableFrom(parameterType)) {
             return userResume;
         }
+
         String paramName = StringUtils.defaultString(requestValue.name(), StringUtils.defaultString(parameter.getName(), methodParameter.getParameterName()));
         if("userId".equalsIgnoreCase(paramName)) {
             return Converter.convertIfNecessary(userResume.getUserId(), parameterType);

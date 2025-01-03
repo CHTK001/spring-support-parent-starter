@@ -14,7 +14,7 @@
     <groupId>com.chua</groupId>
     <artifactId>spring-support-parent-starter</artifactId>
     <packaging>pom</packaging>
-    <version>4.0.0.10</version>
+    <version>4.0.0.12</version>
     <modules>
         <module>spring-support-datasource-starter</module>
         <module>spring-support-common-starter</module>
@@ -38,6 +38,7 @@
         <module>spring-support-tencent-starter</module>
         <module>spring-support-websockify-starter</module>
         <module>spring-support-pay-starter</module>
+        <module>spring-support-pay-client-starter</module>
     </modules>
 
     <properties>
@@ -45,8 +46,9 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
-        <module.version>4.0.0.10</module.version>
         <spring-boot.version>3.2.3</spring-boot.version>
+        <module.version>4.0.0.12</module.version>
+        <utils.version>4.0.0.11</utils.version>
 
         <mybatis-plus.version>3.4.0</mybatis-plus.version>
         <dubbo.version>3.1.1</dubbo.version>
@@ -112,25 +114,25 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-mica-starter</artifactId>
-                <version>${module.version}</version>
+                <version>${utils.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-netty-starter</artifactId>
-                <version>${module.version}</version>
+                <version>${utils.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-datasource-starter</artifactId>
-                <version>${module.version}</version>
+                <version>${utils.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-calcite-starter</artifactId>
-                <version>${module.version}</version>
+                <version>${utils.version}</version>
             </dependency>
 
             <dependency>
@@ -148,54 +150,55 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-zbus-starter</artifactId>
-                <version>${module.version}</version>
+                <version>${utils.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-spring-starter</artifactId>
-                <version>${module.version}</version>
+                <version>${utils.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-shell-starter</artifactId>
-                <version>${module.version}</version>
+                <version>${utils.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-hibernate-starter</artifactId>
-                <version>${module.version}</version>
+                <version>${utils.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-redis-starter</artifactId>
-                <version>${module.version}</version>
+                <version>${utils.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-httpclient-starter</artifactId>
-                <version>${module.version}</version>
+                <version>${utils.version}</version>
             </dependency>
+
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-jdk15on-starter</artifactId>
-                <version>${module.version}</version>
+                <version>${utils.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-groovy-starter</artifactId>
-                <version>${module.version}</version>
+                <version>${utils.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-vertx-starter</artifactId>
-                <version>${module.version}</version>
+                <version>${utils.version}</version>
             </dependency>
 
             <dependency>
@@ -214,19 +217,25 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-guava-starter</artifactId>
-                <version>${module.version}</version>
+                <version>${utils.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-rpc-starter</artifactId>
-                <version>${module.version}</version>
+                <version>${utils.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-rpc-sofa-starter</artifactId>
-                <version>${module.version}</version>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-elasticsearch-starter</artifactId>
+                <version>${utils.version}</version>
             </dependency>
 
             <dependency>
@@ -287,19 +296,26 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-email-starter</artifactId>
-                <version>${module.version}</version>
+                <version>${utils.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-nginx-starter</artifactId>
-                <version>${module.version}</version>
+                <version>${utils.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>com.chua</groupId>
+                <artifactId>utils-support-log-logback-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+
+            <dependency>
+                <groupId>com.chua</groupId>
                 <artifactId>utils-support-geoip2-starter</artifactId>
-                <version>${module.version}</version>
+                <version>${utils.version}</version>
             </dependency>
 
 
@@ -309,7 +325,6 @@
                 <version>${module.version}</version>
             </dependency>
 
-
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-sse-starter</artifactId>
@@ -318,25 +333,38 @@
 
             <dependency>
                 <groupId>com.chua</groupId>
+                <artifactId>utils-support-minio-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
                 <artifactId>utils-support-common-starter</artifactId>
-                <version>${module.version}</version>
+                <version>${utils.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-gateway-starter</artifactId>
-                <version>${module.version}</version>
+                <version>${utils.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-milvus-starter</artifactId>
-                <version>${module.version}</version>
+                <version>${utils.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-monitor-client-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-pay-client-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
 
@@ -354,22 +382,34 @@
 
             <dependency>
                 <groupId>com.chua</groupId>
-                <artifactId>utils-support-lucene-starter</artifactId>
+                <artifactId>spring-support-rpc-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
 
 
             <dependency>
                 <groupId>com.chua</groupId>
+                <artifactId>utils-support-lucene-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-tencent-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
                 <artifactId>utils-support-ssh-starter</artifactId>
-                <version>${module.version}</version>
+                <version>${utils.version}</version>
             </dependency>
 
 
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-oshi-starter</artifactId>
-                <version>${module.version}</version>
+                <version>${utils.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

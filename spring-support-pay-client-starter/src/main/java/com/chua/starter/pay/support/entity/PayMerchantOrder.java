@@ -85,6 +85,13 @@ public class PayMerchantOrder extends SysBase implements Serializable {
     @ApiModelProperty(value = "总价")
     @Schema(description = "总价")
     private BigDecimal payMerchantOrderTotalPrice;
+
+    /**
+     * 当时余额
+     */
+    @TableField(value = "pay_merchant_order_wallet")
+    @ApiModelProperty(value = "当时余额")
+    private BigDecimal payMerchantOrderWallet;
     /**
      订单状态;
      <pre>

@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class PayListenerService {
 
-    private Map<String, ListenerBean> originListener = new ConcurrentHashMap<>();
+    private final Map<String, ListenerBean> originListener = new ConcurrentHashMap<>();
     public void addListener(OnPayListener onPayListener, Object bean, Method method) {
         ReflectionUtils.makeAccessible(method);
         originListener.put(onPayListener.value(), new ListenerBean(bean, onPayListener, method));

@@ -5,7 +5,6 @@ import com.chua.starter.pay.support.entity.PayMerchantConfigWechat;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.handler.CallbackNotificationParser;
 import com.chua.starter.pay.support.mapper.PayMerchantConfigWechatMapper;
-import com.chua.starter.pay.support.mapper.PayMerchantMapper;
 import com.chua.starter.pay.support.mapper.PayMerchantOrderMapper;
 import com.chua.starter.pay.support.pojo.OrderCallbackRequest;
 import com.chua.starter.pay.support.pojo.WechatOrderCallbackRequest;
