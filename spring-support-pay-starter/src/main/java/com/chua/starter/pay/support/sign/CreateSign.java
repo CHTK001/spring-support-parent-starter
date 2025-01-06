@@ -2,6 +2,7 @@ package com.chua.starter.pay.support.sign;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.value.Value;
 import com.chua.starter.pay.support.emuns.TradeType;
 import com.chua.starter.pay.support.entity.PayMerchant;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
@@ -31,11 +32,12 @@ public class CreateSign {
 
     public ReturnResult<PaySignResponse> create(PaySignCreateRequest request, PayMerchantOrder payMerchantOrder) {
         String merchantCode = payMerchantOrder.getPayMerchantCode();
-        PayMerchant payMerchant = payMerchantService.getOneByCode(merchantCode);
-        if(null == payMerchant) {
+        Value<PayMerchant> payMerchantValue = payMerchantService.getOneByCode(merchantCode);
+        if(null == payMerchantValue || payMerchantValue.isNull()) {
             return ReturnResult.error("商户不存在");
         }
 
+        PayMerchant payMerchant = payMerchantValue.getValue();
         String tradeType = payMerchantOrder.getPayMerchantOrderTradeType().toUpperCase();
         PayConfigDetector<?> payConfigDetector = ServiceProvider.of(PayConfigDetector.class).getNewExtension(tradeType);
         if(null == payConfigDetector) {

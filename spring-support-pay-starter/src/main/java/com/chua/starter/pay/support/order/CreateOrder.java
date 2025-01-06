@@ -4,6 +4,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.net.UserAgent;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.IdUtils;
+import com.chua.common.support.value.Value;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.pay.support.emuns.TradeType;
 import com.chua.starter.pay.support.entity.PayMerchant;
@@ -35,10 +36,11 @@ public class CreateOrder {
     }
 
     public ReturnResult<PayOrderResponse> create(PayOrderRequest request) {
-        PayMerchant payMerchant = payMerchantService.getOneByCode(request.getMerchantCode());
-        if(null == payMerchant) {
+        Value<PayMerchant> payMerchantValue = payMerchantService.getOneByCode(request.getMerchantCode());
+        if(null == payMerchantValue || payMerchantValue.isNull()) {
             return ReturnResult.illegal("商户不存在");
         }
+        PayMerchant payMerchant = payMerchantValue.getValue();
 
         if(null == payMerchant.getPayMerchantStatus() || payMerchant.getPayMerchantStatus() == 0) {
             return ReturnResult.illegal("商户未启用");
@@ -71,6 +73,7 @@ public class CreateOrder {
         payMerchantOrder.setPayMerchantOrderOrigin(request.getOrigin());
         payMerchantOrder.setPayMerchantOrderAttach(request.getAttach());
         payMerchantOrder.setPayMerchantOrderProductName(request.getProductName());
+        payMerchantOrder.setPayMerchantOrderProductCode(request.getProductCode());
         payMerchantOrder.setPayMerchantOrderRemark(request.getRemark());
         payMerchantOrder.setPayMerchantOrderPrice(request.getPrice());
         payMerchantOrder.setPayMerchantOrderCode("P" + IdUtils.createTimeId(31));

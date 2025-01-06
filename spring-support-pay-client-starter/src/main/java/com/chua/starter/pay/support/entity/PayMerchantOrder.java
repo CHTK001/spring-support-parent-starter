@@ -5,6 +5,7 @@ import com.chua.starter.mybatis.pojo.SysBase;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -42,6 +43,15 @@ public class PayMerchantOrder extends SysBase implements Serializable {
     @Schema(description = "订单号")
     @Size(max = 255, message = "订单号最大长度要小于 255")
     private String payMerchantOrderCode;
+    /**
+     * 优惠券编码
+     */
+    @TableField(value = "pay_merchant_coupon_code")
+    @ApiModelProperty(value = "优惠券编码")
+    @Schema(description = "优惠券编码")
+    private String payMerchantCouponCode;
+
+
 
     /**
      * 创建订单的用户
@@ -165,6 +175,14 @@ public class PayMerchantOrder extends SysBase implements Serializable {
     @Schema(description = "商品名称")
     @Size(max = 255, message = "商品名称最大长度要小于 255")
     private String payMerchantOrderProductName;
+    /**
+     * 商品ID
+     */
+    @TableField(value = "pay_merchant_order_product_code")
+    @Schema(description = "商品编码(用于业务上的商品标识)")
+    @Size(max = 255, message = "商品编码最大长度要小于 255")
+    @NotBlank(message = "商品编码不能为空")
+    private String payMerchantOrderProductCode;
 
     /**
      * 请求消息头
