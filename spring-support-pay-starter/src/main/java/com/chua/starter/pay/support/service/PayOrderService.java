@@ -35,5 +35,20 @@ public interface PayOrderService extends PayService{
      * @return 结果
      */
     WechatOrderCallbackResponse refundOrder(CallbackNotificationParser wechatOrderCallbackRequest);
+    /**
+     * 退款
+     *
+     * @param refundRequest 退款请求
+     * @return 结果
+     */
+    ReturnResult<PayRefundResponse> refund(PayRefundRequest refundRequest);
 
+
+    /**
+     * 创建签名
+     *
+     * @param paySignCreateRequest 订单请求
+     * @return 结果
+     */
+    ReturnResult<PaySignResponse> createSign(PaySignCreateRequest paySignCreateRequest);
 }

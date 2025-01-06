@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.pojo.PayMerchantOrderQueryRequest;
+import com.chua.starter.pay.support.pojo.PayOrderV1Request;
 import org.apache.ibatis.annotations.Param;
 
 /**
@@ -19,5 +20,18 @@ public interface PayMerchantOrderMapper extends BaseMapper<PayMerchantOrder> {
      * @param request    请求
      * @return
      */
-    IPage<PayMerchantOrder> pageForOrder(@Param("page") Page<PayMerchantOrder> page,@Param("request") PayMerchantOrderQueryRequest request);
+    IPage<PayMerchantOrder> pageForOrder(@Param("page") Page<PayMerchantOrder> page,
+                                         @Param("request") PayMerchantOrderQueryRequest request);
+
+    /**
+     * 分页查询
+     *
+     * @param page      分页
+     * @param request   查询条件
+     * @param sysUserId 账单所属用户
+     * @return
+     */
+    IPage<PayMerchantOrder> order(@Param("page") Page<PayMerchantOrder> page,
+                                  @Param("request")PayOrderV1Request request,
+                                  @Param("sysUserId")Integer sysUserId);
 }
