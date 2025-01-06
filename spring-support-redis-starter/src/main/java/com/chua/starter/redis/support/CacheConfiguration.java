@@ -93,6 +93,7 @@ public class CacheConfiguration {
 
         return RedisCacheManager.builder(factory)
                 .cacheDefaults(config)
+                .allowCreateOnMissingCache(true)
                 .build();
     }
 

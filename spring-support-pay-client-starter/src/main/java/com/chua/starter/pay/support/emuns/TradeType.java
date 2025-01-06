@@ -27,6 +27,12 @@ public enum TradeType {
     WECHAT_JS_API("wechat_js_api"),
 
 
+    /**
+     * 钱包
+     */
+    WALLET("wallet")
+
+
     ;
 
     private final String name;

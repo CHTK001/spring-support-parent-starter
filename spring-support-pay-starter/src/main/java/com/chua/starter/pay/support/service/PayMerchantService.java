@@ -3,6 +3,7 @@ package com.chua.starter.pay.support.service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.value.Value;
 import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.pay.support.entity.PayMerchant;
 import jakarta.validation.constraints.NotBlank;
@@ -20,7 +21,7 @@ public interface PayMerchantService extends IService<PayMerchant> {
      * @return 商户信息
      */
 
-    PayMerchant getOneByCode(@NotBlank(message = "商户编码不能为空") String merchantCode);
+    Value<PayMerchant> getOneByCode(@NotBlank(message = "商户编码不能为空") String merchantCode);
 
     /**
      * 保存支付商户信息
