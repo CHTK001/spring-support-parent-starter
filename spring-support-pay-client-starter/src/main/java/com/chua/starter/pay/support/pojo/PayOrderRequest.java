@@ -71,7 +71,7 @@ public class PayOrderRequest implements Serializable {
     /**
      * 金额
      */
-    @Schema(description = "金额")
+    @Schema(description = "金额(原始金额)")
     @NotBlank(message = "金额不能为空", groups = {AddGroup.class})
     private BigDecimal price;
 

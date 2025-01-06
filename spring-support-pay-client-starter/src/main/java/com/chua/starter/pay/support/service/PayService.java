@@ -1,12 +1,12 @@
 package com.chua.starter.pay.support.service;
 
+import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.mybatis.entity.Query;
+import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.pojo.PayOrderRequest;
-import com.chua.starter.pay.support.pojo.PayRefundRequest;
-import com.chua.starter.pay.support.pojo.PaySignCreateRequest;
+import com.chua.starter.pay.support.pojo.PayOrderV1Request;
 import com.chua.starter.pay.support.result.PayOrderResponse;
-import com.chua.starter.pay.support.result.PayRefundResponse;
-import com.chua.starter.pay.support.result.PaySignResponse;
 
 /**
  * 支付服务
@@ -23,21 +23,12 @@ public interface PayService {
      */
     ReturnResult<PayOrderResponse> createOrder(PayOrderRequest request);
 
-
     /**
-     * 退款
+     * 创建订单
      *
-     * @param refundRequest 退款请求
-     * @return 结果
+     * @param request 用户ID
+     * @return 订单
      */
-    ReturnResult<PayRefundResponse> refund(PayRefundRequest refundRequest);
+    ReturnPageResult<PayMerchantOrder> order(Query<PayMerchantOrder> query, PayOrderV1Request request, Integer sysUserId);
 
-
-    /**
-     * 创建签名
-     *
-     * @param paySignCreateRequest 订单请求
-     * @return 结果
-     */
-    ReturnResult<PaySignResponse> createSign(PaySignCreateRequest paySignCreateRequest);
 }

@@ -1,10 +1,14 @@
 package com.chua.starter.pay.support.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.rpc.RpcService;
 import com.chua.common.support.validator.group.AddGroup;
+import com.chua.common.support.validator.group.SelectGroup;
 import com.chua.starter.common.support.utils.JakartaValidationUtils;
+import com.chua.starter.mybatis.entity.Query;
+import com.chua.starter.mybatis.utils.ReturnPageResultUtils;
 import com.chua.starter.pay.support.configuration.PayListenerService;
 import com.chua.starter.pay.support.constant.PayConstant;
 import com.chua.starter.pay.support.emuns.TradeType;
@@ -74,6 +78,15 @@ public class PayOrderServiceImpl implements PayOrderService {
         } finally {
             rLock.unlock();
         }
+    }
+
+    @Override
+    public ReturnPageResult<PayMerchantOrder> order(Query<PayMerchantOrder> query, PayOrderV1Request request, Integer sysUserId) {
+        Errors validate = JakartaValidationUtils.validate(request, SelectGroup.class);
+        if (validate.hasErrors()) {
+            return ReturnPageResult.illegal(validate.getAllErrors().get(0).getDefaultMessage());
+        }
+        return ReturnPageResultUtils.ok(payMerchantOrderMapper.order(query.createPage(), request, sysUserId));
     }
 
     @Override

@@ -16,6 +16,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -26,7 +27,7 @@ import java.util.List;
  */
 @Schema(description ="分页信息")
 @Data
-public class Query<T>{
+public class Query<T> implements Serializable {
     private static final Integer PAGE_NO = 1;
     private static final Integer PAGE_SIZE = 10;
 
