@@ -68,6 +68,15 @@ public class PayMerchant extends SysBase implements Serializable {
     @Schema(description = "是否启用; 0:未启用")
     private Integer payMerchantStatus;
 
+
+    /**
+     * 是否开通钱包
+     */
+    @TableField(value = "pay_merchant_open_wallet")
+    @ApiModelProperty(value = "是否启用; 0:未启用")
+    @Schema(description = "是否启用; 0:未启用")
+    private Integer payMerchantOpenWallet;
+
     /**
      * 是否删除;0:未删除
      */

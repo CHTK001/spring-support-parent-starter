@@ -60,7 +60,6 @@ public class RpcProperties {
     /**
      * 协议
      */
-    @NestedConfigurationProperty
     private List<RpcProtocolConfig> protocols;
     /**
      * 应用
@@ -69,12 +68,10 @@ public class RpcProperties {
     /**
      * 消费者
      */
-    @NestedConfigurationProperty
     private RpcConsumerConfig consumer;
     /**
      * 注册器
      */
-    @NestedConfigurationProperty
     private List<RpcRegistryConfig> registry;
 
     public List<RpcRegistryConfig> getRegistry() {
