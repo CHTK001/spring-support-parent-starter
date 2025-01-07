@@ -3,7 +3,6 @@ package com.chua.starter.pay.support.service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.value.Value;
 import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.pay.support.entity.PayMerchant;
 import jakarta.validation.constraints.NotBlank;
@@ -50,8 +49,9 @@ public interface PayMerchantService extends IService<PayMerchant> {
     /**
      * 分页查询支付商户信息
      *
-     * @param query 分页查询参数
+     * @param query       分页查询参数
+     * @param payMerchant
      * @return 返回分页查询结果
      */
-    IPage<PayMerchant> pageForMerchant(Query<PayMerchant> query);
+    IPage<PayMerchant> pageForMerchant(Query<PayMerchant> query, PayMerchant payMerchant);
 }
