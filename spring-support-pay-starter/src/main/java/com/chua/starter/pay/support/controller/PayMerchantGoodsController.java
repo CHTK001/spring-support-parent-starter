@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.*;
 @Api(tags = "商品商品接口")
 @Tag(name = "商品商品接口")
 @RestController
-@RequestMapping("/v2/pay/merchant/goods")
+@RequestMapping("/v3/pay/merchant/goods")
 @Slf4j
 @RequiredArgsConstructor
 public class PayMerchantGoodsController {
