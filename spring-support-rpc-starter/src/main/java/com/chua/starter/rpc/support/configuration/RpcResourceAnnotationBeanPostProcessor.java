@@ -65,6 +65,9 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
 
     @Override
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+        if(!rpcProperties.isOpen()) {
+            return;
+        }
         String[] beanNames = beanFactory.getBeanDefinitionNames();
         for (String beanName : beanNames) {
             Class<?> beanType = beanFactory.getType(beanName);
@@ -93,6 +96,9 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
 
     @Override
     public void postProcessMergedBeanDefinition(RootBeanDefinition beanDefinition, Class<?> beanType, String beanName) {
+        if(!rpcProperties.isOpen()) {
+            return;
+        }
         AnnotatedInjectionMetadata metadata = findInjectionMetadata(beanName, beanType, null);
         metadata.checkConfigMembers(beanDefinition);
         try {
@@ -104,7 +110,9 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
 
     @Override
     public PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName) throws BeansException {
-
+        if(!rpcProperties.isOpen()) {
+            return pvs;
+        }
         try {
             AnnotatedInjectionMetadata metadata = findInjectionMetadata(beanName, bean.getClass(), pvs);
             prepareInjection(metadata);
@@ -121,6 +129,9 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
 
     @Override
     protected Object doGetInjectedBean(AnnotationAttributes attributes, Object bean, String beanName, Class<?> injectedType, AnnotatedInjectElement injectedElement) throws Exception {
+        if(!rpcProperties.isOpen()) {
+            return bean;
+        }
         if (injectedElement.injectedObject == null) {
             throw new IllegalStateException("The AnnotatedInjectElement of bean should be inited before injection");
         }
@@ -241,4 +252,5 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
         rpcProperties.setEnable(false);
 
     }
+
 }

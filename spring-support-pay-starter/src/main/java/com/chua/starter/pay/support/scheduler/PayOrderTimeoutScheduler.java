@@ -22,7 +22,7 @@ public class PayOrderTimeoutScheduler {
 
     private final PayMerchantOrderService payMerchantOrderService;
 
-    @Scheduled(cron = "0 0 1,2 * * ?")
+    @Scheduled(cron = "0 1 * * * ?")
     public void execute() {
         log.info("超时检测机制开始扫描");
         try {
@@ -37,26 +37,11 @@ public class PayOrderTimeoutScheduler {
                 .name("订单超时检测机制")
                 .start(() -> {
                     try {
-                        LocalDateTime startTime = LocalDate.now().minusDays(1)
-                                .atTime(0, 0, 0, 0);
-                        while (true) {
-                            try {
-                                LocalDateTime endTime = startTime.plusHours(1);
-                                if(endTime.isAfter(LocalDateTime.now())) {
-                                    break;
-                                }
-                                payMerchantOrderService.update(Wrappers.<PayMerchantOrder>lambdaUpdate()
-                                        .set(PayMerchantOrder::getPayMerchantOrderStatus, "3000")
-                                        .eq(PayMerchantOrder::getPayMerchantOrderStatus, "1000")
-                                        .le(PayMerchantOrder::getCreateTime, endTime)
-                                        .ge(PayMerchantOrder::getCreateTime, startTime));
-
-                                startTime = endTime;
-                            } catch (Exception ignored) {
-                                break;
-                            }
-                        }
-
+                        payMerchantOrderService.update(Wrappers.<PayMerchantOrder>lambdaUpdate()
+                                .set(PayMerchantOrder::getPayMerchantOrderStatus, "3000")
+                                .eq(PayMerchantOrder::getPayMerchantOrderStatus, "1000")
+                                .le(PayMerchantOrder::getCreateTime, LocalDateTime.now())
+                                .ge(PayMerchantOrder::getCreateTime, LocalDateTime.now().minusHours(1).minusMinutes(3)));
                     } catch (Exception ignored) {
                     }
                 });

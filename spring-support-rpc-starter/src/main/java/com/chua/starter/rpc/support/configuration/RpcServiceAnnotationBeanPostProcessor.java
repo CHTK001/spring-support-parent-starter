@@ -76,7 +76,10 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        RpcProperties rpcProperties = Binder.get(SpringBeanUtils.getEnvironment()).bindOrCreate(RpcProperties.PRE, RpcProperties.class);
+        rpcProperties = Binder.get(SpringBeanUtils.getEnvironment()).bindOrCreate(RpcProperties.PRE, RpcProperties.class);
+        if(!rpcProperties.isOpen()) {
+            return;
+        }
         if (null == rpcProperties || CollectionUtils.isEmpty(rpcProperties.getScan())) {
             packagesToScan = Collections.singleton(applicationContext.getBeansWithAnnotation(SpringBootApplication.class).values().iterator().next().getClass().getPackage().getName());
         } else {
@@ -87,6 +90,9 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
 
     @Override
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+        if(!rpcProperties.isOpen()) {
+            return;
+        }
         if (this.registry == null) {
             // In spring 3.x, may be not call postProcessBeanDefinitionRegistry()
             this.registry = (BeanDefinitionRegistry) beanFactory;
@@ -112,6 +118,9 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
+        if(!rpcProperties.isOpen()) {
+            return;
+        }
         this.registry = registry;
         scanServiceBeans(resolvedPackagesToScan, registry);
     }

@@ -51,4 +51,12 @@ public interface PayOrderService extends PayService{
      * @return 结果
      */
     ReturnResult<PaySignResponse> createSign(PaySignCreateRequest paySignCreateRequest);
+
+    /**
+     * 关闭订单
+     *
+     * @param refundRequest 退款请求
+     * @return 结果
+     */
+    ReturnResult<PayRefundResponse> cancel(PayRefundRequest refundRequest);
 }

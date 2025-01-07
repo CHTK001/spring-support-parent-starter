@@ -15,10 +15,7 @@ import com.chua.starter.pay.support.emuns.TradeType;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.handler.CallbackNotificationParser;
 import com.chua.starter.pay.support.mapper.PayMerchantOrderMapper;
-import com.chua.starter.pay.support.order.CreateOrder;
-import com.chua.starter.pay.support.order.ReCreateOrder;
-import com.chua.starter.pay.support.order.RefundOrder;
-import com.chua.starter.pay.support.order.UpdateOrder;
+import com.chua.starter.pay.support.order.*;
 import com.chua.starter.pay.support.pojo.*;
 import com.chua.starter.pay.support.result.PayOrderResponse;
 import com.chua.starter.pay.support.result.PayRefundResponse;
@@ -153,6 +150,26 @@ public class PayOrderServiceImpl implements PayOrderService {
             rLock.unlock();
         }
     }
+    @Override
+    public ReturnResult<PayRefundResponse> cancel(PayRefundRequest refundRequest) {
+        RLock rLock = redissonClient.getLock(PayConstant.ORDER_REFUND_PREFIX);
+        if (!rLock.tryLock()) {
+            return ReturnResult.illegal("订单正在关闭, 请勿重复操作");
+        }
+
+        rLock.lock(10, TimeUnit.SECONDS);
+        try {
+            ReturnResult<PayRefundResponse> update = new CancelOrder(transactionTemplate, payMerchantService, payMerchantOrderMapper).update(refundRequest);
+            if(update.isOk()) {
+                payListenerService.listen(update.getData().getOrder());
+            }
+            return update;
+        } catch (Exception e) {
+            throw new RuntimeException("退款操作失败，请稍后重试");
+        } finally {
+            rLock.unlock();
+        }
+    }
 
     @Override
     public ReturnResult<PayRefundResponse> refund(PayRefundRequest refundRequest) {
@@ -200,5 +217,6 @@ public class PayOrderServiceImpl implements PayOrderService {
             rLock.unlock();
         }
     }
+
 
 }
