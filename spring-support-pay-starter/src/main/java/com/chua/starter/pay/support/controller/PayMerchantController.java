@@ -42,8 +42,8 @@ public class PayMerchantController {
      */
     @GetMapping("page")
     @Operation(summary = "分页查询商户")
-    public ReturnPageResult<PayMerchant> page(@ParameterObject Query<PayMerchant> query) {
-        return ReturnPageResultUtils.ok(payMerchantService.pageForMerchant(query));
+    public ReturnPageResult<PayMerchant> page(@ParameterObject Query<PayMerchant> query, @ParameterObject PayMerchant payMerchant) {
+        return ReturnPageResultUtils.ok(payMerchantService.pageForMerchant(query, payMerchant));
     }
 
     /**

@@ -16,7 +16,7 @@ import com.chua.starter.pay.support.mapper.PayMerchantConfigWechatMapper;
  * @author CH
  * @since 2024/12/30
  */
-@Spi("wechat_h5")
+@Spi("wallet")
 public final class WalletConfigDetector implements PayConfigDetector<PayMerchant> {
 
 

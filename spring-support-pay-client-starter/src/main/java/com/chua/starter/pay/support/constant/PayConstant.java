@@ -13,6 +13,10 @@ public interface PayConstant {
      */
      String ORDER_CREATE_PREFIX = "order:create:";
      /**
+     * 订单重新创建前缀
+     */
+     String ORDER_RECREATE_PREFIX = "order:recreate:";
+     /**
      * 订单签名前缀
      */
      String ORDER_SIGN_PREFIX = "order:sign:";

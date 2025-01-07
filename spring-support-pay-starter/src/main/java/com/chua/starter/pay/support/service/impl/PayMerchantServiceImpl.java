@@ -1,11 +1,10 @@
 package com.chua.starter.pay.support.service.impl;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.rpc.RpcService;
-import com.chua.common.support.value.Value;
 import com.chua.starter.common.support.annotations.ApiCacheKey;
 import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.pay.support.entity.PayMerchant;
@@ -63,8 +62,11 @@ public class PayMerchantServiceImpl extends ServiceImpl<PayMerchantMapper, PayMe
     }
 
     @Override
-    public IPage<PayMerchant> pageForMerchant(Query<PayMerchant> query) {
-        return baseMapper.selectPage(query.createPage(), query.mpjLambda());
+    public IPage<PayMerchant> pageForMerchant(Query<PayMerchant> query, PayMerchant payMerchant) {
+        return baseMapper.selectPage(query.createPage(), query.mpjLambda()
+                .likeRight(StringUtils.isNotBlank(payMerchant.getPayMerchantName()), PayMerchant::getPayMerchantName, payMerchant.getPayMerchantName())
+                .likeRight(StringUtils.isNotBlank(payMerchant.getPayMerchantCode()), PayMerchant::getPayMerchantCode, payMerchant.getPayMerchantCode())
+        );
     }
 
     /**

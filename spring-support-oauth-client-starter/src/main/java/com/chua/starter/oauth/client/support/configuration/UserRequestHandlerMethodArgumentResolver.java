@@ -98,6 +98,10 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
             return Converter.convertIfNecessary(userResume.getUserId(), parameterType);
         }
 
+        if(null == userResume) {
+            return null;
+        }
+
         Map<String, Object> cacheValue = asMap(webRequest, userResume);
 
         Object o = cacheValue.get(paramName);
