@@ -36,11 +36,11 @@ public class CreateOrder {
     }
 
     public ReturnResult<PayOrderResponse> create(PayOrderRequest request) {
-        Value<PayMerchant> payMerchantValue = payMerchantService.getOneByCode(request.getMerchantCode());
-        if(null == payMerchantValue || payMerchantValue.isNull()) {
+        ReturnResult<PayMerchant> payMerchantValue = payMerchantService.getOneByCode(request.getMerchantCode());
+        if(null == payMerchantValue || !payMerchantValue.isOk()) {
             return ReturnResult.illegal("商户不存在");
         }
-        PayMerchant payMerchant = payMerchantValue.getValue();
+        PayMerchant payMerchant = payMerchantValue.getData();
 
         if(null == payMerchant.getPayMerchantStatus() || payMerchant.getPayMerchantStatus() == 0) {
             return ReturnResult.illegal("商户未启用");
@@ -78,6 +78,7 @@ public class CreateOrder {
         payMerchantOrder.setPayMerchantOrderPrice(request.getPrice());
         payMerchantOrder.setPayMerchantOrderCode("P" + IdUtils.createTimeId(31));
         payMerchantOrder.setPayMerchantOrderTotalPrice(request.getTotalPrice());
+        payMerchantOrder.setPayMerchantCouponCode(request.getCouponCode());
         payMerchantOrder.setPayMerchantOrderStatus("1000");
         return transactionTemplate.execute(status -> {
             PayOrderCreator payOrderCreator = ServiceProvider.of(PayOrderCreator.class).getNewExtension(tradeType, checked.getData());
@@ -85,11 +86,12 @@ public class CreateOrder {
                 return ReturnResult.illegal("当前系统不支持该"+ payMerchantOrder.getPayMerchantOrderTradeType() +"下单方式");
             }
 
-            payMerchantOrderMapper.insert(payMerchantOrder);
             ReturnResult<PayOrderResponse> handle = payOrderCreator.handle(payMerchantOrder);
             if(handle.isOk()) {
+                payMerchantOrderMapper.insert(payMerchantOrder);
                 PayOrderResponse handleData = handle.getData();
                 handleData.setPayMerchantCode(payMerchantOrder.getPayMerchantOrderCode());
+                payOrderCreator.onFinish(payMerchantOrder);
                 return handle;
             }
             throw new RuntimeException(handle.getMsg());

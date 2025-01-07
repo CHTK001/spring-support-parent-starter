@@ -230,7 +230,10 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
         BindResult<RpcProperties> bindResult = Binder.get(environment).bind(RpcProperties.PRE, RpcProperties.class);
         if(bindResult.isBound()) {
             rpcProperties = bindResult.get();
-            this.rpcClient = RpcClient.createClient(rpcProperties.getType().name(), rpcProperties.getRegistry(), rpcProperties.getApplicationName());
+            this.rpcClient = RpcClient.createClient(rpcProperties.getType().name(),
+                    rpcProperties.getRegistry(),
+                    rpcProperties.getConsumer(),
+                    rpcProperties.getApplicationName());
             return;
         }
         rpcProperties = new RpcProperties();

@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.common.support.validator.group.UpdateGroup;
+import com.chua.starter.common.support.annotations.ApiCrypto;
+import com.chua.starter.common.support.annotations.ApiCryptoKey;
 import com.chua.starter.mybatis.pojo.SysBase;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -36,8 +38,7 @@ public class PayMerchantConfigWechat extends SysBase implements Serializable {
     @TableId(value = "pay_merchant_config_wechat_id", type = IdType.AUTO)
     @ApiModelProperty(value = "")
     @Schema(description = "")
-    @NotNull(message = "不能为null")
-    @NotBlank(message = "配置编码不能为空", groups = {UpdateGroup.class})
+    @NotNull(message = "配置编码不能为空", groups = {UpdateGroup.class})
     private Integer payMerchantConfigWechatId;
 
     /**

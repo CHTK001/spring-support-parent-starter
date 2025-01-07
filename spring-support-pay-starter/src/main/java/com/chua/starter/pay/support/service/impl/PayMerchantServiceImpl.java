@@ -32,8 +32,9 @@ public class PayMerchantServiceImpl extends ServiceImpl<PayMerchantMapper, PayMe
     @Override
     @ApiCacheKey("'sys:pay:merchant' + #merchantCode")
     @Cacheable(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, keyGenerator = "customTenantedKeyGenerator", unless = "#result == null")
-    public Value<PayMerchant> getOneByCode(String merchantCode) {
-        return Value.of(baseMapper.selectOne(Wrappers.<PayMerchant>lambdaQuery().eq(PayMerchant::getPayMerchantCode, merchantCode)));
+    public ReturnResult<PayMerchant> getOneByCode(String merchantCode) {
+        PayMerchant payMerchant = baseMapper.selectOne(Wrappers.<PayMerchant>lambdaQuery().eq(PayMerchant::getPayMerchantCode, merchantCode));
+        return null == payMerchant ? ReturnResult.illegal() : ReturnResult.ok(payMerchant);
     }
 
 

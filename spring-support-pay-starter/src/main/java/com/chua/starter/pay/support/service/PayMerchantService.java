@@ -21,7 +21,7 @@ public interface PayMerchantService extends IService<PayMerchant> {
      * @return 商户信息
      */
 
-    Value<PayMerchant> getOneByCode(@NotBlank(message = "商户编码不能为空") String merchantCode);
+    ReturnResult<PayMerchant> getOneByCode(@NotBlank(message = "商户编码不能为空") String merchantCode);
 
     /**
      * 保存支付商户信息
