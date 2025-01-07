@@ -13,6 +13,8 @@ import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE_ALWAYS;
 
 /**
@@ -61,6 +63,11 @@ public class PayMerchantConfigWechatServiceImpl extends ServiceImpl<PayMerchantC
         }
         clearCache(payMerchantConfigWechat2);
         return ReturnResult.ok(baseMapper.updateById(payMerchantConfigWechat )> 0);
+    }
+
+    @Override
+    public List<PayMerchantConfigWechat> getByMerchant(Integer payMerchantId) {
+        return baseMapper.selectList(Wrappers.<PayMerchantConfigWechat>lambdaQuery().eq(PayMerchantConfigWechat::getPayMerchantId, payMerchantId));
     }
 
     /**

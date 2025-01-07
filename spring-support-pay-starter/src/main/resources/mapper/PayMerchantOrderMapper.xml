@@ -33,27 +33,31 @@
                pmo.create_time
         FROM pay_merchant_order pmo
                  INNER JOIN pay_merchant pm ON pm.pay_merchant_code = pmo.pay_merchant_code
-        WHERE pmo.pay_merchant_code = #{request.payMerchantCode}
+        <where>
+            <if test="request.payMerchantCode != null and request.payMerchantCode != ''">
+                AND pmo.pay_merchant_code = #{request.payMerchantCode}
+            </if>
+            <if test="request.payMerchantOrderOrigin != null and request.payMerchantOrderOrigin != ''">
+                AND pay_merchant_order_origin = #{request.payMerchantOrderOrigin}
+            </if>
 
-        <if test="request.payMerchantOrderOrigin != null and request.payMerchantOrderOrigin != ''">
-            AND pay_merchant_order_origin = #{request.payMerchantOrderOrigin}
-        </if>
+            <if test="request.payMerchantOrderTradeType != null and request.payMerchantOrderTradeType != ''">
+                AND pay_merchant_order_trade_type = #{request.payMerchantOrderTradeType}
+            </if>
 
-        <if test="request.payMerchantOrderTradeType != null and request.payMerchantOrderTradeType != ''">
-            AND pay_merchant_order_trade_type = #{request.payMerchantOrderTradeType}
-        </if>
+            <if test="request.payMerchantOrderStatus != null and request.payMerchantOrderStatus != ''">
+                AND pay_merchant_order_status = #{request.payMerchantOrderTradeType}
+            </if>
 
-        <if test="request.payMerchantOrderStatus != null and request.payMerchantOrderStatus != ''">
-            AND pay_merchant_order_status = #{request.payMerchantOrderTradeType}
-        </if>
+            <if test="request.payMerchantOrderRemark != null and request.payMerchantOrderRemark != ''">
+                AND pay_merchant_order_remark LIKE concat(#{request.payMerchantOrderRemark}, '%')
+            </if>
 
-        <if test="request.payMerchantOrderRemark != null and request.payMerchantOrderRemark != ''">
-            AND pay_merchant_order_remark LIKE concat(#{request.payMerchantOrderRemark}, '%')
-        </if>
-
-        <if test="request.startTime != null and request.endTime != null">
-            AND (pmo.create_time <![CDATA[>=]]> #{request.startTime} AND pmo.create_time <![CDATA[<=]]> #{request.endTime})
-        </if>
+            <if test="request.startTime != null and request.endTime != null">
+                AND (pmo.create_time <![CDATA[>=]]> #{request.startTime} AND pmo.create_time <![CDATA[<=]]> #{request.endTime})
+            </if>
+        </where>
+        ORDER BY pmo.create_time DESC
     </select>
 
     <select id="order" resultType="com.chua.starter.pay.support.entity.PayMerchantOrder">
@@ -123,6 +127,6 @@
         <if test="request.payMerchantOrderAttach != null and request.payMerchantOrderAttach != ''">
             AND pay_merchant_order_attach LIKE concat('%', #{request.payMerchantOrderAttach}, '%')
         </if>
-
+        ORDER BY pmo.create_time DESC
     </select>
 </mapper>

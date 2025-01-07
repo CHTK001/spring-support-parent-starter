@@ -32,12 +32,12 @@ public class CreateSign {
 
     public ReturnResult<PaySignResponse> create(PaySignCreateRequest request, PayMerchantOrder payMerchantOrder) {
         String merchantCode = payMerchantOrder.getPayMerchantCode();
-        Value<PayMerchant> payMerchantValue = payMerchantService.getOneByCode(merchantCode);
-        if(null == payMerchantValue || payMerchantValue.isNull()) {
+        ReturnResult<PayMerchant> payMerchantValue = payMerchantService.getOneByCode(merchantCode);
+        if(null == payMerchantValue || !payMerchantValue.isOk()) {
             return ReturnResult.error("商户不存在");
         }
 
-        PayMerchant payMerchant = payMerchantValue.getValue();
+        PayMerchant payMerchant = payMerchantValue.getData();
         String tradeType = payMerchantOrder.getPayMerchantOrderTradeType().toUpperCase();
         PayConfigDetector<?> payConfigDetector = ServiceProvider.of(PayConfigDetector.class).getNewExtension(tradeType);
         if(null == payConfigDetector) {

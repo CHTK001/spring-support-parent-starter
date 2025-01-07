@@ -3,6 +3,8 @@ package com.chua.starter.pay.support.result;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
+import java.io.Serializable;
+
 /**
  * 订单
  * @author CH
@@ -10,7 +12,7 @@ import lombok.Data;
  */
 @Data
 @Schema(description = "订单响应数据")
-public class PayOrderResponse {
+public class PayOrderResponse implements Serializable {
 
     /**
      * 预支付ID

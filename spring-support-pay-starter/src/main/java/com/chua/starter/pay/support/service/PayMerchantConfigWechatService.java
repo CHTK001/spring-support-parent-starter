@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.pay.support.entity.PayMerchantConfigWechat;
 
+import java.util.List;
+
 /**
  * // 接口文档：微信支付商户配置服务
  * @author CH
@@ -34,4 +36,13 @@ public interface PayMerchantConfigWechatService extends IService<PayMerchantConf
      * @return 返回更新操作的结果，包括操作状态和可能的错误信息
      */
     ReturnResult<Boolean> updatePayMerchantConfigWechat(PayMerchantConfigWechat payMerchantConfigWechat);
+
+
+    /**
+     * 根据商户ID获取微信支付商户配置信息列表
+     *
+     * @param payMerchantId 商户ID
+     * @return 返回查询到的微信支付商户配置对象列表
+     */
+    List<PayMerchantConfigWechat> getByMerchant(Integer payMerchantId);
 }
