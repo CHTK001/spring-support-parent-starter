@@ -95,7 +95,7 @@
         WHERE pmo.pay_merchant_code = #{request.payMerchantCode}
 
         <if test="sysUserId != null">
-            AND pmo.create_by = #{sysUserId}
+            AND pmo.pay_merchant_order_user_id = #{sysUserId}
         </if>
 
         <if test="request.username != null and request.username != ''">
@@ -126,6 +126,50 @@
 
         <if test="request.payMerchantOrderAttach != null and request.payMerchantOrderAttach != ''">
             AND pay_merchant_order_attach LIKE concat('%', #{request.payMerchantOrderAttach}, '%')
+        </if>
+        ORDER BY pmo.create_time DESC
+    </select>
+
+    <select id="reOrder" resultType="com.chua.starter.pay.support.entity.PayMerchantOrder">
+        SELECT pay_merchant_order_id,
+        pay_merchant_order_code,
+        pay_merchant_order_user_id,
+        pay_merchant_order_origin,
+        pay_merchant_order_price,
+        pay_merchant_order_total_price,
+        pay_merchant_order_status,
+        pay_merchant_order_trade_type,
+        pmo.pay_merchant_code,
+        pm.pay_merchant_name payMerchantName,
+        pay_merchant_order_remark,
+        pay_merchant_order_product_name,
+        pay_merchant_order_product_code,
+        pay_merchant_coupon_code,
+        pay_merchant_order_wallet,
+        pay_merchant_order_browser,
+        pay_merchant_order_browser_system,
+        pay_merchant_order_fail_message,
+        pay_merchant_order_attach,
+        pay_merchant_order_transaction_id,
+        pay_merchant_order_refund_reason,
+        pay_merchant_order_refund_transaction_id,
+        pay_merchant_order_refund_code,
+        pay_merchant_order_refund_create_time,
+        pay_merchant_order_refund_success_time,
+        pay_merchant_order_refund_user_received_account,
+        pmo.create_name,
+        pmo.create_by,
+        pmo.create_time
+        FROM pay_merchant_order pmo
+        INNER JOIN pay_merchant pm ON pm.pay_merchant_code = pmo.pay_merchant_code
+        WHERE pmo.pay_merchant_code = #{request.payMerchantCode}
+        AND pay_merchant_order_status = 1000
+        <if test="request.userId != null">
+            AND pmo.pay_merchant_order_user_id = #{request.userId}
+        </if>
+
+        <if test="request.startTime != null and request.endTime != null">
+            AND (pmo.create_time <![CDATA[>=]]> #{request.startTime} AND pmo.create_time <![CDATA[<=]]> #{request.endTime})
         </if>
         ORDER BY pmo.create_time DESC
     </select>

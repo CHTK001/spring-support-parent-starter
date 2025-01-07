@@ -6,6 +6,8 @@ import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.pojo.PayOrderRequest;
 import com.chua.starter.pay.support.pojo.PayOrderV1Request;
+import com.chua.starter.pay.support.pojo.PayReOrderQueryV1Request;
+import com.chua.starter.pay.support.pojo.PayReOrderRequest;
 import com.chua.starter.pay.support.result.PayOrderResponse;
 
 /**
@@ -24,7 +26,23 @@ public interface PayService {
     ReturnResult<PayOrderResponse> createOrder(PayOrderRequest request);
 
     /**
-     * 创建订单
+     * 重新支付订单
+     *
+     * @param request 用户ID
+     * @return 订单
+     */
+    ReturnResult<PayOrderResponse> recreateOrder(PayReOrderRequest request);
+
+
+    /**
+     * 查询待支付订单
+     *
+     * @param request 用户ID
+     * @return 订单
+     */
+    ReturnPageResult<PayMerchantOrder> order(PayReOrderQueryV1Request request);
+    /**
+     * 查询订单
      *
      * @param request 用户ID
      * @return 订单

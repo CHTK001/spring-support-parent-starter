@@ -16,12 +16,14 @@ import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.handler.CallbackNotificationParser;
 import com.chua.starter.pay.support.mapper.PayMerchantOrderMapper;
 import com.chua.starter.pay.support.order.CreateOrder;
+import com.chua.starter.pay.support.order.ReCreateOrder;
 import com.chua.starter.pay.support.order.RefundOrder;
 import com.chua.starter.pay.support.order.UpdateOrder;
 import com.chua.starter.pay.support.pojo.*;
 import com.chua.starter.pay.support.result.PayOrderResponse;
 import com.chua.starter.pay.support.result.PayRefundResponse;
 import com.chua.starter.pay.support.result.PaySignResponse;
+import com.chua.starter.pay.support.service.PayMerchantOrderService;
 import com.chua.starter.pay.support.service.PayMerchantService;
 import com.chua.starter.pay.support.service.PayOrderService;
 import com.chua.starter.pay.support.service.PayService;
@@ -49,6 +51,7 @@ public class PayOrderServiceImpl implements PayOrderService {
 
     final PayMerchantService payMerchantService;
     final PayMerchantOrderMapper payMerchantOrderMapper;
+    final PayMerchantOrderService payMerchantOrderService;
     final RedissonClient redissonClient;
     final PayListenerService payListenerService;
     final TransactionTemplate transactionTemplate;
@@ -78,6 +81,37 @@ public class PayOrderServiceImpl implements PayOrderService {
         } finally {
             rLock.unlock();
         }
+    }
+
+    @Override
+    public ReturnResult<PayOrderResponse> recreateOrder(PayReOrderRequest request) {
+        Errors errors = JakartaValidationUtils.validate(request, AddGroup.class);
+        if (errors.hasErrors()) {
+            return ReturnResult.illegal(errors.getAllErrors().get(0).getDefaultMessage());
+        }
+
+        RLock rLock = redissonClient.getLock(PayConstant.ORDER_RECREATE_PREFIX + request.getPayMerchantOrderCode());
+        if (!rLock.tryLock()) {
+            return ReturnResult.illegal("订单已存在, 请勿重复下单");
+        }
+
+        rLock.lock(5, TimeUnit.SECONDS);
+        try {
+            return new ReCreateOrder(transactionTemplate, payMerchantService, payMerchantOrderService).create(request);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        } finally {
+            rLock.unlock();
+        }
+    }
+
+    @Override
+    public ReturnPageResult<PayMerchantOrder> order(PayReOrderQueryV1Request request) {
+        Errors validate = JakartaValidationUtils.validate(request, SelectGroup.class);
+        if (validate.hasErrors()) {
+            return ReturnPageResult.illegal(validate.getAllErrors().get(0).getDefaultMessage());
+        }
+        return ReturnPageResultUtils.ok(payMerchantOrderMapper.reOrder(request.createPage(), request));
     }
 
     @Override

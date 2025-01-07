@@ -7,6 +7,7 @@ import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.pojo.PayMerchantOrderQueryRequest;
 import com.chua.starter.pay.support.pojo.PayOrderQueryRequest;
 import com.chua.starter.pay.support.pojo.PayOrderV1Request;
+import com.chua.starter.pay.support.pojo.PayReOrderQueryV1Request;
 import org.apache.ibatis.annotations.Param;
 
 /**
@@ -35,4 +36,13 @@ public interface PayMerchantOrderMapper extends BaseMapper<PayMerchantOrder> {
     IPage<PayMerchantOrder> order(@Param("page") Page<PayMerchantOrder> page,
                                   @Param("request")PayOrderV1Request request,
                                   @Param("sysUserId")Integer sysUserId);
+
+    /**
+     * 分页查询
+     *
+     * @param page      分页
+     * @param request   查询条件
+     * @return
+     */
+    IPage<PayMerchantOrder> reOrder(@Param("page")Page<PayMerchantOrder> page, @Param("request")PayReOrderQueryV1Request request);
 }
