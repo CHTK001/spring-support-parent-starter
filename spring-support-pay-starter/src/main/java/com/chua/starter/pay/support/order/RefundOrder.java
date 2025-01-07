@@ -122,6 +122,6 @@ public class RefundOrder {
      * @return 商户
      */
     private PayMerchant getPayMerchant(PayMerchantOrder payMerchantOrder) {
-        return payMerchantService.getOneByCode(payMerchantOrder.getPayMerchantCode()).getValue();
+        return payMerchantService.getOneByCode(payMerchantOrder.getPayMerchantCode()).getData();
     }
 }

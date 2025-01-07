@@ -14,6 +14,8 @@ import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
  * 商户接口
  * @author CH
@@ -29,7 +31,16 @@ public class PayMerchantWechatController {
 
     private final PayMerchantConfigWechatService payMerchantConfigWechatService;
 
-
+    /**
+     * 删除商户
+     * @param merchantId 商户id
+     * @return 删除结果
+     */
+    @Operation(summary = "获取商户微信设置")
+    @GetMapping("list")
+    public ReturnResult<List<PayMerchantConfigWechat>> list(Integer payMerchantId) {
+        return ReturnResult.ok(payMerchantConfigWechatService.getByMerchant(payMerchantId));
+    }
 
     /**
      * 删除商户

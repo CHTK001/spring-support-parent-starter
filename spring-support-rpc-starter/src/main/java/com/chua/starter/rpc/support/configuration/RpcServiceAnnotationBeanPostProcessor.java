@@ -232,8 +232,7 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
                 }
             } else {
                 if (log.isWarnEnabled()) {
-                    log.warn("No class annotated by @Service was found under package ["
-                            + packageToScan + "], ignore re-scanned classes: " + scanExcludeFilter.getExcludedCount());
+                    log.warn("No class annotated by @Service was found under package [{}], ignore re-scanned classes: {}", packageToScan, scanExcludeFilter.getExcludedCount());
                 }
             }
 
@@ -252,8 +251,7 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
 
         BeanNameGenerator beanNameGenerator = null;
 
-        if (registry instanceof SingletonBeanRegistry) {
-            SingletonBeanRegistry singletonBeanRegistry = (SingletonBeanRegistry) registry;
+        if (registry instanceof SingletonBeanRegistry singletonBeanRegistry) {
             beanNameGenerator = (BeanNameGenerator) singletonBeanRegistry.getSingleton(CONFIGURATION_BEAN_NAME_GENERATOR);
         }
 

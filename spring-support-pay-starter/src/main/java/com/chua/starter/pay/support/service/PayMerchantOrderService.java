@@ -5,6 +5,7 @@ import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.pojo.PayMerchantOrderQueryRequest;
+import com.chua.starter.pay.support.pojo.PayOrderQueryRequest;
 
 
 /**
@@ -22,5 +23,13 @@ public interface PayMerchantOrderService extends IService<PayMerchantOrder>{
      * @param request 查询参数
      * @return 返回结果
      */
-    ReturnPageResult<PayMerchantOrder> page(Query<PayMerchantOrder> query, PayMerchantOrderQueryRequest request);
+    ReturnPageResult<PayMerchantOrder> page(Query<PayMerchantOrder> query, PayOrderQueryRequest request);
+
+    /**
+     * 分页查询
+     * @param page 分页条件
+     * @param request 查询参数
+     * @return 返回结果
+     */
+    ReturnPageResult<PayMerchantOrder> page(Query<PayMerchantOrder> page, PayMerchantOrderQueryRequest request);
 }

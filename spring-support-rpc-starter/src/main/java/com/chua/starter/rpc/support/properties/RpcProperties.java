@@ -68,7 +68,7 @@ public class RpcProperties {
     /**
      * 消费者
      */
-    private RpcConsumerConfig consumer;
+    private RpcConsumerConfig consumer = new RpcConsumerConfig();
     /**
      * 注册器
      */

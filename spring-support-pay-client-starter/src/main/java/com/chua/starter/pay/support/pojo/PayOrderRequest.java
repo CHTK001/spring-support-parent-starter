@@ -78,11 +78,15 @@ public class PayOrderRequest implements Serializable {
     /**
      * 总金额
      */
-    @Schema(description = "总金额")
+    @Schema(description = "总金额(实际支付金额)")
     @NotBlank(message = "总金额不能为空", groups = {AddGroup.class})
     private BigDecimal totalPrice;
 
-
+    /**
+     * 优惠券编码
+     */
+    @Schema(description = "优惠券编码")
+    private String couponCode;
     /**
      * 备注
      */

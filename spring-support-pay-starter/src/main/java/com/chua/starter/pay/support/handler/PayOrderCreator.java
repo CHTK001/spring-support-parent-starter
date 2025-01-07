@@ -17,4 +17,12 @@ public interface PayOrderCreator {
      * @return
      */
     ReturnResult<PayOrderResponse> handle(PayMerchantOrder payMerchantOrder);
+
+    /**
+     * 完成
+     * @param payMerchantOrder 支付订单
+     */
+    default void onFinish(PayMerchantOrder payMerchantOrder) {
+
+    }
 }
