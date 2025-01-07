@@ -24,7 +24,7 @@ import java.util.List;
 @Api(tags = "商户微信支付接口")
 @Tag(name = "商户微信支付接口")
 @RestController
-@RequestMapping("/v2/pay/merchant/wechat")
+@RequestMapping("/v3/pay/merchant/wechat")
 @Slf4j
 @RequiredArgsConstructor
 public class PayMerchantWechatController {
@@ -33,7 +33,6 @@ public class PayMerchantWechatController {
 
     /**
      * 删除商户
-     * @param merchantId 商户id
      * @return 删除结果
      */
     @Operation(summary = "获取商户微信设置")
@@ -44,7 +43,6 @@ public class PayMerchantWechatController {
 
     /**
      * 删除商户
-     * @param merchantId 商户id
      * @return 删除结果
      */
     @Operation(summary = "删除商户微信设置")
