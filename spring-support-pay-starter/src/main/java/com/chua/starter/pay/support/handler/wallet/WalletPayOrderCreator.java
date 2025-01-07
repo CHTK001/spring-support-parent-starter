@@ -41,6 +41,9 @@ public class WalletPayOrderCreator implements PayOrderCreator {
         }
 
         PayUserWallet payUserWallet = sysUserStudent.getData();
+        if(null == payUserWallet) {
+            return ReturnResult.illegal("用户钱包不存在");
+        }
         BigDecimal sysUserWallet = Optional.ofNullable(payUserWallet.getPayUserWalletMoney()).orElse(BigDecimal.ZERO);
 
         if(sysUserWallet.compareTo(payMerchantOrder.getPayMerchantOrderTotalPrice()) < 0) {
