@@ -63,11 +63,11 @@ public class RefundOrder {
             return ReturnResult.error("订单未支付");
         }
 
-        if(!payMerchantOrderStatus.startsWith("100")) {
+        if(payMerchantOrderStatus.startsWith("100")) {
             return ReturnResult.error("订单未支付");
         }
 
-        if(!payMerchantOrderStatus.startsWith("300")) {
+        if(payMerchantOrderStatus.startsWith("300")) {
             return ReturnResult.error("订单已超时");
         }
 
@@ -76,7 +76,7 @@ public class RefundOrder {
             return ReturnResult.illegal("商户不存在, 请联系管理员");
         }
 
-        TradeType type = TradeType.valueOf(payMerchantOrder.getPayMerchantOrderTradeType());
+        TradeType type = TradeType.valueOf(payMerchantOrder.getPayMerchantOrderTradeType().toUpperCase());
         String tradeType = type.getName();
         PayConfigDetector<?> payConfigDetector = ServiceProvider.of(PayConfigDetector.class).getNewExtension(tradeType);
         if(null == payConfigDetector) {
