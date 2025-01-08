@@ -1,5 +1,7 @@
 package com.chua.starter.pay.support.annotations;
 
+import com.chua.starter.pay.support.pojo.OrderCallbackRequest;
+
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -19,4 +21,10 @@ public @interface OnPayListener {
      * @return 监听
      */
     String value();
+
+    /**
+     * 监听状态
+     * @return 监听
+     */
+    OrderCallbackRequest.Status status() default OrderCallbackRequest.Status.SUCCESS;
 }

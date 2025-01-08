@@ -2,6 +2,7 @@ package com.chua.report.server.starter.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.utils.FileUtils;
 import com.chua.common.support.utils.IoUtils;
@@ -9,6 +10,8 @@ import com.chua.report.server.starter.entity.MonitorNginxConfig;
 import com.chua.report.server.starter.mapper.*;
 import com.chua.report.server.starter.ngxin.*;
 import com.chua.report.server.starter.service.MonitorNginxConfigService;
+import com.chua.starter.mybatis.entity.Query;
+import com.chua.starter.mybatis.utils.ReturnPageResultUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -102,6 +105,32 @@ public class MonitorNginxConfigServiceImpl extends ServiceImpl<MonitorNginxConfi
         MonitorNginxConfig monitorNginxConfig = baseMapper.selectById(monitorNginxConfigId);
         NginxRestart nginxRestart = new NginxRestart(monitorNginxConfig);
         return nginxRestart.run();
+    }
+
+    @Override
+    public ReturnPageResult<MonitorNginxConfig> pageForConfig(Query<MonitorNginxConfig> query) {
+        return ReturnPageResultUtils.ok(
+                baseMapper.selectPage(query.createPage(), query.mpjLambda())
+        );
+    }
+
+    @Override
+    public Boolean update(MonitorNginxConfig nginxConfig) {
+        return baseMapper.updateById(nginxConfig) > 0;
+    }
+
+    @Override
+    public MonitorNginxConfig saveForConfig(MonitorNginxConfig nginxConfig) {
+        baseMapper.insert(nginxConfig);
+        return nginxConfig;
+    }
+
+    @Override
+    public MonitorNginxConfig getForConfig(Integer monitorNginxConfigId) {
+        if(null == monitorNginxConfigId || monitorNginxConfigId <= 0) {
+            return null;
+        }
+        return baseMapper.selectById(monitorNginxConfigId);
     }
 
 }
