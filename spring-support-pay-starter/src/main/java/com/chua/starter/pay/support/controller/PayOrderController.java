@@ -11,6 +11,7 @@ import com.chua.starter.pay.support.entity.PayMerchantOrderWater;
 import com.chua.starter.pay.support.pojo.PayMerchantOrderQueryRequest;
 import com.chua.starter.pay.support.pojo.PayOrderQueryRequest;
 import com.chua.starter.pay.support.service.PayMerchantOrderService;
+import com.chua.starter.pay.support.service.PayMerchantOrderWaterService;
 import io.swagger.annotations.Api;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -40,7 +41,7 @@ public class PayOrderController {
 
 
     final PayMerchantOrderService payMerchantOrderService;
-
+    final PayMerchantOrderWaterService payMerchantOrderWaterService;
 
     /**
      * 分页查询
@@ -91,6 +92,6 @@ public class PayOrderController {
     @GetMapping("/water")
     @Operation(summary = "订单查询流水")
     public ReturnResult<List<PayMerchantOrderWater>> water(String payMerchantOrderCode) {
-        return payMerchantOrderService.water(payMerchantOrderCode);
+        return payMerchantOrderWaterService.water(payMerchantOrderCode);
     }
 }

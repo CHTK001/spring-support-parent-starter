@@ -12,8 +12,7 @@ import com.chua.starter.pay.support.mapper.PayMerchantOrderMapper;
 import com.chua.starter.pay.support.pojo.PayMerchantOrderQueryRequest;
 import com.chua.starter.pay.support.pojo.PayOrderQueryRequest;
 import com.chua.starter.pay.support.service.PayMerchantOrderService;
-import com.chua.starter.pay.support.service.PayService;
-import jodd.bean.BeanUtil;
+import com.chua.starter.pay.support.service.PayMerchantOrderWaterService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -28,7 +27,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PayMerchantOrderServiceImpl extends ServiceImpl<PayMerchantOrderMapper, PayMerchantOrder> implements PayMerchantOrderService{
 
-    private final PayService payService;
+    private final PayMerchantOrderWaterService payMerchantOrderWaterService;
 
     @Override
     public ReturnPageResult<PayMerchantOrder> page(Query<PayMerchantOrder> query, PayOrderQueryRequest request) {
@@ -42,8 +41,5 @@ public class PayMerchantOrderServiceImpl extends ServiceImpl<PayMerchantOrderMap
         return page(page, BeanUtils.copyProperties(request, PayOrderQueryRequest.class));
     }
 
-    @Override
-    public ReturnResult<List<PayMerchantOrderWater>> water(String payMerchantOrderCode) {
-        return payService.water(payMerchantOrderCode);
-    }
+
 }
