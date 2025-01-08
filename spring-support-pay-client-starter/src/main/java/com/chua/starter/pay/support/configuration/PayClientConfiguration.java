@@ -1,5 +1,9 @@
 package com.chua.starter.pay.support.configuration;
 
+import com.chua.common.support.protocol.ClientSetting;
+import com.chua.common.support.utils.ClassUtils;
+import com.chua.mica.support.client.MicaClient;
+import com.chua.mica.support.client.session.MicaSession;
 import com.chua.starter.pay.support.annotations.OnPayListener;
 import com.chua.starter.pay.support.properties.PayNotifyProperties;
 import org.springframework.beans.BeansException;
@@ -13,6 +17,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.util.ReflectionUtils;
+import org.springframework.util.StringUtils;
 
 /**
  * 客戶端配置
@@ -31,45 +36,45 @@ public class PayClientConfiguration implements BeanDefinitionRegistryPostProcess
         registry.registerBeanDefinition("paySmartInstantiationAwareBeanPostProcessor",
                 BeanDefinitionBuilder.genericBeanDefinition(PayListenerService.class, () -> factory)
                         .getBeanDefinition());
-//        if(!payNotifyProperties.isEnable()) {
-//            return;
-//        }
-//
-//        if(ClassUtils.isPresent("com.chua.starter.pay.support.configuration.PayConfiguration")) {
-//            return;
-//        }
-//
-//        if(payNotifyProperties.getType() == PayNotifyProperties.Type.MQTT) {
-//            registerMqttClient(registry, payNotifyProperties);
-//        }
+        if(!payNotifyProperties.isEnable()) {
+            return;
+        }
+
+        if(ClassUtils.isPresent("com.chua.starter.pay.support.configuration.PayConfiguration")) {
+            return;
+        }
+
+        if(payNotifyProperties.getType() == PayNotifyProperties.Type.MQTT) {
+            registerMqttClient(registry, payNotifyProperties);
+        }
 
     }
 
-//    private void registerMqttClient(BeanDefinitionRegistry registry, PayNotifyProperties payNotifyProperties) {
-//        PayNotifyProperties.MqttConfig mqttConfig = payNotifyProperties.getMqttConfig();
-//
-//        if(!StringUtils.hasLength(mqttConfig.getHost())) {
-//            return;
-//        }
-//
-//        MicaClient micaClient = new MicaClient(ClientSetting.builder()
-//                .host(mqttConfig.getHost())
-//                .port(mqttConfig.getPort())
-//                .clientId(mqttConfig.getClientId())
-//                .username(mqttConfig.getUsername())
-//                .password(mqttConfig.getPassword())
-//                .build());
-//
-//        micaClient.connect();
-//        MicaSession session = (MicaSession) micaClient.createSession("default");
-//        factory.register(session);
-//
-//        registry.registerBeanDefinition("MicaClient",
-//                BeanDefinitionBuilder.genericBeanDefinition(MicaClient.class, () -> micaClient)
-//                        .setDestroyMethodName("close")
-//                        .getBeanDefinition());
-//
-//    }
+    private void registerMqttClient(BeanDefinitionRegistry registry, PayNotifyProperties payNotifyProperties) {
+        PayNotifyProperties.MqttConfig mqttConfig = payNotifyProperties.getMqttConfig();
+
+        if(!StringUtils.hasLength(mqttConfig.getHost())) {
+            return;
+        }
+
+        MicaClient micaClient = new MicaClient(ClientSetting.builder()
+                .host(mqttConfig.getHost())
+                .port(mqttConfig.getPort())
+                .clientId(mqttConfig.getClientId())
+                .username(mqttConfig.getUsername())
+                .password(mqttConfig.getPassword())
+                .build());
+
+        micaClient.connect();
+        MicaSession session = (MicaSession) micaClient.createSession("default");
+        factory.register(session);
+
+        registry.registerBeanDefinition("MicaClient",
+                BeanDefinitionBuilder.genericBeanDefinition(MicaClient.class, () -> micaClient)
+                        .setDestroyMethodName("close")
+                        .getBeanDefinition());
+
+    }
 
 
     @Bean

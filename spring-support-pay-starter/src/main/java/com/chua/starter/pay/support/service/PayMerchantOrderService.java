@@ -37,10 +37,4 @@ public interface PayMerchantOrderService extends IService<PayMerchantOrder>{
      */
     ReturnPageResult<PayMerchantOrder> page(Query<PayMerchantOrder> page, PayMerchantOrderQueryRequest request);
 
-    /**
-     * 水单
-     * @param payMerchantOrderCode 订单编号
-     * @return 返回结果
-     */
-    ReturnResult<List<PayMerchantOrderWater>> water(String payMerchantOrderCode);
 }

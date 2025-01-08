@@ -24,4 +24,10 @@ public interface PayMerchantOrderWaterService extends IService<PayMerchantOrderW
      * @return 订单流水
      */
     ReturnResult<List<PayMerchantOrderWater>> water(String payMerchantOrderCode);
+
+    /**
+     * 创建新表
+     * @return 是否成功
+     */
+    ReturnResult<Boolean> createNewTable();
 }

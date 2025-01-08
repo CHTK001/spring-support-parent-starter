@@ -1,10 +1,8 @@
 package com.chua.report.client.starter.aop;
 
-import com.chua.report.client.starter.report.event.NetworkEvent;
 import com.chua.report.client.starter.report.event.ReportEvent;
 import com.chua.report.client.starter.report.event.TraceEvent;
 import com.chua.report.client.starter.service.ReportService;
-import com.chua.starter.common.support.watch.Span;
 import lombok.extern.slf4j.Slf4j;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
@@ -19,10 +17,8 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**

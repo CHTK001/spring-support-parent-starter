@@ -74,7 +74,7 @@ public class WechatJsApiPayOrderCreator implements PayOrderCreator {
         request.setDescription(payMerchantOrder.getPayMerchantOrderProductName());
         request.setNotifyUrl(payMerchantConfigWechat.getPayMerchantConfigWechatNotifyUrl() + "/" + payMerchantOrder.getPayMerchantCode() + "/" + payMerchantOrder.getPayMerchantOrderCode());
         request.setOutTradeNo(payMerchantOrder.getPayMerchantOrderCode());
-        request.setAttach(payMerchantOrder.getPayMerchantOrderAttach());
+//        request.setAttach(payMerchantOrder.getPayMerchantOrderAttach());
 
         Payer payer = new Payer();
         payer.setOpenid(payMerchantOrder.getPayMerchantOrderUserId());

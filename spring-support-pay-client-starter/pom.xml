@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.18</version>
+        <version>4.0.0.20</version>
     </parent>
 
     <artifactId>spring-support-pay-client-starter</artifactId>
@@ -22,6 +22,11 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-rpc-starter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-mica-starter</artifactId>
         </dependency>
 
         <dependency>
