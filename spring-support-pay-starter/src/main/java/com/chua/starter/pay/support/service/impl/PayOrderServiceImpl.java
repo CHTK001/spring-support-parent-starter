@@ -20,10 +20,7 @@ import com.chua.starter.pay.support.pojo.*;
 import com.chua.starter.pay.support.result.PayOrderResponse;
 import com.chua.starter.pay.support.result.PayRefundResponse;
 import com.chua.starter.pay.support.result.PaySignResponse;
-import com.chua.starter.pay.support.service.PayMerchantOrderService;
-import com.chua.starter.pay.support.service.PayMerchantService;
-import com.chua.starter.pay.support.service.PayOrderService;
-import com.chua.starter.pay.support.service.PayService;
+import com.chua.starter.pay.support.service.*;
 import com.chua.starter.pay.support.sign.CreateSign;
 import lombok.RequiredArgsConstructor;
 import org.redisson.api.RLock;
@@ -52,6 +49,7 @@ public class PayOrderServiceImpl implements PayOrderService {
     final RedissonClient redissonClient;
     final PayListenerService payListenerService;
     final TransactionTemplate transactionTemplate;
+    final PayMerchantOrderWaterService payMerchantOrderWaterService;
     final ApplicationContext applicationContext;
 
     @Override
@@ -72,7 +70,7 @@ public class PayOrderServiceImpl implements PayOrderService {
 
         rLock.lock(5, TimeUnit.SECONDS);
         try {
-            return new CreateOrder(transactionTemplate, payMerchantService, payMerchantOrderMapper).create(request);
+            return new CreateOrder(transactionTemplate, payMerchantService, payMerchantOrderWaterService, payMerchantOrderMapper).create(request);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         } finally {
@@ -94,7 +92,7 @@ public class PayOrderServiceImpl implements PayOrderService {
 
         rLock.lock(5, TimeUnit.SECONDS);
         try {
-            return new ReCreateOrder(transactionTemplate, payMerchantService, payMerchantOrderService).create(request);
+            return new ReCreateOrder(transactionTemplate, payMerchantService, payMerchantOrderWaterService, payMerchantOrderService).create(request);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         } finally {
@@ -141,8 +139,10 @@ public class PayOrderServiceImpl implements PayOrderService {
                 return updateOrder.failure(request, parser.getOrder());
             }
 
-            WechatOrderCallbackResponse success = updateOrder.success(request, parser.getOrder());
-            payListenerService.listen(parser.getOrder());
+            PayMerchantOrder payMerchantOrder = parser.getOrder();
+            WechatOrderCallbackResponse success = updateOrder.success(request, payMerchantOrder);
+            payMerchantOrderWaterService.createOrderWater(payMerchantOrder);
+            payListenerService.listen(payMerchantOrder);
             return success;
         } catch (Throwable e) {
             throw new RuntimeException("通知失败，订单处理异常");
@@ -161,7 +161,9 @@ public class PayOrderServiceImpl implements PayOrderService {
         try {
             ReturnResult<PayRefundResponse> update = new CancelOrder(transactionTemplate, payMerchantService, payMerchantOrderMapper).update(refundRequest);
             if(update.isOk()) {
-                payListenerService.listen(update.getData().getOrder());
+                PayMerchantOrder payMerchantOrder = update.getData().getOrder();
+                payMerchantOrderWaterService.createOrderWater(payMerchantOrder);
+                payListenerService.listen(payMerchantOrder);
             }
             return update;
         } catch (Exception e) {
@@ -182,7 +184,9 @@ public class PayOrderServiceImpl implements PayOrderService {
         try {
             ReturnResult<PayRefundResponse> update = new RefundOrder(transactionTemplate, payMerchantService, payMerchantOrderMapper).update(refundRequest);
             if(update.isOk()) {
-                payListenerService.listen(update.getData().getOrder());
+                PayMerchantOrder payMerchantOrder = update.getData().getOrder();
+                payMerchantOrderWaterService.createOrderWater(payMerchantOrder);
+                payListenerService.listen(payMerchantOrder);
             }
             return update;
         } catch (Exception e) {

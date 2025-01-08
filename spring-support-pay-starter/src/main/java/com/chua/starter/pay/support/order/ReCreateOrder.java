@@ -4,18 +4,16 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.net.UserAgent;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.utils.IdUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.pay.support.emuns.TradeType;
 import com.chua.starter.pay.support.entity.PayMerchant;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.handler.PayConfigDetector;
 import com.chua.starter.pay.support.handler.PayOrderCreator;
-import com.chua.starter.pay.support.mapper.PayMerchantOrderMapper;
-import com.chua.starter.pay.support.pojo.PayOrderRequest;
 import com.chua.starter.pay.support.pojo.PayReOrderRequest;
 import com.chua.starter.pay.support.result.PayOrderResponse;
 import com.chua.starter.pay.support.service.PayMerchantOrderService;
+import com.chua.starter.pay.support.service.PayMerchantOrderWaterService;
 import com.chua.starter.pay.support.service.PayMerchantService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -29,11 +27,16 @@ public class ReCreateOrder {
 
     private final TransactionTemplate transactionTemplate;
     private final PayMerchantService payMerchantService;
+    private final PayMerchantOrderWaterService payMerchantOrderWaterService;
     private final PayMerchantOrderService payMerchantOrderService;
 
-    public ReCreateOrder(TransactionTemplate transactionTemplate, PayMerchantService payMerchantService, PayMerchantOrderService payMerchantOrderService) {
+    public ReCreateOrder(TransactionTemplate transactionTemplate,
+                         PayMerchantService payMerchantService,
+                         PayMerchantOrderWaterService payMerchantOrderWaterService,
+                         PayMerchantOrderService payMerchantOrderService) {
         this.transactionTemplate = transactionTemplate;
         this.payMerchantService = payMerchantService;
+        this.payMerchantOrderWaterService = payMerchantOrderWaterService;
         this.payMerchantOrderService = payMerchantOrderService;
     }
 
@@ -84,6 +87,7 @@ public class ReCreateOrder {
             ReturnResult<PayOrderResponse> handle = payOrderCreator.handle(payMerchantOrder);
             if(handle.isOk()) {
                 payMerchantOrderService.updateById(payMerchantOrder);
+                payMerchantOrderWaterService.createOrderWater(payMerchantOrder);
                 PayOrderResponse handleData = handle.getData();
                 handleData.setPayMerchantCode(payMerchantOrder.getPayMerchantOrderCode());
                 payOrderCreator.onFinish(payMerchantOrder);

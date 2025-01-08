@@ -1,7 +1,9 @@
 package com.chua.report.server.starter.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.report.server.starter.entity.MonitorNginxConfig;
+import com.chua.starter.mybatis.entity.Query;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.validation.constraints.NotNull;
@@ -143,4 +145,32 @@ public interface MonitorNginxConfigService extends IService<MonitorNginxConfig> 
      * @return 返回一个包含重启结果的对象，其中包括了重启结果和错误信息
      */
     String restart(@NotNull(message = "不能为null") Integer monitorNginxConfigId);
+
+    /**
+     * 分页查询Nginx配置
+     * @param query 查询条件
+     * @return 返回一个包含分页结果的对象，其中包括了分页结果和错误信息
+     */
+    ReturnPageResult<MonitorNginxConfig> pageForConfig(Query<MonitorNginxConfig> query);
+
+    /**
+     * 更新Nginx配置
+     * @param nginxConfig Nginx配置对象
+     * @return 返回一个包含更新结果的对象，其中包括了更新结果和错误信息
+     */
+    Boolean update(MonitorNginxConfig nginxConfig);
+
+    /**
+     * 保存Nginx配置
+     * @param nginxConfig Nginx配置对象
+     * @return 返回一个包含保存结果的对象，其中包括了保存结果和错误信息
+     */
+    MonitorNginxConfig saveForConfig(MonitorNginxConfig nginxConfig);
+
+    /**
+     * 获取Nginx配置
+     * @param monitorNginxConfigId Nginx配置的唯一标识符
+     * @return 返回一个包含获取结果的对象，其中包括了获取结果和错误信息
+     */
+    MonitorNginxConfig getForConfig(Integer monitorNginxConfigId);
 }

@@ -6,12 +6,12 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.17</version>
+        <version>4.0.0.18</version>
     </parent>
 
     <artifactId>spring-support-oauth-server-starter</artifactId>
     <description>单点登录服务端</description>
-    <version>4.0.0.17</version>
+    <version>4.0.0.18</version>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>

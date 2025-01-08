@@ -4,7 +4,6 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.net.UserAgent;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.IdUtils;
-import com.chua.common.support.value.Value;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.pay.support.emuns.TradeType;
 import com.chua.starter.pay.support.entity.PayMerchant;
@@ -14,6 +13,7 @@ import com.chua.starter.pay.support.handler.PayOrderCreator;
 import com.chua.starter.pay.support.mapper.PayMerchantOrderMapper;
 import com.chua.starter.pay.support.pojo.PayOrderRequest;
 import com.chua.starter.pay.support.result.PayOrderResponse;
+import com.chua.starter.pay.support.service.PayMerchantOrderWaterService;
 import com.chua.starter.pay.support.service.PayMerchantService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -27,11 +27,16 @@ public class CreateOrder {
 
     private final TransactionTemplate transactionTemplate;
     private final PayMerchantService payMerchantService;
+    private final PayMerchantOrderWaterService payMerchantOrderWaterService;
     private final PayMerchantOrderMapper payMerchantOrderMapper;
 
-    public CreateOrder(TransactionTemplate transactionTemplate, PayMerchantService payMerchantService, PayMerchantOrderMapper payMerchantOrderMapper) {
+    public CreateOrder(TransactionTemplate transactionTemplate,
+                       PayMerchantService payMerchantService,
+                       PayMerchantOrderWaterService payMerchantOrderWaterService,
+                       PayMerchantOrderMapper payMerchantOrderMapper) {
         this.transactionTemplate = transactionTemplate;
         this.payMerchantService = payMerchantService;
+        this.payMerchantOrderWaterService = payMerchantOrderWaterService;
         this.payMerchantOrderMapper = payMerchantOrderMapper;
     }
 
@@ -89,6 +94,7 @@ public class CreateOrder {
             ReturnResult<PayOrderResponse> handle = payOrderCreator.handle(payMerchantOrder);
             if(handle.isOk()) {
                 payMerchantOrderMapper.insert(payMerchantOrder);
+                payMerchantOrderWaterService.createOrderWater(payMerchantOrder);
                 PayOrderResponse handleData = handle.getData();
                 handleData.setPayMerchantCode(payMerchantOrder.getPayMerchantOrderCode());
                 payOrderCreator.onFinish(payMerchantOrder);
