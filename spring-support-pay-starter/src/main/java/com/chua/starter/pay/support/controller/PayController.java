@@ -6,6 +6,8 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.common.support.validator.group.UpdateGroup;
 import com.chua.starter.common.support.annotations.Permission;
+import com.chua.starter.pay.support.entity.PayMerchant;
+import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.pojo.*;
 import com.chua.starter.pay.support.result.PayOrderResponse;
 import com.chua.starter.pay.support.result.PayRefundResponse;
@@ -19,10 +21,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 支付接口
@@ -42,6 +41,15 @@ public class PayController {
     final PayOrderService payOrderService;
 
 
+
+    /**
+     * 详情
+     */
+    @GetMapping("/detail")
+    @Operation(summary = "订单详情")
+    public ReturnResult<PayMerchantOrder> detail(String payMerchantOrderCode) {
+        return payOrderService.detail(payMerchantOrderCode);
+    }
     /**
      * 退款
      */
