@@ -28,7 +28,7 @@ public class PayOrderRequest implements Serializable {
     /**
      * 用户id
      */
-    @Schema(description = "用户id")
+    @Schema(description = "用户id(微信为openId)")
     @NotBlank(message = "用户id不能为空", groups = {AddGroup.class})
     private String userId;
 

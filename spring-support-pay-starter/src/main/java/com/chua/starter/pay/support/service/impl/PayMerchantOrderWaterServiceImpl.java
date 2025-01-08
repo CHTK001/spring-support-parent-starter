@@ -66,4 +66,9 @@ public class PayMerchantOrderWaterServiceImpl extends ServiceImpl<PayMerchantOrd
                         .orderByDesc(PayMerchantOrderWater::getCreateTime)
         ));
     }
+
+    @Override
+    public ReturnResult<Boolean> createNewTable() {
+        return null;
+    }
 }

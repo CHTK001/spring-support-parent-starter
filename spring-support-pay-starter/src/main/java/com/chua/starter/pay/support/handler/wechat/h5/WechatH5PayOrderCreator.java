@@ -75,7 +75,7 @@ public final class WechatH5PayOrderCreator implements PayOrderCreator {
         request.setMchid(payMerchantConfigWechat.getPayMerchantConfigWechatMchId());
         request.setDescription(payMerchantOrder.getPayMerchantOrderProductName());
         request.setNotifyUrl(payMerchantConfigWechat.getPayMerchantConfigWechatNotifyUrl() + "/" + payMerchantOrder.getPayMerchantCode() + "/" + payMerchantOrder.getPayMerchantOrderCode());        request.setOutTradeNo(payMerchantOrder.getPayMerchantOrderCode());
-        request.setAttach(payMerchantOrder.getPayMerchantOrderAttach());
+//        request.setAttach(payMerchantOrder.getPayMerchantOrderAttach());
         SceneInfo sceneInfo = new SceneInfo();
         sceneInfo.setPayerClientIp(RequestUtils.getIpAddress());
         request.setSceneInfo(sceneInfo);
