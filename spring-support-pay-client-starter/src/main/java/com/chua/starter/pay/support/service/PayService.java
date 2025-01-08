@@ -4,11 +4,14 @@ import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
+import com.chua.starter.pay.support.entity.PayMerchantOrderWater;
 import com.chua.starter.pay.support.pojo.PayOrderRequest;
 import com.chua.starter.pay.support.pojo.PayOrderV1Request;
 import com.chua.starter.pay.support.pojo.PayReOrderQueryV1Request;
 import com.chua.starter.pay.support.pojo.PayReOrderRequest;
 import com.chua.starter.pay.support.result.PayOrderResponse;
+
+import java.util.List;
 
 /**
  * 支付服务
@@ -49,4 +52,19 @@ public interface PayService {
      */
     ReturnPageResult<PayMerchantOrder> order(Query<PayMerchantOrder> query, PayOrderV1Request request, Integer sysUserId);
 
+    /**
+     * 订单详情
+     *
+     * @param payMerchantOrderCode 订单编号
+     * @return 订单
+     */
+    ReturnResult<PayMerchantOrder> detail(String payMerchantOrderCode);
+
+    /**
+     * 订单流水
+     *
+     * @param payMerchantOrderCode 订单编号
+     * @return 订单
+     */
+    ReturnResult<List<PayMerchantOrderWater>> water(String payMerchantOrderCode);
 }
