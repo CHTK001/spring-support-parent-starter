@@ -14,7 +14,7 @@
     <groupId>com.chua</groupId>
     <artifactId>spring-support-parent-starter</artifactId>
     <packaging>pom</packaging>
-    <version>4.0.0.17</version>
+    <version>4.0.0.18</version>
     <modules>
         <module>spring-support-datasource-starter</module>
         <module>spring-support-common-starter</module>
@@ -47,7 +47,7 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <spring-boot.version>3.2.3</spring-boot.version>
-        <module.version>4.0.0.17</module.version>
+        <module.version>4.0.0.18</module.version>
         <utils.version>4.0.0.14</utils.version>
 
         <mybatis-plus.version>3.4.0</mybatis-plus.version>
@@ -280,6 +280,7 @@
                 <version>${module.version}</version>
             </dependency>
 
+
             <!--            <dependency>-->
             <!--                <groupId>com.chua</groupId>-->
             <!--                <artifactId>spring-support-webjar-starter</artifactId>-->
@@ -296,6 +297,12 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-email-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-shardingv5-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
 

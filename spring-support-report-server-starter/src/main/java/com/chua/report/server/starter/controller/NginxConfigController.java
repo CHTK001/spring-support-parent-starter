@@ -1,12 +1,19 @@
 package com.chua.report.server.starter.controller;
 
+import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.validator.group.AddGroup;
+import com.chua.common.support.validator.group.UpdateGroup;
 import com.chua.report.server.starter.entity.MonitorNginxConfig;
 import com.chua.report.server.starter.service.MonitorNginxConfigService;
+import com.chua.starter.mybatis.entity.Query;
+import com.chua.starter.mybatis.utils.ReturnPageResultUtils;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -24,6 +31,61 @@ public class NginxConfigController {
     private final MonitorNginxConfigService monitorNginxConfigService;
 
 
+    /**
+     * 分页
+     * @param query 查询
+     * @return 分页
+     */
+    @GetMapping("page")
+    @Schema(description = "分页")
+    public ReturnPageResult<MonitorNginxConfig> page(Query<MonitorNginxConfig> query) {
+        return monitorNginxConfigService.pageForConfig(query);
+    }
+
+
+    /**
+     * 更新配置
+     * @param nginxConfig 配置
+     * @return 是否成功
+     */
+    @PutMapping("update")
+    @Schema(description = "更新配置")
+    public ReturnResult<Boolean> update(@Validated(UpdateGroup.class) @ParameterObject @RequestBody MonitorNginxConfig nginxConfig, BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            return ReturnResult.illegal(bindingResult.getAllErrors().get(0).getDefaultMessage());
+        }
+        return ReturnResult.optional(monitorNginxConfigService.update(nginxConfig))
+                .withErrorMessage("配置不存在")
+                .asResult();
+    }
+
+    /**
+     * 添加配置
+     * @param nginxConfig 配置
+     * @return 是否成功
+     */
+    @PostMapping("save")
+    @Schema(description = "添加配置")
+    public ReturnResult<MonitorNginxConfig> save(@Validated(AddGroup.class) @ParameterObject @RequestBody MonitorNginxConfig nginxConfig, BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            return ReturnResult.illegal(bindingResult.getAllErrors().get(0).getDefaultMessage());
+        }
+        return ReturnResult.optional(monitorNginxConfigService.saveForConfig(nginxConfig))
+                .withErrorMessage("配置新增失败")
+                .asResult();
+    }
+    /**
+     * 获取配置
+     * @param nginxConfigId nginx配置id
+     * @return 配置
+     */
+    @GetMapping("get")
+    @Schema(description = "获取配置")
+    public ReturnResult<MonitorNginxConfig> get(Integer monitorNginxConfigId) {
+        return ReturnResult.optional(monitorNginxConfigService.getForConfig(monitorNginxConfigId))
+                .withErrorMessage("配置新增失败")
+                .asResult();
+    }
     /**
      * 获取配置
      * @param nginxConfigId nginx配置id
@@ -65,7 +127,7 @@ public class NginxConfigController {
      * @param nginxConfig 配置
      * @return 是否成功
      */
-    @PostMapping("save")
+    @PostMapping("create")
     @Schema(description = "生成配置")
     public ReturnResult<Boolean> save(@ParameterObject @RequestBody MonitorNginxConfig nginxConfig) {
         return ReturnResult.optional(monitorNginxConfigService.createConfigString(nginxConfig.getMonitorNginxConfigId()))
