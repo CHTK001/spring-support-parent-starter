@@ -1,5 +1,7 @@
 package com.chua.starter.pay.support.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
@@ -13,6 +15,7 @@ import com.chua.starter.pay.support.configuration.PayListenerService;
 import com.chua.starter.pay.support.constant.PayConstant;
 import com.chua.starter.pay.support.emuns.TradeType;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
+import com.chua.starter.pay.support.entity.PayMerchantOrderWater;
 import com.chua.starter.pay.support.handler.CallbackNotificationParser;
 import com.chua.starter.pay.support.mapper.PayMerchantOrderMapper;
 import com.chua.starter.pay.support.order.*;
@@ -30,6 +33,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.validation.Errors;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -60,7 +64,7 @@ public class PayOrderServiceImpl implements PayOrderService {
         }
 
         TradeType tradeType = request.getTradeType();
-        if(null == tradeType) {
+        if (null == tradeType) {
             return ReturnResult.illegal("交易类型不能为空");
         }
         RLock rLock = redissonClient.getLock(PayConstant.ORDER_CREATE_PREFIX + tradeType.getName() + request.getOrderId());
@@ -119,6 +123,23 @@ public class PayOrderServiceImpl implements PayOrderService {
     }
 
     @Override
+    public ReturnResult<PayMerchantOrder> detail(String payMerchantOrderCode) {
+        if (StringUtils.isEmpty(payMerchantOrderCode)) {
+            return ReturnResult.illegal("订单号不能为空");
+        }
+        return ReturnResult.optional(payMerchantOrderMapper.selectOne(Wrappers.<PayMerchantOrder>lambdaQuery()
+                        .eq(PayMerchantOrder::getPayMerchantOrderCode, payMerchantOrderCode)
+                )
+        ).withErrorMessage("订单不存在")
+                .asResult();
+    }
+
+    @Override
+    public ReturnResult<List<PayMerchantOrderWater>> water(String payMerchantOrderCode) {
+        return payMerchantOrderWaterService.water(payMerchantOrderCode);
+    }
+
+    @Override
     public WechatOrderCallbackResponse notifyOrder(CallbackNotificationParser parser) {
         //订单号
         String id = parser.id();
@@ -150,6 +171,7 @@ public class PayOrderServiceImpl implements PayOrderService {
             rLock.unlock();
         }
     }
+
     @Override
     public ReturnResult<PayRefundResponse> cancel(PayRefundRequest refundRequest) {
         RLock rLock = redissonClient.getLock(PayConstant.ORDER_REFUND_PREFIX);
@@ -160,7 +182,7 @@ public class PayOrderServiceImpl implements PayOrderService {
         rLock.lock(10, TimeUnit.SECONDS);
         try {
             ReturnResult<PayRefundResponse> update = new CancelOrder(transactionTemplate, payMerchantService, payMerchantOrderMapper).update(refundRequest);
-            if(update.isOk()) {
+            if (update.isOk()) {
                 PayMerchantOrder payMerchantOrder = update.getData().getOrder();
                 payMerchantOrderWaterService.createOrderWater(payMerchantOrder);
                 payListenerService.listen(payMerchantOrder);
@@ -183,7 +205,7 @@ public class PayOrderServiceImpl implements PayOrderService {
         rLock.lock(10, TimeUnit.SECONDS);
         try {
             ReturnResult<PayRefundResponse> update = new RefundOrder(transactionTemplate, payMerchantService, payMerchantOrderMapper).update(refundRequest);
-            if(update.isOk()) {
+            if (update.isOk()) {
                 PayMerchantOrder payMerchantOrder = update.getData().getOrder();
                 payMerchantOrderWaterService.createOrderWater(payMerchantOrder);
                 payListenerService.listen(payMerchantOrder);

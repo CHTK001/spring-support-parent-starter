@@ -4,6 +4,9 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.entity.PayMerchantOrderWater;
 import com.baomidou.mybatisplus.extension.service.IService;
+
+import java.util.List;
+
 public interface PayMerchantOrderWaterService extends IService<PayMerchantOrderWater>{
 
 
@@ -15,4 +18,10 @@ public interface PayMerchantOrderWaterService extends IService<PayMerchantOrderW
      */
     ReturnResult<Boolean> createOrderWater(PayMerchantOrder payMerchantOrder);
 
+    /**
+     * 订单流水
+     * @param payMerchantOrderCode 订单号
+     * @return 订单流水
+     */
+    ReturnResult<List<PayMerchantOrderWater>> water(String payMerchantOrderCode);
 }

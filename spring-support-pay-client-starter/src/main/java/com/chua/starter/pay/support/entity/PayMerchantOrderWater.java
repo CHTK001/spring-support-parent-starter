@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.io.Serializable;
+import java.math.BigDecimal;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -57,6 +58,13 @@ public class PayMerchantOrderWater extends SysBase implements Serializable {
     @Size(max = 255,message = "订单状态;参见订单表最大长度要小于 255")
     private String payMerchantOrderStatus;
 
+
+    /**
+     * 当时余额
+     */
+    @TableField(value = "pay_merchant_order_wallet")
+    @ApiModelProperty(value = "当时余额")
+    private BigDecimal payMerchantOrderWallet;
     /**
      * 失败原因
      */

@@ -1,10 +1,13 @@
 package com.chua.starter.pay.support.controller;
 
 import com.chua.common.support.lang.code.ReturnPageResult;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.validator.group.SelectGroup;
 import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.mybatis.entity.Query;
+import com.chua.starter.pay.support.entity.PayMerchant;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
+import com.chua.starter.pay.support.entity.PayMerchantOrderWater;
 import com.chua.starter.pay.support.pojo.PayMerchantOrderQueryRequest;
 import com.chua.starter.pay.support.pojo.PayOrderQueryRequest;
 import com.chua.starter.pay.support.service.PayMerchantOrderService;
@@ -19,6 +22,8 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 /**
  * 订单接口
@@ -74,5 +79,18 @@ public class PayOrderController {
             return ReturnPageResult.illegal(bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
         return payMerchantOrderService.page(page, request);
+    }
+
+
+    /**
+     * 订单查询流水
+     *
+     * @param payMerchantOrderCode 订单编号
+     * @return 流水
+     */
+    @GetMapping("/water")
+    @Operation(summary = "订单查询流水")
+    public ReturnResult<List<PayMerchantOrderWater>> water(String payMerchantOrderCode) {
+        return payMerchantOrderService.water(payMerchantOrderCode);
     }
 }

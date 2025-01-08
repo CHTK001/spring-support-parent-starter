@@ -2,10 +2,14 @@ package com.chua.starter.pay.support.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.common.support.lang.code.ReturnPageResult;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
+import com.chua.starter.pay.support.entity.PayMerchantOrderWater;
 import com.chua.starter.pay.support.pojo.PayMerchantOrderQueryRequest;
 import com.chua.starter.pay.support.pojo.PayOrderQueryRequest;
+
+import java.util.List;
 
 
 /**
@@ -32,4 +36,11 @@ public interface PayMerchantOrderService extends IService<PayMerchantOrder>{
      * @return 返回结果
      */
     ReturnPageResult<PayMerchantOrder> page(Query<PayMerchantOrder> page, PayMerchantOrderQueryRequest request);
+
+    /**
+     * 水单
+     * @param payMerchantOrderCode 订单编号
+     * @return 返回结果
+     */
+    ReturnResult<List<PayMerchantOrderWater>> water(String payMerchantOrderCode);
 }
