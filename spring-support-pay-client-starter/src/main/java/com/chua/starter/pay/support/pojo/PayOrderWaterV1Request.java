@@ -7,33 +7,24 @@ import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
 import java.time.LocalDate;
-import java.util.Set;
+import java.time.LocalTime;
 
 /**
- * 流水查询
+ * 支付流水
  * @author CH
  */
 @EqualsAndHashCode(callSuper = true)
 @Data
-public class WaterQueryV1Request extends Query<PayMerchantOrderWater> implements Serializable {
+public class PayOrderWaterV1Request extends Query<PayMerchantOrderWater> implements Serializable {
 
 
-    /**
-     * 用户id
-     */
-    private Set<String> userIds;
-
-    /**
-     * 流水类型; 1:消费 2:充值
-     */
-    private Integer type;
     /**
      * 开始时间
      */
-    private Long startTime;
+    private LocalDate startDate;
 
     /**
      * 结束时间
      */
-    private Long endTime;
+    private LocalTime endDate;
 }

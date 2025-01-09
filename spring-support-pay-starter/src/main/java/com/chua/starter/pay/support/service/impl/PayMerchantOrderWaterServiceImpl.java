@@ -11,9 +11,9 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.mybatis.utils.ReturnPageResultUtils;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
+import com.chua.starter.pay.support.pojo.WaterQueryV1Request;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -25,6 +25,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.starter.pay.support.entity.PayMerchantOrderWater;
 import com.chua.starter.pay.support.mapper.PayMerchantOrderWaterMapper;
 import com.chua.starter.pay.support.service.PayMerchantOrderWaterService;
+
 @Service
 public class PayMerchantOrderWaterServiceImpl extends ServiceImpl<PayMerchantOrderWaterMapper, PayMerchantOrderWater> implements PayMerchantOrderWaterService{
 
@@ -39,7 +40,7 @@ public class PayMerchantOrderWaterServiceImpl extends ServiceImpl<PayMerchantOrd
         payMerchantOrderWater.setCreateTime(LocalDateTime.now());
         String format = DateUtils.format(payMerchantOrderWater.getCreateTime(), DateFormatConstant.YYYYMMDDHHMMSS);
         payMerchantOrderWater.setPayMerchantOrderWaterCode("S" + RandomUtils.randomString(6).toUpperCase()
-                + "P" + payMerchantOrderWater.getPayMerchantOrderCode()
+                + "P" + payMerchantOrder.getPayMerchantOrderCode()
                 + "T" + format
         );
         payMerchantOrderWater.setPayMerchantOrderCode(payMerchantOrder.getPayMerchantOrderCode());
@@ -74,7 +75,7 @@ public class PayMerchantOrderWaterServiceImpl extends ServiceImpl<PayMerchantOrd
     }
 
     @Override
-    public ReturnPageResult<PayMerchantOrderWater> water(Page<PayMerchantOrderWater> page, Set<String> userIds, LocalDate startDate, LocalDate endDate) {
+    public ReturnPageResult<PayMerchantOrderWater> water(Page<PayMerchantOrderWater> page, WaterQueryV1Request request, Set<String> userIds, LocalDate startDate, LocalDate endDate) {
         if(userIds.isEmpty()) {
             return ReturnPageResult.ok(Collections.emptyList());
         }
@@ -88,18 +89,18 @@ public class PayMerchantOrderWaterServiceImpl extends ServiceImpl<PayMerchantOrd
         }
 
         if(endDate == null) {
-            startDate = startDate.plusMonths(1);
+            endDate = startDate.plusMonths(1);
         }
 
         if(startDate.isAfter(endDate)) {
             return ReturnPageResult.illegal("请选择正确的时间");
         }
 
-        if(Duration.between(startDate, endDate).toDays() > 30) {
+        if(java.time.Period.between(startDate, endDate).getDays() > 30) {
             return ReturnPageResult.illegal("时间间隔不能超过30天");
         }
 
-        return ReturnPageResultUtils.ok(baseMapper.water(page, userIds, startDate, endDate));
+        return ReturnPageResultUtils.ok(baseMapper.water(page, request, userIds, startDate, endDate));
     }
 
     @Override

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.starter.pay.support.entity.PayMerchantOrderWater;
+import com.chua.starter.pay.support.pojo.WaterQueryV1Request;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -17,6 +18,7 @@ public interface PayMerchantOrderWaterMapper extends BaseMapper<PayMerchantOrder
      * water
      *
      * @param page      page
+     * @param request
      * @param userIds   userIds
      * @param startDate startDate
      * @param endDate   endDate
@@ -24,6 +26,7 @@ public interface PayMerchantOrderWaterMapper extends BaseMapper<PayMerchantOrder
      */
     IPage<PayMerchantOrderWater> water(
             @Param("page") Page<PayMerchantOrderWater> page,
+            @Param("request")WaterQueryV1Request request,
             @Param("userIds") Set<String> userIds,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate);

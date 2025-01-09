@@ -4,14 +4,43 @@
 
     <select id="water" resultType="com.chua.starter.pay.support.entity.PayMerchantOrderWater">
 
-        SELECT *
+        SELECT
+        pmow.pay_merchant_order_water_code,
+        pmow.pay_merchant_order_code,
+        pmow.pay_merchant_order_status,
+        pmow.pay_merchant_order_fail_message,
+        pmow.pay_merchant_order_transaction_id,
+        pmow.pay_merchant_order_refund_reason,
+        pmow.pay_merchant_order_refund_transaction_id,
+        pmow.pay_merchant_order_refund_code,
+        pmow.pay_merchant_order_refund_create_time,
+        pmow.pay_merchant_order_refund_success_time,
+        pmow.pay_merchant_order_refund_user_received_account,
+        pmow.create_time,
+        (SELECT pay_merchant_name FROM pay_merchant WHERE pay_merchant_code = pmo.pay_merchant_code) payMerchantName,
+        pmo.pay_merchant_order_product_name,
+        pmo.pay_merchant_order_product_code,
+        pmo.pay_merchant_order_price,
+        pmo.pay_merchant_order_total_price,
+        pmo.pay_merchant_order_trade_type,
+        pmo.pay_merchant_order_origin,
+        pmo.pay_merchant_order_attach
+
         FROM
             pay_merchant_order_water pmow
         INNER JOIN pay_merchant_order pmo ON pmo.pay_merchant_order_code = pmow.pay_merchant_order_code
 
         <trim>
             WHERE
-              pmo.pay_merchant_order_user_id IN
+                pmow.pay_merchant_order_status <![CDATA[<>]]> '1000'
+
+            <if test="request.type != null and request.type == 1">
+                AND pmo.pay_merchant_order_origin <![CDATA[<>]]> 'RECHARGE'
+            </if>
+            <if test="request.type != null and request.type == 2">
+                AND pmo.pay_merchant_order_origin = 'RECHARGE'
+            </if>
+            AND pmo.pay_merchant_order_user_id IN
             <foreach collection="userIds" item="userId" separator="," open="(" close=")">
                 #{userId}
             </foreach>
