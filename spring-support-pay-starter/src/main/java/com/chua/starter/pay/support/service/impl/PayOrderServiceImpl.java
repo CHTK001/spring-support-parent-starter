@@ -3,8 +3,10 @@ package com.chua.starter.pay.support.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.lang.date.DateUtils;
 import com.chua.common.support.rpc.RpcService;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.common.support.validator.group.SelectGroup;
@@ -142,8 +144,13 @@ public class PayOrderServiceImpl implements PayOrderService {
 
     @Override
     public ReturnPageResult<PayMerchantOrderWater> water(WaterQueryV1Request request) {
-        return payMerchantOrderWaterService.water(request.createPage(), request.getUserIds(), request.getStartTime(), request.getEndTime());
+        Long startTime = request.getStartTime();
+        Long endTime = request.getEndTime();
+        return payMerchantOrderWaterService.water(request.createPage(), request, request.getUserIds(),
+               null != startTime ?  DateUtils.toLocalDate(startTime) : null,
+                null != endTime ? DateUtils.toLocalDate(endTime) : null);
     }
+
 
     @Override
     public WechatOrderCallbackResponse notifyOrder(CallbackNotificationParser parser) {
@@ -211,6 +218,29 @@ public class PayOrderServiceImpl implements PayOrderService {
         rLock.lock(10, TimeUnit.SECONDS);
         try {
             ReturnResult<PayRefundResponse> update = new RefundOrder(transactionTemplate, payMerchantService, payMerchantOrderMapper).update(refundRequest);
+            if (update.isOk()) {
+                PayMerchantOrder payMerchantOrder = update.getData().getOrder();
+                payMerchantOrderWaterService.createOrderWater(payMerchantOrder);
+                payListenerService.listen(payMerchantOrder);
+            }
+            return update;
+        } catch (Exception e) {
+            throw new RuntimeException("退款操作失败，请稍后重试");
+        } finally {
+            rLock.unlock();
+        }
+    }
+
+    @Override
+    public ReturnResult<PayRefundResponse> refundWallet(PayRefundRequest request) {
+        RLock rLock = redissonClient.getLock(PayConstant.ORDER_REFUND_PREFIX);
+        if (!rLock.tryLock()) {
+            return ReturnResult.illegal("订单正在退款, 请勿重复操作");
+        }
+
+        rLock.lock(10, TimeUnit.SECONDS);
+        try {
+            ReturnResult<PayRefundResponse> update = new RefundWalletOrder(transactionTemplate, payMerchantService, payMerchantOrderMapper).update(request);
             if (update.isOk()) {
                 PayMerchantOrder payMerchantOrder = update.getData().getOrder();
                 payMerchantOrderWaterService.createOrderWater(payMerchantOrder);
