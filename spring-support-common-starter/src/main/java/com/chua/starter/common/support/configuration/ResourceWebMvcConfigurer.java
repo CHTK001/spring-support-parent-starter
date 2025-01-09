@@ -17,9 +17,9 @@ public class ResourceWebMvcConfigurer implements WebMvcConfigurer {
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         log.info("当前运行目录: {}", new File(".").getAbsolutePath());
-        registry.addResourceHandler("/static/**").addResourceLocations("classpath:/static/", "./static/");
+        registry.addResourceHandler("/static/**").addResourceLocations("classpath:/static/", "file:./static/");
         registry.addResourceHandler("/webjars/**").addResourceLocations("classpath:/webjars/",
-                "./webjars/",
+                "file:./webjars/",
                 "classpath:/META-INF/resources/webjars/");
     }
 
