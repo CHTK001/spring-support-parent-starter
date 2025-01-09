@@ -1,19 +1,26 @@
 package com.chua.starter.common.support.configuration;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import java.io.File;
 
 /**
  * resource
  *
  * @author CH
  */
+@Slf4j
 public class ResourceWebMvcConfigurer implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        registry.addResourceHandler("/static/**").addResourceLocations("classpath:/static/");
-        registry.addResourceHandler("/webjars/**").addResourceLocations("classpath:/webjars/", "classpath:/META-INF/resources/webjars/");
+        log.info("当前运行目录: {}", new File(".").getAbsolutePath());
+        registry.addResourceHandler("/static/**").addResourceLocations("classpath:/static/", "./static/");
+        registry.addResourceHandler("/webjars/**").addResourceLocations("classpath:/webjars/",
+                "./webjars/",
+                "classpath:/META-INF/resources/webjars/");
     }
 
 }

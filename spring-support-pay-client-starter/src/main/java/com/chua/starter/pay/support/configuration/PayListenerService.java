@@ -1,6 +1,7 @@
 package com.chua.starter.pay.support.configuration;
 
 import com.chua.common.support.json.Json;
+import com.chua.common.support.utils.ClassUtils;
 import com.chua.mica.support.client.session.MicaSession;
 import com.chua.starter.pay.support.annotations.OnPayListener;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
@@ -29,25 +30,26 @@ public class PayListenerService {
     public void addListener(OnPayListener onPayListener, Object bean, Method method) {
         ReflectionUtils.makeAccessible(method);
         String topic = onPayListener.value();
-
-        if(null != session) {
-            session.subscribe("#", 1, it -> {
-                try {
-                    PayMerchantOrder payMerchantOrder = Json.fromJson(it.payload(), PayMerchantOrder.class);
-                    listen(payMerchantOrder);
-                } catch (Exception ignored) {
-                }
-            });
-        }
         originListener.computeIfAbsent(topic, it -> new LinkedList<>()).add(new ListenerBean(bean, onPayListener, method));
     }
 
     public void listen(PayMerchantOrder order) {
+        if(ClassUtils.isPresent("com.chua.starter.pay.support.configuration.PayConfiguration")) {
+            if(session != null) {
+                session.publish("/" + order.getPayMerchantOrderOrigin(), Json.toJson(order).getBytes());
+            }
+            return;
+        }
         String payMerchantOrderOrigin = order.getPayMerchantOrderOrigin();
         if(StringUtils.isBlank(payMerchantOrderOrigin)) {
             return;
         }
 
+        notify(payMerchantOrderOrigin, order);
+        notify("*", order);
+    }
+
+    private void notify(String payMerchantOrderOrigin, PayMerchantOrder order) {
         List<ListenerBean> listenerBeanList = originListener.get(payMerchantOrderOrigin);
         if(null == listenerBeanList) {
             return;
@@ -60,6 +62,16 @@ public class PayListenerService {
 
     public void register(MicaSession session) {
         this.session = session;
+
+        if(null != session) {
+            session.subscribe("/#", 1, it -> {
+                try {
+                    PayMerchantOrder payMerchantOrder = Json.fromJson(it.payload(), PayMerchantOrder.class);
+                    listen(payMerchantOrder);
+                } catch (Exception ignored) {
+                }
+            });
+        }
     }
 
 

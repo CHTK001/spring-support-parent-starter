@@ -48,7 +48,7 @@
         <maven.compiler.target>21</maven.compiler.target>
         <spring-boot.version>3.2.3</spring-boot.version>
         <module.version>4.0.0.20</module.version>
-        <utils.version>4.0.0.14</utils.version>
+        <utils.version>4.0.0.15</utils.version>
 
         <mybatis-plus.version>3.4.0</mybatis-plus.version>
         <dubbo.version>3.1.1</dubbo.version>

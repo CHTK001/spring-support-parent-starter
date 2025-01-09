@@ -1,18 +1,26 @@
 package com.chua.starter.pay.support.configuration;
 
+import com.chua.common.support.chain.ChainContext;
+import com.chua.common.support.chain.FilterChain;
+import com.chua.common.support.chain.filter.Filter;
 import com.chua.common.support.eventbus.EventRouter;
 import com.chua.common.support.eventbus.Eventbus;
 import com.chua.common.support.protocol.ClientSetting;
 import com.chua.common.support.protocol.ServerSetting;
 import com.chua.common.support.utils.IoUtils;
+import com.chua.common.support.utils.NumberUtils;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.mica.support.client.MicaClient;
+import com.chua.mica.support.client.session.MicaSession;
 import com.chua.mica.support.server.MicaServer;
 import com.chua.redis.support.eventbus.RedisEventbus;
 import com.chua.starter.pay.support.properties.PayMqttProperties;
+import com.chua.starter.pay.support.properties.PayNotifyProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.DisposableBean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
@@ -48,9 +56,13 @@ public class PayConfiguration implements BeanDefinitionRegistryPostProcessor, Ap
     private ServerProperties serverProperties;
     private MicaServer micaServer;
     private MicaClient micaClient;
+    private PayNotifyProperties payNotifyProperties;
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
+        if(!payNotifyProperties.isEnable()) {
+            return;
+        }
         try {
             registerMqttServer();
             registryMqttClient();
@@ -61,20 +73,28 @@ public class PayConfiguration implements BeanDefinitionRegistryPostProcessor, Ap
     }
 
     private void registryMqttClient() {
+        PayNotifyProperties.MqttConfig mqttConfig = payNotifyProperties.getMqttConfig();
         micaClient = new MicaClient(
                 ClientSetting.builder()
-                        .port(serverProperties.getPort() + 1000)
-                        .host("0.0.0.0")
+                        .port(NumberUtils.isPositive(mqttConfig.getPort(), serverProperties.getPort() + 10000))
+                        .host(StringUtils.defaultString(mqttConfig.getHost(), "127.0.0.1"))
                         .build()
         );
 
         micaClient.connect();
+        MicaSession session = (MicaSession) micaClient.createSession("default");
+        PayClientConfiguration.factory.register(session);
     }
 
     private void registerMqttServer() {
+        PayNotifyProperties.MqttConfig mqttConfig = payNotifyProperties.getMqttConfig();
+        if(!mqttConfig.isOpenServer()) {
+            return;
+        }
         micaServer = new MicaServer(
                 ServerSetting.builder()
-                        .port(serverProperties.getPort() + 1000)
+                        .addDefaultMapping(false)
+                        .port(NumberUtils.isPositive(mqttConfig.getPort(), serverProperties.getPort() + 10000))
                         .host("0.0.0.0")
                         .build()
         );
@@ -111,6 +131,7 @@ public class PayConfiguration implements BeanDefinitionRegistryPostProcessor, Ap
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         serverProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate("server", ServerProperties.class);
+        payNotifyProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(PayNotifyProperties.PRE, PayNotifyProperties.class);
     }
 
     @Override

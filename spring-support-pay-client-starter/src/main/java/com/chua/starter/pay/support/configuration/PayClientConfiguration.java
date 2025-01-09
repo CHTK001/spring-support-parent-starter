@@ -28,7 +28,7 @@ import org.springframework.util.StringUtils;
 @EnableConfigurationProperties(PayNotifyProperties.class)
 public class PayClientConfiguration implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware {
 
-    final PayListenerService factory = new PayListenerService();
+    public static PayListenerService factory = new PayListenerService();
     private PayNotifyProperties payNotifyProperties;
 
     @Override

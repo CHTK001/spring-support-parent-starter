@@ -37,6 +37,10 @@ public class PayNotifyProperties {
     public static class MqttConfig {
 
         /**
+         * 是否开启服务端
+         */
+        private boolean openServer;
+        /**
          * 客户端id
          */
         private String clientId = IdUtils.createUlid();
