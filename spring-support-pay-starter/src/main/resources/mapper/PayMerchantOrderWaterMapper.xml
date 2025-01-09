@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.pay.support.mapper.PayMerchantOrderWaterMapper">
+
+    <select id="water" resultType="com.chua.starter.pay.support.entity.PayMerchantOrderWater">
+
+        SELECT *
+        FROM
+            pay_merchant_order_water pmow
+        INNER JOIN pay_merchant_order pmo ON pmo.pay_merchant_order_code = pmow.pay_merchant_order_code
+
+        <trim>
+            WHERE
+              pmo.pay_merchant_order_user_id IN
+            <foreach collection="userIds" item="userId" separator="," open="(" close=")">
+                #{userId}
+            </foreach>
+            AND pmo.create_time BETWEEN  #{startDate} AND #{endDate}
+        </trim>
+        ORDER BY
+        pmo.create_time DESC
+    </select>
+</mapper>
