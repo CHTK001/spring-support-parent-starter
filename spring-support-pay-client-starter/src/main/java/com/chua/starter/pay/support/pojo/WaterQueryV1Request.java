@@ -24,12 +24,16 @@ public class WaterQueryV1Request extends Query<PayMerchantOrderWater> implements
     private Set<String> userIds;
 
     /**
+     * 流水类型; 1:消费 2:充值
+     */
+    private Integer type;
+    /**
      * 开始时间
      */
-    private LocalDate startTime;
+    private Long startTime;
 
     /**
      * 结束时间
      */
-    private LocalDate endTime;
+    private Long endTime;
 }

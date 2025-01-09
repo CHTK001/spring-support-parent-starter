@@ -62,15 +62,15 @@ public class PayOrderCreateRequest {
     /**
      * 金额
      */
-    @Schema(description = "金额")
-    @NotNull(message = "金额不能为空", groups = {AddGroup.class})
+    @Schema(description = "商品原始价格")
+    @NotNull(message = "商品原始价格不能为空", groups = {AddGroup.class})
     private BigDecimal price;
 
     /**
      * 总金额
      */
-    @Schema(description = "总金额")
-    @NotNull(message = "总金额不能为空", groups = {AddGroup.class})
+    @Schema(description = "实际支付价格")
+    @NotNull(message = "实际支付价格不能为空", groups = {AddGroup.class})
     private BigDecimal totalPrice;
 
 

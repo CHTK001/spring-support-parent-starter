@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 
 /**
@@ -14,7 +15,7 @@ import java.math.BigDecimal;
  */
 @Data
 @Schema(description = "退款响应请求")
-public class PayRefundCreateRequest {
+public class PayRefundCreateRequest implements Serializable {
 
     /**
      * 退款原因

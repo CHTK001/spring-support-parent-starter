@@ -7,6 +7,7 @@ import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.entity.PayMerchantOrderWater;
 import com.chua.starter.pay.support.pojo.*;
 import com.chua.starter.pay.support.result.PayOrderResponse;
+import com.chua.starter.pay.support.result.PayRefundResponse;
 
 import java.util.List;
 import java.util.Set;
@@ -74,4 +75,20 @@ public interface PayService {
      * @return 订单
      */
     ReturnPageResult<PayMerchantOrderWater> water(WaterQueryV1Request request);
+
+
+    /**
+     * 退款
+     *
+     * @param request 订单编号
+     * @return 订单
+     */
+    ReturnResult<PayRefundResponse> refund(PayRefundRequest request);
+    /**
+     * 退款到钱包
+     *
+     * @param request 订单编号
+     * @return 订单
+     */
+    ReturnResult<PayRefundResponse> refundWallet(PayRefundRequest request);
 }

@@ -136,4 +136,62 @@ public class PayMerchantOrderWater extends SysBase implements Serializable {
     @Schema(description="退款入账账户 说明：取当前退款单的退款入账方，有以下几种情况： 1）退回银行卡：{银行名称}{卡类型}{卡尾号} 2）退回支付用户零钱:支付用户零钱* 3）退还商户:商户基本账户商户结算银行账户 4）退回支付用户零钱通:支付用户零钱通")
     @Size(max = 255,message = "退款入账账户 说明：取当前退款单的退款入账方，有以下几种情况： 1）退回银行卡：{银行名称}{卡类型}{卡尾号} 2）退回支付用户零钱:支付用户零钱* 3）退还商户:商户基本账户商户结算银行账户 4）退回支付用户零钱通:支付用户零钱通最大长度要小于 255")
     private String payMerchantOrderRefundUserReceivedAccount;
+
+
+    /**
+     * 商户名称
+     */
+    @TableField(exist = false)
+    @ApiModelProperty(value="商户名称")
+    private String payMerchantName;
+
+    /**
+     * 商品名称
+     */
+    @TableField(exist = false)
+    @ApiModelProperty(value="商品名称")
+    private String payMerchantOrderProductName;
+    /**
+     * 商品code
+     */
+    @TableField(exist = false)
+    @ApiModelProperty(value="商品code")
+    private String payMerchantOrderProductCode;
+
+    /**
+     * 商品原始价格
+     */
+    @TableField(exist = false)
+    @ApiModelProperty(value="商品原始价格")
+    private String payMerchantOrderPrice;
+    /**
+     * 商品总价格
+     */
+    @TableField(exist = false)
+    @ApiModelProperty(value="商品总价格")
+    private String payMerchantOrderTotalPrice;
+
+    /**
+     * 支付方式
+     */
+    @TableField(exist = false)
+    @ApiModelProperty(value="支付方式")
+    private String payMerchantOrderTradeType;
+    /**
+     * 订单来源
+     */
+    @TableField(exist = false)
+    @ApiModelProperty(value = "订单来源")
+    @Schema(description = "订单来源")
+    @Size(max = 255, message = "订单来源最大长度要小于 255")
+    private String payMerchantOrderOrigin;
+
+    /**
+     * 附加参数
+     */
+    @TableField(exist = false)
+    @ApiModelProperty(value = "附加参数")
+    @Schema(description = "附加参数")
+    @Size(max = 255, message = "附加参数最大长度要小于 255")
+    private String payMerchantOrderAttach;
 }

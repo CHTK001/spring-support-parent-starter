@@ -52,7 +52,7 @@ public class PayOrderController {
      * @return
      */
     @GetMapping("/page")
-    @Operation(summary = "分页查询订单")
+    @Operation(summary = "分页查询订单(v3)")
     @Permission({"sys:pay:order:page"})
     public ReturnPageResult<PayMerchantOrder> page(@ParameterObject Query<PayMerchantOrder> page,
                                                    @Validated(SelectGroup.class) @ParameterObject PayOrderQueryRequest request,
@@ -71,7 +71,7 @@ public class PayOrderController {
      * @return
      */
     @GetMapping("/merchant")
-    @Operation(summary = "分页查询订单")
+    @Operation(summary = "分页查询订单(商家)")
     @Permission({"sys:pay:order:page"})
     public ReturnPageResult<PayMerchantOrder> page(@ParameterObject Query<PayMerchantOrder> page,
                                                    @Validated(SelectGroup.class) @ParameterObject PayMerchantOrderQueryRequest request,
