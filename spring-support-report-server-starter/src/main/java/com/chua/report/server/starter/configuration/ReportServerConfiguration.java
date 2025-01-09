@@ -21,14 +21,18 @@ import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.core.Ordered;
 import org.springframework.core.env.Environment;
 import org.springframework.util.ReflectionUtils;
 
@@ -44,8 +48,9 @@ import org.springframework.util.ReflectionUtils;
         "com.chua.report.server.starter.report.endpoint",
         "com.chua.report.server.starter.controller"
 })
+@AutoConfigureAfter(ServerProperties.class)
 @EnableConfigurationProperties({ReportServerProperties.class, ReportJobProperties.class, ReportGenProperties.class})
-public class ReportServerConfiguration implements BeanDefinitionRegistryPostProcessor, EnvironmentAware, DisposableBean, CommandLineRunner, SmartInstantiationAwareBeanPostProcessor {
+public class ReportServerConfiguration implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware, DisposableBean, CommandLineRunner, SmartInstantiationAwareBeanPostProcessor, Ordered {
     private Integer serverPort;
     private int reportServerPort;
     private ReportServerProperties reportServerProperties;
@@ -96,13 +101,6 @@ public class ReportServerConfiguration implements BeanDefinitionRegistryPostProc
         }
     }
 
-    @Override
-    public void setEnvironment(Environment environment) {
-        ServerProperties serverProperties = Binder.get(environment).bindOrCreate("server", ServerProperties.class);
-        reportServerProperties = Binder.get(environment).bindOrCreate(ReportServerProperties.PRE,  ReportServerProperties.class);
-        serverPort = serverProperties.getPort();
-        reportServerPort = serverPort + 10000;
-    }
 
     @Bean
     @ConditionalOnMissingBean
@@ -122,6 +120,22 @@ public class ReportServerConfiguration implements BeanDefinitionRegistryPostProc
     public void run(String... args) throws Exception {
         Thread.sleep(1000);
 //        registerZbusClient();
+    }
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        ServerProperties serverProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate("server", ServerProperties.class);
+        reportServerProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(ReportServerProperties.PRE,  ReportServerProperties.class);
+        serverPort = serverProperties.getPort();
+        if(null == serverPort) {
+            serverPort = 8080;
+        }
+        reportServerPort = serverPort + 10000;
+    }
+
+    @Override
+    public int getOrder() {
+        return Ordered.LOWEST_PRECEDENCE + 1;
     }
 
 
