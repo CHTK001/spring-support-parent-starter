@@ -72,7 +72,7 @@ public class PayOrderServiceImpl implements PayOrderService {
             return ReturnResult.illegal("订单已存在, 请勿重复下单");
         }
 
-        rLock.lock(5, TimeUnit.SECONDS);
+        rLock.lock(3, TimeUnit.SECONDS);
         try {
             return new CreateOrder(transactionTemplate, payMerchantService, payMerchantOrderWaterService, payMerchantOrderMapper).create(request);
         } catch (Throwable e) {
