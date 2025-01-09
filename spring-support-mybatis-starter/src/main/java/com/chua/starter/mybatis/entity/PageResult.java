@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 
@@ -18,7 +19,7 @@ import java.util.List;
 @Schema(description = "分页信息")
 @Data
 @Builder
-public class PageResult<T>{
+public class PageResult<T> implements Serializable {
     /**
      * 每页显示条数，默认 10
      */

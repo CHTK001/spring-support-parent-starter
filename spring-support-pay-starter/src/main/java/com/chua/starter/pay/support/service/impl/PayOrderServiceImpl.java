@@ -34,6 +34,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.validation.Errors;
 
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -114,12 +115,12 @@ public class PayOrderServiceImpl implements PayOrderService {
     }
 
     @Override
-    public ReturnPageResult<PayMerchantOrder> order(Query<PayMerchantOrder> query, PayOrderV1Request request, Integer sysUserId) {
+    public ReturnPageResult<PayMerchantOrder> order(Query<PayMerchantOrder> query, PayOrderV1Request request, Set<String> sysUserIds) {
         Errors validate = JakartaValidationUtils.validate(request, SelectGroup.class);
         if (validate.hasErrors()) {
             return ReturnPageResult.illegal(validate.getAllErrors().get(0).getDefaultMessage());
         }
-        return ReturnPageResultUtils.ok(payMerchantOrderMapper.order(query.createPage(), request, sysUserId));
+        return ReturnPageResultUtils.ok(payMerchantOrderMapper.order(query.createPage(), request, sysUserIds));
     }
 
     @Override
@@ -137,6 +138,11 @@ public class PayOrderServiceImpl implements PayOrderService {
     @Override
     public ReturnResult<List<PayMerchantOrderWater>> water(String payMerchantOrderCode) {
         return payMerchantOrderWaterService.water(payMerchantOrderCode);
+    }
+
+    @Override
+    public ReturnPageResult<PayMerchantOrderWater> water(WaterQueryV1Request request) {
+        return payMerchantOrderWaterService.water(request.createPage(), request.getUserIds(), request.getStartTime(), request.getEndTime());
     }
 
     @Override

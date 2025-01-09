@@ -7,8 +7,11 @@ import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.pojo.PayOrderQueryRequest;
 import com.chua.starter.pay.support.pojo.PayOrderV1Request;
 import com.chua.starter.pay.support.pojo.PayReOrderQueryV1Request;
+import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.Set;
+@Mapper
 public interface PayMerchantOrderMapper extends BaseMapper<PayMerchantOrder> {
     /**
      * 分页查询
@@ -25,12 +28,12 @@ public interface PayMerchantOrderMapper extends BaseMapper<PayMerchantOrder> {
      *
      * @param page      分页
      * @param request   查询条件
-     * @param sysUserId 账单所属用户
+     * @param sysUserIds 账单所属用户
      * @return
      */
     IPage<PayMerchantOrder> order(@Param("page") Page<PayMerchantOrder> page,
                                   @Param("request") PayOrderV1Request request,
-                                  @Param("sysUserId") Integer sysUserId);
+                                  @Param("sysUserIds") Set<String> sysUserIds);
 
     /**
      * 分页查询

@@ -6,6 +6,8 @@ import com.chua.starter.pay.support.mapper.PayMerchantOrderMapper;
 import com.chua.starter.pay.support.pojo.OrderCallbackRequest;
 import com.chua.starter.pay.support.pojo.WechatOrderCallbackResponse;
 
+import java.time.LocalDateTime;
+
 /**
  * 更新订单
  *
@@ -28,6 +30,7 @@ public class UpdateOrder {
     public WechatOrderCallbackResponse success(OrderCallbackRequest request, PayMerchantOrder payMerchantOrder) {
         payMerchantOrder.setPayMerchantOrderTransactionId(request.getTransactionId());
         payMerchantOrder.setPayMerchantOrderStatus("2000");
+        payMerchantOrder.setPayMerchantOrderFinishedTime(LocalDateTime.now());
         try {
             payMerchantOrderMapper.updateById(payMerchantOrder);
             return new WechatOrderCallbackResponse("SUCCESS", "OK", null);
@@ -53,6 +56,7 @@ public class UpdateOrder {
         try {
             payMerchantOrder = getPayMerchantOrder(wechatOrderCallbackRequest);
             payMerchantOrder.setPayMerchantOrderTransactionId(wechatOrderCallbackRequest.getTransactionId());
+            payMerchantOrder.setPayMerchantOrderFinishedTime(LocalDateTime.now());
             payMerchantOrderMapper.updateById(payMerchantOrder);
             return new WechatOrderCallbackResponse("SUCCESS", "OK", null);
         } catch (Exception ignored) {
@@ -85,6 +89,7 @@ public class UpdateOrder {
     private void registerFailure(OrderCallbackRequest wechatOrderCallbackRequest, PayMerchantOrder payMerchantOrder) {
         OrderCallbackRequest.Status status = wechatOrderCallbackRequest.getStatus();
         payMerchantOrder.setPayMerchantOrderFailMessage(wechatOrderCallbackRequest.getMessage());
+        payMerchantOrder.setPayMerchantOrderFinishedTime(LocalDateTime.now());
         if(status == OrderCallbackRequest.Status.SUCCESS) {
             payMerchantOrder.setPayMerchantOrderStatus("2005");
             return;

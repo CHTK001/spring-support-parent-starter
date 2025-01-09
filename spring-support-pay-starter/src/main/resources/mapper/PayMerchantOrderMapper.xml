@@ -140,41 +140,50 @@
                pmo.create_time
         FROM pay_merchant_order pmo
                  INNER JOIN pay_merchant pm ON pm.pay_merchant_code = pmo.pay_merchant_code
-        WHERE pmo.pay_merchant_code = #{request.payMerchantCode}
 
-        <if test="sysUserId != null">
-            AND pmo.pay_merchant_order_user_id = #{sysUserId}
-        </if>
+        <trim>
+        <where>
+            <if test="request.payMerchantCode != null and request.payMerchantCode != ''">
+                AND pmo.pay_merchant_code = #{request.payMerchantCode}
+            </if>
+            <if test="sysUserIds != null and sysUserIds.size() != 0">
+                AND pmo.pay_merchant_order_user_id IN
+                <foreach collection="sysUserIds" item="sysUserId" open="(" separator="," close=")">
+                    #{sysUserId}
+                </foreach>
+            </if>
 
-        <if test="request.username != null and request.username != ''">
-            AND pmo.create_name LIKE concat(#{request.username}, '%')
-        </if>
+            <if test="request.username != null and request.username != ''">
+                AND pmo.create_name LIKE concat(#{request.username}, '%')
+            </if>
 
-        <if test="request.payMerchantOrderCode != null and request.payMerchantOrderCode != ''">
-            AND pmo.pay_merchant_order_code LIKE concat(#{request.payMerchantOrderCode}, '%')
-        </if>
-
-
-        <if test="request.payMerchantOrderTradeType != null and request.payMerchantOrderTradeType != ''">
-            AND pay_merchant_order_trade_type = #{request.payMerchantOrderTradeType}
-        </if>
+            <if test="request.payMerchantOrderCode != null and request.payMerchantOrderCode != ''">
+                AND pmo.pay_merchant_order_code LIKE concat(#{request.payMerchantOrderCode}, '%')
+            </if>
 
 
-        <if test="request.payMerchantOrderStatus != null and request.payMerchantOrderStatus != ''">
-            AND pay_merchant_order_status = #{request.payMerchantOrderTradeType}
-        </if>
+            <if test="request.payMerchantOrderTradeType != null and request.payMerchantOrderTradeType != ''">
+                AND pay_merchant_order_trade_type = #{request.payMerchantOrderTradeType}
+            </if>
 
-        <if test="request.startTime != null and request.endTime != null">
-            AND (pmo.create_time <![CDATA[>=]]> #{request.startTime} AND pmo.create_time <![CDATA[<=]]> #{request.endTime})
-        </if>
 
-        <if test="request.payMerchantOrderOrigin != null and request.payMerchantOrderOrigin != ''">
-            AND pay_merchant_order_origin = #{request.payMerchantOrderOrigin}
-        </if>
+            <if test="request.payMerchantOrderStatus != null and request.payMerchantOrderStatus != ''">
+                AND pay_merchant_order_status = #{request.payMerchantOrderTradeType}
+            </if>
 
-        <if test="request.payMerchantOrderAttach != null and request.payMerchantOrderAttach != ''">
-            AND pay_merchant_order_attach LIKE concat('%', #{request.payMerchantOrderAttach}, '%')
-        </if>
+            <if test="request.startTime != null and request.endTime != null">
+                AND (pmo.create_time <![CDATA[>=]]> #{request.startTime} AND pmo.create_time <![CDATA[<=]]> #{request.endTime})
+            </if>
+
+            <if test="request.payMerchantOrderOrigin != null and request.payMerchantOrderOrigin != ''">
+                AND pay_merchant_order_origin = #{request.payMerchantOrderOrigin}
+            </if>
+
+            <if test="request.payMerchantOrderAttach != null and request.payMerchantOrderAttach != ''">
+                AND pay_merchant_order_attach LIKE concat('%', #{request.payMerchantOrderAttach}, '%')
+            </if>
+        </where>
+        </trim>
         ORDER BY pmo.create_time DESC
     </select>
 
