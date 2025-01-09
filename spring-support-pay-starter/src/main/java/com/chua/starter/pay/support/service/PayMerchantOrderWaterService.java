@@ -1,11 +1,15 @@
 package com.chua.starter.pay.support.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.entity.PayMerchantOrderWater;
 import com.baomidou.mybatisplus.extension.service.IService;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 
 public interface PayMerchantOrderWaterService extends IService<PayMerchantOrderWater>{
 
@@ -24,6 +28,16 @@ public interface PayMerchantOrderWaterService extends IService<PayMerchantOrderW
      * @return 订单流水
      */
     ReturnResult<List<PayMerchantOrderWater>> water(String payMerchantOrderCode);
+    /**
+     * 订单流水
+     *
+     * @param page
+     * @param userIds   用户id
+     * @param startDate 开始时间
+     * @param endDate   结束时间
+     * @return 订单流水
+     */
+    ReturnPageResult<PayMerchantOrderWater> water(Page<PayMerchantOrderWater> page, Set<String> userIds, LocalDate startDate, LocalDate endDate);
 
     /**
      * 创建新表

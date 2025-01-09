@@ -3,6 +3,8 @@ package com.chua.starter.pay.support.configuration;
 import com.chua.common.support.chain.ChainContext;
 import com.chua.common.support.chain.FilterChain;
 import com.chua.common.support.chain.filter.Filter;
+import com.chua.common.support.collection.Option;
+import com.chua.common.support.collection.Options;
 import com.chua.common.support.eventbus.EventRouter;
 import com.chua.common.support.eventbus.Eventbus;
 import com.chua.common.support.protocol.ClientSetting;
@@ -94,6 +96,7 @@ public class PayConfiguration implements BeanDefinitionRegistryPostProcessor, Ap
         micaServer = new MicaServer(
                 ServerSetting.builder()
                         .addDefaultMapping(false)
+                        .options(new Options().addOption("defaultPublish", new Option("false")))
                         .port(NumberUtils.isPositive(mqttConfig.getPort(), serverProperties.getPort() + 10000))
                         .host("0.0.0.0")
                         .build()

@@ -13,6 +13,7 @@ import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 /**
  *
@@ -43,6 +44,8 @@ public class PayMerchantOrder extends SysBase implements Serializable {
     @Schema(description = "订单号")
     @Size(max = 255, message = "订单号最大长度要小于 255")
     private String payMerchantOrderCode;
+
+
     /**
      * 优惠券编码
      */
@@ -209,6 +212,15 @@ public class PayMerchantOrder extends SysBase implements Serializable {
     @Schema(description = "锁")
     @Version
     private Integer payMerchantOrderVersion;
+
+
+    /**
+     * 完成时间
+     */
+    @TableField(value = "pay_merchant_order_finished_time")
+    @ApiModelProperty(value = "完成时间")
+    @Schema(description = "完成时间")
+    private LocalDateTime payMerchantOrderFinishedTime;
 
     /**
      * 失败原因
