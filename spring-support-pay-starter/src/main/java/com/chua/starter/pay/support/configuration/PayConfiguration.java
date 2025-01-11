@@ -9,9 +9,7 @@ import com.chua.common.support.eventbus.EventRouter;
 import com.chua.common.support.eventbus.Eventbus;
 import com.chua.common.support.protocol.ClientSetting;
 import com.chua.common.support.protocol.ServerSetting;
-import com.chua.common.support.utils.IoUtils;
-import com.chua.common.support.utils.NumberUtils;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.*;
 import com.chua.mica.support.client.MicaClient;
 import com.chua.mica.support.client.session.MicaSession;
 import com.chua.mica.support.server.MicaServer;
@@ -26,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -37,8 +36,11 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
+import java.util.UUID;
+
 /**
  * 支付配置
+ *
  * @author CH
  * @since 2024/12/27
  */
@@ -52,23 +54,22 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EnableConfigurationProperties(PayMqttProperties.class)
 @EnableScheduling
 @EnableTransactionManagement
-public class PayConfiguration implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware, DisposableBean {
+public class PayConfiguration implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware, DisposableBean, CommandLineRunner {
 
 
     private ServerProperties serverProperties;
     private MicaServer micaServer;
-    private MicaClient micaClient;
+    private static MicaClient micaClient;
     private PayNotifyProperties payNotifyProperties;
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
-        if(!payNotifyProperties.isEnable()) {
+        if (!payNotifyProperties.isEnable()) {
             return;
         }
         try {
             registerMqttServer();
             registryMqttClient();
-            registry.registerBeanDefinition("micaClient", BeanDefinitionBuilder.genericBeanDefinition(MicaClient.class, () -> micaClient).getBeanDefinition());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -76,21 +77,30 @@ public class PayConfiguration implements BeanDefinitionRegistryPostProcessor, Ap
 
     private void registryMqttClient() {
         PayNotifyProperties.MqttConfig mqttConfig = payNotifyProperties.getMqttConfig();
-        micaClient = new MicaClient(
-                ClientSetting.builder()
-                        .port(NumberUtils.isPositive(mqttConfig.getPort(), serverProperties.getPort() + 10000))
-                        .host(StringUtils.defaultString(mqttConfig.getHost(), "127.0.0.1"))
-                        .build()
-        );
+        if(null == micaClient) {
+            micaClient = new MicaClient(
+                    ClientSetting.builder()
+                            .clientId(UUID.randomUUID().toString())
+                            .port(NumberUtils.isPositive(mqttConfig.getPort(), serverProperties.getPort() + 10000))
+                            .host(StringUtils.defaultString(mqttConfig.getHost(), "127.0.0.1"))
+                            .build()
+            );
+            Thread.ofVirtual()
+                    .name("延迟启动")
+                    .start(() -> {
+                        ThreadUtils.sleepSecondsQuietly(5);
+                        micaClient.connect();
+                        MicaSession session = (MicaSession) micaClient.createSession("default");
+                        PayClientConfiguration.factory.register(session);
+                    });
+        }
 
-        micaClient.connect();
-        MicaSession session = (MicaSession) micaClient.createSession("default");
-        PayClientConfiguration.factory.register(session);
+
     }
 
     private void registerMqttServer() {
         PayNotifyProperties.MqttConfig mqttConfig = payNotifyProperties.getMqttConfig();
-        if(!mqttConfig.isOpenServer()) {
+        if (!mqttConfig.isOpenServer()) {
             return;
         }
         micaServer = new MicaServer(
@@ -141,5 +151,10 @@ public class PayConfiguration implements BeanDefinitionRegistryPostProcessor, Ap
     public void destroy() throws Exception {
         IoUtils.closeQuietly(micaServer);
         IoUtils.closeQuietly(micaClient);
+    }
+
+    @Override
+    public void run(String... args) throws Exception {
+
     }
 }

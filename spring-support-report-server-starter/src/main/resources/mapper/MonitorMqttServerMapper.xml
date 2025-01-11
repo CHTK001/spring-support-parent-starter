@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.report.server.starter.mapper.MonitorMqttServerMapper">
+  <resultMap id="BaseResultMap" type="com.chua.report.server.starter.entity.MonitorMqttServer">
+    <!--@mbg.generated-->
+    <!--@Table monitor_mqtt_server-->
+    <id column="monitor_mqtt_server_id" jdbcType="INTEGER" property="monitorMqttServerId" />
+    <result column="monitor_mqtt_server_name" jdbcType="VARCHAR" property="monitorMqttServerName" />
+    <result column="monitor_mqtt_server_host" jdbcType="VARCHAR" property="monitorMqttServerHost" />
+    <result column="monitor_mqtt_server_port" jdbcType="INTEGER" property="monitorMqttServerPort" />
+    <result column="monitor_mqtt_server_username" jdbcType="VARCHAR" property="monitorMqttServerUsername" />
+    <result column="monitor_mqtt_server_password" jdbcType="VARCHAR" property="monitorMqttServerPassword" />
+    <result column="monitor_mqtt_server_version" jdbcType="INTEGER" property="monitorMqttServerVersion" />
+    <result column="monitor_mqtt_server_status" jdbcType="INTEGER" property="monitorMqttServerStatus" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    monitor_mqtt_server_id, monitor_mqtt_server_name, monitor_mqtt_server_host, monitor_mqtt_server_port, 
+    monitor_mqtt_server_username, monitor_mqtt_server_password, monitor_mqtt_server_version, 
+    monitor_mqtt_server_status
+  </sql>
+</mapper>

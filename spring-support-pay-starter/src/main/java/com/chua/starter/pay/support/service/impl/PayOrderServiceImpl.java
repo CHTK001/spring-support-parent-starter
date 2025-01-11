@@ -8,11 +8,13 @@ import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.date.DateUtils;
 import com.chua.common.support.rpc.RpcService;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.common.support.validator.group.SelectGroup;
 import com.chua.starter.common.support.utils.JakartaValidationUtils;
 import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.mybatis.utils.ReturnPageResultUtils;
+import com.chua.starter.pay.support.checker.CreateOrderChecker;
 import com.chua.starter.pay.support.configuration.PayListenerService;
 import com.chua.starter.pay.support.constant.PayConstant;
 import com.chua.starter.pay.support.emuns.TradeType;
@@ -70,6 +72,13 @@ public class PayOrderServiceImpl implements PayOrderService {
         if (null == tradeType) {
             return ReturnResult.illegal("交易类型不能为空");
         }
+
+        CreateOrderChecker createOrderChecker = ServiceProvider.of(CreateOrderChecker.class).getNewExtension(tradeType);
+        ReturnResult<String> returnResult = createOrderChecker.check(request);
+        if(!returnResult.isOk()) {
+            return ReturnResult.illegal(returnResult.getMsg());
+        }
+
         RLock rLock = redissonClient.getLock(PayConstant.ORDER_CREATE_PREFIX + tradeType.getName() + request.getOrderId());
         if (!rLock.tryLock()) {
             return ReturnResult.illegal("订单已存在, 请勿重复下单");

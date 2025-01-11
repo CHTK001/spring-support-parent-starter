@@ -6,6 +6,7 @@ import com.chua.mica.support.client.MicaClient;
 import com.chua.mica.support.client.session.MicaSession;
 import com.chua.starter.pay.support.annotations.OnPayListener;
 import com.chua.starter.pay.support.properties.PayNotifyProperties;
+import com.chua.starter.pay.support.properties.PayProperties;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
@@ -25,7 +26,7 @@ import org.springframework.util.StringUtils;
  * @author CH
  * @since 2025/1/3
  */
-@EnableConfigurationProperties(PayNotifyProperties.class)
+@EnableConfigurationProperties({PayNotifyProperties.class, PayProperties.class})
 public class PayClientConfiguration implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware {
 
     public static PayListenerService factory = new PayListenerService();
