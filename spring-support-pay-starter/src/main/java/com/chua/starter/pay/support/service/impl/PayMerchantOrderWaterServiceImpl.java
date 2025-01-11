@@ -6,12 +6,14 @@ import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.date.DateUtils;
 import com.chua.common.support.lang.date.constant.DateFormatConstant;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.RandomUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.mybatis.utils.ReturnPageResultUtils;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.pojo.WaterQueryV1Request;
+import com.chua.starter.pay.support.transfer.WalletCurrentTransfer;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -43,11 +45,13 @@ public class PayMerchantOrderWaterServiceImpl extends ServiceImpl<PayMerchantOrd
                 + "P" + payMerchantOrder.getPayMerchantOrderCode()
                 + "T" + format
         );
+        WalletCurrentTransfer currentTransfer = ServiceProvider.of(WalletCurrentTransfer.class).getNewExtension("WALLET");
+
         payMerchantOrderWater.setPayMerchantOrderCode(payMerchantOrder.getPayMerchantOrderCode());
         payMerchantOrderWater.setPayMerchantOrderFailMessage(payMerchantOrder.getPayMerchantOrderFailMessage());
         payMerchantOrderWater.setPayMerchantOrderRefundSuccessTime(payMerchantOrder.getPayMerchantOrderRefundSuccessTime());
         payMerchantOrderWater.setPayMerchantOrderStatus(payMerchantOrder.getPayMerchantOrderStatus());
-        payMerchantOrderWater.setPayMerchantOrderWallet(payMerchantOrder.getPayMerchantOrderWallet());
+        payMerchantOrderWater.setPayMerchantOrderWallet(currentTransfer.getCurrentWallet(payMerchantOrder.getPayMerchantOrderUserId()));
         payMerchantOrderWater.setPayMerchantOrderRefundTransactionId(payMerchantOrder.getPayMerchantOrderRefundTransactionId());
         payMerchantOrderWater.setPayMerchantOrderRefundReason(payMerchantOrder.getPayMerchantOrderRefundReason());
 

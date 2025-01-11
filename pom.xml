@@ -14,7 +14,7 @@
     <groupId>com.chua</groupId>
     <artifactId>spring-support-parent-starter</artifactId>
     <packaging>pom</packaging>
-    <version>4.0.0.22</version>
+    <version>4.0.0.25</version>
     <modules>
         <module>spring-support-datasource-starter</module>
         <module>spring-support-common-starter</module>
@@ -39,6 +39,7 @@
         <module>spring-support-websockify-starter</module>
         <module>spring-support-pay-starter</module>
         <module>spring-support-pay-client-starter</module>
+        <module>spring-support-configcenter-starter</module>
     </modules>
 
     <properties>
@@ -47,8 +48,8 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <spring-boot.version>3.2.3</spring-boot.version>
-        <module.version>4.0.0.22</module.version>
-        <utils.version>4.0.0.16</utils.version>
+        <module.version>4.0.0.25</module.version>
+        <utils.version>4.0.0.18</utils.version>
 
         <mybatis-plus.version>3.4.0</mybatis-plus.version>
         <dubbo.version>3.1.1</dubbo.version>
@@ -132,6 +133,12 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-calcite-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-nacos-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
 

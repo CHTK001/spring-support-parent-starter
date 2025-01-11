@@ -17,6 +17,7 @@
         pmow.pay_merchant_order_refund_success_time,
         pmow.pay_merchant_order_refund_user_received_account,
         pmow.create_time,
+        pmow.pay_merchant_order_wallet,
         (SELECT pay_merchant_name FROM pay_merchant WHERE pay_merchant_code = pmo.pay_merchant_code) payMerchantName,
         pmo.pay_merchant_order_product_name,
         pmo.pay_merchant_order_product_code,
@@ -38,7 +39,7 @@
                 AND pmo.pay_merchant_order_origin <![CDATA[<>]]> 'RECHARGE'
             </if>
             <if test="request.type != null and request.type == 2">
-                AND pmo.pay_merchant_order_origin = 'RECHARGE'
+                AND (pmo.pay_merchant_order_origin = 'RECHARGE' OR pmo.pay_merchant_order_code = '4002')
             </if>
             AND pmo.pay_merchant_order_user_id IN
             <foreach collection="userIds" item="userId" separator="," open="(" close=")">

@@ -68,7 +68,7 @@ public class PayListenerService {
                 try {
                     PayMerchantOrder payMerchantOrder = Json.fromJson(it.payload(), PayMerchantOrder.class);
                     listen(payMerchantOrder);
-                } catch (Exception ignored) {
+                } catch (Throwable ignored) {
                 }
             });
         }

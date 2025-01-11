@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.report.server.starter.mapper.MonitorNginxHttpMapper">
+  <resultMap id="BaseResultMap" type="com.chua.report.server.starter.entity.MonitorNginxHttp">
+    <!--@mbg.generated-->
+    <!--@Table monitor_nginx_http-->
+    <id column="monitor_nginx_http_id" jdbcType="INTEGER" property="monitorNginxHttpId" />
+    <result column="monitor_nginx_http_keepalive_timeout" jdbcType="INTEGER" property="monitorNginxHttpKeepaliveTimeout" />
+    <result column="monitor_nginx_http_sendfile" jdbcType="VARCHAR" property="monitorNginxHttpSendfile" />
+    <result column="monitor_nginx_http_access_log" jdbcType="VARCHAR" property="monitorNginxHttpAccessLog" />
+    <result column="monitor_nginx_http_server_names_hash_bucket_size" jdbcType="INTEGER" property="monitorNginxHttpServerNamesHashBucketSize" />
+    <result column="monitor_nginx_http_server_tokens" jdbcType="VARCHAR" property="monitorNginxHttpServerTokens" />
+    <result column="monitor_nginx_http_ignore_invalid_headers" jdbcType="VARCHAR" property="monitorNginxHttpIgnoreInvalidHeaders" />
+    <result column="monitor_nginx_http_server_name_in_redirect" jdbcType="VARCHAR" property="monitorNginxHttpServerNameInRedirect" />
+    <result column="monitor_nginx_http_client_body_buffer_size" jdbcType="VARCHAR" property="monitorNginxHttpClientBodyBufferSize" />
+    <result column="monitor_nginx_http_tcp_nopush" jdbcType="VARCHAR" property="monitorNginxHttpTcpNopush" />
+    <result column="monitor_nginx_http_tcp_nodelay" jdbcType="VARCHAR" property="monitorNginxHttpTcpNodelay" />
+    <result column="monitor_nginx_http_gzip" jdbcType="VARCHAR" property="monitorNginxHttpGzip" />
+    <result column="monitor_nginx_http_gzip_min_length" jdbcType="VARCHAR" property="monitorNginxHttpGzipMinLength" />
+    <result column="monitor_nginx_http_gzip_buffers" jdbcType="VARCHAR" property="monitorNginxHttpGzipBuffers" />
+    <result column="monitor_nginx_http_gzip_http_version" jdbcType="VARCHAR" property="monitorNginxHttpGzipHttpVersion" />
+    <result column="monitor_nginx_http_gzip_comp_level" jdbcType="INTEGER" property="monitorNginxHttpGzipCompLevel" />
+    <result column="monitor_nginx_http_gzip_types" jdbcType="VARCHAR" property="monitorNginxHttpGzipTypes" />
+    <result column="monitor_nginx_http_ssl_certificate" jdbcType="VARCHAR" property="monitorNginxHttpSslCertificate" />
+    <result column="monitor_nginx_http_ssl_certificate_key" jdbcType="VARCHAR" property="monitorNginxHttpSslCertificateKey" />
+    <result column="monitor_nginx_http_ssl_protocols" jdbcType="VARCHAR" property="monitorNginxHttpSslProtocols" />
+    <result column="monitor_nginx_http_ssl_session_timeout" jdbcType="VARCHAR" property="monitorNginxHttpSslSessionTimeout" />
+    <result column="monitor_nginx_http_ssl_ciphers" jdbcType="VARCHAR" property="monitorNginxHttpSslCiphers" />
+    <result column="monitor_nginx_http_ssl_prefer_server_ciphers" jdbcType="VARCHAR" property="monitorNginxHttpSslPreferServerCiphers" />
+    <result column="monitor_nginx_http_include" jdbcType="VARCHAR" property="monitorNginxHttpInclude" />
+    <result column="monitor_nginx_http_limit_req_zone" jdbcType="VARCHAR" property="monitorNginxHttpLimitReqZone" />
+    <result column="monitor_nginx_http_proxy_cache_path" jdbcType="LONGVARCHAR" property="monitorNginxHttpProxyCachePath" />
+    <result column="monitor_nginx_config_id" jdbcType="INTEGER" property="monitorNginxConfigId" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    monitor_nginx_http_id, monitor_nginx_http_keepalive_timeout, monitor_nginx_http_sendfile, 
+    monitor_nginx_http_access_log, monitor_nginx_http_server_names_hash_bucket_size, 
+    monitor_nginx_http_server_tokens, monitor_nginx_http_ignore_invalid_headers, monitor_nginx_http_server_name_in_redirect, 
+    monitor_nginx_http_client_body_buffer_size, monitor_nginx_http_tcp_nopush, monitor_nginx_http_tcp_nodelay, 
+    monitor_nginx_http_gzip, monitor_nginx_http_gzip_min_length, monitor_nginx_http_gzip_buffers, 
+    monitor_nginx_http_gzip_http_version, monitor_nginx_http_gzip_comp_level, monitor_nginx_http_gzip_types, 
+    monitor_nginx_http_ssl_certificate, monitor_nginx_http_ssl_certificate_key, monitor_nginx_http_ssl_protocols, 
+    monitor_nginx_http_ssl_session_timeout, monitor_nginx_http_ssl_ciphers, monitor_nginx_http_ssl_prefer_server_ciphers, 
+    monitor_nginx_http_include, monitor_nginx_http_limit_req_zone, monitor_nginx_http_proxy_cache_path, 
+    monitor_nginx_config_id
+  </sql>
+</mapper>

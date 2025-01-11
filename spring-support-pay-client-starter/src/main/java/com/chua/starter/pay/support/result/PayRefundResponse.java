@@ -5,6 +5,8 @@ import com.google.gson.annotations.SerializedName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
+import java.io.Serializable;
+
 /**
  * 退款
  * @author CH
@@ -12,7 +14,7 @@ import lombok.Data;
  */
 @Data
 @Schema(description = "退款响应数据")
-public class PayRefundResponse {
+public class PayRefundResponse implements Serializable {
 
     /**
      * 退款单号
