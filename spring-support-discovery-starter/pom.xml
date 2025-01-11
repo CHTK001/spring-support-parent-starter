@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.22</version>
+        <version>4.0.0.25</version>
     </parent>
 
     <artifactId>spring-support-discovery-starter</artifactId>

@@ -15,6 +15,7 @@ import com.chua.starter.pay.support.pojo.PayOrderRequest;
 import com.chua.starter.pay.support.result.PayOrderResponse;
 import com.chua.starter.pay.support.service.PayMerchantOrderWaterService;
 import com.chua.starter.pay.support.service.PayMerchantService;
+import com.chua.starter.pay.support.transfer.UserIdTransfer;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -72,9 +73,11 @@ public class CreateOrder {
             payMerchantOrder.setPayMerchantOrderBrowser(userAgent.getBrowser().toString());
         } catch (Exception ignored) {
         }
+
+        UserIdTransfer transfer = ServiceProvider.of(UserIdTransfer.class).getNewExtension(tradeType);
         payMerchantOrder.setPayMerchantOrderTradeType(tradeType);
         payMerchantOrder.setPayMerchantCode(request.getMerchantCode());
-        payMerchantOrder.setPayMerchantOrderUserId(request.getUserId());
+        payMerchantOrder.setPayMerchantOrderUserId(transfer.transfer(request.getUserId()));
         payMerchantOrder.setPayMerchantOrderOrigin(request.getOrigin());
         payMerchantOrder.setPayMerchantOrderAttach(request.getAttach());
         payMerchantOrder.setPayMerchantOrderProductName(request.getProductName());
