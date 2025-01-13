@@ -90,5 +90,12 @@ public interface PayService {
      * @param request 订单编号
      * @return 订单
      */
-    ReturnResult<PayRefundResponse> refundWallet(PayRefundRequest request);
+    ReturnResult<PayRefundResponse> refundToWallet(PayRefundRequest request);
+    /**
+     * 取消到钱包
+     *
+     * @param request 订单编号
+     * @return 订单
+     */
+    ReturnResult<PayRefundResponse> cancelToWallet(PayRefundRequest request);
 }
