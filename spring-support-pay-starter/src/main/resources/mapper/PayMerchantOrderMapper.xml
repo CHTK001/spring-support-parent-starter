@@ -104,6 +104,10 @@
             <if test="request.startTime != null and request.endTime != null">
                 AND (pmo.create_time <![CDATA[>=]]> #{request.startTime} AND pmo.create_time <![CDATA[<=]]> #{request.endTime})
             </if>
+
+            <if test="request.keyword != null">
+                AND (pmo.pay_merchant_order_attach LIKE concat('%', #{request.keyword}, '%'))
+            </if>
         </where>
         ORDER BY pmo.create_time DESC
     </select>
