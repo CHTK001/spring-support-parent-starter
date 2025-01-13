@@ -48,6 +48,6 @@
             AND pmo.create_time BETWEEN  #{startDate} AND #{endDate}
         </trim>
         ORDER BY
-        pmo.create_time DESC
+        pmow.create_time DESC
     </select>
 </mapper>
