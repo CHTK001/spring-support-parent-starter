@@ -100,7 +100,7 @@ public class NginxConfigController {
     }
     /**
      * 解析配置
-     * @param file 配置
+     * @param nginxConfigId 配置
      * @return 是否成功
      */
     @PutMapping("configAnalysis")
