@@ -32,9 +32,9 @@ public class MqttConfiguration implements ApplicationContextAware, SmartInstanti
 
     private MqttTemplate mqttTemplate ;
 
-    @Bean
+    @Bean("mqttClient")
     @ConditionalOnMissingBean
-    @ConditionalOnExpression("!T(org.springframework.util.StringUtils).isEmpty('${plugin.spring.mqtt.host:}')")
+    @ConditionalOnExpression("!T(org.springframework.util.StringUtils).isEmpty('${plugin.spring.mqtt.address:}')")
     public MqttTemplate mqttClient() {
         return mqttTemplate;
     }
@@ -55,7 +55,7 @@ public class MqttConfiguration implements ApplicationContextAware, SmartInstanti
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.mqttProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(MqttProperties.PRE, MqttProperties.class);
-        if(StringUtils.isNotEmpty(mqttProperties.getHost())) {
+        if(StringUtils.isNotEmpty(mqttProperties.getAddress())) {
             try {
                 this.mqttTemplate = new MqttTemplate(mqttProperties);
             } catch (MqttException e) {

@@ -8,6 +8,7 @@ import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.util.ReflectionUtils;
 
 /**
@@ -23,6 +24,7 @@ public class PayClientConfiguration  {
 
 
     @Bean
+    @DependsOn("mqttClient")
     public PayListenerService payListenerService(MqttTemplate mqttTemplate) {
         factory.register(mqttTemplate);
         return factory;

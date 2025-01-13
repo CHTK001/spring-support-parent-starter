@@ -20,6 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 监听工厂
+ *
  * @author CH
  * @since 2024/12/31
  */
@@ -34,18 +35,19 @@ public class PayListenerService {
         originListener.computeIfAbsent(topic, it -> new LinkedList<>()).add(new ListenerBean(bean, onPayListener, method));
     }
 
-    public void listen(PayMerchantOrder order) {
-        if(ClassUtils.isPresent("com.chua.starter.pay.support.configuration.PayConfiguration")) {
-            if(mqttTemplate != null) {
-                try {
-                    mqttTemplate.publish(order.getPayMerchantOrderOrigin(), Json.toJson(order).getBytes(), 1, true);
-                } catch (MqttException ignored) {
-                }
+
+    public void publish(PayMerchantOrder order) {
+        if (mqttTemplate != null) {
+            try {
+                mqttTemplate.publish(order.getPayMerchantOrderOrigin(), Json.toJson(order).getBytes(), 1, true);
+            } catch (MqttException ignored) {
             }
-            return;
         }
+    }
+
+    public void listen(PayMerchantOrder order) {
         String payMerchantOrderOrigin = order.getPayMerchantOrderOrigin();
-        if(StringUtils.isBlank(payMerchantOrderOrigin)) {
+        if (StringUtils.isBlank(payMerchantOrderOrigin)) {
             return;
         }
 
@@ -55,7 +57,7 @@ public class PayListenerService {
 
     private void notify(String payMerchantOrderOrigin, PayMerchantOrder order) {
         List<ListenerBean> listenerBeanList = originListener.get(payMerchantOrderOrigin);
-        if(null == listenerBeanList) {
+        if (null == listenerBeanList) {
             return;
         }
 
@@ -67,7 +69,7 @@ public class PayListenerService {
     public void register(MqttTemplate mqttTemplate) {
         this.mqttTemplate = mqttTemplate;
 
-        if(null != mqttTemplate) {
+        if (null != mqttTemplate) {
             try {
                 mqttTemplate.subscribe("#", (topic, message) -> {
                     try {
@@ -92,6 +94,7 @@ public class PayListenerService {
 
         /**
          * 通知
+         *
          * @param order 订单
          */
         public void notifyOrder(PayMerchantOrder order) {

@@ -61,6 +61,6 @@ public class WalletPayOrderCreator implements PayOrderCreator {
 
     @Override
     public void onFinish(PayMerchantOrder payMerchantOrder) {
-        payListenerService.listen(payMerchantOrder);
+        payListenerService.publish(payMerchantOrder);
     }
 }
