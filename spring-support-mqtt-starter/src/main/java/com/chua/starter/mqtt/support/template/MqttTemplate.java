@@ -40,10 +40,10 @@ public class MqttTemplate extends MqttClient implements DisposableBean, Initiali
 
 
     public MqttTemplate(MqttProperties mqttProperties) throws MqttException {
-        super(mqttProperties.getHost(), StringUtils.ifValid(mqttProperties.getClientId(), IdUtils.createTid()));
+        super(mqttProperties.getAddress(), StringUtils.ifValid(mqttProperties.getClientId(), IdUtils.createTid()));
         this.mqttConnectOptions = mqttConnectOptions(mqttProperties);
         this.mqttProperties = mqttProperties;
-        log.info(">>>> MQTT服务器[{}]连接成功", mqttProperties.getHost());
+        log.info(">>>> MQTT服务器[{}]连接成功", mqttProperties.getAddress());
     }
 
     /**

@@ -183,7 +183,7 @@ public class PayOrderServiceImpl implements PayOrderService {
             PayMerchantOrder payMerchantOrder = parser.getOrder();
             WechatOrderCallbackResponse success = updateOrder.success(request, payMerchantOrder);
             payMerchantOrderWaterService.createOrderWater(payMerchantOrder);
-            payListenerService.listen(payMerchantOrder);
+            payListenerService.publish(payMerchantOrder);
             return success;
         } catch (Throwable e) {
             throw new RuntimeException("通知失败，订单处理异常");
@@ -205,7 +205,7 @@ public class PayOrderServiceImpl implements PayOrderService {
             if (update.isOk()) {
                 PayMerchantOrder payMerchantOrder = update.getData().getOrder();
                 payMerchantOrderWaterService.createOrderWater(payMerchantOrder);
-                payListenerService.listen(payMerchantOrder);
+                payListenerService.publish(payMerchantOrder);
             }
             return update;
         } catch (Exception e) {
@@ -228,7 +228,7 @@ public class PayOrderServiceImpl implements PayOrderService {
             if (update.isOk()) {
                 PayMerchantOrder payMerchantOrder = update.getData().getOrder();
                 payMerchantOrderWaterService.createOrderWater(payMerchantOrder);
-                payListenerService.listen(payMerchantOrder);
+                payListenerService.publish(payMerchantOrder);
             }
             return update;
         } catch (Exception e) {
@@ -251,7 +251,7 @@ public class PayOrderServiceImpl implements PayOrderService {
             if (update.isOk()) {
                 PayMerchantOrder payMerchantOrder = update.getData().getOrder();
                 payMerchantOrderWaterService.createOrderWater(payMerchantOrder);
-                payListenerService.listen(payMerchantOrder);
+                payListenerService.publish(payMerchantOrder);
             }
             return update;
         } catch (Exception e) {
@@ -274,7 +274,7 @@ public class PayOrderServiceImpl implements PayOrderService {
             if (update.isOk()) {
                 PayMerchantOrder payMerchantOrder = update.getData().getOrder();
                 payMerchantOrderWaterService.createOrderWater(payMerchantOrder);
-                payListenerService.listen(payMerchantOrder);
+                payListenerService.publish(payMerchantOrder);
             }
             return update;
         } catch (Exception e) {
