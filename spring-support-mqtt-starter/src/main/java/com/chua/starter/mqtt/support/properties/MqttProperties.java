@@ -17,7 +17,7 @@ public class MqttProperties {
     /**
      * 主机
      */
-    private String host;
+    private String address;
     /**
      * 账号
      */

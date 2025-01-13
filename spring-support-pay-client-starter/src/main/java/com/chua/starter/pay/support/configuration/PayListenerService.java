@@ -2,12 +2,13 @@ package com.chua.starter.pay.support.configuration;
 
 import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.ClassUtils;
-import com.chua.mica.support.client.session.MicaSession;
+import com.chua.starter.mqtt.support.template.MqttTemplate;
 import com.chua.starter.pay.support.annotations.OnPayListener;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import io.micrometer.common.util.StringUtils;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import org.eclipse.paho.client.mqttv3.MqttException;
 import org.springframework.util.ReflectionUtils;
 
 import java.lang.reflect.InvocationTargetException;
@@ -25,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class PayListenerService {
 
     private final Map<String, List<ListenerBean>> originListener = new ConcurrentHashMap<>();
-    private MicaSession session;
+    private MqttTemplate mqttTemplate;
 
     public void addListener(OnPayListener onPayListener, Object bean, Method method) {
         ReflectionUtils.makeAccessible(method);
@@ -35,8 +36,11 @@ public class PayListenerService {
 
     public void listen(PayMerchantOrder order) {
         if(ClassUtils.isPresent("com.chua.starter.pay.support.configuration.PayConfiguration")) {
-            if(session != null) {
-                session.publish("/" + order.getPayMerchantOrderOrigin(), Json.toJson(order).getBytes());
+            if(mqttTemplate != null) {
+                try {
+                    mqttTemplate.publish(order.getPayMerchantOrderOrigin(), Json.toJson(order).getBytes(), 1, true);
+                } catch (MqttException ignored) {
+                }
             }
             return;
         }
@@ -60,17 +64,21 @@ public class PayListenerService {
         }
     }
 
-    public void register(MicaSession session) {
-        this.session = session;
+    public void register(MqttTemplate mqttTemplate) {
+        this.mqttTemplate = mqttTemplate;
 
-        if(null != session) {
-            session.subscribe("/#", 1, it -> {
-                try {
-                    PayMerchantOrder payMerchantOrder = Json.fromJson(it.payload(), PayMerchantOrder.class);
-                    listen(payMerchantOrder);
-                } catch (Throwable ignored) {
-                }
-            });
+        if(null != mqttTemplate) {
+            try {
+                mqttTemplate.subscribe("#", (topic, message) -> {
+                    try {
+                        PayMerchantOrder payMerchantOrder = Json.fromJson(message.getPayload(), PayMerchantOrder.class);
+                        listen(payMerchantOrder);
+                    } catch (Throwable ignored) {
+                    }
+                });
+            } catch (MqttException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 
