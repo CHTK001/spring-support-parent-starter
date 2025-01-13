@@ -1,9 +1,7 @@
 package com.chua.starter.pay.support.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.date.DateUtils;
@@ -241,7 +239,7 @@ public class PayOrderServiceImpl implements PayOrderService {
     }
 
     @Override
-    public ReturnResult<PayRefundResponse> refundWallet(PayRefundRequest request) {
+    public ReturnResult<PayRefundResponse> refundToWallet(PayRefundRequest request) {
         RLock rLock = redissonClient.getLock(PayConstant.ORDER_REFUND_PREFIX);
         if (!rLock.tryLock()) {
             return ReturnResult.illegal("订单正在退款, 请勿重复操作");
@@ -250,6 +248,29 @@ public class PayOrderServiceImpl implements PayOrderService {
         rLock.lock(10, TimeUnit.SECONDS);
         try {
             ReturnResult<PayRefundResponse> update = new RefundWalletOrder(transactionTemplate, payMerchantService, payMerchantOrderMapper).update(request);
+            if (update.isOk()) {
+                PayMerchantOrder payMerchantOrder = update.getData().getOrder();
+                payMerchantOrderWaterService.createOrderWater(payMerchantOrder);
+                payListenerService.listen(payMerchantOrder);
+            }
+            return update;
+        } catch (Exception e) {
+            throw new RuntimeException("退款操作失败，请稍后重试");
+        } finally {
+            rLock.unlock();
+        }
+    }
+
+    @Override
+    public ReturnResult<PayRefundResponse> cancelToWallet(PayRefundRequest request) {
+        RLock rLock = redissonClient.getLock(PayConstant.ORDER_REFUND_PREFIX);
+        if (!rLock.tryLock()) {
+            return ReturnResult.illegal("订单正在退款, 请勿重复操作");
+        }
+
+        rLock.lock(10, TimeUnit.SECONDS);
+        try {
+            ReturnResult<PayRefundResponse> update = new CancelWalletOrder(transactionTemplate, payMerchantService, payMerchantOrderMapper).update(request);
             if (update.isOk()) {
                 PayMerchantOrder payMerchantOrder = update.getData().getOrder();
                 payMerchantOrderWaterService.createOrderWater(payMerchantOrder);

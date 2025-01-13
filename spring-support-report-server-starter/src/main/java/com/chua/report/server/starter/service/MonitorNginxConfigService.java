@@ -173,4 +173,11 @@ public interface MonitorNginxConfigService extends IService<MonitorNginxConfig> 
      * @return 返回一个包含获取结果的对象，其中包括了获取结果和错误信息
      */
     MonitorNginxConfig getForConfig(Integer monitorNginxConfigId);
+
+    /**
+     * 分析Nginx配置
+     * @param nginxConfigId Nginx配置的唯一标识符
+     * @return 返回一个包含分析结果的对象，其中包括了分析结果和错误信息
+     */
+    Boolean analyzeConfig(Integer nginxConfigId);
 }

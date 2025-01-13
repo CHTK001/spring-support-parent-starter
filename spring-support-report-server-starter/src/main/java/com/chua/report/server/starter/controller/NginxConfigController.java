@@ -98,7 +98,18 @@ public class NginxConfigController {
                 .withErrorMessage("配置不存在")
                 .asResult();
     }
-
+    /**
+     * 解析配置
+     * @param file 配置
+     * @return 是否成功
+     */
+    @PutMapping("configAnalysis")
+    @Schema(description = "解析配置")
+    public ReturnResult<Boolean> configAnalysis(Integer nginxConfigId) {
+        return ReturnResult.optional(monitorNginxConfigService.analyzeConfig(nginxConfigId))
+                .withErrorMessage("配置解析失败")
+                .asResult();
+    }
     @PutMapping("start")
     @Schema(description = "启动nginx")
     public ReturnResult<String> start(@ParameterObject @RequestBody MonitorNginxConfig nginxConfig) {

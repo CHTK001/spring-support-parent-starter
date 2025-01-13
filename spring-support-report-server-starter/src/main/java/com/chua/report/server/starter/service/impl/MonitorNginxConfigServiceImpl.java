@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -55,6 +56,24 @@ public class MonitorNginxConfigServiceImpl extends ServiceImpl<MonitorNginxConfi
         }
         try {
             return IoUtils.toString(file, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+    @Override
+    public Boolean analyzeConfig(Integer nginxConfigId) {
+        MonitorNginxConfig monitorNginxConfig = baseMapper.selectById(nginxConfigId);
+        if(StringUtils.isBlank(monitorNginxConfig.getMonitorNginxConfigPath())) {
+            return null;
+        }
+
+        File file = new File(monitorNginxConfig.getMonitorNginxConfigPath());
+        if(!file.exists()) {
+            return false;
+        }
+        try (InputStream inputStream = new FileInputStream(file)) {
+            NginxDisAssembly disAssembly = new NginxDisAssembly(baseMapper, monitorNginxHttpMapper, monitorNginxHttpServerMapper, monitorNginxHttpServerLocationMapper, monitorNginxHttpServerLocationHeaderMapper, monitorNginxUpstreamMapper, monitorNginxEventMapper);
+            return disAssembly.handle(inputStream);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -132,5 +151,6 @@ public class MonitorNginxConfigServiceImpl extends ServiceImpl<MonitorNginxConfi
         }
         return baseMapper.selectById(monitorNginxConfigId);
     }
+
 
 }
