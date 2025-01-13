@@ -33,6 +33,7 @@ public class PayMerchantOrderQueryRequest {
     @Schema(description = "订单来源")
     @Size(max = 255, message = "订单来源最大长度要小于 255")
     private String payMerchantOrderOrigin;
+
     /**
      * 订单状态;
      */

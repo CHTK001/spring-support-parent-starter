@@ -53,6 +53,12 @@ public class PayOrderQueryRequest {
     private String payMerchantOrderStatus;
 
     /**
+     * 关键字
+     */
+    @TableField(exist = false)
+    @ApiModelProperty(value = "关键字")
+    private String keyword;
+    /**
      * 备注
      */
     @TableField(value = "pay_merchant_order_remark")
