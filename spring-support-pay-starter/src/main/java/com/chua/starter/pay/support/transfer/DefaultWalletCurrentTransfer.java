@@ -25,6 +25,10 @@ public class DefaultWalletCurrentTransfer implements WalletCurrentTransfer{
         if(!userWallet.isOk()) {
             return BigDecimal.ZERO;
         }
-        return userWallet.getData().getPayUserWalletMoney();
+        PayUserWallet payUserWallet = userWallet.getData();
+        if(null == payUserWallet) {
+            return BigDecimal.ZERO;
+        }
+        return payUserWallet.getPayUserWalletMoney();
     }
 }

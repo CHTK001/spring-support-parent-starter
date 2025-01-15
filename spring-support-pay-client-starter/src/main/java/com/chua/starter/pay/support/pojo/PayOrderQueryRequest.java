@@ -75,6 +75,19 @@ public class PayOrderQueryRequest {
     @Size(max = 255, message = "交易方式；最大长度要小于 255")
     private String payMerchantOrderTradeType;
 
+
+    /**
+     * 订单号
+     */
+    @Schema(description = "订单号(支持模糊查询)")
+    private String payMerchantOrderCode;
+
+    /**
+     * 用户id
+     */
+    @Schema(description = "下单账号ID")
+    private String payMerchantOrderUserId;
+
     /**
      * 开始时间
      */

@@ -22,9 +22,9 @@ public class PayOrderRequest implements Serializable {
     /**
      * 订单id
      */
-    @Schema(description = "订单id(用于前端区分是否同一次交易)")
-    @NotBlank(message = "订单id不能为空", groups = {AddGroup.class})
+    @Schema(description = "订单id(用于前端区分是否同一次交易), 不传不进行订单校验")
     private String orderId;
+
     /**
      * 用户id
      */

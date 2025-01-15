@@ -89,7 +89,8 @@ public class CancelWalletOrder {
         }
 
         return transactionTemplate.execute(status -> {
-            PayOrderWalletRefundCreator orderRefundCreator = ServiceProvider.of(PayOrderWalletRefundCreator.class).getNewExtension(payMerchantOrder.getPayMerchantOrderTradeType(), checked.getData());
+            PayOrderWalletRefundCreator orderRefundCreator = ServiceProvider.of(PayOrderWalletRefundCreator.class)
+                    .getNewExtension("WALLET", checked.getData());
             if(null == orderRefundCreator) {
                 return ReturnResult.illegal("当前系统不支持退款, 请联系客服");
             }
