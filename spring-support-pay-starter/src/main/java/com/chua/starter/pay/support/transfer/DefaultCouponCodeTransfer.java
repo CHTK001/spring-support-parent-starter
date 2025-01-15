@@ -2,6 +2,7 @@ package com.chua.starter.pay.support.transfer;
 
 import com.chua.common.support.annotations.SpiDefault;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.pay.support.pojo.PayOrderRequest;
 
 import java.math.BigDecimal;
 
@@ -19,7 +20,7 @@ public class DefaultCouponCodeTransfer implements CouponCodeTransfer{
     }
 
     @Override
-    public ReturnResult<String> check(String code) {
+    public ReturnResult<String> check(PayOrderRequest request) {
         return ReturnResult.SUCCESS;
     }
 }

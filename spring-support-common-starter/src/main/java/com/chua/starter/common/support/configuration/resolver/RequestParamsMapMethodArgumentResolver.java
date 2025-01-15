@@ -35,13 +35,9 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.nio.charset.StandardCharsets;
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
- *
  * @author CH
  */
 public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMethodArgumentResolver {
@@ -71,7 +67,7 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
     public Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
                                   NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
 
-        if(parameter.hasParameterAnnotation(RequestParamMapping.class)) {
+        if (parameter.hasParameterAnnotation(RequestParamMapping.class)) {
             return resolveArgumentOne(parameter, mavContainer, webRequest, binderFactory);
         }
         return resolveArgumentObject(parameter, mavContainer, webRequest, binderFactory);
@@ -83,7 +79,7 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
         Class<?> type = parameter1.getType();
         Object instance = type.newInstance();
         ReflectionUtils.doWithFields(type, field -> {
-            if(Modifier.isStatic(field.getModifiers())) {
+            if (Modifier.isStatic(field.getModifiers())) {
                 return;
             }
             ReflectionUtils.makeAccessible(field);
@@ -94,8 +90,14 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
     }
 
     private void doRegister(Object instance, Field field, Object argument) {
-        BeanMap beanMap = BeanMap.of(argument, false);
-        if(field.isAnnotationPresent(RequestParamMapping.class)) {
+        BeanMap beanMap = null;
+        if (argument instanceof Map<?, ?> map) {
+            beanMap = BeanMap.of(Collections.emptyMap());
+            beanMap.putAll((Map<? extends String, ?>) map);
+        } else {
+            beanMap = BeanMap.of(argument, false);
+        }
+        if (field.isAnnotationPresent(RequestParamMapping.class)) {
             doRequestParamMappingRegister(instance, field, AnnotationUtils.getAnnotation(field, RequestParamMapping.class), beanMap);
             return;
         }
@@ -111,29 +113,29 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
         Object value = null;
         for (String s : name) {
             Object o = beanMap.get(s);
-            if(null != o) {
+            if (null != o) {
                 value = o;
                 break;
             }
         }
 
-        if(null == value) {
+        if (null == value) {
             value = defaultValue;
         }
         set(instance, field, value);
     }
 
     private void set(Object instance, Field field, Object o) {
-        if(null == o) {
+        if (null == o) {
             return;
         }
 
-        if(ValueConstants.DEFAULT_NONE.equals(o)) {
+        if (ValueConstants.DEFAULT_NONE.equals(o)) {
             return;
         }
 
         Object o1 = Converter.convertIfNecessary(o, field.getType());
-        if(null == o1) {
+        if (null == o1) {
             return;
         }
         try {
@@ -153,8 +155,7 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
             if (valueType == MultipartFile.class) {
                 MultipartRequest multipartRequest = MultipartResolutionDelegate.resolveMultipartRequest(webRequest);
                 return (multipartRequest != null ? multipartRequest.getMultiFileMap() : new LinkedMultiValueMap<>(0));
-            }
-            else if (valueType == Part.class) {
+            } else if (valueType == Part.class) {
                 HttpServletRequest servletRequest = webRequest.getNativeRequest(HttpServletRequest.class);
                 if (servletRequest != null && MultipartResolutionDelegate.isMultipartRequest(servletRequest)) {
                     Collection<Part> parts = servletRequest.getParts();
@@ -165,8 +166,7 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
                     return result;
                 }
                 return new LinkedMultiValueMap<>(0);
-            }
-            else {
+            } else {
                 Map<String, String[]> parameterMap = webRequest.getParameterMap();
                 MultiValueMap<String, String> result = new LinkedMultiValueMap<>(parameterMap.size());
                 parameterMap.forEach((key, values) -> {
@@ -176,16 +176,13 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
                 });
                 return result;
             }
-        }
-
-        else {
+        } else {
             // Regular Map
             Class<?> valueType = resolvableType.asMap().getGeneric(1).resolve();
             if (valueType == MultipartFile.class) {
                 MultipartRequest multipartRequest = MultipartResolutionDelegate.resolveMultipartRequest(webRequest);
                 return (multipartRequest != null ? multipartRequest.getFileMap() : new LinkedHashMap<>(0));
-            }
-            else if (valueType == Part.class) {
+            } else if (valueType == Part.class) {
                 HttpServletRequest servletRequest = webRequest.getNativeRequest(HttpServletRequest.class);
                 if (servletRequest != null && MultipartResolutionDelegate.isMultipartRequest(servletRequest)) {
                     Collection<Part> parts = servletRequest.getParts();
@@ -198,8 +195,7 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
                     return result;
                 }
                 return new LinkedHashMap<>(0);
-            }
-            else {
+            } else {
                 Map<String, String[]> parameterMap = webRequest.getParameterMap();
                 Map<String, String> result = CollectionUtils.newLinkedHashMap(parameterMap.size());
                 parameterMap.forEach((key, values) -> {

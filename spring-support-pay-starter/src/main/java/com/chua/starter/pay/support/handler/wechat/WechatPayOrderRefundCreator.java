@@ -10,6 +10,7 @@ import com.chua.starter.pay.support.result.PayRefundResponse;
 import com.chua.starter.pay.support.result.PayRefundStatus;
 import com.wechat.pay.java.core.Config;
 import com.wechat.pay.java.core.RSAAutoCertificateConfig;
+import com.wechat.pay.java.core.exception.ServiceException;
 import com.wechat.pay.java.service.refund.RefundService;
 import com.wechat.pay.java.service.refund.model.AmountReq;
 import com.wechat.pay.java.service.refund.model.CreateRequest;
@@ -48,8 +49,14 @@ public final class WechatPayOrderRefundCreator implements PayOrderRefundCreator 
         RefundService service = new RefundService.Builder().config(config).build();
         CreateRequest request = getPrepayRequest(payMerchantOrder, refundRequest);
 
-        Refund refund = service.create(request);
-        Status status = refund.getStatus();
+        Refund refund = null;
+        Status status = null;
+        try {
+            refund = service.create(request);
+            status = refund.getStatus();
+        } catch (ServiceException e) {
+            throw new RuntimeException(e.getErrorMessage());
+        }
         PayRefundResponse payRefundResponse = new PayRefundResponse();
         payRefundResponse.setStatus(PayRefundStatus.valueOf(status.name()));
         payRefundResponse.setRefundId(refund.getRefundId());
@@ -72,8 +79,11 @@ public final class WechatPayOrderRefundCreator implements PayOrderRefundCreator 
     private CreateRequest getPrepayRequest(PayMerchantOrder payMerchantOrder, PayRefundRequest refundRequest) {
         CreateRequest request = new CreateRequest();
         AmountReq amount = new AmountReq();
-        amount.setTotal(getMoney(payMerchantOrder, refundRequest).multiply(new BigDecimal(100))
+        amount.setTotal(getTotalMoney(payMerchantOrder, refundRequest).multiply(new BigDecimal(100))
                 .setScale(0, RoundingMode.HALF_UP).longValue());
+        amount.setRefund(getTotalMoney(payMerchantOrder, refundRequest).multiply(new BigDecimal(100))
+                .setScale(0, RoundingMode.HALF_UP).longValue());
+        amount.setCurrency("CNY");
 
         request.setAmount(amount);
         request.setOutTradeNo(payMerchantOrder.getPayMerchantOrderCode());
@@ -84,7 +94,10 @@ public final class WechatPayOrderRefundCreator implements PayOrderRefundCreator 
         return request;
     }
 
-    private BigDecimal getMoney(PayMerchantOrder payMerchantOrder, PayRefundRequest refundRequest) {
+    private BigDecimal getMoney(PayMerchantOrder payMerchantOrder) {
+        return payMerchantOrder.getPayMerchantOrderPrice();
+    }
+    private BigDecimal getTotalMoney(PayMerchantOrder payMerchantOrder, PayRefundRequest refundRequest) {
         if(null == refundRequest.getMoney()) {
             return payMerchantOrder.getPayMerchantOrderTotalPrice();
         }

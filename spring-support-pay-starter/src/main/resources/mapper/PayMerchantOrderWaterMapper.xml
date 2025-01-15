@@ -36,10 +36,10 @@
                 pmow.pay_merchant_order_status <![CDATA[<>]]> '1000'
 
             <if test="request.type != null and request.type == 1">
-                AND pmo.pay_merchant_order_origin <![CDATA[<>]]> 'RECHARGE'
+                AND (pmo.pay_merchant_order_origin <![CDATA[<>]]> 'RECHARGE' AND pmow.pay_merchant_order_status NOT IN ('4002', '5002'))
             </if>
             <if test="request.type != null and request.type == 2">
-                AND (pmo.pay_merchant_order_origin = 'RECHARGE' OR pmo.pay_merchant_order_code = '4002')
+                AND (pmo.pay_merchant_order_origin = 'RECHARGE' OR pmow.pay_merchant_order_status  IN ('4002', '5002'))
             </if>
             AND pmo.pay_merchant_order_user_id IN
             <foreach collection="userIds" item="userId" separator="," open="(" close=")">
