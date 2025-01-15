@@ -138,7 +138,7 @@ public class PayMerchantOrder extends SysBase implements Serializable {
             "4003:退款失败;" +
             "5000:订单已关闭;" +
             "5001:订单已关闭(手动)" +
-            "5002:订单取消"
+            "5002:订单取消(成功)"
             )
     private String payMerchantOrderStatus;
 

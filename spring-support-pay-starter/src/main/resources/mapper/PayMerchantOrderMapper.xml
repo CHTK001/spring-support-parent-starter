@@ -94,7 +94,19 @@
             </if>
 
             <if test="request.payMerchantOrderStatus != null and request.payMerchantOrderStatus != ''">
-                AND pay_merchant_order_status = #{request.payMerchantOrderTradeType}
+                AND pay_merchant_order_status = #{request.payMerchantOrderStatus}
+            </if>
+
+            <if test="request.payMerchantOrderStatus != null and request.payMerchantOrderStatus != ''">
+                AND pay_merchant_order_status = #{request.payMerchantOrderStatus}
+            </if>
+
+            <if test="request.payMerchantOrderCode != null and request.payMerchantOrderCode != ''">
+                AND pay_merchant_order_code LIKE concat(#{request.payMerchantOrderCode}, '%')
+            </if>
+
+            <if test="request.payMerchantOrderUserId != null and request.payMerchantOrderUserId != ''">
+                AND pay_merchant_order_user_id LIKE concat(#{request.payMerchantOrderUserId}, '%')
             </if>
 
             <if test="request.payMerchantOrderRemark != null and request.payMerchantOrderRemark != ''">

@@ -30,7 +30,7 @@ public class WechatPayOrderRefundCallbackController {
 
     final PayOrderService payOrderService;
 
-    @PostMapping(value = "/notify", produces = MediaType.APPLICATION_XML_VALUE)
+    @PostMapping(value = "/notify/{payMerchantCode}/{payMerchantOrderCode}", produces = MediaType.APPLICATION_XML_VALUE)
     @ApiOperation("订单结果通知")
     public WechatOrderCallbackResponse refundOrder(@RequestBody WechatOrderRefundCallbackRequest wechatOrderRefundCallbackRequest) {
 //        return payOrderService.refundOrder(wechatOrderRefundCallbackRequest, "wechat_" + wechatOrderRefundCallbackRequest.getTradeType());

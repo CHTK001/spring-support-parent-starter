@@ -1,6 +1,7 @@
 package com.chua.starter.pay.support.transfer;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.pay.support.pojo.PayOrderRequest;
 
 import java.math.BigDecimal;
 
@@ -24,8 +25,8 @@ public interface CouponCodeTransfer {
     /**
      * 检查
      *
-     * @param code 券码
+     * @param request 券码
      * @return 是否可用
      */
-    ReturnResult<String> check(String code);
+    ReturnResult<String> check(PayOrderRequest request);
 }

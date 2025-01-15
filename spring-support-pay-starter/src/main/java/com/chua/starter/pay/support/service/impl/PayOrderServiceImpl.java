@@ -77,18 +77,30 @@ public class PayOrderServiceImpl implements PayOrderService {
             return ReturnResult.illegal(returnResult.getMsg());
         }
 
-        RLock rLock = redissonClient.getLock(PayConstant.ORDER_CREATE_PREFIX + tradeType.getName() + request.getOrderId());
+        String orderId = request.getOrderId();
+        if(null == orderId) {
+            try {
+                return new CreateOrder(transactionTemplate, payMerchantService, payMerchantOrderWaterService, payMerchantOrderMapper).create(request);
+            } catch (Throwable e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        RLock rLock = redissonClient.getLock(PayConstant.ORDER_CREATE_PREFIX + tradeType.getName() + request.getProductCode() + orderId);
         if (!rLock.tryLock()) {
             return ReturnResult.illegal("订单已存在, 请勿重复下单");
         }
 
-        rLock.lock(3, TimeUnit.SECONDS);
+        rLock.lock(1, TimeUnit.SECONDS);
         try {
             return new CreateOrder(transactionTemplate, payMerchantService, payMerchantOrderWaterService, payMerchantOrderMapper).create(request);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         } finally {
-            rLock.unlock();
+            try {
+                rLock.unlock();
+            } catch (Throwable ignored) {
+            }
         }
     }
 
@@ -168,7 +180,7 @@ public class PayOrderServiceImpl implements PayOrderService {
             return new WechatOrderCallbackResponse("FAIL", "正在处理", null);
         }
 
-        rLock.lock(10, TimeUnit.SECONDS);
+        rLock.lock(1, TimeUnit.SECONDS);
         try {
             if (!parser.parser(payMerchantService, payMerchantOrderMapper)) {
                 return new WechatOrderCallbackResponse("FAIL", "订单不存在", null);
@@ -232,7 +244,7 @@ public class PayOrderServiceImpl implements PayOrderService {
             }
             return update;
         } catch (Exception e) {
-            throw new RuntimeException("退款操作失败，请稍后重试");
+            throw new RuntimeException("退款操作失败，" + e.getLocalizedMessage());
         } finally {
             rLock.unlock();
         }
@@ -270,7 +282,8 @@ public class PayOrderServiceImpl implements PayOrderService {
 
         rLock.lock(10, TimeUnit.SECONDS);
         try {
-            ReturnResult<PayRefundResponse> update = new CancelWalletOrder(transactionTemplate, payMerchantService, payMerchantOrderMapper).update(request);
+            ReturnResult<PayRefundResponse> update = new CancelWalletOrder(transactionTemplate, payMerchantService, payMerchantOrderMapper)
+                    .update(request);
             if (update.isOk()) {
                 PayMerchantOrder payMerchantOrder = update.getData().getOrder();
                 payMerchantOrderWaterService.createOrderWater(payMerchantOrder);

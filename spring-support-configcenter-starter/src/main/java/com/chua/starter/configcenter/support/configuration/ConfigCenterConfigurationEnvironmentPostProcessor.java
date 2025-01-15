@@ -12,7 +12,9 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.env.EnvironmentPostProcessor;
 import org.springframework.boot.env.OriginTrackedMapPropertySource;
+import org.springframework.boot.env.SystemEnvironmentPropertySourceEnvironmentPostProcessor;
 import org.springframework.boot.env.YamlPropertySourceLoader;
+import org.springframework.core.Ordered;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
 
@@ -26,7 +28,7 @@ import java.util.Map;
  */
 @Slf4j
 @EnableConfigurationProperties(ConfigCenterProperties.class)
-public class ConfigCenterConfigurationEnvironmentPostProcessor implements EnvironmentPostProcessor {
+public class ConfigCenterConfigurationEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
 
 
     @Override
@@ -65,4 +67,8 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
     }
 
 
+    @Override
+    public int getOrder() {
+        return SystemEnvironmentPropertySourceEnvironmentPostProcessor.DEFAULT_ORDER - 100 ;
+    }
 }
