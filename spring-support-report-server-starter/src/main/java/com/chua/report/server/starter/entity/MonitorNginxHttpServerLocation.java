@@ -138,6 +138,13 @@ public class MonitorNginxHttpServerLocation extends SysBase implements Serializa
     @Schema(description = "root   html;")
     @Size(max = 255, message = "root   html;最大长度要小于 255")
     private String monitorNginxHttpServerLocationRoot;
+    /**
+     * alias  html;
+     */
+    @TableField(value = "monitor_nginx_http_server_location_alias")
+    @ApiModelProperty(value = "alias  html;")
+    @Schema(description = "alias  html;")
+    private String monitorNginxHttpServerLocationAlias;
 
     /**
      * #定义首页索引文件的名称\n# index  index.html index.htm;

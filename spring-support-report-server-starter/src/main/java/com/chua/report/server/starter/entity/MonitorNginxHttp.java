@@ -49,6 +49,14 @@ public class MonitorNginxHttp extends SysBase implements Serializable {
     private String monitorNginxHttpSendfile;
 
     /**
+     * 默认字符集
+     */
+    @TableField(value = "monitor_nginx_http_charset")
+    @ApiModelProperty(value = "默认字符集")
+    @Schema(description = "默认字符集")
+    private String monitorNginxHttpCharset;
+
+    /**
      * 用了log_format指令设置了日志格式之后，需要用access_log指令指定日志文件的存放路径记录了哪些用户，哪些页面以及用户浏览器、ip和其他的访问信息
      */
     @TableField(value = "monitor_nginx_http_access_log")
@@ -56,6 +64,22 @@ public class MonitorNginxHttp extends SysBase implements Serializable {
     @Schema(description = "用了log_format指令设置了日志格式之后，需要用access_log指令指定日志文件的存放路径记录了哪些用户，哪些页面以及用户浏览器、ip和其他的访问信息")
     @Size(max = 255, message = "用了log_format指令设置了日志格式之后，需要用access_log指令指定日志文件的存放路径记录了哪些用户，哪些页面以及用户浏览器、ip和其他的访问信息最大长度要小于 255")
     private String monitorNginxHttpAccessLog;
+    /**
+     * 错误日志
+     */
+    @TableField(value = "monitor_nginx_http_error_log")
+    @ApiModelProperty(value = "错误日志")
+    @Schema(description = "错误日志")
+    private String monitorNginxHttpErrorLog;
+    /**
+     * 自定义日志格式
+     */
+    @TableField(value = "monitor_nginx_http_log_format")
+    @ApiModelProperty(value = "自定义日志格式")
+    @Schema(description = "自定义日志格式")
+    private String monitorNginxHttpLogFormat;
+
+
 
     /**
      * 服务器名字的hash表大小
@@ -129,6 +153,14 @@ public class MonitorNginxHttp extends SysBase implements Serializable {
     private String monitorNginxHttpGzip;
 
     /**
+     * 禁用gzip压缩
+     */
+    @TableField(value = "monitor_nginx_http_gzip_disable")
+    @ApiModelProperty(value = "禁用gzip压缩")
+    @Schema(description = "禁用gzip压缩")
+    private String monitorNginxHttpGzipDisable;
+
+    /**
      * 最小压缩大小
      */
     @TableField(value = "monitor_nginx_http_gzip_min_length")
@@ -171,6 +203,13 @@ public class MonitorNginxHttp extends SysBase implements Serializable {
     @Schema(description = "#gzip_types   text/plain text/css text/xml text/javascript application/json application/x-javascript application/xml application/xml+rss;#压缩类型")
     @Size(max = 255, message = "#gzip_types   text/plain text/css text/xml text/javascript application/json application/x-javascript application/xml application/xml+rss;#压缩类型最大长度要小于 255")
     private String monitorNginxHttpGzipTypes;
+    /**
+     * gzip_vary on;                 #是否开启gzip vary头
+     */
+    @TableField(value = "monitor_nginx_http_gzip_vary")
+    @ApiModelProperty(value = "gzip_vary on;                 #是否开启gzip vary头")
+    @Schema(description = "gzip_vary on;                 #是否开启gzip vary头")
+    private String monitorNginxHttpGzipVary;
 
     /**
      * ssl_certificate     	cert/yphtoy.com.pem;   #加密证书路径
