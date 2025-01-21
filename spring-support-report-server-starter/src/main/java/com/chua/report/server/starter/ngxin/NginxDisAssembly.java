@@ -1,11 +1,14 @@
 package com.chua.report.server.starter.ngxin;
 
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.converter.Converter;
 import com.chua.common.support.function.Joiner;
+import com.chua.common.support.function.Splitter;
 import com.chua.report.server.starter.entity.*;
 import com.chua.report.server.starter.mapper.*;
 import com.chua.report.server.starter.service.MonitorNginxConfigService;
+import com.chua.socketio.support.MsgStep;
 import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.github.odiszapc.nginxparser.NgxBlock;
 import com.github.odiszapc.nginxparser.NgxConfig;
@@ -13,8 +16,7 @@ import com.github.odiszapc.nginxparser.NgxEntry;
 import com.github.odiszapc.nginxparser.NgxParam;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -46,6 +48,7 @@ public class NginxDisAssembly {
     @Autowired
     private SocketSessionTemplate socketSessionTemplate;
 
+    private int index = 0;
     public NginxDisAssembly(MonitorNginxConfig monitorNginxConfig) {
         this.eventName = getEventName(monitorNginxConfig.getMonitorNginxConfigId());
         this.monitorNginxConfig = monitorNginxConfig;
@@ -55,12 +58,19 @@ public class NginxDisAssembly {
         return "nginx-analysis-" + monitorNginxConfigId;
     }
 
+    public int createIndex(int step) {
+        return index += step;
+    }
     public Boolean handle(InputStream inputStream) throws IOException {
+        socketSessionTemplate.send(eventName, new MsgStep("开始解析配置", createIndex(1)));
         NgxConfig ngxConfig = NgxConfig.read(inputStream);
+        socketSessionTemplate.send(eventName, new MsgStep("开始事件配置", createIndex(1)));
         registerEvent(ngxConfig);
+        socketSessionTemplate.send(eventName, new MsgStep("开始Http配置", createIndex(1)));
         registerHttp(ngxConfig);
         return false;
     }
+
 
     private void registerHttp(NgxConfig ngxConfig) {
         NgxBlock http = ngxConfig.findBlock("http");
@@ -104,13 +114,62 @@ public class NginxDisAssembly {
         } else {
             monitorNginxHttpMapper.updateById(monitorNginxHttp);
         }
+        socketSessionTemplate.send(eventName, new MsgStep("开始Server配置", createIndex(1)));
         registerServers(http, monitorNginxHttp);
+        socketSessionTemplate.send(eventName, new MsgStep("开始include配置", createIndex(1)));
+        analysisInclude( monitorNginxHttp);
+    }
+
+    private void analysisInclude(MonitorNginxHttp monitorNginxHttp) {
+        String monitorNginxHttpInclude = monitorNginxHttp.getMonitorNginxHttpInclude();
+        if(StringUtils.isBlank(monitorNginxHttpInclude)) {
+            return;
+        }
+        String[] split = Splitter.on(";").split(monitorNginxHttpInclude);
+        int max = 99 - index;
+        int step = max / split.length;
+
+        for (String s : split) {
+            if(!s.endsWith(".conf")) {
+                continue;
+            }
+            registerInclude(s, monitorNginxHttp, step);
+        }
+    }
+
+    private void registerInclude(String s, MonitorNginxHttp monitorNginxHttp, int max) {
+        String fullPath = getFullPath(s);
+        File file = new File(fullPath);
+        if(!file.isDirectory() || null == file.listFiles()) {
+            return;
+        }
+        File[] files = file.listFiles();
+        int step = max / files.length;
+        for (File file1 : files) {
+            socketSessionTemplate.send(eventName, new MsgStep("开始["+ file1.getName() +"]配置", createIndex(step)));
+            registerInclude(file1, monitorNginxHttp);
+        }
+    }
+
+    private void registerInclude(File file1, MonitorNginxHttp monitorNginxHttp) {
+        try (FileInputStream fis = new FileInputStream(file1)) {
+            NgxConfig ngxConfig = NgxConfig.read(fis);
+            List<NgxEntry> server = ngxConfig.findAll(NgxBlock.class, "server");
+            for (NgxEntry ngxEntry : server) {
+                registerServer( (NgxBlock) ngxEntry, monitorNginxHttp);
+            }
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void registerServers(NgxBlock http, MonitorNginxHttp monitorNginxHttp) {
         List<NgxEntry> server = http.findAll(NgxBlock.class, "server");
         for (NgxEntry ngxEntry : server) {
             NgxBlock serverBlock = (NgxBlock) ngxEntry;
+            socketSessionTemplate.send(eventName, new MsgStep("开始Server配置", createIndex(1)));
             registerServer(serverBlock, monitorNginxHttp);
         }
     }
@@ -154,7 +213,7 @@ public class NginxDisAssembly {
         } else {
             monitorNginxHttpServerMapper.updateById(monitorNginxHttpServer);
         }
-
+        socketSessionTemplate.send(eventName, new MsgStep("开始location配置", createIndex(1)));
         registerServerLocations(serverBlock, monitorNginxHttpServer);
     }
 
