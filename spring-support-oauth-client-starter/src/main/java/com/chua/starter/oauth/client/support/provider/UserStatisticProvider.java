@@ -32,7 +32,7 @@ import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 import java.util.*;
 
 import static com.chua.common.support.constant.Constants.CAPTCHA_SESSION_KEY;
