@@ -13,10 +13,8 @@ import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.env.EnvironmentPostProcessor;
 import org.springframework.boot.env.OriginTrackedMapPropertySource;
 import org.springframework.boot.env.SystemEnvironmentPropertySourceEnvironmentPostProcessor;
-import org.springframework.boot.env.YamlPropertySourceLoader;
 import org.springframework.core.Ordered;
 import org.springframework.core.env.ConfigurableEnvironment;
-import org.springframework.core.env.MapPropertySource;
 
 import java.util.List;
 import java.util.Map;
@@ -62,7 +60,7 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
             }
 
             environment.getPropertySources()
-                    .addFirst(new OriginTrackedMapPropertySource(newName, stringObjectMap));
+                    .addLast(new OriginTrackedMapPropertySource(newName, stringObjectMap));
         }
     }
 
