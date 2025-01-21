@@ -2,7 +2,7 @@ package com.chua.starter.oauth.client.support.provider;
 
 import lombok.Data;
 
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 /**
  * 登录信息

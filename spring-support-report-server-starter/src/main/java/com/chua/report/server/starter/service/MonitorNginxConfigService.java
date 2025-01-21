@@ -6,7 +6,7 @@ import com.chua.report.server.starter.entity.MonitorNginxConfig;
 import com.chua.report.server.starter.pojo.NginxInclude;
 import com.chua.starter.mybatis.entity.Query;
 
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
 /**
