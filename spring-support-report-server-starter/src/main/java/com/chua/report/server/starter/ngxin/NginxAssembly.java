@@ -155,7 +155,7 @@ public class NginxAssembly {
 
 
     }
-    private NgxBlock createNginxHttp(MonitorNginxHttp monitorNginxHttp) {
+    private static NgxBlock createNginxHttp(MonitorNginxHttp monitorNginxHttp) {
         NgxBlock ngxHttp = new NgxBlock();
         ngxHttp.addEntry(new NgxComment("#HTTP 模块配置"));
         ngxHttp.addValue("http");
