@@ -176,8 +176,8 @@ public class MonitorNginxConfigServiceImpl extends ServiceImpl<MonitorNginxConfi
             return Projects.isWindows()?
                     checkWindowPidExists(pid):
                     checkLinuxPidExists(pid);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } catch (IOException ignored) {
+            return false;
         }
     }
 
