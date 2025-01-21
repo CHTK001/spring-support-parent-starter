@@ -114,4 +114,58 @@ public class MonitorNginxHttpServer extends SysBase implements Serializable {
     @Schema(description = "error_page 500 502 503 504 /50x.html;")
     @Size(max = 255, message = "error_page 500 502 503 504 /50x.html;最大长度要小于 255")
     private String monitorNginxHttpServerErrorPage;
+
+    /**
+     * ssl_certificate     	cert/yphtoy.com.pem;   #加密证书路径
+     */
+    @TableField(value = "monitor_nginx_http_ssl_certificate")
+    @ApiModelProperty(value = "ssl_certificate     	cert/yphtoy.com.pem;   #加密证书路径")
+    @Schema(description = "ssl_certificate     	cert/yphtoy.com.pem;   #加密证书路径")
+    @Size(max = 255, message = "ssl_certificate     	cert/yphtoy.com.pem;   #加密证书路径最大长度要小于 255")
+    private String monitorNginxHttpServerSslCertificate;
+
+    /**
+     * ssl_certificate_key	cert/yphtoy.com.key;       #加密私钥路径
+     */
+    @TableField(value = "monitor_nginx_http_ssl_certificate_key")
+    @ApiModelProperty(value = "ssl_certificate_key	cert/yphtoy.com.key;       #加密私钥路径")
+    @Schema(description = "ssl_certificate_key	cert/yphtoy.com.key;       #加密私钥路径")
+    @Size(max = 255, message = "ssl_certificate_key	cert/yphtoy.com.key;       #加密私钥路径最大长度要小于 255")
+    private String monitorNginxHttpServerSslCertificateKey;
+
+    /**
+     * ssl_protocols		TLSv1 TLSv1.1 TLSv1.2;     #加密协议
+     */
+    @TableField(value = "monitor_nginx_http_ssl_protocols")
+    @ApiModelProperty(value = "ssl_protocols		TLSv1 TLSv1.1 TLSv1.2;     #加密协议")
+    @Schema(description = "ssl_protocols		TLSv1 TLSv1.1 TLSv1.2;     #加密协议")
+    @Size(max = 255, message = "ssl_protocols		TLSv1 TLSv1.1 TLSv1.2;     #加密协议最大长度要小于 255")
+    private String monitorNginxHttpServerSslProtocols;
+
+    /**
+     * ssl_session_timeout	10m;                       #加密访问缓存过期时间
+     */
+    @TableField(value = "monitor_nginx_http_ssl_session_timeout")
+    @ApiModelProperty(value = "ssl_session_timeout	10m;                       #加密访问缓存过期时间")
+    @Schema(description = "ssl_session_timeout	10m;                       #加密访问缓存过期时间")
+    @Size(max = 255, message = "ssl_session_timeout	10m;                       #加密访问缓存过期时间最大长度要小于 255")
+    private String monitorNginxHttpServerSslSessionTimeout;
+
+    /**
+     * ssl_ciphers		HIGH:!aNULL:!MD5;              #加密算法
+     */
+    @TableField(value = "monitor_nginx_http_ssl_ciphers")
+    @ApiModelProperty(value = "ssl_ciphers		HIGH:!aNULL:!MD5;              #加密算法")
+    @Schema(description = "ssl_ciphers		HIGH:!aNULL:!MD5;              #加密算法")
+    @Size(max = 255, message = "ssl_ciphers		HIGH:!aNULL:!MD5;              #加密算法最大长度要小于 255")
+    private String monitorNginxHttpServerSslCiphers;
+
+    /**
+     * ssl_prefer_server_ciphers on;	               #是否由服务器决定采用哪种加密算法
+     */
+    @TableField(value = "monitor_nginx_http_ssl_prefer_server_ciphers")
+    @ApiModelProperty(value = "ssl_prefer_server_ciphers on;	               #是否由服务器决定采用哪种加密算法")
+    @Schema(description = "ssl_prefer_server_ciphers on;	               #是否由服务器决定采用哪种加密算法")
+    @Size(max = 255, message = "ssl_prefer_server_ciphers on;	               #是否由服务器决定采用哪种加密算法最大长度要小于 255")
+    private String monitorNginxHttpServerSslPreferServerCiphers;
 }
