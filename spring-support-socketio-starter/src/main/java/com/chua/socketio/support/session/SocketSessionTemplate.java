@@ -1,5 +1,6 @@
 package com.chua.socketio.support.session;
 
+import com.chua.socketio.support.MsgStep;
 import com.corundumstudio.socketio.SocketIOClient;
 
 import java.util.List;
@@ -54,6 +55,17 @@ public interface SocketSessionTemplate {
     void send(String event, String msg);
 
 
+    /**
+     * 向所有客户端发送消息。
+     *
+     * @param event 触发的事件名称。
+     * @param msgStep 要发送的消息内容。
+     */
+    default void send(String event, MsgStep msgStep) {
+        send(event, msgStep.toString());
+    }
+
+
 
     /**
      * 向指定客户端发送消息。
@@ -73,7 +85,7 @@ public interface SocketSessionTemplate {
 
     /**
      * 获取指定用户类型的在线用户列表。
-     * @param type 用户类型
+     * @param aDefault 用户类型
      * @return
      */
     SocketSession getOnlineSession(String aDefault, String roomId, String target);
