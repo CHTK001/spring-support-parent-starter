@@ -8,7 +8,7 @@ import com.chua.common.support.datasource.annotation.ColumnDesc;
 import com.chua.starter.mybatis.pojo.SysBase;
 import lombok.Data;
 
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.io.Serializable;
 
