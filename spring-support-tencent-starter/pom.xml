@@ -6,12 +6,12 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.28</version>
+        <version>4.0.0.29</version>
     </parent>
 
     <artifactId>spring-support-tencent-starter</artifactId>
     <description>腾讯接口</description>
-    <version>4.0.0.28</version>
+    <version>4.0.0.29</version>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
