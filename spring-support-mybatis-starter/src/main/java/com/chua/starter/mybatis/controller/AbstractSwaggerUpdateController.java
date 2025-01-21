@@ -12,6 +12,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Set;
 
 import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
@@ -48,6 +49,23 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
         }
 
         return ReturnResult.of(getService().removeBatchByIds(ids));
+    }
+
+    /**
+     * 根据主键更新数据
+     *
+     * @param t 实体
+     * @return 分页结果
+     */
+    @ResponseBody
+    @Operation(summary = "更新/保存数据")
+    @PutMapping("saveOrUpdateBatch")
+    public ReturnResult<Boolean>saveOrUpdateBatch(@Validated(UpdateGroup.class) @RequestBody List<T> t , @Ignore BindingResult bindingResult) {
+        if(bindingResult.hasErrors()) {
+            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+        }
+
+        return ReturnResult.of(getService().saveOrUpdateBatch(t));
     }
 
     /**
