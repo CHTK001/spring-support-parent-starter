@@ -5,9 +5,9 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.common.support.validator.group.UpdateGroup;
 import com.chua.report.server.starter.entity.MonitorNginxConfig;
+import com.chua.report.server.starter.pojo.NginxInclude;
 import com.chua.report.server.starter.service.MonitorNginxConfigService;
 import com.chua.starter.mybatis.entity.Query;
-import com.chua.starter.mybatis.utils.ReturnPageResultUtils;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +15,8 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 /**
  * nginx配置接口
@@ -76,7 +77,7 @@ public class NginxConfigController {
     }
     /**
      * 获取配置
-     * @param nginxConfigId nginx配置id
+     * @param monitorNginxConfigId nginx配置id
      * @return 配置
      */
     @GetMapping("get")
@@ -99,6 +100,18 @@ public class NginxConfigController {
                 .asResult();
     }
     /**
+     * 获取配置
+     * @param nginxConfigId nginx配置id
+     * @return 配置
+     */
+    @GetMapping("configFormInclude")
+    @Schema(description = "获取配置")
+    public ReturnResult<List<NginxInclude>> configFormInclude(Integer nginxConfigId) {
+        return ReturnResult.optional(monitorNginxConfigService.configFormInclude(nginxConfigId))
+                .withErrorMessage("配置不存在")
+                .asResult();
+    }
+    /**
      * 解析配置
      * @param nginxConfigId 配置
      * @return 是否成功
@@ -115,6 +128,7 @@ public class NginxConfigController {
     public ReturnResult<String> start(@ParameterObject @RequestBody MonitorNginxConfig nginxConfig) {
         return ReturnResult.optional(monitorNginxConfigService.start(nginxConfig.getMonitorNginxConfigId()))
                 .withErrorMessage("配置不存在")
+                .nullIsSuccess()
                 .asResult();
     }
     @PutMapping("restart")
@@ -122,6 +136,7 @@ public class NginxConfigController {
     public ReturnResult<String> restart(@ParameterObject @RequestBody MonitorNginxConfig nginxConfig) {
         return ReturnResult.optional(monitorNginxConfigService.restart(nginxConfig.getMonitorNginxConfigId()))
                 .withErrorMessage("配置不存在")
+                .nullIsSuccess()
                 .asResult();
     }
 
@@ -130,6 +145,7 @@ public class NginxConfigController {
     public ReturnResult<String> stop(@ParameterObject @RequestBody MonitorNginxConfig nginxConfig) {
         return ReturnResult.optional(monitorNginxConfigService.stop(nginxConfig.getMonitorNginxConfigId()))
                 .withErrorMessage("配置不存在")
+                .nullIsSuccess()
                 .asResult();
     }
 
@@ -160,16 +176,4 @@ public class NginxConfigController {
     }
 
 
-    /**
-     * 解析配置
-     * @param file 配置
-     * @return 是否成功
-     */
-    @PutMapping("analysis")
-    @Schema(description = "解析配置")
-    public ReturnResult<Boolean> analyzeConfig(MultipartFile file) {
-        return ReturnResult.optional(monitorNginxConfigService.analyzeConfig(file))
-                .withErrorMessage("配置解析失败")
-                .asResult();
-    }
 }

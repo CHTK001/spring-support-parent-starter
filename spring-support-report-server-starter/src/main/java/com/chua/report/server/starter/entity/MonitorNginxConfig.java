@@ -112,4 +112,19 @@ public class MonitorNginxConfig extends SysBase implements Serializable {
     @Schema(description = "nginx脚本路径；服务方式无需配置")
     @Size(max = 255, message = "nginx脚本路径；服务方式无需配置最大长度要小于 255")
     private String monitorNginxConfigNginxPath;
+
+
+    /**
+     * 是否运行中
+     */
+    @TableField(exist = false)
+    @ApiModelProperty(value = "是否运行中")
+    private Boolean running;
+    /**
+     * 事件
+     */
+    @TableField(exist = false)
+    @ApiModelProperty(value = "事件")
+    @Schema(description = "事件")
+    private MonitorNginxEvent events;
 }
