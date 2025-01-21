@@ -3,10 +3,11 @@ package com.chua.report.server.starter.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.report.server.starter.entity.MonitorNginxConfig;
+import com.chua.report.server.starter.pojo.NginxInclude;
 import com.chua.starter.mybatis.entity.Query;
-import org.springframework.web.multipart.MultipartFile;
 
 import javax.validation.constraints.NotNull;
+import java.util.List;
 
 /**
  * @author CH
@@ -112,13 +113,6 @@ public interface MonitorNginxConfigService extends IService<MonitorNginxConfig> 
     String getConfigString(Integer nginxConfigId);
 
     /**
-     * 分析Nginx配置文件
-     * @param file Nginx配置文件
-     * @return 返回一个包含分析结果的对象，其中包括了分析结果和错误信息
-     */
-    Boolean analyzeConfig(MultipartFile file);
-
-    /**
      * 备份Nginx配置
      * @param nginxConfig Nginx配置对象
      * @return 返回一个包含备份结果的对象，其中包括了备份结果和错误信息
@@ -180,4 +174,11 @@ public interface MonitorNginxConfigService extends IService<MonitorNginxConfig> 
      * @return 返回一个包含分析结果的对象，其中包括了分析结果和错误信息
      */
     Boolean analyzeConfig(Integer nginxConfigId);
+
+    /**
+     * 获取Nginx配置的include文件
+     * @param nginxConfigId Nginx配置的唯一标识符
+     * @return 返回一个包含获取结果的对象，其中包括了获取结果和错误信息
+     */
+    List<NginxInclude> configFormInclude(Integer nginxConfigId);
 }
