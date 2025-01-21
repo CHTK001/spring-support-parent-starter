@@ -47,7 +47,12 @@ public class MonitorNginxConfigServiceImpl extends ServiceImpl<MonitorNginxConfi
 
     @Override
     public Boolean createConfigString(Integer nginxConfigId) {
-        NginxAssembly assembly = new NginxAssembly(baseMapper, monitorNginxHttpMapper, monitorNginxHttpServerMapper, monitorNginxHttpServerLocationMapper, monitorNginxHttpServerLocationHeaderMapper, monitorNginxUpstreamMapper, monitorNginxEventMapper);
+        MonitorNginxConfig monitorNginxConfig = baseMapper.selectById(nginxConfigId);
+        if(StringUtils.isBlank(monitorNginxConfig.getMonitorNginxConfigPath())) {
+            return null;
+        }
+        NginxAssembly assembly = new NginxAssembly(monitorNginxConfig);
+        SpringBeanUtils.autowireBean(assembly);
         return assembly.handle(nginxConfigId);
     }
 
