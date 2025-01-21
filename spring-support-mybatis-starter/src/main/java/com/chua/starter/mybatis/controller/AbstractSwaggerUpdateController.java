@@ -8,6 +8,8 @@ import com.chua.common.support.validator.group.UpdateGroup;
 import com.github.xiaoymin.knife4j.annotations.Ignore;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -24,6 +26,8 @@ import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
  */
 public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> {
 
+    @Autowired
+    protected TransactionTemplate transactionTemplate;
 
     /**
      * 根据主键删除数据
@@ -82,7 +86,15 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
             return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
 
-        return ReturnResult.of(getService().saveOrUpdate(t));
+
+        return transactionTemplate.execute(it -> {
+            boolean saveOrUpdate = getService().saveOrUpdate(render(t));
+            if(!saveOrUpdate) {
+                throw new RuntimeException("保存失败");
+            }
+            saveOrUpdateAfter(t);
+            return ReturnResult.of(saveOrUpdate);
+        });
     }
 
     /**
@@ -99,7 +111,7 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
             return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
 
-        return ReturnResult.of(getService().updateById(t));
+        return ReturnResult.of(getService().updateById(render(t)));
     }
 
     /**
@@ -115,7 +127,7 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
         if(bindingResult.hasErrors()) {
             return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
-        getService().save(t);
+        getService().save(render(t));
         return ReturnResult.ok(t);
     }
 
@@ -135,5 +147,13 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
      */
     public T render(T t) {
         return t;
+    }
+
+    /**
+     * 保存或更新后
+     *
+     * @param t 实体
+     */
+    public void saveOrUpdateAfter(T t) {
     }
 }
