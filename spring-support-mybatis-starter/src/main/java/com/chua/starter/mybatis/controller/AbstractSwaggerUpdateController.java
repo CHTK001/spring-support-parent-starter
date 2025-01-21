@@ -57,6 +57,23 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
      * @return 分页结果
      */
     @ResponseBody
+    @Operation(summary = "更新/保存数据")
+    @PutMapping("saveOrUpdate")
+    public ReturnResult<Boolean>saveOrUpdate(@Validated(UpdateGroup.class) @RequestBody T t , @Ignore BindingResult bindingResult) {
+        if(bindingResult.hasErrors()) {
+            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+        }
+
+        return ReturnResult.of(getService().saveOrUpdate(t));
+    }
+
+    /**
+     * 根据主键更新数据
+     *
+     * @param t 实体
+     * @return 分页结果
+     */
+    @ResponseBody
     @Operation(summary = "更新数据")
     @PutMapping("update")
     public ReturnResult<Boolean>updateById(@Validated(UpdateGroup.class) @RequestBody T t , @Ignore BindingResult bindingResult) {
