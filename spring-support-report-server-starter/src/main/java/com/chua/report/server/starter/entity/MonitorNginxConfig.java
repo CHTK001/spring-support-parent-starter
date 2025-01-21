@@ -46,6 +46,21 @@ public class MonitorNginxConfig extends SysBase implements Serializable {
     private String monitorNginxConfigName;
 
     /**
+     * 配置类型
+     */
+    @TableField(value = "monitor_nginx_config_type")
+    @ApiModelProperty(value = "配置类型; 0:文件; 1:服务")
+    private Integer monitorNginxConfigType = 0;
+
+    /**
+     * 服务名称
+     */
+    @TableField(value = "monitor_nginx_config_service_name")
+    @ApiModelProperty(value = "服务名称")
+    @Schema(description = "服务名称")
+    private String monitorNginxConfigServiceName;
+
+    /**
      * 配置文件路径
      */
     @TableField(value = "monitor_nginx_config_path")

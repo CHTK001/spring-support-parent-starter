@@ -27,24 +27,28 @@ public class NginxRestart {
         }
 
         if(Projects.isWindows()) {
-            return runWindow();
+            if(monitorNginxConfig.getMonitorNginxConfigType() == 0) {
+                new NginxStop(monitorNginxConfig).run();
+                new NginxStart(monitorNginxConfig).run();
+                return null;
+            }
+            return runService();
         }
 
         if(Projects.isLinux()) {
-            return runLinux();
+            if(monitorNginxConfig.getMonitorNginxConfigType() == 0) {
+                new NginxStop(monitorNginxConfig).run();
+                new NginxStart(monitorNginxConfig).run();
+                return null;
+            }
+            return runService();
         }
         return null;
     }
 
-    private String runWindow() {
+
+    private String runService() {
         return CmdUtils.exec("nginx -s reload  -c " + monitorNginxConfigPath);
     }
 
-    private String runPath() {
-        return CmdUtils.exec(monitorNginxConfigNginxPath + " -s reload -c " + monitorNginxConfigPath);
-    }
-
-    private String runLinux() {
-        return CmdUtils.exec("nginx -s reload  -c " + monitorNginxConfigPath);
-    }
 }
