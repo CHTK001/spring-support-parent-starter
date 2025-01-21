@@ -1,6 +1,5 @@
 package com.chua.report.server.starter.ngxin;
 
-import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.chua.common.support.constant.Projects;
 import com.chua.common.support.utils.CmdUtils;
 import com.chua.report.server.starter.entity.MonitorNginxConfig;
@@ -22,11 +21,7 @@ public class NginxRestart {
     }
 
     public String run() {
-        if(StringUtils.isNotBlank(monitorNginxConfigNginxPath)) {
-            return runPath();
-        }
-
-        if(Projects.isWindows()) {
+               if(Projects.isWindows()) {
             if(monitorNginxConfig.getMonitorNginxConfigType() == 0) {
                 new NginxStop(monitorNginxConfig).run();
                 new NginxStart(monitorNginxConfig).run();
