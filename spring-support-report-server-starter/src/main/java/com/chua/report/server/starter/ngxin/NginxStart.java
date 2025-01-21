@@ -1,15 +1,16 @@
 package com.chua.report.server.starter.ngxin;
 
-import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.chua.common.support.constant.Projects;
 import com.chua.common.support.utils.CmdUtils;
 import com.chua.report.server.starter.entity.MonitorNginxConfig;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * nginx启动
  * @author CH
  * @since 2024/12/29
  */
+@Slf4j
 public class NginxStart {
     private final MonitorNginxConfig monitorNginxConfig;
     private final  String monitorNginxConfigNginxPath;
@@ -22,29 +23,42 @@ public class NginxStart {
     }
 
     public String run() {
-        if(StringUtils.isNotBlank(monitorNginxConfigNginxPath)) {
-            return runPath();
-        }
 
         if(Projects.isWindows()) {
-            return runWindow();
+            new NginxStop(monitorNginxConfig).run();
+            if(monitorNginxConfig.getMonitorNginxConfigType() == 0) {
+                return runWindow();
+            }
+            return runService();
         }
 
         if(Projects.isLinux()) {
-            return runLinux();
+            if(monitorNginxConfig.getMonitorNginxConfigType() == 0) {
+                return runLinux();
+            }
+            return runService();
         }
         return null;
     }
 
     private String runWindow() {
-        return CmdUtils.exec("nginx -c " + monitorNginxConfigPath);
-    }
+        Thread.ofVirtual()
+                .start(() ->{
+                    try {
+                        CmdUtils.exec(monitorNginxConfigNginxPath + " -c " + monitorNginxConfigPath);
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+        return null;
 
-    private String runPath() {
-        return CmdUtils.exec(monitorNginxConfigNginxPath + " -c " + monitorNginxConfigPath);
     }
 
     private String runLinux() {
+        return CmdUtils.exec(monitorNginxConfigNginxPath + " -c " + monitorNginxConfigPath);
+    }
+
+    private String runService() {
         return CmdUtils.exec("nginx -c " + monitorNginxConfigPath);
     }
 }
