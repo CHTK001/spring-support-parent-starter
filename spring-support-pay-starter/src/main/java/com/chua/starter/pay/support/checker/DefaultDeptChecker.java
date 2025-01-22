@@ -18,11 +18,11 @@ public class DefaultDeptChecker implements DeptChecker{
             return ReturnResult.SUCCESS;
         }
         if(StringUtils.isEmpty(request.getDeptId())) {
-            return ReturnResult.error("部门不能为空");
+            return ReturnResult.error("机构编码不能为空");
         }
 
         if(StringUtils.isEmpty(request.getDeptName())) {
-            return ReturnResult.error("部门名称不能为空");
+            return ReturnResult.error("机构名称不能为空");
         }
         return ReturnResult.SUCCESS;
     }
