@@ -47,6 +47,22 @@ public class PayMerchantOrder extends SysBase implements Serializable {
 
 
     /**
+     * 部门ID
+     */
+    @TableField(value = "pay_merchant_order_dept_id")
+    @ApiModelProperty(value = "部门ID")
+    @Schema(description = "部门ID")
+    private String payMerchantOrderDeptId;
+    /**
+     * 部门名称
+     */
+    @TableField(value = "pay_merchant_order_dept_name")
+    @ApiModelProperty(value = "部门名称")
+    @Schema(description = "部门名称")
+    private String payMerchantOrderDeptName;
+
+
+    /**
      * 优惠券编码
      */
     @TableField(value = "pay_merchant_coupon_code")
