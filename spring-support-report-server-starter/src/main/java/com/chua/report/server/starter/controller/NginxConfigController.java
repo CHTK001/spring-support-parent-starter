@@ -101,25 +101,25 @@ public class NginxConfigController {
     }
     /**
      * 获取配置
-     * @param nginxConfigId nginx配置id
+     * @param monitorNginxConfigId nginx配置id
      * @return 配置
      */
     @GetMapping("configFormInclude")
     @Schema(description = "获取配置")
-    public ReturnResult<List<NginxInclude>> configFormInclude(Integer nginxConfigId) {
-        return ReturnResult.optional(monitorNginxConfigService.configFormInclude(nginxConfigId))
+    public ReturnResult<List<NginxInclude>> configFormInclude(Integer monitorNginxConfigId) {
+        return ReturnResult.optional(monitorNginxConfigService.configFormInclude(monitorNginxConfigId))
                 .withErrorMessage("配置不存在")
                 .asResult();
     }
     /**
      * 解析配置
-     * @param nginxConfigId 配置
+     * @param nginxConfig 配置
      * @return 是否成功
      */
     @PutMapping("configAnalysis")
     @Schema(description = "解析配置")
-    public ReturnResult<Boolean> configAnalysis(Integer nginxConfigId) {
-        return ReturnResult.optional(monitorNginxConfigService.analyzeConfig(nginxConfigId))
+    public ReturnResult<Boolean> configAnalysis(@RequestBody MonitorNginxConfig nginxConfig) {
+        return ReturnResult.optional(monitorNginxConfigService.analyzeConfig(nginxConfig.getMonitorNginxConfigId()))
                 .withErrorMessage("配置解析失败")
                 .asResult();
     }

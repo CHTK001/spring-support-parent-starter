@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.converter.Converter;
 import com.chua.common.support.function.Joiner;
 import com.chua.common.support.function.Splitter;
+import com.chua.common.support.utils.ObjectUtils;
 import com.chua.report.server.starter.entity.*;
 import com.chua.report.server.starter.mapper.*;
 import com.chua.report.server.starter.service.MonitorNginxConfigService;
@@ -79,35 +80,35 @@ public class NginxDisAssembly {
             monitorNginxHttp = new MonitorNginxHttp();
         }
         monitorNginxHttp.setMonitorNginxConfigId(monitorNginxConfig.getMonitorNginxConfigId());
-        monitorNginxHttp.setMonitorNginxHttpServerNamesHashBucketSize(Converter.createInteger(http.findParam("server_names_hash_bucket_size").getValue()));
-        monitorNginxHttp.setMonitorNginxHttpClientBodyBufferSize(http.findParam("client_body_buffer_size").getValue());
-        monitorNginxHttp.setMonitorNginxHttpGzip(http.findParam("gzip").getValue());
-        monitorNginxHttp.setMonitorNginxHttpGzipCompLevel(Converter.createInteger(http.findParam("gzip_comp_level").getValue()));
-        monitorNginxHttp.setMonitorNginxHttpGzipDisable(http.findParam("gzip_disable").getValue());
-        monitorNginxHttp.setMonitorNginxHttpGzipHttpVersion(http.findParam("gzip_http_version").getValue());
-        monitorNginxHttp.setMonitorNginxHttpGzipMinLength(http.findParam("gzip_min_length").getValue());
-        monitorNginxHttp.setMonitorNginxHttpGzipBuffers(http.findParam("gzip_buffers").getValue());
-        monitorNginxHttp.setMonitorNginxHttpGzipTypes(http.findParam("gzip_types").getValue());
-        monitorNginxHttp.setMonitorNginxHttpGzipVary(http.findParam("gzip_vary").getValue());
-        monitorNginxHttp.setMonitorNginxHttpAccessLog(http.findParam("access_log").getValue());
-        monitorNginxHttp.setMonitorNginxHttpErrorLog(http.findParam("error_log").getValue());
-        monitorNginxHttp.setMonitorNginxHttpLogFormat(http.findParam("log_format").getValue());
-        monitorNginxHttp.setMonitorNginxHttpKeepaliveTimeout(Converter.createInteger(http.findParam("keepalive_timeout").getValue()));
-        monitorNginxHttp.setMonitorNginxHttpTcpNopush(http.findParam("tcp_nopush").getValue());
-        monitorNginxHttp.setMonitorNginxHttpTcpNodelay(http.findParam("tcp_nodelay").getValue());
-        monitorNginxHttp.setMonitorNginxHttpSendfile(http.findParam("sendfile").getValue());
-        monitorNginxHttp.setMonitorNginxHttpCharset(http.findParam("charset").getValue());
-        monitorNginxHttp.setMonitorNginxHttpIgnoreInvalidHeaders(http.findParam("ignore_invalid_headers").getValue());
-        monitorNginxHttp.setMonitorNginxHttpInclude(http.findParam("include").getValue());
-        monitorNginxHttp.setMonitorNginxHttpProxyCachePath(http.findParam("proxy_cache_path").getValue());
-        monitorNginxHttp.setMonitorNginxHttpLimitReqZone(http.findParam("limit_req_zone").getValue());
-        monitorNginxHttp.setMonitorNginxHttpServerNameInRedirect(http.findParam("server_name_in_redirect").getValue());
-        monitorNginxHttp.setMonitorNginxHttpSslPreferServerCiphers(http.findParam("ssl_prefer_server_ciphers").getValue());
-        monitorNginxHttp.setMonitorNginxHttpSslCertificateKey(http.findParam("ssl_certificate_key").getValue());
-        monitorNginxHttp.setMonitorNginxHttpSslCertificate(http.findParam("ssl_certificate").getValue());
-        monitorNginxHttp.setMonitorNginxHttpSslProtocols(http.findParam("ssl_protocols").getValue());
-        monitorNginxHttp.setMonitorNginxHttpSslCiphers(http.findParam("ssl_ciphers").getValue());
-        monitorNginxHttp.setMonitorNginxHttpSslSessionTimeout(http.findParam("ssl_session_timeout").getValue());
+        monitorNginxHttp.setMonitorNginxHttpServerNamesHashBucketSize(Converter.createInteger(findParam(http, "server_names_hash_bucket_size")));
+        monitorNginxHttp.setMonitorNginxHttpClientBodyBufferSize(findParam(http, "client_body_buffer_size"));
+        monitorNginxHttp.setMonitorNginxHttpGzip(findParam(http, "gzip"));
+        monitorNginxHttp.setMonitorNginxHttpGzipCompLevel(Converter.createInteger(findParam(http, "gzip_comp_level")));
+        monitorNginxHttp.setMonitorNginxHttpGzipDisable(findParam(http, "gzip_disable"));
+        monitorNginxHttp.setMonitorNginxHttpGzipHttpVersion(findParam(http, "gzip_http_version"));
+        monitorNginxHttp.setMonitorNginxHttpGzipMinLength(findParam(http, "gzip_min_length"));
+        monitorNginxHttp.setMonitorNginxHttpGzipBuffers(findParam(http, "gzip_buffers"));
+        monitorNginxHttp.setMonitorNginxHttpGzipTypes(findParam(http, "gzip_types"));
+        monitorNginxHttp.setMonitorNginxHttpGzipVary(findParam(http, "gzip_vary"));
+        monitorNginxHttp.setMonitorNginxHttpAccessLog(findParam(http, "access_log"));
+        monitorNginxHttp.setMonitorNginxHttpErrorLog(findParam(http, "error_log"));
+        monitorNginxHttp.setMonitorNginxHttpLogFormat(findParam(http, "log_format"));
+        monitorNginxHttp.setMonitorNginxHttpKeepaliveTimeout(Converter.createInteger(findParam(http, "keepalive_timeout")));
+        monitorNginxHttp.setMonitorNginxHttpTcpNopush(findParam(http, "tcp_nopush"));
+        monitorNginxHttp.setMonitorNginxHttpTcpNodelay(findParam(http, "tcp_nodelay"));
+        monitorNginxHttp.setMonitorNginxHttpSendfile(findParam(http, "sendfile"));
+        monitorNginxHttp.setMonitorNginxHttpCharset(findParam(http, "charset"));
+        monitorNginxHttp.setMonitorNginxHttpIgnoreInvalidHeaders(findParam(http, "ignore_invalid_headers"));
+        monitorNginxHttp.setMonitorNginxHttpInclude(findParam(http, "include"));
+        monitorNginxHttp.setMonitorNginxHttpProxyCachePath(findParam(http, "proxy_cache_path"));
+        monitorNginxHttp.setMonitorNginxHttpLimitReqZone(findParam(http, "limit_req_zone"));
+        monitorNginxHttp.setMonitorNginxHttpServerNameInRedirect(findParam(http, "server_name_in_redirect"));
+        monitorNginxHttp.setMonitorNginxHttpSslPreferServerCiphers(findParam(http, "ssl_prefer_server_ciphers"));
+        monitorNginxHttp.setMonitorNginxHttpSslCertificateKey(findParam(http, "ssl_certificate_key"));
+        monitorNginxHttp.setMonitorNginxHttpSslCertificate(findParam(http, "ssl_certificate"));
+        monitorNginxHttp.setMonitorNginxHttpSslProtocols(findParam(http, "ssl_protocols"));
+        monitorNginxHttp.setMonitorNginxHttpSslCiphers(findParam(http, "ssl_ciphers"));
+        monitorNginxHttp.setMonitorNginxHttpSslSessionTimeout(findParam(http, "ssl_session_timeout"));
 
         if(monitorNginxHttp.getMonitorNginxHttpId() == null) {
             monitorNginxHttpMapper.insert(monitorNginxHttp);
@@ -118,6 +119,16 @@ public class NginxDisAssembly {
         registerServers(http, monitorNginxHttp);
         socketSessionTemplate.send(eventName, new MsgStep("开始include配置", createIndex(1)));
         analysisInclude( monitorNginxHttp);
+    }
+
+    /**
+     * 获取参数
+     * @param http
+     * @param name
+     * @return
+     */
+    private String findParam(NgxBlock http, String name) {
+        return ObjectUtils.optional(findParam(http, name), NgxParam::getValue, null);
     }
 
     private void analysisInclude(MonitorNginxHttp monitorNginxHttp) {
@@ -176,7 +187,7 @@ public class NginxDisAssembly {
 
     private void registerServer(NgxBlock serverBlock, MonitorNginxHttp monitorNginxHttp) {
 
-        String listen = serverBlock.findParam("listen").getValue();
+        String listen = findParam(serverBlock, "listen");
         boolean isSsl = listen.contains("ssl");
         Integer port;
         if(isSsl) {
@@ -195,19 +206,19 @@ public class NginxDisAssembly {
         }
         monitorNginxHttpServer.setMonitorNginxHttpId(monitorNginxHttp.getMonitorNginxHttpId());
         monitorNginxHttpServer.setMonitorNginxHttpServerPort(port);
-        monitorNginxHttpServer.setMonitorNginxHttpServerName(serverBlock.findParam("server_name").getValue());
-        monitorNginxHttpServer.setMonitorNginxHttpServerCharset(serverBlock.findParam("charset").getValue());
-        monitorNginxHttpServer.setMonitorNginxHttpServerAccessLog(serverBlock.findParam("access_log").getValue());
-        monitorNginxHttpServer.setMonitorNginxHttpServerReturn(serverBlock.findParam("return").getValue());
+        monitorNginxHttpServer.setMonitorNginxHttpServerName(findParam(serverBlock, "server_name"));
+        monitorNginxHttpServer.setMonitorNginxHttpServerCharset(findParam(serverBlock, "charset"));
+        monitorNginxHttpServer.setMonitorNginxHttpServerAccessLog(findParam(serverBlock, "access_log"));
+        monitorNginxHttpServer.setMonitorNginxHttpServerReturn(findParam(serverBlock, "return"));
         monitorNginxHttpServer.setMonitorNginxHttpServerSsl(isSsl ? "ssl" : "");
-        monitorNginxHttpServer.setMonitorNginxHttpServerUdp(serverBlock.findParam("listen").getValue());
-        monitorNginxHttpServer.setMonitorNginxHttpServerErrorPage(serverBlock.findParam("error_page").getValue());
-        monitorNginxHttpServer.setMonitorNginxHttpServerSslCertificate(serverBlock.findParam("ssl_certificate").getValue());
-        monitorNginxHttpServer.setMonitorNginxHttpServerSslCertificateKey(serverBlock.findParam("ssl_certificate_key").getValue());
-        monitorNginxHttpServer.setMonitorNginxHttpServerSslProtocols(serverBlock.findParam("ssl_protocols").getValue());
-        monitorNginxHttpServer.setMonitorNginxHttpServerSslCiphers(serverBlock.findParam("ssl_ciphers").getValue());
-        monitorNginxHttpServer.setMonitorNginxHttpServerSslPreferServerCiphers(serverBlock.findParam("ssl_prefer_server_ciphers").getValue());
-        monitorNginxHttpServer.setMonitorNginxHttpServerSslSessionTimeout(serverBlock.findParam("ssl_session_timeout").getValue());
+        monitorNginxHttpServer.setMonitorNginxHttpServerUdp(findParam(serverBlock, "listen"));
+        monitorNginxHttpServer.setMonitorNginxHttpServerErrorPage(findParam(serverBlock, "error_page"));
+        monitorNginxHttpServer.setMonitorNginxHttpServerSslCertificate(findParam(serverBlock, "ssl_certificate"));
+        monitorNginxHttpServer.setMonitorNginxHttpServerSslCertificateKey(findParam(serverBlock, "ssl_certificate_key"));
+        monitorNginxHttpServer.setMonitorNginxHttpServerSslProtocols(findParam(serverBlock, "ssl_protocols"));
+        monitorNginxHttpServer.setMonitorNginxHttpServerSslCiphers(findParam(serverBlock, "ssl_ciphers"));
+        monitorNginxHttpServer.setMonitorNginxHttpServerSslPreferServerCiphers(findParam(serverBlock, "ssl_prefer_server_ciphers"));
+        monitorNginxHttpServer.setMonitorNginxHttpServerSslSessionTimeout(findParam(serverBlock, "ssl_session_timeout"));
         if(monitorNginxHttpServer.getMonitorNginxHttpServerId() == null) {
             monitorNginxHttpServerMapper.insert(monitorNginxHttpServer);
         } else {
@@ -226,7 +237,7 @@ public class NginxDisAssembly {
     }
 
     private void registerServerLocation(NgxBlock locationBlock, MonitorNginxHttpServer monitorNginxHttpServer) {
-        String location = locationBlock.findParam("location").getValue();
+        String location = findParam(locationBlock, "location");
         MonitorNginxHttpServerLocation monitorNginxHttpLocation = monitorNginxHttpServerLocationMapper
                 .selectOne(Wrappers.<MonitorNginxHttpServerLocation>lambdaQuery()
                         .eq(MonitorNginxHttpServerLocation::getMonitorNginxHttpServerId, monitorNginxHttpServer.getMonitorNginxHttpServerId())
@@ -237,20 +248,20 @@ public class NginxDisAssembly {
         }
         monitorNginxHttpLocation.setMonitorNginxHttpServerId(monitorNginxHttpServer.getMonitorNginxHttpServerId());
         monitorNginxHttpLocation.setMonitorNginxHttpServerLocationName(location);
-        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationRoot(locationBlock.findParam("root").getValue());
-        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationIndex(locationBlock.findParam("index").getValue());
-        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationClientBodyBufferSize(Converter.convertIfNecessary(locationBlock.findParam("client_body_buffer_size").getValue(), Double.class));
-        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationLimitReq(locationBlock.findParam("limit_req").getValue());
-        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationProxyCache(locationBlock.findParam("proxy_cache").getValue());
-        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationProxyCacheValid(locationBlock.findParam("proxy_cache_valid").getValue());
-        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationProxyCacheMethods(locationBlock.findParam("proxy_cache_methods").getValue());
-        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationProxyConnectTimeout(Integer.valueOf(locationBlock.findParam("proxy_connect_timeout").getValue()));
-        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationProxySendTimeout(Integer.valueOf(locationBlock.findParam("proxy_send_timeout").getValue()));
-        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationProxyReadTimeout(Integer.valueOf(locationBlock.findParam("proxy_read_timeout").getValue()));
-        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationProxyConnectTimeout(Integer.valueOf(locationBlock.findParam("proxy_connect_timeout").getValue()));
-        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationProxyPass(locationBlock.findParam("proxy_pass").getValue());
-        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationTryFiles(locationBlock.findParam("try_files").getValue());
-        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationAlias(locationBlock.findParam("alias").getValue());
+        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationRoot(findParam(locationBlock, "root"));
+        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationIndex(findParam(locationBlock, "index"));
+        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationClientBodyBufferSize(Converter.convertIfNecessary(findParam(locationBlock, "client_body_buffer_size"), Double.class));
+        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationLimitReq(findParam(locationBlock, "limit_req"));
+        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationProxyCache(findParam(locationBlock, "proxy_cache"));
+        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationProxyCacheValid(findParam(locationBlock, "proxy_cache_valid"));
+        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationProxyCacheMethods(findParam(locationBlock, "proxy_cache_methods"));
+        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationProxyConnectTimeout(Integer.valueOf(findParam(locationBlock, "proxy_connect_timeout")));
+        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationProxySendTimeout(Integer.valueOf(findParam(locationBlock, "proxy_send_timeout")));
+        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationProxyReadTimeout(Integer.valueOf(findParam(locationBlock, "proxy_read_timeout")));
+        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationProxyConnectTimeout(Integer.valueOf(findParam(locationBlock, "proxy_connect_timeout")));
+        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationProxyPass(findParam(locationBlock, "proxy_pass"));
+        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationTryFiles(findParam(locationBlock, "try_files"));
+        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationAlias(findParam(locationBlock, "alias"));
         if(monitorNginxHttpLocation.getMonitorNginxHttpServerLocationId() == null) {
             monitorNginxHttpServerLocationMapper.insert(monitorNginxHttpLocation);
         } else {
@@ -306,9 +317,10 @@ public class NginxDisAssembly {
         if(null == monitorNginxEvent) {
             monitorNginxEvent = new MonitorNginxEvent();
         }
-        monitorNginxEvent.setMonitorNginxEventWorkerConnections(Converter.createInteger(events.findParam("worker_connections").getValue()));
-        monitorNginxEvent.setMonitorNginxEventMultiAccept(events.findParam("multi_accept").getValue());
-        monitorNginxEvent.setMonitorNginxEventAcceptMutex(events.findParam("accept_mutex").getValue());
+        monitorNginxEvent.setMonitorNginxEventWorkerConnections(Converter.createInteger(
+                ObjectUtils.optional(events.findParam("worker_connections"), NgxParam::getValue, "1024")));
+        monitorNginxEvent.setMonitorNginxEventMultiAccept(ObjectUtils.optional(events.findParam("multi_accept"), NgxParam::getValue, null));
+        monitorNginxEvent.setMonitorNginxEventAcceptMutex(ObjectUtils.optional(events.findParam("accept_mutex"), NgxParam::getValue, null));
         monitorNginxEvent.setMonitorNginxConfigId(monitorNginxConfig.getMonitorNginxConfigId());
         if(monitorNginxEvent.getMonitorNginxEventId() == null) {
             monitorNginxEventMapper.insert(monitorNginxEvent);
