@@ -7,10 +7,7 @@ import com.chua.report.server.starter.entity.*;
 import com.chua.report.server.starter.mapper.*;
 import com.chua.socketio.support.MsgStep;
 import com.chua.socketio.support.session.SocketSessionTemplate;
-import com.github.odiszapc.nginxparser.NgxBlock;
-import com.github.odiszapc.nginxparser.NgxComment;
-import com.github.odiszapc.nginxparser.NgxConfig;
-import com.github.odiszapc.nginxparser.NgxParam;
+import com.github.odiszapc.nginxparser.*;
 import com.google.common.base.Joiner;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -93,13 +90,17 @@ public class NginxAssembly {
         socketSessionTemplate.send(eventName, new MsgStep("获取配置", createIndex(1)));
         MonitorNginxConfig monitorNginxConfig = baseMapper.selectById(nginxConfigId);
 
-        NginxAnalyze analyze;
-        if (monitorNginxConfig.getMonitorNginxConfigMultipart() == 1) {
-            analyze = new MultiNginxAnalyze(monitorNginxEvent, monitorNginxHttp, monitorNginxHttpServers, monitorNginxUpstreams, location, locationHeader);
-        } else {
-            analyze = new SingleNginxAnalyze(monitorNginxEvent, monitorNginxHttp, monitorNginxHttpServers, monitorNginxUpstreams, location, locationHeader);
+        try {
+            NginxAnalyze analyze;
+            if (monitorNginxConfig.getMonitorNginxConfigMultipart() == 1) {
+                analyze = new MultiNginxAnalyze(monitorNginxEvent, monitorNginxHttp, monitorNginxHttpServers, monitorNginxUpstreams, location, locationHeader);
+            } else {
+                analyze = new SingleNginxAnalyze(monitorNginxEvent, monitorNginxHttp, monitorNginxHttpServers, monitorNginxUpstreams, location, locationHeader);
+            }
+            return analyze.analyze(monitorNginxConfig);
+        } finally {
+            socketSessionTemplate.send(eventName, new MsgStep("生成完成", 100));
         }
-        return analyze.analyze(monitorNginxConfig);
     }
 
     static class MultiNginxAnalyze implements NginxAnalyze {
@@ -123,6 +124,8 @@ public class NginxAssembly {
         public Boolean analyze(MonitorNginxConfig monitorNginxConfig) {
             NgxBlock nginxConfig = createNginxConfig(monitorNginxConfig);
             createNginxEvent(monitorNginxEvent, nginxConfig);
+            NgxBlock ngxHttp = createNginxHttp(monitorNginxHttp);
+            nginxConfig.addEntry(ngxHttp);
             return null;
         }
     }
@@ -149,12 +152,80 @@ public class NginxAssembly {
             NgxBlock nginxConfig = createNginxConfig(monitorNginxConfig);
             createNginxEvent(monitorNginxEvent, nginxConfig);
             NgxBlock ngxHttp = createNginxHttp(monitorNginxHttp);
+            for (MonitorNginxHttpServer monitorNginxHttpServer : monitorNginxHttpServers) {
+                NgxBlock server = createServer(ngxHttp, monitorNginxHttpServer, location.get(monitorNginxHttpServer.getMonitorNginxHttpServerId()), locationHeader);
+                ngxHttp.addEntry(server);
+            }
+            nginxConfig.addEntry(ngxHttp);
             return null;
         }
 
 
+    }
+
+    private static NgxBlock createServer(NgxBlock ngxHttp, MonitorNginxHttpServer monitorNginxHttpServer, List<MonitorNginxHttpServerLocation> monitorNginxHttpServerLocations, Map<Integer, List<MonitorNginxHttpServerLocationHeader>> locationHeader) {
+        NgxBlock server = new NgxBlock();
+        server.addEntry(new NgxComment("#HTTP 服务器模块配置"));
+        createParam(server, "server_name", "服务器名称", monitorNginxHttpServer.getMonitorNginxHttpServerName());
+        createParam(server, "listen", "监听端口", monitorNginxHttpServer.getMonitorNginxHttpServerPort());
+        createParam(server, "charset", "编码", monitorNginxHttpServer.getMonitorNginxHttpServerCharset());
+        createParam(server, "access_log", "访问日志", monitorNginxHttpServer.getMonitorNginxHttpServerAccessLog());
+        createParam(server, "error_page", "错误页面", monitorNginxHttpServer.getMonitorNginxHttpServerErrorPage());
+
+        // 添加其他配置项
+        createParam(server, "return", "重定向", monitorNginxHttpServer.getMonitorNginxHttpServerReturn());
+        createParam(server, "ssl", "SSL配置", monitorNginxHttpServer.getMonitorNginxHttpServerSsl());
+        createParam(server, "udp", "UDP配置", monitorNginxHttpServer.getMonitorNginxHttpServerUdp());
+        createParam(server, "ssl_certificate", "SSL证书路径", monitorNginxHttpServer.getMonitorNginxHttpServerSslCertificate());
+        createParam(server, "ssl_certificate_key", "SSL证书密钥路径", monitorNginxHttpServer.getMonitorNginxHttpServerSslCertificateKey());
+        createParam(server, "ssl_protocols", "SSL协议", monitorNginxHttpServer.getMonitorNginxHttpServerSslProtocols());
+        createParam(server, "ssl_session_timeout", "SSL会话超时", monitorNginxHttpServer.getMonitorNginxHttpServerSslSessionTimeout());
+        createParam(server, "ssl_ciphers", "SSL加密算法", monitorNginxHttpServer.getMonitorNginxHttpServerSslCiphers());
+        createParam(server, "ssl_prefer_server_ciphers", "SSL优先服务器加密算法", monitorNginxHttpServer.getMonitorNginxHttpServerSslPreferServerCiphers());
+
+        registerLocation(server, monitorNginxHttpServerLocations, locationHeader);
+        ngxHttp.addEntry(server);
+        return server;
 
     }
+
+    private static void registerLocation(NgxBlock server, List<MonitorNginxHttpServerLocation> monitorNginxHttpServerLocations, Map<Integer, List<MonitorNginxHttpServerLocationHeader>> locationHeader) {
+        for (MonitorNginxHttpServerLocation monitorNginxHttpServerLocation : monitorNginxHttpServerLocations) {
+            NgxBlock location = new NgxBlock();
+            location.addEntry(new NgxComment("#HTTP 服务器模块配置"));
+            createParam(location, "location", "路径", monitorNginxHttpServerLocation.getMonitorNginxHttpServerLocationName());
+            createParam(location, "alias", "别名", monitorNginxHttpServerLocation.getMonitorNginxHttpServerLocationAlias());
+            createParam(location, "root", "根目录", monitorNginxHttpServerLocation.getMonitorNginxHttpServerLocationRoot());
+            createParam(location, "index", "默认文件", monitorNginxHttpServerLocation.getMonitorNginxHttpServerLocationIndex());
+            createParam(location, "try_files", "尝试文件", monitorNginxHttpServerLocation.getMonitorNginxHttpServerLocationTryFiles());
+            createParam(location, "limit_req", "限制请求", monitorNginxHttpServerLocation.getMonitorNginxHttpServerLocationLimitReq() );
+
+            // 添加其他配置项
+            createParam(location, "proxy_pass", "代理地址", monitorNginxHttpServerLocation.getMonitorNginxHttpServerLocationProxyPass());
+            createParam(location, "proxy_cache", "代理缓存", monitorNginxHttpServerLocation.getMonitorNginxHttpServerLocationProxyCache());
+            createParam(location, "proxy_cache_valid", "代理缓存有效时间", monitorNginxHttpServerLocation.getMonitorNginxHttpServerLocationProxyCacheValid());
+            createParam(location, "proxy_cache_methods", "代理缓存方法", monitorNginxHttpServerLocation.getMonitorNginxHttpServerLocationProxyCacheMethods());
+            createParam(location, "proxy_connect_timeout", "代理链接超时时间", monitorNginxHttpServerLocation.getMonitorNginxHttpServerLocationProxyConnectTimeout());
+            createParam(location, "proxy_read_timeout", "代理读取超时时间", monitorNginxHttpServerLocation.getMonitorNginxHttpServerLocationProxyReadTimeout());
+            createParam(location, "proxy_send_timeout", "代理发送超时时间", monitorNginxHttpServerLocation.getMonitorNginxHttpServerLocationProxySendTimeout());
+            createParam(location, "client_max_body_size", "允许客户端请求的最大单文件字节", monitorNginxHttpServerLocation.getMonitorNginxHttpServerLocationClientMaxBodySize());
+            createParam(location, "client_body_buffer_size", "客户端请求体缓冲区大小",  monitorNginxHttpServerLocation.getMonitorNginxHttpServerLocationClientBodyBufferSize());
+
+            createHeader(location, locationHeader.get(monitorNginxHttpServerLocation.getMonitorNginxHttpServerLocationId()));
+
+            server.addEntry(location);
+        }
+    }
+
+    private static void createHeader(NgxBlock location, List<MonitorNginxHttpServerLocationHeader> monitorNginxHttpServerLocationHeaders) {
+        for (MonitorNginxHttpServerLocationHeader monitorNginxHttpServerLocationHeader : monitorNginxHttpServerLocationHeaders) {
+            NgxBlock header = new NgxBlock();
+            header.addEntry(new NgxComment("#HTTP 服务器模块消息头配置"));
+            createParam(header, monitorNginxHttpServerLocationHeader.getMonitorNginxHttpServerLocationHeaderType(), "添加头信息", monitorNginxHttpServerLocationHeader.getMonitorNginxHttpServerLocationHeaderName() + " " + monitorNginxHttpServerLocationHeader.getMonitorNginxHttpServerLocationHeaderValue());
+            location.addEntry(header);
+        }
+    }
+
     private static NgxBlock createNginxHttp(MonitorNginxHttp monitorNginxHttp) {
         NgxBlock ngxHttp = new NgxBlock();
         ngxHttp.addEntry(new NgxComment("#HTTP 模块配置"));
@@ -178,29 +249,31 @@ public class NginxAssembly {
         createParam(ngxHttp, "gzip_buffers", "设置gzip压缩缓冲区大小", monitorNginxHttp.getMonitorNginxHttpGzipBuffers());
         createParam(ngxHttp, "gzip_disable", "设置哪些浏览器不进行gzip压缩", monitorNginxHttp.getMonitorNginxHttpGzipDisable());
         createParam(ngxHttp, "gzip_http_version", "设置gzip压缩的http版本", monitorNginxHttp.getMonitorNginxHttpGzipHttpVersion());
+
         return ngxHttp;
     }
 
 
     private static void createNginxEvent(MonitorNginxEvent monitorNginxEvent, NgxBlock nginxConfig) {
         NgxBlock events = new NgxBlock();
-        nginxConfig.addEntry(new NgxComment("#events模块：影响nginx服务器与用户的网络连接"));
-        nginxConfig.addEntry(events);
+        events.addEntry(new NgxComment("#events模块：影响nginx服务器与用户的网络连接"));
+        events.addValue("events");
         createParam(events, "worker_connections", "设置单个工作进程最大并发连接数", monitorNginxEvent.getMonitorNginxEventWorkerConnections());
         createParam(events, "multi_accept", "允许一个进程接受多个连接", monitorNginxEvent.getMonitorNginxEventMultiAccept());
         createParam(events, "use", "使用 epoll 模型（Linux 系统推荐）", monitorNginxEvent.getMonitorNginxEventUse());
         createParam(events, "accept_mutex", "在某些情况下，可以设置为 on 来允许多个工作进程同时监听相同的端口。默认情况下，它是关闭的，以避免多个进程间的端口竞争", monitorNginxEvent.getMonitorNginxEventAcceptMutex());
+        nginxConfig.addEntry(events);
     }
 
     private static NgxBlock createNginxConfig(MonitorNginxConfig monitorNginxConfig) {
         NgxConfig ngxConfig = new NgxConfig();
-        createParam(ngxConfig, "worker_processes", monitorNginxConfig.getMonitorNginxConfigWorkerProcesses());
-        createParam(ngxConfig, "pid", FileUtils.normalize(monitorNginxConfig.getMonitorNginxConfigPid(), "/nginx.pid"));
-        createParam(ngxConfig, "error_log", monitorNginxConfig.getMonitorNginxConfigErrorLog());
+        createParam1(ngxConfig, "worker_processes", monitorNginxConfig.getMonitorNginxConfigWorkerProcesses());
+        createParam1(ngxConfig, "pid", FileUtils.normalize(monitorNginxConfig.getMonitorNginxConfigPid(), "/nginx.pid"));
+        createParam1(ngxConfig, "error_log", monitorNginxConfig.getMonitorNginxConfigErrorLog());
         return ngxConfig;
     }
 
-    private static void createParam(NgxBlock ngxBlock, String name, Object... value) {
+    private static void createParam1(NgxBlock ngxBlock, String name, Object... value) {
         createParam(ngxBlock, name, null, value);
 
     }
@@ -217,7 +290,7 @@ public class NginxAssembly {
             ngxBlock.addEntry(ngxComment);
         }
         NgxParam ngxParam = new NgxParam();
-        ngxParam.addValue(Joiner.on(" ").join(name, value));
+        ngxParam.addValue(name + " " + Joiner.on(" ").join(value));
         ngxBlock.addEntry(ngxParam);
     }
 

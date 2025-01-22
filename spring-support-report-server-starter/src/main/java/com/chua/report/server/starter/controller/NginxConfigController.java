@@ -158,6 +158,7 @@ public class NginxConfigController {
     @Schema(description = "生成配置")
     public ReturnResult<Boolean> save(@ParameterObject @RequestBody MonitorNginxConfig nginxConfig) {
         return ReturnResult.optional(monitorNginxConfigService.createConfigString(nginxConfig.getMonitorNginxConfigId()))
+                .nullIsSuccess()
                 .withErrorMessage("配置不存在")
                 .asResult();
     }
