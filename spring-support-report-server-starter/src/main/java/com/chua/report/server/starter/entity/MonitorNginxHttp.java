@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.report.server.starter.ngxin.NginxDisAssembly;
 import com.chua.starter.mybatis.pojo.SysBase;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -14,6 +15,8 @@ import lombok.EqualsAndHashCode;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.io.Serializable;
+
+import static com.chua.common.support.constant.CommonConstant.EMPTY;
 
 /**
  * @author CH
@@ -298,4 +301,19 @@ public class MonitorNginxHttp extends SysBase implements Serializable {
     @ApiModelProperty(value = "所属配置")
     @Schema(description = "所属配置")
     private Integer monitorNginxConfigId;
+
+    /**
+     * 获取父级路径
+     * @return
+     */
+    public String getIncludeParentPath() {
+        for (String s : monitorNginxHttpInclude.split(";")) {
+            if(s.endsWith(".conf")) {
+                return NginxDisAssembly.getFullPath(s);
+            }
+        }
+
+        return EMPTY;
+
+    }
 }
