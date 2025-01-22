@@ -5,7 +5,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.validator.group.SelectGroup;
 import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.mybatis.entity.Query;
-import com.chua.starter.pay.support.entity.PayMerchant;
+import com.chua.starter.oauth.client.support.annotation.UserValue;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.entity.PayMerchantOrderWater;
 import com.chua.starter.pay.support.pojo.PayMerchantOrderQueryRequest;
@@ -14,6 +14,7 @@ import com.chua.starter.pay.support.service.PayMerchantOrderService;
 import com.chua.starter.pay.support.service.PayMerchantOrderWaterService;
 import io.swagger.annotations.Api;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * 订单接口
@@ -56,11 +58,12 @@ public class PayOrderController {
     @Permission({"sys:pay:order:page"})
     public ReturnPageResult<PayMerchantOrder> page(@ParameterObject Query<PayMerchantOrder> page,
                                                    @Validated(SelectGroup.class) @ParameterObject PayOrderQueryRequest request,
+                                                   @Parameter(hidden = true) @UserValue("roles") Set<String> roles,
                                                    BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
             return ReturnPageResult.illegal(bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
-        return payMerchantOrderService.page(page, request);
+        return payMerchantOrderService.page(page, roles, request);
     }
     /**
      * 分页查询

@@ -26,6 +26,23 @@ public class PayOrderRequest implements Serializable {
     private String orderId;
 
     /**
+     * 是否校验部门
+     */
+    @Schema(description = "是否校验部门")
+    private boolean checkDept = true;
+
+    /**
+     * 部门id
+     */
+    @Schema(description = "部门id")
+    private String deptId;
+
+    /**
+     * 部门名称
+     */
+    @Schema(description = "部门名称")
+    private String deptName;
+    /**
      * 用户id
      */
     @Schema(description = "用户id(微信为openId)")

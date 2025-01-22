@@ -24,6 +24,11 @@
             <artifactId>spring-support-pay-client-starter</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-oauth-client-starter</artifactId>
+        </dependency>
+
     </dependencies>
 
 </project>

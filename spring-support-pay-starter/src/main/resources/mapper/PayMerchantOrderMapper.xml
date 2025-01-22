@@ -1,54 +1,156 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.chua.starter.pay.support.mapper.PayMerchantOrderMapper">
-  <resultMap id="BaseResultMap" type="com.chua.starter.pay.support.entity.PayMerchantOrder">
-    <!--@mbg.generated-->
-    <!--@Table pay_merchant_order-->
-    <id column="pay_merchant_order_id" jdbcType="INTEGER" property="payMerchantOrderId" />
-    <result column="pay_merchant_order_code" jdbcType="VARCHAR" property="payMerchantOrderCode" />
-    <result column="pay_merchant_order_user_id" jdbcType="VARCHAR" property="payMerchantOrderUserId" />
-    <result column="pay_merchant_order_origin" jdbcType="VARCHAR" property="payMerchantOrderOrigin" />
-    <result column="pay_merchant_order_price" jdbcType="DECIMAL" property="payMerchantOrderPrice" />
-    <result column="pay_merchant_order_total_price" jdbcType="DECIMAL" property="payMerchantOrderTotalPrice" />
-    <result column="pay_merchant_order_status" jdbcType="VARCHAR" property="payMerchantOrderStatus" />
-    <result column="pay_merchant_order_trade_type" jdbcType="VARCHAR" property="payMerchantOrderTradeType" />
-    <result column="pay_merchant_code" jdbcType="VARCHAR" property="payMerchantCode" />
-    <result column="pay_merchant_order_remark" jdbcType="VARCHAR" property="payMerchantOrderRemark" />
-    <result column="pay_merchant_order_product_name" jdbcType="VARCHAR" property="payMerchantOrderProductName" />
-    <result column="pay_merchant_order_product_code" jdbcType="VARCHAR" property="payMerchantOrderProductCode" />
-    <result column="pay_merchant_coupon_code" jdbcType="VARCHAR" property="payMerchantCouponCode" />
-    <result column="pay_merchant_order_wallet" jdbcType="DECIMAL" property="payMerchantOrderWallet" />
-    <result column="pay_merchant_order_browser" jdbcType="LONGVARCHAR" property="payMerchantOrderBrowser" />
-    <result column="pay_merchant_order_browser_system" jdbcType="VARCHAR" property="payMerchantOrderBrowserSystem" />
-    <result column="pay_merchant_order_version" jdbcType="INTEGER" property="payMerchantOrderVersion" />
-    <result column="pay_merchant_order_fail_message" jdbcType="VARCHAR" property="payMerchantOrderFailMessage" />
-    <result column="pay_merchant_order_attach" jdbcType="VARCHAR" property="payMerchantOrderAttach" />
-    <result column="pay_merchant_order_transaction_id" jdbcType="VARCHAR" property="payMerchantOrderTransactionId" />
-    <result column="pay_merchant_order_refund_reason" jdbcType="VARCHAR" property="payMerchantOrderRefundReason" />
-    <result column="pay_merchant_order_refund_transaction_id" jdbcType="VARCHAR" property="payMerchantOrderRefundTransactionId" />
-    <result column="pay_merchant_order_refund_code" jdbcType="VARCHAR" property="payMerchantOrderRefundCode" />
-    <result column="pay_merchant_order_refund_create_time" jdbcType="VARCHAR" property="payMerchantOrderRefundCreateTime" />
-    <result column="pay_merchant_order_refund_success_time" jdbcType="VARCHAR" property="payMerchantOrderRefundSuccessTime" />
-    <result column="pay_merchant_order_refund_user_received_account" jdbcType="VARCHAR" property="payMerchantOrderRefundUserReceivedAccount" />
-    <result column="create_name" jdbcType="VARCHAR" property="createName" />
-    <result column="create_by" jdbcType="INTEGER" property="createBy" />
-    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
-    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
-    <result column="update_name" jdbcType="VARCHAR" property="updateName" />
-    <result column="update_by" jdbcType="INTEGER" property="updateBy" />
-  </resultMap>
-  <sql id="Base_Column_List">
-    <!--@mbg.generated-->
-    pay_merchant_order_id, pay_merchant_order_code, pay_merchant_order_user_id, pay_merchant_order_origin, 
-    pay_merchant_order_price, pay_merchant_order_total_price, pay_merchant_order_status, 
-    pay_merchant_order_trade_type, pay_merchant_code, pay_merchant_order_remark, pay_merchant_order_product_name, 
-    pay_merchant_order_product_code, pay_merchant_coupon_code, pay_merchant_order_wallet, 
-    pay_merchant_order_browser, pay_merchant_order_browser_system, pay_merchant_order_version, 
-    pay_merchant_order_fail_message, pay_merchant_order_attach, pay_merchant_order_transaction_id, 
-    pay_merchant_order_refund_reason, pay_merchant_order_refund_transaction_id, pay_merchant_order_refund_code, 
-    pay_merchant_order_refund_create_time, pay_merchant_order_refund_success_time, pay_merchant_order_refund_user_received_account, 
-    create_name, create_by, create_time, update_time, update_name, update_by
-  </sql>
+    <resultMap id="BaseResultMap" type="com.chua.starter.pay.support.entity.PayMerchantOrder">
+        <!--@mbg.generated-->
+        <!--@Table pay_merchant_order-->
+        <id column="pay_merchant_order_id" jdbcType="INTEGER" property="payMerchantOrderId"/>
+        <result column="pay_merchant_order_code" jdbcType="VARCHAR" property="payMerchantOrderCode"/>
+        <result column="pay_merchant_order_user_id" jdbcType="VARCHAR" property="payMerchantOrderUserId"/>
+        <result column="pay_merchant_order_origin" jdbcType="VARCHAR" property="payMerchantOrderOrigin"/>
+        <result column="pay_merchant_order_price" jdbcType="DECIMAL" property="payMerchantOrderPrice"/>
+        <result column="pay_merchant_order_total_price" jdbcType="DECIMAL" property="payMerchantOrderTotalPrice"/>
+        <result column="pay_merchant_order_status" jdbcType="VARCHAR" property="payMerchantOrderStatus"/>
+        <result column="pay_merchant_order_trade_type" jdbcType="VARCHAR" property="payMerchantOrderTradeType"/>
+        <result column="pay_merchant_code" jdbcType="VARCHAR" property="payMerchantCode"/>
+        <result column="pay_merchant_order_remark" jdbcType="VARCHAR" property="payMerchantOrderRemark"/>
+        <result column="pay_merchant_order_product_name" jdbcType="VARCHAR" property="payMerchantOrderProductName"/>
+        <result column="pay_merchant_order_product_code" jdbcType="VARCHAR" property="payMerchantOrderProductCode"/>
+        <result column="pay_merchant_coupon_code" jdbcType="VARCHAR" property="payMerchantCouponCode"/>
+        <result column="pay_merchant_order_wallet" jdbcType="DECIMAL" property="payMerchantOrderWallet"/>
+        <result column="pay_merchant_order_browser" jdbcType="LONGVARCHAR" property="payMerchantOrderBrowser"/>
+        <result column="pay_merchant_order_browser_system" jdbcType="VARCHAR" property="payMerchantOrderBrowserSystem"/>
+        <result column="pay_merchant_order_version" jdbcType="INTEGER" property="payMerchantOrderVersion"/>
+        <result column="pay_merchant_order_fail_message" jdbcType="VARCHAR" property="payMerchantOrderFailMessage"/>
+        <result column="pay_merchant_order_attach" jdbcType="VARCHAR" property="payMerchantOrderAttach"/>
+        <result column="pay_merchant_order_transaction_id" jdbcType="VARCHAR" property="payMerchantOrderTransactionId"/>
+        <result column="pay_merchant_order_refund_reason" jdbcType="VARCHAR" property="payMerchantOrderRefundReason"/>
+        <result column="pay_merchant_order_refund_transaction_id" jdbcType="VARCHAR"
+                property="payMerchantOrderRefundTransactionId"/>
+        <result column="pay_merchant_order_refund_code" jdbcType="VARCHAR" property="payMerchantOrderRefundCode"/>
+        <result column="pay_merchant_order_refund_create_time" jdbcType="VARCHAR"
+                property="payMerchantOrderRefundCreateTime"/>
+        <result column="pay_merchant_order_refund_success_time" jdbcType="VARCHAR"
+                property="payMerchantOrderRefundSuccessTime"/>
+        <result column="pay_merchant_order_refund_user_received_account" jdbcType="VARCHAR"
+                property="payMerchantOrderRefundUserReceivedAccount"/>
+        <result column="create_name" jdbcType="VARCHAR" property="createName"/>
+        <result column="create_by" jdbcType="INTEGER" property="createBy"/>
+        <result column="create_time" jdbcType="TIMESTAMP" property="createTime"/>
+        <result column="update_time" jdbcType="TIMESTAMP" property="updateTime"/>
+        <result column="update_name" jdbcType="VARCHAR" property="updateName"/>
+        <result column="update_by" jdbcType="INTEGER" property="updateBy"/>
+    </resultMap>
+    <sql id="Base_Column_List">
+        <!--@mbg.generated-->
+        pay_merchant_order_id,
+        pay_merchant_order_code,
+        pay_merchant_order_user_id,
+        pay_merchant_order_origin,
+        pay_merchant_order_price,
+        pay_merchant_order_total_price,
+        pay_merchant_order_status,
+        pay_merchant_order_trade_type,
+        pay_merchant_code,
+        pay_merchant_order_remark,
+        pay_merchant_order_product_name,
+        pay_merchant_order_product_code,
+        pay_merchant_coupon_code,
+        pay_merchant_order_wallet,
+        pay_merchant_order_browser,
+        pay_merchant_order_browser_system,
+        pay_merchant_order_version,
+        pay_merchant_order_fail_message,
+        pay_merchant_order_attach,
+        pay_merchant_order_transaction_id,
+        pay_merchant_order_refund_reason,
+        pay_merchant_order_refund_transaction_id,
+        pay_merchant_order_refund_code,
+        pay_merchant_order_refund_create_time,
+        pay_merchant_order_refund_success_time,
+        pay_merchant_order_refund_user_received_account,
+        create_name,
+        create_by,
+        create_time,
+        update_time,
+        update_name,
+        update_by
+    </sql>
+    <select id="pageForOrderDept" resultType="com.chua.starter.pay.support.entity.PayMerchantOrder">
+    SELECT pay_merchant_order_id,
+               pay_merchant_order_code,
+               pay_merchant_order_user_id,
+               pay_merchant_order_origin,
+               pay_merchant_order_price,
+               pay_merchant_order_total_price,
+               pay_merchant_order_status,
+               pay_merchant_order_trade_type,
+               pmo.pay_merchant_code,
+               pm.pay_merchant_name payMerchantName,
+               pay_merchant_order_remark,
+               pay_merchant_order_product_name,
+               pay_merchant_order_product_code,
+               pay_merchant_coupon_code,
+               pay_merchant_order_wallet,
+               pay_merchant_order_browser,
+               pay_merchant_order_browser_system,
+               pay_merchant_order_fail_message,
+               pay_merchant_order_attach,
+               pay_merchant_order_transaction_id,
+               pay_merchant_order_refund_reason,
+               pay_merchant_order_refund_transaction_id,
+               pay_merchant_order_refund_code,
+               pay_merchant_order_refund_create_time,
+               pay_merchant_order_refund_success_time,
+               pay_merchant_order_refund_user_received_account,
+               pmo.create_name,
+               pmo.create_by,
+               pmo.create_time
+        FROM pay_merchant_order pmo
+                 INNER JOIN pay_merchant pm ON pm.pay_merchant_code = pmo.pay_merchant_code
+        <where>
+            AND pay_merchant_order_dept_id = #{request.payMerchantDeptId}
+            <if test="request.payMerchantCode != null and request.payMerchantCode != ''">
+                AND pmo.pay_merchant_code = #{request.payMerchantCode}
+            </if>
+            <if test="request.payMerchantOrderOrigin != null and request.payMerchantOrderOrigin != ''">
+                AND pay_merchant_order_origin = #{request.payMerchantOrderOrigin}
+            </if>
+
+            <if test="request.payMerchantOrderTradeType != null and request.payMerchantOrderTradeType != ''">
+                AND pay_merchant_order_trade_type = #{request.payMerchantOrderTradeType}
+            </if>
+
+            <if test="request.payMerchantOrderStatus != null and request.payMerchantOrderStatus != ''">
+                AND pay_merchant_order_status = #{request.payMerchantOrderStatus}
+            </if>
+
+            <if test="request.payMerchantOrderStatus != null and request.payMerchantOrderStatus != ''">
+                AND pay_merchant_order_status = #{request.payMerchantOrderStatus}
+            </if>
+
+            <if test="request.payMerchantOrderCode != null and request.payMerchantOrderCode != ''">
+                AND pay_merchant_order_code LIKE concat(#{request.payMerchantOrderCode}, '%')
+            </if>
+
+            <if test="request.payMerchantOrderUserId != null and request.payMerchantOrderUserId != ''">
+                AND pay_merchant_order_user_id LIKE concat(#{request.payMerchantOrderUserId}, '%')
+            </if>
+
+            <if test="request.payMerchantOrderRemark != null and request.payMerchantOrderRemark != ''">
+                AND pay_merchant_order_remark LIKE concat(#{request.payMerchantOrderRemark}, '%')
+            </if>
+
+            <if test="request.startTime != null and request.endTime != null">
+                AND (pmo.create_time <![CDATA[>=]]> #{request.startTime} AND pmo.create_time <![CDATA[<=]]> #{request.endTime})
+            </if>
+
+            <if test="request.keyword != null">
+                AND (pmo.pay_merchant_order_attach LIKE concat('%', #{request.keyword}, '%'))
+            </if>
+        </where>
+        ORDER BY pmo.create_time DESC
+    </select>
     <select id="pageForOrder" resultType="com.chua.starter.pay.support.entity.PayMerchantOrder">
         SELECT pay_merchant_order_id,
                pay_merchant_order_code,
@@ -91,6 +193,14 @@
 
             <if test="request.payMerchantOrderTradeType != null and request.payMerchantOrderTradeType != ''">
                 AND pay_merchant_order_trade_type = #{request.payMerchantOrderTradeType}
+            </if>
+
+            <if test="request.payMerchantDeptId != null and request.payMerchantDeptId != ''">
+                AND pmo.pay_merchant_order_dept_id = #{request.payMerchantDeptId}
+            </if>
+
+            <if test="request.payMerchantDeptName != null and request.payMerchantDeptName != ''">
+                AND pmo.pay_merchant_order_dept_name LIKE concat(#{request.payMerchantDeptName}, '%')
             </if>
 
             <if test="request.payMerchantOrderStatus != null and request.payMerchantOrderStatus != ''">
@@ -158,85 +268,85 @@
                  INNER JOIN pay_merchant pm ON pm.pay_merchant_code = pmo.pay_merchant_code
 
         <trim>
-        <where>
-            <if test="request.payMerchantCode != null and request.payMerchantCode != ''">
-                AND pmo.pay_merchant_code = #{request.payMerchantCode}
-            </if>
-            <if test="sysUserIds != null and sysUserIds.size() != 0">
-                AND pmo.pay_merchant_order_user_id IN
-                <foreach collection="sysUserIds" item="sysUserId" open="(" separator="," close=")">
-                    #{sysUserId}
-                </foreach>
-            </if>
+            <where>
+                <if test="request.payMerchantCode != null and request.payMerchantCode != ''">
+                    AND pmo.pay_merchant_code = #{request.payMerchantCode}
+                </if>
+                <if test="sysUserIds != null and sysUserIds.size() != 0">
+                    AND pmo.pay_merchant_order_user_id IN
+                    <foreach collection="sysUserIds" item="sysUserId" open="(" separator="," close=")">
+                        #{sysUserId}
+                    </foreach>
+                </if>
 
-            <if test="request.username != null and request.username != ''">
-                AND pmo.create_name LIKE concat(#{request.username}, '%')
-            </if>
+                <if test="request.username != null and request.username != ''">
+                    AND pmo.create_name LIKE concat(#{request.username}, '%')
+                </if>
 
-            <if test="request.payMerchantOrderCode != null and request.payMerchantOrderCode != ''">
-                AND pmo.pay_merchant_order_code LIKE concat(#{request.payMerchantOrderCode}, '%')
-            </if>
-
-
-            <if test="request.payMerchantOrderTradeType != null and request.payMerchantOrderTradeType != ''">
-                AND pay_merchant_order_trade_type = #{request.payMerchantOrderTradeType}
-            </if>
+                <if test="request.payMerchantOrderCode != null and request.payMerchantOrderCode != ''">
+                    AND pmo.pay_merchant_order_code LIKE concat(#{request.payMerchantOrderCode}, '%')
+                </if>
 
 
-            <if test="request.payMerchantOrderStatus != null and request.payMerchantOrderStatus != ''">
-                AND pay_merchant_order_status = #{request.payMerchantOrderTradeType}
-            </if>
+                <if test="request.payMerchantOrderTradeType != null and request.payMerchantOrderTradeType != ''">
+                    AND pay_merchant_order_trade_type = #{request.payMerchantOrderTradeType}
+                </if>
 
-            <if test="request.startTime != null and request.endTime != null">
-                AND (pmo.create_time <![CDATA[>=]]> #{request.startTime} AND pmo.create_time <![CDATA[<=]]> #{request.endTime})
-            </if>
 
-            <if test="request.payMerchantOrderOrigin != null and request.payMerchantOrderOrigin != ''">
-                AND pay_merchant_order_origin = #{request.payMerchantOrderOrigin}
-            </if>
+                <if test="request.payMerchantOrderStatus != null and request.payMerchantOrderStatus != ''">
+                    AND pay_merchant_order_status = #{request.payMerchantOrderTradeType}
+                </if>
 
-            <if test="request.payMerchantOrderAttach != null and request.payMerchantOrderAttach != ''">
-                AND pay_merchant_order_attach LIKE concat('%', #{request.payMerchantOrderAttach}, '%')
-            </if>
-        </where>
+                <if test="request.startTime != null and request.endTime != null">
+                    AND (pmo.create_time <![CDATA[>=]]> #{request.startTime} AND pmo.create_time <![CDATA[<=]]> #{request.endTime})
+                </if>
+
+                <if test="request.payMerchantOrderOrigin != null and request.payMerchantOrderOrigin != ''">
+                    AND pay_merchant_order_origin = #{request.payMerchantOrderOrigin}
+                </if>
+
+                <if test="request.payMerchantOrderAttach != null and request.payMerchantOrderAttach != ''">
+                    AND pay_merchant_order_attach LIKE concat('%', #{request.payMerchantOrderAttach}, '%')
+                </if>
+            </where>
         </trim>
         ORDER BY pmo.create_time DESC
     </select>
 
     <select id="reOrder" resultType="com.chua.starter.pay.support.entity.PayMerchantOrder">
         SELECT pay_merchant_order_id,
-        pay_merchant_order_code,
-        pay_merchant_order_user_id,
-        pay_merchant_order_origin,
-        pay_merchant_order_price,
-        pay_merchant_order_total_price,
-        pay_merchant_order_status,
-        pay_merchant_order_trade_type,
-        pmo.pay_merchant_code,
-        pm.pay_merchant_name payMerchantName,
-        pay_merchant_order_remark,
-        pay_merchant_order_product_name,
-        pay_merchant_order_product_code,
-        pay_merchant_coupon_code,
-        pay_merchant_order_wallet,
-        pay_merchant_order_browser,
-        pay_merchant_order_browser_system,
-        pay_merchant_order_fail_message,
-        pay_merchant_order_attach,
-        pay_merchant_order_transaction_id,
-        pay_merchant_order_refund_reason,
-        pay_merchant_order_refund_transaction_id,
-        pay_merchant_order_refund_code,
-        pay_merchant_order_refund_create_time,
-        pay_merchant_order_refund_success_time,
-        pay_merchant_order_refund_user_received_account,
-        pmo.create_name,
-        pmo.create_by,
-        pmo.create_time
+               pay_merchant_order_code,
+               pay_merchant_order_user_id,
+               pay_merchant_order_origin,
+               pay_merchant_order_price,
+               pay_merchant_order_total_price,
+               pay_merchant_order_status,
+               pay_merchant_order_trade_type,
+               pmo.pay_merchant_code,
+               pm.pay_merchant_name payMerchantName,
+               pay_merchant_order_remark,
+               pay_merchant_order_product_name,
+               pay_merchant_order_product_code,
+               pay_merchant_coupon_code,
+               pay_merchant_order_wallet,
+               pay_merchant_order_browser,
+               pay_merchant_order_browser_system,
+               pay_merchant_order_fail_message,
+               pay_merchant_order_attach,
+               pay_merchant_order_transaction_id,
+               pay_merchant_order_refund_reason,
+               pay_merchant_order_refund_transaction_id,
+               pay_merchant_order_refund_code,
+               pay_merchant_order_refund_create_time,
+               pay_merchant_order_refund_success_time,
+               pay_merchant_order_refund_user_received_account,
+               pmo.create_name,
+               pmo.create_by,
+               pmo.create_time
         FROM pay_merchant_order pmo
-        INNER JOIN pay_merchant pm ON pm.pay_merchant_code = pmo.pay_merchant_code
+                 INNER JOIN pay_merchant pm ON pm.pay_merchant_code = pmo.pay_merchant_code
         WHERE pmo.pay_merchant_code = #{request.payMerchantCode}
-        AND pay_merchant_order_status = 1000
+          AND pay_merchant_order_status = 1000
         <if test="request.userId != null">
             AND pmo.pay_merchant_order_user_id = #{request.userId}
         </if>

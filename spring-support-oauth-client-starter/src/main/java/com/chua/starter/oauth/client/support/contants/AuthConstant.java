@@ -20,6 +20,11 @@ public interface AuthConstant {
      * ops
      */
     String OPS = "ops";
+
+    /**
+     * 部门
+     */
+    String DEPT = "dept";
     /**
      * 管理员
      */
@@ -76,6 +81,26 @@ public interface AuthConstant {
         return CollectionUtils.containsIgnoreCase(roles, ADMIN) && !isSuperAdmin(roles);
     }
 
+
+    /**
+     * 是否为部门
+     *
+     * @param roles 角色
+     * @return 是否为管理员
+     */
+    static boolean isDept(Set<String> roles) {
+        return CollectionUtils.containsIgnoreCase(roles, DEPT);
+    }
+    /**
+     * 是否为运维
+     *
+     * @param roles 角色
+     * @return 是否为管理员
+     */
+
+    static boolean isOps(Set<String> roles) {
+        return CollectionUtils.containsIgnoreCase(roles, OPS);
+    }
     /**
      * 是否为管理员
      *
