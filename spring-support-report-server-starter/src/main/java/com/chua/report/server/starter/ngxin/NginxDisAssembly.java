@@ -128,7 +128,7 @@ public class NginxDisAssembly {
      * @return
      */
     private String findParam(NgxBlock http, String name) {
-        return ObjectUtils.optional(findParam(http, name), NgxParam::getValue, null);
+        return ObjectUtils.optional(http.findParam(name), NgxParam::getValue, null);
     }
 
     private void analysisInclude(MonitorNginxHttp monitorNginxHttp) {
