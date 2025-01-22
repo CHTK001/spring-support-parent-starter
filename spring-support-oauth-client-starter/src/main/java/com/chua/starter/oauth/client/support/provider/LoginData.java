@@ -6,8 +6,6 @@ import io.swagger.annotations.ApiModelProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
-import jakarta.validation.constraints.NotNull;
-
 /**
  * 登录信息
  *
@@ -23,21 +21,18 @@ public class LoginData {
      */
     @ApiModelProperty(value = "账号/微信code/微信openId")
     @Schema(description = "账号/微信code/微信openId")
-    @NotNull(message = "账号不能为空")
     private String username;
 
     /**
      * 密码
      */
     @ApiModelProperty(value = "密码(md5加密)/微信getphonenumber(code)")
-    @NotNull(message = "密码不能为空")
     @Schema(description = "密码(md5加密)/微信getphonenumber(code")
     private String password;
     /**
      * 校验码
      */
     @ApiModelProperty(value = "校验码; 由服务器决定是否必填")
-    @NotNull(message = "校验码不能为空")
     @Schema(description = "校验码; 由服务器决定是否必填")
     @RequestParamMapping(name = {"verifyCode", "verifyCodeKey"})
     private String verifyCodeKey;
