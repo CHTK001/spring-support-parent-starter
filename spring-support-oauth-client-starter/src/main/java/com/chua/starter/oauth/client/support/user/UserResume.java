@@ -30,6 +30,11 @@ public class UserResume  {
      * 租户id
      */
     private String tenantId;
+
+    /**
+     * 机构id
+     */
+    private String deptId;
     /**
      * 名称
      */

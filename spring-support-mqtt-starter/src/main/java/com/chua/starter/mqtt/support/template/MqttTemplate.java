@@ -1,6 +1,7 @@
 package com.chua.starter.mqtt.support.template;
 
 import com.chua.common.support.utils.ClassUtils;
+import com.chua.common.support.utils.FileUtils;
 import com.chua.common.support.utils.IdUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
@@ -40,9 +41,15 @@ public class MqttTemplate extends MqttClient implements DisposableBean, Initiali
     private final Map<String, List<MqttBean>> beans = new ConcurrentHashMap<>();
 
 
+    private static final String DIRECTORY = "./mqtt";
+
+    static {
+        FileUtils.forceMkdir(DIRECTORY);
+    }
+
     public MqttTemplate(MqttProperties mqttProperties) throws MqttException {
         super(mqttProperties.getAddress(), StringUtils.ifValid(mqttProperties.getClientId(), IdUtils.createTid()), new MqttDefaultFilePersistence(
-                "./mqtt"
+                DIRECTORY
         ));
         this.mqttConnectOptions = mqttConnectOptions(mqttProperties);
         this.mqttProperties = mqttProperties;
