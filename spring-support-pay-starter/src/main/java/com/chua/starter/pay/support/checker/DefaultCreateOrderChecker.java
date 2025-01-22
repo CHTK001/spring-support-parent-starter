@@ -16,6 +16,12 @@ public class DefaultCreateOrderChecker implements CreateOrderChecker {
     @Override
     public ReturnResult<String> check(PayOrderRequest request) {
 
+        DeptChecker deptChecker = ServiceProvider.of(DeptChecker.class).getNewExtension(request.getTradeType());
+        ReturnResult<String> deptCheckerResult = deptChecker.check(request);
+        if (!deptCheckerResult.isOk()) {
+            return deptCheckerResult;
+        }
+
         CouponCodeTransfer couponCodeTransfer = ServiceProvider.of(CouponCodeTransfer.class).getNewExtension(request.getTradeType());
         ReturnResult<String> couponCodeTransferResult = couponCodeTransfer.check(request);
         if(!couponCodeTransferResult.isOk()) {

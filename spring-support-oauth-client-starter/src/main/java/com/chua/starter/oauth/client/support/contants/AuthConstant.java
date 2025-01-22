@@ -22,7 +22,7 @@ public interface AuthConstant {
     String OPS = "ops";
 
     /**
-     * 部门
+     * 机构
      */
     String DEPT = "dept";
     /**
@@ -83,7 +83,7 @@ public interface AuthConstant {
 
 
     /**
-     * 是否为部门
+     * 是否为机构
      *
      * @param roles 角色
      * @return 是否为管理员
