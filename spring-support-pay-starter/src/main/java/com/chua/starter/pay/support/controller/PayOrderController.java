@@ -96,6 +96,7 @@ public class PayOrderController {
      */
     @GetMapping("/water")
     @Operation(summary = "订单查询流水")
+    @Permission({"sys:pay:order:water:page"})
     public ReturnResult<List<PayMerchantOrderWater>> water(String payMerchantOrderCode) {
         return payMerchantOrderWaterService.water(payMerchantOrderCode);
     }

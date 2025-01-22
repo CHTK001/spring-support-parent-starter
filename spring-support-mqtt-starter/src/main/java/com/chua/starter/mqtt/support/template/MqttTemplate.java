@@ -12,6 +12,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.paho.client.mqttv3.*;
+import org.eclipse.paho.client.mqttv3.persist.MqttDefaultFilePersistence;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -40,7 +41,9 @@ public class MqttTemplate extends MqttClient implements DisposableBean, Initiali
 
 
     public MqttTemplate(MqttProperties mqttProperties) throws MqttException {
-        super(mqttProperties.getAddress(), StringUtils.ifValid(mqttProperties.getClientId(), IdUtils.createTid()));
+        super(mqttProperties.getAddress(), StringUtils.ifValid(mqttProperties.getClientId(), IdUtils.createTid()), new MqttDefaultFilePersistence(
+                "./mqtt"
+        ));
         this.mqttConnectOptions = mqttConnectOptions(mqttProperties);
         this.mqttProperties = mqttProperties;
         log.info(">>>> MQTT服务器[{}]连接成功", mqttProperties.getAddress());
