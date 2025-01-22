@@ -1,10 +1,8 @@
 package com.chua.starter.pay.support.pojo;
 
 import com.baomidou.mybatisplus.annotation.TableField;
-import com.chua.common.support.validator.group.SelectGroup;
 import io.swagger.annotations.ApiModelProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -24,6 +22,22 @@ public class PayOrderQueryRequest {
      */
     @Schema(description = "商户编码")
     private String payMerchantCode;
+
+    /**
+     * 收款机构ID
+     */
+    @TableField(value = "pay_merchant_pay_id")
+    @ApiModelProperty(value = "收款机构ID")
+    @Schema(description = "收款机构ID")
+    private String payMerchantDeptId;
+
+    /**
+     * 收款机构名称
+     */
+    @TableField(value = "pay_merchant_dept_name")
+    @ApiModelProperty(value = "收款机构名称")
+    @Schema(description = "收款机构名称")
+    private String payMerchantDeptName;
     /**
      * 订单来源
      */
