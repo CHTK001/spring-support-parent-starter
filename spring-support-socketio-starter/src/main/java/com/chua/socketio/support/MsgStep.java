@@ -18,6 +18,11 @@ public class MsgStep {
     private String name;
 
     /**
+     * 步骤消息
+     */
+    private String msg;
+
+    /**
      * 步骤
      */
     private int step;
@@ -28,7 +33,7 @@ public class MsgStep {
     private int total;
 
     public MsgStep(String name, int step) {
-        this(name, step, 100);
+        this(name, name, step, 100);
     }
 
     @Override
