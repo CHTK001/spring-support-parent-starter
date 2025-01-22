@@ -12,6 +12,9 @@ import com.google.common.base.Joiner;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -122,22 +125,28 @@ public class NginxAssembly {
 
         @Override
         public Boolean analyze(MonitorNginxConfig monitorNginxConfig) {
-            NgxBlock nginxConfig = createNginxConfig(monitorNginxConfig);
+            NgxConfig nginxConfig = createNginxConfig(monitorNginxConfig);
             createNginxEvent(monitorNginxEvent, nginxConfig);
             NgxBlock ngxHttp = createNginxHttp(monitorNginxHttp);
+            for (MonitorNginxHttpServer monitorNginxHttpServer : monitorNginxHttpServers) {
+                NgxBlock server = createServer(ngxHttp, monitorNginxHttpServer, location.get(monitorNginxHttpServer.getMonitorNginxHttpServerId()), locationHeader);
+                createServerFile(monitorNginxHttp, monitorNginxHttpServer, server);
+            }
             nginxConfig.addEntry(ngxHttp);
+            createNginxConf(monitorNginxConfig, nginxConfig);
             return null;
         }
-    }
 
+
+    }
     static class SingleNginxAnalyze implements NginxAnalyze {
         private final MonitorNginxEvent monitorNginxEvent;
+
         private final MonitorNginxHttp monitorNginxHttp;
         private final List<MonitorNginxHttpServer> monitorNginxHttpServers;
         private final List<MonitorNginxUpstream> monitorNginxUpstreams;
         private final Map<Integer, List<MonitorNginxHttpServerLocation>> location;
         private final Map<Integer, List<MonitorNginxHttpServerLocationHeader>> locationHeader;
-
         public SingleNginxAnalyze(MonitorNginxEvent monitorNginxEvent, MonitorNginxHttp monitorNginxHttp, List<MonitorNginxHttpServer> monitorNginxHttpServers, List<MonitorNginxUpstream> monitorNginxUpstreams, Map<Integer, List<MonitorNginxHttpServerLocation>> location, Map<Integer, List<MonitorNginxHttpServerLocationHeader>> locationHeader) {
             this.monitorNginxEvent = monitorNginxEvent;
             this.monitorNginxHttp = monitorNginxHttp;
@@ -146,10 +155,9 @@ public class NginxAssembly {
             this.location = location;
             this.locationHeader = locationHeader;
         }
-
         @Override
         public Boolean analyze(MonitorNginxConfig monitorNginxConfig) {
-            NgxBlock nginxConfig = createNginxConfig(monitorNginxConfig);
+            NgxConfig nginxConfig = createNginxConfig(monitorNginxConfig);
             createNginxEvent(monitorNginxEvent, nginxConfig);
             NgxBlock ngxHttp = createNginxHttp(monitorNginxHttp);
             for (MonitorNginxHttpServer monitorNginxHttpServer : monitorNginxHttpServers) {
@@ -157,12 +165,14 @@ public class NginxAssembly {
                 ngxHttp.addEntry(server);
             }
             nginxConfig.addEntry(ngxHttp);
+            createNginxConf(monitorNginxConfig, nginxConfig);
             return null;
         }
 
 
-    }
 
+
+    }
     private static NgxBlock createServer(NgxBlock ngxHttp, MonitorNginxHttpServer monitorNginxHttpServer, List<MonitorNginxHttpServerLocation> monitorNginxHttpServerLocations, Map<Integer, List<MonitorNginxHttpServerLocationHeader>> locationHeader) {
         NgxBlock server = new NgxBlock();
         server.addEntry(new NgxComment("#HTTP 服务器模块配置"));
@@ -188,7 +198,6 @@ public class NginxAssembly {
         return server;
 
     }
-
     private static void registerLocation(NgxBlock server, List<MonitorNginxHttpServerLocation> monitorNginxHttpServerLocations, Map<Integer, List<MonitorNginxHttpServerLocationHeader>> locationHeader) {
         for (MonitorNginxHttpServerLocation monitorNginxHttpServerLocation : monitorNginxHttpServerLocations) {
             NgxBlock location = new NgxBlock();
@@ -265,7 +274,7 @@ public class NginxAssembly {
         nginxConfig.addEntry(events);
     }
 
-    private static NgxBlock createNginxConfig(MonitorNginxConfig monitorNginxConfig) {
+    private static NgxConfig createNginxConfig(MonitorNginxConfig monitorNginxConfig) {
         NgxConfig ngxConfig = new NgxConfig();
         createParam1(ngxConfig, "worker_processes", monitorNginxConfig.getMonitorNginxConfigWorkerProcesses());
         createParam1(ngxConfig, "pid", FileUtils.normalize(monitorNginxConfig.getMonitorNginxConfigPid(), "/nginx.pid"));
@@ -294,7 +303,34 @@ public class NginxAssembly {
         ngxBlock.addEntry(ngxParam);
     }
 
+    private static void createNginxConf(MonitorNginxConfig monitorNginxConfig, NgxConfig nginxConfig) {
+        NgxDumper nodeDumper = new NgxDumper(nginxConfig);
+        try (FileOutputStream outputStream = new FileOutputStream(new File(monitorNginxConfig.getMonitorNginxConfigPath(), "nginx.conf"))){
+            nodeDumper.dump(outputStream);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    private static void createServerFile(MonitorNginxHttp monitorNginxHttp, MonitorNginxHttpServer monitorNginxHttpServer, NgxBlock server) {
+        NgxConfig ngxConfig = new NgxConfig();
+        ngxConfig.addEntry(server);
+        NgxDumper nodeDumper = new NgxDumper(ngxConfig);
+        File file = new File(monitorNginxHttp.getIncludeParentPath(), monitorNginxHttpServer.getMonitorNginxHttpServerName() + ".conf");
+        FileUtils.forceMkdirParent(file);
+        try {
+            FileUtils.forceDelete(file);
+        } catch (IOException ignored) {
+        }
+        try (FileOutputStream outputStream = new FileOutputStream(file)){
+            nodeDumper.dump(outputStream);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
     interface NginxAnalyze {
+
         Boolean analyze(MonitorNginxConfig monitorNginxConfig);
     }
 }
