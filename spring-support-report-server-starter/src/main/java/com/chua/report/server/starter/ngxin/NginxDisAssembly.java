@@ -63,13 +63,18 @@ public class NginxDisAssembly {
         return index += step;
     }
     public Boolean handle(InputStream inputStream) throws IOException {
-        socketSessionTemplate.send(eventName, new MsgStep("开始解析配置", createIndex(1)));
-        NgxConfig ngxConfig = NgxConfig.read(inputStream);
-        socketSessionTemplate.send(eventName, new MsgStep("开始事件配置", createIndex(1)));
-        registerEvent(ngxConfig);
-        socketSessionTemplate.send(eventName, new MsgStep("开始Http配置", createIndex(1)));
-        registerHttp(ngxConfig);
-        return false;
+        try {
+            socketSessionTemplate.send(eventName, new MsgStep("开始解析配置", createIndex(1)));
+            NgxConfig ngxConfig = NgxConfig.read(inputStream);
+            socketSessionTemplate.send(eventName, new MsgStep("开始事件配置", createIndex(1)));
+            registerEvent(ngxConfig);
+            socketSessionTemplate.send(eventName, new MsgStep("开始Http配置", createIndex(1)));
+            registerHttp(ngxConfig);
+            return true;
+        } finally {
+            socketSessionTemplate.send(eventName, new MsgStep("完成解析", 100));
+
+        }
     }
 
 
@@ -255,10 +260,10 @@ public class NginxDisAssembly {
         monitorNginxHttpLocation.setMonitorNginxHttpServerLocationProxyCache(findParam(locationBlock, "proxy_cache"));
         monitorNginxHttpLocation.setMonitorNginxHttpServerLocationProxyCacheValid(findParam(locationBlock, "proxy_cache_valid"));
         monitorNginxHttpLocation.setMonitorNginxHttpServerLocationProxyCacheMethods(findParam(locationBlock, "proxy_cache_methods"));
-        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationProxyConnectTimeout(Integer.valueOf(findParam(locationBlock, "proxy_connect_timeout")));
-        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationProxySendTimeout(Integer.valueOf(findParam(locationBlock, "proxy_send_timeout")));
-        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationProxyReadTimeout(Integer.valueOf(findParam(locationBlock, "proxy_read_timeout")));
-        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationProxyConnectTimeout(Integer.valueOf(findParam(locationBlock, "proxy_connect_timeout")));
+        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationProxyConnectTimeout(Converter.createInteger(findParam(locationBlock, "proxy_connect_timeout")));
+        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationProxySendTimeout(Converter.createInteger(findParam(locationBlock, "proxy_send_timeout")));
+        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationProxyReadTimeout(Converter.createInteger(findParam(locationBlock, "proxy_read_timeout")));
+        monitorNginxHttpLocation.setMonitorNginxHttpServerLocationProxyConnectTimeout(Converter.createInteger(findParam(locationBlock, "proxy_connect_timeout")));
         monitorNginxHttpLocation.setMonitorNginxHttpServerLocationProxyPass(findParam(locationBlock, "proxy_pass"));
         monitorNginxHttpLocation.setMonitorNginxHttpServerLocationTryFiles(findParam(locationBlock, "try_files"));
         monitorNginxHttpLocation.setMonitorNginxHttpServerLocationAlias(findParam(locationBlock, "alias"));
