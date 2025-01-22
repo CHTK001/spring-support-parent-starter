@@ -101,13 +101,13 @@ public class NginxConfigController {
     }
     /**
      * 获取配置
-     * @param monitorNginxConfigId nginx配置id
+     * @param nginxConfigId nginx配置id
      * @return 配置
      */
     @GetMapping("configFormInclude")
     @Schema(description = "获取配置")
-    public ReturnResult<List<NginxInclude>> configFormInclude(Integer monitorNginxConfigId) {
-        return ReturnResult.optional(monitorNginxConfigService.configFormInclude(monitorNginxConfigId))
+    public ReturnResult<List<NginxInclude>> configFormInclude(Integer nginxConfigId) {
+        return ReturnResult.optional(monitorNginxConfigService.configFormInclude(nginxConfigId))
                 .withErrorMessage("配置不存在")
                 .asResult();
     }
