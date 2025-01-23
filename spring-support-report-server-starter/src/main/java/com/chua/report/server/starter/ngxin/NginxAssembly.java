@@ -311,7 +311,7 @@ public class NginxAssembly {
             ngxBlock.addEntry(ngxComment);
         }
         NgxParam ngxParam = new NgxParam();
-        ngxParam.addValue(name + " " + Joiner.on(" ").join(value));
+        ngxParam.addValue(name + " " + Joiner.on(" ").skipNulls().join(value));
         ngxBlock.addEntry(ngxParam);
     }
 
