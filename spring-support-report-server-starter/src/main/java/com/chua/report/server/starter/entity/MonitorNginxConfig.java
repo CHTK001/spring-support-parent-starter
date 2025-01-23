@@ -60,6 +60,16 @@ public class MonitorNginxConfig extends SysBase implements Serializable {
     @Schema(description = "服务名称")
     private String monitorNginxConfigServiceName;
 
+
+    /**
+     * 运行用户
+     */
+    @TableField(value = "monitor_nginx_config_run_user")
+    @ApiModelProperty(value = "运行用户")
+    @Schema(description = "运行用户")
+    private String monitorNginxConfigRunUser;
+
+
     /**
      * 配置文件路径
      */
@@ -87,6 +97,13 @@ public class MonitorNginxConfig extends SysBase implements Serializable {
     @Size(max = 255, message = "#error日志存放位置\n error_log  logs/error.log; \n#error_log  logs/error.log  notice; \n#error_log  logs/error.log  info;最大长度要小于 255")
     private String monitorNginxConfigErrorLog;
 
+    /**
+     * #access_log  logs/access.log  main;
+     */
+    @TableField(value = "monitor_nginx_config_access_log")
+    @ApiModelProperty(value = "#access_log  logs/access.log  main;")
+    @Schema(description = "#access_log  logs/access.log  main;")
+    private String monitorNginxConfigAccessLog;
     /**
      * #pid        logs/nginx.pid;#工作模式及连接数上限
      */

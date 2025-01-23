@@ -277,6 +277,14 @@ public class MonitorNginxHttp extends SysBase implements Serializable {
     private String monitorNginxHttpInclude;
 
     /**
+     * 日志名称
+     */
+    @TableField(value = "monitor_nginx_http_log_name")
+    @ApiModelProperty(value = "日志名称")
+    @Schema(description = "日志名称")
+    private String monitorNginxHttpLogName;
+
+    /**
      * 限流；limit_req_zone $binary_remote_addr zone=mylimit:10m rate=1r/s;
      */
     @TableField(value = "monitor_nginx_http_limit_req_zone")
@@ -307,6 +315,9 @@ public class MonitorNginxHttp extends SysBase implements Serializable {
      */
     public String getIncludeParentPath(MonitorNginxConfig monitorNginxConfig) {
         String defaultPath = FileUtils.normalize(NginxDisAssembly.getFullPath(FileUtils.getFullPath(monitorNginxConfig.getMonitorNginxConfigPath()) + "/config.d"));
+        if (null == monitorNginxHttpInclude) {
+            return defaultPath;
+        }
         for (String s : monitorNginxHttpInclude.split(";")) {
             if(s.endsWith(".conf")) {
                 return NginxDisAssembly.getFullPath(s);
