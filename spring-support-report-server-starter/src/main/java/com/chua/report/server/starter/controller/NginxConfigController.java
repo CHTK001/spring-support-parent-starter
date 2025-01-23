@@ -123,6 +123,11 @@ public class NginxConfigController {
                 .withErrorMessage("配置解析失败")
                 .asResult();
     }
+    /**
+     * 启动nginx
+     * @param nginxConfig 配置
+     * @return 是否成功
+     */
     @PutMapping("start")
     @Schema(description = "启动nginx")
     public ReturnResult<String> start(@ParameterObject @RequestBody MonitorNginxConfig nginxConfig) {
@@ -131,6 +136,11 @@ public class NginxConfigController {
                 .nullIsSuccess()
                 .asResult();
     }
+    /**
+     * 重启nginx
+     * @param nginxConfig 配置
+     * @return 是否成功
+     */
     @PutMapping("restart")
     @Schema(description = "重启nginx")
     public ReturnResult<String> restart(@ParameterObject @RequestBody MonitorNginxConfig nginxConfig) {
@@ -139,6 +149,11 @@ public class NginxConfigController {
                 .nullIsSuccess()
                 .asResult();
     }
+    /**
+     * 停止nginx
+     * @param nginxConfig 配置
+     * @return 是否成功
+     */
 
     @PutMapping("stop")
     @Schema(description = "停止nginx")
