@@ -16,6 +16,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -70,27 +72,36 @@ public class NginxAssembly {
         MonitorNginxHttp monitorNginxHttp = monitorNginxHttpMapper.selectOne(Wrappers.<MonitorNginxHttp>lambdaQuery()
                 .eq(MonitorNginxHttp::getMonitorNginxConfigId, nginxConfigId));
 
-        List<MonitorNginxHttpServer> monitorNginxHttpServers = monitorNginxHttpServerMapper.selectList(Wrappers.<MonitorNginxHttpServer>lambdaQuery()
+        List<MonitorNginxHttpServer> monitorNginxHttpServers = new LinkedList<>();
+        monitorNginxHttpServers = monitorNginxHttpServerMapper.selectList(Wrappers.<MonitorNginxHttpServer>lambdaQuery()
                 .eq(MonitorNginxHttpServer::getMonitorNginxHttpId, monitorNginxHttp.getMonitorNginxHttpId()));
-        Map<Integer, List<MonitorNginxHttpServer>> httpServer =
-                monitorNginxHttpServers.stream().collect(Collectors.groupingBy(MonitorNginxHttpServer::getMonitorNginxHttpId));
+        Map<Integer, List<MonitorNginxHttpServer>> httpServer = new LinkedHashMap<>();
+        if (!monitorNginxHttpServers.isEmpty()) {
+            httpServer = monitorNginxHttpServers.stream().collect(Collectors.groupingBy(MonitorNginxHttpServer::getMonitorNginxHttpId));
+        }
 
         socketSessionTemplate.send(eventName, new MsgStep("获取Server", createIndex(1)));
         List<Integer> httpServerIds = httpServer.values().stream()
                 .flatMap(List::stream)
                 .map(MonitorNginxHttpServer::getMonitorNginxHttpServerId).toList();
-        Map<Integer, List<MonitorNginxHttpServerLocation>> location = monitorNginxHttpServerLocationMapper.selectList(Wrappers.<MonitorNginxHttpServerLocation>lambdaQuery()
-                        .in(MonitorNginxHttpServerLocation::getMonitorNginxHttpServerId, httpServerIds))
-                .stream().collect(Collectors.groupingBy(MonitorNginxHttpServerLocation::getMonitorNginxHttpServerId));
 
-        Map<Integer, List<MonitorNginxHttpServerLocationHeader>> locationHeader = monitorNginxHttpServerLocationHeaderMapper.selectList(Wrappers.<MonitorNginxHttpServerLocationHeader>lambdaQuery()
-                        .in(MonitorNginxHttpServerLocationHeader::getMonitorNginxHttpServerLocationId, location.values().stream()
-                                .flatMap(List::stream)
-                                .map(MonitorNginxHttpServerLocation::getMonitorNginxHttpServerLocationId).toList()))
-                .stream().collect(Collectors.groupingBy(MonitorNginxHttpServerLocationHeader::getMonitorNginxHttpServerLocationId));
+        List<MonitorNginxUpstream> monitorNginxUpstreams = new LinkedList<>();
+        Map<Integer, List<MonitorNginxHttpServerLocation>> location = new LinkedHashMap<>();
+        Map<Integer, List<MonitorNginxHttpServerLocationHeader>> locationHeader = new LinkedHashMap<>();
+        if (!httpServerIds.isEmpty()) {
+            location = monitorNginxHttpServerLocationMapper.selectList(Wrappers.<MonitorNginxHttpServerLocation>lambdaQuery()
+                            .in(MonitorNginxHttpServerLocation::getMonitorNginxHttpServerId, httpServerIds))
+                    .stream().collect(Collectors.groupingBy(MonitorNginxHttpServerLocation::getMonitorNginxHttpServerId));
+            locationHeader = monitorNginxHttpServerLocationHeaderMapper.selectList(Wrappers.<MonitorNginxHttpServerLocationHeader>lambdaQuery()
+                            .in(MonitorNginxHttpServerLocationHeader::getMonitorNginxHttpServerLocationId, location.values().stream()
+                                    .flatMap(List::stream)
+                                    .map(MonitorNginxHttpServerLocation::getMonitorNginxHttpServerLocationId).toList()))
+                    .stream().collect(Collectors.groupingBy(MonitorNginxHttpServerLocationHeader::getMonitorNginxHttpServerLocationId));
+            monitorNginxUpstreams = monitorNginxUpstreamMapper.selectList(Wrappers.<MonitorNginxUpstream>lambdaQuery()
+                    .in(MonitorNginxUpstream::getMonitorNginxServerId, httpServerIds));
+        }
 
-        List<MonitorNginxUpstream> monitorNginxUpstreams = monitorNginxUpstreamMapper.selectList(Wrappers.<MonitorNginxUpstream>lambdaQuery()
-                .in(MonitorNginxUpstream::getMonitorNginxServerId, httpServerIds));
+
         socketSessionTemplate.send(eventName, new MsgStep("获取配置", createIndex(1)));
         MonitorNginxConfig monitorNginxConfig = baseMapper.selectById(nginxConfigId);
 
