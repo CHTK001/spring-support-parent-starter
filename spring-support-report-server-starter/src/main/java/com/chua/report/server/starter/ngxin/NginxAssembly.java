@@ -80,7 +80,7 @@ public class NginxAssembly {
             httpServer = monitorNginxHttpServers.stream().collect(Collectors.groupingBy(MonitorNginxHttpServer::getMonitorNginxHttpId));
         }
 
-        socketSessionTemplate.send(eventName, new MsgStep("获取Server", createIndex(1)));
+        socketSessionTemplate.send(eventName, new MsgStep("获取Server", createIndex(1)
         List<Integer> httpServerIds = httpServer.values().stream()
                 .flatMap(List::stream)
                 .map(MonitorNginxHttpServer::getMonitorNginxHttpServerId).toList();
