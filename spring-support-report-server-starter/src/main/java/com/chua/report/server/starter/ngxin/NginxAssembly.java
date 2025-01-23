@@ -254,9 +254,14 @@ public class NginxAssembly {
         createParam(ngxHttp, "server_names_hash_bucket_size", "设置服务器名称的哈希表大小", monitorNginxHttp.getMonitorNginxHttpServerNamesHashBucketSize());
         createParam(ngxHttp, "server_tokens", "设置nginx返回给用户的服务器标识", monitorNginxHttp.getMonitorNginxHttpServerTokens());
         createParam(ngxHttp, "include", "包含其它配置文件", monitorNginxHttp.getMonitorNginxHttpInclude());
+        createParam(ngxHttp, "log_format", "自定义日志格式",
+                com.chua.common.support.utils.StringUtils.defaultString(monitorNginxHttp.getMonitorNginxHttpLogName(), "main"), com.chua.common.support.utils.StringUtils.defaultString(monitorNginxHttp.getMonitorNginxHttpLogFormat(),
+                        """
+                                '$remote_addr - $remote_user [$time_local] "$request" '
+                                                    '$status $body_bytes_sent "$http_referer" '
+                                                    '"$http_user_agent" "$http_x_forwarded_for"'"""));
         createParam(ngxHttp, "error_log", "错误日志", monitorNginxHttp.getMonitorNginxHttpErrorLog());
         createParam(ngxHttp, "access_log", "访问日志", monitorNginxHttp.getMonitorNginxHttpAccessLog());
-        createParam(ngxHttp, "log_format", "自定义日志格式", monitorNginxHttp.getMonitorNginxHttpLogFormat());
         createParam(ngxHttp, "sendfile", "是否开启sendfile", monitorNginxHttp.getMonitorNginxHttpSendfile());
         createParam(ngxHttp, "tcp_nopush", "是否开启tcp_nopush", monitorNginxHttp.getMonitorNginxHttpTcpNopush());
         createParam(ngxHttp, "tcp_nodelay", "是否开启tcp_nodelay", monitorNginxHttp.getMonitorNginxHttpTcpNodelay());
@@ -288,9 +293,19 @@ public class NginxAssembly {
 
     private static NgxConfig createNginxConfig(MonitorNginxConfig monitorNginxConfig) {
         NgxConfig ngxConfig = new NgxConfig();
+//        createParam1(ngxConfig, "user", com.chua.common.support.utils.StringUtils.defaultString(monitorNginxConfig.getMonitorNginxConfigRunUser(), System.getProperty("user.name")));
         createParam1(ngxConfig, "worker_processes", monitorNginxConfig.getMonitorNginxConfigWorkerProcesses());
         createParam1(ngxConfig, "pid", FileUtils.normalize(monitorNginxConfig.getMonitorNginxConfigPid(), "/nginx.pid"));
-        createParam1(ngxConfig, "error_log", FileUtils.normalize(monitorNginxConfig.getMonitorNginxConfigErrorLog()));
+        createParam1(ngxConfig, "error_log", FileUtils.normalize(
+                monitorNginxConfig.getMonitorNginxConfigErrorLog().contains(".log") ?
+                        monitorNginxConfig.getMonitorNginxConfigErrorLog() :
+                        monitorNginxConfig.getMonitorNginxConfigErrorLog() + "/error.log"
+        ));
+//        createParam1(ngxConfig, "access_log", FileUtils.normalize(
+//                monitorNginxConfig.getMonitorNginxConfigAccessLog().contains(".log") ?
+//                        monitorNginxConfig.getMonitorNginxConfigAccessLog() :
+//                        monitorNginxConfig.getMonitorNginxConfigAccessLog() + "/access.log"
+//        ));
         return ngxConfig;
     }
 
@@ -311,7 +326,7 @@ public class NginxAssembly {
             ngxBlock.addEntry(ngxComment);
         }
         NgxParam ngxParam = new NgxParam();
-        ngxParam.addValue(name + " " + Joiner.on(" ").join(value));
+        ngxParam.addValue(name + " " + Joiner.on(" ").skipNulls().join(value));
         ngxBlock.addEntry(ngxParam);
     }
 

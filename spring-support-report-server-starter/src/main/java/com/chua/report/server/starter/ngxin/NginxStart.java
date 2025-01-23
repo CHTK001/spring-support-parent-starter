@@ -66,6 +66,10 @@ public class NginxStart {
     }
 
     private String runService() {
-        return CmdUtils.exec("nginx -c " + monitorNginxConfigPath);
+        try {
+            return CmdUtils.exec("nginx -c " + monitorNginxConfigPath);
+        } catch (Exception e) {
+            throw new RuntimeMessageException(e.getMessage());
+        }
     }
 }
