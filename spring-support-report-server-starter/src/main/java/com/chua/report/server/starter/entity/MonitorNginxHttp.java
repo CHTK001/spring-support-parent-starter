@@ -4,19 +4,18 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.common.support.utils.FileUtils;
 import com.chua.report.server.starter.ngxin.NginxDisAssembly;
 import com.chua.starter.mybatis.pojo.SysBase;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import java.io.Serializable;
-
-import static com.chua.common.support.constant.CommonConstant.EMPTY;
 
 /**
  * @author CH
@@ -306,14 +305,15 @@ public class MonitorNginxHttp extends SysBase implements Serializable {
      * 获取父级路径
      * @return
      */
-    public String getIncludeParentPath() {
+    public String getIncludeParentPath(MonitorNginxConfig monitorNginxConfig) {
+        String defaultPath = FileUtils.normalize(NginxDisAssembly.getFullPath(FileUtils.getFullPath(monitorNginxConfig.getMonitorNginxConfigPath()) + "/config.d"));
         for (String s : monitorNginxHttpInclude.split(";")) {
             if(s.endsWith(".conf")) {
                 return NginxDisAssembly.getFullPath(s);
             }
         }
 
-        return EMPTY;
+        return defaultPath;
 
     }
 }

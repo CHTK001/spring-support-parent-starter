@@ -6,6 +6,7 @@ import com.chua.common.support.lang.exception.RemoteExecutionException;
 import com.chua.common.support.lang.file.adaptor.univocity.parsers.conversions.Validator;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.exception.BusinessException;
+import com.chua.starter.common.support.exception.RuntimeMessageException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import jakarta.servlet.ServletException;
 import lombok.extern.slf4j.Slf4j;
@@ -248,6 +249,11 @@ public class ExceptionAdvice  {
         if(Validator.hasChinese(e.getMessage())) {
             return Result.failed(e);
         }
+
+        if(e instanceof RuntimeMessageException ) {
+            return Result.failed(e.getMessage());
+        }
+
         Throwable cause = e.getCause();
         if(cause instanceof UnsupportedOperationException) {
             return Result.failed("当前系统版本/软件不支持该功能");
