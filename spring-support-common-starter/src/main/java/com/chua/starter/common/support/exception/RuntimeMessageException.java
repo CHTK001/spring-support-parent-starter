@@ -10,24 +10,24 @@ import lombok.Getter;
  * @since 2022/7/31
  */
 @Getter
-public class BusinessException extends RuntimeException {
+public class RuntimeMessageException extends RuntimeException {
 
     public ResultCode resultCode;
 
-    public BusinessException(ResultCode errorCode) {
+    public RuntimeMessageException(ResultCode errorCode) {
         super(errorCode.getMsg());
         this.resultCode = errorCode;
     }
 
-    public BusinessException(String message){
+    public RuntimeMessageException(String message) {
         super(message);
     }
 
-    public BusinessException(String message, Throwable cause){
+    public RuntimeMessageException(String message, Throwable cause) {
         super(message, cause);
     }
 
-    public BusinessException(Throwable cause){
+    public RuntimeMessageException(Throwable cause) {
         super(cause);
     }
 

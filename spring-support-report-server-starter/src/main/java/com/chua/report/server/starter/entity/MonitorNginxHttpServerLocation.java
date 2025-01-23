@@ -8,12 +8,13 @@ import com.chua.starter.mybatis.pojo.SysBase;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import java.io.Serializable;
+import java.util.List;
 
 /**
  *
@@ -62,6 +63,14 @@ public class MonitorNginxHttpServerLocation extends SysBase implements Serializa
     @Size(max = 255, message = "proxy_pass http://192.168.247.129:8080;最大长度要小于 255")
     private String monitorNginxHttpServerLocationProxyPass;
 
+    /**
+     * proxy: 代理
+     * local: 本地
+     */
+    @TableField(value = "monitor_nginx_http_server_location_type")
+    @ApiModelProperty(value = "proxy: 代理\nlocal: 本地")
+    @Schema(description = "proxy: 代理\nlocal: 本地")
+    private String monitorNginxHttpServerLocationType;
     /**
      * proxy_cache my_cache;  # 启用名为my_cache的缓存
      */
@@ -180,4 +189,20 @@ public class MonitorNginxHttpServerLocation extends SysBase implements Serializa
     @Schema(description = "限流； limit_req zone=mylimit burst=5 nodelay;;")
     @Size(max = 255, message = "限流； limit_req zone=mylimit burst=5 nodelay;;最大长度要小于 255")
     private String monitorNginxHttpServerLocationLimitReq;
+
+
+    /**
+     * 备注
+     */
+    @TableField(value = "monitor_nginx_http_server_location_remark")
+    @ApiModelProperty(value = "备注")
+    @Schema(description = "备注")
+    private String monitorNginxHttpServerLocationRemark;
+    /**
+     * 消息头
+     */
+    @TableField(exist = false)
+    @ApiModelProperty(value = "消息头")
+    @Schema(description = "消息头")
+    private List<MonitorNginxHttpServerLocationHeader> headers;
 }

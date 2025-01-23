@@ -1,11 +1,12 @@
 package com.chua.starter.mybatis.controller;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.validator.group.SelectGroup;
 import com.chua.starter.mybatis.entity.Query;
@@ -39,7 +40,12 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> extend
             return ReturnPageResult.error(bindingResult.getFieldError().getDefaultMessage());
         }
         S service = getService();
-        Page<T> tPage = service.page(page.createPage(), createWrapper(entity));
+        IPage<T> tPage = service.page(page.createPage(), createWrapper(entity));
+        List<T> records = tPage.getRecords();
+        if(CollectionUtils.isEmpty(records)) {
+            return ReturnPageResult.ok();
+        }
+        pageAfter(records);
         return PageResultUtils.ok(tPage);
     }
     /**
@@ -67,6 +73,14 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> extend
         return Wrappers.lambdaQuery(entity);
     }
 
+
+    /**
+     * 分页查询后
+     * @param page 分页
+     */
+    protected void pageAfter(List<T> page) {
+
+    }
     /**
      * 查询详细信息
      * @param id id

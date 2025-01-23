@@ -267,6 +267,11 @@ public class NginxDisAssembly {
         monitorNginxHttpLocation.setMonitorNginxHttpServerLocationProxyPass(findParam(locationBlock, "proxy_pass"));
         monitorNginxHttpLocation.setMonitorNginxHttpServerLocationTryFiles(findParam(locationBlock, "try_files"));
         monitorNginxHttpLocation.setMonitorNginxHttpServerLocationAlias(findParam(locationBlock, "alias"));
+        if(StringUtils.isNotBlank(monitorNginxHttpLocation.getMonitorNginxHttpServerLocationProxyPass())) {
+            monitorNginxHttpLocation.setMonitorNginxHttpServerLocationType("proxy");
+        } else {
+            monitorNginxHttpLocation.setMonitorNginxHttpServerLocationType("local");
+        }
         if(monitorNginxHttpLocation.getMonitorNginxHttpServerLocationId() == null) {
             monitorNginxHttpServerLocationMapper.insert(monitorNginxHttpLocation);
         } else {

@@ -3,6 +3,7 @@ package com.chua.report.server.starter.ngxin;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.utils.FileUtils;
+import com.chua.common.support.utils.ObjectUtils;
 import com.chua.report.server.starter.entity.*;
 import com.chua.report.server.starter.mapper.*;
 import com.chua.socketio.support.MsgStep;
@@ -130,7 +131,7 @@ public class NginxAssembly {
             NgxBlock ngxHttp = createNginxHttp(monitorNginxHttp);
             for (MonitorNginxHttpServer monitorNginxHttpServer : monitorNginxHttpServers) {
                 NgxBlock server = createServer(ngxHttp, monitorNginxHttpServer, location.get(monitorNginxHttpServer.getMonitorNginxHttpServerId()), locationHeader);
-                createServerFile(monitorNginxHttp, monitorNginxHttpServer, server);
+                createServerFile(monitorNginxConfig, monitorNginxHttp, monitorNginxHttpServer, server);
             }
             nginxConfig.addEntry(ngxHttp);
             createNginxConf(monitorNginxConfig, nginxConfig);
@@ -176,15 +177,15 @@ public class NginxAssembly {
     private static NgxBlock createServer(NgxBlock ngxHttp, MonitorNginxHttpServer monitorNginxHttpServer, List<MonitorNginxHttpServerLocation> monitorNginxHttpServerLocations, Map<Integer, List<MonitorNginxHttpServerLocationHeader>> locationHeader) {
         NgxBlock server = new NgxBlock();
         server.addEntry(new NgxComment("#HTTP 服务器模块配置"));
+        server.addValue("server");
+        createParam(server, "listen", "监听端口", monitorNginxHttpServer.getMonitorNginxHttpServerPort(), monitorNginxHttpServer.getMonitorNginxHttpServerSsl());
         createParam(server, "server_name", "服务器名称", monitorNginxHttpServer.getMonitorNginxHttpServerName());
-        createParam(server, "listen", "监听端口", monitorNginxHttpServer.getMonitorNginxHttpServerPort());
         createParam(server, "charset", "编码", monitorNginxHttpServer.getMonitorNginxHttpServerCharset());
         createParam(server, "access_log", "访问日志", monitorNginxHttpServer.getMonitorNginxHttpServerAccessLog());
         createParam(server, "error_page", "错误页面", monitorNginxHttpServer.getMonitorNginxHttpServerErrorPage());
 
         // 添加其他配置项
         createParam(server, "return", "重定向", monitorNginxHttpServer.getMonitorNginxHttpServerReturn());
-        createParam(server, "ssl", "SSL配置", monitorNginxHttpServer.getMonitorNginxHttpServerSsl());
         createParam(server, "udp", "UDP配置", monitorNginxHttpServer.getMonitorNginxHttpServerUdp());
         createParam(server, "ssl_certificate", "SSL证书路径", monitorNginxHttpServer.getMonitorNginxHttpServerSslCertificate());
         createParam(server, "ssl_certificate_key", "SSL证书密钥路径", monitorNginxHttpServer.getMonitorNginxHttpServerSslCertificateKey());
@@ -202,7 +203,7 @@ public class NginxAssembly {
         for (MonitorNginxHttpServerLocation monitorNginxHttpServerLocation : monitorNginxHttpServerLocations) {
             NgxBlock location = new NgxBlock();
             location.addEntry(new NgxComment("#HTTP 服务器模块配置"));
-            createParam(location, "location", "路径", monitorNginxHttpServerLocation.getMonitorNginxHttpServerLocationName());
+            location.addValue("location " + monitorNginxHttpServerLocation.getMonitorNginxHttpServerLocationName());
             createParam(location, "alias", "别名", monitorNginxHttpServerLocation.getMonitorNginxHttpServerLocationAlias());
             createParam(location, "root", "根目录", monitorNginxHttpServerLocation.getMonitorNginxHttpServerLocationRoot());
             createParam(location, "index", "默认文件", monitorNginxHttpServerLocation.getMonitorNginxHttpServerLocationIndex());
@@ -227,11 +228,11 @@ public class NginxAssembly {
     }
 
     private static void createHeader(NgxBlock location, List<MonitorNginxHttpServerLocationHeader> monitorNginxHttpServerLocationHeaders) {
+        if(null == monitorNginxHttpServerLocationHeaders) {
+            return;
+        }
         for (MonitorNginxHttpServerLocationHeader monitorNginxHttpServerLocationHeader : monitorNginxHttpServerLocationHeaders) {
-            NgxBlock header = new NgxBlock();
-            header.addEntry(new NgxComment("#HTTP 服务器模块消息头配置"));
-            createParam(header, monitorNginxHttpServerLocationHeader.getMonitorNginxHttpServerLocationHeaderType(), "添加头信息", monitorNginxHttpServerLocationHeader.getMonitorNginxHttpServerLocationHeaderName() + " " + monitorNginxHttpServerLocationHeader.getMonitorNginxHttpServerLocationHeaderValue());
-            location.addEntry(header);
+            createParam(location, monitorNginxHttpServerLocationHeader.getMonitorNginxHttpServerLocationHeaderType(), "添加头信息", monitorNginxHttpServerLocationHeader.getMonitorNginxHttpServerLocationHeaderName() + " " + monitorNginxHttpServerLocationHeader.getMonitorNginxHttpServerLocationHeaderValue());
         }
     }
 
@@ -278,7 +279,7 @@ public class NginxAssembly {
         NgxConfig ngxConfig = new NgxConfig();
         createParam1(ngxConfig, "worker_processes", monitorNginxConfig.getMonitorNginxConfigWorkerProcesses());
         createParam1(ngxConfig, "pid", FileUtils.normalize(monitorNginxConfig.getMonitorNginxConfigPid(), "/nginx.pid"));
-        createParam1(ngxConfig, "error_log", monitorNginxConfig.getMonitorNginxConfigErrorLog());
+        createParam1(ngxConfig, "error_log", FileUtils.normalize(monitorNginxConfig.getMonitorNginxConfigErrorLog()));
         return ngxConfig;
     }
 
@@ -291,7 +292,7 @@ public class NginxAssembly {
         if (null == value) {
             return;
         }
-        if (value.length == 1 && value[0] == null) {
+        if (value.length == 1 && ObjectUtils.isEmpty(value[0])) {
             return;
         }
         if (!StringUtils.isBlank(comment)) {
@@ -305,7 +306,7 @@ public class NginxAssembly {
 
     private static void createNginxConf(MonitorNginxConfig monitorNginxConfig, NgxConfig nginxConfig) {
         NgxDumper nodeDumper = new NgxDumper(nginxConfig);
-        try (FileOutputStream outputStream = new FileOutputStream(new File(monitorNginxConfig.getMonitorNginxConfigPath(), "nginx.conf"))){
+        try (FileOutputStream outputStream = new FileOutputStream(new File(monitorNginxConfig.getMonitorNginxConfigPath()))){
             nodeDumper.dump(outputStream);
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -313,11 +314,11 @@ public class NginxAssembly {
 
     }
 
-    private static void createServerFile(MonitorNginxHttp monitorNginxHttp, MonitorNginxHttpServer monitorNginxHttpServer, NgxBlock server) {
+    private static void createServerFile(MonitorNginxConfig monitorNginxConfig, MonitorNginxHttp monitorNginxHttp, MonitorNginxHttpServer monitorNginxHttpServer, NgxBlock server) {
         NgxConfig ngxConfig = new NgxConfig();
         ngxConfig.addEntry(server);
         NgxDumper nodeDumper = new NgxDumper(ngxConfig);
-        File file = new File(monitorNginxHttp.getIncludeParentPath(), monitorNginxHttpServer.getMonitorNginxHttpServerName() + ".conf");
+        File file = new File(monitorNginxHttp.getIncludeParentPath(monitorNginxConfig), monitorNginxHttpServer.getMonitorNginxHttpServerName() + ".conf");
         FileUtils.forceMkdirParent(file);
         try {
             FileUtils.forceDelete(file);

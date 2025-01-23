@@ -2,7 +2,10 @@ package com.chua.report.server.starter.ngxin;
 
 import com.chua.common.support.constant.Projects;
 import com.chua.common.support.utils.CmdUtils;
+import com.chua.common.support.utils.FileUtils;
+import com.chua.common.support.utils.ThreadUtils;
 import com.chua.report.server.starter.entity.MonitorNginxConfig;
+import com.chua.starter.common.support.exception.RuntimeMessageException;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -27,6 +30,8 @@ public class NginxStart {
         if(Projects.isWindows()) {
             new NginxStop(monitorNginxConfig).run();
             if(monitorNginxConfig.getMonitorNginxConfigType() == 0) {
+                FileUtils.forceMkdir("C:/temp");
+                FileUtils.forceMkdir("C:/logs");
                 return runWindow();
             }
             return runService();
@@ -42,14 +47,16 @@ public class NginxStart {
     }
 
     private String runWindow() {
-        Thread.ofVirtual()
-                .start(() ->{
-                    try {
+
+        try {
+            Thread.ofVirtual()
+                    .start(() ->{
                         CmdUtils.exec(monitorNginxConfigNginxPath + " -c " + monitorNginxConfigPath);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                });
+                    });
+            ThreadUtils.sleepSecondsQuietly(1);
+        } catch (Exception e) {
+            throw new RuntimeMessageException(e);
+        }
         return null;
 
     }
