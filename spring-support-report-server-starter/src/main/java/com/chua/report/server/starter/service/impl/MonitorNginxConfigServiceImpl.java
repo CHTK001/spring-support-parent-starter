@@ -156,7 +156,7 @@ public class MonitorNginxConfigServiceImpl extends ServiceImpl<MonitorNginxConfi
 
     @Override
     public ReturnPageResult<MonitorNginxConfig> pageForConfig(Query<MonitorNginxConfig> query) {
-        Page<MonitorNginxConfig> monitorNginxConfigPage = baseMapper.selectPage(query.createPage(), query.mpjLambda());
+        Page<MonitorNginxConfig> monitorNginxConfigPage = baseMapper.selectPage(query.createPage(), Wrappers.<MonitorNginxConfig>lambdaQuery().orderByDesc(MonitorNginxConfig::getCreateTime));
         List<MonitorNginxConfig> records = monitorNginxConfigPage.getRecords();
         if(CollectionUtils.isNotEmpty(records)) {
             Set<Integer> ids = records.stream().map(MonitorNginxConfig::getMonitorNginxConfigId).collect(Collectors.toSet());
