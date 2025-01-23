@@ -307,6 +307,9 @@ public class MonitorNginxHttp extends SysBase implements Serializable {
      */
     public String getIncludeParentPath(MonitorNginxConfig monitorNginxConfig) {
         String defaultPath = FileUtils.normalize(NginxDisAssembly.getFullPath(FileUtils.getFullPath(monitorNginxConfig.getMonitorNginxConfigPath()) + "/config.d"));
+        if (null == monitorNginxHttpInclude) {
+            return defaultPath;
+        }
         for (String s : monitorNginxHttpInclude.split(";")) {
             if(s.endsWith(".conf")) {
                 return NginxDisAssembly.getFullPath(s);
