@@ -4,9 +4,9 @@ import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.chua.common.support.constant.Projects;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.date.DateTime;
+import com.chua.common.support.net.NetUtils;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.FileUtils;
 import com.chua.common.support.utils.IoUtils;
@@ -23,7 +23,10 @@ import com.chua.starter.mybatis.utils.ReturnPageResultUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -173,9 +176,7 @@ public class MonitorNginxConfigServiceImpl extends ServiceImpl<MonitorNginxConfi
     private Boolean findPid(String monitorNginxConfigPid) {
         try (FileInputStream fis = new FileInputStream(new File(monitorNginxConfigPid, "nginx.pid"))) {
             String pid = IoUtils.toString(fis, StandardCharsets.UTF_8);
-            return Projects.isWindows()?
-                    checkWindowPidExists(pid):
-                    checkLinuxPidExists(pid);
+            return NetUtils.checkPidExists(pid);
         } catch (IOException ignored) {
             return false;
         }
@@ -200,51 +201,5 @@ public class MonitorNginxConfigServiceImpl extends ServiceImpl<MonitorNginxConfi
         return baseMapper.selectById(monitorNginxConfigId);
     }
 
-    public static boolean checkLinuxPidExists(String pid) {
-        Process process = null;
-        try {
-            // 构造命令：kill -0 <PID>
-            String command = "kill -0 " + pid;
 
-            // 执行命令
-            process = Runtime.getRuntime().exec(command);
-
-            // 等待命令执行完成
-            int exitCode = process.waitFor();
-            return exitCode == 0; // 如果退出码为 0，表示 PID 存在
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        } finally {
-            IoUtils.closeQuietly(process);
-        }
-    }
-    public static boolean checkWindowPidExists(String pid) {
-        Process process = null;
-        try {
-            // 构造命令：tasklist /FI "PID eq <PID>"
-            String command = "tasklist /FI \"PID eq " + pid + "\"";
-
-            // 执行命令
-            process = Runtime.getRuntime().exec(command);
-
-            // 读取命令输出
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    if (line.contains("INFO: No tasks are running")) {
-                        return false; // 如果输出中包含 "INFO: No tasks are running"，表示 PID 不存在
-                    }
-                }
-            }
-            // 等待命令执行完成
-            int exitCode = process.waitFor();
-            return exitCode == 0; // 如果退出码为 0，表示命令执行成功，PID 存在
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        } finally {
-            IoUtils.closeQuietly(process);
-        }
-    }
 }
