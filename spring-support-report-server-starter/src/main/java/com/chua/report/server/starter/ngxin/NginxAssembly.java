@@ -259,8 +259,7 @@ public class NginxAssembly {
                         """
                                 '$remote_addr - $remote_user [$time_local] "$request" '
                                                     '$status $body_bytes_sent "$http_referer" '
-                                                    '"$http_user_agent" "$http_x_forwarded_for"'
-                                """));
+                                                    '"$http_user_agent" "$http_x_forwarded_for"'"""));
         createParam(ngxHttp, "error_log", "错误日志", monitorNginxHttp.getMonitorNginxHttpErrorLog());
         createParam(ngxHttp, "access_log", "访问日志", monitorNginxHttp.getMonitorNginxHttpAccessLog());
         createParam(ngxHttp, "sendfile", "是否开启sendfile", monitorNginxHttp.getMonitorNginxHttpSendfile());
