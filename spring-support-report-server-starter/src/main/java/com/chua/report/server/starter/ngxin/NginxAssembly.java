@@ -288,9 +288,19 @@ public class NginxAssembly {
 
     private static NgxConfig createNginxConfig(MonitorNginxConfig monitorNginxConfig) {
         NgxConfig ngxConfig = new NgxConfig();
+//        createParam1(ngxConfig, "user", com.chua.common.support.utils.StringUtils.defaultString(monitorNginxConfig.getMonitorNginxConfigRunUser(), System.getProperty("user.name")));
         createParam1(ngxConfig, "worker_processes", monitorNginxConfig.getMonitorNginxConfigWorkerProcesses());
         createParam1(ngxConfig, "pid", FileUtils.normalize(monitorNginxConfig.getMonitorNginxConfigPid(), "/nginx.pid"));
-        createParam1(ngxConfig, "error_log", FileUtils.normalize(monitorNginxConfig.getMonitorNginxConfigErrorLog()));
+        createParam1(ngxConfig, "error_log", FileUtils.normalize(
+                monitorNginxConfig.getMonitorNginxConfigErrorLog().contains(".log") ?
+                        monitorNginxConfig.getMonitorNginxConfigErrorLog() :
+                        monitorNginxConfig.getMonitorNginxConfigErrorLog() + "/error.log"
+        ));
+        createParam1(ngxConfig, "access_log", FileUtils.normalize(
+                monitorNginxConfig.getMonitorNginxConfigAccessLog().contains(".log") ?
+                        monitorNginxConfig.getMonitorNginxConfigAccessLog() :
+                        monitorNginxConfig.getMonitorNginxConfigAccessLog() + "/access.log"
+        ));
         return ngxConfig;
     }
 
