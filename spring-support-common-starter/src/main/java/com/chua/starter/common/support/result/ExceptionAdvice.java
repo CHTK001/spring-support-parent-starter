@@ -4,6 +4,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.exception.AuthenticationException;
 import com.chua.common.support.lang.exception.RemoteExecutionException;
 import com.chua.common.support.lang.file.adaptor.univocity.parsers.conversions.Validator;
+import com.chua.common.support.unit.name.NamingCase;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.common.support.exception.RuntimeMessageException;
@@ -272,7 +273,7 @@ public class ExceptionAdvice  {
             Matcher matcher = DATA_TOO_LONG_PATTERN.matcher(message);
             if (matcher.find()) {
                 if (matcher.groupCount() == 1) {
-                    return Result.failed("选项%s长度过长".formatted(matcher.group(1)));
+                    return Result.failed("选项%s长度过长".formatted(NamingCase.toCamelCase(matcher.group(1))));
                 }
             }
             return Result.failed("数据长度过长");
