@@ -50,6 +50,12 @@ public class PayMerchantOrderServiceImpl extends ServiceImpl<PayMerchantOrderMap
             return baseMapper.pageForOrderDept(query.createPage(), request);
         }
 
+        if (AuthConstant.isDeptOrganizer(roles)) {
+            if (StringUtils.isEmpty(request.getPayMerchantDeptId()) || StringUtils.isEmpty(request.getPayMerchantOrderDeptOrganizer())) {
+                return new Page<>();
+            }
+            return baseMapper.pageForOrderDeptOrganizer(query.createPage(), request);
+        }
         return new Page<>();
     }
 

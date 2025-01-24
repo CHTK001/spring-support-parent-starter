@@ -31,6 +31,16 @@ public interface PayMerchantOrderMapper extends BaseMapper<PayMerchantOrder> {
      */
     IPage<PayMerchantOrder> pageForOrderDept(@Param("page") Page<PayMerchantOrder> page,
                                              @Param("request") PayOrderQueryRequest request);
+
+    /**
+     * 分页查询机构订单
+     *
+     * @param page    分页
+     * @param request 查询条件
+     * @return
+     */
+    IPage<PayMerchantOrder> pageForOrderDeptOrganizer(@Param("page") Page<PayMerchantOrder> page,
+                                                      @Param("request") PayOrderQueryRequest request);
     /**
      * 分页查询
      *
