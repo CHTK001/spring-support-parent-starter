@@ -60,11 +60,13 @@ public class PayOrderController {
                                                    @Validated(SelectGroup.class) @ParameterObject PayOrderQueryRequest request,
                                                    @Parameter(hidden = true) @UserValue("roles") Set<String> roles,
                                                    @Parameter(hidden = true) @UserValue("deptId") String deptId,
+                                                   @Parameter(hidden = true) @UserValue("userId") String userId,
                                                    BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
             return ReturnPageResult.illegal(bindingResult.getAllErrors().get(0).getDefaultMessage());
         }
         request.setPayMerchantDeptId(deptId);
+        request.setPayMerchantOrderDeptOrganizer(userId);
         return payMerchantOrderService.page(page, roles, request);
     }
     /**

@@ -32,6 +32,14 @@ public class PayOrderQueryRequest {
     private String payMerchantDeptId;
 
     /**
+     * 组织者
+     */
+    @TableField(value = "pay_merchant_dept_organizer")
+    @ApiModelProperty(value = "组织者")
+    @Schema(description = "组织者")
+    private String payMerchantOrderDeptOrganizer;
+
+    /**
      * 收款机构名称
      */
     @TableField(value = "pay_merchant_dept_name")

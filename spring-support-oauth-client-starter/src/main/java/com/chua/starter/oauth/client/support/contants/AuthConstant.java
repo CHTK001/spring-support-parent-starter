@@ -25,6 +25,11 @@ public interface AuthConstant {
      * 机构
      */
     String DEPT = "dept";
+
+    /**
+     * 机构组织者
+     */
+    String DEPT_ORGANIZER = "dept:organizer";
     /**
      * 管理员
      */
@@ -90,6 +95,16 @@ public interface AuthConstant {
      */
     static boolean isDept(Set<String> roles) {
         return CollectionUtils.containsIgnoreCase(roles, DEPT);
+    }
+
+    /**
+     * 是否为机构组织者
+     *
+     * @param roles 角色
+     * @return 是否为管理员
+     */
+    static boolean isDeptOrganizer(Set<String> roles) {
+        return CollectionUtils.containsIgnoreCase(roles, DEPT) && CollectionUtils.containsIgnoreCase(roles, DEPT_ORGANIZER);
     }
     /**
      * 是否为运维
