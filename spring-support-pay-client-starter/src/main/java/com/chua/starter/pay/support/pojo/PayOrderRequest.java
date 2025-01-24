@@ -37,6 +37,13 @@ public class PayOrderRequest implements Serializable {
     @Schema(description = "部门id")
     private String deptId;
 
+
+    /**
+     * 机构组织者
+     */
+    @Schema(description = "机构组织者")
+    private String deptOrganizer;
+
     /**
      * 部门名称
      */
