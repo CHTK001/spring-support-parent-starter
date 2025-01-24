@@ -271,7 +271,9 @@ public class ExceptionAdvice  {
         if (message != null && message.contains("Data truncation: Data too long for column")) {
             Matcher matcher = DATA_TOO_LONG_PATTERN.matcher(message);
             if (matcher.find()) {
-                return Result.failed("选项%s长度过长".formatted(matcher.group()));
+                if (matcher.groupCount() == 1) {
+                    return Result.failed("选项%s长度过长".formatted(matcher.group(1)));
+                }
             }
             return Result.failed("数据长度过长");
         }
