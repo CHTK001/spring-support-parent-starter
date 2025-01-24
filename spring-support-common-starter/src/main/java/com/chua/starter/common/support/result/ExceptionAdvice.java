@@ -280,6 +280,7 @@ public class ExceptionAdvice  {
         return Result.failed("当前系统版本不支持或者系统不开放");
     }
 
+    static Pattern CONVERTER_PATTERN = Pattern.compile("\\[\"(.*?)\"]+");
     /**
      * 传参类型错误时，用于消息转换
      *
@@ -288,9 +289,7 @@ public class ExceptionAdvice  {
      */
     private String convertMessage(Throwable throwable) {
         String error = throwable.toString();
-        String regulation = "\\[\"(.*?)\"]+";
-        Pattern pattern = Pattern.compile(regulation);
-        Matcher matcher = pattern.matcher(error);
+        Matcher matcher = CONVERTER_PATTERN.matcher(error);
         String group = "";
         if (matcher.find()) {
             String matchString = matcher.group();
