@@ -266,6 +266,10 @@ public class ExceptionAdvice  {
             return handleIllegalArgumentException((IllegalArgumentException) cause);
         }
 
+        String message = cause.getMessage();
+        if (message != null && message.contains("Data truncation: Data too long for column")) {
+            return Result.failed("数据长度过长");
+        }
         return Result.failed("当前系统版本不支持或者系统不开放");
     }
 
