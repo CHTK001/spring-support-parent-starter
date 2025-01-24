@@ -45,6 +45,7 @@ import static com.chua.common.support.lang.code.ReturnCode.*;
 @Slf4j
 public class ExceptionAdvice  {
 
+    static final Pattern DATA_TOO_LONG_PATTERN = Pattern.compile("Data too long for column '([^']*)' at row");
 
     @ExceptionHandler(BindException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
@@ -268,6 +269,10 @@ public class ExceptionAdvice  {
 
         String message = cause.getMessage();
         if (message != null && message.contains("Data truncation: Data too long for column")) {
+            Matcher matcher = DATA_TOO_LONG_PATTERN.matcher(message);
+            if (matcher.find()) {
+                return Result.failed("选项%s长度过长".formatted(matcher.group()));
+            }
             return Result.failed("数据长度过长");
         }
         return Result.failed("当前系统版本不支持或者系统不开放");
