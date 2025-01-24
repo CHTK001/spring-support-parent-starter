@@ -86,6 +86,9 @@ public class CreateOrder {
         payMerchantOrder.setPayMerchantOrderPrice(request.getPrice());
         payMerchantOrder.setPayMerchantOrderCode("P" + IdUtils.createTimeId(31));
         payMerchantOrder.setPayMerchantOrderTotalPrice(request.getTotalPrice());
+        payMerchantOrder.setPayMerchantOrderDeptId(request.getDeptId());
+        payMerchantOrder.setPayMerchantOrderDeptName(request.getDeptName());
+        payMerchantOrder.setPayMerchantOrderDeptOrganizer(request.getDeptOrganizer());
         payMerchantOrder.setPayMerchantCouponCode(request.getCouponCode());
         payMerchantOrder.setPayMerchantOrderStatus("1000");
         return transactionTemplate.execute(status -> {
