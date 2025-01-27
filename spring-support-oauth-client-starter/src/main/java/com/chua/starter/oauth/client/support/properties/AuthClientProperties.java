@@ -122,7 +122,7 @@ public class AuthClientProperties {
     /**
      * 临时用户
      */
-    private TempUser  temp = new TempUser();
+    private TempUser temp = new TempUser();
 
     @Data
     public static class TempUser {
