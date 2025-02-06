@@ -61,7 +61,7 @@ public class MonitorMqttServerController {
     @PutMapping("update")
     public ReturnResult<Boolean> updateById(@Validated(UpdateGroup.class) @RequestBody MonitorMqttServer t , @Ignore BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
-            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
 
 
@@ -79,7 +79,7 @@ public class MonitorMqttServerController {
     @PostMapping("save")
     public ReturnResult<MonitorMqttServer> save(@Validated(AddGroup.class) @RequestBody MonitorMqttServer t, @Ignore BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
-            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
         return monitorMqttServerService.saveFor(t);
     }
@@ -97,7 +97,7 @@ public class MonitorMqttServerController {
     @GetMapping("page")
     public ReturnPageResult<MonitorMqttServer> page(Query<MonitorMqttServer> page, @Validated(SelectGroup.class) MonitorMqttServer entity, BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
-            return ReturnPageResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnPageResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
         return monitorMqttServerService.pageFor(page, entity);
     }

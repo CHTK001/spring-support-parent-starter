@@ -66,7 +66,7 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
     @PutMapping("saveOrUpdateBatch")
     public ReturnResult<Boolean>saveOrUpdateBatch(@Validated(UpdateGroup.class) @RequestBody List<T> t , @Ignore BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
-            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
 
         return ReturnResult.of(getService().saveOrUpdateBatch(t));
@@ -83,7 +83,7 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
     @PutMapping("saveOrUpdate")
     public ReturnResult<Boolean>saveOrUpdate(@Validated(UpdateGroup.class) @RequestBody T t , @Ignore BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
-            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
 
 
@@ -108,7 +108,7 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
     @PutMapping("update")
     public ReturnResult<Boolean>updateById(@Validated(UpdateGroup.class) @RequestBody T t , @Ignore BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
-            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
 
         return ReturnResult.of(getService().updateById(render(t)));
@@ -125,7 +125,7 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
     @PostMapping("save")
     public ReturnResult<T> save(@Validated(AddGroup.class) @RequestBody T t, @Ignore BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
-            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
         getService().save(render(t));
         return ReturnResult.ok(t);

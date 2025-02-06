@@ -53,7 +53,7 @@ public class NginxConfigController {
     @Schema(description = "更新配置")
     public ReturnResult<Boolean> update(@Validated(UpdateGroup.class) @ParameterObject @RequestBody MonitorNginxConfig nginxConfig, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ReturnResult.illegal(bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
         return ReturnResult.optional(monitorNginxConfigService.update(nginxConfig))
                 .withErrorMessage("配置不存在")
@@ -69,7 +69,7 @@ public class NginxConfigController {
     @Schema(description = "添加配置")
     public ReturnResult<MonitorNginxConfig> save(@Validated(AddGroup.class) @ParameterObject @RequestBody MonitorNginxConfig nginxConfig, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ReturnResult.illegal(bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
         return ReturnResult.optional(monitorNginxConfigService.saveForConfig(nginxConfig))
                 .withErrorMessage("配置新增失败")
