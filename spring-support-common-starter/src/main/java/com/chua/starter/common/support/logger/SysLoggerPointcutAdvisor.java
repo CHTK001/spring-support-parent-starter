@@ -39,6 +39,7 @@ import static com.chua.common.support.constant.NameConstant.*;
 @Lazy
 public class SysLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor implements InitializingBean {
 
+    public static final String X_REQ_FINGERPRINT = "x-req-fingerprint";
     @Autowired HttpServletRequest request;
     @Autowired HttpServletResponse response;
 
@@ -102,6 +103,7 @@ public class SysLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor
         sysLoggerInfo.setCreateName(RequestUtils.getUsername());
         sysLoggerInfo.setCreateTime(new Date());
         sysLoggerInfo.setLogName(name);
+        sysLoggerInfo.setFingerprint(RequestUtils.getHeader(request, X_REQ_FINGERPRINT));
         sysLoggerInfo.setLogModule(StringUtils.defaultString(operateLog.module(), module));
         sysLoggerInfo.setLogCost((System.currentTimeMillis() - startTime) );
         sysLoggerInfo.setClientIp(RequestUtils.getIpAddress(request));

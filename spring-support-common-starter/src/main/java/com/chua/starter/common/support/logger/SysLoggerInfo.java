@@ -28,6 +28,11 @@ public class SysLoggerInfo extends ApplicationEvent {
     private String logName;
 
     /**
+     * 浏览器指纹
+     */
+    private String fingerprint;
+
+    /**
      * 登录方式
      */
     private String loginType;

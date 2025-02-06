@@ -66,7 +66,7 @@ public class PayMerchantController {
     @Operation(summary = "新增商户")
     public ReturnResult<PayMerchant> save(@Validated(AddGroup.class) @RequestBody PayMerchant payMerchant, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ReturnResult.illegal(bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
         return ReturnResult.ok(payMerchantService.savePayMerchant(payMerchant));
     }
@@ -81,7 +81,7 @@ public class PayMerchantController {
     @Operation(summary = "修改商户")
     public ReturnResult<Boolean> update(@Validated(UpdateGroup.class) @RequestBody PayMerchant payMerchant, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ReturnResult.illegal(bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
         return payMerchantService.updatePayMerchant(payMerchant);
     }

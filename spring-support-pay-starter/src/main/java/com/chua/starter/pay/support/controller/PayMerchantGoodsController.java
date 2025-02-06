@@ -6,7 +6,6 @@ import com.chua.common.support.validator.group.AddGroup;
 import com.chua.common.support.validator.group.UpdateGroup;
 import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.mybatis.utils.ReturnPageResultUtils;
-import com.chua.starter.pay.support.entity.PayMerchant;
 import com.chua.starter.pay.support.entity.PayMerchantGoods;
 import com.chua.starter.pay.support.service.PayMerchantGoodsService;
 import io.swagger.annotations.Api;
@@ -67,7 +66,7 @@ public class PayMerchantGoodsController {
     @Operation(summary = "新增商品")
     public ReturnResult<PayMerchantGoods> save(@Validated(AddGroup.class) @RequestBody PayMerchantGoods payMerchantGoods, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ReturnResult.illegal(bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
         return ReturnResult.ok(payMerchantGoodsService.savePayGoods(payMerchantGoods));
     }
@@ -82,7 +81,7 @@ public class PayMerchantGoodsController {
     @Operation(summary = "修改商品")
     public ReturnResult<Boolean> update(@Validated(UpdateGroup.class) @RequestBody PayMerchantGoods payMerchantGoods, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ReturnResult.illegal(bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
         return payMerchantGoodsService.updatePayGoods(payMerchantGoods);
     }

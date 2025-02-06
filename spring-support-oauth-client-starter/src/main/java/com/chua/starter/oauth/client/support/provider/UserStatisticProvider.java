@@ -22,6 +22,7 @@ import com.chua.starter.oauth.client.support.user.UserResult;
 import com.google.common.base.Strings;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -32,7 +33,6 @@ import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import jakarta.validation.Valid;
 import java.util.*;
 
 import static com.chua.common.support.constant.Constants.CAPTCHA_SESSION_KEY;
@@ -69,7 +69,7 @@ public class UserStatisticProvider {
                                      HttpServletResponse response,
                                      BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return Result.failed(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return Result.failed(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
 
         String code = loginData.getVerifyCodeKey();

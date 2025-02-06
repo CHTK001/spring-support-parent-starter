@@ -71,7 +71,7 @@ public class FileStorageController {
     @PutMapping("update")
     public ReturnResult<Boolean> updateById(@Validated(UpdateGroup.class) @RequestBody FileStorage t , @Ignore BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
-            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
 
 
@@ -89,7 +89,7 @@ public class FileStorageController {
     @PostMapping("save")
     public ReturnResult<FileStorage> save(@Validated(AddGroup.class) @RequestBody FileStorage t, @Ignore BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
-            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
         return ReturnResult.of(fileStorageService.saveFor(t), t, "添加数据失败");
     }
@@ -107,7 +107,7 @@ public class FileStorageController {
     @GetMapping("page")
     public ReturnPageResult<FileStorage> page(Query<FileStorage> page, @Validated(SelectGroup.class) FileStorage entity, BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
-            return ReturnPageResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnPageResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
         Page<FileStorage> tPage = fileStorageService.page(page.createPage(), Wrappers.<FileStorage>lambdaQuery()
                 .eq(FileStorage::getFileStorageProtocolId, entity.getFileStorageProtocolId())

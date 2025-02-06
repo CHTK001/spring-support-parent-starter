@@ -73,7 +73,7 @@ public class FileStorageProtocolController {
     @PutMapping("update")
     public ReturnResult<Boolean> updateById(@Validated(UpdateGroup.class) @RequestBody FileStorageProtocol t , @Ignore BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
-            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
 
 
@@ -91,7 +91,7 @@ public class FileStorageProtocolController {
     @PostMapping("save")
     public ReturnResult<FileStorageProtocol> save(@Validated(AddGroup.class) @RequestBody FileStorageProtocol t, @Ignore BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
-            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
         t.setFileStorageProtocolUaOpen(0);
         t.setFileStorageProtocolPluginOpen(0);

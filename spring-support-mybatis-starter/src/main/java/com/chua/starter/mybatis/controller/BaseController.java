@@ -5,10 +5,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.starter.common.support.result.ResultData;
 import com.chua.starter.mybatis.entity.DelegatePage;
+import jakarta.validation.Valid;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
-
-import jakarta.validation.Valid;
 
 import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
 
@@ -31,7 +30,7 @@ public abstract class BaseController<S extends IService<T>, T> {
     @ResponseBody
     public ResultData<Page<T>> page(DelegatePage<T> page, @Valid T entity, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ResultData.failure(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ResultData.failure(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
         return ResultData.success(getService().page(page.createPage(), Wrappers.lambdaQuery(entity)));
     }
@@ -61,7 +60,7 @@ public abstract class BaseController<S extends IService<T>, T> {
     @ResponseBody
     public ResultData<Boolean> updateById(@Valid @RequestBody T t, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ResultData.failure(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ResultData.failure(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
         return ResultData.success(getService().updateById(t));
     }
@@ -76,7 +75,7 @@ public abstract class BaseController<S extends IService<T>, T> {
     @ResponseBody
     public ResultData<Boolean> save(@Valid @RequestBody T t, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ResultData.failure(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ResultData.failure(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
         return ResultData.success(getService().save(t));
     }

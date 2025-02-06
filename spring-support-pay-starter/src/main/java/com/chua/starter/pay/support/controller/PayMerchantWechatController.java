@@ -60,7 +60,7 @@ public class PayMerchantWechatController {
     @Operation(summary = "新增商户微信设置")
     public ReturnResult<PayMerchantConfigWechat> save(@Validated(AddGroup.class) @RequestBody PayMerchantConfigWechat payMerchantConfigWechat, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ReturnResult.illegal(bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
         return payMerchantConfigWechatService.savePayMerchantConfigWechat(payMerchantConfigWechat);
     }
@@ -75,7 +75,7 @@ public class PayMerchantWechatController {
     @Operation(summary = "修改商户微信设置")
     public ReturnResult<Boolean> update(@Validated(UpdateGroup.class) @RequestBody PayMerchantConfigWechat payMerchantConfigWechat, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ReturnResult.illegal(bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
         return payMerchantConfigWechatService.updatePayMerchantConfigWechat(payMerchantConfigWechat);
     }

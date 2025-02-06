@@ -103,7 +103,7 @@ public class MonitorProxyPluginStatisticServiceDiscoveryController {
     @PutMapping("update")
     public ReturnResult<Boolean> updateById(@Validated(UpdateGroup.class) @RequestBody MonitorProxyPluginStatisticServiceDiscovery t , @Ignore BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
-            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
 
         MonitorProxyPluginStatisticServiceDiscovery monitorProxyLimit = service.getById(t.getProxyStatisticId());
@@ -130,7 +130,7 @@ public class MonitorProxyPluginStatisticServiceDiscoveryController {
     @PostMapping("save")
     public ReturnResult<MonitorProxyPluginStatisticServiceDiscovery> save(@Validated(AddGroup.class) @RequestBody MonitorProxyPluginStatisticServiceDiscovery t, @Ignore BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
-            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
         return ReturnResult.success(transactionTemplate.execute(status -> {
             service.save(t);

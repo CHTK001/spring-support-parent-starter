@@ -6,7 +6,6 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.common.support.validator.group.UpdateGroup;
 import com.chua.starter.common.support.annotations.Permission;
-import com.chua.starter.pay.support.entity.PayMerchant;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.pojo.*;
 import com.chua.starter.pay.support.result.PayOrderResponse;
@@ -58,7 +57,7 @@ public class PayController {
     @Permission({"sys:pay:cancel"})
     public ReturnResult<PayRefundResponse> cancel(@Validated(UpdateGroup.class) @RequestBody PayRefundCreateRequest request, BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
-            return ReturnResult.illegal(bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
 
         PayRefundRequest refundRequest = BeanUtils.copyProperties(request, PayRefundRequest.class);
@@ -73,7 +72,7 @@ public class PayController {
     @Permission({"sys:pay:refund"})
     public ReturnResult<PayRefundResponse> refund(@Validated(UpdateGroup.class) @RequestBody PayRefundCreateRequest request, BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
-            return ReturnResult.illegal(bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
 
         PayRefundRequest refundRequest = BeanUtils.copyProperties(request, PayRefundRequest.class);
@@ -88,7 +87,7 @@ public class PayController {
     public ReturnResult<PayOrderResponse> createOrder(@Validated(AddGroup.class) @RequestBody PayOrderCreateRequest request,
                                                       BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
-            return ReturnResult.illegal(bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
         PayOrderRequest payOrderRequest = BeanUtils.copyProperties(request, PayOrderRequest.class);
         payOrderRequest.setUserId(StringUtils.defaultString(request.getOpenId(), null));
@@ -102,7 +101,7 @@ public class PayController {
     public ReturnResult<PaySignResponse> createSign(@Validated(AddGroup.class) @RequestBody PaySignCreateRequest request,
                                                     BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
-            return ReturnResult.illegal(bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
         return payOrderService.createSign(request);
     }
