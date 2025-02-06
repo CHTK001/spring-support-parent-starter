@@ -63,7 +63,7 @@ public class PayOrderController {
                                                    @Parameter(hidden = true) @UserValue("userId") String userId,
                                                    BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
-            return ReturnPageResult.illegal(bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnPageResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
         request.setPayMerchantDeptId(deptId);
         request.setPayMerchantOrderDeptOrganizer(userId);
@@ -84,7 +84,7 @@ public class PayOrderController {
                                                    @Validated(SelectGroup.class) @ParameterObject PayMerchantOrderQueryRequest request,
                                                    BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
-            return ReturnPageResult.illegal(bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return ReturnPageResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
         return payMerchantOrderService.page(page, request);
     }
