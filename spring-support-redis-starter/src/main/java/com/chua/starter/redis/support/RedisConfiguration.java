@@ -66,7 +66,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     public RedisClient redisClient(RedisProperties redisProperties) {
         RedisClient redisClient = new RedisClient(
                 ClientSetting.builder()
-                        .database("0")
+                        .database(String.valueOf(redisProperties.getDatabase()))
                         .host(redisProperties.getHost())
                         .port(redisProperties.getPort())
                         .password(redisProperties.getPassword())

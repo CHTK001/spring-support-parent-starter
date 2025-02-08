@@ -10,6 +10,7 @@ import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.common.support.exception.RuntimeMessageException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
@@ -240,23 +241,28 @@ public class ExceptionAdvice  {
     }
     @ExceptionHandler(RuntimeException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public <T> Result<T> handleRuntimeException(RuntimeException e) {
+    public <T> Result<T> handleRuntimeException(RuntimeException e, HttpServletResponse response) {
+        response.setContentType("application/json");
         if("org.apache.ibatis.exceptions.TooManyResultsException".equals(e.getClass().getName())) {
             log.error("SQL只允许返回一条数据, 但是查询到多条数据", e);
         } else {
             log.error("handleRuntimeException exception", e);
         }
 
+        String message = e.getMessage();
+        Throwable cause = e.getCause();
+        if (cause instanceof Exception e1 && !(e1 instanceof NullPointerException)) {
+            message = e1.getMessage();
+        }
 
-        if(Validator.hasChinese(e.getMessage())) {
+        if (Validator.hasChinese(message)) {
             return Result.failed(e);
         }
 
-        if(e instanceof RuntimeMessageException ) {
+        if (e instanceof RuntimeMessageException) {
             return Result.failed(e.getMessage());
         }
 
-        Throwable cause = e.getCause();
         if(cause instanceof UnsupportedOperationException) {
             return Result.failed("当前系统版本/软件不支持该功能");
         }
@@ -268,7 +274,6 @@ public class ExceptionAdvice  {
             return handleIllegalArgumentException((IllegalArgumentException) cause);
         }
 
-        String message = cause.getMessage();
         if (message != null && message.contains("Data truncation: Data too long for column")) {
             Matcher matcher = DATA_TOO_LONG_PATTERN.matcher(message);
             if (matcher.find()) {
