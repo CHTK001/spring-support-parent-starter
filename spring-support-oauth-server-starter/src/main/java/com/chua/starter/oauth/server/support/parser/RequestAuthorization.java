@@ -4,6 +4,7 @@ import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.code.ReturnResultBuilder;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.oauth.client.support.enums.UpgradeType;
 import com.chua.starter.oauth.client.support.user.LoginResult;
@@ -32,6 +33,7 @@ public final class RequestAuthorization implements Authorization {
 
     final ApplicationContext applicationContext;
     final LoginCheck loginCheck;
+    private final String refreshToken;
 
     public RequestAuthorization(AuthInformation authInformation,
                                 String token,
@@ -40,7 +42,8 @@ public final class RequestAuthorization implements Authorization {
                                 String secretKey,
                                 UpgradeType upgradeType,
                                 ApplicationContext applicationContext,
-                                LoginCheck loginCheck) {
+                                LoginCheck loginCheck,
+                                String refreshToken) {
         this.authInformation = authInformation;
         this.token = token;
         this.cookies = cookies;
@@ -49,6 +52,7 @@ public final class RequestAuthorization implements Authorization {
         this.upgradeType = upgradeType;
         this.applicationContext = applicationContext;
         this.loginCheck = loginCheck;
+        this.refreshToken = refreshToken;
     }
 
     @Override
@@ -72,7 +76,7 @@ public final class RequestAuthorization implements Authorization {
     }
 
     @Override
-    public ReturnResult<String> authentication() {
+    public ReturnResult<String> authentication(boolean encipher) {
         String tokenManagement = authInformation.getAuthServerProperties().getTokenManagement();
         TokenResolver tokenResolver = ServiceProvider.of(TokenResolver.class).getExtension(tokenManagement);
         if (null == tokenResolver) {
@@ -81,7 +85,8 @@ public final class RequestAuthorization implements Authorization {
         ReturnResult<UserResult> resolve = tokenResolver.resolve(cookies, token);
         ReturnResultBuilder<String> result = ReturnResult.<String>newBuilder().code(resolve.getCode()).msg(resolve.getMsg());
         if (OK.getCode().equals(resolve.getCode())) {
-            result.setData(authInformation.getCodec().encodeHex(Json.toJson(resolve.getData())));
+            String body = Json.toJson(resolve.getData());
+            result.setData(encipher ? authInformation.getCodec().encodeHex(body) : body);
         }
         return result.build();
     }
@@ -97,24 +102,26 @@ public final class RequestAuthorization implements Authorization {
         LoginResult loginResult = new LoginResult();
         ReturnResult<UserResult> resolve = null;
         if(upgradeType == UpgradeType.TIMESTAMP) {
-            resolve = tokenResolver.upgradeForTimestamp(cookies, token);
+            resolve = tokenResolver.upgradeForTimestamp(getToken(cookieName), refreshToken);
             loginResult.setToken(getValidToken(cookieName));
+            loginResult.setRefreshToken(refreshToken);
             loginResult.setUserResult(resolve.getData());
         }
 
          else if(upgradeType == UpgradeType.VERSION) {
-            resolve = tokenResolver.upgradeForVersion(cookies, token);
+            resolve = tokenResolver.upgradeForVersion(getToken(cookieName), refreshToken);
             loginResult.setToken(getValidToken(cookieName));
+            loginResult.setRefreshToken(refreshToken);
             loginResult.setUserResult(resolve.getData());
         }
 
          else if(upgradeType == UpgradeType.REFRESH) {
-            resolve = tokenResolver.upgradeForVersion(cookies, token);
+            resolve = tokenResolver.upgradeForRefresh(getToken(cookieName), refreshToken);
             if(resolve.isOk()) {
-                ReturnResult<LoginResult> token = tokenResolver.createToken(address, resolve.getData(), null);
+                ReturnResult<LoginResult> token = tokenResolver.createToken(address, resolve.getData(), resolve.getMsg());
                 String code = token.getCode();
                 if (OK.getCode().equals(code)) {
-                    tokenResolver.logout(cookies, this.token, cookieName);
+                    tokenResolver.logout(cookies, this.token, refreshToken, cookieName);
                     loginResult = token.getData();
                     loginResult.setUserResult(resolve.getData());
                 }
@@ -127,6 +134,25 @@ public final class RequestAuthorization implements Authorization {
             result.setData(authInformation.getCodec().encodeHex(Json.toJson(loginResult)));
         }
         return result.build();
+    }
+
+    /**
+     * 获取token
+     *
+     * @param cookieName cookieName
+     * @return token
+     */
+    private String getToken(String cookieName) {
+        if (StringUtils.isNotBlank(token)) {
+            return token;
+        }
+
+        return getValidToken(cookieName);
+    }
+
+    @Override
+    public boolean hasRefreshToken() {
+        return StringUtils.isNotBlank(refreshToken);
     }
 
     /**

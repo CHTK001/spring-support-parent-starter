@@ -219,7 +219,7 @@ public class AuthClientExecute {
     /**
      * 刷新token
      */
-    public LoginResult upgrade(UpgradeType upgradeType) {
+    public LoginResult upgrade(String refreshToken, UpgradeType upgradeType) {
         RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
         if (requestAttributes == null) {
             return new LoginAuthResult(-1, ReturnCode.CLIENT_OTHER_ERROR.getMsg());
@@ -231,7 +231,7 @@ public class AuthClientExecute {
                 authClientProperties,
                 request, null);
 
-        return webRequest1.upgrade(upgradeType);
+        return webRequest1.upgrade(upgradeType, refreshToken);
     }
 
     /**

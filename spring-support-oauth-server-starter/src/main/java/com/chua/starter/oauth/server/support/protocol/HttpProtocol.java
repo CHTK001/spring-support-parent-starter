@@ -61,7 +61,7 @@ public class HttpProtocol implements Protocol, InitializingBean {
     @ResponseBody
     public ReturnResult<String> oauth(@RequestBody AuthRequest request1, HttpServletRequest request, HttpServletResponse response) {
         String data = request1.getData();
-        AuthInformation authInformation = new AuthInformation(data, request, authServerProperties, applicationContext, loginCheck);
+        AuthInformation authInformation = new AuthInformation(request1.isEncipher(), data, request, authServerProperties, applicationContext, loginCheck);
         Authorization authorization = authInformation.resolve();
         String address = RequestUtils.getIpAddress(request);
 
@@ -77,7 +77,7 @@ public class HttpProtocol implements Protocol, InitializingBean {
             return ReturnResult.noAuth();
         }
 
-        ReturnResult<String> authentication = authorization.authentication();
+        ReturnResult<String> authentication = authorization.authentication(request1.isEncipher());
         if (!OK.getCode().equals(authentication.getCode())) {
             loginProvider.logout(request, response);
             loggerResolver.register(AuthConstant.OAUTH, RESOURCE_OAUTH_ERROR.getCode(), "ak,sk限制登录", address);
@@ -97,9 +97,15 @@ public class HttpProtocol implements Protocol, InitializingBean {
     @PostMapping("/upgrade")
     @ResponseBody
     public ReturnResult<String> upgrade(@RequestParam("data") String data, HttpServletRequest request, HttpServletResponse response) {
-        AuthInformation authInformation = new AuthInformation(data, request, authServerProperties, applicationContext, loginCheck);
+        AuthInformation authInformation = new AuthInformation(true, data, request, authServerProperties, applicationContext, loginCheck);
         Authorization authorization = authInformation.resolve();
         String address = RequestUtils.getIpAddress(request);
+
+        if (!authorization.hasRefreshToken()) {
+            loginProvider.logout(request, response);
+            loggerResolver.register(AuthConstant.OAUTH, RESOURCE_OAUTH_ERROR.getCode(), "无权限", address);
+            return ReturnResult.noAuth();
+        }
 
         if (!authorization.hasKey()) {
             loginProvider.logout(request, response);
