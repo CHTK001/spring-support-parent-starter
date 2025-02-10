@@ -18,5 +18,6 @@ public class AuthRequest {
     private String code;
     private String redirect_url;
     private String mode;
+    private boolean encipher = true;
     private String ifRemember;
 }

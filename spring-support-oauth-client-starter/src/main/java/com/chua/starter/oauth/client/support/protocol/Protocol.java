@@ -22,9 +22,10 @@ public interface Protocol {
     /**
      * 升级操作，用于处理会话升级请求。
      *
-     * @param cookie      用于升级的Cookie数组。
-     * @param token       用于升级的令牌字符串。
-     * @param upgradeType 升级类型。
+     * @param cookie       用于升级的Cookie数组。
+     * @param token        用于升级的令牌字符串。
+     * @param upgradeType  升级类型。
+     * @param refreshToken
      */
-    LoginResult upgrade(Cookie[] cookie, String token, UpgradeType upgradeType);
+    LoginResult upgrade(Cookie[] cookie, String token, UpgradeType upgradeType, String refreshToken);
 }

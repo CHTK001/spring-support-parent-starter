@@ -27,6 +27,7 @@ import static com.chua.starter.oauth.client.support.contants.AuthConstant.*;
  * @author CH
  */
 public class AuthInformation {
+    private final boolean encipher;
     private final String data;
     private final HttpServletRequest request;
     @Getter
@@ -45,12 +46,15 @@ public class AuthInformation {
     private Cookie[] cookie;
     @Getter
     private UpgradeType upgradeType;
+    @Getter
+    private String refreshToken;
 
-    public AuthInformation(String data,
+    public AuthInformation(boolean encipher, String data,
                            HttpServletRequest request,
                            AuthServerProperties authServerProperties,
                            ApplicationContext applicationContext,
                            LoginCheck loginCheck) {
+        this.encipher = encipher;
         this.data = data;
         this.request = request;
         this.authServerProperties = authServerProperties;
@@ -75,19 +79,24 @@ public class AuthInformation {
      * 解析请求
      */
     private Authorization analysisRequest() {
-        String requestData = Codec.build(encryption, authServerProperties.getServiceKey()).decodeHex(data);
-        JsonObject jsonObject = Json.getJsonObject(requestData);
+        if (encipher) {
+            return analysisRequestEncipher();
+        }
+
+        return analysisRequestNotEncipher();
+    }
+
+    private Authorization analysisRequestNotEncipher() {
+        JsonObject jsonObject = Json.getJsonObject(data);
         String oauthValue = jsonObject.getString(OAUTH_VALUE);
         this.accessKey = jsonObject.getString(ACCESS_KEY);
         this.secretKey = jsonObject.getString(SECRET_KEY);
         this.oauthKey = jsonObject.getString(OAUTH_KEY);
 
-        String tokenCookie = Codec.build(encryption, Md5Utils.getInstance()
-                .getMd5String(accessKey + DigestUtils.md5Hex(secretKey + oauthKey))).decodeHex(oauthValue);
-
-        JsonObject parseObject = Json.getJsonObject(tokenCookie);
+        JsonObject parseObject = Json.getJsonObject(oauthValue);
         this.token = parseObject.getString(authServerProperties.getTokenName());
         this.upgradeType = UpgradeType.getUpgradeType(parseObject.getString(OAUTH_UPGRADE_KEY));
+        this.refreshToken = parseObject.getString(OAUTH_UPGRADE_KEY_TOKEN);
         JsonArray jsonArray = parseObject.getJsonArray(authServerProperties.getCookieName());
         int size = jsonArray.size();
         Cookie[] cookies = new Cookie[size];
@@ -104,8 +113,47 @@ public class AuthInformation {
                 secretKey,
                 upgradeType,
                 applicationContext,
-                loginCheck
-                );
+                loginCheck,
+                refreshToken
+        );
+        SpringBeanUtils.getApplicationContext().getAutowireCapableBeanFactory().autowireBean(authorization);
+        return authorization;
+    }
+
+    private Authorization analysisRequestEncipher() {
+        String requestData = Codec.build(encryption, authServerProperties.getServiceKey()).decodeHex(data);
+        JsonObject jsonObject = Json.getJsonObject(requestData);
+        String oauthValue = jsonObject.getString(OAUTH_VALUE);
+        this.accessKey = jsonObject.getString(ACCESS_KEY);
+        this.secretKey = jsonObject.getString(SECRET_KEY);
+        this.oauthKey = jsonObject.getString(OAUTH_KEY);
+
+        String tokenCookie = Codec.build(encryption, Md5Utils.getInstance()
+                .getMd5String(accessKey + DigestUtils.md5Hex(secretKey + oauthKey))).decodeHex(oauthValue);
+
+        JsonObject parseObject = Json.getJsonObject(tokenCookie);
+        this.token = parseObject.getString(authServerProperties.getTokenName());
+        this.upgradeType = UpgradeType.getUpgradeType(parseObject.getString(OAUTH_UPGRADE_KEY));
+        this.refreshToken = parseObject.getString(OAUTH_UPGRADE_KEY_TOKEN);
+        JsonArray jsonArray = parseObject.getJsonArray(authServerProperties.getCookieName());
+        int size = jsonArray.size();
+        Cookie[] cookies = new Cookie[size];
+        for (int i = 0; i < size; i++) {
+            JsonObject jsonObject1 = jsonArray.getJsonObject(i);
+            cookies[i] = new Cookie(jsonObject1.getString("name"), jsonObject1.getString("value"));
+        }
+        this.cookie = cookies;
+
+        RequestAuthorization authorization = new RequestAuthorization(this,
+                token,
+                cookie,
+                accessKey,
+                secretKey,
+                upgradeType,
+                applicationContext,
+                loginCheck,
+                refreshToken
+        );
         SpringBeanUtils.getApplicationContext().getAutowireCapableBeanFactory().autowireBean(authorization);
         return authorization;
     }

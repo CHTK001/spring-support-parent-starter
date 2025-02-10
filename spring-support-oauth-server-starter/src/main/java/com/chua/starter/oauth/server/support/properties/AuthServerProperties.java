@@ -37,6 +37,11 @@ public class AuthServerProperties {
      */
     private long expire = 86_400L * 3;
     /**
+     * 刷新令牌超时时间(<=0 永不超时)(单位: s)
+     */
+    private long refreshExpire = 86_400L * 4;
+
+    /**
      * token是否续费
      * <p>即每次认证超时时间重置</p>
      */

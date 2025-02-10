@@ -243,12 +243,14 @@ public class WebRequest {
 
     /**
      * 刷新token
-     * @param upgradeType 升级类型
+     *
+     * @param upgradeType  升级类型
+     * @param refreshToken
      */
-    public LoginResult upgrade(UpgradeType upgradeType) {
+    public LoginResult upgrade(UpgradeType upgradeType, String refreshToken) {
         Cookie[] cookie = getCookie();
         String token = getToken();
         Protocol protocol = ServiceProvider.of(Protocol.class).getExtension(authProperties.getProtocol());
-         return protocol.upgrade(cookie, token, upgradeType);
+        return protocol.upgrade(cookie, token, upgradeType, refreshToken);
     }
 }

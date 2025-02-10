@@ -47,10 +47,10 @@ public interface Authorization {
 
     /**
      * 认证
-     *
+     * @param encipher 是否加密
      * @return 结果
      */
-    ReturnResult<String> authentication();
+    ReturnResult<String> authentication(boolean encipher);
 
     /**
      * 刷新缓存
@@ -58,4 +58,11 @@ public interface Authorization {
      * @return 刷新缓存
      */
     ReturnResult<String> upgrade(String address, String cookieName);
+
+    /**
+     * 是否存在刷新token
+     *
+     * @return 是否存在刷新token
+     */
+    boolean hasRefreshToken();
 }

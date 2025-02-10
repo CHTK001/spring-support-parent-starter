@@ -32,12 +32,17 @@ public final class InvalidAuthorization implements Authorization {
     }
 
     @Override
-    public ReturnResult<String> authentication() {
+    public ReturnResult<String> authentication(boolean encipher) {
         return ReturnResult.noAuth();
     }
 
     @Override
     public ReturnResult<String> upgrade(String address, String cookieName) {
         return ReturnResult.noAuth();
+    }
+
+    @Override
+    public boolean hasRefreshToken() {
+        return false;
     }
 }

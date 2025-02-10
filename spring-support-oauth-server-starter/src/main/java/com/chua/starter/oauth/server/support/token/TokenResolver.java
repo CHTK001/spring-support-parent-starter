@@ -50,27 +50,37 @@ public interface TokenResolver {
     /**
      * 刷新token
      *
-     * @param cookies cookie
-     * @param token   token
+     * @param token        token
+     * @param refreshToken
      * @return 登录信息
      */
-    ReturnResult<UserResult> upgradeForTimestamp(Cookie[] cookies, String token);
+    ReturnResult<UserResult> upgradeForTimestamp(String token, String refreshToken);
 
     /**
      * 刷新token内容
      *
-     * @param cookie cookie
-     * @param token  token
+     * @param token        token
+     * @param refreshToken 刷新token
      * @return 登录信息
      */
-    ReturnResult<UserResult> upgradeForVersion(Cookie[] cookie, String token);
+    ReturnResult<UserResult> upgradeForVersion(String token, String refreshToken);
 
+    /**
+     * 刷新token
+     *
+     * @param token        token
+     * @param refreshToken 刷新token
+     * @return 登录信息
+     */
+    ReturnResult<UserResult> upgradeForRefresh(String token, String refreshToken);
     /**
      * 注销
      *
      * @param cookies    cookie
      * @param token      token
+     * @param refreshToken 刷新token
      * @param cookieName cookieName
      */
-    void logout(Cookie[] cookies, String token, String cookieName);
+    void logout(Cookie[] cookies, String token, String refreshToken, String cookieName);
+
 }
