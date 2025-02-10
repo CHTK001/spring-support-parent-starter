@@ -19,6 +19,11 @@ public class LoginResult {
      */
     @NonNull
     private String token;
+
+    /**
+     * 刷新token
+     */
+    private String refreshToken;
     /**
      * 用户信息
      */

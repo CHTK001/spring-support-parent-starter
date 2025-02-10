@@ -44,6 +44,7 @@ import static com.chua.common.support.http.HttpClientUtils.APPLICATION_JSON;
 import static com.chua.common.support.lang.code.ReturnCode.RESOURCE_OAUTH_ERROR;
 import static com.chua.common.support.lang.code.ReturnCode.RESULT_ACCESS_UNAUTHORIZED;
 import static com.chua.starter.oauth.client.support.contants.AuthConstant.OAUTH_UPGRADE_KEY;
+import static com.chua.starter.oauth.client.support.contants.AuthConstant.OAUTH_UPGRADE_KEY_TOKEN;
 import static com.chua.starter.oauth.client.support.infomation.Information.*;
 
 /**
@@ -58,7 +59,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
 
     @AutoInject
     private AuthClientProperties authClientProperties;
-    private static Cacheable CACHEABLE;
+    protected static Cacheable CACHEABLE;
     private String encryption;
 
     @Override
@@ -178,11 +179,11 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         return inCache(cacheKey, AuthenticationInformation.authServerNotFound());
     }
 
-    private void checkCache() {
+    void checkCache() {
         check();
     }
 
-    private void check() {
+    void check() {
         if (null != CACHEABLE) {
             return;
         }
@@ -193,7 +194,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
     }
 
     @Override
-    public LoginResult upgrade(Cookie[] cookie, String token, UpgradeType upgradeType) {
+    public LoginResult upgrade(Cookie[] cookie, String token, UpgradeType upgradeType, String refreshToken) {
         String key = DigestUtils.md5Hex(UUID.randomUUID().toString());
         Map<String, Object> jsonObject = new HashMap<>(2);
         Cookie[] cookies = Optional.ofNullable(cookie).orElse(new Cookie[0]);
@@ -201,6 +202,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         jsonObject.put("x-oauth-cookie", cookies);
         jsonObject.put("x-oauth-token", token);
         jsonObject.put(OAUTH_UPGRADE_KEY, upgradeType);
+        jsonObject.put(OAUTH_UPGRADE_KEY_TOKEN, refreshToken);
         String accessKey = authClientProperties.getAccessKey();
         String secretKey = authClientProperties.getSecretKey();
         String serviceKey = authClientProperties.getServiceKey();
@@ -291,7 +293,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
 
     }
 
-    private AuthenticationInformation inCache(String cacheKey, AuthenticationInformation authenticationInformation) {
+    AuthenticationInformation inCache(String cacheKey, AuthenticationInformation authenticationInformation) {
         if (null == cacheKey) {
             return authenticationInformation;
         }
@@ -306,7 +308,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         return CACHEABLE.put(cacheKey, authenticationInformation);
     }
 
-    private String getCacheKey(Cookie[] cookies, String token) {
+    String getCacheKey(Cookie[] cookies, String token) {
         if (StringUtils.isNotEmpty(StringUtils.ifValid(token, ""))) {
             return token;
         }

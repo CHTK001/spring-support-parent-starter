@@ -53,6 +53,11 @@ public class UserResult {
      * 索引唯一由系统生成
      */
     private String uid;
+
+    /**
+     * 刷新token
+     */
+    private String refreshToken;
     /**
      * 加密密码
      */
@@ -118,6 +123,11 @@ public class UserResult {
      * 登录超时时间
      */
     private Long expire;
+
+    /**
+     * 刷新token超时时间
+     */
+    private Long refreshExpire;
     /**
      * 错误信息
      */

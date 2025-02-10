@@ -85,7 +85,7 @@ public class StaticProtocol extends AbstractProtocol{
         return new AuthenticationInformation(Information.OK, userResume);
     }
     @Override
-    public LoginResult upgrade(Cookie[] cookie, String token, UpgradeType upgradeType) {
+    public LoginResult upgrade(Cookie[] cookie, String token, UpgradeType upgradeType, String refreshToken) {
         return new LoginAuthResult(0, null);
     }
 }

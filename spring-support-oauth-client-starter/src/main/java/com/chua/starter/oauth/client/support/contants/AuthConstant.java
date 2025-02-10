@@ -52,6 +52,11 @@ public interface AuthConstant {
      * "x-oauth-upgrade"
      */
     String OAUTH_UPGRADE_KEY =  "x-oauth-upgrade";
+
+    /**
+     * ov
+     */
+    String OAUTH_UPGRADE_KEY_TOKEN = "x-oauth-upgrade-token";
     /**
      * ov
      */
@@ -71,6 +76,10 @@ public interface AuthConstant {
      * 前缀
      */
     String TOKEN_PRE = "oauth:token:";
+    /**
+     * 刷新令牌前缀
+     */
+    String TOKEN_REFRESH_PRE = "oauth:token:refresh:";
     /**
      * 令牌前缀
      */
