@@ -1,5 +1,6 @@
 package com.chua.starter.oauth.server.support.advice;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.*;
 import lombok.experimental.Accessors;
@@ -24,5 +25,6 @@ public class AdviceView<T> {
     /**
      * 请求
      */
+    @JsonIgnore
     private volatile transient HttpServletRequest request;
 }
