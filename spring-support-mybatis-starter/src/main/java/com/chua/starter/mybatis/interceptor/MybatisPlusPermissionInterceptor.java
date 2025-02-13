@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.PluginUtils;
 import com.baomidou.mybatisplus.extension.parser.JsqlParserSupport;
 import com.baomidou.mybatisplus.extension.plugins.handler.DataPermissionHandler;
 import com.baomidou.mybatisplus.extension.plugins.inner.InnerInterceptor;
-import com.chua.starter.mybatis.EmptyDataPermissionHandler;
+import com.chua.starter.mybatis.properties.MybatisPlusDataScopeProperties;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -38,7 +38,7 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
 
     private DataPermissionHandler mybatisPlusPermissionHandler;
 
-    public MybatisPlusPermissionInterceptor(DataPermissionHandler mybatisPlusPermissionHandler) {
+    public MybatisPlusPermissionInterceptor(DataPermissionHandler mybatisPlusPermissionHandler, MybatisPlusDataScopeProperties methodSecurityInterceptor) {
         this.mybatisPlusPermissionHandler = mybatisPlusPermissionHandler;
     }
 
@@ -78,9 +78,8 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
             // 单个sql
             if (selectBody instanceof PlainSelect) {
                 this.setWhere((PlainSelect) selectBody, obj.toString());
-            } else if (selectBody instanceof SetOperationList) {
+            } else if (selectBody instanceof SetOperationList setOperationList) {
                 // 多个sql，用;号隔开，一般不会用到。例如：select * from user;select * from role;
-                SetOperationList setOperationList = (SetOperationList) selectBody;
                 List<SelectBody> selects = setOperationList.getSelects();
                 selects.forEach(s -> this.setWhere((PlainSelect) s, obj.toString()));
             }
@@ -90,9 +89,13 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
     }
 
     protected void setWhere(PlainSelect plainSelect, String mapperId) {
-        Expression sqlSegment = mybatisPlusPermissionHandler.getSqlSegment(plainSelect.getWhere(), mapperId);
-        if (null != sqlSegment) {
-            plainSelect.setWhere(sqlSegment);
+        if (mybatisPlusPermissionHandler instanceof SelectDataPermissionHandler selectDataPermissionHandler) {
+            selectDataPermissionHandler.processSelect(plainSelect, plainSelect.getWhere(), mapperId);
+        } else {
+            Expression sqlSegment = mybatisPlusPermissionHandler.getSqlSegment(plainSelect.getWhere(), mapperId);
+            if (null != sqlSegment) {
+                plainSelect.setWhere(sqlSegment);
+            }
         }
     }
 }
