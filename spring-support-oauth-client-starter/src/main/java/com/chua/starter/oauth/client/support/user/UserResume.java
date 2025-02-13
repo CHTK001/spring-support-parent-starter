@@ -1,5 +1,6 @@
 package com.chua.starter.oauth.client.support.user;
 
+import com.chua.starter.common.support.constant.DataFilterTypeEnum;
 import com.google.common.base.Strings;
 import lombok.Data;
 import org.springframework.util.AntPathMatcher;
@@ -65,6 +66,19 @@ public class UserResume  {
      * 权限
      */
     private Set<String> permission;
+    /**
+     * 角色
+     */
+    private Set<UserResult.RoleInfo> rolesByRole;
+
+    /**
+     * 数据权限(部门)
+     */
+    private DataFilterTypeEnum dataPermission;
+    /**
+     * 数据权限规则
+     */
+    private String dataPermissionRule;
     /**
      * 最后一次登录地址
      */
