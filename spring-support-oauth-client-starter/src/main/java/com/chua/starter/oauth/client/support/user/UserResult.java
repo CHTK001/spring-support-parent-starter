@@ -76,6 +76,7 @@ public class UserResult {
      */
     private Set<String> roles;
 
+
     /**
      * 部门id
      */
@@ -84,6 +85,10 @@ public class UserResult {
      * 权限(按钮)
      */
     private Set<String> permission;
+    /**
+     * 角色
+     */
+    private Set<RoleInfo> rolesByRole;
 
     /**
      * 数据权限(部门)
@@ -200,6 +205,36 @@ public class UserResult {
 
     public String getExtValue(String key) {
         return MapUtils.getString(ext, key);
+    }
+
+
+    @Data
+    public static class RoleInfo {
+
+        /**
+         * 角色名称
+         */
+        private String roleName;
+
+        /**
+         * 角色编码
+         */
+        private String roleCode;
+
+        /**
+         * 是否可读
+         */
+        private boolean readable;
+
+        /**
+         * 是否可写
+         */
+        private boolean writeable;
+
+        /**
+         * 是否可执行
+         */
+        private boolean executable;
     }
 
 }

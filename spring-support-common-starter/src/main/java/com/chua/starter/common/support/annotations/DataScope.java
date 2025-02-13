@@ -3,7 +3,7 @@ package com.chua.starter.common.support.annotations;
 import java.lang.annotation.*;
 
 /**
- * 权限
+ * 权限(只支持注入 xxxMapper)
  *
  * @author CH
  * @since 2022/7/29 8:23
@@ -12,11 +12,5 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface DataScope {
-    /**
-     * 表别名
-     *
-     * @return 表别名
-     */
-    String value();
 
 }

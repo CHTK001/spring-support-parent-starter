@@ -18,10 +18,10 @@ public interface SelectDataPermissionHandler extends DataPermissionHandler {
      * @param mappedStatementId 片段ID
      * @return 表达式
      */
-    Expression getSqlSegment(PlainSelect plainSelect, Expression where, String mappedStatementId);
+    Expression processSelect(PlainSelect plainSelect, Expression where, String mappedStatementId);
 
     @Override
     default Expression getSqlSegment(Expression where, String mappedStatementId) {
-        return getSqlSegment(null, where, mappedStatementId);
+        return processSelect(null, where, mappedStatementId);
     }
 }

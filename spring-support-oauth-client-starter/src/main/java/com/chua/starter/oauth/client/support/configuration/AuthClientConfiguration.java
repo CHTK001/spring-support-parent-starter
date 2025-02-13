@@ -1,8 +1,10 @@
 package com.chua.starter.oauth.client.support.configuration;
 
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.starter.common.support.oauth.AuthService;
 import com.chua.starter.oauth.client.support.filter.AuthFilter;
 import com.chua.starter.oauth.client.support.interceptor.PermissionPointcut;
+import com.chua.starter.oauth.client.support.oauth.OauthAuthService;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.provider.UserStatisticProvider;
 import com.chua.starter.oauth.client.support.web.WebRequest;
@@ -39,6 +41,16 @@ public class AuthClientConfiguration implements ApplicationContextAware, BeanDef
 
     private AuthClientProperties authProperties;
 
+
+    /**
+     * 鉴权服务
+     *
+     * @return 鉴权服务
+     */
+    @Bean
+    public AuthService authService() {
+        return new OauthAuthService();
+    }
 
     @Bean
     @ConditionalOnMissingBean

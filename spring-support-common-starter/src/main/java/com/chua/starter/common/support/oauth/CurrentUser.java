@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
+import javax.management.relation.RoleInfo;
 import java.util.Map;
 import java.util.Set;
 
@@ -42,14 +43,18 @@ public class CurrentUser {
      */
     private Set<String> permission;
     /**
-     * 数据权限
+     * 角色
+     */
+    private Set<RoleInfo> rolesByRole;
+
+    /**
+     * 数据权限(部门)
      */
     private DataFilterTypeEnum dataPermission;
     /**
      * 数据权限规则
-     * {@link  DataFilterTypeEnum#DEPT_SETS}
      */
-    private String deptIds;
+    private String dataPermissionRule;
 
     /**
      * 额外信息

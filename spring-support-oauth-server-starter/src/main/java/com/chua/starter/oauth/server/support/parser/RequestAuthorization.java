@@ -152,7 +152,7 @@ public final class RequestAuthorization implements Authorization {
 
     @Override
     public boolean hasRefreshToken() {
-        return StringUtils.isNotBlank(refreshToken);
+        return upgradeType != UpgradeType.REFRESH || StringUtils.isNotBlank(refreshToken);
     }
 
     /**

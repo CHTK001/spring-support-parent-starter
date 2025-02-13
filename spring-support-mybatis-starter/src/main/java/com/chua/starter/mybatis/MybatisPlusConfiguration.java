@@ -10,6 +10,7 @@ import com.chua.starter.mybatis.endpoint.MybatisEndpoint;
 import com.chua.starter.mybatis.interceptor.MybatisPlusPermissionHandler;
 import com.chua.starter.mybatis.interceptor.MybatisPlusPermissionInterceptor;
 import com.chua.starter.mybatis.method.SupportInjector;
+import com.chua.starter.mybatis.properties.MybatisPlusDataScopeProperties;
 import com.chua.starter.mybatis.properties.MybatisPlusProperties;
 import com.chua.starter.mybatis.reloader.MapperReload;
 import com.chua.starter.mybatis.reloader.Reload;
@@ -35,13 +36,12 @@ import java.util.List;
  */
 @Slf4j
 @AutoConfigureAfter(SqlSessionFactory.class)
-@EnableConfigurationProperties(MybatisPlusProperties.class)
+@EnableConfigurationProperties({MybatisPlusProperties.class, MybatisPlusDataScopeProperties.class})
 //@AutoConfigureOrder(Ordered.LOWEST_PRECEDENCE + 10)
 @RequiredArgsConstructor
 public class MybatisPlusConfiguration {
 
     final  MybatisPlusProperties mybatisProperties;
-
 
     /**
      * 分页
@@ -65,12 +65,13 @@ public class MybatisPlusConfiguration {
     @ConditionalOnMissingBean
     public MybatisPlusPermissionInterceptor dataPermissionInterceptor(
             @Autowired(required = false) DataPermissionHandler dataPermissionHandler,
-            @Autowired(required = false) AuthService authService
+            @Autowired(required = false) AuthService authService,
+            MybatisPlusDataScopeProperties methodSecurityInterceptor
             ) {
         if(null == dataPermissionHandler) {
-            dataPermissionHandler = new MybatisPlusPermissionHandler(authService);
+            dataPermissionHandler = new MybatisPlusPermissionHandler(authService, methodSecurityInterceptor);
         }
-        return new MybatisPlusPermissionInterceptor(dataPermissionHandler);
+        return new MybatisPlusPermissionInterceptor(dataPermissionHandler, methodSecurityInterceptor);
     }
 
 

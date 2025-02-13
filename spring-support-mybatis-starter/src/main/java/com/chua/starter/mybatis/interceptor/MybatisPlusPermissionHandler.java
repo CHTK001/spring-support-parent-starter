@@ -1,35 +1,30 @@
 package com.chua.starter.mybatis.interceptor;
 
-import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.chua.common.support.utils.ObjectUtils;
 import com.chua.starter.common.support.annotations.DataScope;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.constant.DataFilterTypeEnum;
 import com.chua.starter.common.support.oauth.AuthService;
 import com.chua.starter.common.support.oauth.CurrentUser;
+import com.chua.starter.mybatis.permission.DeptRegister;
+import com.chua.starter.mybatis.permission.SelectDeptRegister;
+import com.chua.starter.mybatis.permission.WhereDeptChecker;
+import com.chua.starter.mybatis.permission.WhereDeptRegister;
+import com.chua.starter.mybatis.properties.MybatisPlusDataScopeProperties;
 import lombok.RequiredArgsConstructor;
 import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.LongValue;
-import net.sf.jsqlparser.expression.StringValue;
-import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
-import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
-import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
-import net.sf.jsqlparser.expression.operators.relational.InExpression;
-import net.sf.jsqlparser.schema.Column;
-import net.sf.jsqlparser.schema.Table;
+import net.sf.jsqlparser.expression.operators.relational.NotEqualsTo;
 import net.sf.jsqlparser.statement.select.PlainSelect;
-import net.sf.jsqlparser.statement.select.SelectExpressionItem;
-import net.sf.jsqlparser.statement.select.SubSelect;
+import org.springframework.util.ConcurrentReferenceHashMap;
 
 import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * 数据处理器
+ *
  * @author CH
  */
 @RequiredArgsConstructor
@@ -37,10 +32,65 @@ public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler
 
     private static final String CREATE_BY = "rule_create_by";
     private static final String DEPT_ID = "rule_dept_id";
-    final  AuthService authService;
+    public static final NotEqualsTo NO_DATA = new NotEqualsTo();
+    static final Map<String, Expression> MAPPED_STATEMENT_ID = new ConcurrentReferenceHashMap<>(4096);
+
+    static {
+        NO_DATA.setLeftExpression(new LongValue(1));
+        NO_DATA.setRightExpression(new LongValue(1));
+    }
+
+    final AuthService authService;
+    final MybatisPlusDataScopeProperties metaDataScopeProperties;
+
+    /**
+     * 构建过滤条件
+     *
+     * @param plainSelect
+     * @param user              当前登录用户
+     * @param where             当前查询条件
+     * @param mappedStatementId
+     * @return 构建后查询条件
+     */
+    public static Expression dataScopeFilter(PlainSelect plainSelect, CurrentUser user, MybatisPlusDataScopeProperties dataScopeProperties, Expression where, String mappedStatementId) {
+        Set<String> roles = user.getRoles();
+
+        if (isSuperAdmin(user)) {
+            return where;
+        }
+
+        if (isAdmin(roles)) {
+            return where;
+        }
+
+        DataFilterTypeEnum dataPermission = user.getDataPermission();
+        if (null == dataPermission || dataPermission == DataFilterTypeEnum.ALL) {
+            return where;
+        }
+
+        //  return MAPPED_STATEMENT_ID.computeIfAbsent(mappedStatementId, k -> {
+        String tableAlias = dataScopeProperties.getTableName();
+        String columnName = dataScopeProperties.getDeptIdColumn();
+        WhereDeptChecker whereDeptChecker = new WhereDeptChecker(where, tableAlias, columnName);
+        boolean whereHasDeptId = whereDeptChecker.check();
+        DeptRegister register = whereHasDeptId ? new WhereDeptRegister(plainSelect, where, user, dataPermission, dataScopeProperties, whereDeptChecker.getCurrentTable())
+                : new SelectDeptRegister(plainSelect, where, user, dataPermission, dataScopeProperties);
+
+        return register.register();
+    }
+
+    /**
+     * 是否超级管理员
+     *
+     * @param user 用户信息
+     * @return boolean
+     */
+    private static boolean isSuperAdmin(CurrentUser user) {
+        return "sa".equals(user.getUsername());
+    }
 
     @Override
-    public Expression getSqlSegment(PlainSelect plainSelect, Expression where, String mappedStatementId) {
+    public Expression processSelect(PlainSelect plainSelect, Expression where, String mappedStatementId) {
         try {
             Class<?> clazz = Class.forName(mappedStatementId.substring(0, mappedStatementId.lastIndexOf(".")));
             String methodName = mappedStatementId.substring(mappedStatementId.lastIndexOf(".") + 1);
@@ -51,7 +101,7 @@ public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler
                     // 获取当前的用户
                     CurrentUser currentUser = SpringBeanUtils.getBean(AuthService.class).getCurrentUser();
                     if (ObjectUtils.isNotEmpty(currentUser) && ObjectUtils.isNotEmpty(currentUser) && !currentUser.isAdmin()) {
-                        return dataScopeFilter(currentUser, annotation.value(), where);
+                        return dataScopeFilter(plainSelect, currentUser, metaDataScopeProperties, where, mappedStatementId);
                     }
                 }
             }
@@ -60,81 +110,6 @@ public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler
         }
         return where;
 
-    }
-
-    /**
-     * 构建过滤条件
-     *
-     * @param user 当前登录用户
-     * @param where 当前查询条件
-     * @return 构建后查询条件
-     */
-    public static Expression dataScopeFilter(CurrentUser user, String tableAlias, Expression where) {
-        Set<String> roles = user.getRoles();
-        if(isAdmin(roles)) {
-            return where;
-        }
-        DataFilterTypeEnum dataPermission = user.getDataPermission();
-        if(null == dataPermission || dataPermission == DataFilterTypeEnum.ALL) {
-            return where;
-        }
-
-        if (DataFilterTypeEnum.DEPT_SETS == dataPermission) {
-            InExpression inExpression = new InExpression();
-            inExpression.setLeftExpression(buildColumn(tableAlias, "dept_id"));
-            SubSelect subSelect = new SubSelect();
-            PlainSelect select = new PlainSelect();
-            select.setSelectItems(Collections.singletonList(new SelectExpressionItem(new Column("dept_id"))));
-            select.setFromItem(new Table("sys_dept"));
-            EqualsTo equalsTo = new EqualsTo();
-            equalsTo.setLeftExpression(new Column("dept_id"));
-            Function function = new Function();
-            function.setName("IN");
-            function.setParameters(new ExpressionList(Arrays.stream(user.getDeptIds().split(","))
-                    .map(LongValue::new).collect(Collectors.toList())));
-            equalsTo.setRightExpression(function);
-            select.setWhere(equalsTo);
-            subSelect.setSelectBody(select);
-            inExpression.setRightExpression(subSelect);
-            return inExpression;
-        }
-        if (DataFilterTypeEnum.DEPT == dataPermission) {
-            EqualsTo equalsTo = new EqualsTo();
-            equalsTo.setLeftExpression(buildColumn(tableAlias, "dept_id"));
-            equalsTo.setRightExpression(new LongValue(user.getDeptId()));
-            return equalsTo;
-        }
-
-        if (DataFilterTypeEnum.DEPT_AND_SUB == dataPermission) {
-            InExpression inExpression = new InExpression();
-            inExpression.setLeftExpression(buildColumn(tableAlias, "dept_id"));
-            SubSelect subSelect = new SubSelect();
-            PlainSelect select = new PlainSelect();
-            select.setSelectItems(Collections.singletonList(new SelectExpressionItem(new Column("dept_id"))));
-            select.setFromItem(new Table("sys_dept"));
-            EqualsTo equalsTo = new EqualsTo();
-            equalsTo.setLeftExpression(new Column("dept_id"));
-            equalsTo.setRightExpression(new LongValue(user.getDeptId()));
-            Function function = new Function();
-            function.setName("find_in_set");
-            function.setParameters(new ExpressionList(new LongValue(user.getDeptId()) , new Column("dept_id")));
-            select.setWhere(new OrExpression(equalsTo, function));
-            subSelect.setSelectBody(select);
-            inExpression.setRightExpression(subSelect);
-            return inExpression;
-        }
-        
-        if (DataFilterTypeEnum.SELF == dataPermission) {
-            EqualsTo equalsTo = new EqualsTo();
-            equalsTo.setLeftExpression(buildColumn(tableAlias, "create_by"));
-            equalsTo.setRightExpression(new StringValue(user.getId()));
-            return equalsTo;
-        }
-
-        EqualsTo equalsTo = new EqualsTo();
-        equalsTo.setLeftExpression(new StringValue("1"));
-        equalsTo.setRightExpression(new LongValue("2"));
-        return equalsTo;
     }
 
     /**
@@ -147,19 +122,6 @@ public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler
         return roles.contains("ADMIN");
     }
 
-    /**
-     * 构建Column
-     *
-     * @param tableAlias 表别名
-     * @param columnName 字段名称
-     * @return 带表别名字段
-     */
-    public static Column buildColumn(String tableAlias, String columnName) {
-        if (StringUtils.isNotEmpty(tableAlias)) {
-            columnName = tableAlias + "." + columnName;
-        }
-        return new Column(columnName);
-    }
 
 
 }
