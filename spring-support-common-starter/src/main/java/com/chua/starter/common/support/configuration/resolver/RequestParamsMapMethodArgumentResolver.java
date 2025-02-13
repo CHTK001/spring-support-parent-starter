@@ -89,24 +89,29 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
         return instance;
     }
 
+    @SuppressWarnings("ALL")
     private void doRegister(Object instance, Field field, Object argument) {
-        BeanMap beanMap = null;
-        if (argument instanceof Map<?, ?> map) {
-            beanMap = BeanMap.of(Collections.emptyMap());
-            beanMap.putAll((Map<? extends String, ?>) map);
+        String name = field.getName();
+        Object value = null;
+        Map<String, Object> beanMap = Collections.emptyMap();
+        if (argument instanceof Map map) {
+            beanMap = (Map<String, Object>) map;
         } else {
             beanMap = BeanMap.of(argument, false);
+        }
+        value = beanMap.get(name);
+        if (null == value) {
+            return;
         }
         if (field.isAnnotationPresent(RequestParamMapping.class)) {
             doRequestParamMappingRegister(instance, field, AnnotationUtils.getAnnotation(field, RequestParamMapping.class), beanMap);
             return;
         }
 
-        String name = field.getName();
-        set(instance, field, beanMap.get(name));
+        set(instance, field, value);
     }
 
-    private void doRequestParamMappingRegister(Object instance, Field field, RequestParamMapping requestParamMapping, BeanMap beanMap) {
+    private void doRequestParamMappingRegister(Object instance, Field field, RequestParamMapping requestParamMapping, Map<String, Object> beanMap) {
         Map<String, Object> annotationAttributes = AnnotationUtils.getAnnotationAttributes(requestParamMapping);
         String defaultValue = requestParamMapping.defaultValue();
         String[] name = (String[]) annotationAttributes.getOrDefault("name", new String[0]);
