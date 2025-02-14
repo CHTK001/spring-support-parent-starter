@@ -1,5 +1,7 @@
 package com.chua.starter.common.support.annotations;
 
+import com.chua.starter.common.support.constant.DataFilterTypeEnum;
+
 import java.lang.annotation.*;
 
 /**
@@ -13,4 +15,10 @@ import java.lang.annotation.*;
 @Documented
 public @interface DataScope {
 
+    /**
+     * 数据权限类型
+     *
+     * @return 数据权限类型
+     */
+    DataFilterTypeEnum value() default DataFilterTypeEnum.ALL;
 }

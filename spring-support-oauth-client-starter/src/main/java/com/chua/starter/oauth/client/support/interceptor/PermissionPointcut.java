@@ -11,7 +11,9 @@ import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.aop.support.StaticMethodMatcherPointcutAdvisor;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.core.Ordered;
 import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.core.annotation.Order;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -24,7 +26,8 @@ import java.util.Set;
  * @version 1.0.0
  * @since 2024/01/18
  */
-public class PermissionPointcut extends StaticMethodMatcherPointcutAdvisor implements InitializingBean {
+@Order(1)
+public class PermissionPointcut extends StaticMethodMatcherPointcutAdvisor implements InitializingBean, Ordered {
     @Override
     public boolean matches(Method method, Class<?> targetClass) {
         if (Proxy.isProxyClass(targetClass)) {
@@ -125,5 +128,10 @@ public class PermissionPointcut extends StaticMethodMatcherPointcutAdvisor imple
             return permission;
         }
         return method.getDeclaringClass().getDeclaredAnnotation(Permission.class);
+    }
+
+    @Override
+    public int getOrder() {
+        return Ordered.HIGHEST_PRECEDENCE;
     }
 }

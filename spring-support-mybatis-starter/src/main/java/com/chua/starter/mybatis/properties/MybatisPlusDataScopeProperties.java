@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import static com.chua.starter.mybatis.properties.MybatisPlusDataScopeProperties.PRE;
 
 /**
- * 数据权限
+ * 数据权限(机构帐号)
  *
  * @author CH
  */
