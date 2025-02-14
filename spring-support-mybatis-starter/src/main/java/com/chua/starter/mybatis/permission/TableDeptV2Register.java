@@ -10,7 +10,6 @@ import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.expression.StringValue;
-import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
 import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.expression.operators.relational.InExpression;
@@ -85,17 +84,14 @@ public class TableDeptV2Register implements DeptRegister {
     private Expression createDeptWhere() {
         if (DataFilterTypeEnum.DEPT_SETS == dataPermission) {
             if (StringUtils.isEmpty(currentUser.getDataPermissionRule())) {
-                return null == where ? NO_DATA : new AndExpression(where, NO_DATA);
+                return NO_DATA;
             }
 
             Expression inExpression = createInExpression();
             if (null == where) {
-                return inExpression;
+                return NO_DATA;
             }
-            AndExpression expression = new AndExpression();
-            expression.setLeftExpression(where);
-            expression.setRightExpression(inExpression);
-            return expression;
+            return inExpression;
         }
 
         if (DataFilterTypeEnum.DEPT == dataPermission) {
@@ -103,12 +99,9 @@ public class TableDeptV2Register implements DeptRegister {
             equalsTo.setLeftExpression(new Column(table, deptIdColumn));
             equalsTo.setRightExpression(new LongValue(currentUser.getDeptId()));
             if (null == where) {
-                return equalsTo;
+                return NO_DATA;
             }
-            AndExpression expression = new AndExpression();
-            expression.setRightExpression(equalsTo);
-            expression.setLeftExpression(where);
-            return expression;
+            return equalsTo;
         }
 
         if (DataFilterTypeEnum.DEPT_AND_SUB == dataPermission) {
@@ -125,12 +118,9 @@ public class TableDeptV2Register implements DeptRegister {
             subSelect.setSelectBody(select);
             inExpression.setRightExpression(subSelect);
             if (null == where) {
-                return inExpression;
+                return NO_DATA;
             }
-            AndExpression expression = new AndExpression();
-            expression.setLeftExpression(where);
-            expression.setRightExpression(inExpression);
-            return expression;
+            return inExpression;
         }
 
         if (DataFilterTypeEnum.SELF == dataPermission) {
@@ -138,15 +128,12 @@ public class TableDeptV2Register implements DeptRegister {
             equalsTo.setLeftExpression(new Column(table, createByColumn));
             equalsTo.setRightExpression(new StringValue(currentUser.getId()));
             if (null == where) {
-                return equalsTo;
+                return NO_DATA;
             }
-            AndExpression expression = new AndExpression();
-            expression.setLeftExpression(where);
-            expression.setRightExpression(equalsTo);
-            return expression;
+            return equalsTo;
         }
 
-        return null == where ? NO_DATA : new AndExpression(where, NO_DATA);
+        return NO_DATA;
     }
 
     /**
