@@ -122,6 +122,6 @@ public class CurrentUser {
      * @return boolean
      */
     public boolean isDept() {
-        return roles.contains("DEPT");
+        return deptId != null;
     }
 }
