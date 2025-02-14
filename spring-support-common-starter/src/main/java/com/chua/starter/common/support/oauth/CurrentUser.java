@@ -108,11 +108,20 @@ public class CurrentUser {
     }
 
     /**
-     * 是管理员
+     * 管理员
      *
      * @return boolean
      */
     public boolean isAdmin() {
         return roles.contains("ADMIN");
+    }
+
+    /**
+     * 部门账号
+     *
+     * @return boolean
+     */
+    public boolean isDept() {
+        return roles.contains("DEPT");
     }
 }
