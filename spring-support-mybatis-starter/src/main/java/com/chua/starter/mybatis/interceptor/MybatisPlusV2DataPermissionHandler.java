@@ -46,7 +46,7 @@ public class MybatisPlusV2DataPermissionHandler implements MultiDataPermissionHa
                                        Expression where,
                                        DataFilterTypeEnum dataPermission) {
         if (null == dataPermission || dataPermission == DataFilterTypeEnum.ALL) {
-            return where;
+            return null;
         }
 
         return new TableDeptV2Register(table, where, currentUser, dataPermission, dataScopeProperties).register();
