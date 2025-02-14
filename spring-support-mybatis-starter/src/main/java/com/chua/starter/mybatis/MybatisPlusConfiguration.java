@@ -1,14 +1,13 @@
 package com.chua.starter.mybatis;
 
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
-import com.baomidou.mybatisplus.extension.plugins.handler.DataPermissionHandler;
+import com.baomidou.mybatisplus.extension.plugins.inner.DataPermissionInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
-import com.chua.starter.common.support.oauth.AuthService;
 import com.chua.starter.mybatis.endpoint.MybatisEndpoint;
-import com.chua.starter.mybatis.interceptor.MybatisPlusPermissionHandler;
-import com.chua.starter.mybatis.interceptor.MybatisPlusPermissionInterceptor;
+import com.chua.starter.mybatis.interceptor.MybatisPlusV2DataPermissionHandler;
+import com.chua.starter.mybatis.interceptor.MybatisPlusV2DataPermissionInterceptor;
 import com.chua.starter.mybatis.method.SupportInjector;
 import com.chua.starter.mybatis.properties.MybatisPlusDataScopeProperties;
 import com.chua.starter.mybatis.properties.MybatisPlusProperties;
@@ -63,16 +62,31 @@ public class MybatisPlusConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    public MybatisPlusPermissionInterceptor dataPermissionInterceptor(
-            @Autowired(required = false) DataPermissionHandler dataPermissionHandler,
-            @Autowired(required = false) AuthService authService,
+    public DataPermissionInterceptor dataPermissionInterceptor(
+            @Autowired(required = false) MybatisPlusV2DataPermissionHandler dataPermissionHandler,
             MybatisPlusDataScopeProperties methodSecurityInterceptor
             ) {
         if(null == dataPermissionHandler) {
-            dataPermissionHandler = new MybatisPlusPermissionHandler(authService, methodSecurityInterceptor);
+            dataPermissionHandler = new MybatisPlusV2DataPermissionHandler(methodSecurityInterceptor);
         }
-        return new MybatisPlusPermissionInterceptor(dataPermissionHandler, methodSecurityInterceptor);
+        return new MybatisPlusV2DataPermissionInterceptor(dataPermissionHandler);
     }
+//    /**
+//     * 数据权限
+//     *
+//     * @return OptimisticLockerInnerInterceptor
+//     */
+//    @Bean
+//    @ConditionalOnMissingBean
+//    public MybatisPlusPermissionInterceptor dataPermissionInterceptor(
+//            @Autowired(required = false) DataPermissionHandler dataPermissionHandler,
+//            MybatisPlusDataScopeProperties methodSecurityInterceptor
+//            ) {
+//        if(null == dataPermissionHandler) {
+//            dataPermissionHandler = new MybatisPlusPermissionHandler(methodSecurityInterceptor);
+//        }
+//        return new MybatisPlusPermissionInterceptor(dataPermissionHandler, methodSecurityInterceptor);
+//    }
 
 
     /**
@@ -95,13 +109,13 @@ public class MybatisPlusConfiguration {
     public MybatisPlusInterceptor mybatisPlusInterceptor(
             @Autowired(required = false) TenantLineInnerInterceptor tenantLineInnerInterceptor,
             OptimisticLockerInnerInterceptor optimisticLockerInnerInterceptor,
-            PaginationInnerInterceptor paginationInnerInterceptor,
-            MybatisPlusPermissionInterceptor dataPermissionInterceptor
+            DataPermissionInterceptor dataPermissionInterceptor,
+            PaginationInnerInterceptor paginationInnerInterceptor
             ) {
         MybatisPlusInterceptor mybatisPlusInterceptor = new MybatisPlusInterceptor();
         mybatisPlusInterceptor.addInnerInterceptor(optimisticLockerInnerInterceptor);
-        mybatisPlusInterceptor.addInnerInterceptor(paginationInnerInterceptor);
         mybatisPlusInterceptor.addInnerInterceptor(dataPermissionInterceptor);
+        mybatisPlusInterceptor.addInnerInterceptor(paginationInnerInterceptor);
         if(null != tenantLineInnerInterceptor) {
             mybatisPlusInterceptor.addInnerInterceptor(tenantLineInnerInterceptor);
         }

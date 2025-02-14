@@ -2,23 +2,24 @@ package com.chua.starter.mybatis.permission;
 
 import com.baomidou.mybatisplus.core.metadata.TableFieldInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
-import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+import com.chua.common.support.utils.ObjectUtils;
 import com.chua.starter.common.support.constant.DataFilterTypeEnum;
 import com.chua.starter.common.support.oauth.CurrentUser;
 import com.chua.starter.mybatis.properties.MybatisPlusDataScopeProperties;
-import net.sf.jsqlparser.expression.*;
+import net.sf.jsqlparser.expression.Alias;
+import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
 import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
-import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
-import net.sf.jsqlparser.expression.operators.relational.InExpression;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
-import net.sf.jsqlparser.statement.select.*;
+import net.sf.jsqlparser.statement.select.FromItem;
+import net.sf.jsqlparser.statement.select.Join;
+import net.sf.jsqlparser.statement.select.PlainSelect;
 
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.stream.Collectors;
+import java.util.List;
 
+import static com.chua.common.support.constant.CommonConstant.EMPTY;
 import static com.chua.starter.mybatis.interceptor.MybatisPlusPermissionHandler.NO_DATA;
 
 /**
@@ -26,39 +27,24 @@ import static com.chua.starter.mybatis.interceptor.MybatisPlusPermissionHandler.
  *
  * @author CH
  */
-public class SelectDeptRegister implements DeptRegister {
+public class SelectDeptRegister extends AbstractDeptRegister {
 
-    private final PlainSelect plainSelect;
-    private final Expression where;
-    private final CurrentUser user;
-    private final DataFilterTypeEnum dataPermission;
-    private final String tableName;
-    private final String deptIdColumn;
-    private final String deptTreeIdColumn;
-    private final String createByColumn;
-    private String hasDeptIdTableAlias;
-    private Table hasDeptIdTableTable;
-    private Table deptTable;
-
-    public SelectDeptRegister(PlainSelect plainSelect,
-                              Expression where,
-                              CurrentUser user,
-                              DataFilterTypeEnum dataPermission,
-                              MybatisPlusDataScopeProperties scopeProperties) {
-        this.plainSelect = plainSelect;
-        this.where = where;
-        this.user = user;
-        this.dataPermission = dataPermission;
-        this.tableName = scopeProperties.getTableName();
-        this.deptIdColumn = scopeProperties.getDeptIdColumn();
-        this.deptTreeIdColumn = scopeProperties.getDeptTreeIdColumn();
-        this.createByColumn = scopeProperties.getCurrentUserIdColumn();
+    public SelectDeptRegister(PlainSelect plainSelect, Expression where, CurrentUser user, DataFilterTypeEnum dataPermission, MybatisPlusDataScopeProperties scopeProperties) {
+        super(plainSelect, where, user, dataPermission, scopeProperties);
     }
 
     @Override
     public Expression register() {
         findTableHasDeptId();
         if (null == hasDeptIdTableAlias) {
+            if (where == null) {
+                plainSelect.setWhere(NO_DATA);
+                return NO_DATA;
+            }
+            AndExpression andExpression = new AndExpression();
+            andExpression.setLeftExpression(where);
+            andExpression.setRightExpression(NO_DATA);
+            plainSelect.setWhere(andExpression);
             return NO_DATA;
         }
         registerPlainSelect(findDeptTable());
@@ -100,89 +86,24 @@ public class SelectDeptRegister implements DeptRegister {
      */
     private void registerPlainSelect(boolean hasDeptTable) {
         if (!hasDeptTable) {
-            Join join = new Join();
-            join.setInner(true);
-            Table table = new Table(tableName);
-            table.setAlias(new Alias(tableName, false));
-            join.setRightItem(table);
-            join.setOnExpressions(Collections.singletonList(
-                    new EqualsTo(new Column(table, deptIdColumn), new Column(hasDeptIdTableTable, deptIdColumn))));
-            plainSelect.getJoins().add(join);
-            deptTable = table;
+            if (null != hasDeptIdTableTable) {
+                deptTable = hasDeptIdTableTable;
+            } else {
+                Join join = new Join();
+                join.setInner(true);
+                Table table = new Table(tableName);
+                table.setAlias(new Alias(tableAlias, false));
+                join.setRightItem(table);
+                join.setOnExpressions(Collections.singletonList(
+                        new EqualsTo(new Column(table, deptIdColumn), new Column(hasDeptIdTableTable, deptIdColumn))));
+                plainSelect.getJoins().add(join);
+                deptTable = table;
+            }
         }
         registerDataScope();
     }
 
-    private void registerDataScope() {
-        if (DataFilterTypeEnum.DEPT_SETS == dataPermission) {
-            if (StringUtils.isEmpty(user.getDataPermissionRule())) {
-                plainSelect.setWhere(NO_DATA);
-                return;
-            }
-            AndExpression expression = new AndExpression();
-            expression.setLeftExpression(where);
-            expression.setRightExpression(createInExpression());
-            plainSelect.setWhere(expression);
-            return;
-        }
 
-        if (DataFilterTypeEnum.DEPT == dataPermission) {
-            EqualsTo equalsTo = new EqualsTo();
-            equalsTo.setLeftExpression(new Column(deptTable, deptIdColumn));
-            equalsTo.setRightExpression(new LongValue(user.getDeptId()));
-            AndExpression expression = new AndExpression();
-            expression.setLeftExpression(where);
-            expression.setRightExpression(equalsTo);
-            plainSelect.setWhere(expression);
-            return;
-        }
-
-        if (DataFilterTypeEnum.DEPT_AND_SUB == dataPermission) {
-            InExpression inExpression = new InExpression();
-            inExpression.setLeftExpression(buildColumn(tableName, deptIdColumn));
-            SubSelect subSelect = new SubSelect();
-            PlainSelect select = new PlainSelect();
-            select.setSelectItems(Collections.singletonList(new SelectExpressionItem(new Column(deptIdColumn))));
-            select.setFromItem(deptTable);
-            Function function = new Function();
-            function.setName("find_in_set");
-            function.setParameters(new ExpressionList(new LongValue(user.getDeptId()), new Column(deptTreeIdColumn)));
-            select.setWhere(function);
-            subSelect.setSelectBody(select);
-            inExpression.setRightExpression(subSelect);
-            AndExpression expression = new AndExpression();
-            expression.setLeftExpression(where);
-            expression.setRightExpression(inExpression);
-            plainSelect.setWhere(expression);
-            return;
-        }
-
-        if (DataFilterTypeEnum.SELF == dataPermission) {
-            EqualsTo equalsTo = new EqualsTo();
-            equalsTo.setLeftExpression(buildColumn(tableName, createByColumn));
-            equalsTo.setRightExpression(new StringValue(user.getId()));
-            AndExpression expression = new AndExpression();
-            expression.setLeftExpression(where);
-            expression.setRightExpression(equalsTo);
-            plainSelect.setWhere(expression);
-            return;
-        }
-
-        plainSelect.setWhere(NO_DATA);
-    }
-
-    /**
-     * 创建in表达式
-     *
-     * @return
-     */
-    private Expression createInExpression() {
-        return new InExpression(
-                new Column(deptTable, deptIdColumn),
-                new ExpressionList(Arrays.stream(user.getDataPermissionRule().split(","))
-                        .map(LongValue::new).collect(Collectors.toList()))
-        );
-    }
 
     /**
      * 查找表是否有部门ID
@@ -195,7 +116,11 @@ public class SelectDeptRegister implements DeptRegister {
     }
 
     private void findFromJoin() {
-        for (Object o : plainSelect.getJoins()) {
+        List<Join> joins = plainSelect.getJoins();
+        if (null == joins) {
+            return;
+        }
+        for (Object o : joins) {
             if (o instanceof net.sf.jsqlparser.statement.select.Join join) {
                 FromItem rightItem = join.getRightItem();
                 if (rightItem instanceof Table table) {
@@ -204,7 +129,7 @@ public class SelectDeptRegister implements DeptRegister {
                     if (null == tableInfo) {
                         continue;
                     }
-                    if (findFromFrom(tableInfo, table.getAlias().getName(), table)) {
+                    if (findFromFrom(tableInfo, ObjectUtils.optional(table.getAlias(), Alias::getName, EMPTY), table)) {
                         return;
                     }
                 }
@@ -229,7 +154,7 @@ public class SelectDeptRegister implements DeptRegister {
             if (null == tableInfo) {
                 return false;
             }
-            return findFromFrom(tableInfo, table.getAlias().getName(), table);
+            return findFromFrom(tableInfo, ObjectUtils.optional(table.getAlias(), Alias::getName, EMPTY), table);
         }
         return false;
     }

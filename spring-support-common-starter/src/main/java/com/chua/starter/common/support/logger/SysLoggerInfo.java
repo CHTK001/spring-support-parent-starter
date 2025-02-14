@@ -85,6 +85,11 @@ public class SysLoggerInfo extends ApplicationEvent {
      * 耗时(s)
      */
     private Long logCost;
+
+    /**
+     * 部门ID
+     */
+    private String sysDeptId;
     /**
      * 請求地址
      */

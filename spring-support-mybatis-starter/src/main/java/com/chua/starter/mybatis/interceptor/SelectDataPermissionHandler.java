@@ -1,6 +1,7 @@
 package com.chua.starter.mybatis.interceptor;
 
 import com.baomidou.mybatisplus.extension.plugins.handler.DataPermissionHandler;
+import com.chua.starter.common.support.oauth.CurrentUser;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 
@@ -16,12 +17,8 @@ public interface SelectDataPermissionHandler extends DataPermissionHandler {
      * @param plainSelect       select
      * @param where             where
      * @param mappedStatementId 片段ID
-     * @return 表达式
+     * @param currentUser       用户信息
      */
-    Expression processSelect(PlainSelect plainSelect, Expression where, String mappedStatementId);
+    void processSelect(PlainSelect plainSelect, Expression where, String mappedStatementId, CurrentUser currentUser);
 
-    @Override
-    default Expression getSqlSegment(Expression where, String mappedStatementId) {
-        return processSelect(null, where, mappedStatementId);
-    }
 }
