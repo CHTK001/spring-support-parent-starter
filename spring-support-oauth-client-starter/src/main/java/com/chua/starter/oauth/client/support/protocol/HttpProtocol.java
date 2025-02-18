@@ -184,6 +184,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
     }
 
     void check() {
+        checkEncryption();
         if (null != CACHEABLE) {
             return;
         }
@@ -193,8 +194,16 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         }
     }
 
+    private void checkEncryption() {
+        if (null != encryption) {
+            return;
+        }
+        this.encryption = authClientProperties.getEncryption();
+    }
+
     @Override
     public LoginResult upgrade(Cookie[] cookie, String token, UpgradeType upgradeType, String refreshToken) {
+        checkEncryption();
         String key = DigestUtils.md5Hex(UUID.randomUUID().toString());
         Map<String, Object> jsonObject = new HashMap<>(2);
         Cookie[] cookies = Optional.ofNullable(cookie).orElse(new Cookie[0]);
