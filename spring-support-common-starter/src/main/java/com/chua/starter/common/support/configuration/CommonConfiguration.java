@@ -17,6 +17,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 /**
  * 通用配置
  *
@@ -56,6 +59,11 @@ public class CommonConfiguration {
         return new UniformResponseBodyAdvice();
     }
 
+
+    @Bean("uniform")
+    public ExecutorService executor() {
+        return Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name("uniform-pool").factory());
+    }
     /**
      * 异常建议
      *

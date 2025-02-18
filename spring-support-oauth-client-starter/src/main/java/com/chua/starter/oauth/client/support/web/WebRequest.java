@@ -21,15 +21,14 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.AntPathMatcher;
+import org.springframework.util.ConcurrentReferenceHashMap;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
  * webrequest
@@ -57,7 +56,7 @@ public class WebRequest {
         this(authProperties, null, null);
     }
 
-    private static final Set<HandlerMethod> PASS = new LinkedHashSet<>();
+    private static final ConcurrentReferenceHashMap<HandlerMethod, HandlerMethod> PASS = new ConcurrentReferenceHashMap<>(1024);
 
     /**
      * 是否通过
@@ -106,30 +105,31 @@ public class WebRequest {
             } catch (Exception ignored) {
             }
             if (null != handlerMethod) {
-                if (PASS.contains(handlerMethod)) {
+                if (PASS.containsKey(handlerMethod)) {
                     return true;
                 }
                 Method method = handlerMethod.getMethod();
                 boolean annotationPresent = method.isAnnotationPresent(AuthIgnore.class);
                 if (annotationPresent) {
-                    PASS.add(handlerMethod);
+                    PASS.put(handlerMethod, handlerMethod);
                     return true;
                 }
                 boolean annotationPresent11 = method.isAnnotationPresent(Ignore.class);
                 if (annotationPresent11) {
-                    PASS.add(handlerMethod);
+                    PASS.put(handlerMethod, handlerMethod);
                     return true;
                 }
 
-                boolean annotationPresent1 = handlerMethod.getBeanType().isAnnotationPresent(AuthIgnore.class);
+                Class<?> beanType = handlerMethod.getBeanType();
+                boolean annotationPresent1 = beanType.isAnnotationPresent(AuthIgnore.class);
                 if (annotationPresent1) {
-                    PASS.add(handlerMethod);
+                    PASS.put(handlerMethod, handlerMethod);
                     return true;
                 }
 
-                boolean annotationPresent12 = handlerMethod.getBeanType().isAnnotationPresent(Ignore.class);
+                boolean annotationPresent12 = beanType.isAnnotationPresent(Ignore.class);
                 if (annotationPresent12) {
-                    PASS.add(handlerMethod);
+                    PASS.put(handlerMethod, handlerMethod);
                     return true;
                 }
             }
