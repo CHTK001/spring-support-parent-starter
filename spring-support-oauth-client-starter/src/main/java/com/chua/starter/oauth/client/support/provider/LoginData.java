@@ -51,6 +51,20 @@ public class LoginData {
 
 
     /**
+     * 账号类型
+     */
+    @ApiModelProperty(value = "账号类型, 用于区分同一种登录方式")
+    @Schema(description = "账号类型, 用于区分同一种登录方式")
+    private String accountType;
+
+
+    /**
+     * 租户ID
+     */
+    @ApiModelProperty(value = "租户ID")
+    @Schema(description = "租户ID")
+    private String tenantId;
+    /**
      * 谷歌验证码
      */
 //    @ApiModelProperty(value = "谷歌/其它验证码")
