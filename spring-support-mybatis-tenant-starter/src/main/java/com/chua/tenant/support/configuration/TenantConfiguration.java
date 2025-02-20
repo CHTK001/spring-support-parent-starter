@@ -105,8 +105,9 @@ public class TenantConfiguration implements EnvironmentAware, BeanClassLoaderAwa
                         .dataSource(dataSource)
                 .build()
         );
+        String databaseName = null;
         try (Connection connection = dataSource.getConnection()){
-            String databaseName = dialect.getDatabaseName(url);
+            databaseName = dialect.getDatabaseName(url);
             DatabaseMetaData metaData = connection.getMetaData();
             registerColumn(columnNames, metaData, databaseName);
         } catch (Exception e) {
@@ -115,18 +116,19 @@ public class TenantConfiguration implements EnvironmentAware, BeanClassLoaderAwa
         for (Map.Entry<String, List<String>> entry : columnNames.entrySet()) {
             boolean hasTenantColumn = check(entry.getValue());
             if(!hasTenantColumn) {
-                updateTable(engine, entry.getKey());
+                updateTable(engine, databaseName, entry.getKey());
             }
         }
     }
 
-    private void updateTable(Engine engine, String tableName) {
+    private void updateTable(Engine engine, String databaseName, String tableName) {
         if(engine instanceof EngineTable engineTable) {
             Table table = new Table();
             table.setTableName(tableName);
+            table.setCatalog(databaseName);
             Column column = new Column();
             column.setNodeId(tenantProperties.getTenantId());
-            column.setJavaType(new JavaType(Long.class, null));
+            column.setJavaType(new JavaType(Integer.class, null));
             column.setComment("租户ID");
             column.setNullable(false);
             column.setIndex(true);

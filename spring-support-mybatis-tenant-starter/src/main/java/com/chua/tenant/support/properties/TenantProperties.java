@@ -19,7 +19,7 @@ import static com.chua.tenant.support.properties.TenantProperties.PRE;
 public class TenantProperties {
 
 
-    public static final String PRE = "plugin.tenant";
+    public static final String PRE = "plugin.mybatis-plus.tenant";
 
 
     /**
@@ -40,5 +40,5 @@ public class TenantProperties {
     /**
      * 租户ID字段名
      */
-    private String tenantId = "tenant_id";
+    private String tenantId = "sys_tenant_id";
 }

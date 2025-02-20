@@ -46,7 +46,7 @@ public class LoginCheck {
             return false;
         }
         String value = userLoginType.value();
-        return null != value && value.equals(authType);
+        return null != value && value.equalsIgnoreCase(authType);
     }
 
 
