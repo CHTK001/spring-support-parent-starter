@@ -21,6 +21,8 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Set;
 
+import static com.chua.starter.oauth.client.support.contants.AuthConstant.SUPER_ADMIN;
+
 /**
  * @author CH
  * @version 1.0.0
@@ -50,7 +52,14 @@ public class PermissionPointcut extends StaticMethodMatcherPointcutAdvisor imple
                 }
 
                 Set<String> roles = userInfo.getRoles();
-                if(AuthConstant.isSuperAdmin(roles)) {
+                if (AuthConstant.isSuperAdmin(roles)) {
+                    return invocation.proceed();
+                }
+
+                if (AuthConstant.isAdmin(roles)) {
+                    if (onlySuperAdmin(permission)) {
+                        throw new OauthException("您的账号没有权限, 请联系管理员分配!");
+                    }
                     return invocation.proceed();
                 }
 
@@ -63,6 +72,8 @@ public class PermissionPointcut extends StaticMethodMatcherPointcutAdvisor imple
                 }
                 return invocation.proceed();
             }
+
+
         });
     }
 
@@ -97,13 +108,17 @@ public class PermissionPointcut extends StaticMethodMatcherPointcutAdvisor imple
 
     }
 
+    private boolean onlySuperAdmin(Permission permission) {
+        String[] role = permission.role();
+        if (ArrayUtils.isEmpty(role)) {
+            return false;
+        }
+
+        return role.length == 1 && SUPER_ADMIN.equalsIgnoreCase(role[0]);
+    }
     private boolean isRoleMatch(Permission permission, Set<String> roles) {
         String[] role = permission.role();
         if(ArrayUtils.isEmpty(role)) {
-            return true;
-        }
-
-        if(!AuthConstant.isSuperAdmin(roles) && AuthConstant.isAdmin(roles)) {
             return true;
         }
 
