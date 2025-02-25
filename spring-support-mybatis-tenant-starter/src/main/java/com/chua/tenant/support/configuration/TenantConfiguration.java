@@ -26,6 +26,8 @@ import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -68,6 +70,10 @@ public class TenantConfiguration implements EnvironmentAware, BeanClassLoaderAwa
 
             @Override
             public boolean ignoreTable(String tableName) {
+                RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
+                if (requestAttributes == null) {
+                    return true;
+                }
                 Set<String> ignoreTable = tenantProperties.getIgnoreTable();
                 return CollectionUtils.containsIgnoreCase(ignoreTable, tableName);
             }
@@ -130,7 +136,7 @@ public class TenantConfiguration implements EnvironmentAware, BeanClassLoaderAwa
             column.setNodeId(tenantProperties.getTenantId());
             column.setJavaType(new JavaType(Integer.class, null));
             column.setComment("租户ID");
-            column.setNullable(false);
+            column.setNullable(true);
             column.setIndex(true);
             column.setUpdatable(false);
 

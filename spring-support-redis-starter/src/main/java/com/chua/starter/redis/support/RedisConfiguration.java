@@ -12,6 +12,11 @@ import com.chua.starter.redis.support.service.TimeSeriesService;
 import com.chua.starter.redis.support.service.impl.RedisSearchServiceImpl;
 import com.chua.starter.redis.support.service.impl.SimpleRedisServiceImpl;
 import com.chua.starter.redis.support.service.impl.TimeSeriesServiceImpl;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
@@ -27,11 +32,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.core.Ordered;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
+import java.text.SimpleDateFormat;
 import java.util.List;
 
 /**
@@ -110,17 +118,17 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
         return new RedisEmbeddedServer(redisServerProperties);
     }
 
-//    @Bean
-//    @ConditionalOnMissingBean
-//    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
-//        RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
-//        redisTemplate.setConnectionFactory(factory);
-//        redisTemplate.setKeySerializer(new StringRedisSerializer());
-//        redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer());
-//        redisTemplate.setHashKeySerializer(new StringRedisSerializer());
-//        redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
-//        return redisTemplate;
-//    }
+
+    public static ObjectMapper createObjectMapper() {
+        ObjectMapper objectMapper = new ObjectMapper();
+        // 忽略未知字段
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        // 注册 JavaTimeModule 以支持 Java 8 日期时间类型
+        objectMapper.registerModule(new JavaTimeModule());
+        // 设置日期格式
+        objectMapper.setDateFormat(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"));
+        return objectMapper;
+    }
 
     @Bean
     @ConditionalOnMissingBean
@@ -130,10 +138,47 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
         for (RedisListener listener : listeners) {
             container.addMessageListener(listener::onMessage, listener.getTopics());
         }
+        /**
+         * 设置序列化对象
+         * 特别注意：1. 发布的时候需要设置序列化；订阅方也需要设置序列化
+         *         2. 设置序列化对象必须放在[加入消息监听器]这一步后面，否则会导致接收器接收不到消息
+         */
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
+        objectMapper.enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL);
+        Jackson2JsonRedisSerializer seria = new Jackson2JsonRedisSerializer(objectMapper, Object.class);
+        container.setTopicSerializer(seria);
         return container;
     }
 
+    @Bean
+    @SuppressWarnings("all")
+    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
+        //由于源码autoConfig中是<Object, Object>，开发中一般直接使用<String,Object>
+        RedisTemplate<String, Object> template = new RedisTemplate();
+        template.setConnectionFactory(factory);
 
+        //Json序列化配置
+        Jackson2JsonRedisSerializer jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer(Object.class);
+        ObjectMapper om = new ObjectMapper();
+        om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
+        om.enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL);
+        jackson2JsonRedisSerializer.setObjectMapper(om);
+
+        //String的序列化
+        StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
+
+        //key采用string的序列化
+        template.setKeySerializer(stringRedisSerializer);
+        //hash的key采用string的序列化
+        template.setHashKeySerializer(stringRedisSerializer);
+        //value序列化采用jackson
+        template.setValueSerializer(jackson2JsonRedisSerializer);
+        //hash的value序列化方式采用jackson
+        template.setHashValueSerializer(jackson2JsonRedisSerializer);
+        template.afterPropertiesSet();
+        return template;
+    }
 
     @Bean("stringRedisTemplate")
     public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory factory) {
