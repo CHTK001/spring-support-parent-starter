@@ -6,13 +6,15 @@ import javax.sql.DataSource;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static com.chua.starter.datasource.support.DynamicDataSource.TARGET_DATA_SOURCES;
+
 /**
  * 数据源管理器
  *
  * @author CH
  */
 @Slf4j
-class DataSourceContextSupport {
+public class DataSourceContextSupport {
 
     public static final Map<Object, Object> DATA_SOURCE_MAP = new ConcurrentHashMap<>();
 
@@ -41,7 +43,7 @@ class DataSourceContextSupport {
      * @param dataSource 添加数据源
      */
     public static void addDatasource(String name, DataSource dataSource) {
-        DATA_SOURCE_MAP.put(name, dataSource);
+        TARGET_DATA_SOURCES.put(name, dataSource);
     }
 
     /**
@@ -51,7 +53,7 @@ class DataSourceContextSupport {
      * @return 是否存在數據源
      */
     public static boolean hasDbType(String dbType) {
-        return DATA_SOURCE_MAP.containsKey(dbType);
+        return TARGET_DATA_SOURCES.containsKey(dbType);
     }
 
     /**
@@ -61,7 +63,7 @@ class DataSourceContextSupport {
      * @return dataSource 添加数据源
      */
     public static DataSource getDatasource(String name) {
-        return (DataSource) DATA_SOURCE_MAP.get(name);
+        return (DataSource) TARGET_DATA_SOURCES.get(name);
     }
 
     /**

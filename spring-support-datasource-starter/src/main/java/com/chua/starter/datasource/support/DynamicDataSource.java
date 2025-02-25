@@ -23,7 +23,7 @@ import java.util.Map;
 public class DynamicDataSource extends AbstractRoutingDataSource {
 
     private static final String MASTER = "master";
-    private static final Map<Object, Object> TARGET_DATA_SOURCES = DataSourceContextSupport.DATA_SOURCE_MAP;
+    protected static final Map<Object, Object> TARGET_DATA_SOURCES = DataSourceContextSupport.DATA_SOURCE_MAP;
     private final Object defaultDataSource;
     private static final String MYBATIS = "org.springframework.transaction.support.TransactionSynchronizationManager";
     private boolean binder;
@@ -47,7 +47,6 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
      * 绑定事务
      *
      * @param value 值
-     * @param pool
      * @throws IllegalStateException ex
      */
     public void bindResource(Connection value) throws IllegalStateException {
@@ -66,7 +65,6 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
                 com.chua.common.support.utils.ClassUtils.setAccessible(method);
                 method.invoke(null, this, connectionHolder);
                 this.binder = true;
-                return;
             } catch (Exception ignored) {
             }
         }
@@ -87,12 +85,12 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
             try {
                 connectionHolder.released();
                 this.binder = false;
-                return;
             } catch (Exception ignored) {
             }
         }
 
     }
+
 
     @Override
     protected DataSource determineTargetDataSource() {
