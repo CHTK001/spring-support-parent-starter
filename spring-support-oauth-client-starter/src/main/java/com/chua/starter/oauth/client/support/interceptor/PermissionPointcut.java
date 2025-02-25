@@ -57,7 +57,7 @@ public class PermissionPointcut extends StaticMethodMatcherPointcutAdvisor imple
                 }
 
                 if (AuthConstant.isAdmin(roles)) {
-                    if (onlySuperAdmin(permission)) {
+                    if (hasSuperAdminAndMatch(permission)) {
                         throw new OauthException("您的账号没有权限, 请联系管理员分配!");
                     }
                     return invocation.proceed();
@@ -108,7 +108,7 @@ public class PermissionPointcut extends StaticMethodMatcherPointcutAdvisor imple
 
     }
 
-    private boolean onlySuperAdmin(Permission permission) {
+    private boolean hasSuperAdminAndMatch(Permission permission) {
         String[] role = permission.role();
         if (ArrayUtils.isEmpty(role)) {
             return false;
