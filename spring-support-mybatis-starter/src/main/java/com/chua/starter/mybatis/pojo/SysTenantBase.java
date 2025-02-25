@@ -21,5 +21,5 @@ public class SysTenantBase extends SysBase{
     @Column(defaultValue = "0", comment = "租户ID", refresh = true)
     @Schema(description = "租户ID")
     @ApiModelProperty("租户ID")
-    private Long sysTenantId;
+    private Integer sysTenantId;
 }
