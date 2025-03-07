@@ -16,6 +16,7 @@ import com.chua.starter.mybatis.utils.PageResultUtils;
 import com.github.xiaoymin.knife4j.annotations.Ignore;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.BindingResult;
@@ -24,7 +25,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -69,7 +69,7 @@ public class MonitorAppController extends AbstractSwaggerUpdateController<Monito
     @ResponseBody
     @Operation(summary = "查询基础数据")
     @GetMapping("list")
-    public ReturnResult<List<MonitorApplication>> list(@Valid MonitorApplication entity) {
+    public ReturnResult<List<MonitorApplication>> list(MonitorApplication entity) {
         List<MonitorApplication> page1 = getService().list(Wrappers.lambdaQuery(entity));
         mergePage(page1);
         return ReturnResult.ok(page1);

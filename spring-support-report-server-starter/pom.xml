@@ -6,12 +6,12 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.31</version>
+        <version>4.0.0.32</version>
     </parent>
 
     <artifactId>spring-support-report-server-starter</artifactId>
     <description>上报信息服务端模块</description>
-    <version>4.0.0.31</version>
+    <version>4.0.0.32</version>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
