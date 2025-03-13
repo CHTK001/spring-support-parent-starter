@@ -27,12 +27,12 @@
             <div class="form-group has-feedback">
                 <input type="text" name="username" class="form-control" placeholder="Please input username."
                        value="user" maxlength="50">
-                <span class="glyphicon glyphicon-envelope form-control-feedback"></span>
+                <fileSpan class="glyphicon glyphicon-envelope form-control-feedback"></fileSpan>
             </div>
             <div class="form-group has-feedback">
                 <input type="password" name="passwd" class="form-control" placeholder="Please input password."
                        value="123456" maxlength="50">
-                <span class="glyphicon glyphicon-lock form-control-feedback"></span>
+                <fileSpan class="glyphicon glyphicon-lock form-control-feedback"></fileSpan>
             </div>
 
             <div class="form-group has-feedback hidden">

@@ -42,7 +42,7 @@ public class ReportService {
             return;
         }
 
-        if(ClassUtils.isPresent("com.chua.attach.hotspot.support.Agent")) {
+        if (ClassUtils.isPresent("com.chua.hotspot.support.Agent")) {
             if(reportType == ReportEvent.ReportType.LOG ||
                     reportType == ReportEvent.ReportType.SQL ||
                     reportType == ReportEvent.ReportType.TRACE) {
