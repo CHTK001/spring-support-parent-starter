@@ -8,7 +8,6 @@ import com.chua.common.support.utils.NumberUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
 import java.util.Collections;
 import java.util.List;
