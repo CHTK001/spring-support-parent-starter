@@ -2,7 +2,6 @@ package com.chua.starter.oauth.client.support.execute;
 
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.constant.CommonConstant;
-import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.lang.exception.AuthenticationException;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.Md5Utils;
@@ -222,7 +221,7 @@ public class AuthClientExecute {
     public LoginResult upgrade(String refreshToken, UpgradeType upgradeType) {
         RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
         if (requestAttributes == null) {
-            return new LoginAuthResult(-1, ReturnCode.CLIENT_OTHER_ERROR.getMsg());
+            return null;
         }
 
         ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;

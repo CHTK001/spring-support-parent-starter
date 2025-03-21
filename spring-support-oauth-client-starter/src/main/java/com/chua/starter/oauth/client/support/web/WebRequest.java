@@ -250,6 +250,9 @@ public class WebRequest {
     public LoginResult upgrade(UpgradeType upgradeType, String refreshToken) {
         Cookie[] cookie = getCookie();
         String token = getToken();
+        if (cookie == null || cookie.length == 0 || token == null) {
+            return null;
+        }
         Protocol protocol = ServiceProvider.of(Protocol.class).getExtension(authProperties.getProtocol());
         return protocol.upgrade(cookie, token, upgradeType, refreshToken);
     }
