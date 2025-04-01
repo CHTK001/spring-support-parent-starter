@@ -29,11 +29,9 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
-import org.springframework.context.EnvironmentAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.Ordered;
-import org.springframework.core.env.Environment;
 import org.springframework.util.ReflectionUtils;
 
 /**
@@ -118,7 +116,7 @@ public class ReportServerConfiguration implements BeanDefinitionRegistryPostProc
 
     @Override
     public void run(String... args) throws Exception {
-        Thread.sleep(1000);
+        Thread.sleep(0);
 //        registerZbusClient();
     }
 

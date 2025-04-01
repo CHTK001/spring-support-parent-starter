@@ -112,6 +112,7 @@ public class FileStorageController {
         Page<FileStorage> tPage = fileStorageService.page(page.createPage(), Wrappers.<FileStorage>lambdaQuery()
                 .eq(FileStorage::getFileStorageProtocolId, entity.getFileStorageProtocolId())
                 .like(StringUtils.isNotBlank(entity.getFileStorageName()), FileStorage::getFileStorageName, entity.getFileStorageName())
+                .orderByDesc(FileStorage::getFileStorageStatus)
         );
         return PageResultUtils.ok(tPage);
     }
