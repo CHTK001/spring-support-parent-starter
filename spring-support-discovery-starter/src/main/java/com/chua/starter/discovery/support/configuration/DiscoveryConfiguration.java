@@ -2,7 +2,6 @@ package com.chua.starter.discovery.support.configuration;
 
 import com.chua.common.support.discovery.*;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.utils.IdUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.project.Project;
 import com.chua.starter.discovery.support.properties.DiscoveryListProperties;
@@ -47,6 +46,7 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         DiscoveryListProperties properties = Binder.get(environment).bindOrCreate(DiscoveryListProperties.PRE, DiscoveryListProperties.class);
         if(!properties.isEnable()) {
+            log.warn("未开启 discovery 服务");
             return;
         }
         List<DiscoveryProperties> properties1 = properties.getProperties();
@@ -80,6 +80,7 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
         List<DiscoveryNodeProperties> node = discoveryProperties.getNode();
         for (DiscoveryNodeProperties discoveryNodeProperties : node) {
             discoveryList.add(registryNode(discoveryNodeProperties));
+            log.warn("注册发现服务{} => {}", discoveryProperties.getProtocol(), discoveryNodeProperties.getNamespace());
         }
         registry.registerBeanDefinition(
                         discoveryProperties.getProtocol(),

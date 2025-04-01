@@ -37,6 +37,7 @@
   </select>
 
   <select id="listForGeo" resultType="com.chua.report.server.starter.pojo.MonitorProxyLimitLogResult">
+    <trim>
     select create_time,
     sum(allowCount) allowCount,
     sum(denyCount) denyCount,
@@ -44,27 +45,30 @@
     SELECT DISTINCT create_time,
     (select count(*) from monitor_proxy_log where monitor_proxy_log_date = mpll.monitor_proxy_log_date and monitor_proxy_log_server_id = mpll.monitor_proxy_log_server_id and  monitor_proxy_log_address = mpll.monitor_proxy_log_address and monitor_proxy_log_type = 'allow' and monitor_proxy_log_url = mpll.monitor_proxy_log_url) allowCount,
     (select count(*) from monitor_proxy_log where monitor_proxy_log_date = mpll.monitor_proxy_log_date and monitor_proxy_log_server_id = mpll.monitor_proxy_log_server_id and  monitor_proxy_log_address = mpll.monitor_proxy_log_address and monitor_proxy_log_type = 'deny' and monitor_proxy_log_url = mpll.monitor_proxy_log_url) denyCount,
-    (select count(*) from monitor_proxy_log where monitor_proxy_log_date = mpll.monitor_proxy_log_date and monitor_proxy_log_server_id = mpll.monitor_proxy_log_server_id and  monitor_proxy_log_address = mpll.monitor_proxy_log_address and monitor_proxy_log_type = 'warn' and monitor_proxy_log_url = mpll.monitor_proxy_log_url) warnCount,
+    (select count(*) from monitor_proxy_log where monitor_proxy_log_date = mpll.monitor_proxy_log_date and monitor_proxy_log_server_id = mpll.monitor_proxy_log_server_id and  monitor_proxy_log_address = mpll.monitor_proxy_log_address and monitor_proxy_log_type = 'warn' and monitor_proxy_log_url = mpll.monitor_proxy_log_url) warnCount
     FROM monitor_proxy_log mpll
-    <where>
-      <if test="query.monitorProxyLogServerId != null">
-        AND monitor_proxy_log_server_id = #{query.monitorProxyLogServerId}
-      </if>
+      <trim>
+        <where>
+          <if test="query.monitorProxyLogServerId != null">
+            AND monitor_proxy_log_server_id = #{query.monitorProxyLogServerId}
+          </if>
 
-      <if test="query.monitorProxyLogAddress != null and query.monitorProxyLogAddress != ''">
-        AND monitor_proxy_log_address = #{query.monitorProxyLogAddress}
-      </if>
+          <if test="query.monitorProxyLogAddress != null and query.monitorProxyLogAddress != ''">
+            AND monitor_proxy_log_address = #{query.monitorProxyLogAddress}
+          </if>
 
-      <if test="query.startDate != null">
-        AND create_time <![CDATA[>=]]> #{query.startDate}
-      </if>
+          <if test="query.startDate != null">
+            AND create_time <![CDATA[>=]]> #{query.startDate}
+          </if>
 
-      <if test="query.endDate != null">
-        AND mpll.create_time <![CDATA[<=]]> #{query.endDate}
-      </if>
-    </where>
+          <if test="query.endDate != null">
+            AND mpll.create_time <![CDATA[<=]]> #{query.endDate}
+          </if>
+        </where>
+      </trim>
     ) t
     GROUP BY create_time
     ORDER BY create_time
+    </trim>
   </select>
 </mapper>
