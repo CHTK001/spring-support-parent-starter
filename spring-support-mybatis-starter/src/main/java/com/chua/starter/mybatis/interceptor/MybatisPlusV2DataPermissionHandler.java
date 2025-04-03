@@ -31,6 +31,9 @@ public class MybatisPlusV2DataPermissionHandler implements MultiDataPermissionHa
 
     @Override
     public Expression getSqlSegment(Table table, Expression where, String mappedStatementId) {
+        if (!metaDataScopeProperties.isEnable()) {
+            return null;
+        }
         try {
             CurrentUser currentUser = SpringBeanUtils.getBean(AuthService.class).getCurrentUser();
             return dataScopeFilter(table, currentUser, metaDataScopeProperties, where, currentUser.getDataPermission());

@@ -72,8 +72,8 @@ public class Query<T> implements Serializable {
     })
     @Min(value = 1, message = "排序字段, 多个逗号分隔")
     @Max(value = 100, message = "排序字段, 多个逗号分隔")
-    @RequestParamMapping({"order"})
-    private String[] order = new String[0];
+    @RequestParamMapping({"order", "orderBy"})
+    private String order;
 
     /**
      * 初始化分页
@@ -82,13 +82,14 @@ public class Query<T> implements Serializable {
      */
     public com.baomidou.mybatisplus.extension.plugins.pagination.Page<T> createPage() {
         Page<T> tPage = new Page<>(page, pageSize);
-        if(ArrayUtils.isNotEmpty(order)) {
+        if (null != order) {
+            String[] orders = order.split(",");
             List<OrderItem> orderItem = new LinkedList<>();
-            for (String s : order) {
-                if(s.startsWith("-")) {
-                    orderItem.add(OrderItem.desc(s.substring(0, s.length() - 1)));
-                } else if(s.startsWith("+")){
-                    orderItem.add(OrderItem.asc(s.substring(0, s.length() - 1)));
+            for (String s : orders) {
+                if (s.endsWith("desc")) {
+                    orderItem.add(OrderItem.desc(s.substring(0, s.length() - 4).trim()));
+                } else if (s.endsWith("asc")) {
+                    orderItem.add(OrderItem.asc(s.substring(0, s.length() - 3).trim()));
                 } else {
                     orderItem.add(OrderItem.asc(s));
                 }
@@ -109,12 +110,13 @@ public class Query<T> implements Serializable {
            query.select(prop);
         }
 
-        if(ArrayUtils.isNotEmpty(order)) {
-            for (String s : order) {
-                if(s.endsWith("-")) {
-                    query.orderByDesc(s.substring(0, s.length() - 1));
-                } else if(s.endsWith("+")){
-                    query.orderByAsc(s.substring(0, s.length() - 1));
+        if (null != order) {
+            String[] orders = order.split(",");
+            for (String s : orders) {
+                if (s.endsWith("desc")) {
+                    query.orderByDesc(s.substring(0, s.length() - 4).trim());
+                } else if (s.endsWith("asc")) {
+                    query.orderByAsc(s.substring(0, s.length() - 3).trim());
                 } else {
                     query.orderByAsc(s);
                 }
@@ -137,12 +139,13 @@ public class Query<T> implements Serializable {
             wrapper.select(prop);
         }
 
-        if(ArrayUtils.isNotEmpty(order)) {
-            for (String s : order) {
-                if(s.endsWith("-")) {
-                    wrapper.orderByDesc(s.substring(0, s.length() - 1));
-                } else if(s.endsWith("+")){
-                    wrapper.orderByAsc(s.substring(0, s.length() - 1));
+        if (null != order) {
+            String[] orders = order.split(",");
+            for (String s : orders) {
+                if (s.endsWith("desc")) {
+                    wrapper.orderByDesc(s.substring(0, s.length() - 4).trim());
+                } else if (s.endsWith("asc")) {
+                    wrapper.orderByAsc(s.substring(0, s.length() - 3).trim());
                 } else {
                     wrapper.orderByAsc(s);
                 }
@@ -170,12 +173,13 @@ public class Query<T> implements Serializable {
             wrapper.select(prop);
         }
 
-        if(ArrayUtils.isNotEmpty(order)) {
-            for (String s : order) {
-                if(s.endsWith("-")) {
-                    wrapper.orderByDesc(s.substring(0, s.length() - 1));
-                } else if(s.endsWith("+")){
-                    wrapper.orderByAsc(s.substring(0, s.length() - 1));
+        if (null != order) {
+            String[] orders = order.split(",");
+            for (String s : orders) {
+                if (s.endsWith("desc")) {
+                    wrapper.orderByDesc(s.substring(0, s.length() - 4).trim());
+                } else if (s.endsWith("asc")) {
+                    wrapper.orderByAsc(s.substring(0, s.length() - 3).trim());
                 } else {
                     wrapper.orderByAsc(s);
                 }
