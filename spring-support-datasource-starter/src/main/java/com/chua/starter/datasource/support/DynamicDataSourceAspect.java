@@ -2,6 +2,7 @@ package com.chua.starter.datasource.support;
 
 import com.chua.starter.common.support.annotations.DS;
 import com.chua.starter.datasource.datasource.MultiDataSource;
+import com.chua.starter.datasource.properties.MultiDataSourceSettingProperties;
 import lombok.Setter;
 import org.aopalliance.intercept.MethodInvocation;
 import org.aspectj.lang.JoinPoint;
@@ -33,11 +34,12 @@ public class DynamicDataSourceAspect {
     /**
      * 切入点
      *
-     * @param methodInvocation 切入点
+     * @param methodInvocation          切入点
+     * @param multiDataSourceSettingProperties
      */
-    public void beforeSwitchDS(MethodInvocation methodInvocation) {
+    public void beforeSwitchDS(MethodInvocation methodInvocation, MultiDataSourceSettingProperties multiDataSourceSettingProperties) {
         //默认数据源
-        String dataSource = getDataSourceType(methodInvocation);
+        String dataSource = getDataSourceType(methodInvocation, multiDataSourceSettingProperties);
         //分析处理多数据源
         doAnalysisDataSource(dataSource);
         // 切换数据源
@@ -80,10 +82,11 @@ public class DynamicDataSourceAspect {
     /**
      * 获取切换的数据源
      *
-     * @param methodInvocation 切入点
+     * @param methodInvocation          切入点
+     * @param multiDataSourceSettingProperties
      * @return 数据源
      */
-    private String getDataSourceType(MethodInvocation methodInvocation) {
+    private String getDataSourceType(MethodInvocation methodInvocation, MultiDataSourceSettingProperties multiDataSourceSettingProperties) {
         //類是否包含註解
         String dsName = DataSourceContextSupport.DEFAULT_DATASOURCE;
         //类上的注解
@@ -91,16 +94,17 @@ public class DynamicDataSourceAspect {
         //方法上的注解
         dsName = analysisMethod(dsName, methodInvocation);
 
-        return createDataSource(dsName);
+        return createDataSource(dsName, multiDataSourceSettingProperties);
     }
 
     /**
      * 数据源
      *
-     * @param dsName 数据源名称
+     * @param dsName                    数据源名称
+     * @param multiDataSourceSettingProperties 数据源配置
      * @return 数据源名称
      */
-    private String createDataSource(String dsName) {
+    private String createDataSource(String dsName, MultiDataSourceSettingProperties multiDataSourceSettingProperties) {
         if (DataSourceContextSupport.hasDbType(dsName)) {
             return dsName;
         }
@@ -126,6 +130,9 @@ public class DynamicDataSourceAspect {
             return dsName;
         }
 
+        if (multiDataSourceSettingProperties.isForceAnnotation()) {
+            return dsName;
+        }
         return DataSourceContextSupport.DEFAULT_DATASOURCE;
     }
 
