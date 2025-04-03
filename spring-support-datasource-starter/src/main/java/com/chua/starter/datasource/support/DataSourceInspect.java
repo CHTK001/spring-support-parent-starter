@@ -1,15 +1,21 @@
 package com.chua.starter.datasource.support;
 
+import com.chua.starter.datasource.properties.HikariDataSourceProperties;
+import com.chua.starter.datasource.properties.MultiDataSourceProperties;
+import com.chua.starter.datasource.properties.MultiHikariDataSourceProperties;
 import com.chua.starter.datasource.util.ClassUtils;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import com.zaxxer.hikari.HikariDataSource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.boot.context.properties.bind.BindResult;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
@@ -30,6 +36,7 @@ import java.util.*;
 /**
  * 数据库注入
  */
+@Slf4j
 public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
         EnvironmentAware,
         ApplicationContextAware {
@@ -52,9 +59,9 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
 
     private static final String TRANSACTION = "_transaction";
     private final String[] PREFIX = new String[]{
-            "spring.datasource.*",
             "spring.datasource.hikari.*",
             "spring.datasource.druid.*",
+            "spring.datasource.*",
     };
 
     private Environment environment;
@@ -63,6 +70,62 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry beanDefinitionRegistry) throws BeansException {
+        registerMultiDataSourceProperties(beanDefinitionRegistry);
+        registerEnvironment(beanDefinitionRegistry);
+    }
+
+    private void registerMultiDataSourceProperties(BeanDefinitionRegistry beanDefinitionRegistry) {
+        MultiDataSourceProperties multiDataSourceProperties = Binder.get(environment).bindOrCreate(MultiDataSourceProperties.PRE, MultiDataSourceProperties.class);
+        registerDataSource(multiDataSourceProperties.getDataSource(), beanDefinitionRegistry, null);
+
+        MultiHikariDataSourceProperties multiHikariDataSourceProperties = Binder.get(environment).bindOrCreate(MultiHikariDataSourceProperties.PRE, MultiHikariDataSourceProperties.class);
+        registerDataSource(multiHikariDataSourceProperties.getDataSource(), beanDefinitionRegistry, HikariDataSource.class);
+    }
+
+    private void registerDataSource(List<? extends DataSourceProperties> dataSource,
+                                    BeanDefinitionRegistry beanDefinitionRegistry,
+                                    Class<? extends DataSource> dataSourceType) {
+        if (null == dataSource) {
+            return;
+        }
+
+        for (DataSourceProperties dataSourceProperty : dataSource) {
+            if (null == dataSourceProperty.getUrl() || null == dataSourceProperty.getName()) {
+                continue;
+            }
+
+            if (null != dataSourceType) {
+                dataSourceProperty.setType(dataSourceType);
+            }
+
+            try {
+                dataSourceProperty.afterPropertiesSet();
+            } catch (Exception e) {
+                continue;
+            }
+
+            DataSource dataSource1 = dataSourceProperty.initializeDataSourceBuilder()
+                    .build();
+
+            if (dataSourceProperty instanceof HikariDataSourceProperties hikariDataSourceProperties) {
+                HikariDataSource hikariDataSource = (HikariDataSource) dataSource1;
+                hikariDataSource.setIdleTimeout(hikariDataSourceProperties.getIdleTimeout());
+                hikariDataSource.setLeakDetectionThreshold(hikariDataSourceProperties.getLeakDetectionThreshold());
+                hikariDataSource.setMaxLifetime(hikariDataSourceProperties.getMaxLifetime());
+                hikariDataSource.setMaximumPoolSize(hikariDataSourceProperties.getMaxPoolSize());
+                hikariDataSource.setMinimumIdle(hikariDataSourceProperties.getMinIdle());
+            }
+            //注册动态数据源
+            String name = dataSourceProperty.getName();
+            beanDefinitionRegistry.registerBeanDefinition("dataSource#" + name, BeanDefinitionBuilder
+                    .rootBeanDefinition(DataSource.class, () -> dataSource1).getBeanDefinition()
+            );
+            DataSourceContextSupport.addDatasource(name, dataSource1);
+            log.info("注册数据源:{}", name);
+        }
+    }
+
+    private void registerEnvironment(BeanDefinitionRegistry beanDefinitionRegistry) {
         if (null == dataSourceClass) {
             return;
         }
@@ -72,8 +135,7 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
         }
 
 
-        if (environment instanceof ConfigurableEnvironment) {
-            ConfigurableEnvironment configurableEnvironment = (ConfigurableEnvironment) environment;
+        if (environment instanceof ConfigurableEnvironment configurableEnvironment) {
             MutablePropertySources propertySources = configurableEnvironment.getPropertySources();
             propertySources.stream().iterator().forEachRemaining(propertySource -> {
             });
@@ -94,12 +156,16 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
      */
     private void analysisDataSource(Map<String, Object> objectMap, String prefix, BeanDefinitionRegistry beanDefinitionRegistry) {
         String urlPrefix = prefix.replace("*", "url");
+        String urlPrefix2 = prefix.replace("*", "jdbc-url");
         Map<String, DataSource> dataSources = new HashMap<>();
 
         String oldPrefix = prefix.replace(".*", "");
         //单数据源
         if (objectMap.containsKey(urlPrefix)) {
             dataSources.put("master", createDataSource(objectMap, oldPrefix));
+        }
+        if (objectMap.containsKey(urlPrefix2)) {
+            dataSources.put("master", createDataSource(objectMap, urlPrefix2.replace(".jdbc-url", "")));
         }
         dataSources.putAll(createDataSources(objectMap, oldPrefix));
 
