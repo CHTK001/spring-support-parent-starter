@@ -41,7 +41,7 @@ import java.util.List;
 public class MybatisPlusConfiguration {
 
     final  MybatisPlusProperties mybatisProperties;
-
+    final MybatisPlusDataScopeProperties methodSecurityInterceptor;
     /**
      * 分页
      *
@@ -69,7 +69,7 @@ public class MybatisPlusConfiguration {
         if(null == dataPermissionHandler) {
             dataPermissionHandler = new MybatisPlusV2DataPermissionHandler(methodSecurityInterceptor);
         }
-        return new MybatisPlusV2DataPermissionInterceptor(dataPermissionHandler);
+        return new MybatisPlusV2DataPermissionInterceptor(dataPermissionHandler, methodSecurityInterceptor);
     }
 //    /**
 //     * 数据权限

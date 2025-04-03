@@ -1,5 +1,8 @@
 package com.chua.starter.datasource.configuration;
 
+import com.chua.starter.datasource.properties.MultiDataSourceProperties;
+import com.chua.starter.datasource.properties.MultiDataSourceSettingProperties;
+import com.chua.starter.datasource.properties.MultiHikariDataSourceProperties;
 import com.chua.starter.datasource.properties.TransactionProperties;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
@@ -33,7 +36,12 @@ import java.util.Optional;
  * @author CH
  * @since 2021-07-19
  */
-@EnableConfigurationProperties(TransactionProperties.class)
+@EnableConfigurationProperties({
+        TransactionProperties.class,
+        MultiDataSourceSettingProperties.class,
+        MultiDataSourceProperties.class,
+        MultiHikariDataSourceProperties.class,
+})
 @ConditionalOnClass(name = "org.springframework.jdbc.datasource.DataSourceTransactionManager")
 @AutoConfigureOrder(Ordered.LOWEST_PRECEDENCE + 10)
 public class DataSourceTransactionConfiguration implements
