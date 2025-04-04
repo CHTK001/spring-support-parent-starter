@@ -72,8 +72,8 @@ public class Query<T> implements Serializable {
     })
     @Min(value = 1, message = "排序字段, 多个逗号分隔")
     @Max(value = 100, message = "排序字段, 多个逗号分隔")
-    @RequestParamMapping({"order", "orderBy", "sortBy"})
-    private String order;
+    @RequestParamMapping({"order"})
+    private String[] order = new String[0];
 
     /**
      * 初始化分页
@@ -118,13 +118,12 @@ public class Query<T> implements Serializable {
            query.select(prop);
         }
 
-        if (null != order) {
-            String[] orders = order.split(",");
-            for (String s : orders) {
-                if (s.endsWith("desc")) {
-                    query.orderByDesc(s.substring(0, s.length() - 4).trim());
-                } else if (s.endsWith("asc")) {
-                    query.orderByAsc(s.substring(0, s.length() - 3).trim());
+        if(ArrayUtils.isNotEmpty(order)) {
+            for (String s : order) {
+                if(s.endsWith("-")) {
+                    query.orderByDesc(s.substring(0, s.length() - 1));
+                } else if(s.endsWith("+")){
+                    query.orderByAsc(s.substring(0, s.length() - 1));
                 } else {
                     query.orderByAsc(s);
                 }
@@ -147,13 +146,12 @@ public class Query<T> implements Serializable {
             wrapper.select(prop);
         }
 
-        if (null != order) {
-            String[] orders = order.split(",");
-            for (String s : orders) {
-                if (s.endsWith("desc")) {
-                    wrapper.orderByDesc(s.substring(0, s.length() - 4).trim());
-                } else if (s.endsWith("asc")) {
-                    wrapper.orderByAsc(s.substring(0, s.length() - 3).trim());
+        if(ArrayUtils.isNotEmpty(order)) {
+            for (String s : order) {
+                if(s.endsWith("-")) {
+                    wrapper.orderByDesc(s.substring(0, s.length() - 1));
+                } else if(s.endsWith("+")){
+                    wrapper.orderByAsc(s.substring(0, s.length() - 1));
                 } else {
                     wrapper.orderByAsc(s);
                 }
@@ -181,13 +179,12 @@ public class Query<T> implements Serializable {
             wrapper.select(prop);
         }
 
-        if (null != order) {
-            String[] orders = order.split(",");
-            for (String s : orders) {
-                if (s.endsWith("desc")) {
-                    wrapper.orderByDesc(s.substring(0, s.length() - 4).trim());
-                } else if (s.endsWith("asc")) {
-                    wrapper.orderByAsc(s.substring(0, s.length() - 3).trim());
+        if(ArrayUtils.isNotEmpty(order)) {
+            for (String s : order) {
+                if(s.endsWith("-")) {
+                    wrapper.orderByDesc(s.substring(0, s.length() - 1));
+                } else if(s.endsWith("+")){
+                    wrapper.orderByAsc(s.substring(0, s.length() - 1));
                 } else {
                     wrapper.orderByAsc(s);
                 }
