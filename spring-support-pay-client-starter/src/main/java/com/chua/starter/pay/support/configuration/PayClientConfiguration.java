@@ -3,10 +3,9 @@ package com.chua.starter.pay.support.configuration;
 import com.chua.starter.mqtt.support.template.MqttTemplate;
 import com.chua.starter.pay.support.annotations.OnPayListener;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.DependsOn;
 import org.springframework.util.ReflectionUtils;
 
 /**
@@ -22,9 +21,7 @@ public class PayClientConfiguration  {
 
 
     @Bean
-    @DependsOn("mqttClient")
-    @ConditionalOnBean(MqttTemplate.class)
-    public PayListenerService payListenerService(MqttTemplate mqttTemplate) {
+    public PayListenerService payListenerService(@Autowired(required = false) MqttTemplate mqttTemplate) {
         factory.register(mqttTemplate);
         return factory;
     }

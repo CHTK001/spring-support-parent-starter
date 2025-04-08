@@ -1,7 +1,6 @@
 package com.chua.starter.pay.support.configuration;
 
 import com.chua.common.support.json.Json;
-import com.chua.common.support.utils.ClassUtils;
 import com.chua.starter.mqtt.support.template.MqttTemplate;
 import com.chua.starter.pay.support.annotations.OnPayListener;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
@@ -36,13 +35,20 @@ public class PayListenerService {
     }
 
 
+    /**
+     * 发布
+     *
+     * @param order 订单
+     */
     public void publish(PayMerchantOrder order) {
         if (mqttTemplate != null) {
             try {
                 mqttTemplate.publish(order.getPayMerchantOrderOrigin(), Json.toJson(order).getBytes(), 1, true);
             } catch (MqttException ignored) {
             }
+            return;
         }
+        listen(order);
     }
 
     public void listen(PayMerchantOrder order) {
@@ -66,6 +72,11 @@ public class PayListenerService {
         }
     }
 
+    /**
+     * 注册
+     *
+     * @param mqttTemplate mqttTemplate
+     */
     public void register(MqttTemplate mqttTemplate) {
         this.mqttTemplate = mqttTemplate;
 

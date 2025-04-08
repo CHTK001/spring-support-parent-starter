@@ -1,6 +1,8 @@
 package com.chua.starter.pay.support.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.chua.starter.common.support.annotations.ApiIgnore;
+import com.chua.starter.common.support.group.IgnoreGroup;
 import com.chua.starter.mybatis.pojo.SysBase;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -46,11 +48,20 @@ public class PayUserWallet extends SysBase implements Serializable {
     private BigDecimal payUserWalletMoney;
 
     /**
+     * 账户类型
+     */
+    @TableField(value = "pay_merchant_involved_account_type")
+    @ApiModelProperty(value = "账户类型")
+    @Schema(description = "账户类型")
+    private String payMerchantInvolvedAccountType;
+
+    /**
      * 锁
      */
     @TableField(value = "pay_user_wallet_version")
-    @ApiModelProperty(value="锁")
-    @Schema(description="锁")
+    @ApiModelProperty(value = "预留字段;锁")
+    @Schema(description = "预留字段;锁")
     @Version
+    @ApiIgnore(IgnoreGroup.class)
     private Integer payUserWalletVersion;
 }

@@ -45,6 +45,21 @@ public class PayMerchantOrder extends SysBase implements Serializable {
     @Size(max = 255, message = "订单号最大长度要小于 255")
     private String payMerchantOrderCode;
 
+    /**
+     * 涉及到的设备序列号
+     */
+    @TableField(value = "pay_merchant_involved_device_serial_number")
+    @ApiModelProperty(value = "涉及到的设备序列号")
+    @Schema(description = "涉及到的设备序列号")
+    private String payMerchantInvolvedDeviceSerialNumber;
+    /**
+     * 涉及到的账号类型
+     */
+    @TableField(value = "pay_merchant_involved_account_type")
+    @ApiModelProperty(value = "涉及到的账号类型")
+    @Schema(description = "涉及到的账号类型")
+    private String payMerchantInvolvedAccountType;
+
 
     /**
      * 部门ID
@@ -60,6 +75,7 @@ public class PayMerchantOrder extends SysBase implements Serializable {
     @ApiModelProperty(value = "部门名称")
     @Schema(description = "部门名称")
     private String payMerchantOrderDeptName;
+
 
 
     /**
@@ -115,6 +131,13 @@ public class PayMerchantOrder extends SysBase implements Serializable {
     @ApiModelProperty(value = "商品原始价格")
     @Schema(description = "商品原始价格")
     private BigDecimal payMerchantOrderPrice;
+    /**
+     * 服务费
+     */
+    @TableField(value = "pay_merchant_order_service_price")
+    @ApiModelProperty(value = "服务费")
+    @Schema(description = "服务费")
+    private BigDecimal payMerchantOrderServicePrice;
 
     /**
      * 总价
