@@ -17,14 +17,6 @@ import java.math.BigDecimal;
 @Data
 @Schema(description = "创建订单请求")
 public class PayOrderCreateRequest {
-
-
-    /**
-     * 用户id
-     */
-    @Schema(description = "用户id(非必填)")
-    private String openId;
-
     /**
      * 涉及到的设备序列号
      */
