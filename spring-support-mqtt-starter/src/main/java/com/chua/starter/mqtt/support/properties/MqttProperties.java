@@ -14,6 +14,11 @@ import static com.chua.starter.mqtt.support.properties.MqttProperties.PRE;
 public class MqttProperties {
 
     public static final String PRE = "plugin.spring.mqtt";
+
+    /**
+     * 是否启用
+     */
+    private boolean enable = false;
     /**
      * 主机
      */

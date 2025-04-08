@@ -6,8 +6,6 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.common.support.validator.group.UpdateGroup;
-import com.chua.starter.common.support.annotations.ApiCrypto;
-import com.chua.starter.common.support.annotations.ApiCryptoKey;
 import com.chua.starter.mybatis.pojo.SysBase;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -124,6 +122,14 @@ public class PayMerchantConfigWechat extends SysBase implements Serializable {
     @ApiModelProperty(value = "是否启用；0:禁用")
     @Schema(description = "是否启用；0:禁用")
     private Integer payMerchantConfigStatus;
+
+    /**
+     * 测试账号
+     */
+    @TableField(value = "pay_merchant_config_test_account")
+    @ApiModelProperty(value = "测试账号")
+    @Schema(description = "测试账号")
+    private String payMerchantConfigTestAccount;
 
     /**
      * 商户ID
