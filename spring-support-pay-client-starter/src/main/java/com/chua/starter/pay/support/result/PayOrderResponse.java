@@ -30,5 +30,5 @@ public class PayOrderResponse implements Serializable {
      * 订单编号
      */
     @Schema(description = "订单编号")
-    private String payMerchantCode;
+    private String payMerchantOrderCode;
 }

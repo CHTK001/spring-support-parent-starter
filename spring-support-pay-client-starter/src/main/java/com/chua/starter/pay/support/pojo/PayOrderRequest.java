@@ -23,13 +23,14 @@ public class PayOrderRequest implements Serializable {
      * 订单id
      */
     @Schema(description = "订单id(用于前端区分是否同一次交易), 不传不进行订单校验")
+    @NotBlank(message = "订单id不能为空", groups = {AddGroup.class})
     private String orderId;
 
     /**
      * 是否校验部门
      */
     @Schema(description = "是否校验部门")
-    private boolean checkDept = true;
+    private boolean checkDept = false;
 
     /**
      * 部门id
@@ -52,7 +53,7 @@ public class PayOrderRequest implements Serializable {
     /**
      * 用户id
      */
-    @Schema(description = "用户id(微信为openId)")
+    @Schema(description = "用户id(微信为openId, 支付宝账号ID)")
     @NotBlank(message = "用户id不能为空", groups = {AddGroup.class})
     private String userId;
 

@@ -107,7 +107,7 @@ public interface AuthConstant {
     }
 
     /**
-     * 是否为机构组织者
+     * 是否为机构组织者(参与发布活动的合伙人)
      *
      * @param roles 角色
      * @return 是否为管理员

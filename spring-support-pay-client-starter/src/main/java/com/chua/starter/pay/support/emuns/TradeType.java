@@ -30,9 +30,13 @@ public enum TradeType {
     /**
      * 钱包
      */
-    WALLET("wallet")
+    WALLET("wallet"),
 
 
+    /**
+     * 待定
+     */
+    UNCERTAIN("uncertain")
     ;
 
     private final String name;

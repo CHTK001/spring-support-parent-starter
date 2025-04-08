@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
@@ -20,6 +21,7 @@ import org.springframework.util.ReflectionUtils;
 
 /**
  * mqtt
+ *
  * @author CH
  */
 @EnableConfigurationProperties(MqttProperties.class)
@@ -30,10 +32,11 @@ public class MqttConfiguration implements ApplicationContextAware, SmartInstanti
 
     private static final Log log = Log.getLogger(MqttConfiguration.class);
 
-    private MqttTemplate mqttTemplate ;
+    private MqttTemplate mqttTemplate;
 
     @Bean("mqttClient")
     @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = MqttProperties.PRE, name = "enable", havingValue = "true")
     @ConditionalOnExpression("!T(org.springframework.util.StringUtils).isEmpty('${plugin.spring.mqtt.address:}')")
     public MqttTemplate mqttClient() {
         return mqttTemplate;
@@ -55,7 +58,7 @@ public class MqttConfiguration implements ApplicationContextAware, SmartInstanti
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.mqttProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(MqttProperties.PRE, MqttProperties.class);
-        if(StringUtils.isNotEmpty(mqttProperties.getAddress())) {
+        if (StringUtils.isNotEmpty(mqttProperties.getAddress()) && mqttProperties.isEnable()) {
             try {
                 this.mqttTemplate = new MqttTemplate(mqttProperties);
             } catch (MqttException e) {

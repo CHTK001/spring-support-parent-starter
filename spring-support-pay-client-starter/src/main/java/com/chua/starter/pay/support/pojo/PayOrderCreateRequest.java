@@ -24,6 +24,12 @@ public class PayOrderCreateRequest {
      */
     @Schema(description = "用户id(非必填)")
     private String openId;
+
+    /**
+     * 涉及到的设备序列号
+     */
+    @Schema(description = "涉及到的设备序列号")
+    private String payMerchantInvolvedDeviceSerialNumber;
     /**
      * 订单id
      */

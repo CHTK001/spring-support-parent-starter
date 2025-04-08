@@ -6,7 +6,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
-import java.time.LocalDate;
 import java.util.Set;
 
 /**
@@ -16,7 +15,6 @@ import java.util.Set;
 @EqualsAndHashCode(callSuper = true)
 @Data
 public class WaterQueryV1Request extends Query<PayMerchantOrderWater> implements Serializable {
-
 
     /**
      * 用户id
@@ -31,7 +29,6 @@ public class WaterQueryV1Request extends Query<PayMerchantOrderWater> implements
      * 开始时间
      */
     private Long startTime;
-
     /**
      * 结束时间
      */

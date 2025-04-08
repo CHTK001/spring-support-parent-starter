@@ -26,6 +26,11 @@ public interface PayConstant {
      */
      String ORDER_REFUND_PREFIX = "order:refund:";
 
+    /**
+     * 订单支付二维码前缀
+     */
+    String ORDER_PAY_QR_CODE = "order:pay:qrcode:";
+
      /**
      * 订单回调前缀
      */
