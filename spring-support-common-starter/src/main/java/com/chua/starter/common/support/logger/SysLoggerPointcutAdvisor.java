@@ -3,8 +3,7 @@ package com.chua.starter.common.support.logger;
 import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.*;
-import com.chua.starter.common.support.annotations.OperateLog;
-import com.chua.starter.common.support.annotations.UserLogger;
+import com.chua.starter.common.support.annotations.SysLog;
 import com.chua.starter.common.support.utils.RequestUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -51,7 +50,7 @@ public class SysLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor
 
     @Override
     public boolean matches(Method method, Class<?> targetClass) {
-        return method.isAnnotationPresent(UserLogger.class) && !method.isAnnotationPresent(LoggerIgnore.class);
+        return method.isAnnotationPresent(SysLog.class) && !method.isAnnotationPresent(LoggerIgnore.class);
     }
 
     @Override
@@ -87,12 +86,12 @@ public class SysLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor
 
     void createOperateLogger(Object proceed, Throwable throwable, MethodInvocation invocation, long startTime) {
         Method method = invocation.getMethod();
-        OperateLog operateLog = method.getDeclaredAnnotation(OperateLog.class);
-        if(!operateLog.enable()) {
+        SysLog sysLog = method.getDeclaredAnnotation(SysLog.class);
+        if (!sysLog.enable()) {
             return;
         }
 
-        String name = getName(operateLog, method);
+        String name = getName(sysLog, method);
         if(null == name) {
             return;
         }
@@ -104,11 +103,11 @@ public class SysLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor
         sysLoggerInfo.setCreateTime(new Date());
         sysLoggerInfo.setLogName(name);
         sysLoggerInfo.setFingerprint(RequestUtils.getHeader(request, X_REQ_FINGERPRINT));
-        sysLoggerInfo.setLogModule(StringUtils.defaultString(operateLog.module(), module));
+        sysLoggerInfo.setLogModule(StringUtils.defaultString(sysLog.module(), module));
         sysLoggerInfo.setLogCost((System.currentTimeMillis() - startTime) );
         sysLoggerInfo.setClientIp(RequestUtils.getIpAddress(request));
 
-        if(operateLog.logArgs()) {
+        if (sysLog.logArgs()) {
             List<Object> params = new LinkedList<>();
             for (Object argument : invocation.getArguments()) {
                 if(null == argument) {
@@ -132,7 +131,7 @@ public class SysLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor
             }
         }
 
-        String content = operateLog.content();
+        String content = sysLog.content();
         sysLoggerInfo.setLogStatus(null == throwable ? 1 : 0);
         sysLoggerInfo.setLogMapping(RequestUtils.getUrl(request));
         sysLoggerInfo.setLogCode(IdUtils.createUlid());
@@ -179,8 +178,8 @@ public class SysLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor
         return "查询";
     }
 
-    private String getName(OperateLog operateLog, Method method) {
-        String name = operateLog.name();
+    private String getName(SysLog sysLog, Method method) {
+        String name = sysLog.name();
         if(StringUtils.isNotBlank(name)) {
             return name;
         }

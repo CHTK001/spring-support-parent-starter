@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.handlers.AbstractJsonTypeHandler;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.json.TypeReference;
 
+import java.lang.reflect.Field;
 import java.util.Set;
 
 /**
@@ -18,13 +19,21 @@ public class JsonLongSetTypeHandler extends AbstractJsonTypeHandler<Object> {
 
     private static final TypeReference<Set<Long>> TYPE_REFERENCE = new TypeReference<Set<Long>>(){};
 
+    public JsonLongSetTypeHandler(Class<?> type) {
+        super(type);
+    }
+
+    public JsonLongSetTypeHandler(Class<?> type, Field field) {
+        super(type, field);
+    }
+
     @Override
-    protected Object parse(String json) {
+    public Object parse(String json) {
         return Json.fromJson(json, TYPE_REFERENCE);
     }
 
     @Override
-    protected String toJson(Object obj) {
+    public String toJson(Object obj) {
         return Json.toJson(obj);
     }
 

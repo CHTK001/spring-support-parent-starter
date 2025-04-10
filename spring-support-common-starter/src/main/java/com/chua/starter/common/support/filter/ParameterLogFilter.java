@@ -5,9 +5,12 @@ import com.chua.common.support.log.Log;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.logger.InterfaceLoggerInfo;
+import com.chua.starter.common.support.properties.LogProperties;
 import com.chua.starter.common.support.utils.RequestUtils;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.context.ApplicationContext;
 
 import java.io.IOException;
 import java.net.URLDecoder;
@@ -15,6 +18,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Enumeration;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static com.chua.common.support.constant.NameConstant.*;
 import static com.chua.common.support.http.HttpConstant.HTTP_HEADER_CONTENT_TYPE;
@@ -28,6 +33,14 @@ import static com.chua.common.support.http.HttpConstant.HTTP_HEADER_CONTENT_TYPE
 public class ParameterLogFilter implements Filter {
 
     private static final Log log = Log.getLogger(Filter.class);
+    private final LogProperties loggerProperties;
+    private final ApplicationContext applicationContext;
+    private final ExecutorService interfaceServiceLog = Executors.newVirtualThreadPerTaskExecutor();
+
+    public ParameterLogFilter(LogProperties loggerProperties, ApplicationContext applicationContext) {
+        this.loggerProperties = loggerProperties;
+        this.applicationContext = applicationContext;
+    }
 
     @Override
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
@@ -36,9 +49,11 @@ public class ParameterLogFilter implements Filter {
             return;
         }
 
+
         String requestURI = request.getRequestURI();
         if(isPass(requestURI)) {
             filterChain.doFilter(servletRequest, servletResponse);
+            injectInterfaceServiceLog(request);
             return;
         }
         log.info("======================================");
@@ -46,6 +61,7 @@ public class ParameterLogFilter implements Filter {
         String header = request.getHeader(HTTP_HEADER_CONTENT_TYPE);
         if(StringUtils.contains(header, "form-data")) {
             filterChain.doFilter(servletRequest, servletResponse);
+            injectInterfaceServiceLog(request);
             return;
         }
         String method = request.getMethod();
@@ -55,6 +71,7 @@ public class ParameterLogFilter implements Filter {
             printQuery(request);
             printHeader(request);
             log.info("======================================\r\n");
+            injectInterfaceServiceLog(request);
             filterChain.doFilter(request, servletResponse);
             return;
         }
@@ -64,12 +81,28 @@ public class ParameterLogFilter implements Filter {
             printBody(requestWrapper);
             printHeader(request);
             log.info("======================================\r\n");
+            injectInterfaceServiceLog(requestWrapper);
             filterChain.doFilter(requestWrapper, servletResponse);
             return;
         }
+        injectInterfaceServiceLog(request);
         filterChain.doFilter(request, servletResponse);
     }
 
+    /**
+     * 注入接口服务日志
+     *
+     * @param request 请求
+     */
+    private void injectInterfaceServiceLog(HttpServletRequest request) {
+        if (!loggerProperties.isOpenInterfaceLog()) {
+            return;
+        }
+
+        interfaceServiceLog.execute(() -> {
+            applicationContext.publishEvent(new InterfaceLoggerInfo(request));
+        });
+    }
 
 
     private boolean isPass(String requestURI) {

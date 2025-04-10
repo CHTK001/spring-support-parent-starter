@@ -14,12 +14,11 @@ import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.expression.operators.relational.InExpression;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
+import net.sf.jsqlparser.statement.select.ParenthesedSelect;
 import net.sf.jsqlparser.statement.select.PlainSelect;
-import net.sf.jsqlparser.statement.select.SelectExpressionItem;
-import net.sf.jsqlparser.statement.select.SubSelect;
+import net.sf.jsqlparser.statement.select.SelectItem;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.stream.Collectors;
 
 import static com.chua.starter.mybatis.interceptor.MybatisPlusPermissionHandler.NO_DATA;
@@ -95,24 +94,40 @@ public abstract class AbstractDeptRegister implements DeptRegister {
 
         if (DataFilterTypeEnum.DEPT_AND_SUB == dataPermission) {
             InExpression inExpression = new InExpression();
+            // 设置左侧表达式 - 列名
             inExpression.setLeftExpression(new Column(deptTable, deptIdColumn));
-            SubSelect subSelect = new SubSelect();
+
+            // 创建子查询
+            ParenthesedSelect subSelect = new ParenthesedSelect();
             PlainSelect select = new PlainSelect();
-            select.setSelectItems(Collections.singletonList(new SelectExpressionItem(new Column(deptIdColumn))));
+
+            // 设置 SELECT 部分
+            select.addSelectItems(new SelectItem<>(new Column(deptIdColumn)));
+
+            // 设置 FROM 部分
             select.setFromItem(deptTable);
+
+            // 创建函数表达式 - find_in_set
             Function function = new Function();
             function.setName("find_in_set");
-            function.setParameters(new ExpressionList(new LongValue(user.getDeptId()), new Column(deptTreeIdColumn)));
+            ExpressionList params = new ExpressionList<>();
+            params.addExpressions(new LongValue(user.getDeptId()), new Column(deptTreeIdColumn));
+            function.setParameters(params);
+
+            // 设置 WHERE 条件
             select.setWhere(function);
-            subSelect.setSelectBody(select);
+
+            // 将子查询设置为 IN 表达式的右侧
+            subSelect.setSelect(select);
             inExpression.setRightExpression(subSelect);
-            if (null == where) {
+
+            if (where == null) {
                 plainSelect.setWhere(inExpression);
                 return inExpression;
             }
-            AndExpression expression = new AndExpression();
-            expression.setLeftExpression(where);
-            expression.setRightExpression(inExpression);
+
+            // 创建 AND 表达式
+            AndExpression expression = new AndExpression(where, inExpression);
             plainSelect.setWhere(expression);
             return expression;
         }

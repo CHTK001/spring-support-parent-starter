@@ -163,7 +163,7 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
         return Db.updateBatchById(entities, size);
     }
 
-    default Boolean insertOrUpdate(T entity) {
+    default boolean insertOrUpdate(T entity) {
         return  Db.saveOrUpdate(entity);
     }
 
