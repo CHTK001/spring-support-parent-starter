@@ -5,7 +5,6 @@ import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.net.UserAgent;
 import com.chua.common.support.utils.*;
-import com.chua.starter.common.support.annotations.OperateLog;
 import com.chua.starter.common.support.annotations.UserLogger;
 import com.chua.starter.common.support.utils.RequestUtils;
 import jakarta.servlet.http.HttpServletRequest;
@@ -53,7 +52,7 @@ public class UserLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdviso
 
     @Override
     public boolean matches(Method method, Class<?> targetClass) {
-        return method.isAnnotationPresent(OperateLog.class) && !method.isAnnotationPresent(LoggerIgnore.class);
+        return method.isAnnotationPresent(UserLogger.class) && !method.isAnnotationPresent(LoggerIgnore.class);
     }
 
     @Override

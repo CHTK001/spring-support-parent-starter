@@ -13,7 +13,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class LogProperties {
 
     /**
-     * 开启限流
+     * 日志开启
      */
     private boolean enable = true;
+
+    /**
+     * 开启接口日志
+     */
+    private boolean openInterfaceLog = false;
 }
