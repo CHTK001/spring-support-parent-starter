@@ -381,7 +381,7 @@
 
             <dependency>
                 <groupId>com.chua</groupId>
-                <artifactId>spring-support-pay-client-starter</artifactId>
+                <artifactId>spring-api-support-common-pay-client-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
 

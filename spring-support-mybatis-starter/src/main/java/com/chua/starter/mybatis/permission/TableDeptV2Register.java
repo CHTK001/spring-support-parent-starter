@@ -15,9 +15,9 @@ import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.expression.operators.relational.InExpression;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
+import net.sf.jsqlparser.statement.select.ParenthesedSelect;
 import net.sf.jsqlparser.statement.select.PlainSelect;
-import net.sf.jsqlparser.statement.select.SelectExpressionItem;
-import net.sf.jsqlparser.statement.select.SubSelect;
+import net.sf.jsqlparser.statement.select.SelectItem;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -107,15 +107,15 @@ public class TableDeptV2Register implements DeptRegister {
         if (DataFilterTypeEnum.DEPT_AND_SUB == dataPermission) {
             InExpression inExpression = new InExpression();
             inExpression.setLeftExpression(new Column(table, deptIdColumn));
-            SubSelect subSelect = new SubSelect();
+            ParenthesedSelect subSelect = new ParenthesedSelect();
             PlainSelect select = new PlainSelect();
-            select.setSelectItems(Collections.singletonList(new SelectExpressionItem(new Column(deptIdColumn))));
+            select.setSelectItems(Collections.singletonList(new SelectItem<>(new Column(deptIdColumn))));
             select.setFromItem(table);
             Function function = new Function();
             function.setName("find_in_set");
-            function.setParameters(new ExpressionList(new LongValue(currentUser.getDeptId()), new Column(deptTreeIdColumn)));
+            function.setParameters(new ExpressionList<>(new LongValue(currentUser.getDeptId()), new Column(deptTreeIdColumn)));
             select.setWhere(function);
-            subSelect.setSelectBody(select);
+            subSelect.setSelect(select);
             inExpression.setRightExpression(subSelect);
             if (null == where) {
                 return NO_DATA;
@@ -160,7 +160,7 @@ public class TableDeptV2Register implements DeptRegister {
     private Expression createInExpression() {
         return new InExpression(
                 new Column(table, deptIdColumn),
-                new ExpressionList(Arrays.stream(currentUser.getDataPermissionRule().split(","))
+                new ExpressionList<>(Arrays.stream(currentUser.getDataPermissionRule().split(","))
                         .map(LongValue::new).collect(Collectors.toList()))
         );
     }

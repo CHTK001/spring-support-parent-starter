@@ -3,8 +3,10 @@ package com.chua.starter.common.support.configuration;
 import com.chua.starter.common.support.configuration.resolver.VersionArgumentResolver;
 import com.chua.starter.common.support.filter.ActuatorAuthenticationFilter;
 import com.chua.starter.common.support.filter.ParameterLogFilter;
+import com.chua.starter.common.support.listener.SysInterfaceLogListener;
 import com.chua.starter.common.support.properties.ActuatorProperties;
 import com.chua.starter.common.support.properties.CorsProperties;
+import com.chua.starter.common.support.properties.LogProperties;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +16,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.Ordered;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -88,11 +91,22 @@ public class FilterConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(name = "plugin.log.enable", havingValue = "true", matchIfMissing = true)
-    public ParameterLogFilter paramLogFilter() {
-        return new ParameterLogFilter();
+    public ParameterLogFilter paramLogFilter(LogProperties loggerProperties, ApplicationContext applicationContext) {
+        return new ParameterLogFilter(loggerProperties, applicationContext);
     }
 
 
+    /**
+     * 系统日志
+     *
+     * @return SysInterfaceLogListener
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(name = "plugin.log.enable", havingValue = "true", matchIfMissing = true)
+    public SysInterfaceLogListener sysInterfaceLogListener() {
+        return new SysInterfaceLogListener();
+    }
     /**
      * 认证过滤器
      *

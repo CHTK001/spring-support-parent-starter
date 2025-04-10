@@ -9,7 +9,7 @@
         <version>4.0.0.32</version>
     </parent>
 
-    <artifactId>spring-support-pay-client-starter</artifactId>
+    <artifactId>spring-api-support-common-pay-client-starter</artifactId>
     <description>支付客户端</description>
 
     <properties>

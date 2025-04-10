@@ -17,7 +17,6 @@ import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.statement.delete.Delete;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
-import net.sf.jsqlparser.statement.select.SelectBody;
 import net.sf.jsqlparser.statement.select.SetOperationList;
 import net.sf.jsqlparser.statement.update.Update;
 import org.apache.ibatis.executor.Executor;
@@ -88,14 +87,14 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
         if (!currentUser.isDept()) {
             return;
         }
-        SelectBody selectBody = select.getSelectBody();
+        Select selectBody = select.getSelectBody();
         try {
             // 单个sql
             if (selectBody instanceof PlainSelect) {
                 this.setWhere((PlainSelect) selectBody, obj.toString(), currentUser);
             } else if (selectBody instanceof SetOperationList setOperationList) {
                 // 多个sql，用;号隔开，一般不会用到。例如：select * from user;select * from role;
-                List<SelectBody> selects = setOperationList.getSelects();
+                List<Select> selects = setOperationList.getSelects();
                 selects.forEach(s -> this.setWhere((PlainSelect) s, obj.toString(), currentUser));
             }
         } catch (Exception e) {
