@@ -1,5 +1,6 @@
 package com.chua.socketio.support.session;
 
+import com.chua.socketio.support.MsgEvent;
 import com.chua.socketio.support.MsgStep;
 import com.corundumstudio.socketio.SocketIOClient;
 
@@ -54,6 +55,16 @@ public interface SocketSessionTemplate {
      */
     void send(String event, String msg);
 
+
+    /**
+     * 向所有客户端发送消息。
+     *
+     * @param event 触发的事件名称。
+     * @param msgEvent 要发送的消息内容。
+     */
+    default void send(String event, MsgEvent msgEvent) {
+        send(event, msgEvent.toString());
+    }
 
     /**
      * 向所有客户端发送消息。
