@@ -11,7 +11,8 @@ import org.springframework.context.ApplicationEvent;
 
 import java.io.IOException;
 import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * 接口日志信息
@@ -49,12 +50,17 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
     public InterfaceLoggerInfo(HttpServletRequest request) {
         super(request);
         this.method = request.getMethod();
-        this.url = URLDecoder.decode(request.getRequestURI(), StandardCharsets.UTF_8);
+        this.url = URLDecoder.decode(request.getRequestURI(), UTF_8);
         this.ip = RequestUtils.getIpAddress(request);
         this.queryParams = request.getQueryString();
         if (request instanceof CustomHttpServletRequestWrapper wrapper) {
+            String header = wrapper.getHeader("Content-Type");
             try {
-                this.body = IoUtils.toByteArray(wrapper.getInputStream());
+                if (header != null && (header.contains("application/json") || header.contains("text/"))) {
+                    this.body = IoUtils.toString(wrapper.getInputStream(), UTF_8).getBytes(UTF_8);
+                } else {
+                    this.body = IoUtils.toByteArray(wrapper.getInputStream());
+                }
             } catch (IOException ignored) {
             }
         }
