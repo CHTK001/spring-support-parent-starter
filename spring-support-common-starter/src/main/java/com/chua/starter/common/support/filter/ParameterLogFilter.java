@@ -66,7 +66,7 @@ public class ParameterLogFilter implements Filter {
         }
         String method = request.getMethod();
 
-        if(StringUtils.isEmpty(header) || (GET.equals(method) || PUT.equals(method))) {
+        if (StringUtils.isEmpty(header) || (GET.equals(method) || DELETE.equals(method))) {
             printUrl(request);
             printQuery(request);
             printHeader(request);
@@ -76,7 +76,7 @@ public class ParameterLogFilter implements Filter {
             return;
         }
 
-        if(POST.equalsIgnoreCase(method) || PUT.equalsIgnoreCase(method)) {
+        if (POST.equalsIgnoreCase(method) || PUT.equalsIgnoreCase(method) || "patch".equalsIgnoreCase(method)) {
             CustomHttpServletRequestWrapper requestWrapper = new CustomHttpServletRequestWrapper((HttpServletRequest) servletRequest);
             printBody(requestWrapper);
             printHeader(request);

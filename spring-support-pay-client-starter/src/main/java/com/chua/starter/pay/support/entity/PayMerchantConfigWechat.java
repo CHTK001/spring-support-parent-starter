@@ -89,15 +89,6 @@ public class PayMerchantConfigWechat extends SysBase implements Serializable {
     @NotBlank(message = "支付类型不能为空", groups = {AddGroup.class})
     private String payMerchantConfigWechatTradeType;
 
-    /**
-     * 回调地址
-     */
-    @TableField(value = "pay_merchant_config_wechat_notify_url")
-    @ApiModelProperty(value = "回调地址")
-    @Schema(description = "回调地址")
-    @Size(max = 255, message = "回调地址最大长度要小于 255")
-    @NotBlank(message = "回调地址不能为空", groups = {AddGroup.class})
-    private String payMerchantConfigWechatNotifyUrl;
 
     /**
      * api v3Key
@@ -109,6 +100,9 @@ public class PayMerchantConfigWechat extends SysBase implements Serializable {
     @NotBlank(message = "api v3Key不能为空", groups = {AddGroup.class})
     private String payMerchantConfigWechatApiKeyV3;
 
+    /**
+     * 私钥文件路径
+     */
     @TableField(value = "pay_merchant_config_wechat_private_key_path")
     @ApiModelProperty(value = "")
     @Schema(description = "")
@@ -139,13 +133,31 @@ public class PayMerchantConfigWechat extends SysBase implements Serializable {
     @Schema(description = "商户ID")
     @NotBlank(message = "商户ID不能为空", groups = {AddGroup.class})
     private Integer payMerchantId;
-
+    /**
+     * 回调地址
+     * 默认: payMerchantConfigWechatNotifyUrl +"/商户号/订单号"
+     */
+    @TableField(value = "pay_merchant_config_wechat_notify_url")
+    @ApiModelProperty(value = "回调地址")
+    @Schema(description = "回调地址")
+    @Size(max = 255, message = "回调地址最大长度要小于 255")
+    @NotBlank(message = "回调地址不能为空", groups = {AddGroup.class})
+    private String payMerchantConfigWechatNotifyUrl;
     /**
      * 退款回调地址
+     * 默认: payMerchantConfigWechatRefundNotifyUrl +"/商户号/订单号"
      */
     @TableField(value = "pay_merchant_config_wechat_refund_notify_url")
     @ApiModelProperty(value = "退款回调地址")
     @Schema(description = "退款回调地址")
     @Size(max = 255, message = "退款回调地址最大长度要小于 255")
     private String payMerchantConfigWechatRefundNotifyUrl;
+    /**
+     * 转账回调地址
+     * 默认: payMerchantConfigWechatTransferUrl + "/outTradeNo/payMerchantConfigWechatId/商户ID"
+     */
+    @TableField(value = "pay_merchant_config_wechat_transfer_url")
+    @ApiModelProperty(value = "转账回调地址")
+    @Schema(description = "转账回调地址")
+    private String payMerchantConfigWechatTransferUrl;
 }
