@@ -42,6 +42,12 @@ public class PayOrderCreateRequest {
     @Schema(description = "商品名称")
     @NotBlank(message = "商品名称不能为空", groups = {AddGroup.class})
     private String productName;
+
+    /**
+     * 商品编码(默认与商品名称一致)
+     */
+    @Schema(description = "商品编码(默认与商品名称一致)")
+    private String productCode;
     /**
      * 商户编码
      */
