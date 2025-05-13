@@ -18,6 +18,15 @@ import java.util.Set;
  */
 @Data
 public class UserResume  {
+
+    /**
+     * unionId
+     */
+    private String unionId;
+    /**
+     * openId
+     */
+    private String openId;
     /**
      * 索引
      */
