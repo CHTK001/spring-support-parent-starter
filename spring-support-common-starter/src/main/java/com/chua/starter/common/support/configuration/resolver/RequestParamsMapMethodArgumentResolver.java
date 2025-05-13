@@ -101,6 +101,10 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
         }
         value = beanMap.get(name);
         if (null == value) {
+            if (field.isAnnotationPresent(RequestParamMapping.class)) {
+                doRequestParamMappingRegister(instance, field, AnnotationUtils.getAnnotation(field, RequestParamMapping.class), beanMap);
+                return;
+            }
             return;
         }
         if (field.isAnnotationPresent(RequestParamMapping.class)) {

@@ -60,7 +60,7 @@ public class PayOrderRequest implements Serializable {
     /**
      * 来源
      */
-    @Schema(description = "来源")
+    @Schema(description = "来源(业务系统ID, 用于处理数据)")
     @NotBlank(message = "来源不能为空", groups = {AddGroup.class})
     private String origin;
 
