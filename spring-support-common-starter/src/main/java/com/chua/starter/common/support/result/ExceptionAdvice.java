@@ -52,7 +52,7 @@ public class ExceptionAdvice  {
     @ExceptionHandler(BindException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> processException(BindException e) {
-        log.error("BindException:{}", e.getMessage());
+        e.printStackTrace();
         String msg = e.getAllErrors().stream().map(DefaultMessageSourceResolvable::getDefaultMessage).collect(Collectors.joining("；"));
         return Result.failed(REQUEST_PARAM_ERROR, msg);
     }
@@ -60,6 +60,8 @@ public class ExceptionAdvice  {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> remoteExecutionException(RemoteExecutionException e) {
         String message = e.getMessage();
+        log.error("远程调用异常");
+        e.printStackTrace();
         if(null != message && message.contains("Auth fail")) {
             return Result.failed(e.getType() + "登录认证失败");
         }
@@ -77,7 +79,7 @@ public class ExceptionAdvice  {
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> processException(HttpRequestMethodNotSupportedException e) {
-        log.error("HttpRequestMethodNotSupportedException:{}", e.getMessage());
+        e.printStackTrace();
         ProblemDetail body = e.getBody();
         return Result.failed(REQUEST_PARAM_ERROR, body.getDetail());
     }
@@ -91,7 +93,7 @@ public class ExceptionAdvice  {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> processException(MethodArgumentNotValidException e) {
-        log.error("MethodArgumentNotValidException:{}", e.getMessage());
+        e.printStackTrace();
         String msg = e.getBindingResult().getAllErrors().stream().map(DefaultMessageSourceResolvable::getDefaultMessage).collect(Collectors.joining("；"));
         return Result.failed(REQUEST_PARAM_ERROR, msg);
     }
@@ -99,7 +101,7 @@ public class ExceptionAdvice  {
     @ExceptionHandler(NoHandlerFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public <T> Result<T> processException(NoHandlerFoundException e) {
-        log.error(e.getMessage(), e);
+        e.printStackTrace();
         return Result.failed(RESOURCE_NOT_FOUND);
     }
 
@@ -109,7 +111,7 @@ public class ExceptionAdvice  {
     @ExceptionHandler(MissingServletRequestParameterException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> ReturnResult<T> processException(MissingServletRequestParameterException e) {
-        log.error(e.getMessage(), e);
+        e.printStackTrace();
         return Result.illegal(REQUEST_PARAM_ERROR, REQUEST_PARAM_ERROR.getMsg() + "(" + e.getParameterName() + ")缺失");
     }
 
@@ -119,7 +121,7 @@ public class ExceptionAdvice  {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> processException(MethodArgumentTypeMismatchException e) {
-        log.error(e.getMessage(), e);
+        e.printStackTrace();
         return Result.failed(REQUEST_PARAM_ERROR, "类型错误");
     }
 
@@ -129,7 +131,7 @@ public class ExceptionAdvice  {
     @ExceptionHandler(ServletException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> processException(ServletException e) {
-        log.error(e.getMessage(), e);
+        e.printStackTrace();
         if(e instanceof HttpMediaTypeNotSupportedException httpMediaTypeNotSupportedException) {
             return Result.failed("当前不支持: {}, 支持: {}",
                     httpMediaTypeNotSupportedException.getContentType(),
@@ -144,7 +146,7 @@ public class ExceptionAdvice  {
     @ExceptionHandler(UnknownHostException.class)
     @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
     public <T> Result<T> unknow(UnknownHostException e) {
-        log.error(e.getMessage(), e);
+        e.printStackTrace();
         return Result.failed(e.getMessage());
     }
 
@@ -152,6 +154,7 @@ public class ExceptionAdvice  {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> handleIllegalArgumentException(IllegalArgumentException e) {
         log.error("非法参数异常，异常原因：{}", e.getMessage(), e);
+        e.printStackTrace();
         String message = e.getMessage();
         if(message.contains("Unable to parse url")) {
             return Result.failed(message.replace("Unable to parse url", "无法解析地址"));
@@ -163,6 +166,7 @@ public class ExceptionAdvice  {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> handleJsonProcessingException(JsonProcessingException e) {
         log.error("Json转换异常，异常原因：{}", e.getMessage(), e);
+        e.printStackTrace();
         return Result.failed(e.getMessage());
     }
 
@@ -172,7 +176,7 @@ public class ExceptionAdvice  {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> processException(HttpMessageNotReadableException e) {
-        log.error(e.getMessage(), e);
+        e.printStackTrace();
         String errorMessage = "请求体不可为空";
         Throwable cause = e.getCause();
         if (cause != null) {
@@ -184,21 +188,21 @@ public class ExceptionAdvice  {
     @ExceptionHandler(TypeMismatchException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> processException(TypeMismatchException e) {
-        log.error(e.getMessage(), e);
+        e.printStackTrace();
         return Result.failed(e.getMessage());
     }
 
     @ExceptionHandler(SQLSyntaxErrorException.class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public <T> Result<T> processSQLSyntaxErrorException(SQLSyntaxErrorException e) {
-        log.error(e.getMessage(), e);
+        e.printStackTrace();
         return Result.failed("无权限操作");
     }
 
     @ExceptionHandler(AuthenticationException.class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public <T> Result<T> authenticationException(AuthenticationException e) {
-        log.error(e.getMessage(), e);
+        e.printStackTrace();
         return Result.failed(RESULT_ACCESS_UNAUTHORIZED, "无权限操作");
     }
 
@@ -206,7 +210,7 @@ public class ExceptionAdvice  {
     @ExceptionHandler(BusinessException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> handleBizException(BusinessException e) {
-        log.error("-->", e);
+        e.printStackTrace();
         if (e.getResultCode() != null) {
             return Result.failed(e.getLocalizedMessage());
         }
@@ -219,6 +223,7 @@ public class ExceptionAdvice  {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> maxUploadSizeExceededException(MaxUploadSizeExceededException e) {
         log.error("文件过大", e);
+        e.printStackTrace();
         if(e.getMaxUploadSize() > 0) {
             return Result.failed("文件过大, 当前服务器支支持{}大小文件", StringUtils.getNetFileSizeDescription(e.getMaxUploadSize(), DECIMAL_FORMAT));
         }
@@ -228,12 +233,14 @@ public class ExceptionAdvice  {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> handleException(Exception e) {
         log.error("handleException exception: {}", e.getMessage());
+        e.printStackTrace();
         return Result.failed("请求失败,请稍后重试");
     }
     @ExceptionHandler(SQLException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public <T> Result<T> sqlException(SQLException e) {
         log.error("SQLException: {}", e.getMessage());
+        e.printStackTrace();
         if(Validator.hasChinese(e.getMessage())) {
             return Result.failed(e);
         }
@@ -242,6 +249,7 @@ public class ExceptionAdvice  {
     @ExceptionHandler(RuntimeException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public <T> Result<T> handleRuntimeException(RuntimeException e, HttpServletResponse response) {
+        e.printStackTrace();
         response.setContentType("application/json");
         if("org.apache.ibatis.exceptions.TooManyResultsException".equals(e.getClass().getName())) {
             log.error("SQL只允许返回一条数据, 但是查询到多条数据", e);
