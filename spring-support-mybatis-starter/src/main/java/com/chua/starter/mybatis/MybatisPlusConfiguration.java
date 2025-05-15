@@ -1,5 +1,6 @@
 package com.chua.starter.mybatis;
 
+import com.baomidou.mybatisplus.core.config.GlobalConfig;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.DataPermissionInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
@@ -54,6 +55,17 @@ public class MybatisPlusConfiguration {
     }
 
 
+    @Bean
+    public GlobalConfig globalConfig() {
+        GlobalConfig globalConfig = new GlobalConfig();
+        GlobalConfig.DbConfig dbConfig = new GlobalConfig.DbConfig();
+        // 设置逻辑删除的全局值
+        dbConfig.setLogicDeleteField("sys_deleted");
+        dbConfig.setLogicDeleteValue("1"); // 删除值
+        dbConfig.setLogicNotDeleteValue("0"); // 未删除值
+        globalConfig.setDbConfig(dbConfig);
+        return globalConfig;
+    }
 
     /**
      * 数据权限
