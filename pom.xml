@@ -37,6 +37,7 @@
         <module>spring-support-websockify-starter</module>
         <module>spring-support-pay-client-starter</module>
         <module>spring-support-configcenter-starter</module>
+        <module>spring-support-prometheus-starter</module>
     </modules>
 
     <properties>
