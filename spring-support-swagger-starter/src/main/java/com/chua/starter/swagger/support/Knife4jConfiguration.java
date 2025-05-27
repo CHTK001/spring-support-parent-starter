@@ -1,6 +1,6 @@
 package com.chua.starter.swagger.support;
 
-import com.github.xiaoymin.knife4j.spring.annotations.EnableKnife4j;
+import com.github.xingfudeshi.knife4j.spring.annotations.EnableKnife4j;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
@@ -15,8 +15,6 @@ import org.springframework.boot.actuate.autoconfigure.endpoint.web.WebEndpointPr
 import org.springframework.boot.actuate.autoconfigure.web.server.ManagementPortType;
 import org.springframework.boot.actuate.endpoint.ExposableEndpoint;
 import org.springframework.boot.actuate.endpoint.web.*;
-import org.springframework.boot.actuate.endpoint.web.annotation.ControllerEndpointsSupplier;
-import org.springframework.boot.actuate.endpoint.web.annotation.ServletEndpointsSupplier;
 import org.springframework.boot.actuate.endpoint.web.servlet.WebMvcEndpointHandlerMapping;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.Binder;
@@ -86,8 +84,8 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
      **/
     @Bean
     public WebMvcEndpointHandlerMapping webEndpointServletHandlerMapping(WebEndpointsSupplier webEndpointsSupplier,
-                                                                         ServletEndpointsSupplier servletEndpointsSupplier,
-                                                                         ControllerEndpointsSupplier controllerEndpointsSupplier,
+//                                                                         ServletEndpointsSupplier servletEndpointsSupplier,
+//                                                                         ControllerEndpointsSupplier controllerEndpointsSupplier,
                                                                          EndpointMediaTypes endpointMediaTypes,
                                                                          CorsEndpointProperties corsProperties,
                                                                          WebEndpointProperties webEndpointProperties,
@@ -95,8 +93,8 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
         List<ExposableEndpoint<?>> allEndpoints = new ArrayList();
         Collection<ExposableWebEndpoint> webEndpoints = webEndpointsSupplier.getEndpoints();
         allEndpoints.addAll(webEndpoints);
-        allEndpoints.addAll(servletEndpointsSupplier.getEndpoints());
-        allEndpoints.addAll(controllerEndpointsSupplier.getEndpoints());
+//        allEndpoints.addAll(servletEndpointsSupplier.getEndpoints());
+//        allEndpoints.addAll(controllerEndpointsSupplier.getEndpoints());
         String basePath = webEndpointProperties.getBasePath();
         EndpointMapping endpointMapping = new EndpointMapping(basePath);
         boolean shouldRegisterLinksMapping = this.shouldRegisterLinksMapping(webEndpointProperties, environment, basePath);
