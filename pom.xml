@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.2.3</version>
+        <version>3.4.5</version>
         <relativePath/>
     </parent>
 
@@ -38,6 +38,7 @@
         <module>spring-support-pay-client-starter</module>
         <module>spring-support-configcenter-starter</module>
         <module>spring-support-prometheus-starter</module>
+        <module>spring-support-loki-starter</module>
     </modules>
 
     <properties>
