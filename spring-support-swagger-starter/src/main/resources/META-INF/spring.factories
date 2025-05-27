@@ -1,6 +1,7 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
   com.chua.starter.swagger.support.Knife4jConfiguration,\
   com.chua.starter.swagger.support.Knife4jWebMvcConfigurer,\
-  com.chua.starter.swagger.support.Knife4jRunner
+  com.chua.starter.swagger.support.Knife4jRunner,\
+  com.chua.starter.swagger.support.customizers.CustomOpenApiCustomizer
 org.springframework.boot.env.EnvironmentPostProcessor=\
   com.chua.starter.swagger.support.environment.SwaggerEnvironmentPostProcessor
