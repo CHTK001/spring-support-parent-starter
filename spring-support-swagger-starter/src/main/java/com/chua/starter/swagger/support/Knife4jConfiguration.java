@@ -1,5 +1,6 @@
 package com.chua.starter.swagger.support;
 
+import com.chua.starter.swagger.support.customize.CustomOperationCustomizer;
 import com.github.xingfudeshi.knife4j.spring.annotations.EnableKnife4j;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
@@ -44,6 +45,11 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
     Knife4jProperties knife4jProperties;
     private ApplicationContext applicationContext;
 
+
+    @Bean
+    public CustomOperationCustomizer customOperationCustomizer() {
+        return new CustomOperationCustomizer(knife4jProperties);
+    }
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         List<Knife4jProperties.Knife4j> knife4j1 = knife4jProperties.getKnife4j();
