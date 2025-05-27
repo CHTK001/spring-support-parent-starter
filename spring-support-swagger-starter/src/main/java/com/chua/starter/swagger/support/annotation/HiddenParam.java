@@ -15,5 +15,5 @@ import java.lang.annotation.Target;
 @Target({ElementType.FIELD, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Schema(hidden = true)  // 继承标准的hidden行为
-public @interface HiddenField {
+public @interface HiddenParam {
 }
