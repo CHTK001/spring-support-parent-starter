@@ -5,6 +5,7 @@ import lombok.experimental.Accessors;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 配置
@@ -25,6 +26,11 @@ public class Knife4jProperties {
      * knife4j
      */
     private List<Knife4j> knife4j;
+
+    /**
+     * 默认请求头
+     */
+    private Map<String, String> defaultHeader;
 
     /**
      * 账号

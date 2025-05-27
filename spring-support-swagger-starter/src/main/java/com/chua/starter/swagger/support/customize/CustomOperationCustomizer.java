@@ -1,5 +1,6 @@
-package com.chua.starter.swagger.support.filter;
+package com.chua.starter.swagger.support.customize;
 
+import com.chua.starter.swagger.support.Knife4jProperties;
 import com.chua.starter.swagger.support.annotation.HiddenParam;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.parameters.Parameter;
@@ -8,9 +9,7 @@ import org.springframework.core.MethodParameter;
 import org.springframework.util.ClassUtils;
 import org.springframework.web.method.HandlerMethod;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * @author CH
@@ -25,6 +24,14 @@ public class CustomOperationCustomizer implements GlobalOperationCustomizer {
             USER_VALUE = ClassUtils.forName("com.chua.starter.oauth.client.support.annotation.UserValue", CustomOperationCustomizer.class.getClassLoader());
         } catch (Exception ignored) {
         }
+    }
+
+    private final Knife4jProperties knife4jProperties;
+    private final Map<String, String> defaultHeaders;
+
+    public CustomOperationCustomizer(Knife4jProperties knife4jProperties) {
+        this.knife4jProperties = knife4jProperties;
+        this.defaultHeaders = Optional.ofNullable(knife4jProperties.getDefaultHeader()).orElse(Collections.emptyMap());
     }
 
     @Override
@@ -54,6 +61,13 @@ public class CustomOperationCustomizer implements GlobalOperationCustomizer {
             }
             Optional<Parameter> first = parameters.stream().filter(parameter -> parameter.getName().equals(methodParameter.getParameterName())).findFirst();
             first.ifPresent(rs::add);
+        }
+        for (Map.Entry<String, String> entry : defaultHeaders.entrySet()) {
+            rs.add(new Parameter()
+                    .in("header")
+                    .name(entry.getKey())
+                    .schema(new io.swagger.v3.oas.models.media.StringSchema()
+                            .example(entry.getValue())));
         }
         operation.setParameters(rs);
     }
