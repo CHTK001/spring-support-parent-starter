@@ -27,6 +27,11 @@
         </dependency>
 
         <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-oshi-starter</artifactId>
         </dependency>
@@ -34,12 +39,6 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-groovy-starter</artifactId>
-        </dependency>
-
-
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-mica-starter</artifactId>
         </dependency>
 
         <dependency>

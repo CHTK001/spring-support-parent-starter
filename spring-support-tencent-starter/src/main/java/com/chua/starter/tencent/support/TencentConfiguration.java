@@ -21,13 +21,15 @@ public class TencentConfiguration {
 
     /**
      * 小程序
-     * @param tencent tencent
+     * @param properties tencent
      * @return TencentMaHandler
      */
     @Bean
     @ConditionalOnProperty(name = "plugin.tencent.mini-app.enabled", havingValue = "true")
     public TencentMaHandler tencentMaHandler(TencentMiniAppProperties properties) {
         log.info("加载tencent配置");
+        log.info("appId => {}", properties.getAppId());
+        log.info("appSecret => {}", properties.getAppSecret());
         Tencent tencent = new Tencent(TencentSetting.builder()
                 .appId(properties.getAppId())
                 .appSecret(properties.getAppSecret())

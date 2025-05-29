@@ -200,7 +200,7 @@ public class ExceptionAdvice  {
     }
 
     @ExceptionHandler(AuthenticationException.class)
-    @ResponseStatus(HttpStatus.FORBIDDEN)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
     public <T> Result<T> authenticationException(AuthenticationException e) {
         e.printStackTrace();
         return Result.failed(RESULT_ACCESS_UNAUTHORIZED, "无权限操作");

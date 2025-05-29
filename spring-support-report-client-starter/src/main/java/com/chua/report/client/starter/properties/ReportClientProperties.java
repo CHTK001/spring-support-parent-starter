@@ -1,11 +1,7 @@
 package com.chua.report.client.starter.properties;
 
-import com.chua.report.client.starter.report.event.ReportEvent;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * 上报配置
@@ -23,29 +19,17 @@ public class ReportClientProperties {
      */
     private boolean enable = false;
 
-
-    /**
-     * 是否开启自上报
-     */
-    private boolean openSelf = false;
-
     /**
      * 上报服务器地址
      */
     private String address;
 
     /**
-     * 上报服务
+     * 接收协议
      */
-    private Set<ReportEvent.ReportType> report = new HashSet<>();
-
+    private String receivableProtocol = "http";
     /**
-     * 上报时间间隔(s)
+     * 接收端口
      */
-    private Integer reportTime = 10;
-
-    /**
-     * trace切面(使用agent则会忽略切面实现)
-     */
-    private String traceAop;
+    private Integer receivablePort = -1;
 }

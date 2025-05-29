@@ -17,7 +17,7 @@ public class ConfigCenterProperties {
     /**
      * 是否启用
      */
-    private boolean enabled = true;
+    private boolean enable = false;
 
     /**
      * 协议
