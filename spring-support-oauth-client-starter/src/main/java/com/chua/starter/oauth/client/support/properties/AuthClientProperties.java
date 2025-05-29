@@ -20,6 +20,7 @@ public class AuthClientProperties {
     public AuthClientProperties() {
         whitelist.add("/**/captcha");
         whitelist.add("/**/login");
+        whitelist.add("/**/oauth");
         whitelist.add("/**/doLogin");
         whitelist.add("/**/logout");
         whitelist.add("/doc.html");
