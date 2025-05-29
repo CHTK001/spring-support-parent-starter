@@ -33,12 +33,13 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         log.info("开始处理nacos配置中心");
         ConfigCenterProperties configCenterProperties = Binder.get(environment).bindOrCreate(ConfigCenterProperties.PRE, ConfigCenterProperties.class);
-        if (!configCenterProperties.isEnabled()) {
+        if (!configCenterProperties.isEnable()) {
             log.warn("nacos配置中心未启用");
             return;
         }
         log.info("开始加载nacos配置中心");
         String active = environment.getProperty("spring.profiles.active");
+        log.info("当前环境: {}", active);
         ConfigCenter configCenter = ServiceProvider.of(ConfigCenter.class)
                 .getNewExtension(configCenterProperties.getProtocol(), ConfigCenterSetting.builder()
                 .address(configCenterProperties.getAddress())
@@ -64,6 +65,18 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
 
             environment.getPropertySources()
                     .addLast(new OriginTrackedMapPropertySource(newName, stringObjectMap));
+            log.info("加载nacos配置中心: {}", newName);
+        }
+        for (String string : strings) {
+            String newName = "application-%s-%s.yml".formatted(string, active);
+            Map<String, Object> stringObjectMap = configCenter.get(newName);
+            if (null == stringObjectMap) {
+                continue;
+            }
+
+            environment.getPropertySources()
+                    .addLast(new OriginTrackedMapPropertySource(newName, stringObjectMap));
+            log.info("加载nacos配置中心: {}", newName);
         }
     }
 

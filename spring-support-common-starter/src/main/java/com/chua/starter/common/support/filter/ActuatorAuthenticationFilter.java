@@ -80,6 +80,10 @@ public class ActuatorAuthenticationFilter implements Filter {
             return true;
         }
 
+        if ("0:0:0:0:0:0:0:1".equals(remoteAddress)) {
+            return true;
+        }
+
         if(NetUtils.isLocalHost(remoteAddress)) {
             return true;
         }

@@ -7,7 +7,6 @@ import com.chua.common.support.protocol.request.BadResponse;
 import com.chua.common.support.protocol.request.OkResponse;
 import com.chua.common.support.protocol.request.Request;
 import com.chua.common.support.protocol.request.Response;
-import com.chua.common.support.protocol.server.ProtocolServer;
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.report.client.starter.entity.JobCat;
 import com.chua.report.client.starter.entity.JobValue;
@@ -101,9 +100,6 @@ public class ReportXxlJobConfiguration implements BeanFactoryAware, SmartInstant
                     "ConfigValueAnnotationBeanPostProcessor requires a ConfigurableListableBeanFactory");
         }
         this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
-        String[] beanNamesForType = this.beanFactory.getBeanNamesForType(ProtocolServer.class);
-        if(beanNamesForType.length == 0) {
-        }
     }
 
     private void doAnalysisJob(Map<Method, Job> methodJobMap, String beanDefinitionName, Object bean) {

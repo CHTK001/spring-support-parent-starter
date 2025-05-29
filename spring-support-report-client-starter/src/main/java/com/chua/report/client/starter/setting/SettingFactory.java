@@ -7,21 +7,11 @@ import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.http.HttpClient;
 import com.chua.common.support.http.HttpResponse;
 import com.chua.common.support.json.Json;
-import com.chua.common.support.net.NetAddress;
-import com.chua.common.support.net.NetUtils;
-import com.chua.common.support.protocol.ClientSetting;
 import com.chua.common.support.protocol.ProtocolSetting;
 import com.chua.common.support.protocol.protocol.Protocol;
-import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.*;
-import com.chua.mica.support.client.MicaClient;
-import com.chua.mica.support.client.session.MicaSession;
 import com.chua.report.client.starter.endpoint.ModuleType;
 import com.chua.report.client.starter.properties.ReportClientProperties;
-import com.chua.report.client.starter.properties.ReportEndpointProperties;
-import com.chua.report.client.starter.report.OnlineReport;
-import com.chua.report.client.starter.report.Report;
-import com.chua.report.client.starter.report.event.ReportEvent;
 import com.google.common.reflect.TypeToken;
 import lombok.Getter;
 import org.springframework.beans.factory.InitializingBean;
@@ -31,11 +21,7 @@ import org.springframework.core.env.Environment;
 
 import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.chua.starter.common.support.project.Project.KEY;
@@ -52,29 +38,11 @@ public class SettingFactory implements AutoCloseable, InitializingBean {
     private final ExecutorService executorService;
     private Environment environment;
     private ReportClientProperties reportClientProperties;
-    private ReportEndpointProperties reportEndpointProperties;
-    private ScheduledExecutorService scheduledExecutorService;
-    private static final AtomicBoolean RUNNING = new AtomicBoolean(false);
-
-    /**
-     * -- GETTER --
-     *
-     * @return
-     */
-    @Getter
-    private Integer endpointPort;
-    private Set<ModuleType> endpointActive;
     private String reportServerAddress;
     private ServerProperties serverProperties;
-    private String reportServerHost;
-    private int reportServerPort;
+    private static final AtomicBoolean RUNNING = new AtomicBoolean(false);
     @Getter
-    private String reportTopic;
-
-    private MicaClient micaClient;
-    @Getter
-    private MicaSession reportProducer;
-    private Integer reportTime;
+    private Integer endpointPort;
 
     public SettingFactory() {
         this.isServer = ClassUtils.isPresent("com.chua.report.server.starter.properties.ReportServerProperties");
@@ -93,14 +61,6 @@ public class SettingFactory implements AutoCloseable, InitializingBean {
     public boolean isServer() {
         return isServer;
     }
-
-    /**
-     *
-     * @return
-     */
-    public boolean canSelf() {
-return reportClientProperties.isOpenSelf();
-    }
     /**
      * 注册环境配置
      * 该方法通过接收一个Environment对象来配置报告客户端的环境属性，并初始化报告客户端的配置属性
@@ -111,74 +71,11 @@ return reportClientProperties.isOpenSelf();
         this.environment = environment;
         reportClientProperties = Binder.get(environment).bindOrCreate(ReportClientProperties.PRE, ReportClientProperties.class);
         serverProperties = Binder.get(environment).bindOrCreate("server", ServerProperties.class);
-        reportEndpointProperties = Binder.get(environment).bindOrCreate(ReportEndpointProperties.PRE, ReportEndpointProperties.class);
-
-        this.reportTime = reportClientProperties.getReportTime();
         this.reportServerAddress = reportClientProperties.getAddress();
-        this.endpointPort = -1 == reportEndpointProperties.getPort() ?
+        this.endpointPort = -1 == reportClientProperties.getReceivablePort() ?
                 Converter.convertIfNecessary(environment.resolvePlaceholders("${server.port:8080}"), Integer.class) + 10000
-                : reportEndpointProperties.getPort();
-        this.endpointActive = reportEndpointProperties.getActive();
-        if(null != reportServerAddress) {
-            NetAddress netAddress = NetAddress.of(reportServerAddress);
-            this.reportServerHost = netAddress.getHost();
-            this.reportServerPort = netAddress.getPort() + 10000;
-        }
+                : reportClientProperties.getReceivablePort();
     }
-
-
-    private void initializeZbus() {
-        micaClient = new MicaClient(ClientSetting.builder()
-                .host(reportServerHost)
-                .port(reportServerPort)
-                .build());
-
-        micaClient.connect();
-        this.reportTopic = "/" + DigestUtils.md5Hex(reportServerPort + "#report");
-        reportProducer = (MicaSession) micaClient.createSession("default");
-        this.report();
-    }
-
-
-    public void publish(Report<?> report) {
-        if(null == this.reportProducer) {
-            return;
-        }
-
-        this.reportProducer.publish(this.reportTopic,Json.toJSONBytes(report.report()));
-    }
-
-    private void report() {
-        Set<ReportEvent.ReportType> reportCollect = reportClientProperties.getReport();
-        if (CollectionUtils.isEmpty(reportCollect)) {
-            return;
-        }
-
-        if(reportCollect.contains(ReportEvent.ReportType.ALL)) {
-            reportCollect.clear();
-            reportCollect.addAll(List.of(ReportEvent.ReportType.values()));
-        }
-
-        scheduledExecutorService.scheduleAtFixedRate(() -> {
-            try {
-                for (ReportEvent.ReportType reportType : reportCollect) {
-                    if (null == reportType || reportType == ReportEvent.ReportType.ONLINE || reportType == ReportEvent.ReportType.OFFLINE) {
-                        continue;
-                    }
-                    String name = reportType.name();
-                    Report<?> report = ServiceProvider.of(Report.class).getNewExtension(name.replace("_", ""));
-                    if (null == report) {
-                        continue;
-                    }
-                    reportProducer.publish(reportTopic, Json.toJSONBytes(report.report()));
-                }
-            } catch (Throwable ignored) {
-            }
-        }, 0, reportTime, TimeUnit.SECONDS);
-
-        reportProducer.publish(reportTopic, Json.toJSONBytes(new OnlineReport().report()));
-    }
-
 
     /**
      * 检查报告客户端是否启用
@@ -208,7 +105,7 @@ return reportClientProperties.isOpenSelf();
                 .port(getEndpointPort())
                 .codec(codec)
                 .build();
-        return Protocol.create(reportEndpointProperties.getProtocol(), protocolSetting);
+        return Protocol.create(reportClientProperties.getReceivableProtocol(), protocolSetting);
     }
 
     /**
@@ -222,21 +119,6 @@ return reportClientProperties.isOpenSelf();
         return ArrayUtils.containsIgnoreCase(environment.getActiveProfiles(), active);
     }
 
-    /**
-     * 检查给定的功能名称是否在当前激活的环境中
-     * 通过比较给定的功能名称和当前激活的环境列表来确定给定的功能名称是否在当前激活的环境中
-     *
-     * @param moduleType 功能名称
-     * @return 如果给定的功能名称在当前激活的环境中，则返回true；否则返回false
-     */
-    public boolean isEndpointActive(ModuleType moduleType) {
-        for (ModuleType item : endpointActive) {
-            if (item == moduleType) {
-                return true;
-            }
-        }
-        return false;
-    }
 
     /**
      * 发送请求
@@ -269,7 +151,7 @@ return reportClientProperties.isOpenSelf();
     private Object endpoint() {
         return ImmutableBuilder.builderOfStringStringMap()
                 .put("port", String.valueOf(getEndpointPort()))
-                .put("protocol", reportEndpointProperties.getProtocol())
+                .put("protocol", reportClientProperties.getReceivableProtocol())
                 .put("host", String.valueOf(getEndpointPort()))
                 .newHashMap();
     }
@@ -298,36 +180,12 @@ return reportClientProperties.isOpenSelf();
 
     @Override
     public void close() throws Exception {
-        IoUtils.closeQuietly(scheduledExecutorService);
-        IoUtils.closeQuietly(micaClient);
     }
 
     @Override
     public void afterPropertiesSet() throws Exception {
         if (!RUNNING.compareAndSet(false, true)) {
-            return;
         }
-        scheduledExecutorService = ThreadUtils.newScheduledThreadPoolExecutor(1, "com-ch-monitor-core-thread");
-        initializeZbus();
-    }
-
-    /**
-     * 检查给定的报告类型是否包含在报告客户端的配置属性中
-     * 通过比较给定的报告类型和报告客户端的配置属性中的报告类型列表来确定给定的报告类型是否包含在报告客户端的配置属性中
-     *
-     * @param reportType 报告类型
-     * @return 如果给定的报告类型包含在报告客户端的配置属性中，则返回true；否则返回false
-     */
-    public boolean contains(ReportEvent.ReportType reportType) {
-        Set<ReportEvent.ReportType> report = reportClientProperties.getReport();
-        if(report.contains(ReportEvent.ReportType.ALL)) {
-            return true;
-        }
-
-        if(null == reportType) {
-            return false;
-        }
-        return report.contains(reportType);
     }
 
 
