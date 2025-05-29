@@ -7,6 +7,7 @@ import io.swagger.v3.oas.models.parameters.Parameter;
 import org.springdoc.core.customizers.GlobalOperationCustomizer;
 import org.springframework.core.MethodParameter;
 import org.springframework.util.ClassUtils;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.method.HandlerMethod;
 
 import java.util.*;
@@ -59,6 +60,11 @@ public class CustomOperationCustomizer implements GlobalOperationCustomizer {
             if (parameterAnnotation != null && parameterAnnotation.hidden()) {
                 continue;
             }
+
+            if (methodParameter.getParameterType().isAssignableFrom(BindingResult.class)) {
+                continue;
+            }
+
             Optional<Parameter> first = parameters.stream().filter(parameter -> parameter.getName().equals(methodParameter.getParameterName())).findFirst();
             first.ifPresent(rs::add);
         }
