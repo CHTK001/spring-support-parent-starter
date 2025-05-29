@@ -5,7 +5,6 @@ import com.chua.common.support.function.Splitter;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.common.support.validator.group.UpdateGroup;
-import com.github.xingfudeshi.knife4j.annotations.Ignore;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,7 +63,7 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
     @ResponseBody
     @Operation(summary = "更新/保存数据")
     @PutMapping("saveOrUpdateBatch")
-    public ReturnResult<Boolean>saveOrUpdateBatch(@Validated(UpdateGroup.class) @RequestBody List<T> t , @Ignore BindingResult bindingResult) {
+    public ReturnResult<Boolean> saveOrUpdateBatch(@Validated(UpdateGroup.class) @RequestBody List<T> t, BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
             return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
@@ -81,7 +80,7 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
     @ResponseBody
     @Operation(summary = "更新/保存数据")
     @PutMapping("saveOrUpdate")
-    public ReturnResult<Boolean>saveOrUpdate(@Validated(UpdateGroup.class) @RequestBody T t , @Ignore BindingResult bindingResult) {
+    public ReturnResult<Boolean> saveOrUpdate(@Validated(UpdateGroup.class) @RequestBody T t, BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
             return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
@@ -106,7 +105,7 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
     @ResponseBody
     @Operation(summary = "更新数据")
     @PutMapping("update")
-    public ReturnResult<Boolean>updateById(@Validated(UpdateGroup.class) @RequestBody T t , @Ignore BindingResult bindingResult) {
+    public ReturnResult<Boolean> updateById(@Validated(UpdateGroup.class) @RequestBody T t, BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
             return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
@@ -123,7 +122,7 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
     @ResponseBody
     @Operation(summary = "添加数据")
     @PostMapping("save")
-    public ReturnResult<T> save(@Validated(AddGroup.class) @RequestBody T t, @Ignore BindingResult bindingResult) {
+    public ReturnResult<T> save(@Validated(AddGroup.class) @RequestBody T t, BindingResult bindingResult) {
         if(bindingResult.hasErrors()) {
             return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
