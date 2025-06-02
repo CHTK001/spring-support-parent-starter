@@ -7,6 +7,8 @@ import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.contants.AuthConstant;
 import com.chua.starter.oauth.client.support.exception.OauthException;
 import com.chua.starter.oauth.client.support.user.UserResume;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.aop.support.StaticMethodMatcherPointcutAdvisor;
@@ -15,8 +17,6 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.annotation.Order;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Set;
