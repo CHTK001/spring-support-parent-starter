@@ -26,10 +26,9 @@ import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.jackson.JsonMixinModule;
 import org.springframework.context.annotation.Bean;
-import org.springframework.http.converter.json.AbstractJackson2HttpMessageConverter;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 
 import java.io.IOException;
@@ -110,10 +109,12 @@ public class JacksonConfiguration {
         return objectMapper;
     }
     @Bean
-    ObjectMapper objectMapper(JacksonProperties jacksonProperties) {
+    @ConditionalOnMissingBean
+    public ObjectMapper defaultObjectMapper(JacksonProperties jacksonProperties) {
         return createObjectMapper(false, jacksonProperties.isIncludeNull());
     }
     @Bean
+    @ConditionalOnMissingBean
     public Jackson2ObjectMapperBuilder objectMapperBuilder(ObjectMapper objectMapper) {
         Jackson2ObjectMapperBuilder builder = new Jackson2ObjectMapperBuilder();
         builder.configure(objectMapper);

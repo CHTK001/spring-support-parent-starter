@@ -9,7 +9,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.util.ConcurrentReferenceHashMap;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -20,11 +22,14 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * @author CH
  * @since 2024/9/13
  */
+@ComponentScan("com.chua.report.client.starter.jpom")
+@ConditionalOnMissingClass("com.chua.starter.monitor.jpom.controller.system.LogManageController")
 public class CustomEndpointConfiguration implements WebMvcConfigurer {
 
 
     @Autowired
     private MeterRegistry meterRegistry;
+
     /**
      * map
      * @return MapEndpoint

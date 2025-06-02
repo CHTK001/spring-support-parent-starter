@@ -8,10 +8,10 @@ import io.minio.*;
 import io.minio.http.Method;
 import io.minio.messages.Bucket;
 import io.minio.messages.Item;
+import jakarta.annotation.PostConstruct;
 import lombok.SneakyThrows;
 import org.springframework.beans.factory.InitializingBean;
 
-import javax.annotation.PostConstruct;
 import java.io.InputStream;
 import java.time.ZonedDateTime;
 import java.util.List;

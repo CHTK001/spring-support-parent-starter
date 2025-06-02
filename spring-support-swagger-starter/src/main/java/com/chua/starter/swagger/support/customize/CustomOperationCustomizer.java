@@ -65,7 +65,7 @@ public class CustomOperationCustomizer implements GlobalOperationCustomizer {
                 continue;
             }
 
-            Optional<Parameter> first = parameters.stream().filter(parameter -> parameter.getName().equals(methodParameter.getParameterName())).findFirst();
+            Optional<Parameter> first = parameters.stream().filter(parameter -> parameter.getName().equals(methodParameter.getParameter().getName())).findFirst();
             first.ifPresent(rs::add);
         }
         for (Map.Entry<String, String> entry : defaultHeaders.entrySet()) {

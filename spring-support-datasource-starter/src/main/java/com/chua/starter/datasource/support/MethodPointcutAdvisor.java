@@ -2,6 +2,8 @@ package com.chua.starter.datasource.support;
 
 import com.chua.starter.common.support.annotations.DS;
 import com.chua.starter.datasource.properties.MultiDataSourceSettingProperties;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.aop.support.StaticMethodMatcherPointcutAdvisor;
@@ -9,8 +11,6 @@ import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 

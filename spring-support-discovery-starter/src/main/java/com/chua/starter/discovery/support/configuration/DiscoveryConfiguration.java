@@ -2,6 +2,7 @@ package com.chua.starter.discovery.support.configuration;
 
 import com.chua.common.support.discovery.*;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.project.Project;
 import com.chua.starter.discovery.support.properties.DiscoveryListProperties;
@@ -94,9 +95,12 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
             serverId = project.calcApplicationUuid();
         }
         Map<String, String> newMetaData = new LinkedHashMap<>(project.getProject());
+        String serverIdValue = DigestUtils.md5Hex(project.getApplicationHost() + project.getApplicationPort());
+        newMetaData.put("serverId", serverIdValue);
 
         return Discovery.builder()
                 .id(serverId)
+                .serverId(serverIdValue)
                 .uriSpec(discoveryNodeProperties.getNamespace())
                 .port(project.getApplicationPort())
                 .host(project.getApplicationHost())
