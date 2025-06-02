@@ -8,6 +8,7 @@ import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.code.preconditioning.ReturnPreconditioning;
 import com.chua.starter.common.support.annotations.ApiReturnFormatIgnore;
+import com.chua.starter.common.support.annotations.ReturnOrigin;
 import jakarta.annotation.Resource;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -151,6 +152,14 @@ public class UniformResponseBodyAdvice implements ResponseBodyAdvice<Object> {
             return true;
         }
         if (declaringClass.isAnnotationPresent(ApiReturnFormatIgnore.class) ||
+                isAssignableFrom(ResponseEntity.class, declaringClass)
+        ) {
+            return true;
+        }
+        if (methodParameter.hasMethodAnnotation(ReturnOrigin.class)) {
+            return true;
+        }
+        if (declaringClass.isAnnotationPresent(ReturnOrigin.class) ||
                 isAssignableFrom(ResponseEntity.class, declaringClass)
         ) {
             return true;
