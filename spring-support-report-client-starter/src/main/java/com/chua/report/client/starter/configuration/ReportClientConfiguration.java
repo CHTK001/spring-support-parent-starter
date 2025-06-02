@@ -3,6 +3,7 @@ package com.chua.report.client.starter.configuration;
 import com.chua.common.support.protocol.protocol.Protocol;
 import com.chua.common.support.protocol.server.ProtocolServer;
 import com.chua.report.client.starter.function.ReportXxlJobConfiguration;
+import com.chua.report.client.starter.jpom.common.validator.ParameterInterceptor;
 import com.chua.report.client.starter.properties.ReportClientProperties;
 import com.chua.report.client.starter.setting.SettingFactory;
 import lombok.Data;
@@ -12,10 +13,12 @@ import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.EnvironmentAware;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.env.Environment;
 
 /**
@@ -25,6 +28,8 @@ import org.springframework.core.env.Environment;
  */
 @Data
 @EnableConfigurationProperties({ReportClientProperties.class})
+@ConditionalOnClass(name = "com.chua.starter.monitor.jpom.controller.system.LogManageController")
+@ComponentScan(value = {"com.chua.report.client.starter.jpom.configuration"}, basePackageClasses = ParameterInterceptor.class)
 public class ReportClientConfiguration implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware, EnvironmentAware, DisposableBean {
 
     @Override
