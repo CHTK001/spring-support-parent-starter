@@ -582,7 +582,7 @@
   "i18n.force_unbind_succeeded.5bfd": "强制解绑成功",
   "i18n.free_script.7760": "自由脚本",
   "i18n.fuzzy_match_files.139d": "{} 模糊匹配到 {} 个文件",
-  "i18n.general_error_message.728a": "啊哦，好像哪里出错了，请稍候再试试吧~",
+  "i18n.general_error_message.728a": "好像哪里出错了，请稍候再试试吧~",
   "i18n.general_execution_exception.62e9": "执行异常：",
   "i18n.get_build_status_exception.914e": "获取构建状态异常",
   "i18n.get_container_execution_result_failure.1828": "获取容器执行结果失败",
