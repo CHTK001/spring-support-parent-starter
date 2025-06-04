@@ -23,7 +23,7 @@ import java.util.Optional;
  * @since 23/12/29 029
  */
 @Data
-@ConfigurationProperties("plugin.maintenance.project.log")
+@ConfigurationProperties("plugin.maintenance.server.project.log")
 public class ProjectLogConfig {
     /**
      * 检测控制台日志周期，防止日志文件过大，目前暂只支持linux 不停服备份

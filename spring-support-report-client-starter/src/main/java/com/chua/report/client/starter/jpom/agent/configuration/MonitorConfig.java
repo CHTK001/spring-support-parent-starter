@@ -17,13 +17,13 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @since 2024/4/24
  */
 @Data
-@ConfigurationProperties("plugin.maintenance.monitor")
+@ConfigurationProperties("plugin.maintenance.server.monitor")
 public class MonitorConfig {
 
     private NetworkConfig network;
 
     @Data
-    @ConfigurationProperties("plugin.maintenance.monitor.network")
+    @ConfigurationProperties("plugin.maintenance.server.monitor.network")
     public static class NetworkConfig {
         /**
          * 忽略的网卡,多个使用逗号分隔

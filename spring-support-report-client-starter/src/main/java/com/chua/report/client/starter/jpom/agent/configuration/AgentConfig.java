@@ -38,7 +38,13 @@ import java.util.Optional;
 @Configuration
 @ConfigurationProperties("plugin.maintenance.server")
 @Data
-@EnableConfigurationProperties({ProjectConfig.class, ProjectLogConfig.class, SystemConfig.class, AgentAuthorize.class, MonitorConfig.class, MonitorConfig.NetworkConfig.class})
+@EnableConfigurationProperties({ProjectConfig.class,
+        ProjectLogConfig.class,
+        SystemConfig.class,
+        AgentAuthorize.class,
+        MonitorConfig.class,
+        ServerConfig.class,
+        MonitorConfig.NetworkConfig.class})
 public class AgentConfig implements ILoadEvent, InitializingBean {
 
     /**
@@ -50,6 +56,11 @@ public class AgentConfig implements ILoadEvent, InitializingBean {
      * 项目配置
      */
     private ProjectConfig project;
+
+    /**
+     * 服务器配置
+     */
+    private ServerConfig serverConfig;
     /**
      * 系统配置参数
      */
@@ -63,6 +74,11 @@ public class AgentConfig implements ILoadEvent, InitializingBean {
      * 数据目录
      */
     private String path;
+
+    /**
+     * 检查token
+     */
+    private boolean tokenCheck = true;
 
     /**
      * 初始读取日志文件行号

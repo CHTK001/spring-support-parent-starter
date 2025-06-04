@@ -36,7 +36,7 @@ import java.io.File;
  */
 @Slf4j
 @Data
-@ConfigurationProperties("plugin.maintenance.authorize")
+@ConfigurationProperties("plugin.maintenance.server.authorize")
 public class AgentAuthorize {
     /**
      * 账号

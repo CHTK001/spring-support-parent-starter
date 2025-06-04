@@ -39,6 +39,7 @@ import com.chua.report.client.starter.jpom.common.model.RunMode;
 import com.chua.report.client.starter.jpom.common.script.BaseRunScript;
 import com.chua.report.client.starter.jpom.common.socket.ConsoleCommandOp;
 import com.chua.report.client.starter.jpom.common.util.CommandUtil;
+import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Configuration;
@@ -167,7 +168,7 @@ public class AgentStartInit implements ILoadEvent, ISystemTask {
         }
         List<NodeProjectInfoModel> startList = allProject.stream()
                 .filter(nodeProjectInfoModel -> nodeProjectInfoModel.getAutoStart() != null && nodeProjectInfoModel.getAutoStart())
-                .collect(Collectors.toList());
+                .toList();
         ThreadUtil.execute(() -> {
             for (NodeProjectInfoModel nodeProjectInfoModel : startList) {
                 try {
@@ -234,6 +235,8 @@ public class AgentStartInit implements ILoadEvent, ISystemTask {
         urlBuilder.addQuery("loginPwd", agentAuthorize.getAgentPwd());
         int port = clientJpomApplication.getPort();
         urlBuilder.addQuery("port", port + "");
+        urlBuilder.addQuery("contentPath", SpringBeanUtils.getEnvironment()
+                .getProperty("server.servlet.context-path", ""));
         //
         String build = urlBuilder.build();
         try (HttpResponse execute = HttpUtil.createGet(build, true).execute()) {

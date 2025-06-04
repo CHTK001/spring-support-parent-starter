@@ -48,11 +48,17 @@ public class ParameterLogFilter implements Filter {
             filterChain.doFilter(servletRequest, servletResponse);
             return;
         }
-
-
+        String connection = request.getHeader("upgrade");
+        if ("websocket".equalsIgnoreCase(connection)) {
+            filterChain.doFilter(servletRequest, servletResponse);
+            return;
+        }
         String requestURI = request.getRequestURI();
         if(isPass(requestURI)) {
-            filterChain.doFilter(servletRequest, servletResponse);
+            CustomHttpServletRequestWrapper requestWrapper = new CustomHttpServletRequestWrapper((HttpServletRequest) servletRequest);
+            printBody(requestWrapper);
+            printHeader(request);
+            filterChain.doFilter(requestWrapper, servletResponse);
             injectInterfaceServiceLog(request);
             return;
         }
