@@ -19,8 +19,6 @@ import cn.hutool.http.Header;
 import cn.hutool.http.HtmlUtil;
 import cn.keepbx.jpom.model.JsonMessage;
 import com.chua.common.support.converter.Converter;
-import com.chua.common.support.json.Json;
-import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.report.client.starter.jpom.common.common.i18n.I18nMessageUtil;
 import com.chua.report.client.starter.jpom.common.common.interceptor.HandlerMethodInterceptor;
@@ -35,7 +33,7 @@ import org.springframework.web.method.HandlerMethod;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -103,14 +101,14 @@ public class ParameterInterceptor implements HandlerMethodInterceptor {
         String language = JakartaServletUtil.getHeader(request, Header.ACCEPT_LANGUAGE.getValue(), CharsetUtil.CHARSET_UTF_8);
         I18nMessageUtil.setLanguage(language);
         MethodParameter[] methodParameters = handlerMethod.getMethodParameters();
-        String body = IoUtils.toString(request.getInputStream(), CharsetUtil.CHARSET_UTF_8);
-        Map<String, Object> bodyParameters = new HashMap<>();
-        if (null != body && body.startsWith("{") && body.endsWith("}")) {
-            try {
-                bodyParameters = Json.getJsonObject(body);
-            } catch (Exception ignored) {
-            }
-        }
+//        String body = IoUtils.toString(request.getInputStream(), CharsetUtil.CHARSET_UTF_8);
+//        Map<String, Object> bodyParameters = new HashMap<>();
+//        if (null != body && body.startsWith("{") && body.endsWith("}")) {
+//            try {
+//                bodyParameters = Json.getJsonObject(body);
+//            } catch (Exception ignored) {
+//            }
+//        }
         for (MethodParameter item : methodParameters) {
             ValidatorItem[] validatorItems;
             ValidatorConfig validatorConfig = item.getParameterAnnotation(ValidatorConfig.class);
@@ -128,7 +126,7 @@ public class ParameterInterceptor implements HandlerMethodInterceptor {
             if (name == null) {
                 continue;
             }
-            String value = getValue(validatorConfig, request, name, item, bodyParameters);
+            String value = getValue(validatorConfig, request, name, item, Collections.emptyMap());
             // 验证每一项
             int errorCount = 0;
             for (int i = 0, len = validatorItems.length; i < len; i++) {
