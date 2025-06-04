@@ -55,10 +55,10 @@ public class ParameterLogFilter implements Filter {
         }
         String requestURI = request.getRequestURI();
         if(isPass(requestURI)) {
-            CustomHttpServletRequestWrapper requestWrapper = new CustomHttpServletRequestWrapper((HttpServletRequest) servletRequest);
-            printBody(requestWrapper);
-            printHeader(request);
-            filterChain.doFilter(requestWrapper, servletResponse);
+//            CustomHttpServletRequestWrapper requestWrapper = new CustomHttpServletRequestWrapper((HttpServletRequest) servletRequest);
+//            printBody(requestWrapper);
+//            printHeader(request);
+            filterChain.doFilter(request, servletResponse);
             injectInterfaceServiceLog(request);
             return;
         }
