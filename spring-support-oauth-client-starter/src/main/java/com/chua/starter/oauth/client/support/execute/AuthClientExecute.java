@@ -110,6 +110,49 @@ public class AuthClientExecute {
     }
 
     /**
+     * 获取UserResult
+     *
+     * @return token
+     */
+    public UserResult getSafeUserResult() {
+        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
+        if (requestAttributes == null) {
+            return null;
+        }
+
+        ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
+
+        HttpServletRequest request = attributes.getRequest();
+        Object attribute = request.getSession().getAttribute(SESSION_USER_INFO);
+        if (null != attribute) {
+            if (attribute instanceof UserResult) {
+                return (UserResult) attribute;
+            }
+
+            if (attribute instanceof UserResume) {
+                UserResult userResult = new UserResult();
+                com.chua.common.support.bean.BeanUtils.copyProperties(attribute, userResult);
+                request.getSession().setAttribute(SESSION_USER_INFO, userResult);
+                return userResult;
+            }
+        }
+
+        WebRequest webRequest1 = new WebRequest(
+                authClientProperties,
+                request, null);
+
+        UserResult userResult = new UserResult();
+        AuthenticationInformation authentication = webRequest1.authentication();
+        UserResume returnResult = authentication.getReturnResult();
+        if (null == returnResult) {
+            return null;
+        }
+        com.chua.common.support.bean.BeanUtils.copyProperties(returnResult, userResult);
+        request.getSession().setAttribute(SESSION_USER_INFO, userResult);
+        return userResult;
+    }
+
+    /**
      * 登出
      *
      * @param loginType

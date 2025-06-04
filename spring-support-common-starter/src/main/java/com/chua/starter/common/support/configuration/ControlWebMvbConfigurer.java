@@ -2,6 +2,7 @@ package com.chua.starter.common.support.configuration;
 
 import com.chua.starter.common.support.application.GlobalSettingFactory;
 import com.chua.starter.common.support.control.ApiVersionRequestMappingHandlerMapping;
+import com.chua.starter.common.support.properties.ApiProperties;
 import com.chua.starter.common.support.properties.ControlProperties;
 import com.chua.starter.common.support.properties.IpProperties;
 import jakarta.annotation.Priority;
@@ -25,6 +26,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 @EnableConfigurationProperties({
         ControlProperties.class,
         IpProperties.class,
+        ApiProperties.class
 })
 @Slf4j
 @Priority(0)

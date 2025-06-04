@@ -17,6 +17,13 @@ import java.util.Set;
 @ConfigurationProperties(prefix = AuthClientProperties.PRE, ignoreInvalidFields = true)
 public class AuthClientProperties {
 
+    /**
+     * 是否启用
+     */
+    private boolean enable = true;
+
+    public static final String PRE = "plugin.oauth";
+
     public AuthClientProperties() {
         whitelist.add("/**/captcha");
         whitelist.add("/**/login");
@@ -35,9 +42,8 @@ public class AuthClientProperties {
         whitelist.add("/**/*.html");
         whitelist.add("/**/users/loginCode");
         whitelist.add("/v3/api-docs/**");
+        whitelist.add("/**/node/receive_push");
     }
-
-    public static final String PRE = "plugin.oauth";
     /**
      * 链接超时
      */

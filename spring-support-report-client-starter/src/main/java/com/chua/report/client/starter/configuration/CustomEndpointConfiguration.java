@@ -7,10 +7,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.support.BeanDefinitionRegistry;
-import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
 import org.springframework.context.annotation.Bean;
@@ -27,7 +24,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  */
 @ComponentScan("com.chua.report.client.starter.jpom.agent")
 @ConditionalOnMissingClass("com.chua.starter.monitor.jpom.JpomApplication")
-public class CustomEndpointConfiguration implements WebMvcConfigurer, BeanDefinitionRegistryPostProcessor {
+public class CustomEndpointConfiguration implements WebMvcConfigurer {
 
 
     @Autowired
@@ -57,10 +54,6 @@ public class CustomEndpointConfiguration implements WebMvcConfigurer, BeanDefini
         registry.addInterceptor(new UrlMetricsInterceptor(meterRegistry));
     }
 
-    @Override
-    public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
-        System.out.println();
-    }
 
     public static class UrlMetricsInterceptor implements HandlerInterceptor {
 

@@ -64,6 +64,9 @@ public class WebRequest {
      * @return 是否通过
      */
     public boolean isPass() {
+        if (!authProperties.isEnable()) {
+            return true;
+        }
         List<String> whitelist = authProperties.getWhitelist();
         if (null == whitelist) {
             return false;

@@ -9,11 +9,15 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.code.preconditioning.ReturnPreconditioning;
 import com.chua.starter.common.support.annotations.ApiReturnFormatIgnore;
 import com.chua.starter.common.support.annotations.ReturnOrigin;
+import com.chua.starter.common.support.properties.ApiProperties;
 import jakarta.annotation.Resource;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.context.EnvironmentAware;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.core.env.Environment;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageConverter;
@@ -39,10 +43,14 @@ import static com.chua.common.support.utils.ClassUtils.isAssignableFrom;
 @RestControllerAdvice
 @Slf4j
 @SuppressWarnings("ALL")
-public class UniformResponseBodyAdvice implements ResponseBodyAdvice<Object> {
+public class UniformResponseBodyAdvice implements ResponseBodyAdvice<Object>, EnvironmentAware {
 
     @Resource(name = "uniform")
     private ExecutorService executorService;
+
+    private ApiProperties apiProperties;
+    private String[] ignoreFormatPackages;
+    private boolean noPackages;
 
     @Override
     public boolean supports(MethodParameter methodParameter, Class<? extends HttpMessageConverter<?>> aClass) {
@@ -52,6 +60,10 @@ public class UniformResponseBodyAdvice implements ResponseBodyAdvice<Object> {
     @SneakyThrows
     @Override
     public Object beforeBodyWrite(Object o, MethodParameter methodParameter, MediaType mediaType, Class<? extends HttpMessageConverter<?>> aClass, ServerHttpRequest serverHttpRequest, ServerHttpResponse serverHttpResponse) {
+        Class<?> parameterDeclaringClass = methodParameter.getDeclaringClass();
+        if (isIgnorePackages(parameterDeclaringClass)) {
+            return o;
+        }
         Method method = methodParameter.getMethod();
         Class<?> declaringClass = method.getReturnType();
         if (isIgnoreReturnFormat(methodParameter, method, declaringClass, serverHttpRequest, mediaType)) {
@@ -86,6 +98,35 @@ public class UniformResponseBodyAdvice implements ResponseBodyAdvice<Object> {
         }
 
         return Result.success(o);
+    }
+
+    /**
+     * 是否忽略返回格式
+     *
+     * @param methodParameter
+     * @param method
+     * @param declaringClass
+     * @param serverHttpRequest
+     * @param mediaType
+     * @return
+     */
+    private boolean isIgnorePackages(Class<?> parameterDeclaringClass) {
+        if (null == apiProperties) {
+            return false;
+        }
+
+        if (noPackages) {
+            return false;
+        }
+
+        String typeName = parameterDeclaringClass.getTypeName();
+        for (String ignoreFormatPackage : ignoreFormatPackages) {
+            if (typeName.startsWith(ignoreFormatPackage)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -189,5 +230,13 @@ public class UniformResponseBodyAdvice implements ResponseBodyAdvice<Object> {
         }
 
         return false;
+    }
+
+    @Override
+    public void setEnvironment(Environment environment) {
+        apiProperties = Binder.get(environment)
+                .bindOrCreate(ApiProperties.PRE, ApiProperties.class);
+        ignoreFormatPackages = apiProperties.getIgnoreFormatPackages();
+        noPackages = null == ignoreFormatPackages || ignoreFormatPackages.length == 0;
     }
 }

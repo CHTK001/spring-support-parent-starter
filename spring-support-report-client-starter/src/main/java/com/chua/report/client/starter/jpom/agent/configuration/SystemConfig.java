@@ -20,6 +20,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  */
 @EqualsAndHashCode(callSuper = true)
 @Data
-@ConfigurationProperties("plugin.maintenance.system")
+@ConfigurationProperties("plugin.maintenance.server.system")
 public class SystemConfig extends BaseSystemConfig {
 }

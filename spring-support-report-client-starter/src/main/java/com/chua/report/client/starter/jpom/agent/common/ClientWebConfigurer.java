@@ -9,7 +9,6 @@
  */
 package com.chua.report.client.starter.jpom.agent.common;
 
-import com.chua.report.client.starter.jpom.agent.common.interceptor.AuthorizeInterceptor;
 import com.chua.report.client.starter.jpom.common.common.validator.ParameterInterceptor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -23,12 +22,9 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class ClientWebConfigurer implements WebMvcConfigurer {
 
     private final ParameterInterceptor parameterInterceptor;
-    private final AuthorizeInterceptor authorizeInterceptor;
 
-    public ClientWebConfigurer(ParameterInterceptor parameterInterceptor,
-                               AuthorizeInterceptor authorizeInterceptor) {
+    public ClientWebConfigurer(ParameterInterceptor parameterInterceptor) {
         this.parameterInterceptor = parameterInterceptor;
-        this.authorizeInterceptor = authorizeInterceptor;
     }
 
 
@@ -36,7 +32,6 @@ public class ClientWebConfigurer implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
 
         registry.addInterceptor(parameterInterceptor).addPathPatterns("/**");
-        registry.addInterceptor(authorizeInterceptor).addPathPatterns("/**");
     }
 
 

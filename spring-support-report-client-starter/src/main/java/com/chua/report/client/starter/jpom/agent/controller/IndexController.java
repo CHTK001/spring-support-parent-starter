@@ -31,6 +31,8 @@ import com.chua.report.client.starter.jpom.common.common.RemoteVersion;
 import com.chua.report.client.starter.jpom.common.common.i18n.I18nMessageUtil;
 import com.chua.report.client.starter.jpom.common.plugin.PluginFactory;
 import com.chua.report.client.starter.jpom.common.util.JvmUtil;
+import com.chua.starter.common.support.annotations.ReturnOrigin;
+import com.chua.starter.oauth.client.support.annotation.AuthIgnore;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.util.Assert;
@@ -53,6 +55,8 @@ import java.util.stream.Collectors;
  */
 @RestController
 @Slf4j
+@AuthIgnore
+@ReturnOrigin
 public class IndexController extends BaseAgentController {
 
     private final ProjectInfoService projectInfoService;

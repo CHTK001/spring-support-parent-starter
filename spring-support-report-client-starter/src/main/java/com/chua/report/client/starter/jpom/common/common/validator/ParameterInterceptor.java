@@ -18,6 +18,10 @@ import cn.hutool.extra.servlet.JakartaServletUtil;
 import cn.hutool.http.Header;
 import cn.hutool.http.HtmlUtil;
 import cn.keepbx.jpom.model.JsonMessage;
+import com.chua.common.support.converter.Converter;
+import com.chua.common.support.json.Json;
+import com.chua.common.support.utils.IoUtils;
+import com.chua.common.support.utils.MapUtils;
 import com.chua.report.client.starter.jpom.common.common.i18n.I18nMessageUtil;
 import com.chua.report.client.starter.jpom.common.common.interceptor.HandlerMethodInterceptor;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,6 +35,8 @@ import org.springframework.web.method.HandlerMethod;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 参数拦截器  验证参数是否正确  排序号是：-100
@@ -56,9 +62,10 @@ public class ParameterInterceptor implements HandlerMethodInterceptor {
      * @param request         req
      * @param name            name
      * @param item            item
+     * @param bodyParameters
      * @return val
      */
-    private String getValue(ValidatorConfig validatorConfig, HttpServletRequest request, String name, MethodParameter item) {
+    private String getValue(ValidatorConfig validatorConfig, HttpServletRequest request, String name, MethodParameter item, Map<String, Object> bodyParameters) {
         // 获取值
         String value;
         // 指定name
@@ -70,6 +77,14 @@ public class ParameterInterceptor implements HandlerMethodInterceptor {
             value = request.getParameter(configName);
         } else {
             value = request.getParameter(name);
+        }
+
+        if (null == value) {
+            if (StrUtil.isNotEmpty(configName)) {
+                value = Converter.convertIfNecessary(MapUtils.getObject(bodyParameters, configName), String.class);
+            } else {
+                value = Converter.convertIfNecessary(MapUtils.getObject(bodyParameters, name), String.class);
+            }
         }
         // 默认值
         if (validatorConfig != null && !ValueConstants.DEFAULT_NONE.equals(validatorConfig.defaultVal())) {
@@ -88,6 +103,14 @@ public class ParameterInterceptor implements HandlerMethodInterceptor {
         String language = JakartaServletUtil.getHeader(request, Header.ACCEPT_LANGUAGE.getValue(), CharsetUtil.CHARSET_UTF_8);
         I18nMessageUtil.setLanguage(language);
         MethodParameter[] methodParameters = handlerMethod.getMethodParameters();
+        String body = IoUtils.toString(request.getInputStream(), CharsetUtil.CHARSET_UTF_8);
+        Map<String, Object> bodyParameters = new HashMap<>();
+        if (null != body && body.startsWith("{") && body.endsWith("}")) {
+            try {
+                bodyParameters = Json.getJsonObject(body);
+            } catch (Exception ignored) {
+            }
+        }
         for (MethodParameter item : methodParameters) {
             ValidatorItem[] validatorItems;
             ValidatorConfig validatorConfig = item.getParameterAnnotation(ValidatorConfig.class);
@@ -105,7 +128,7 @@ public class ParameterInterceptor implements HandlerMethodInterceptor {
             if (name == null) {
                 continue;
             }
-            String value = getValue(validatorConfig, request, name, item);
+            String value = getValue(validatorConfig, request, name, item, bodyParameters);
             // 验证每一项
             int errorCount = 0;
             for (int i = 0, len = validatorItems.length; i < len; i++) {
