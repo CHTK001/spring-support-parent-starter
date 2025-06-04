@@ -19,7 +19,7 @@ import java.util.Optional;
  * @since 23/12/29 029
  */
 @Data
-@ConfigurationProperties("plugin.maintenance.project")
+@ConfigurationProperties("plugin.maintenance.server.project")
 public class ProjectConfig {
     /**
      * 项目日志配置
