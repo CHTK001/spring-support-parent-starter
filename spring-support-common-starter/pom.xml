@@ -26,6 +26,12 @@
         </dependency>
 
         <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-exec</artifactId>
+            <version>1.4.0</version>
+        </dependency>
+
+        <dependency>
             <groupId>kim.nzxy</groupId>
             <artifactId>spel-extension</artifactId>
             <version>1.0.0</version>
