@@ -26,6 +26,11 @@ public class MsgEvent {
     private String msg;
 
     /**
+     * 类型
+     */
+    private String type;
+
+    /**
      * 事件ID
      */
     private String eventId;
