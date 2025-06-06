@@ -62,6 +62,7 @@ import java.nio.file.AccessDeniedException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 启动 、关闭监听
@@ -75,6 +76,7 @@ public class JpomApplicationEvent implements ApplicationListener<ApplicationEven
 
     private static int oldJarsCount = 2;
     private final ClientJpomApplication configBean;
+    private static final AtomicBoolean INITIALIZED = new AtomicBoolean(false);
 
     public JpomApplicationEvent(ClientJpomApplication configBean) {
         this.configBean = configBean;
@@ -325,6 +327,9 @@ public class JpomApplicationEvent implements ApplicationListener<ApplicationEven
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         //
+        if (!INITIALIZED.compareAndSet(false, true)) {
+            return;
+        }
         File file = FileUtil.file(ClientJpomApplication.getInstance().getDataPath(), Const.REMOTE_VERSION);
         SystemUtil.set("JPOM_REMOTE_VERSION_CACHE_FILE", file.getAbsolutePath());
         JpomManifest jpomManifest = JpomManifest.getInstance();
