@@ -29,11 +29,16 @@ public class MsgEvent {
      * 类型
      */
     private String type;
+    /**
+     * 模块
+     */
+    private String module;
 
     /**
      * 事件ID
      */
     private String eventId;
+
     /**
      * 步骤
      */

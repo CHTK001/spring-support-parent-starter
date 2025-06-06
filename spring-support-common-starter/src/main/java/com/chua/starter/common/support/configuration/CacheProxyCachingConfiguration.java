@@ -26,4 +26,6 @@ public class CacheProxyCachingConfiguration {
     public CacheCustomCacheAnnotationParser cacheAnnotationParser() {
         return new CacheCustomCacheAnnotationParser();
     }
+
+
 }
