@@ -10,16 +10,20 @@ import com.chua.starter.common.support.annotations.RequestParamMapping;
 import com.github.yulichang.query.MPJQueryWrapper;
 import com.github.yulichang.toolkit.MPJWrappers;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
+import com.google.common.base.Splitter;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.experimental.Accessors;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.Serializable;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 
 /**
@@ -66,15 +70,76 @@ public class Query<T> implements Serializable {
      * 查询字段
      */
     @Schema(description = "排序字段, 多个逗号分隔", requiredMode = Schema.RequiredMode.NOT_REQUIRED, examples = {
-            "createTime",
+            "createTime; 不进行处理",
             "+createTime; e.g asc",
             "-createTime; e.g desc"
     })
     @Min(value = 1, message = "排序字段, 多个逗号分隔")
     @Max(value = 100, message = "排序字段, 多个逗号分隔")
-    @RequestParamMapping({"order", "sortBy", "orderBy"})
+    @RequestParamMapping({"order", "sortBy", "sort", "orderBy"})
     private String order;
 
+
+    /**
+     * 获取查询字段
+     *
+     * @return 查询字段
+     */
+    public String getColumns() {
+        return ArrayUtils.isEmpty(prop) ? null : String.join(",", prop);
+    }
+
+    /**
+     * 是否最近更新
+     *
+     * @return 是否排序
+     */
+    public boolean isUpdateTime() {
+        return sortBy("updateTime");
+    }
+
+    /**
+     * 是否最新添加
+     *
+     * @return 是否排序
+     */
+    public boolean isCreateTime() {
+        return sortBy("createTime");
+    }
+
+    /**
+     * 是否最受欢迎
+     *
+     * @return 是否排序
+     */
+    public boolean isPopular() {
+        return sortBy("popular");
+    }
+
+    /**
+     * 是否最受欢迎
+     *
+     * @return 是否排序
+     */
+    public boolean isNewest() {
+        return sortBy("newest");
+    }
+
+    /**
+     * 排序字段
+     *
+     * @param name 字段名
+     * @return 是否排序
+     */
+    public boolean sortBy(String name) {
+        if (StringUtils.isEmpty(order) || StringUtils.isEmpty(name)) {
+            return false;
+        }
+        Set<String> strings = Splitter.on(",").omitEmptyStrings().trimResults()
+                .splitToStream(order).map(String::toLowerCase)
+                .collect(Collectors.toSet());
+        return strings.contains(name.toLowerCase());
+    }
     /**
      * 初始化分页
      *
@@ -90,8 +155,6 @@ public class Query<T> implements Serializable {
                     orderItem.add(OrderItem.desc(s.substring(0, s.length() - 4).trim()));
                 } else if (s.endsWith("asc")) {
                     orderItem.add(OrderItem.asc(s.substring(0, s.length() - 3).trim()));
-                } else {
-                    orderItem.add(OrderItem.asc(s));
                 }
             }
             tPage.setOrders(orderItem);
@@ -125,8 +188,6 @@ public class Query<T> implements Serializable {
                     query.orderByDesc(s.replace(" desc", ""));
                 } else if (s.endsWith(" asc")) {
                     query.orderByAsc(s.replace(" asc", ""));
-                } else {
-                    query.orderByAsc(s);
                 }
             }
         }
@@ -154,8 +215,6 @@ public class Query<T> implements Serializable {
                     wrapper.orderByDesc(s.replace(" desc", ""));
                 } else if (s.endsWith(" asc")) {
                     wrapper.orderByAsc(s.replace(" asc", ""));
-                } else {
-                    wrapper.orderByAsc(s);
                 }
             }
         }
@@ -188,8 +247,6 @@ public class Query<T> implements Serializable {
                     wrapper.orderByDesc(s.replace(" desc", ""));
                 } else if (s.endsWith(" asc")) {
                     wrapper.orderByAsc(s.replace(" asc", ""));
-                } else {
-                    wrapper.orderByAsc(s);
                 }
             }
         }
