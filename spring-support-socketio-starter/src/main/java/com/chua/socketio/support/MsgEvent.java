@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
+import java.io.Serializable;
+
 /**
  * 消息步骤
  *
@@ -24,6 +26,11 @@ public class MsgEvent {
      * 步骤消息
      */
     private String msg;
+
+    /**
+     * 数据
+     */
+    private Serializable data;
 
     /**
      * 类型
@@ -48,6 +55,11 @@ public class MsgEvent {
      * 总数
      */
     private int total;
+
+    /**
+     * 时间戳
+     */
+    private long timestamp;
 
 
     @Override
