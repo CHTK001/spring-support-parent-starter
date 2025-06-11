@@ -7,6 +7,7 @@ import com.chua.common.support.lang.date.DateTime;
 import com.chua.starter.common.support.jackson.*;
 import com.chua.starter.common.support.jackson.handler.JacksonProblemHandler;
 import com.chua.starter.common.support.jackson.handler.JsonArray2StringJacksonProblemHandler;
+import com.chua.starter.common.support.jackson.handler.JsonObject2ArrayListJacksonProblemHandler;
 import com.chua.starter.common.support.properties.JacksonProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -38,6 +39,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.Year;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.TimeZone;
 
@@ -141,6 +143,7 @@ public class JacksonConfiguration {
 
         static {
             NULLABLE_FIELDS.put("START_ARRAY", String.class, JsonArray2StringJacksonProblemHandler.class);
+            NULLABLE_FIELDS.put("START_OBJECT", ArrayList.class, JsonObject2ArrayListJacksonProblemHandler.class);
         }
 
         @Override

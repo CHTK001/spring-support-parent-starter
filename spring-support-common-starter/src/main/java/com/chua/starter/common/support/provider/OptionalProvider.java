@@ -17,12 +17,15 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.*;
+
+import static com.chua.starter.common.support.constant.CacheConstant.SYSTEM;
 
 /**
  * 获取选项
@@ -46,7 +49,7 @@ public class OptionalProvider {
      */
     @Operation(summary = "获取已经加载选项")
     @GetMapping("objects/get")
-//    @Cacheable(cacheManager = SYSTEM, cacheNames = SYSTEM, key = "'OPTION:OBJECT_GET' + #type + '' + #name")
+    @Cacheable(cacheManager = SYSTEM, cacheNames = SYSTEM, key = "'OPTION:OBJECT_GET' + #type + '' + #name")
     public ReturnResult<List<SpiOption>> objects(String type, @RequestParam(required =false) String name) {
         if(StringUtils.isBlank(type)) {
             return ReturnResult.error();
@@ -105,7 +108,7 @@ public class OptionalProvider {
      */
     @Operation(summary = "获取选项")
     @GetMapping("get")
-//    @Cacheable(cacheManager = SYSTEM, cacheNames = SYSTEM, key = "'OPTION:GET' + #type + '' + #name")
+    @Cacheable(cacheManager = SYSTEM, cacheNames = SYSTEM, key = "'OPTION:GET' + #type + '' + #name")
     public ReturnResult<List<SpiOption>> get(String type, @RequestParam(required =false) String name) {
         if(StringUtils.isBlank(type)) {
             return ReturnResult.error();
@@ -128,7 +131,7 @@ public class OptionalProvider {
      */
     @Operation(summary = "获取选项")
     @GetMapping("list")
-//    @Cacheable(cacheManager = SYSTEM, cacheNames = SYSTEM, key = "'OPTION:LIST' + #type + '' + #name")
+    @Cacheable(cacheManager = SYSTEM, cacheNames = SYSTEM, key = "'OPTION:LIST' + #type + '' + #name")
     public ReturnResult<Map<String, List<SpiOption>>> list(String type, @RequestParam(required =false) String name) {
         if(StringUtils.isBlank(type)) {
             return ReturnResult.error();

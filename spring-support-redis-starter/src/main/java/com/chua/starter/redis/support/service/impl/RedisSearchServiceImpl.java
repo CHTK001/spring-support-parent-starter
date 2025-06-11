@@ -94,7 +94,6 @@ public class RedisSearchServiceImpl implements RedisSearchService {
         if(null == redisClient) {
             return ReturnResult.error("redisClient未初始化");
         }
-
         RedisChannelSession redisSession  = (RedisChannelSession) redisClient.getSession();
 
         if(!redisSession.checkModule("search")) {
