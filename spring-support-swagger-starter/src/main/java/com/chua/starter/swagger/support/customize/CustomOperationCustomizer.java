@@ -4,12 +4,15 @@ import com.chua.starter.swagger.support.Knife4jProperties;
 import com.chua.starter.swagger.support.annotation.HiddenParam;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.parameters.Parameter;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springdoc.core.customizers.GlobalOperationCustomizer;
 import org.springframework.core.MethodParameter;
 import org.springframework.util.ClassUtils;
+import org.springframework.util.ReflectionUtils;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.method.HandlerMethod;
 
+import java.lang.reflect.Field;
 import java.util.*;
 
 /**
@@ -65,8 +68,8 @@ public class CustomOperationCustomizer implements GlobalOperationCustomizer {
                 continue;
             }
 
-            Optional<Parameter> first = parameters.stream().filter(parameter -> parameter.getName().equals(methodParameter.getParameter().getName())).findFirst();
-            first.ifPresent(rs::add);
+            registerParameter(rs, parameters, methodParameter);
+
         }
         for (Map.Entry<String, String> entry : defaultHeaders.entrySet()) {
             rs.add(new Parameter()
@@ -76,5 +79,39 @@ public class CustomOperationCustomizer implements GlobalOperationCustomizer {
                             .example(entry.getValue())));
         }
         operation.setParameters(rs);
+    }
+
+    private void registerParameter(List<Parameter> rs, List<Parameter> parameters, MethodParameter methodParameter) {
+        if (!methodParameter.hasParameterAnnotation(ParameterObject.class)) {
+            parameters.stream()
+                    .filter(parameter -> parameter.getName().equals(methodParameter.getParameterName()))
+                    .findFirst()
+                    .ifPresent(rs::add);
+            return;
+        }
+        java.lang.reflect.Parameter methodParameterParameter = methodParameter.getParameter();
+        register(rs, parameters, methodParameterParameter.getType());
+
+    }
+
+    private void register(List<Parameter> rs, List<Parameter> parameters, Class<?> type) {
+        ReflectionUtils.doWithFields(type, field -> {
+            if (field.isAnnotationPresent(HiddenParam.class)) {
+                return;
+            }
+
+            registerParameter(rs, parameters, field);
+        });
+    }
+
+    private void registerParameter(List<Parameter> rs, List<Parameter> parameters, Field methodParameter) {
+        if (!methodParameter.isAnnotationPresent(ParameterObject.class)) {
+            parameters.stream()
+                    .filter(parameter -> parameter.getName().equals(methodParameter.getName()))
+                    .findFirst()
+                    .ifPresent(rs::add);
+            return;
+        }
+        register(rs, parameters, methodParameter.getType());
     }
 }

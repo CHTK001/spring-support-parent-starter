@@ -23,6 +23,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.env.Environment;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
@@ -47,6 +48,7 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
 
 
     @Bean
+    @Primary
     public CustomOperationCustomizer customOperationCustomizer() {
         return new CustomOperationCustomizer(knife4jProperties);
     }
