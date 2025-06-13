@@ -11,6 +11,7 @@ import com.chua.starter.common.support.utils.RequestUtils;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.ApplicationContext;
+import org.springframework.web.util.ContentCachingRequestWrapper;
 
 import java.io.IOException;
 import java.net.URLDecoder;
@@ -48,34 +49,34 @@ public class ParameterLogFilter implements Filter {
             filterChain.doFilter(servletRequest, servletResponse);
             return;
         }
-        String connection = request.getHeader("upgrade");
+        ContentCachingRequestWrapper requestWrapper = new ContentCachingRequestWrapper(request);
+        String connection = requestWrapper.getHeader("upgrade");
         if ("websocket".equalsIgnoreCase(connection)) {
             filterChain.doFilter(servletRequest, servletResponse);
             return;
         }
-        String requestURI = request.getRequestURI();
+        String requestURI = requestWrapper.getRequestURI();
         if(isPass(requestURI)) {
 //            CustomHttpServletRequestWrapper requestWrapper = new CustomHttpServletRequestWrapper((HttpServletRequest) servletRequest);
 //            printBody(requestWrapper);
 //            printHeader(request);
-            filterChain.doFilter(request, servletResponse);
-            injectInterfaceServiceLog(request);
+            filterChain.doFilter(requestWrapper, servletResponse);
+            injectInterfaceServiceLog(requestWrapper);
             return;
         }
         log.info("======================================");
-        hook(request);
-        String header = request.getHeader(HTTP_HEADER_CONTENT_TYPE);
+        String header = requestWrapper.getHeader(HTTP_HEADER_CONTENT_TYPE);
         if(StringUtils.contains(header, "form-data")) {
-            filterChain.doFilter(servletRequest, servletResponse);
-            injectInterfaceServiceLog(request);
+            filterChain.doFilter(requestWrapper, servletResponse);
+            injectInterfaceServiceLog(requestWrapper);
             return;
         }
-        String method = request.getMethod();
+        String method = requestWrapper.getMethod();
 
         if (StringUtils.isEmpty(header) || (GET.equals(method) || DELETE.equals(method))) {
-            printUrl(request);
-            printQuery(request);
-            printHeader(request);
+            printUrl(requestWrapper);
+            printQuery(requestWrapper);
+            printHeader(requestWrapper);
             log.info("======================================\r\n");
             injectInterfaceServiceLog(request);
             filterChain.doFilter(request, servletResponse);
@@ -83,16 +84,15 @@ public class ParameterLogFilter implements Filter {
         }
 
         if (POST.equalsIgnoreCase(method) || PUT.equalsIgnoreCase(method) || "patch".equalsIgnoreCase(method)) {
-            CustomHttpServletRequestWrapper requestWrapper = new CustomHttpServletRequestWrapper((HttpServletRequest) servletRequest);
             printBody(requestWrapper);
-            printHeader(request);
+            printHeader(requestWrapper);
             log.info("======================================\r\n");
             injectInterfaceServiceLog(requestWrapper);
             filterChain.doFilter(requestWrapper, servletResponse);
             return;
         }
-        injectInterfaceServiceLog(request);
-        filterChain.doFilter(request, servletResponse);
+        injectInterfaceServiceLog(requestWrapper);
+        filterChain.doFilter(requestWrapper, servletResponse);
     }
 
     /**
@@ -115,12 +115,6 @@ public class ParameterLogFilter implements Filter {
         return RequestUtils.isResource(requestURI);
     }
 
-    private void hook(HttpServletRequest request) {
-        request.getParameterNames();
-        request.getHeaderNames();
-        request.getAttributeNames();
-        request.getLocales();
-    }
     private void printUrl(HttpServletRequest request) {
         log.info("{} -> {}", request.getMethod(), request.getRequestURI());
     }
@@ -157,10 +151,10 @@ public class ParameterLogFilter implements Filter {
         }
     }
 
-    private void printBody(CustomHttpServletRequestWrapper requestWrapper) throws IOException {
+    private void printBody(ContentCachingRequestWrapper requestWrapper) throws IOException {
         log.info("请求URL: {} -> {}", requestWrapper.getMethod(), requestWrapper.getRequestURL());
-        String body = IoUtils.toString(requestWrapper.getInputStream(), requestWrapper.getCharacterEncoding());
-        if(null != body && body.length() < NumberConstant.TWE_THOUSAND) {
+        String body = IoUtils.toString(requestWrapper.getContentAsByteArray(), requestWrapper.getCharacterEncoding());
+        if (body.length() < NumberConstant.TWE_THOUSAND) {
             log.info("请求消息体: {}", body);
         }
 

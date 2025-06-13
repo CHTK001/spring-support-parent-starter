@@ -469,6 +469,11 @@ public class ParameterInterceptor implements HandlerMethodInterceptor {
             String msg = validatorItem.msg();
             if (StrUtil.isEmpty(msg)) {
                 msg = I18nMessageUtil.get("i18n.parameter_validation_failed.f0a1");
+            } else {
+                try {
+                    msg = I18nMessageUtil.get(msg);
+                } catch (Exception ignored) {
+                }
             }
             JsonMessage<String> jsonMessage = new JsonMessage<>(validatorItem.code(), msg);
             log.warn("{} {} {} {} {}", request.getRequestURI(), parameterName, value, validatorItem.value(), jsonMessage);
