@@ -28,7 +28,7 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
      * API VERSION interface
      **/
     @Getter
-    private ApiVersion apiVersion;
+    private final ApiVersion apiVersion;
 
     ApiVersionCondition(ApiVersion apiVersion) {
         this.apiVersion = apiVersion;
@@ -61,20 +61,28 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
     public ApiVersionCondition getMatchingCondition(HttpServletRequest httpServletRequest) {
         // 通过uri匹配版本号
         Map<String, String> stringStringMap = MapUtils.asMap(httpServletRequest.getQueryString(), "&", "=");
-        Double urlVersion = MapUtils.getDouble(stringStringMap, "version");
-        if (null == urlVersion) {
+        String versionStr = MapUtils.getString(stringStringMap, "version");
+        if (null == versionStr) {
             return this;
         }
+
         // 获得符合匹配条件的ApiVersionCondition
         ApiVersion currentApiVersion = getApiVersion();
         if (null == currentApiVersion) {
             return this;
         }
 
-        double currentVersion = currentApiVersion.version();
-        if (urlVersion >= currentVersion) {
+        String currentVersion = currentApiVersion.version();
+
+        // 转换为双精度比较
+        double requestVersion = normalizeVersion(versionStr);
+        double apiVersion = normalizeVersion(currentVersion);
+
+        // 判断版本号是否符合要求
+        if (isVersionCompatible(requestVersion, apiVersion)) {
             return this;
         }
+
         return null;
     }
 
@@ -88,7 +96,48 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
     @Override
     public int compareTo(ApiVersionCondition other, HttpServletRequest httpServletRequest) {
         // 当出现多个符合匹配条件的ApiVersionCondition，优先匹配版本号较大的
-        return other.getApiVersion().version() >= getApiVersion().version() ? 1 : -1;
+        double thisVersion = normalizeVersion(getApiVersion().version());
+        double otherVersion = normalizeVersion(other.getApiVersion().version());
+        return Double.compare(otherVersion, thisVersion);
     }
 
+    /**
+     * 标准化版本号，将1和1.0视为相同版本
+     *
+     * @param version 版本号字符串
+     * @return 标准化后的双精度版本号
+     */
+    private double normalizeVersion(String version) {
+        if (version == null || version.isEmpty()) {
+            return 0.0;
+        }
+
+        // 移除可能的+后缀
+        if (version.endsWith("+")) {
+            version = version.substring(0, version.length() - 1);
+        }
+
+        try {
+            return Double.parseDouble(version);
+        } catch (NumberFormatException e) {
+            log.warn("无法解析版本号: {}", version);
+            return 0.0;
+        }
+    }
+
+    /**
+     * 判断请求版本是否与API版本兼容
+     * 支持以下比较方式：
+     * 1. 精确匹配: 1.0 = 1.0, 1 = 1.0
+     * 2. 向后兼容: 请求版本 >= API版本时匹配成功
+     * 3. 带+号的版本表示向后兼容: 1.0+ >= 1.0
+     *
+     * @param requestVersion 请求版本号
+     * @param apiVersion     API定义的版本号
+     * @return 是否兼容
+     */
+    private boolean isVersionCompatible(double requestVersion, double apiVersion) {
+        // 请求版本号大于等于API版本号，表示兼容
+        return requestVersion >= apiVersion;
+    }
 }
