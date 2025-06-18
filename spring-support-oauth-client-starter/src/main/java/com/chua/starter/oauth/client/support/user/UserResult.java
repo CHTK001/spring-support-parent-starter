@@ -89,6 +89,14 @@ public class UserResult {
      * 角色
      */
     private Set<RoleInfo> rolesByRole;
+    /**
+     * 用户自定义数据
+     */
+    private String userDashboardGrid;
+    /**
+     * 用户自定义数据
+     */
+    private String userDashboard;
 
     /**
      * 数据权限(部门)
@@ -215,11 +223,19 @@ public class UserResult {
          * 角色名称
          */
         private String roleName;
+        /**
+         * 角色id
+         */
+        private String roleId;
 
         /**
          * 角色编码
          */
         private String roleCode;
+        /**
+         * 角色描述
+         */
+        private String roleDesc;
 
         /**
          * 是否可读

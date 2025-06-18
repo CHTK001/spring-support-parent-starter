@@ -39,6 +39,7 @@
         <module>spring-support-configcenter-starter</module>
         <module>spring-support-prometheus-starter</module>
         <module>spring-support-loki-starter</module>
+        <module>spring-support-guacamole-starter</module>
     </modules>
 
     <properties>

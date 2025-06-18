@@ -1,13 +1,16 @@
 package com.chua.starter.swagger.support;
 
-import com.chua.starter.swagger.support.customize.CustomOperationCustomizer;
-import com.github.xingfudeshi.knife4j.spring.annotations.EnableKnife4j;
+import com.chua.starter.swagger.support.customize.Knife4jOpenApiCustomizer;
+import com.github.xiaoymin.knife4j.spring.annotations.EnableKnife4j;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import lombok.extern.slf4j.Slf4j;
+import org.springdoc.core.properties.SpringDocConfigProperties;
+import org.springdoc.core.utils.Constants;
 import org.springdoc.webmvc.core.configuration.MultipleOpenApiSupportConfiguration;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
@@ -23,7 +26,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Primary;
 import org.springframework.core.env.Environment;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
@@ -41,17 +43,37 @@ import java.util.List;
 @EnableConfigurationProperties(Knife4jProperties.class)
 //@Import(BeanValidatorPluginsConfiguration.class)
 @Import({MultipleOpenApiSupportConfiguration.class})
-public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware {
+public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware, BeanPostProcessor {
 
     Knife4jProperties knife4jProperties;
     private ApplicationContext applicationContext;
+    private com.github.xiaoymin.knife4j.spring.configuration.Knife4jProperties knife4j;
+    private SpringDocConfigProperties springDocConfigProperties;
 
 
-    @Bean
-    @Primary
-    public CustomOperationCustomizer customOperationCustomizer() {
-        return new CustomOperationCustomizer(knife4jProperties);
+//    @Bean
+//    @Primary
+//    public CustomOperationCustomizer customOperationCustomizer() {
+//        return new CustomOperationCustomizer(knife4jProperties);
+//    }
+
+//
+//    @Bean("knife4jOpenApiCustomizer")
+//    @Primary
+//    public Knife4jOpenApiCustomizer knife4jOpenApiCustomizer(com.github.xiaoymin.knife4j.spring.configuration.Knife4jProperties  knife4jProperties, SpringDocConfigProperties springDocConfigProperties) {
+//        return new Knife4jOpenApiCustomizer(knife4jProperties, springDocConfigProperties);
+//    }
+
+
+    @Override
+    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+        Class<?> aClass = bean.getClass();
+        if (aClass == com.github.xiaoymin.knife4j.spring.extension.Knife4jOpenApiCustomizer.class) {
+            return new Knife4jOpenApiCustomizer(knife4j, springDocConfigProperties);
+        }
+        return BeanPostProcessor.super.postProcessAfterInitialization(bean, beanName);
     }
+
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         List<Knife4jProperties.Knife4j> knife4j1 = knife4jProperties.getKnife4j();
@@ -65,6 +87,13 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
                 .version(knife4jProperties.getVersion())
                 .termsOfService(knife4jProperties.getTermsOfService())
         );
+//        registry.registerBeanDefinition("knife4jOpenApiCustomizer2" , BeanDefinitionBuilder
+//                .genericBeanDefinition(com.github.xiaoymin.knife4j.spring.extension.Knife4jOpenApiCustomizer.class,
+//                        () -> new Knife4jOpenApiCustomizer(knife4j, springDocConfigProperties))
+//                .addConstructorArgValue(knife4j)
+//                .addConstructorArgValue(springDocConfigProperties)
+//                .getBeanDefinition()
+//        );
         registry.registerBeanDefinition("knife4j-OpenAPI", BeanDefinitionBuilder.genericBeanDefinition(OpenAPI.class, () -> openAPI).getBeanDefinition());
 //        for (Knife4jProperties.Knife4j knife4j : knife4j1) {
 //            GroupedOpenApi openApi = GroupedOpenApi.builder()
@@ -84,6 +113,8 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
         knife4jProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate("plugin.swagger", Knife4jProperties.class);
+        knife4j = Binder.get(applicationContext.getEnvironment()).bindOrCreate("knife4j", com.github.xiaoymin.knife4j.spring.configuration.Knife4jProperties.class);
+        springDocConfigProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(Constants.SPRINGDOC_PREFIX, SpringDocConfigProperties.class);
     }
 
 
