@@ -1,5 +1,4 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
   com.chua.report.client.starter.configuration.ReportClientConfiguration,\
   com.chua.report.client.starter.configuration.CustomEndpointConfiguration,\
-  com.chua.report.client.starter.configuration.ReportCommonConfiguration,\
-  com.chua.report.client.starter.configuration.JpomCommonConfiguration
+  com.chua.report.client.starter.configuration.ReportCommonConfiguration

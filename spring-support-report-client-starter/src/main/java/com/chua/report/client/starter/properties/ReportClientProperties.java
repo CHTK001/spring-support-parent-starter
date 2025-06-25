@@ -25,6 +25,11 @@ public class ReportClientProperties {
     private String address;
 
     /**
+     * 上报接口
+     */
+    private String addressReportPath = "/monitor/api";
+
+    /**
      * 接收协议
      */
     private String receivableProtocol = "http";
