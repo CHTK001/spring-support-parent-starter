@@ -1,7 +1,7 @@
 package com.chua.report.client.starter.service.impl;
 
 import com.chua.common.support.annotations.Spi;
-import com.chua.common.support.json.Json;
+import com.chua.common.support.utils.FileUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.report.client.starter.entity.DeviceMetrics;
 import com.chua.report.client.starter.properties.ReportClientProperties;
@@ -137,8 +137,8 @@ public class HttpReportPushServiceImpl implements ReportPushService {
         if (address.endsWith("/")) {
             address = address.substring(0, address.length() - 1);
         }
-        
-        return address + path;
+
+        return FileUtils.normalize(address, properties.getAddressReportPath(), path);
     }
 
     /**

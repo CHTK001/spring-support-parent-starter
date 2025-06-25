@@ -104,6 +104,9 @@ public class AutoCreateTableConfiguration implements ApplicationContextAware {
             return;
         }
         log.info("开始创建<{}>任务", type.getTypeName());
+        if(type.isEnum() || type.isInterface() || type.isAnonymousClass()) {
+            return;
+        }
         engine.createTable().doIt(type, createTableProperties.getType());
     }
 }
