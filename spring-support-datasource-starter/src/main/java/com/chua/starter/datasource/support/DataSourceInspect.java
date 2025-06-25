@@ -145,6 +145,7 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
         beanDefinitionBuilder.setPrimary(true);
         //注册动态数据源
         beanDefinitionRegistry.registerBeanDefinition("dynamicDataSource", beanDefinitionBuilder.getBeanDefinition());
+        log.info("注册动态数据源");
     }
 
     /**
