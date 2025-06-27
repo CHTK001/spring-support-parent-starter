@@ -1,5 +1,6 @@
 package com.chua.starter.mybatis;
 
+import com.baomidou.mybatisplus.autoconfigure.ConfigurationCustomizer;
 import com.baomidou.mybatisplus.core.config.GlobalConfig;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.DataPermissionInterceptor;
@@ -7,6 +8,7 @@ import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInt
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
 import com.chua.starter.mybatis.endpoint.MybatisEndpoint;
+import com.chua.starter.mybatis.interceptor.MapperTracingInterceptor;
 import com.chua.starter.mybatis.interceptor.MybatisPlusV2DataPermissionHandler;
 import com.chua.starter.mybatis.interceptor.MybatisPlusV2DataPermissionInterceptor;
 import com.chua.starter.mybatis.method.SupportInjector;
@@ -155,6 +157,15 @@ public class MybatisPlusConfiguration {
     @ConditionalOnMissingBean(name = {"supportInjector"})
     public SupportInjector supportInjector(MybatisPlusProperties mybatisProperties) {
         return new SupportInjector(mybatisProperties);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public ConfigurationCustomizer mybatisConfigurationCustomizer() {
+        return configuration -> {
+            // 确保拦截器是第一个被执行的
+            configuration.addInterceptor(new MapperTracingInterceptor());
+        };
     }
     /**
      * MybatisEndpoint
