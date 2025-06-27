@@ -37,16 +37,17 @@ public class HttpReportPushServiceImpl implements ReportPushService {
         }
 
         try {
-            String url = buildUrl("/api/v1/monitor/device/metrics");
-            
+            // 使用配置的上报路径，默认为 /monitor/api
+            String url = buildUrl(properties.getAddressReportPath() + "/v1/monitor/device/metrics");
+
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            
+
             HttpEntity<DeviceMetrics> request = new HttpEntity<>(metrics, headers);
-            
-            ResponseEntity<Map> response = deviceReportRestTemplate.exchange(
+
+            ResponseEntity<?> response = deviceReportRestTemplate.exchange(
                 url, HttpMethod.POST, request, Map.class);
-            
+
             if (response.getStatusCode().is2xxSuccessful()) {
                 log.debug("设备指标数据推送成功: {}", metrics.getDeviceId());
                 return true;
@@ -69,16 +70,16 @@ public class HttpReportPushServiceImpl implements ReportPushService {
         }
 
         try {
-            String url = buildUrl("/api/v1/monitor/device/info");
-            
+            String url = buildUrl(properties.getAddressReportPath() + "/v1/monitor/device/info");
+
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            
+
             HttpEntity<DeviceMetrics> request = new HttpEntity<>(deviceInfo, headers);
-            
-            ResponseEntity<Map> response = deviceReportRestTemplate.exchange(
+
+            ResponseEntity<?> response = deviceReportRestTemplate.exchange(
                 url, HttpMethod.POST, request, Map.class);
-            
+
             if (response.getStatusCode().is2xxSuccessful()) {
                 log.debug("设备基本信息推送成功: {}", deviceInfo.getDeviceId());
                 return true;
@@ -101,20 +102,20 @@ public class HttpReportPushServiceImpl implements ReportPushService {
         }
 
         try {
-            String url = buildUrl("/api/v1/monitor/device/ping");
-            
+            String url = buildUrl(properties.getAddressReportPath() + "/v1/monitor/device/ping");
+
             Map<String, Object> pingData = new HashMap<>();
             pingData.put("deviceId", properties.getDeviceId());
             pingData.put("timestamp", System.currentTimeMillis());
-            
+
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            
+
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(pingData, headers);
-            
-            ResponseEntity<Map> response = deviceReportRestTemplate.exchange(
+
+            ResponseEntity<?> response = deviceReportRestTemplate.exchange(
                 url, HttpMethod.POST, request, Map.class);
-            
+
             boolean success = response.getStatusCode().is2xxSuccessful();
             log.info("连接测试结果: {}", success ? "成功" : "失败");
             return success;
@@ -149,37 +150,5 @@ public class HttpReportPushServiceImpl implements ReportPushService {
                StringUtils.isNotBlank(properties.getAddress());
     }
 
-    /**
-     * 重试推送
-     */
-    private boolean retryPush(String url, HttpEntity<?> request, String operation) {
-        int retryCount = properties.getRetryCount();
-        
-        for (int i = 0; i < retryCount; i++) {
-            try {
-                ResponseEntity<Map> response = deviceReportRestTemplate.exchange(
-                    url, HttpMethod.POST, request, Map.class);
-                
-                if (response.getStatusCode().is2xxSuccessful()) {
-                    log.debug("{}重试第{}次成功", operation, i + 1);
-                    return true;
-                }
-                
-            } catch (Exception e) {
-                log.warn("{}重试第{}次失败: {}", operation, i + 1, e.getMessage());
-                
-                if (i < retryCount - 1) {
-                    try {
-                        Thread.sleep(1000 * (i + 1)); // 递增延迟
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                        break;
-                    }
-                }
-            }
-        }
-        
-        log.error("{}重试{}次后仍然失败", operation, retryCount);
-        return false;
-    }
+
 }
