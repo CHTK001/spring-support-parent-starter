@@ -36,6 +36,7 @@ public class WebResponse {
     public void doFailureChain(Information information) {
         if (null != information) {
             response.setStatus(information.getCode());
+            log.error("鉴权服务器异常{} {}", information.getCode(), information.getMessage());
         }
         String accept = request.getHeader("accept");
         String contentType = response.getContentType();
