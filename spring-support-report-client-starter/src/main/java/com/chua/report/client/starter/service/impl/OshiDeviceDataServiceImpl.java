@@ -2,7 +2,8 @@ package com.chua.report.client.starter.service.impl;
 
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.net.NetUtils;
-import com.chua.report.client.starter.entity.DeviceMetrics;
+import com.chua.report.client.starter.pojo.DeviceMetrics;
+import com.chua.report.client.starter.pojo.DiskPartitionInfo;
 import com.chua.report.client.starter.properties.ReportClientProperties;
 import com.chua.report.client.starter.service.DeviceDataService;
 import lombok.RequiredArgsConstructor;
@@ -11,12 +12,14 @@ import org.springframework.stereotype.Service;
 import oshi.SystemInfo;
 import oshi.hardware.*;
 import oshi.software.os.OperatingSystem;
+import oshi.software.os.OSFileStore;
 import cn.hutool.system.oshi.OshiUtil;
 import cn.hutool.system.oshi.CpuInfo;
 
 import java.net.InetAddress;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * 基于OSHI的设备数据服务实现
@@ -179,32 +182,56 @@ public class OshiDeviceDataServiceImpl implements DeviceDataService {
     private void setDiskMetrics(DeviceMetrics metrics) {
         try {
             List<HWDiskStore> diskStores = hardware.getDiskStores();
-            
+
             long totalDisk = 0;
             long usedDisk = 0;
-            
+            List<DiskPartitionInfo> diskPartitions = new ArrayList<>();
+
             for (HWDiskStore disk : diskStores) {
                 totalDisk += disk.getSize();
                 // 这里简化处理，实际应该通过文件系统获取使用情况
             }
-            
-            // 通过文件系统获取更准确的磁盘使用情况
-            java.io.File[] roots = java.io.File.listRoots();
-            for (java.io.File root : roots) {
-                totalDisk += root.getTotalSpace();
-                usedDisk += (root.getTotalSpace() - root.getFreeSpace());
+
+            // 通过文件系统获取更准确的磁盘使用情况和分区信息
+            OperatingSystem os = systemInfo.getOperatingSystem();
+            List<OSFileStore> fileStores = os.getFileSystem().getFileStores();
+
+            for (OSFileStore fs : fileStores) {
+                long totalSpace = fs.getTotalSpace();
+                long freeSpace = fs.getFreeSpace();
+                long usedSpace = totalSpace - freeSpace;
+                double usagePercent = totalSpace > 0 ? (double) usedSpace / totalSpace * 100 : 0;
+
+                // 累计总磁盘使用情况
+                totalDisk += totalSpace;
+                usedDisk += usedSpace;
+
+                // 创建磁盘分区信息
+                DiskPartitionInfo partitionInfo = DiskPartitionInfo.builder()
+                    .name(fs.getName())
+                    .mount(fs.getMount())
+                    .type(fs.getType())
+                    .totalSpace(totalSpace)
+                    .freeSpace(freeSpace)
+                    .usedSpace(usedSpace)
+                    .usagePercent(usagePercent)
+                    .isPrimary(fs.getMount().equals("/") || fs.getMount().equals("C:\\"))
+                    .deviceName(fs.getName())
+                    .build();
+                diskPartitions.add(partitionInfo);
             }
-            
+
             long availableDisk = totalDisk - usedDisk;
-            
+
             metrics.setTotalDisk(totalDisk);
             metrics.setUsedDisk(usedDisk);
             metrics.setAvailableDisk(availableDisk);
-            
+            metrics.setDiskPartitions(diskPartitions);
+
             // 磁盘使用率
             double diskUsage = totalDisk > 0 ? (double) usedDisk / totalDisk * 100 : 0;
             metrics.setDiskUsage(diskUsage);
-            
+
         } catch (Exception e) {
             log.warn("设置磁盘指标失败", e);
         }
