@@ -87,6 +87,20 @@ public interface TimeSeriesService {
      * @return 返回一个表示操作结果的对象，其中包含了操作是否成功的标志。
      */
     ReturnResult<List<TimeIndicator>> range(String indicator, long fromTimestamp, long toTimestamp, boolean latest, int count);
+    /**
+     * 默认查询指定指标的数据范围。
+     * <p>
+     * 本函数旨在查询指定指标的数据范围，包括时间戳和值。
+     * 它返回一个表示操作成功或失败的结果对象。
+     *
+     * @param indicator     指标名称，用于标识要查询的数据类型或类别。
+     * @param fromTimestamp 数据查询的起始时间戳，用于指定查询数据的时间范围。
+     * @param toTimestamp   数据查询的结束时间戳，用于指定查询数据的时间范围。
+     * @return 默认查询指定指标的数据范围。
+     */
+    default ReturnResult<List<TimeIndicator>> range(String indicator, long fromTimestamp, long toTimestamp) {
+        return range(indicator, fromTimestamp, toTimestamp, true, 100);
+    }
 
     /**
      * 查询指定指标的数据范围。
