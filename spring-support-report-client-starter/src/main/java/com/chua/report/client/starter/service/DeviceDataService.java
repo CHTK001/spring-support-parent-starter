@@ -1,6 +1,7 @@
 package com.chua.report.client.starter.service;
 
-import com.chua.report.client.starter.entity.DeviceMetrics;
+
+import com.chua.report.client.starter.pojo.DeviceMetrics;
 
 /**
  * 设备数据服务接口

@@ -3,7 +3,7 @@ package com.chua.report.client.starter.service.impl;
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.utils.FileUtils;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.report.client.starter.entity.DeviceMetrics;
+import com.chua.report.client.starter.pojo.DeviceMetrics;
 import com.chua.report.client.starter.properties.ReportClientProperties;
 import com.chua.report.client.starter.service.ReportPushService;
 import lombok.RequiredArgsConstructor;
