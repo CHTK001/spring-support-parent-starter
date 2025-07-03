@@ -2,8 +2,7 @@ package com.chua.report.client.starter.service.impl;
 
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.net.NetUtils;
-import com.chua.report.client.starter.pojo.DeviceMetrics;
-import com.chua.report.client.starter.pojo.DiskPartitionInfo;
+import com.chua.report.client.starter.entity.DeviceMetrics;
 import com.chua.report.client.starter.properties.ReportClientProperties;
 import com.chua.report.client.starter.service.DeviceDataService;
 import lombok.RequiredArgsConstructor;

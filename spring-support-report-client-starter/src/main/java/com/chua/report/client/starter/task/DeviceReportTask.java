@@ -1,6 +1,6 @@
 package com.chua.report.client.starter.task;
 
-import com.chua.report.client.starter.entity.DeviceMetrics;
+import com.chua.report.client.starter.pojo.DeviceMetrics;
 import com.chua.report.client.starter.properties.ReportClientProperties;
 import com.chua.report.client.starter.service.DeviceDataService;
 import com.chua.report.client.starter.service.ReportPushService;
