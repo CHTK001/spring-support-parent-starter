@@ -2,7 +2,8 @@ package com.chua.report.client.starter.service.impl;
 
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.net.NetUtils;
-import com.chua.report.client.starter.entity.DeviceMetrics;
+import com.chua.report.client.starter.pojo.DeviceMetrics;
+import com.chua.report.client.starter.pojo.DiskPartitionInfo;
 import com.chua.report.client.starter.properties.ReportClientProperties;
 import com.chua.report.client.starter.service.DeviceDataService;
 import lombok.RequiredArgsConstructor;
@@ -111,15 +112,14 @@ public class OshiDeviceDataServiceImpl implements DeviceDataService {
             metrics.setDeviceName(properties.getDeviceName() != null ? 
                 properties.getDeviceName() : getDefaultDeviceName());
             
-            // IP地址和端口
+            // IP地址
             metrics.setIpAddress(NetUtils.getLocalHost());
-            metrics.setPort(properties.getReceivablePort());
-            
+
             // 操作系统信息
-            metrics.setOsName(os.getFamily());
-            metrics.setOsVersion(os.getVersionInfo().getVersion());
-            metrics.setOsArch(System.getProperty("os.arch"));
-            
+            metrics.setOperatingSystem(os.getFamily());
+            metrics.setSystemVersion(os.getVersionInfo().getVersion());
+            metrics.setArchitecture(System.getProperty("os.arch"));
+
             // 主机名
             metrics.setHostname(InetAddress.getLocalHost().getHostName());
             
@@ -143,8 +143,8 @@ public class OshiDeviceDataServiceImpl implements DeviceDataService {
             // CPU核心数
             metrics.setCpuCores(processor.getLogicalProcessorCount());
 
-            // CPU频率
-            metrics.setCpuFrequency(processor.getMaxFreq());
+            // CPU频率 - DeviceMetrics中没有cpuFrequency字段，暂时跳过
+            // metrics.setCpuFrequency(processor.getMaxFreq());
 
         } catch (Exception e) {
             log.warn("设置CPU指标失败", e);
@@ -256,10 +256,10 @@ public class OshiDeviceDataServiceImpl implements DeviceDataService {
                 totalPacketsSent += net.getPacketsSent();
             }
             
-            metrics.setNetworkInBytes(totalBytesRecv);
-            metrics.setNetworkOutBytes(totalBytesSent);
-            metrics.setNetworkInPackets(totalPacketsRecv);
-            metrics.setNetworkOutPackets(totalPacketsSent);
+            metrics.setNetworkBytesReceived(totalBytesRecv);
+            metrics.setNetworkBytesSent(totalBytesSent);
+            metrics.setNetworkPacketsReceived(totalPacketsRecv);
+            metrics.setNetworkPacketsSent(totalPacketsSent);
             
         } catch (Exception e) {
             log.warn("设置网络指标失败", e);
@@ -274,8 +274,13 @@ public class OshiDeviceDataServiceImpl implements DeviceDataService {
             // 系统负载
             double[] loadAverage = hardware.getProcessor().getSystemLoadAverage(3);
             if (loadAverage[0] >= 0) {
-                metrics.setLoadAverage(String.format("%.2f %.2f %.2f", 
-                    loadAverage[0], loadAverage[1], loadAverage[2]));
+                metrics.setLoadAverage1m(loadAverage[0]);
+                if (loadAverage.length > 1) {
+                    metrics.setLoadAverage5m(loadAverage[1]);
+                }
+                if (loadAverage.length > 2) {
+                    metrics.setLoadAverage15m(loadAverage[2]);
+                }
             }
             
             // 系统运行时间
@@ -298,7 +303,7 @@ public class OshiDeviceDataServiceImpl implements DeviceDataService {
             Sensors sensors = hardware.getSensors();
             double cpuTemperature = sensors.getCpuTemperature();
             if (cpuTemperature > 0) {
-                metrics.setTemperature(cpuTemperature);
+                metrics.setCpuTemperature(cpuTemperature);
             }
         } catch (Exception e) {
             log.warn("设置温度指标失败", e);
