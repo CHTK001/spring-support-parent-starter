@@ -1,6 +1,6 @@
 package com.chua.report.client.starter.example;
 
-import com.chua.report.client.starter.entity.DeviceMetrics;
+import com.chua.report.client.starter.pojo.DeviceMetrics;
 import com.chua.report.client.starter.properties.ReportClientProperties;
 import com.chua.report.client.starter.service.impl.OshiDeviceDataServiceImpl;
 import lombok.extern.slf4j.Slf4j;
@@ -53,10 +53,9 @@ public class OshiDeviceDataExample {
         log.info("设备ID: {}", info.getDeviceId());
         log.info("设备名称: {}", info.getDeviceName());
         log.info("IP地址: {}", info.getIpAddress());
-        log.info("端口: {}", info.getPort());
         log.info("主机名: {}", info.getHostname());
-        log.info("操作系统: {} {}", info.getOsName(), info.getOsVersion());
-        log.info("系统架构: {}", info.getOsArch());
+        log.info("操作系统: {} {}", info.getOperatingSystem(), info.getSystemVersion());
+        log.info("系统架构: {}", info.getArchitecture());
         log.info("在线状态: {}", formatOnlineStatus(info.getOnline()));
         log.info("采集时间: {}", info.getCollectTime());
     }
@@ -70,7 +69,7 @@ public class OshiDeviceDataExample {
         // CPU指标
         log.info("CPU使用率: {}%", formatPercentage(metrics.getCpuUsage()));
         log.info("CPU核心数: {}", metrics.getCpuCores());
-        log.info("CPU频率: {} Hz", metrics.getCpuFrequency());
+        log.info("CPU温度: {}°C", formatTemperature(metrics.getCpuTemperature()));
 
         // 内存指标
         log.info("总内存: {} MB", bytesToMB(metrics.getTotalMemory()));
@@ -85,20 +84,22 @@ public class OshiDeviceDataExample {
         log.info("磁盘使用率: {}%", formatPercentage(metrics.getDiskUsage()));
         
         // 网络指标
-        log.info("网络接收字节数: {}", metrics.getNetworkInBytes());
-        log.info("网络发送字节数: {}", metrics.getNetworkOutBytes());
-        log.info("网络接收包数: {}", metrics.getNetworkInPackets());
-        log.info("网络发送包数: {}", metrics.getNetworkOutPackets());
+        log.info("网络接收字节数: {}", metrics.getNetworkBytesReceived());
+        log.info("网络发送字节数: {}", metrics.getNetworkBytesSent());
+        log.info("网络接收包数: {}", metrics.getNetworkPacketsReceived());
+        log.info("网络发送包数: {}", metrics.getNetworkPacketsSent());
         
         // 系统指标
-        log.info("系统负载: {}", metrics.getLoadAverage());
+        log.info("系统负载(1m): {}", formatPercentage(metrics.getLoadAverage1m()));
+        log.info("系统负载(5m): {}", formatPercentage(metrics.getLoadAverage5m()));
+        log.info("系统负载(15m): {}", formatPercentage(metrics.getLoadAverage15m()));
         log.info("系统运行时间: {} 秒", metrics.getUptime());
         log.info("进程数: {}", metrics.getProcessCount());
         log.info("线程数: {}", metrics.getThreadCount());
-        
+
         // 温度指标
-        if (metrics.getTemperature() != null && metrics.getTemperature() > 0) {
-            log.info("CPU温度: {}°C", formatTemperature(metrics.getTemperature()));
+        if (metrics.getCpuTemperature() != null && metrics.getCpuTemperature() > 0) {
+            log.info("CPU温度: {}°C", formatTemperature(metrics.getCpuTemperature()));
         }
     }
 
