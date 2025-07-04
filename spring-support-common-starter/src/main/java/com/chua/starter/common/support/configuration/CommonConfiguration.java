@@ -3,9 +3,9 @@ package com.chua.starter.common.support.configuration;
 import com.chua.common.support.objects.ConfigureObjectContext;
 import com.chua.common.support.objects.DefaultConfigureObjectContext;
 import com.chua.starter.common.support.debounce.DebounceAspect;
-
 import com.chua.starter.common.support.logger.SysLoggerPointcutAdvisor;
 import com.chua.starter.common.support.logger.UserLoggerPointcutAdvisor;
+import com.chua.starter.common.support.oauth.AuthService;
 import com.chua.starter.common.support.properties.*;
 import com.chua.starter.common.support.result.ExceptionAdvice;
 import com.chua.starter.common.support.result.UniformResponseBodyAdvice;
@@ -17,8 +17,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.web.client.RestTemplate;
 
-import javax.annotation.PostConstruct;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -37,6 +35,13 @@ import java.util.concurrent.Executors;
         CacheProperties.class
 })
 public class CommonConfiguration {
+
+
+    @Bean
+    @ConditionalOnMissingBean
+    public AuthService authService() {
+        return new AuthService.DefaultAuthService();
+    }
 
     @Bean
     @ConditionalOnMissingBean

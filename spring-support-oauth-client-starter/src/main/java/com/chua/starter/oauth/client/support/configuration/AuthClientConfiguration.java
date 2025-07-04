@@ -5,11 +5,9 @@ import com.chua.starter.common.support.oauth.AuthService;
 import com.chua.starter.oauth.client.support.filter.AuthFilter;
 import com.chua.starter.oauth.client.support.interceptor.PermissionPointcut;
 import com.chua.starter.oauth.client.support.oauth.OauthAuthService;
-import com.chua.starter.oauth.client.support.principal.OAuthPrincipal;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.provider.UserStatisticProvider;
 import com.chua.starter.oauth.client.support.web.WebRequest;
-import com.chua.starter.oauth.client.support.wrapper.OAuthHttpServletRequestWrapper;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
@@ -24,6 +22,7 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.Ordered;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -58,6 +57,7 @@ public class AuthClientConfiguration implements ApplicationContextAware, BeanDef
      * @return OAuth认证服务实例
      */
     @Bean
+    @Primary
     @ConditionalOnMissingBean(AuthService.class)
     public AuthService authService() {
         return new OauthAuthService();
