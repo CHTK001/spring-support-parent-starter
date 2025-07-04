@@ -49,11 +49,6 @@ public class StaticProtocolExecutor implements ProtocolExecutor{
         return new LoginAuthResult(200, "");
     }
 
-    @Override
-    public String getLoginCode(String loginCodeType, String type, String token, String callback) {
-        return "";
-    }
-
     /**
      * 新登录身份验证结果
      *

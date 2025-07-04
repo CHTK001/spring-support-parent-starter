@@ -2,6 +2,7 @@ package com.chua.starter.circuitbreaker.support.controller;
 
 import com.chua.starter.circuitbreaker.support.service.CircuitBreakerService;
 import com.chua.starter.common.support.oauth.AuthService;
+import com.chua.starter.common.support.oauth.CurrentUser;
 import io.github.resilience4j.bulkhead.BulkheadRegistry;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
@@ -57,13 +58,16 @@ public class CircuitBreakerController {
         String userId = "unknown";
 
         if (authService != null) {
-            try {
-                String authUsername = authService.getCurrentUsername();
-                String authUserId = authService.getCurrentUserId();
-                username = authUsername != null ? authUsername : "匿名用户";
-                userId = authUserId != null ? authUserId : "unknown";
-            } catch (Exception e) {
-                log.warn("获取当前用户信息失败: {}", e.getMessage());
+            CurrentUser currentUser = authService.getCurrentUser();
+            if(null != currentUser) {
+                try {
+                    String authUsername = currentUser.getUsername();
+                    String authUserId = currentUser.getUserId();
+                    username = authUsername != null ? authUsername : "匿名用户";
+                    userId = authUserId != null ? authUserId : "unknown";
+                } catch (Exception e) {
+                    log.warn("获取当前用户信息失败: {}", e.getMessage());
+                }
             }
         }
 
@@ -299,24 +303,24 @@ public class CircuitBreakerController {
      * 
      * @return 超时控制器状态信息
      */
-    @GetMapping("/time-limiters")
-    public Map<String, Object> getTimeLimiters() {
-        return timeLimiterRegistry.getAllTimeLimiters().stream()
-                .collect(Collectors.toMap(
-                        timeLimiter -> timeLimiter.getName(),
-                        timeLimiter -> Map.of(
-                                "name", timeLimiter.getName(),
-                                "metrics", Map.of(
-                                        "numberOfSuccessfulCalls", 
-                                        timeLimiter.getMetrics().getNumberOfSuccessfulCalls(),
-                                        "numberOfFailedCalls", 
-                                        timeLimiter.getMetrics().getNumberOfFailedCalls(),
-                                        "numberOfTimeoutCalls", 
-                                        timeLimiter.getMetrics().getNumberOfTimeoutCalls()
-                                )
-                        )
-                ));
-    }
+//    @GetMapping("/time-limiters")
+//    public Map<String, Object> getTimeLimiters() {
+//        return timeLimiterRegistry.getAllTimeLimiters().stream()
+//                .collect(Collectors.toMap(
+//                        timeLimiter -> timeLimiter.getName(),
+//                        timeLimiter -> Map.of(
+//                                "name", timeLimiter.getName(),
+//                                "metrics", Map.of(
+//                                        "numberOfSuccessfulCalls",
+//                                        timeLimiter.getMetrics().getNumberOfSuccessfulCalls(),
+//                                        "numberOfFailedCalls",
+//                                        timeLimiter.getMetrics().getNumberOfFailedCalls(),
+//                                        "numberOfTimeoutCalls",
+//                                        timeLimiter.getMetrics().getNumberOfTimeoutCalls()
+//                                )
+//                        )
+//                ));
+//    }
 
     /**
      * 获取整体状态概览

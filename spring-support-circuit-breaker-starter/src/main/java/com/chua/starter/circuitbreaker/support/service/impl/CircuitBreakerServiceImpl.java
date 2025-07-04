@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executors;
 import java.util.function.Supplier;
 
 /**
@@ -99,7 +100,7 @@ public class CircuitBreakerServiceImpl implements CircuitBreakerService {
     @Override
     public <T> CompletionStage<T> executeWithTimeLimit(String name, Supplier<CompletionStage<T>> supplier) {
         TimeLimiter timeLimiter = getTimeLimiter(name);
-        return timeLimiter.executeCompletionStage(() -> supplier.get());
+        return timeLimiter.executeCompletionStage(Executors.newScheduledThreadPool(1),  supplier);
     }
 
     @Override
@@ -141,7 +142,7 @@ public class CircuitBreakerServiceImpl implements CircuitBreakerService {
             Supplier<CompletionStage<T>> retryDecorated = Retry.decorateSupplier(retry, rateLimitDecorated);
             Supplier<CompletionStage<T>> circuitBreakerDecorated = CircuitBreaker.decorateSupplier(circuitBreaker, retryDecorated);
             
-            return timeLimiter.executeCompletionStage(circuitBreakerDecorated);
+            return timeLimiter.executeCompletionStage(Executors.newScheduledThreadPool(1), circuitBreakerDecorated);
         };
 
         return decoratedSupplier.get().exceptionally(throwable -> {

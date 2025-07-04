@@ -27,7 +27,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Objects;
-import java.util.Optional;
 
 import static com.chua.common.support.lang.code.ReturnCode.RESOURCE_OAUTH_ERROR;
 import static com.chua.common.support.lang.code.ReturnCode.RESULT_ACCESS_UNAUTHORIZED;
@@ -59,12 +58,12 @@ public abstract class AbstractProtocol implements Protocol {
     /**
      * 获取认证信息
      *
-     * @param cacheKey 缓存key
-     * @param cookies  cookies
-     * @param token    令牌
+     * @param cookies     cookies
+     * @param token       令牌
+     * @param subProtocol 认证协议
      * @return 认证信息
      */
-    protected abstract AuthenticationInformation getAuthenticationInformation(String cacheKey, Cookie[] cookies, String token);
+    protected abstract AuthenticationInformation upgradeInformation(Cookie cookies, String token, String subProtocol);
 
     /**
      * 获取认证信息（升级用）
@@ -75,7 +74,21 @@ public abstract class AbstractProtocol implements Protocol {
      * @param refreshToken 刷新令牌
      * @return 认证信息
      */
-    protected abstract AuthenticationInformation getAuthenticationInformation(Cookie[] cookie, String token, UpgradeType upgradeType, String refreshToken);
+    protected abstract AuthenticationInformation upgradeInformation(Cookie cookie, String token, UpgradeType upgradeType, String refreshToken);
+
+    /**
+     * 创建数据
+     *
+     * @param value 值
+     * @param key   密钥
+     * @return 数据
+     */
+    protected String createData(String value, String key) {
+        if (!enableEncryption) {
+            return value;
+        }
+        return Codec.build(encryption, key).encodeHex(value);
+    }
 
     /**
      * 创建数据
@@ -111,14 +124,10 @@ public abstract class AbstractProtocol implements Protocol {
         return robin.getString();
     }
 
-    @Override
-    public LoginResult upgrade(Cookie[] cookie, String token, UpgradeType upgradeType, String refreshToken) {
-        return null;
-    }
 
     @Override
-    public AuthenticationInformation approve(Cookie[] cookie, String token) {
-        Cookie[] cookies = Optional.ofNullable(cookie).orElse(new Cookie[0]);
+    public AuthenticationInformation approve(Cookie[] cookies, String token, String subProtocol) {
+        Cookie cookie = CookieUtil.get(cookies, "x-oauth-cookie");
         String cacheKey = getCacheKey(cookies, token);
         if (hasCache(cacheKey)) {
             AuthenticationInformation authenticationInformation = cacheAuthenticationInformation(cacheKey);
@@ -126,10 +135,20 @@ public abstract class AbstractProtocol implements Protocol {
                 return authenticationInformation;
             }
         }
-        AuthenticationInformation authenticationInformation = getAuthenticationInformation(cacheKey, cookies, token);
+        AuthenticationInformation authenticationInformation = upgradeInformation(cookie, token, subProtocol);
 
         CACHEABLE.put(cacheKey, authenticationInformation);
         return authenticationInformation;
+    }
+
+    @Override
+    public LoginResult upgrade(Cookie[] cookies, String token, UpgradeType upgradeType, String refreshToken) {
+        Cookie cookie = CookieUtil.get(cookies, "x-oauth-cookie");
+        AuthenticationInformation authenticationInformation = upgradeInformation(cookie, token, upgradeType, refreshToken);
+        if(authenticationInformation.getInformation() != OK) {
+
+        }
+        return null;
     }
 
     /**
@@ -146,7 +165,7 @@ public abstract class AbstractProtocol implements Protocol {
     /**
      * 缓存认证信息
      *
-     * @param cacheKey 缓存key
+     * @param key 缓存key
      * @return 缓存信息
      */
     protected LoginResult createUpgradeResponse(ReturnResult returnResult, String key) {
