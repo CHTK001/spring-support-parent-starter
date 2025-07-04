@@ -32,6 +32,11 @@ public class AccessSecret {
 
     private String password;
 
-    private Map ext;
+    private Map<String, Object> ext;
+
+    /**
+     * 缓存时间（用于性能优化）
+     */
+    private transient long cacheTime;
 
 }

@@ -420,7 +420,7 @@ public class AuthClientExecute {
 
         HttpServletRequest request = attributes.getRequest();
         Object attribute = request.getSession().getAttribute(SESSION_USER_INFO);
-        if (null != attribute || target.isAssignableFrom(attribute.getClass())) {
+        if (null != attribute && target.isAssignableFrom(attribute.getClass())) {
             return (T) attribute;
         }
 

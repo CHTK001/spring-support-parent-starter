@@ -83,6 +83,16 @@ public class AuthClientProperties {
     private String encryption = "aes";
 
     /**
+     * 是否启用数据加密
+     */
+    private boolean enableEncryption = true;
+
+    /**
+     * 客户端IP地址（用于AKSK认证）
+     */
+    private String clientIp;
+
+    /**
      * 拦截地址
      */
     private Set<String> blockAddress = Sets.newHashSet("/*");

@@ -10,7 +10,6 @@ import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.annotation.UserValue;
 import com.chua.starter.oauth.client.support.entity.RoleJudge;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
-import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.chua.starter.oauth.client.support.web.WebRequest;
 import jakarta.servlet.http.HttpServletRequest;
@@ -107,7 +106,7 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
         Object o = cacheValue.get(paramName);
 
         if (null == o) {
-            Map beanMap = com.chua.common.support.bean.BeanMap.create(cacheValue.get("ext"));
+            Map<String, Object> beanMap = com.chua.common.support.bean.BeanMap.create(cacheValue.get("ext"));
             o = MapUtils.getString(beanMap, paramName);
             if (null == o) {
                 o = MapUtils.getString(beanMap, NamingCase.toCamelCase(paramName));
@@ -138,7 +137,7 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
         if (null == convert) {
             Object newInstance = null;
             try {
-                newInstance = parameterType.newInstance();
+                newInstance = parameterType.getDeclaredConstructor().newInstance();
             } catch (Exception e) {
                 return null;
             }
