@@ -14,7 +14,7 @@
     - 开箱即用的集成方案
 
     @author CH
-    @version 4.0.0.32
+    @version 4.0.0.33
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -33,7 +33,7 @@
     <groupId>com.chua</groupId>
     <artifactId>spring-support-parent-starter</artifactId>
     <packaging>pom</packaging> <!-- 父项目打包类型为pom -->
-    <version>4.0.0.32</version>
+    <version>4.0.0.33</version>
     <!-- 子模块列表 - 按功能分类组织 -->
     <modules>
         <!-- 基础功能模块 -->
@@ -100,7 +100,7 @@
         <spring-boot.version>3.2.3</spring-boot.version>
 
         <!-- 项目版本管理 -->
-        <module.version>4.0.0.32</module.version>        <!-- 当前项目模块版本 -->
+        <module.version>4.0.0.33</module.version>        <!-- 当前项目模块版本 -->
         <utils.version>4.0.0.27</utils.version>          <!-- 工具类库版本 -->
 
         <!-- 第三方依赖版本 -->
