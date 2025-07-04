@@ -110,6 +110,12 @@ public class CircuitBreakerStartupListener implements ApplicationListener<Applic
     private void printManagementUrls(String baseUrl) {
         log.info("║ 🌐 管理页面地址:" + " ".repeat(64) + "║");
 
+        // 配置管理页面
+        String configUrl = baseUrl + "/actuator/circuit-breaker-config";
+        log.info("║   ├─ 配置管理: {}" + " ".repeat(Math.max(0, 78 - 17 - configUrl.length())) + "║", configUrl);
+        log.info("║   │  ├─ 功能: 查看配置状态、动态修改配置" + " ".repeat(36) + "║");
+        log.info("║   │  └─ 支持: 限流器配置、重置默认值、配置导出" + " ".repeat(32) + "║");
+
         // 限流器管理页面
         if (properties.getRateLimiter() != null && properties.getRateLimiter().isEnableManagement()) {
             String rateLimiterPath = properties.getRateLimiter().getManagementPath();
@@ -145,8 +151,9 @@ public class CircuitBreakerStartupListener implements ApplicationListener<Applic
         log.info("║   • 使用 @RateLimiter 注解实现方法级限流" + " ".repeat(36) + "║");
         log.info("║   • 使用 @CircuitBreakerProtection 注解实现容错保护" + " ".repeat(26) + "║");
         log.info("║   • 支持 GLOBAL、IP、USER、API 四种限流维度" + " ".repeat(32) + "║");
+        log.info("║   • 访问配置管理页面进行参数调整和状态查看" + " ".repeat(32) + "║");
+        log.info("║   • 访问限流器管理页面进行实时监控和动态配置" + " ".repeat(30) + "║");
         log.info("║   • 集成 Prometheus 指标，支持监控和告警" + " ".repeat(34) + "║");
-        log.info("║   • 访问管理页面进行实时配置和监控" + " ".repeat(40) + "║");
         log.info("║" + " ".repeat(78) + "║");
     }
 

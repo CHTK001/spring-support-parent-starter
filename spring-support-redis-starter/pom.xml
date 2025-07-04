@@ -1,57 +1,89 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Spring Support Redis Starter - Redis缓存集成模块
+
+    这是Spring Support框架的Redis集成模块，提供了完整的Redis缓存解决方案。
+    主要特性包括：
+
+    1. Redis客户端集成 - 支持Jedis和Lettuce客户端
+    2. 分布式锁 - 基于Redis的分布式锁实现
+    3. 缓存管理 - 提供多级缓存和缓存策略
+    4. 会话管理 - 支持Redis存储会话信息
+    5. 发布订阅 - 支持Redis的消息发布订阅功能
+    6. 数据结构操作 - 支持Redis各种数据结构操作
+    7. 集群支持 - 支持Redis集群和哨兵模式
+    8. 嵌入式Redis - 提供测试环境的嵌入式Redis
+    9. Redisson集成 - 提供高级的Redis功能
+
+    @author CH
+    @version 4.0.0.32
+-->
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
+    <!-- 继承父项目配置 -->
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
         <version>4.0.0.32</version>
     </parent>
 
+    <!-- 项目基本信息 -->
     <artifactId>spring-support-redis-starter</artifactId>
-    <description>redis模块</description>
+    <description>Spring Support框架Redis集成模块，提供完整的Redis缓存和分布式功能支持</description>
 
+    <!-- 项目属性配置 -->
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
+    <!-- 依赖配置 -->
     <dependencies>
+        <!-- Redis工具类库 - 提供Redis操作的工具类和扩展功能 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-redis-starter</artifactId>
         </dependency>
 
+        <!-- Lock4j分布式锁 - 基于Redis的分布式锁实现 -->
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>lock4j-redis-template-spring-boot-starter</artifactId>
             <version>2.2.7</version>
         </dependency>
 
+        <!-- Spring Boot Redis数据访问 - 提供Redis的自动配置和操作模板 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
 
+        <!-- 嵌入式Redis - 用于测试环境的内存Redis服务器 -->
         <dependency>
             <groupId>it.ozimov</groupId>
             <artifactId>embedded-redis</artifactId>
             <version>0.7.3</version>
-            <scope>provided</scope>
+            <scope>provided</scope> <!-- 仅在测试环境使用 -->
             <exclusions>
+                <!-- 排除slf4j-simple，避免日志冲突 -->
                 <exclusion>
                     <groupId>org.slf4j</groupId>
                     <artifactId>slf4j-simple</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
+
+        <!-- 通用功能模块 - 提供基础的工具类和通用功能 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-common-starter</artifactId>
         </dependency>
 
+        <!-- Redisson Redis客户端 - 提供高级的Redis功能和分布式对象 -->
         <dependency>
             <groupId>org.redisson</groupId>
             <artifactId>redisson</artifactId>
@@ -59,15 +91,19 @@
         </dependency>
 
     </dependencies>
+    <!-- 构建配置 -->
     <build>
         <plugins>
+            <!-- Maven编译插件 - 配置Java编译参数 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <source>21</source>
-                    <target>21</target>
-<!--                    <compilerArgs>&#45;&#45;enable-preview</compilerArgs>-->
+                    <source>21</source>  <!-- 源码Java版本 -->
+                    <target>21</target>  <!-- 目标Java版本 -->
+                    <!-- 启用预览特性 - 已注释
+                    <compilerArgs>enable-preview</compilerArgs>
+                    -->
                 </configuration>
             </plugin>
         </plugins>

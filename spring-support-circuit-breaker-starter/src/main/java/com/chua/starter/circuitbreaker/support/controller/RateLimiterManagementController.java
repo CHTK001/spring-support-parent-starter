@@ -2,6 +2,7 @@ package com.chua.starter.circuitbreaker.support.controller;
 
 import com.chua.starter.circuitbreaker.support.metrics.RateLimiterMetrics;
 import com.chua.starter.circuitbreaker.support.properties.CircuitBreakerProperties;
+import com.chua.starter.common.support.service.AuthService;
 import io.github.resilience4j.ratelimiter.RateLimiter;
 import io.github.resilience4j.ratelimiter.RateLimiterConfig;
 import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
@@ -19,10 +20,10 @@ import java.util.stream.Collectors;
 
 /**
  * 限流管理控制器
- * 
+ *
  * 提供限流器的动态管理接口，包括查看状态、创建、删除、重置等功能。
- * 同时提供Web管理界面。
- * 
+ * 同时提供Web管理界面，集成用户认证服务进行权限验证和操作记录。
+ *
  * @author CH
  * @since 2024/12/20
  */
@@ -38,6 +39,65 @@ public class RateLimiterManagementController {
 
     @Autowired(required = false)
     private RateLimiterMetrics rateLimiterMetrics;
+
+    /**
+     * 认证服务 - 用于获取当前登录用户的账号信息
+     * 提供用户身份验证和权限检查功能，在限流器管理操作中记录操作用户和进行权限验证
+     */
+    @Autowired(required = false)
+    private AuthService authService;
+
+    /**
+     * 获取当前用户信息的辅助方法
+     *
+     * @return 包含用户名和用户ID的数组，[username, userId]
+     */
+    private String[] getCurrentUserInfo() {
+        String username = "系统";
+        String userId = "unknown";
+
+        if (authService != null) {
+            try {
+                String authUsername = authService.getCurrentUsername();
+                String authUserId = authService.getCurrentUserId();
+                username = authUsername != null ? authUsername : "匿名用户";
+                userId = authUserId != null ? authUserId : "unknown";
+            } catch (Exception e) {
+                log.warn("获取当前用户信息失败: {}", e.getMessage());
+            }
+        }
+
+        return new String[]{username, userId};
+    }
+
+    /**
+     * 检查用户权限的辅助方法
+     *
+     * @param operation 操作类型
+     * @return 是否有权限
+     */
+    private boolean checkPermission(String operation) {
+        if (authService == null) {
+            return true; // 如果没有认证服务，默认允许
+        }
+
+        try {
+            // 检查是否已认证
+            if (!authService.isAuthenticated()) {
+                log.warn("用户未认证，拒绝执行操作: {}", operation);
+                return false;
+            }
+
+            // 可以根据需要添加更细粒度的权限检查
+            // 例如：检查是否有管理员角色
+            // return authService.hasRole("ADMIN") || authService.hasPermission("RATE_LIMITER_MANAGE");
+
+            return true;
+        } catch (Exception e) {
+            log.warn("权限检查失败，操作: {}, 错误: {}", operation, e.getMessage());
+            return false;
+        }
+    }
 
     /**
      * 获取管理页面
@@ -92,27 +152,41 @@ public class RateLimiterManagementController {
     public Map<String, Object> createRateLimiter(
             @PathVariable String name,
             @RequestBody Map<String, Object> config) {
-        
+
+        String[] userInfo = getCurrentUserInfo();
+        Map<String, Object> result = new HashMap<>();
+
+        // 权限检查
+        if (!checkPermission("CREATE_RATE_LIMITER")) {
+            result.put("success", false);
+            result.put("message", "权限不足，无法创建限流器");
+            result.put("operator", userInfo[0]);
+            log.warn("创建限流器权限不足 - 限流器: {}, 操作用户: {} (ID: {})", name, userInfo[0], userInfo[1]);
+            return result;
+        }
+
         try {
             RateLimiterConfig rateLimiterConfig = buildRateLimiterConfig(config);
             RateLimiter rateLimiter = rateLimiterRegistry.rateLimiter(name, rateLimiterConfig);
-            
-            log.info("创建限流器成功: name={}, config={}", name, config);
-            
-            Map<String, Object> result = new HashMap<>();
+
             result.put("success", true);
             result.put("message", "限流器创建成功");
             result.put("rateLimiter", getRateLimiterInfo(rateLimiter));
-            
+            result.put("operator", userInfo[0]);
+
+            log.info("创建限流器成功 - 限流器: {}, 配置: {}, 操作用户: {} (ID: {})",
+                    name, config, userInfo[0], userInfo[1]);
+
             return result;
-            
+
         } catch (Exception e) {
-            log.error("创建限流器失败: name={}", name, e);
-            
-            Map<String, Object> result = new HashMap<>();
             result.put("success", false);
             result.put("message", "创建限流器失败: " + e.getMessage());
-            
+            result.put("operator", userInfo[0]);
+
+            log.error("创建限流器失败 - 限流器: {}, 配置: {}, 操作用户: {} (ID: {}), 错误: {}",
+                     name, config, userInfo[0], userInfo[1], e.getMessage(), e);
+
             return result;
         }
     }
@@ -125,7 +199,23 @@ public class RateLimiterManagementController {
             @PathVariable String name,
             @RequestBody Map<String, Object> config) {
 
+        String[] userInfo = getCurrentUserInfo();
+        Map<String, Object> result = new HashMap<>();
+
+        // 权限检查
+        if (!checkPermission("UPDATE_RATE_LIMITER")) {
+            result.put("success", false);
+            result.put("message", "权限不足，无法更新限流器");
+            result.put("operator", userInfo[0]);
+            log.warn("更新限流器权限不足 - 限流器: {}, 操作用户: {} (ID: {})", name, userInfo[0], userInfo[1]);
+            return result;
+        }
+
         try {
+            // 记录更新前的配置
+            RateLimiter oldRateLimiter = rateLimiterRegistry.find(name).orElse(null);
+            Map<String, Object> oldConfig = oldRateLimiter != null ? getRateLimiterInfo(oldRateLimiter) : null;
+
             // 删除旧的限流器
             rateLimiterRegistry.remove(name);
 
@@ -133,21 +223,25 @@ public class RateLimiterManagementController {
             RateLimiterConfig rateLimiterConfig = buildRateLimiterConfig(config);
             RateLimiter rateLimiter = rateLimiterRegistry.rateLimiter(name, rateLimiterConfig);
 
-            log.info("更新限流器成功: name={}, config={}", name, config);
-
-            Map<String, Object> result = new HashMap<>();
             result.put("success", true);
             result.put("message", "限流器更新成功");
             result.put("rateLimiter", getRateLimiterInfo(rateLimiter));
+            result.put("operator", userInfo[0]);
+
+            log.info("更新限流器成功 - 限流器: {}, 新配置: {}, 操作用户: {} (ID: {})",
+                    name, config, userInfo[0], userInfo[1]);
+            log.debug("限流器更新详情 - 限流器: {}, 原配置: {}, 新配置: {}, 操作用户: {} (ID: {})",
+                     name, oldConfig, config, userInfo[0], userInfo[1]);
 
             return result;
 
         } catch (Exception e) {
-            log.error("更新限流器失败: name={}", name, e);
-
-            Map<String, Object> result = new HashMap<>();
             result.put("success", false);
             result.put("message", "更新限流器失败: " + e.getMessage());
+            result.put("operator", userInfo[0]);
+
+            log.error("更新限流器失败 - 限流器: {}, 配置: {}, 操作用户: {} (ID: {}), 错误: {}",
+                     name, config, userInfo[0], userInfo[1], e.getMessage(), e);
 
             return result;
         }
@@ -158,7 +252,23 @@ public class RateLimiterManagementController {
      */
     @DeleteMapping("/{name}")
     public Map<String, Object> removeRateLimiter(@PathVariable String name) {
+        String[] userInfo = getCurrentUserInfo();
+        Map<String, Object> result = new HashMap<>();
+
+        // 权限检查
+        if (!checkPermission("DELETE_RATE_LIMITER")) {
+            result.put("success", false);
+            result.put("message", "权限不足，无法删除限流器");
+            result.put("operator", userInfo[0]);
+            log.warn("删除限流器权限不足 - 限流器: {}, 操作用户: {} (ID: {})", name, userInfo[0], userInfo[1]);
+            return result;
+        }
+
         try {
+            // 记录删除前的配置信息
+            RateLimiter rateLimiter = rateLimiterRegistry.find(name).orElse(null);
+            Map<String, Object> rateLimiterInfo = rateLimiter != null ? getRateLimiterInfo(rateLimiter) : null;
+
             rateLimiterRegistry.remove(name);
 
             // 清理相关指标
@@ -166,20 +276,23 @@ public class RateLimiterManagementController {
                 rateLimiterMetrics.clearMetrics(name);
             }
 
-            log.info("删除限流器成功: name={}", name);
-
-            Map<String, Object> result = new HashMap<>();
             result.put("success", true);
             result.put("message", "限流器删除成功");
+            result.put("operator", userInfo[0]);
+
+            log.info("删除限流器成功 - 限流器: {}, 操作用户: {} (ID: {})", name, userInfo[0], userInfo[1]);
+            log.debug("删除限流器详情 - 限流器: {}, 原配置: {}, 操作用户: {} (ID: {})",
+                     name, rateLimiterInfo, userInfo[0], userInfo[1]);
 
             return result;
 
         } catch (Exception e) {
-            log.error("删除限流器失败: name={}", name, e);
-
-            Map<String, Object> result = new HashMap<>();
             result.put("success", false);
             result.put("message", "删除限流器失败: " + e.getMessage());
+            result.put("operator", userInfo[0]);
+
+            log.error("删除限流器失败 - 限流器: {}, 操作用户: {} (ID: {}), 错误: {}",
+                     name, userInfo[0], userInfo[1], e.getMessage(), e);
 
             return result;
         }
@@ -285,7 +398,23 @@ public class RateLimiterManagementController {
             <body>
                 <div class="container">
                     <h1>🚦 限流器管理</h1>
-                    
+
+                    <!-- 当前用户信息区域 -->
+                    <div class="stats">
+                        <div class="stat-card">
+                            <div class="stat-value" id="currentUsername">-</div>
+                            <div class="stat-label">👤 当前用户</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="currentUserId">-</div>
+                            <div class="stat-label">🆔 用户ID</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="authStatus">-</div>
+                            <div class="stat-label">🔐 认证状态</div>
+                        </div>
+                    </div>
+
                     <div class="stats">
                         <div class="stat-card">
                             <div class="stat-value" id="totalRateLimiters">-</div>

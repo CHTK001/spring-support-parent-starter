@@ -3,7 +3,7 @@ package com.chua.starter.common.support.configuration;
 import com.chua.common.support.objects.ConfigureObjectContext;
 import com.chua.common.support.objects.DefaultConfigureObjectContext;
 import com.chua.starter.common.support.debounce.DebounceAspect;
-import com.chua.starter.common.support.limit.LimitAspect;
+
 import com.chua.starter.common.support.logger.SysLoggerPointcutAdvisor;
 import com.chua.starter.common.support.logger.UserLoggerPointcutAdvisor;
 import com.chua.starter.common.support.properties.*;
@@ -17,6 +17,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.web.client.RestTemplate;
 
+import javax.annotation.PostConstruct;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -26,7 +28,7 @@ import java.util.concurrent.Executors;
  * @author CH
  */
 @EnableConfigurationProperties({
-        LimiterProperties.class,
+
         LogProperties.class,
         ParameterProperties.class,
         ActuatorProperties.class,
@@ -35,12 +37,7 @@ import java.util.concurrent.Executors;
         CacheProperties.class
 })
 public class CommonConfiguration {
-    @Bean
-    @ConditionalOnMissingBean
-    @ConditionalOnProperty(name = "plugin.limit.enable", havingValue = "true", matchIfMissing = true)
-    public LimitAspect limitAspect(LimiterProperties limitProperties) {
-        return new LimitAspect(limitProperties);
-    }
+
     @Bean
     @ConditionalOnMissingBean
     public DebounceAspect debounceAspect() {
