@@ -12,7 +12,7 @@ import java.util.List;
  * @version 4.0.0.32
  */
 @Data
-@ConfigurationProperties(prefix = "shell")
+@ConfigurationProperties(prefix = "plugin.shell")
 public class ShellProperties {
 
     /**

@@ -3,10 +3,10 @@ package com.chua.starter.oauth.client.support.advice;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.code.ResultCode;
 import com.chua.common.support.lang.code.ReturnResult;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 
-import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 /**
@@ -25,7 +25,7 @@ public class JsonAdviceResolver implements AdviceResolver {
 
     @Override
     public Object resolve(HttpServletResponse response, Integer status, String message) {
-        ReturnResult rs = ReturnResult.newBuilder().code(ResultCode.transferForHttpCode(status).getCode()).msg(message).build();
+        ReturnResult<Object> rs = ReturnResult.newBuilder().code(ResultCode.transferForHttpCode(status).getCode()).msg(message).build();
         if (null == response) {
             return rs;
         }

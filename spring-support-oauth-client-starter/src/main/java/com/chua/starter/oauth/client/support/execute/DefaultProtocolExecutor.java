@@ -85,7 +85,7 @@ public class DefaultProtocolExecutor implements ProtocolExecutor{
         Robin robin1 = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
         Robin balance = robin1.create();
         String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(authClientProperties.getAddress()).split(",");
-        balance.addNode(split);
+        balance.addNode((Object[]) split);
         Node robin = balance.selectNode();
         HttpResponse<String> httpResponse = null;
         try {
@@ -117,7 +117,8 @@ public class DefaultProtocolExecutor implements ProtocolExecutor{
         int status = httpResponse.getStatus();
         String body = httpResponse.getBody();
         if (status == NUM_200) {
-            ReturnResult returnResult = Json.fromJson(body, ReturnResult.class);
+            @SuppressWarnings("unchecked")
+            ReturnResult<Object> returnResult = Json.fromJson(body, ReturnResult.class);
             String code = returnResult.getCode();
             Object data = returnResult.getData();
             if (code.equals(OK.getCode())) {
@@ -186,7 +187,7 @@ public class DefaultProtocolExecutor implements ProtocolExecutor{
         Robin robin = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
         Robin robin1 = robin.create();
         String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(authClientProperties.getAddress()).split(",");
-        robin1.addNode(split);
+        robin1.addNode((Object[]) split);
         Node node = robin1.selectNode();
         HttpResponse<String> httpResponse = null;
         try {
@@ -231,7 +232,7 @@ public class DefaultProtocolExecutor implements ProtocolExecutor{
         Robin robin1 = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
         Robin balance = robin1.create();
         String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(authClientProperties.getAddress()).split(",");
-        balance.addNode(split);
+        balance.addNode((Object[]) split);
         Node robin = balance.selectNode();
         HttpResponse<String> httpResponse = null;
         try {

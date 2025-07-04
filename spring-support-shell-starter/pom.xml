@@ -46,19 +46,7 @@
         <dependency>
             <groupId>com.github.fonimus</groupId>
             <artifactId>ssh-shell-spring-boot-starter</artifactId>
-            <version>1.7.4</version>
-        </dependency>
-
-        <!-- Spring Boot Redis数据访问 - 用于登录信息追踪 -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-redis</artifactId>
-        </dependency>
-
-        <!-- Spring Support Redis模块 - 提供Redis操作工具 -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-redis-starter</artifactId>
+            <version>3.1.0</version>
         </dependency>
 
         <!-- 通用功能模块 - 提供基础的工具类和通用功能 -->
