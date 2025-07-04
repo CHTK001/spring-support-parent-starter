@@ -1,7 +1,7 @@
 package com.chua.starter.circuitbreaker.support.controller;
 
 import com.chua.starter.circuitbreaker.support.service.CircuitBreakerService;
-import com.chua.starter.common.support.service.AuthService;
+import com.chua.starter.common.support.oauth.AuthService;
 import io.github.resilience4j.bulkhead.BulkheadRegistry;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.ratelimiter.RateLimiterRegistry;

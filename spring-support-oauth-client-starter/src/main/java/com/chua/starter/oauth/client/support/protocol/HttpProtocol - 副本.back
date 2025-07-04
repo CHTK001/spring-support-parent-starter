@@ -54,7 +54,7 @@ import static com.chua.starter.oauth.client.support.infomation.Information.*;
 @SpiDefault
 @Extension("http")
 @Slf4j
-public class HttpProtocol extends AbstractProtocol implements InitializingBean {
+public class HttpProtocol1 extends AbstractProtocol implements InitializingBean {
 
     @AutoInject
     private AuthClientProperties authClientProperties;

@@ -11,6 +11,15 @@ public interface AuthService {
      */
     CurrentUser getCurrentUser();
 
+    /**
+     * 是否已认证
+     *
+     * @return 是否已认证
+     */
+    default boolean isAuthenticated() {
+        return getCurrentUser() != null;
+    }
+
 
     class DefaultAuthService implements AuthService {
 

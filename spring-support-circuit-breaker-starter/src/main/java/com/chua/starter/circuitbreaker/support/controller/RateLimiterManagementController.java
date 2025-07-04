@@ -2,7 +2,8 @@ package com.chua.starter.circuitbreaker.support.controller;
 
 import com.chua.starter.circuitbreaker.support.metrics.RateLimiterMetrics;
 import com.chua.starter.circuitbreaker.support.properties.CircuitBreakerProperties;
-import com.chua.starter.common.support.service.AuthService;
+import com.chua.starter.common.support.oauth.AuthService;
+import com.chua.starter.common.support.oauth.CurrentUser;
 import io.github.resilience4j.ratelimiter.RateLimiter;
 import io.github.resilience4j.ratelimiter.RateLimiterConfig;
 import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
@@ -16,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 /**
  * 限流管理控制器
@@ -58,10 +59,13 @@ public class RateLimiterManagementController {
 
         if (authService != null) {
             try {
-                String authUsername = authService.getCurrentUsername();
-                String authUserId = authService.getCurrentUserId();
-                username = authUsername != null ? authUsername : "匿名用户";
-                userId = authUserId != null ? authUserId : "unknown";
+                CurrentUser currentUser = authService.getCurrentUser();
+                if (null != currentUser) {
+                    String authUsername = currentUser.getUsername();
+                    String authUserId = currentUser.getUserId();
+                    username = authUsername != null ? authUsername : "匿名用户";
+                    userId = authUserId != null ? authUserId : "unknown";
+                }
             } catch (Exception e) {
                 log.warn("获取当前用户信息失败: {}", e.getMessage());
             }
@@ -113,16 +117,8 @@ public class RateLimiterManagementController {
     @GetMapping("/status")
     public Map<String, Object> getAllRateLimitersStatus() {
         Map<String, Object> result = new HashMap<>();
-        
-        Map<String, Map<String, Object>> rateLimiters = rateLimiterRegistry.getAllRateLimiters()
-                .asMap()
-                .entrySet()
-                .stream()
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> getRateLimiterInfo(entry.getValue())
-                ));
-        
+
+        Set<RateLimiter> rateLimiters = rateLimiterRegistry.getAllRateLimiters();
         result.put("rateLimiters", rateLimiters);
         result.put("totalCount", rateLimiters.size());
         result.put("timestamp", System.currentTimeMillis());

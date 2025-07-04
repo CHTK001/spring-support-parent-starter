@@ -1,5 +1,6 @@
 package com.chua.starter.shell.command;
 
+import com.github.fonimus.ssh.shell.PromptColor;
 import com.github.fonimus.ssh.shell.SshShellHelper;
 import com.github.fonimus.ssh.shell.commands.SshShellComponent;
 import org.springframework.shell.standard.ShellCommandGroup;
@@ -54,7 +55,7 @@ public class SystemInfoCommand {
                 sb.append(getDiskInfo()).append("\n");
                 sb.append(getNetworkInfo());
             }
-            default -> sb.append(helper.getColored("未知的信息类型: " + type, SshShellHelper.Color.RED))
+            default -> sb.append(helper.getColored("未知的信息类型: " + type, PromptColor.RED))
                     .append("\n支持的类型: all, os, jvm, memory, disk, network");
         }
         
@@ -79,24 +80,24 @@ public class SystemInfoCommand {
     @ShellMethod(value = "显示线程信息", key = {"thread-info", "ti"})
     public String threadInfo() {
         StringBuilder sb = new StringBuilder();
-        
-        sb.append(helper.getColored("=== 线程信息 ===", SshShellHelper.Color.CYAN)).append("\n\n");
+
+        sb.append(helper.getColored("=== 线程信息 ===", PromptColor.CYAN)).append("\n\n");
         
         ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
-        
-        sb.append(helper.getColored("线程统计:", SshShellHelper.Color.YELLOW)).append("\n");
-        sb.append(String.format("  当前线程数: %s\n", helper.getColored(String.valueOf(threadBean.getThreadCount()), SshShellHelper.Color.GREEN)));
-        sb.append(String.format("  峰值线程数: %s\n", helper.getColored(String.valueOf(threadBean.getPeakThreadCount()), SshShellHelper.Color.GREEN)));
-        sb.append(String.format("  守护线程数: %s\n", helper.getColored(String.valueOf(threadBean.getDaemonThreadCount()), SshShellHelper.Color.BLUE)));
-        sb.append(String.format("  总启动线程数: %s\n", helper.getColored(String.valueOf(threadBean.getTotalStartedThreadCount()), SshShellHelper.Color.BLUE)));
+
+        sb.append(helper.getColored("线程统计:", PromptColor.YELLOW)).append("\n");
+        sb.append(String.format("  当前线程数: %s\n", helper.getColored(String.valueOf(threadBean.getThreadCount()), PromptColor.GREEN)));
+        sb.append(String.format("  峰值线程数: %s\n", helper.getColored(String.valueOf(threadBean.getPeakThreadCount()), PromptColor.GREEN)));
+        sb.append(String.format("  守护线程数: %s\n", helper.getColored(String.valueOf(threadBean.getDaemonThreadCount()), PromptColor.BLUE)));
+        sb.append(String.format("  总启动线程数: %s\n", helper.getColored(String.valueOf(threadBean.getTotalStartedThreadCount()), PromptColor.BLUE)));
         
         // 线程状态统计
         Thread.State[] states = Thread.State.values();
-        sb.append("\n").append(helper.getColored("线程状态分布:", SshShellHelper.Color.YELLOW)).append("\n");
+        sb.append("\n").append(helper.getColored("线程状态分布:", PromptColor.YELLOW)).append("\n");
         
         for (Thread.State state : states) {
             long count = threadBean.getAllThreadIds().length; // 简化统计
-            sb.append(String.format("  %s: %s\n", state.name(), helper.getColored("N/A", SshShellHelper.Color.BLUE)));
+            sb.append(String.format("  %s: %s\n", state.name(), helper.getColored("N/A", PromptColor.BLUE)));
         }
         
         return sb.toString();
@@ -107,20 +108,20 @@ public class SystemInfoCommand {
      */
     private String getOsInfo() {
         StringBuilder sb = new StringBuilder();
-        
-        sb.append(helper.getColored("=== 操作系统信息 ===", SshShellHelper.Color.CYAN)).append("\n\n");
-        
-        sb.append(helper.getColored("基本信息:", SshShellHelper.Color.YELLOW)).append("\n");
-        sb.append(String.format("  操作系统: %s\n", helper.getColored(System.getProperty("os.name"), SshShellHelper.Color.GREEN)));
-        sb.append(String.format("  系统版本: %s\n", helper.getColored(System.getProperty("os.version"), SshShellHelper.Color.GREEN)));
-        sb.append(String.format("  系统架构: %s\n", helper.getColored(System.getProperty("os.arch"), SshShellHelper.Color.GREEN)));
-        sb.append(String.format("  用户名: %s\n", helper.getColored(System.getProperty("user.name"), SshShellHelper.Color.BLUE)));
-        sb.append(String.format("  用户目录: %s\n", helper.getColored(System.getProperty("user.home"), SshShellHelper.Color.BLUE)));
-        sb.append(String.format("  工作目录: %s\n", helper.getColored(System.getProperty("user.dir"), SshShellHelper.Color.BLUE)));
+
+        sb.append(helper.getColored("=== 操作系统信息 ===", PromptColor.CYAN)).append("\n\n");
+
+        sb.append(helper.getColored("基本信息:", PromptColor.YELLOW)).append("\n");
+        sb.append(String.format("  操作系统: %s\n", helper.getColored(System.getProperty("os.name"), PromptColor.GREEN)));
+        sb.append(String.format("  系统版本: %s\n", helper.getColored(System.getProperty("os.version"), PromptColor.GREEN)));
+        sb.append(String.format("  系统架构: %s\n", helper.getColored(System.getProperty("os.arch"), PromptColor.GREEN)));
+        sb.append(String.format("  用户名: %s\n", helper.getColored(System.getProperty("user.name"), PromptColor.BLUE)));
+        sb.append(String.format("  用户目录: %s\n", helper.getColored(System.getProperty("user.home"), PromptColor.BLUE)));
+        sb.append(String.format("  工作目录: %s\n", helper.getColored(System.getProperty("user.dir"), PromptColor.BLUE)));
         
         // 处理器信息
         int processors = Runtime.getRuntime().availableProcessors();
-        sb.append(String.format("  可用处理器: %s\n", helper.getColored(String.valueOf(processors), SshShellHelper.Color.GREEN)));
+        sb.append(String.format("  可用处理器: %s\n", helper.getColored(String.valueOf(processors), PromptColor.GREEN)));
         
         return sb.toString();
     }
@@ -130,21 +131,21 @@ public class SystemInfoCommand {
      */
     private String getJvmInfo() {
         StringBuilder sb = new StringBuilder();
-        
-        sb.append(helper.getColored("=== JVM信息 ===", SshShellHelper.Color.CYAN)).append("\n\n");
-        
-        sb.append(helper.getColored("Java信息:", SshShellHelper.Color.YELLOW)).append("\n");
-        sb.append(String.format("  Java版本: %s\n", helper.getColored(System.getProperty("java.version"), SshShellHelper.Color.GREEN)));
-        sb.append(String.format("  Java供应商: %s\n", helper.getColored(System.getProperty("java.vendor"), SshShellHelper.Color.GREEN)));
-        sb.append(String.format("  Java安装目录: %s\n", helper.getColored(System.getProperty("java.home"), SshShellHelper.Color.BLUE)));
-        sb.append(String.format("  JVM名称: %s\n", helper.getColored(System.getProperty("java.vm.name"), SshShellHelper.Color.GREEN)));
-        sb.append(String.format("  JVM版本: %s\n", helper.getColored(System.getProperty("java.vm.version"), SshShellHelper.Color.GREEN)));
-        sb.append(String.format("  JVM供应商: %s\n", helper.getColored(System.getProperty("java.vm.vendor"), SshShellHelper.Color.GREEN)));
+
+        sb.append(helper.getColored("=== JVM信息 ===", PromptColor.CYAN)).append("\n\n");
+
+        sb.append(helper.getColored("Java信息:", PromptColor.YELLOW)).append("\n");
+        sb.append(String.format("  Java版本: %s\n", helper.getColored(System.getProperty("java.version"), PromptColor.GREEN)));
+        sb.append(String.format("  Java供应商: %s\n", helper.getColored(System.getProperty("java.vendor"), PromptColor.GREEN)));
+        sb.append(String.format("  Java安装目录: %s\n", helper.getColored(System.getProperty("java.home"), PromptColor.BLUE)));
+        sb.append(String.format("  JVM名称: %s\n", helper.getColored(System.getProperty("java.vm.name"), PromptColor.GREEN)));
+        sb.append(String.format("  JVM版本: %s\n", helper.getColored(System.getProperty("java.vm.version"), PromptColor.GREEN)));
+        sb.append(String.format("  JVM供应商: %s\n", helper.getColored(System.getProperty("java.vm.vendor"), PromptColor.GREEN)));
         
         // 运行时信息
         Runtime runtime = Runtime.getRuntime();
         long uptime = ManagementFactory.getRuntimeMXBean().getUptime();
-        sb.append(String.format("  JVM运行时间: %s\n", helper.getColored(formatUptime(uptime), SshShellHelper.Color.CYAN)));
+        sb.append(String.format("  JVM运行时间: %s\n", helper.getColored(formatUptime(uptime), PromptColor.CYAN)));
         
         return sb.toString();
     }
@@ -154,8 +155,8 @@ public class SystemInfoCommand {
      */
     private String getMemoryInfo() {
         StringBuilder sb = new StringBuilder();
-        
-        sb.append(helper.getColored("=== 内存信息 ===", SshShellHelper.Color.CYAN)).append("\n\n");
+
+        sb.append(helper.getColored("=== 内存信息 ===", PromptColor.CYAN)).append("\n\n");
         
         Runtime runtime = Runtime.getRuntime();
         MemoryMXBean memoryBean = ManagementFactory.getMemoryMXBean();
@@ -165,30 +166,30 @@ public class SystemInfoCommand {
         long totalMemory = runtime.totalMemory();
         long freeMemory = runtime.freeMemory();
         long usedMemory = totalMemory - freeMemory;
-        
-        sb.append(helper.getColored("JVM内存:", SshShellHelper.Color.YELLOW)).append("\n");
-        sb.append(String.format("  最大内存: %s\n", helper.getColored(formatBytes(maxMemory), SshShellHelper.Color.GREEN)));
-        sb.append(String.format("  总内存: %s\n", helper.getColored(formatBytes(totalMemory), SshShellHelper.Color.GREEN)));
-        sb.append(String.format("  已用内存: %s\n", helper.getColored(formatBytes(usedMemory), SshShellHelper.Color.YELLOW)));
-        sb.append(String.format("  空闲内存: %s\n", helper.getColored(formatBytes(freeMemory), SshShellHelper.Color.GREEN)));
+
+        sb.append(helper.getColored("JVM内存:", PromptColor.YELLOW)).append("\n");
+        sb.append(String.format("  最大内存: %s\n", helper.getColored(formatBytes(maxMemory), PromptColor.GREEN)));
+        sb.append(String.format("  总内存: %s\n", helper.getColored(formatBytes(totalMemory), PromptColor.GREEN)));
+        sb.append(String.format("  已用内存: %s\n", helper.getColored(formatBytes(usedMemory), PromptColor.YELLOW)));
+        sb.append(String.format("  空闲内存: %s\n", helper.getColored(formatBytes(freeMemory), PromptColor.GREEN)));
         
         // 内存使用率
         double usagePercent = (double) usedMemory / totalMemory * 100;
-        SshShellHelper.Color usageColor = usagePercent > 80 ? SshShellHelper.Color.RED : 
-                                         usagePercent > 60 ? SshShellHelper.Color.YELLOW : SshShellHelper.Color.GREEN;
+        PromptColor usageColor = usagePercent > 80 ? PromptColor.RED :
+                usagePercent > 60 ? PromptColor.YELLOW : PromptColor.GREEN;
         sb.append(String.format("  内存使用率: %s%%\n", helper.getColored(df.format(usagePercent), usageColor)));
         
         // 堆内存信息
-        sb.append("\n").append(helper.getColored("堆内存详情:", SshShellHelper.Color.YELLOW)).append("\n");
-        sb.append(String.format("  堆内存已用: %s\n", helper.getColored(formatBytes(memoryBean.getHeapMemoryUsage().getUsed()), SshShellHelper.Color.YELLOW)));
-        sb.append(String.format("  堆内存已提交: %s\n", helper.getColored(formatBytes(memoryBean.getHeapMemoryUsage().getCommitted()), SshShellHelper.Color.GREEN)));
-        sb.append(String.format("  堆内存最大: %s\n", helper.getColored(formatBytes(memoryBean.getHeapMemoryUsage().getMax()), SshShellHelper.Color.GREEN)));
+        sb.append("\n").append(helper.getColored("堆内存详情:", PromptColor.YELLOW)).append("\n");
+        sb.append(String.format("  堆内存已用: %s\n", helper.getColored(formatBytes(memoryBean.getHeapMemoryUsage().getUsed()), PromptColor.YELLOW)));
+        sb.append(String.format("  堆内存已提交: %s\n", helper.getColored(formatBytes(memoryBean.getHeapMemoryUsage().getCommitted()), PromptColor.GREEN)));
+        sb.append(String.format("  堆内存最大: %s\n", helper.getColored(formatBytes(memoryBean.getHeapMemoryUsage().getMax()), PromptColor.GREEN)));
         
         // 非堆内存信息
-        sb.append("\n").append(helper.getColored("非堆内存详情:", SshShellHelper.Color.YELLOW)).append("\n");
-        sb.append(String.format("  非堆内存已用: %s\n", helper.getColored(formatBytes(memoryBean.getNonHeapMemoryUsage().getUsed()), SshShellHelper.Color.YELLOW)));
-        sb.append(String.format("  非堆内存已提交: %s\n", helper.getColored(formatBytes(memoryBean.getNonHeapMemoryUsage().getCommitted()), SshShellHelper.Color.GREEN)));
-        sb.append(String.format("  非堆内存最大: %s\n", helper.getColored(formatBytes(memoryBean.getNonHeapMemoryUsage().getMax()), SshShellHelper.Color.GREEN)));
+        sb.append("\n").append(helper.getColored("非堆内存详情:", PromptColor.YELLOW)).append("\n");
+        sb.append(String.format("  非堆内存已用: %s\n", helper.getColored(formatBytes(memoryBean.getNonHeapMemoryUsage().getUsed()), PromptColor.YELLOW)));
+        sb.append(String.format("  非堆内存已提交: %s\n", helper.getColored(formatBytes(memoryBean.getNonHeapMemoryUsage().getCommitted()), PromptColor.GREEN)));
+        sb.append(String.format("  非堆内存最大: %s\n", helper.getColored(formatBytes(memoryBean.getNonHeapMemoryUsage().getMax()), PromptColor.GREEN)));
         
         return sb.toString();
     }
@@ -198,12 +199,12 @@ public class SystemInfoCommand {
      */
     private String getDiskInfo() {
         StringBuilder sb = new StringBuilder();
-        
-        sb.append(helper.getColored("=== 磁盘信息 ===", SshShellHelper.Color.CYAN)).append("\n\n");
+
+        sb.append(helper.getColored("=== 磁盘信息 ===", PromptColor.CYAN)).append("\n\n");
         
         java.io.File[] roots = java.io.File.listRoots();
-        
-        sb.append(helper.getColored("磁盘分区:", SshShellHelper.Color.YELLOW)).append("\n");
+
+        sb.append(helper.getColored("磁盘分区:", PromptColor.YELLOW)).append("\n");
         sb.append(String.format("  %-10s %-12s %-12s %-12s %s\n", "分区", "总空间", "可用空间", "已用空间", "使用率"));
         sb.append("  ").append("-".repeat(60)).append("\n");
         
@@ -214,8 +215,8 @@ public class SystemInfoCommand {
             
             if (totalSpace > 0) {
                 double usagePercent = (double) usedSpace / totalSpace * 100;
-                SshShellHelper.Color usageColor = usagePercent > 90 ? SshShellHelper.Color.RED : 
-                                                 usagePercent > 80 ? SshShellHelper.Color.YELLOW : SshShellHelper.Color.GREEN;
+                PromptColor usageColor = usagePercent > 90 ? PromptColor.RED :
+                        usagePercent > 80 ? PromptColor.YELLOW : PromptColor.GREEN;
                 
                 sb.append(String.format("  %-10s %-12s %-12s %-12s %s%%\n",
                         root.getPath(),
@@ -234,36 +235,36 @@ public class SystemInfoCommand {
      */
     private String getNetworkInfo() {
         StringBuilder sb = new StringBuilder();
-        
-        sb.append(helper.getColored("=== 网络信息 ===", SshShellHelper.Color.CYAN)).append("\n\n");
+
+        sb.append(helper.getColored("=== 网络信息 ===", PromptColor.CYAN)).append("\n\n");
         
         try {
             java.net.InetAddress localHost = java.net.InetAddress.getLocalHost();
-            sb.append(helper.getColored("本机信息:", SshShellHelper.Color.YELLOW)).append("\n");
-            sb.append(String.format("  主机名: %s\n", helper.getColored(localHost.getHostName(), SshShellHelper.Color.GREEN)));
-            sb.append(String.format("  IP地址: %s\n", helper.getColored(localHost.getHostAddress(), SshShellHelper.Color.GREEN)));
+            sb.append(helper.getColored("本机信息:", PromptColor.YELLOW)).append("\n");
+            sb.append(String.format("  主机名: %s\n", helper.getColored(localHost.getHostName(), PromptColor.GREEN)));
+            sb.append(String.format("  IP地址: %s\n", helper.getColored(localHost.getHostAddress(), PromptColor.GREEN)));
             
             // 网络接口信息
-            sb.append("\n").append(helper.getColored("网络接口:", SshShellHelper.Color.YELLOW)).append("\n");
+            sb.append("\n").append(helper.getColored("网络接口:", PromptColor.YELLOW)).append("\n");
             java.util.Enumeration<java.net.NetworkInterface> interfaces = java.net.NetworkInterface.getNetworkInterfaces();
             
             while (interfaces.hasMoreElements()) {
                 java.net.NetworkInterface networkInterface = interfaces.nextElement();
                 if (networkInterface.isUp() && !networkInterface.isLoopback()) {
-                    sb.append(String.format("  接口名: %s\n", helper.getColored(networkInterface.getDisplayName(), SshShellHelper.Color.BLUE)));
+                    sb.append(String.format("  接口名: %s\n", helper.getColored(networkInterface.getDisplayName(), PromptColor.BLUE)));
                     
                     java.util.Enumeration<java.net.InetAddress> addresses = networkInterface.getInetAddresses();
                     while (addresses.hasMoreElements()) {
                         java.net.InetAddress address = addresses.nextElement();
                         if (!address.isLoopbackAddress()) {
-                            sb.append(String.format("    IP: %s\n", helper.getColored(address.getHostAddress(), SshShellHelper.Color.GREEN)));
+                            sb.append(String.format("    IP: %s\n", helper.getColored(address.getHostAddress(), PromptColor.GREEN)));
                         }
                     }
                 }
             }
             
         } catch (Exception e) {
-            sb.append(helper.getColored("获取网络信息失败: " + e.getMessage(), SshShellHelper.Color.RED));
+            sb.append(helper.getColored("获取网络信息失败: " + e.getMessage(), PromptColor.RED));
         }
         
         return sb.toString();
