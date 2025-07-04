@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Spring Support Shell Starter - SSH Shell集成模块
+
+    这是Spring Support框架的SSH Shell集成模块，提供了完整的SSH Shell解决方案。
+    主要特性包括：
+
+    1. SSH Shell服务 - 基于ssh-shell-spring-boot-starter的SSH Shell功能
+    2. 内置命令 - 提供help、日志等级修改等基础命令
+    3. 登录追踪 - 使用Redis记录30天内的IP登录信息和认证次数
+    4. 安全认证 - 支持用户名密码认证和公钥认证
+    5. 命令扩展 - 支持自定义命令扩展
+    6. 会话管理 - 提供会话管理和监控功能
+    7. 日志记录 - 记录Shell操作日志
+    8. 权限控制 - 支持基于角色的命令权限控制
+
+    @author CH
+    @version 4.0.0.32
+-->
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 继承父项目配置 -->
+    <parent>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-parent-starter</artifactId>
+        <version>4.0.0.32</version>
+    </parent>
+
+    <!-- 项目基本信息 -->
+    <artifactId>spring-support-shell-starter</artifactId>
+    <description>Spring Support框架SSH Shell集成模块，提供完整的SSH Shell功能和登录追踪支持</description>
+
+    <!-- 项目属性配置 -->
+    <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <!-- 依赖配置 -->
+    <dependencies>
+        <!-- SSH Shell Spring Boot Starter - 提供SSH Shell功能 -->
+        <dependency>
+            <groupId>com.github.fonimus</groupId>
+            <artifactId>ssh-shell-spring-boot-starter</artifactId>
+            <version>1.7.4</version>
+        </dependency>
+
+        <!-- Spring Boot Redis数据访问 - 用于登录信息追踪 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
+        <!-- Spring Support Redis模块 - 提供Redis操作工具 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-redis-starter</artifactId>
+        </dependency>
+
+        <!-- 通用功能模块 - 提供基础的工具类和通用功能 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-common-starter</artifactId>
+        </dependency>
+
+        <!-- Spring Boot Actuator - 提供应用监控和管理功能 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- Jackson JSON处理 - 用于数据序列化 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
+        <!-- Spring Boot Web - 提供Web功能支持 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <!-- 构建配置 -->
+    <build>
+        <plugins>
+            <!-- Maven编译插件 - 配置Java编译参数 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>21</source>  <!-- 源码Java版本 -->
+                    <target>21</target>  <!-- 目标Java版本 -->
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

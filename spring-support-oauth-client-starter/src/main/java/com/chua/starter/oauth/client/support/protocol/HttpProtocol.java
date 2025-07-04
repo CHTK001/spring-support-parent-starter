@@ -13,8 +13,7 @@ import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.task.cache.Cacheable;
 import com.chua.common.support.task.cache.GuavaCacheable;
-import com.chua.common.support.utils.DigestUtils;
-import com.chua.common.support.utils.Md5Utils;
+
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.CookieUtil;
@@ -66,7 +65,6 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
     @SuppressWarnings("ALL")
     public AuthenticationInformation approve(Cookie[] cookie, String token) {
         checkCache();
-        String key = DigestUtils.md5Hex(UUID.randomUUID().toString());
         Map<String, Object> jsonObject = new HashMap<>(2);
         Cookie[] cookies = Optional.ofNullable(cookie).orElse(new Cookie[0]);
         String cacheKey = getCacheKey(cookies, token);
@@ -87,25 +85,36 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
                 }
             }
         }
+
+        // 构建认证数据
         jsonObject.put("x-oauth-cookie", cookies);
         jsonObject.put("x-oauth-token", token);
         String accessKey = authClientProperties.getAccessKey();
         String secretKey = authClientProperties.getSecretKey();
-        String serviceKey = authClientProperties.getServiceKey();
         if (Strings.isNullOrEmpty(accessKey) || Strings.isNullOrEmpty(secretKey)) {
             accessKey = DefSecret.ACCESS_KEY;
             secretKey = DefSecret.SECRET_KEY;
         }
 
+        // 简化加密流程：只进行一次UUID加密
+        String key = UUID.randomUUID().toString();
         String asString = Json.toJson(jsonObject);
-        String request = Codec.build(encryption, Md5Utils.getInstance()
-                .getMd5String(accessKey + DigestUtils.md5Hex(secretKey + key))).encodeHex(asString);
-        Map<String, Object> item2 = new HashMap<>(3);
+
+        Map<String, Object> item2 = new HashMap<>(6);
         item2.put(AuthConstant.ACCESS_KEY, accessKey);
         item2.put(AuthConstant.SECRET_KEY, secretKey);
-        item2.put(AuthConstant.OAUTH_VALUE, request);
         item2.put(AuthConstant.OAUTH_KEY, key);
-        request = Codec.build(encryption,serviceKey).encodeHex(Json.toJson(item2));
+        item2.put("clientIp", authClientProperties.getClientIp());
+
+        // 根据配置决定是否加密
+        if (authClientProperties.isEnableEncryption()) {
+            String encryptedData = Codec.build(encryption, key).encodeHex(asString);
+            item2.put(AuthConstant.OAUTH_VALUE, encryptedData);
+        } else {
+            item2.put(AuthConstant.OAUTH_VALUE, asString);
+        }
+
+        String request = Json.toJson(item2);
 
 
         Robin balance = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
@@ -116,7 +125,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
             return AuthenticationInformation.authServerError();
         }
         String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(address).split(",");
-        stringRobin.addNode(split);
+        stringRobin.addNode((Object[]) split);
         Node robin = stringRobin.selectNode();
         HttpResponse<String> httpResponse = null;
         try {
@@ -126,6 +135,7 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
             }
             AuthRequest request1 = new AuthRequest();
             request1.setData(request);
+            request1.setEncipher(authClientProperties.isEnableEncryption());
             httpResponse = Unirest.post(
                             StringUtils.endWithAppend(StringUtils.startWithAppend(url, "http://"), "/") + StringUtils.startWithMove(authClientProperties.getOauthUrl(), "/"))
                     .header("x-oauth-timestamp", System.nanoTime() + "")
@@ -165,7 +175,12 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
             }
 
             if (ReturnCode.OK.getCode().equals(code)) {
-                body = Codec.build(encryption, key).decodeHex(data.toString());
+                // 根据加密配置决定是否解密
+                if (authClientProperties.isEnableEncryption()) {
+                    body = Codec.build(encryption, key).decodeHex(data.toString());
+                } else {
+                    body = data.toString();
+                }
 
                 UserResume userResume = Json.fromJson(body, UserResume.class);
                 RequestUtils.setUsername(userResume.getUsername());
@@ -204,7 +219,6 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
     @Override
     public LoginResult upgrade(Cookie[] cookie, String token, UpgradeType upgradeType, String refreshToken) {
         checkEncryption();
-        String key = DigestUtils.md5Hex(UUID.randomUUID().toString());
         Map<String, Object> jsonObject = new HashMap<>(2);
         Cookie[] cookies = Optional.ofNullable(cookie).orElse(new Cookie[0]);
         String cacheKey = getCacheKey(cookies, token);
@@ -214,22 +228,30 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
         jsonObject.put(OAUTH_UPGRADE_KEY_TOKEN, refreshToken);
         String accessKey = authClientProperties.getAccessKey();
         String secretKey = authClientProperties.getSecretKey();
-        String serviceKey = authClientProperties.getServiceKey();
         if (Strings.isNullOrEmpty(accessKey) || Strings.isNullOrEmpty(secretKey)) {
             accessKey = DefSecret.ACCESS_KEY;
             secretKey = DefSecret.SECRET_KEY;
         }
 
+        // 简化加密流程：只进行一次UUID加密
+        String key = UUID.randomUUID().toString();
         String asString = Json.toJson(jsonObject);
 
-        String request = Codec.build(encryption, Md5Utils.getInstance()
-                .getMd5String(accessKey + DigestUtils.md5Hex(secretKey + key))).encodeHex(asString);
-        Map<String, Object> item2 = new HashMap<>(3);
+        Map<String, Object> item2 = new HashMap<>(6);
         item2.put(AuthConstant.ACCESS_KEY, accessKey);
         item2.put(AuthConstant.SECRET_KEY, secretKey);
-        item2.put(AuthConstant.OAUTH_VALUE, request);
         item2.put(AuthConstant.OAUTH_KEY, key);
-        request = Codec.build(encryption, serviceKey).encodeHex(Json.toJson(item2));
+        item2.put("clientIp", authClientProperties.getClientIp());
+
+        // 根据配置决定是否加密
+        if (authClientProperties.isEnableEncryption()) {
+            String encryptedData = Codec.build(encryption, key).encodeHex(asString);
+            item2.put(AuthConstant.OAUTH_VALUE, encryptedData);
+        } else {
+            item2.put(AuthConstant.OAUTH_VALUE, asString);
+        }
+
+        String request = Json.toJson(item2);
 
 
         Robin balance = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
@@ -285,7 +307,12 @@ public class HttpProtocol extends AbstractProtocol implements InitializingBean {
             }
 
             if (ReturnCode.OK.getCode().equals(code)) {
-                body = Codec.build(encryption, key).decodeHex(data.toString());
+                // 根据加密配置决定是否解密
+                if (authClientProperties.isEnableEncryption()) {
+                    body = Codec.build(encryption, key).decodeHex(data.toString());
+                } else {
+                    body = data.toString();
+                }
                 LoginResult loginResult = Json.fromJson(body, LoginResult.class);
                 UserResume userResume = BeanUtils.copyProperties(loginResult.getUserResult(), UserResume.class);
                 inCache(cacheKey, new AuthenticationInformation(Information.OK, userResume));
