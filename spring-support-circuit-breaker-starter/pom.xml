@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Spring Support Circuit Breaker Starter - 熔断降级模块
+    
+    这是Spring Support框架的熔断降级模块，基于Resilience4j实现了完整的容错解决方案。
+    主要特性包括：
+    
+    1. 熔断器（Circuit Breaker） - 防止级联故障，提供快速失败机制
+    2. 重试机制（Retry） - 自动重试失败的操作，提高系统可靠性
+    3. 限流器（Rate Limiter） - 控制请求速率，防止系统过载
+    4. 舱壁隔离（Bulkhead） - 资源隔离，防止资源耗尽
+    5. 超时控制（Time Limiter） - 防止长时间等待，及时释放资源
+    6. 缓存机制（Cache） - 提供结果缓存，减少重复计算
+    7. 监控指标 - 提供详细的监控指标和健康检查
+    8. 注解支持 - 支持注解和编程式两种使用方式
+    9. 动态配置 - 支持运行时动态调整参数
+    
+    @author CH
+    @version 4.0.0.32
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    
+    <!-- 继承父项目配置 -->
+    <parent>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-parent-starter</artifactId>
+        <version>4.0.0.32</version>
+    </parent>
+
+    <!-- 项目基本信息 -->
+    <artifactId>spring-support-circuit-breaker-starter</artifactId>
+    <description>Spring Support框架熔断降级模块，基于Resilience4j提供完整的容错解决方案</description>
+
+    <!-- 项目属性配置 -->
+    <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <resilience4j.version>2.2.0</resilience4j.version> <!-- Resilience4j版本 -->
+    </properties>
+
+    <!-- 依赖配置 -->
+    <dependencies>
+        <!-- 通用功能模块 - 提供基础的工具类和通用功能 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-common-starter</artifactId>
+        </dependency>
+
+        <!-- Resilience4j Spring Boot 3集成 - 核心熔断降级框架 -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-spring-boot3</artifactId>
+            <version>${resilience4j.version}</version>
+        </dependency>
+
+        <!-- Resilience4j 熔断器 - 提供熔断器功能 -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-circuitbreaker</artifactId>
+            <version>${resilience4j.version}</version>
+        </dependency>
+
+        <!-- Resilience4j 重试机制 - 提供重试功能 -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-retry</artifactId>
+            <version>${resilience4j.version}</version>
+        </dependency>
+
+        <!-- Resilience4j 限流器 - 提供限流功能 -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-ratelimiter</artifactId>
+            <version>${resilience4j.version}</version>
+        </dependency>
+
+        <!-- Resilience4j 舱壁隔离 - 提供资源隔离功能 -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-bulkhead</artifactId>
+            <version>${resilience4j.version}</version>
+        </dependency>
+
+        <!-- Resilience4j 超时控制 - 提供超时控制功能 -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-timelimiter</artifactId>
+            <version>${resilience4j.version}</version>
+        </dependency>
+
+        <!-- Resilience4j 缓存 - 提供缓存功能 -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-cache</artifactId>
+            <version>${resilience4j.version}</version>
+        </dependency>
+
+        <!-- Resilience4j Micrometer监控 - 提供监控指标集成 -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-micrometer</artifactId>
+            <version>${resilience4j.version}</version>
+        </dependency>
+
+        <!-- Spring Boot Actuator - 提供健康检查和监控端点 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- Micrometer Core - 提供监控指标核心功能 -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+        </dependency>
+
+        <!-- Spring Boot AOP - 提供切面编程支持，用于注解实现 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+
+        <!-- Caffeine缓存 - 高性能的本地缓存库 -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
+
+        <!-- Spring Boot配置处理器 - 为自定义配置属性提供IDE支持 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+    </dependencies>
+
+</project>
