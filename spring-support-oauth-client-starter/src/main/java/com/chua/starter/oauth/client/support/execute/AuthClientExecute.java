@@ -276,18 +276,6 @@ public class AuthClientExecute {
         return webRequest1.upgrade(upgradeType, refreshToken);
     }
 
-    /**
-     * 登陆码
-     *
-     * @param loginCodeType 登录类型
-     * @param type
-     * @param callback
-     * @return 登陆码
-     */
-    public String getLoginCode(String loginCodeType, String type, String token, String callback) {
-        ProtocolExecutor protocolExecutor = ServiceProvider.of(ProtocolExecutor.class).getExtension(authClientProperties.getProtocol());
-        return protocolExecutor.getLoginCode(loginCodeType, type, token, callback);
-    }
 
     /**
      * 获取用户结果
@@ -307,9 +295,16 @@ public class AuthClientExecute {
         if (StringUtils.isEmpty(token) || CommonConstant.NULL.equals(token)) {
             return null;
         }
+        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
+        if (requestAttributes == null) {
+            return null;
+        }
 
+        ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
+
+        HttpServletRequest request = attributes.getRequest();
         Protocol protocol = ServiceProvider.of(Protocol.class).getExtension(authClientProperties.getProtocol());
-        AuthenticationInformation approve = protocol.approve(null, token);
+        AuthenticationInformation approve = protocol.approve(null, token, request.getHeader("x-oauth-protocol"));
         if(approve.getInformation().getCode() != 200) {
             return null;
         }

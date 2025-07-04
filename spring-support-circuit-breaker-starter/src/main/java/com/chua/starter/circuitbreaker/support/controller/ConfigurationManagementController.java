@@ -2,6 +2,7 @@ package com.chua.starter.circuitbreaker.support.controller;
 
 import com.chua.starter.circuitbreaker.support.properties.CircuitBreakerProperties;
 import com.chua.starter.common.support.oauth.AuthService;
+import com.chua.starter.common.support.oauth.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 配置管理控制器
@@ -62,21 +64,24 @@ public class ConfigurationManagementController {
         // 添加当前用户信息
         if (authService != null) {
             Map<String, Object> userInfo = new HashMap<>();
-            try {
-                String userId = authService.getCurrentUserId();
-                String username = authService.getCurrentUsername();
-                boolean authenticated = authService.isAuthenticated();
+            CurrentUser currentUser = authService.getCurrentUser();
+            if(null != currentUser) {
+                try {
+                    String userId = currentUser.getUserId();
+                    String username = currentUser.getUsername();
+                    boolean authenticated = authService.isAuthenticated();
 
-                userInfo.put("userId", userId != null ? userId : "未知");
-                userInfo.put("username", username != null ? username : "匿名用户");
-                userInfo.put("authenticated", authenticated);
+                    userInfo.put("userId", userId != null ? userId : "未知");
+                    userInfo.put("username", username != null ? username : "匿名用户");
+                    userInfo.put("authenticated", authenticated);
 
-                log.debug("获取当前用户信息 - 用户ID: {}, 用户名: {}, 认证状态: {}", userId, username, authenticated);
-            } catch (Exception e) {
-                log.warn("获取用户信息失败: {}", e.getMessage());
-                userInfo.put("userId", "获取失败");
-                userInfo.put("username", "获取失败");
-                userInfo.put("authenticated", false);
+                    log.debug("获取当前用户信息 - 用户ID: {}, 用户名: {}, 认证状态: {}", userId, username, authenticated);
+                } catch (Exception e) {
+                    log.warn("获取用户信息失败: {}", e.getMessage());
+                    userInfo.put("userId", "获取失败");
+                    userInfo.put("username", "获取失败");
+                    userInfo.put("authenticated", false);
+                }
             }
             config.put("currentUser", userInfo);
         }
@@ -92,28 +97,30 @@ public class ConfigurationManagementController {
         Map<String, Object> result = new HashMap<>();
 
         if (authService != null) {
-            try {
-                String userId = authService.getCurrentUserId();
-                String username = authService.getCurrentUsername();
-                boolean authenticated = authService.isAuthenticated();
-                Map<String, Object> userInfo = authService.getCurrentUserInfo();
-                String[] roles = authService.getCurrentUserRoles();
-                String[] permissions = authService.getCurrentUserPermissions();
+            CurrentUser currentUser = authService.getCurrentUser();
+            if(null != currentUser) {
+                try {
+                    String userId = currentUser.getUserId();
+                    String username = currentUser.getUsername();
+                    boolean authenticated = authService.isAuthenticated();
+                    Set<String> roles = currentUser.getRoles();
+                    Set<String> permissions = currentUser.getPermission();
 
-                result.put("userId", userId != null ? userId : "未知");
-                result.put("username", username != null ? username : "匿名用户");
-                result.put("authenticated", authenticated);
-                result.put("userInfo", userInfo != null ? userInfo : new HashMap<>());
-                result.put("roles", roles != null ? roles : new String[0]);
-                result.put("permissions", permissions != null ? permissions : new String[0]);
-                result.put("success", true);
+                    result.put("userId", userId != null ? userId : "未知");
+                    result.put("username", username != null ? username : "匿名用户");
+                    result.put("authenticated", authenticated);
+                    result.put("userInfo", currentUser);
+                    result.put("roles", roles != null ? roles : new String[0]);
+                    result.put("permissions", permissions != null ? permissions : new String[0]);
+                    result.put("success", true);
 
-                log.debug("获取用户详细信息 - 用户ID: {}, 用户名: {}, 角色数: {}, 权限数: {}",
-                         userId, username, roles != null ? roles.length : 0, permissions != null ? permissions.length : 0);
-            } catch (Exception e) {
-                log.warn("获取用户详细信息失败: {}", e.getMessage());
-                result.put("success", false);
-                result.put("message", "获取用户信息失败: " + e.getMessage());
+                    log.debug("获取用户详细信息 - 用户ID: {}, 用户名: {}, 角色数: {}, 权限数: {}",
+                            userId, username, roles != null ? roles.size() : 0, permissions != null ? permissions.size() : 0);
+                } catch (Exception e) {
+                    log.warn("获取用户详细信息失败: {}", e.getMessage());
+                    result.put("success", false);
+                    result.put("message", "获取用户信息失败: " + e.getMessage());
+                }
             }
         } else {
             result.put("success", false);
@@ -134,13 +141,16 @@ public class ConfigurationManagementController {
         String currentUser = "系统";
         String userId = "unknown";
         if (authService != null) {
-            try {
-                String username = authService.getCurrentUsername();
-                String userIdFromAuth = authService.getCurrentUserId();
-                currentUser = username != null ? username : "匿名用户";
-                userId = userIdFromAuth != null ? userIdFromAuth : "unknown";
-            } catch (Exception e) {
-                log.warn("获取当前用户信息失败: {}", e.getMessage());
+            CurrentUser currentUser1 = authService.getCurrentUser();
+            if(null != currentUser1) {
+                try {
+                    String username = currentUser1.getUsername();
+                    String userIdFromAuth = currentUser1.getUserId();
+                    currentUser = username != null ? username : "匿名用户";
+                    userId = userIdFromAuth != null ? userIdFromAuth : "unknown";
+                } catch (Exception e) {
+                    log.warn("获取当前用户信息失败: {}", e.getMessage());
+                }
             }
         }
 
@@ -199,13 +209,16 @@ public class ConfigurationManagementController {
         String currentUser = "系统";
         String userId = "unknown";
         if (authService != null) {
-            try {
-                String username = authService.getCurrentUsername();
-                String userIdFromAuth = authService.getCurrentUserId();
-                currentUser = username != null ? username : "匿名用户";
-                userId = userIdFromAuth != null ? userIdFromAuth : "unknown";
-            } catch (Exception e) {
-                log.warn("获取当前用户信息失败: {}", e.getMessage());
+            CurrentUser currentUser1 = authService.getCurrentUser();
+            if(null != currentUser1) {
+                try {
+                    String username = currentUser1.getUsername();
+                    String userIdFromAuth = currentUser1.getUserId();
+                    currentUser = username != null ? username : "匿名用户";
+                    userId = userIdFromAuth != null ? userIdFromAuth : "unknown";
+                } catch (Exception e) {
+                    log.warn("获取当前用户信息失败: {}", e.getMessage());
+                }
             }
         }
 

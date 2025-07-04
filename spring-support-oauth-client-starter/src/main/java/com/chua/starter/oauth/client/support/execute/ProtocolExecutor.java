@@ -43,17 +43,4 @@ public interface ProtocolExecutor {
      * @return LoginAuthResult 登出操作的结果。可能包含操作是否成功、失败原因等信息。
      */
     LoginAuthResult logout(String uid, LogoutType logoutType, UserResult userResult );
-    /**
-     * 根据登录码类型、类型、令牌和回调地址获取登录码。
-     *
-     * 此方法旨在通过调用相应的逻辑，根据提供的参数生成一个用于登录的代码。
-     * 参数包括登录码类型、操作类型、令牌和回调地址，这些参数共同用于定制登录码的生成过程。
-     *
-     * @param loginCodeType 登录码的类型，用于区分不同类型的登录码，例如短信验证码、邮箱验证码等。
-     * @param type 操作类型，指示登录码的用途，如注册、登录、密码重置等。
-     * @param token 令牌，用于验证请求的合法性或与特定用户关联。
-     * @param callback 回调地址，用于接收生成的登录码或操作结果。
-     * @return 返回生成的登录码或操作结果的字符串表示。
-     */
-    String getLoginCode(String loginCodeType, String type, String token, String callback);
 }
