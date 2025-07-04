@@ -7,26 +7,21 @@ import com.chua.starter.circuitbreaker.support.properties.CircuitBreakerProperti
 import com.chua.starter.circuitbreaker.support.service.CircuitBreakerService;
 import com.chua.starter.circuitbreaker.support.service.impl.CircuitBreakerServiceImpl;
 import com.chua.starter.circuitbreaker.support.utils.RateLimiterKeyGenerator;
-import io.github.resilience4j.bulkhead.Bulkhead;
 import io.github.resilience4j.bulkhead.BulkheadConfig;
 import io.github.resilience4j.bulkhead.BulkheadRegistry;
-import io.github.resilience4j.cache.Cache;
-import io.github.resilience4j.cache.CacheConfig;
-import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
-import io.github.resilience4j.ratelimiter.RateLimiter;
+import io.github.resilience4j.core.IntervalFunction;
 import io.github.resilience4j.ratelimiter.RateLimiterConfig;
 import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
-import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryConfig;
 import io.github.resilience4j.retry.RetryRegistry;
-import io.github.resilience4j.timelimiter.TimeLimiter;
 import io.github.resilience4j.timelimiter.TimeLimiterConfig;
 import io.github.resilience4j.timelimiter.TimeLimiterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -126,7 +121,7 @@ public class CircuitBreakerConfiguration {
         RetryConfig defaultConfig = RetryConfig.custom()
                 .maxAttempts(properties.getRetry().getMaxAttempts())
                 .waitDuration(properties.getRetry().getWaitDuration())
-                .intervalFunction(io.github.resilience4j.retry.IntervalFunction.ofExponentialBackoff(
+                .intervalFunction(IntervalFunction.ofExponentialBackoff(
                         properties.getRetry().getWaitDuration(),
                         properties.getRetry().getIntervalMultiplier(),
                         properties.getRetry().getMaxWaitDuration()))
@@ -145,7 +140,7 @@ public class CircuitBreakerConfiguration {
                 configBuilder.waitDuration(instanceConfig.getWaitDuration());
             }
             if (instanceConfig.getIntervalMultiplier() != null && instanceConfig.getMaxWaitDuration() != null) {
-                configBuilder.intervalFunction(io.github.resilience4j.retry.IntervalFunction.ofExponentialBackoff(
+                configBuilder.intervalFunction(IntervalFunction.ofExponentialBackoff(
                         instanceConfig.getWaitDuration() != null ? instanceConfig.getWaitDuration() : properties.getRetry().getWaitDuration(),
                         instanceConfig.getIntervalMultiplier(),
                         instanceConfig.getMaxWaitDuration()));

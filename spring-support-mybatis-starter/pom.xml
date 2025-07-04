@@ -1,84 +1,115 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Spring Support MyBatis Starter - MyBatis Plus集成模块
+
+    这是Spring Support框架的MyBatis Plus集成模块，提供了增强的ORM功能和
+    数据库操作支持。主要特性包括：
+
+    1. MyBatis Plus集成 - 提供增强的MyBatis功能
+    2. 代码生成器 - 支持根据数据库表自动生成实体类、Mapper等
+    3. 多表关联查询 - 支持复杂的关联查询操作
+    4. SQL监控 - 集成P6Spy进行SQL执行监控
+    5. 分页插件 - 提供高性能的分页查询功能
+    6. 乐观锁插件 - 支持乐观锁并发控制
+    7. 数据权限 - 支持数据权限控制和多租户
+    8. SQL解析 - 提供SQL解析和优化功能
+    9. 模板引擎 - 集成FreeMarker用于代码生成
+
+    @author CH
+    @version 4.0.0.32
+-->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
+    <!-- 继承父项目配置 -->
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
         <version>4.0.0.32</version>
     </parent>
 
+    <!-- 项目基本信息 -->
     <artifactId>spring-support-mybatis-starter</artifactId>
-    <description>mybatis-plus模块</description>
+    <description>Spring Support框架MyBatis Plus集成模块，提供增强的ORM功能和数据库操作支持</description>
 
+    <!-- 项目属性配置 -->
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
+    <!-- 依赖配置 -->
     <dependencies>
 
+        <!-- 通用功能模块 - 提供基础的工具类和通用功能 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-common-starter</artifactId>
         </dependency>
 
+        <!-- P6Spy SQL监控 - 提供SQL执行监控和性能分析功能 -->
         <dependency>
             <groupId>p6spy</groupId>
             <artifactId>p6spy</artifactId>
             <version>3.9.0</version>
         </dependency>
 
-
+        <!-- Spring Boot FreeMarker模板引擎 - 用于代码生成器的模板渲染 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-freemarker</artifactId>
         </dependency>
 
+        <!-- MyBatis Plus代码生成器 - 根据数据库表自动生成代码 -->
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-generator</artifactId>
             <version>3.5.5</version>
         </dependency>
 
+        <!-- MyBatis Plus关联查询扩展 - 支持多表关联查询 -->
         <dependency>
             <groupId>com.github.yulichang</groupId>
             <artifactId>mybatis-plus-join-boot-starter</artifactId>
             <version>1.5.3</version>
         </dependency>
 
+        <!-- MyBatis Plus Spring Boot 3集成 - 核心ORM框架 -->
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
             <version>3.5.11</version>
         </dependency>
 
+        <!-- MyBatis Plus SQL解析器 - 提供SQL解析和处理功能 -->
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-jsqlparser</artifactId>
             <version>3.5.11</version>
         </dependency>
 
-
+        <!-- Apache Commons DBUtils - 提供数据库操作工具类 -->
         <dependency>
             <groupId>commons-dbutils</groupId>
             <artifactId>commons-dbutils</artifactId>
             <version>1.8.1</version>
         </dependency>
 
+        <!-- Apache Commons IO - 提供IO操作工具类 -->
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
             <version>2.16.1</version>
         </dependency>
 
-
+        <!-- Swagger API文档 - 可选依赖，用于API文档生成 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-swagger-starter</artifactId>
-            <scope>provided</scope>
+            <scope>provided</scope> <!-- 可选依赖，不强制引入 -->
         </dependency>
     </dependencies>
 
