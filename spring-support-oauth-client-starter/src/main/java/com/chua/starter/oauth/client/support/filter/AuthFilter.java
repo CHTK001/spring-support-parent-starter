@@ -5,8 +5,10 @@ import com.chua.common.support.log.Log;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.infomation.Information;
+import com.chua.starter.oauth.client.support.principal.OAuthPrincipal;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.chua.starter.oauth.client.support.web.WebRequest;
+import com.chua.starter.oauth.client.support.wrapper.OAuthHttpServletRequestWrapper;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -41,26 +43,70 @@ public class AuthFilter implements Filter {
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
-        WebRequest webRequest = new WebRequest(this.webRequest.getAuthProperties(), (HttpServletRequest) request, requestMappingHandlerMapping);
-        ((HttpServletRequest) request).getSession().setAttribute("codec", true);
+        HttpServletRequest httpRequest = (HttpServletRequest) request;
+        WebRequest webRequest = new WebRequest(this.webRequest.getAuthProperties(), httpRequest, requestMappingHandlerMapping);
+
+        httpRequest.getSession().setAttribute("codec", true);
+
         if (webRequest.isPass()) {
-            ((HttpServletRequest) request).getSession().setAttribute("codec", false);
+            httpRequest.getSession().setAttribute("codec", false);
             chain.doFilter(request, response);
             return;
         }
-        log.info("拦截到请求: {}", request instanceof HttpServletRequest ? ((HttpServletRequest) request).getRequestURI() : request.getRemoteAddr());
+
+        log.info("拦截到请求: {}", httpRequest.getRequestURI());
+
         if (webRequest.isFailure()) {
             webRequest.doFailureChain(chain, (HttpServletResponse) response);
             return;
         }
+
         //鉴权
         AuthenticationInformation authentication = webRequest.authentication();
         if (!Objects.equals(authentication.getInformation().getCode(), 200)) {
             webRequest.doFailureChain(chain, (HttpServletResponse) response, authentication.getInformation());
             return;
         }
-        render(authentication, (HttpServletRequest) request);
-        webRequest.doChain(chain, (HttpServletResponse) response);
+
+        // 渲染用户信息到Session
+        render(authentication, httpRequest);
+
+        // 创建增强的HttpServletRequestWrapper，集成Principal支持
+        UserResume userResume = authentication.getReturnResult();
+        String authType = determineAuthType(webRequest);
+        OAuthHttpServletRequestWrapper wrappedRequest = OAuthHttpServletRequestWrapper.authenticated(
+            httpRequest, userResume, authType);
+
+        log.debug("创建OAuth增强请求包装器 - 用户: {}, 认证类型: {}",
+                 userResume != null ? userResume.getUsername() : "anonymous", authType);
+
+        // 使用包装后的请求继续过滤链
+        chain.doFilter(wrappedRequest, response);
+    }
+
+    /**
+     * 确定认证类型
+     *
+     * @param webRequest Web请求
+     * @return 认证类型
+     */
+    private String determineAuthType(WebRequest webRequest) {
+        // 根据OAuth客户端配置确定认证类型
+        String protocol = webRequest.getAuthProperties().getProtocol();
+        if (protocol != null) {
+            switch (protocol.toLowerCase()) {
+                case "http":
+                case "lite":
+                    return "OAUTH_HTTP";
+                case "static":
+                    return "OAUTH_STATIC";
+                case "websocket":
+                    return "OAUTH_WEBSOCKET";
+                default:
+                    return "OAUTH_" + protocol.toUpperCase();
+            }
+        }
+        return "OAUTH";
     }
 
     private void render(AuthenticationInformation authentication, HttpServletRequest request) {
@@ -69,7 +115,18 @@ public class AuthFilter implements Filter {
         }
         HttpSession session = request.getSession();
         UserResume userResume = authentication.getReturnResult();
+
+        // 存储用户信息到Session
         session.setAttribute("username", userResume.getUsername());
         session.setAttribute("userId", MapUtils.getString(userResume.getExt(), "userId"));
+        session.setAttribute("userResume", userResume);
+
+        // 创建并存储Principal
+        String authType = determineAuthType(new WebRequest(this.webRequest.getAuthProperties(), request, requestMappingHandlerMapping));
+        OAuthPrincipal principal = OAuthPrincipal.authenticated(userResume, authType);
+        session.setAttribute("principal", principal);
+
+        log.debug("用户信息已存储到Session - 用户: {}, ID: {}, 认证类型: {}",
+                 userResume.getUsername(), userResume.getUserId(), authType);
     }
 }

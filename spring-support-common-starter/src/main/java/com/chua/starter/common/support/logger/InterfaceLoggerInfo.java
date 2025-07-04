@@ -8,6 +8,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.context.ApplicationEvent;
+import org.springframework.web.util.ContentCachingRequestWrapper;
 
 import java.io.IOException;
 import java.net.URLDecoder;
@@ -62,6 +63,14 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
                     this.body = IoUtils.toByteArray(wrapper.getInputStream());
                 }
             } catch (IOException ignored) {
+            }
+        }
+        if (request instanceof ContentCachingRequestWrapper wrapper) {
+            String header = wrapper.getHeader("Content-Type");
+            if (header != null && (header.contains("application/json") || header.contains("text/"))) {
+                this.body = IoUtils.toString(wrapper.getContentAsByteArray(), UTF_8).getBytes(UTF_8);
+            } else {
+                this.body = wrapper.getContentAsByteArray();
             }
         }
         this.request = request;

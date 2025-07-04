@@ -29,6 +29,7 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MultipartRequest;
 import org.springframework.web.multipart.support.MultipartResolutionDelegate;
+import org.springframework.web.util.ContentCachingRequestWrapper;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -216,6 +217,19 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
                     Object nativeRequest = webRequest.getNativeRequest();
                     if (nativeRequest instanceof CustomHttpServletRequestWrapper) {
                         String s = IoUtils.toString(((CustomHttpServletRequestWrapper) nativeRequest).getInputStream(), StandardCharsets.UTF_8);
+                        if (s.startsWith(CommonConstant.SYMBOL_LEFT_BIG_PARENTHESES)) {
+                            return Json.toMapStringObject(s);
+                        }
+
+                        if (s.startsWith(CommonConstant.SYMBOL_LEFT_SQUARE_BRACKET)) {
+                            return result;
+                        }
+
+                        return MapUtils.asMap(s, "&", "=");
+                    }
+
+                    if(nativeRequest instanceof ContentCachingRequestWrapper contentCachingRequestWrapper) {
+                        String s = IoUtils.toString(contentCachingRequestWrapper.getContentAsByteArray(), StandardCharsets.UTF_8);
                         if (s.startsWith(CommonConstant.SYMBOL_LEFT_BIG_PARENTHESES)) {
                             return Json.toMapStringObject(s);
                         }

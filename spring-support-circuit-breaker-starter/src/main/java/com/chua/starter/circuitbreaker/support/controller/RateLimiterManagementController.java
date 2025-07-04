@@ -440,6 +440,7 @@ public class RateLimiterManagementController {
                     
                     <div class="actions">
                         <button class="btn btn-primary" onclick="refreshData()">刷新数据</button>
+                        <button class="btn btn-primary" onclick="refreshUserInfo()">刷新用户信息</button>
                         <button class="btn btn-primary" onclick="showCreateDialog()">创建限流器</button>
                         <button class="btn btn-primary" onclick="showMetrics()">查看指标</button>
                     </div>
@@ -451,13 +452,54 @@ public class RateLimiterManagementController {
                 
                 <script>
                     function refreshData() {
-                        fetch('/actuator/rate-limiter/status')
+                        // 同时获取限流器状态和用户信息
+                        Promise.all([
+                            fetch('/actuator/rate-limiter/status'),
+                            fetch('/actuator/circuit-breaker-config/user-info')
+                        ])
+                        .then(responses => Promise.all(responses.map(r => r.json())))
+                        .then(([rateLimiterData, userInfoData]) => {
+                            updateStats(rateLimiterData);
+                            updateRateLimiters(rateLimiterData.rateLimiters);
+                            updateUserInfo(userInfoData);
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            // 如果获取用户信息失败，仍然尝试获取限流器数据
+                            fetch('/actuator/rate-limiter/status')
+                                .then(response => response.json())
+                                .then(data => {
+                                    updateStats(data);
+                                    updateRateLimiters(data.rateLimiters);
+                                })
+                                .catch(error => console.error('Error fetching rate limiter data:', error));
+                        });
+                    }
+
+                    function updateUserInfo(userInfoData) {
+                        if (userInfoData && userInfoData.success) {
+                            document.getElementById('currentUsername').textContent = userInfoData.username || '未知';
+                            document.getElementById('currentUserId').textContent = userInfoData.userId || '未知';
+                            document.getElementById('authStatus').textContent = userInfoData.authenticated ? '✅ 已认证' : '❌ 未认证';
+                        } else {
+                            document.getElementById('currentUsername').textContent = '获取失败';
+                            document.getElementById('currentUserId').textContent = '获取失败';
+                            document.getElementById('authStatus').textContent = '❌ 未知';
+                        }
+                    }
+
+                    function refreshUserInfo() {
+                        fetch('/actuator/circuit-breaker-config/user-info')
                             .then(response => response.json())
                             .then(data => {
-                                updateStats(data);
-                                updateRateLimiters(data.rateLimiters);
+                                updateUserInfo(data);
                             })
-                            .catch(error => console.error('Error:', error));
+                            .catch(error => {
+                                console.error('Error fetching user info:', error);
+                                document.getElementById('currentUsername').textContent = '获取失败';
+                                document.getElementById('currentUserId').textContent = '获取失败';
+                                document.getElementById('authStatus').textContent = '❌ 获取失败';
+                            });
                     }
                     
                     function updateStats(data) {

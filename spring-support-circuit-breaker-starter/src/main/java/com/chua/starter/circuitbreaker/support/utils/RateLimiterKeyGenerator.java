@@ -18,6 +18,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.security.Principal;
 import java.util.Base64;
@@ -198,17 +199,20 @@ public class RateLimiterKeyGenerator {
             ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
             if (attributes != null) {
                 HttpServletRequest request = attributes.getRequest();
-
-                // 按优先级尝试各种策略
-                for (UserIdStrategy strategy : userIdStrategies) {
-                    try {
-                        String userId = strategy.getUserId(request);
-                        if (StringUtils.hasText(userId) && !"anonymous".equals(userId)) {
-                            log.debug("通过策略 {} 获取到用户ID: {}", strategy.getClass().getSimpleName(), userId);
-                            return userId;
+                if (request != null) {
+                    // 按优先级尝试各种策略
+                    for (UserIdStrategy strategy : userIdStrategies) {
+                        if (strategy != null) {
+                            try {
+                                String userId = strategy.getUserId(request);
+                                if (StringUtils.hasText(userId) && !"anonymous".equals(userId)) {
+                                    log.debug("通过策略 {} 获取到用户ID: {}", strategy.getClass().getSimpleName(), userId);
+                                    return userId;
+                                }
+                            } catch (Exception e) {
+                                log.debug("策略 {} 获取用户ID失败: {}", strategy.getClass().getSimpleName(), e.getMessage());
+                            }
                         }
-                    } catch (Exception e) {
-                        log.debug("策略 {} 获取用户ID失败: {}", strategy.getClass().getSimpleName(), e.getMessage());
                     }
                 }
             }
@@ -399,6 +403,10 @@ public class RateLimiterKeyGenerator {
          * 从用户对象中提取用户ID
          */
         private String extractUserIdFromUserObject(Object user) {
+            if (user == null) {
+                return null;
+            }
+
             try {
                 // 尝试通过反射获取ID字段
                 Class<?> userClass = user.getClass();
@@ -406,29 +414,39 @@ public class RateLimiterKeyGenerator {
                 // 尝试常见的ID字段名
                 String[] idFields = {"id", "userId", "user_id", "getId", "getUserId"};
                 for (String fieldName : idFields) {
+                    if (fieldName == null || fieldName.isEmpty()) {
+                        continue;
+                    }
+
                     try {
                         if (fieldName.startsWith("get")) {
                             // 尝试调用getter方法
                             Method method = userClass.getMethod(fieldName);
-                            Object result = method.invoke(user);
-                            if (result != null) {
-                                return result.toString();
+                            if (method != null) {
+                                Object result = method.invoke(user);
+                                if (result != null && StringUtils.hasText(result.toString())) {
+                                    return result.toString();
+                                }
                             }
                         } else {
                             // 尝试访问字段
-                            java.lang.reflect.Field field = userClass.getDeclaredField(fieldName);
-                            field.setAccessible(true);
-                            Object result = field.get(user);
-                            if (result != null) {
-                                return result.toString();
+                            Field field = userClass.getDeclaredField(fieldName);
+                            if (field != null) {
+                                field.setAccessible(true);
+                                Object result = field.get(user);
+                                if (result != null && StringUtils.hasText(result.toString())) {
+                                    return result.toString();
+                                }
                             }
                         }
                     } catch (Exception e) {
                         // 忽略单个字段的获取失败
+                        log.trace("获取字段 {} 失败: {}", fieldName, e.getMessage());
                     }
                 }
             } catch (Exception e) {
                 // 反射操作失败
+                log.debug("反射获取用户ID失败: {}", e.getMessage());
             }
             return null;
         }
