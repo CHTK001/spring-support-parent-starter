@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Spring Support SSH Starter - SSH服务端集成模块
+
+    这是Spring Support框架的SSH服务端集成模块，提供了完整的SSH服务端解决方案。
+    主要特性包括：
+
+    1. SSH服务端 - 基于Apache SSHD的SSH服务端功能
+    2. 用户认证 - 支持用户名密码认证和公钥认证
+    3. 命令执行 - 支持远程命令执行和Shell会话
+    4. 文件传输 - 支持SCP和SFTP文件传输协议
+    5. 端口转发 - 支持本地和远程端口转发
+    6. 会话管理 - 提供会话管理和监控功能
+    7. 安全配置 - 支持各种安全配置选项
+    8. 日志记录 - 记录SSH连接和操作日志
+
+    @author CH
+    @version 4.0.0.32
+-->
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 继承父项目 -->
+    <parent>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-parent-starter</artifactId>
+        <version>4.0.0.32</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <!-- 模块基本信息 -->
+    <artifactId>spring-support-ssh-starter</artifactId>
+    <name>Spring Support SSH Starter</name>
+    <description>SSH服务端集成模块，提供SSH服务端功能和文件传输支持</description>
+
+    <!-- 依赖配置 -->
+    <dependencies>
+        <!-- Apache SSHD Core - 提供SSH服务端核心功能 -->
+        <dependency>
+            <groupId>org.apache.sshd</groupId>
+            <artifactId>sshd-core</artifactId>
+            <version>2.12.0</version>
+        </dependency>
+
+        <!-- Apache SSHD SCP - 提供SCP文件传输功能 -->
+        <dependency>
+            <groupId>org.apache.sshd</groupId>
+            <artifactId>sshd-scp</artifactId>
+            <version>2.12.0</version>
+        </dependency>
+
+        <!-- Apache SSHD SFTP - 提供SFTP文件传输功能 -->
+        <dependency>
+            <groupId>org.apache.sshd</groupId>
+            <artifactId>sshd-sftp</artifactId>
+            <version>2.12.0</version>
+        </dependency>
+
+        <!-- Spring Boot Starter - 提供Spring Boot基础功能 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+
+        <!-- Spring Boot Configuration Processor - 提供配置属性处理 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Spring Support Common - 提供通用功能 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-common-starter</artifactId>
+        </dependency>
+
+        <!-- Spring Boot Test - 测试依赖 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <!-- 构建配置 -->
+    <build>
+        <plugins>
+            <!-- Maven编译插件 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>21</source>
+                    <target>21</target>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+
+            <!-- Spring Boot Maven插件 -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
