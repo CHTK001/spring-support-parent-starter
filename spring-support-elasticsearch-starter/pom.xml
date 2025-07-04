@@ -1,35 +1,64 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Spring Support Elasticsearch Starter - Elasticsearch搜索引擎集成模块
+
+    这是Spring Support框架的Elasticsearch集成模块，提供了完整的搜索引擎解决方案。
+    主要特性包括：
+
+    1. Elasticsearch客户端集成 - 支持高级REST客户端
+    2. 文档操作 - 提供文档的增删改查功能
+    3. 索引管理 - 支持索引的创建、删除和管理
+    4. 搜索查询 - 提供复杂的搜索查询功能
+    5. 聚合分析 - 支持数据聚合和统计分析
+    6. 映射管理 - 支持字段映射的配置和管理
+    7. 批量操作 - 提供高效的批量数据操作
+    8. Spring Data集成 - 集成Spring Data Elasticsearch
+    9. 自动配置 - 提供开箱即用的自动配置
+
+    @author CH
+    @version 4.0.0.32
+-->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
+    <!-- 继承父项目配置 -->
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
         <version>4.0.0.32</version>
     </parent>
 
+    <!-- 项目基本信息 -->
     <artifactId>spring-support-elasticsearch-starter</artifactId>
+    <description>Spring Support框架Elasticsearch集成模块，提供完整的搜索引擎功能支持</description>
 
+    <!-- 项目属性配置 -->
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <elasticsearch-java>7.17.22</elasticsearch-java>
+        <elasticsearch-java>7.17.22</elasticsearch-java> <!-- Elasticsearch版本 -->
     </properties>
 
 
+    <!-- 依赖配置 -->
     <dependencies>
+        <!-- Elasticsearch工具类库 - 提供Elasticsearch操作的工具类和扩展功能 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-elasticsearch-starter</artifactId>
         </dependency>
+
+        <!-- Spring Data Elasticsearch - 提供Spring Data的Elasticsearch支持 -->
         <dependency>
             <groupId>org.springframework.data</groupId>
             <artifactId>spring-data-elasticsearch</artifactId>
             <version>4.4.12</version>
             <scope>compile</scope>
             <exclusions>
+                <!-- 排除默认的客户端，使用自定义版本 -->
                 <exclusion>
                     <artifactId>elasticsearch-rest-high-level-client</artifactId>
                     <groupId>org.elasticsearch.client</groupId>
@@ -40,18 +69,21 @@
                 </exclusion>
             </exclusions>
         </dependency>
-        <!--elasticsearch-->
+
+        <!-- Elasticsearch核心库 - 提供Elasticsearch的核心功能 -->
         <dependency>
             <groupId>org.elasticsearch</groupId>
             <artifactId>elasticsearch</artifactId>
             <version>${elasticsearch-java}</version>
         </dependency>
 
+        <!-- Elasticsearch高级REST客户端 - 提供高级的REST API客户端 -->
         <dependency>
             <groupId>org.elasticsearch.client</groupId>
             <artifactId>elasticsearch-rest-high-level-client</artifactId>
             <version>${elasticsearch-java}</version>
             <exclusions>
+                <!-- 排除核心库，避免版本冲突 -->
                 <exclusion>
                     <artifactId>elasticsearch</artifactId>
                     <groupId>org.elasticsearch</groupId>
@@ -59,6 +91,7 @@
             </exclusions>
         </dependency>
 
+        <!-- 通用功能模块 - 提供基础的工具类和通用功能 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-common-starter</artifactId>

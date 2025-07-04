@@ -1,0 +1,36 @@
+plugin:
+  circuit-breaker:
+    enable: true
+    circuit-breaker:
+      failure-rate-threshold: 50.0
+      minimum-number-of-calls: 5
+      instances:
+        test:
+          failure-rate-threshold: 30.0
+        testService:
+          failure-rate-threshold: 40.0
+    retry:
+      max-attempts: 3
+      wait-duration: 100ms
+      instances:
+        test:
+          max-attempts: 5
+    rate-limiter:
+      limit-for-period: 100
+      instances:
+        test:
+          limit-for-period: 50
+    bulkhead:
+      max-concurrent-calls: 10
+      instances:
+        test:
+          max-concurrent-calls: 5
+    time-limiter:
+      timeout-duration: 2s
+      instances:
+        test:
+          timeout-duration: 1s
+
+logging:
+  level:
+    com.chua.starter.circuitbreaker: DEBUG
