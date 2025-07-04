@@ -126,7 +126,7 @@ public class TableDeptV2Register implements DeptRegister {
         if (DataFilterTypeEnum.SELF == dataPermission) {
             EqualsTo equalsTo = new EqualsTo();
             equalsTo.setLeftExpression(new Column(table, createByColumn));
-            equalsTo.setRightExpression(new StringValue(currentUser.getId()));
+            equalsTo.setRightExpression(new StringValue(currentUser.getUserId()));
             if (null == where) {
                 return NO_DATA;
             }
