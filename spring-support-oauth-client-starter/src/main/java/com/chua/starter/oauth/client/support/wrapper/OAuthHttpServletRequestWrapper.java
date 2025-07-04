@@ -141,12 +141,10 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
                 
                 log.info("已清除Session中的用户信息 - 用户: {}", remoteUser);
             }
-            
             // 这里可以添加其他登出逻辑，比如：
             // 1. 通知OAuth服务器用户登出
             // 2. 清除缓存中的用户信息
             // 3. 记录登出日志
-            
         } catch (Exception e) {
             log.error("登出操作失败 - 用户: {}, 错误: {}", remoteUser, e.getMessage(), e);
             throw new ServletException("登出操作失败: " + e.getMessage(), e);
