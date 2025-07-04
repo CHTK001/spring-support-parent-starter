@@ -125,6 +125,18 @@ public class CookieUtil {
     public static Cookie get(HttpServletRequest request, String key) {
         // 获取请求中的所有Cookie
         Cookie[] cookies = request.getCookies();
+        return get(cookies, key);
+    }
+    /**
+     * 从Cookie数组中获取指定名称的Cookie。
+     * 这个方法用于在服务器端根据Cookie的名称查找并返回对应的Cookie对象。
+     * 如果找不到匹配的Cookie，则返回null。
+     *
+     * @param cookies Cookie数组，从中获取Cookie。
+     * @param key 指定的Cookie名称。
+     * @return 返回名称匹配的Cookie对象，如果不存在则返回null。
+     */
+    public static Cookie get( Cookie[] cookies, String key) {
         // 检查是否有Cookie被返回，以及数组是否为空
         if (cookies != null) {
             // 遍历所有Cookie，寻找匹配名称的Cookie

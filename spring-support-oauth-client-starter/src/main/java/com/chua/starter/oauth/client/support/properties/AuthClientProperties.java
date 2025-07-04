@@ -66,18 +66,6 @@ public class AuthClientProperties {
      */
     private String loginAddress = "${plugin.oauth.auth-address:}";
     /**
-     * ak
-     */
-    private String accessKey;
-    /**
-     * sk
-     */
-    private String secretKey;
-    /**
-     * 服务序列
-     */
-    private String serviceKey = "D518E462DF7B36828FA68CCD69FC6140";
-    /**
      * 加密方式
      */
     private String encryption = "aes";
@@ -86,11 +74,6 @@ public class AuthClientProperties {
      * 是否启用数据加密
      */
     private boolean enableEncryption = true;
-
-    /**
-     * 客户端IP地址（用于AKSK认证）
-     */
-    private String clientIp;
 
     /**
      * 拦截地址
@@ -138,12 +121,34 @@ public class AuthClientProperties {
     private String noPermissionPage = "/oauth-page";
 
     /**
+     * 密钥
+     */
+    private Aksk key = new Aksk();
+    /**
      * 临时用户
      */
     private TempUser temp = new TempUser();
 
+    /**
+     * 密钥
+     */
+    @Data
+    public static class Aksk {
+        /**
+         * ak
+         */
+        private String accessKey;
+        /**
+         * sk
+         */
+        private String secretKey;
+    }
+
     @Data
     public static class TempUser {
+        /**
+         * 是否启用临时用户
+         */
         private boolean open;
 
         private String menuPath;
