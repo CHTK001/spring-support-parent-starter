@@ -1,27 +1,24 @@
 package com.chua.starter.circuitbreaker.support.utils;
 
 import com.chua.starter.circuitbreaker.support.annotation.RateLimiter;
+import com.chua.starter.common.support.oauth.AuthService;
+import com.chua.starter.common.support.oauth.CurrentUser;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
-
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.security.Principal;
-import java.util.Base64;
-import java.util.List;
 
 /**
  * 限流键生成器
@@ -37,16 +34,8 @@ public class RateLimiterKeyGenerator {
 
     private final ExpressionParser parser = new SpelExpressionParser();
 
-    /**
-     * 用户ID获取策略列表，按优先级排序
-     */
-    private final List<UserIdStrategy> userIdStrategies = List.of(
-        new JwtTokenUserIdStrategy(),
-        new SpringSecurityUserIdStrategy(),
-        new CustomHeaderUserIdStrategy(),
-        new SessionUserIdStrategy(),
-        new PrincipalUserIdStrategy()
-    );
+    @Autowired
+    private AuthService authService;
 
     /**
      * 生成限流键
@@ -196,31 +185,43 @@ public class RateLimiterKeyGenerator {
     private String getCurrentUserId() {
         try {
             ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-            if (attributes != null) {
-                HttpServletRequest request = attributes.getRequest();
-                if (request != null) {
-                    // 按优先级尝试各种策略
-                    for (UserIdStrategy strategy : userIdStrategies) {
-                        if (strategy != null) {
-                            try {
-                                String userId = strategy.getUserId(request);
-                                if (StringUtils.hasText(userId) && !"anonymous".equals(userId)) {
-                                    log.debug("通过策略 {} 获取到用户ID: {}", strategy.getClass().getSimpleName(), userId);
-                                    return userId;
-                                }
-                            } catch (Exception e) {
-                                log.debug("策略 {} 获取用户ID失败: {}", strategy.getClass().getSimpleName(), e.getMessage());
-                            }
-                        }
-                    }
-                }
+            if (attributes == null) {
+                log.debug("无法获取ServletRequestAttributes，可能不在Web环境中");
+                return "anonymous";
             }
+
+            HttpServletRequest request = attributes.getRequest();
+            if (request == null) {
+                log.debug("无法获取HttpServletRequest");
+                return "anonymous";
+            }
+
+            CurrentUser currentUser = authService.getCurrentUser();
+            return null == currentUser ? "anonymous" : currentUser.getUserId();
         } catch (Exception e) {
             log.debug("获取当前用户ID失败", e);
         }
 
         log.debug("所有策略均失败，返回默认用户ID: anonymous");
         return "anonymous";
+    }
+
+    /**
+     * 验证用户ID的有效性
+     */
+    private boolean isValidUserId(String userId) {
+        if (!StringUtils.hasText(userId)) {
+            return false;
+        }
+
+        // 过滤掉一些明显无效的用户ID
+        String lowerUserId = userId.toLowerCase();
+        return !lowerUserId.equals("anonymous")
+                && !lowerUserId.equals("guest")
+                && !lowerUserId.equals("unknown")
+                && !lowerUserId.equals("null")
+                && !lowerUserId.equals("undefined")
+                && userId.length() <= 100; // 防止过长的ID
     }
 
     /**
@@ -246,277 +247,5 @@ public class RateLimiterKeyGenerator {
         return "unknown";
     }
 
-    /**
-     * 用户ID获取策略接口
-     */
-    private interface UserIdStrategy {
-        /**
-         * 从请求中获取用户ID
-         *
-         * @param request HTTP请求
-         * @return 用户ID，获取失败返回null或空字符串
-         */
-        String getUserId(HttpServletRequest request);
-    }
 
-    /**
-     * JWT Token用户ID获取策略
-     */
-    private static class JwtTokenUserIdStrategy implements UserIdStrategy {
-        @Override
-        public String getUserId(HttpServletRequest request) {
-            String authHeader = request.getHeader("Authorization");
-            if (StringUtils.hasText(authHeader) && authHeader.startsWith("Bearer ")) {
-                String token = authHeader.substring(7);
-                return parseUserIdFromJwtToken(token);
-            }
-            return null;
-        }
-
-        /**
-         * 从JWT Token中解析用户ID
-         *
-         * @param token JWT Token
-         * @return 用户ID
-         */
-        private String parseUserIdFromJwtToken(String token) {
-            if (!StringUtils.hasText(token)) {
-                return null;
-            }
-
-            try {
-                // 简单的JWT解析（仅解析payload部分）
-                String[] parts = token.split("\\.");
-                if (parts.length < 2) {
-                    log.debug("JWT token格式无效，部分数量: {}", parts.length);
-                    return null;
-                }
-
-                // 添加Base64填充字符以确保正确解码
-                String payload = parts[1];
-                while (payload.length() % 4 != 0) {
-                    payload += "=";
-                }
-
-                String decodedPayload = new String(Base64.getUrlDecoder().decode(payload));
-                log.debug("JWT payload解码成功: {}", decodedPayload);
-
-                // 按优先级查找用户ID字段
-                String[] userIdFields = {"sub", "userId", "user_id", "uid", "id"};
-                for (String field : userIdFields) {
-                    if (decodedPayload.contains("\"" + field + "\"")) {
-                        String userId = extractJsonValue(decodedPayload, field);
-                        if (StringUtils.hasText(userId)) {
-                            log.debug("从JWT中提取到用户ID: {} = {}", field, userId);
-                            return userId;
-                        }
-                    }
-                }
-            } catch (IllegalArgumentException e) {
-                log.debug("JWT Base64解码失败: {}", e.getMessage());
-            } catch (Exception e) {
-                log.debug("JWT解析失败: {}", e.getMessage());
-            }
-            return null;
-        }
-
-        /**
-         * 从JSON字符串中提取指定字段的值
-         * 支持字符串值和数字值
-         */
-        private String extractJsonValue(String json, String key) {
-            if (!StringUtils.hasText(json) || !StringUtils.hasText(key)) {
-                return null;
-            }
-
-            try {
-                // 匹配字符串值: "key": "value"
-                String stringPattern = "\"" + java.util.regex.Pattern.quote(key) + "\"\\s*:\\s*\"([^\"]+)\"";
-                java.util.regex.Pattern stringP = java.util.regex.Pattern.compile(stringPattern);
-                java.util.regex.Matcher stringM = stringP.matcher(json);
-                if (stringM.find()) {
-                    return stringM.group(1);
-                }
-
-                // 匹配数字值: "key": 123 或 "key": 123.45
-                String numberPattern = "\"" + java.util.regex.Pattern.quote(key) + "\"\\s*:\\s*([0-9]+(?:\\.[0-9]+)?)";
-                java.util.regex.Pattern numberP = java.util.regex.Pattern.compile(numberPattern);
-                java.util.regex.Matcher numberM = numberP.matcher(json);
-                if (numberM.find()) {
-                    return numberM.group(1);
-                }
-
-                // 匹配布尔值: "key": true/false
-                String boolPattern = "\"" + java.util.regex.Pattern.quote(key) + "\"\\s*:\\s*(true|false)";
-                java.util.regex.Pattern boolP = java.util.regex.Pattern.compile(boolPattern);
-                java.util.regex.Matcher boolM = boolP.matcher(json);
-                if (boolM.find()) {
-                    return boolM.group(1);
-                }
-            } catch (Exception e) {
-                log.debug("JSON值提取失败，key: {}, error: {}", key, e.getMessage());
-            }
-
-            return null;
-        }
-    }
-
-    /**
-     * Spring Security用户ID获取策略
-     */
-    private static class SpringSecurityUserIdStrategy implements UserIdStrategy {
-        @Override
-        public String getUserId(HttpServletRequest request) {
-            try {
-                // 使用反射来避免Spring Security依赖问题
-                Class<?> securityContextHolderClass = Class.forName("org.springframework.security.core.context.SecurityContextHolder");
-                Method getContextMethod = securityContextHolderClass.getMethod("getContext");
-                Object securityContext = getContextMethod.invoke(null);
-
-                if (securityContext != null) {
-                    Method getAuthenticationMethod = securityContext.getClass().getMethod("getAuthentication");
-                    Object authentication = getAuthenticationMethod.invoke(securityContext);
-
-                    if (authentication != null) {
-                        Method isAuthenticatedMethod = authentication.getClass().getMethod("isAuthenticated");
-                        Boolean isAuthenticated = (Boolean) isAuthenticatedMethod.invoke(authentication);
-
-                        if (Boolean.TRUE.equals(isAuthenticated)) {
-                            Method getNameMethod = authentication.getClass().getMethod("getName");
-                            String name = (String) getNameMethod.invoke(authentication);
-
-                            if (StringUtils.hasText(name) && !"anonymousUser".equals(name)) {
-                                return name;
-                            }
-                        }
-                    }
-                }
-            } catch (ClassNotFoundException e) {
-                // Spring Security不在类路径中
-                log.debug("Spring Security不可用: {}", e.getMessage());
-            } catch (Exception e) {
-                // Spring Security不可用或未配置
-                log.debug("Spring Security获取用户信息失败: {}", e.getMessage());
-            }
-            return null;
-        }
-    }
-
-    /**
-     * 自定义请求头用户ID获取策略
-     */
-    private static class CustomHeaderUserIdStrategy implements UserIdStrategy {
-        private final String[] headerNames = {"X-User-Id", "X-UserId", "User-Id", "UserId"};
-
-        @Override
-        public String getUserId(HttpServletRequest request) {
-            for (String headerName : headerNames) {
-                String userId = request.getHeader(headerName);
-                if (StringUtils.hasText(userId)) {
-                    return userId;
-                }
-            }
-
-            // 尝试从请求参数获取
-            String userId = request.getParameter("userId");
-            if (StringUtils.hasText(userId)) {
-                return userId;
-            }
-
-            return null;
-        }
-    }
-
-    /**
-     * Session用户ID获取策略
-     */
-    private static class SessionUserIdStrategy implements UserIdStrategy {
-        private final String[] sessionKeys = {"userId", "user_id", "USER_ID", "currentUserId"};
-
-        @Override
-        public String getUserId(HttpServletRequest request) {
-            HttpSession session = request.getSession(false);
-            if (session != null) {
-                for (String key : sessionKeys) {
-                    Object userId = session.getAttribute(key);
-                    if (userId != null) {
-                        return userId.toString();
-                    }
-                }
-
-                // 尝试获取用户对象
-                Object user = session.getAttribute("user");
-                if (user != null) {
-                    return extractUserIdFromUserObject(user);
-                }
-            }
-            return null;
-        }
-
-        /**
-         * 从用户对象中提取用户ID
-         */
-        private String extractUserIdFromUserObject(Object user) {
-            if (user == null) {
-                return null;
-            }
-
-            try {
-                // 尝试通过反射获取ID字段
-                Class<?> userClass = user.getClass();
-
-                // 尝试常见的ID字段名
-                String[] idFields = {"id", "userId", "user_id", "getId", "getUserId"};
-                for (String fieldName : idFields) {
-                    if (fieldName == null || fieldName.isEmpty()) {
-                        continue;
-                    }
-
-                    try {
-                        if (fieldName.startsWith("get")) {
-                            // 尝试调用getter方法
-                            Method method = userClass.getMethod(fieldName);
-                            if (method != null) {
-                                Object result = method.invoke(user);
-                                if (result != null && StringUtils.hasText(result.toString())) {
-                                    return result.toString();
-                                }
-                            }
-                        } else {
-                            // 尝试访问字段
-                            Field field = userClass.getDeclaredField(fieldName);
-                            if (field != null) {
-                                field.setAccessible(true);
-                                Object result = field.get(user);
-                                if (result != null && StringUtils.hasText(result.toString())) {
-                                    return result.toString();
-                                }
-                            }
-                        }
-                    } catch (Exception e) {
-                        // 忽略单个字段的获取失败
-                        log.trace("获取字段 {} 失败: {}", fieldName, e.getMessage());
-                    }
-                }
-            } catch (Exception e) {
-                // 反射操作失败
-                log.debug("反射获取用户ID失败: {}", e.getMessage());
-            }
-            return null;
-        }
-    }
-
-    /**
-     * Principal用户ID获取策略
-     */
-    private static class PrincipalUserIdStrategy implements UserIdStrategy {
-        @Override
-        public String getUserId(HttpServletRequest request) {
-            Principal principal = request.getUserPrincipal();
-            if (principal != null && StringUtils.hasText(principal.getName())) {
-                return principal.getName();
-            }
-            return null;
-        }
-    }
 }

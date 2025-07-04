@@ -135,7 +135,7 @@ public abstract class AbstractDeptRegister implements DeptRegister {
         if (DataFilterTypeEnum.SELF == dataPermission) {
             EqualsTo equalsTo = new EqualsTo();
             equalsTo.setLeftExpression(new Column(deptTable, createByColumn));
-            equalsTo.setRightExpression(new StringValue(user.getId()));
+            equalsTo.setRightExpression(new StringValue(user.getUserId()));
             if (null == where) {
                 plainSelect.setWhere(equalsTo);
                 return equalsTo;

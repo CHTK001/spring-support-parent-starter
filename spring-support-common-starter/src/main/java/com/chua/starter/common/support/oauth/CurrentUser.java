@@ -1,14 +1,16 @@
 package com.chua.starter.common.support.oauth;
 
-import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.common.support.constant.DataFilterTypeEnum;
+import com.google.common.base.Strings;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
+import org.springframework.util.AntPathMatcher;
+import org.springframework.util.CollectionUtils;
 
-import javax.management.relation.RoleInfo;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -21,45 +23,36 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CurrentUser {
-    private String id;
+
+    private static final String ANY = "*";
     /**
-     * 索引唯一由系统生成
+     * unionId
+     */
+    private String unionId;
+    /**
+     * openId
+     */
+    private String openId;
+    /**
+     * 索引
      */
     private String uid;
     /**
-     * 加密密码
+     * 用户id
      */
-    private String password;
+    private String userId;
+    /**
+     * 租户id
+     */
+    private String tenantId;
     /**
      * 名称
      */
     private String username;
     /**
-     * 角色
+     * 机构id
      */
-    private Set<String> roles;
-    /**
-     * 权限
-     */
-    private Set<String> permission;
-    /**
-     * 角色
-     */
-    private Set<RoleInfo> rolesByRole;
-
-    /**
-     * 数据权限(部门)
-     */
-    private DataFilterTypeEnum dataPermission;
-    /**
-     * 数据权限规则
-     */
-    private String dataPermissionRule;
-
-    /**
-     * 额外信息
-     */
-    private Map<String, Object> ext;
+    private String deptId;
     /**
      * 电话号码
      */
@@ -76,52 +69,145 @@ public class CurrentUser {
      * 性别
      */
     private String sex;
+    /**
+     * 权限
+     */
+    private Set<String> permission;
 
     /**
-     * 部门id
+     * 数据权限(部门)
      */
-    private String deptId;
+    private DataFilterTypeEnum dataPermission;
     /**
-     * address
+     * 数据权限规则
      */
-    private String address;
+    private String dataPermissionRule;
     /**
-     * 登录超时时间
+     * d
+     * /**
+     * 角色
      */
-    private Long expire;
+    private Set<String> roles;
+
+    private Map<String, Object> ext;
     /**
-     * 错误信息
+     * 最后一次登录地址
      */
-    private String message;
+    private String lastIp;
 
     /**
-     * 实现类
+     * 是否具备某个权限
+     *
+     * @param permission 权限
+     * @return 是否具备某个权限
      */
-    private String beanType;
-    /**
-     * 登陆方式
-     */
-    private String authType;
+    public boolean hasPermission(String permission) {
+        if (Strings.isNullOrEmpty(permission)) {
+            return false;
+        }
 
-    public String getExtValue(String key) {
-        return MapUtils.getString(ext, key);
+        if (permission.contains(ANY)) {
+            AntPathMatcher antPathMatcher = new AntPathMatcher();
+            for (String s : this.permission) {
+                if (antPathMatcher.match(permission, s)) {
+                    return true;
+                }
+            }
+        }
+
+        for (String s : this.permission) {
+            if (Objects.equals(permission, s)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
-     * 管理员
+     * 是否具备某个角色
      *
-     * @return boolean
+     * @param roles 角色
+     * @return 是否具备某个角色
+     */
+    public boolean hasRole(String[] roles) {
+        if (roles.length == 0) {
+            return true;
+        }
+
+        if (CollectionUtils.isEmpty(this.roles)) {
+            return false;
+        }
+
+        boolean hasRole = false;
+        for (String role : roles) {
+            hasRole |= hasRole(role);
+        }
+
+        return hasRole;
+    }
+
+    /**
+     * 是否具备某个角色
+     *
+     * @param role 角色
+     * @return 是否具备某个角色
+     */
+    public boolean hasRole(String role) {
+        if (Strings.isNullOrEmpty(role)) {
+            return false;
+        }
+
+        if (role.contains(ANY)) {
+            AntPathMatcher antPathMatcher = new AntPathMatcher();
+            for (String s : roles) {
+                if (antPathMatcher.match(role, s)) {
+                    return true;
+                }
+            }
+        }
+
+        for (String s : roles) {
+            if (Objects.equals(role, s)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public boolean hasPermission(String[] value) {
+        if (value.length == 0) {
+            return true;
+        }
+
+        if (CollectionUtils.isEmpty(this.permission)) {
+            return false;
+        }
+        for (String s : value) {
+            if (this.permission.contains(s)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * 是否管理员
+     *
+     * @return 是否管理员
      */
     public boolean isAdmin() {
-        return roles.contains("ADMIN");
+        return null != this.roles && this.roles.contains("ADMIN");
     }
 
     /**
-     * 部门账号
+     * 是否部门权限
      *
-     * @return boolean
+     * @return 是否部门权限
      */
     public boolean isDept() {
-        return deptId != null;
+        return null != this.roles && this.roles.contains("DEPT");
     }
 }

@@ -10,4 +10,14 @@ public interface AuthService {
      * @return 获取当前登录账号
      */
     CurrentUser getCurrentUser();
+
+
+    class DefaultAuthService implements AuthService {
+
+        @Override
+        public CurrentUser getCurrentUser() {
+            return null;
+        }
+    }
+
 }
