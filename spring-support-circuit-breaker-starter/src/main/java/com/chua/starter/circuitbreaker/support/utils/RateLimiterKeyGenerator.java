@@ -11,8 +11,7 @@ import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -281,50 +280,83 @@ public class RateLimiterKeyGenerator {
          * @return 用户ID
          */
         private String parseUserIdFromJwtToken(String token) {
+            if (!StringUtils.hasText(token)) {
+                return null;
+            }
+
             try {
                 // 简单的JWT解析（仅解析payload部分）
                 String[] parts = token.split("\\.");
-                if (parts.length >= 2) {
-                    String payload = new String(Base64.getUrlDecoder().decode(parts[1]));
+                if (parts.length < 2) {
+                    log.debug("JWT token格式无效，部分数量: {}", parts.length);
+                    return null;
+                }
 
-                    // 简单的JSON解析，查找用户ID字段
-                    if (payload.contains("\"sub\"")) {
-                        String sub = extractJsonValue(payload, "sub");
-                        if (StringUtils.hasText(sub)) {
-                            return sub;
-                        }
-                    }
+                // 添加Base64填充字符以确保正确解码
+                String payload = parts[1];
+                while (payload.length() % 4 != 0) {
+                    payload += "=";
+                }
 
-                    if (payload.contains("\"userId\"")) {
-                        String userId = extractJsonValue(payload, "userId");
+                String decodedPayload = new String(Base64.getUrlDecoder().decode(payload));
+                log.debug("JWT payload解码成功: {}", decodedPayload);
+
+                // 按优先级查找用户ID字段
+                String[] userIdFields = {"sub", "userId", "user_id", "uid", "id"};
+                for (String field : userIdFields) {
+                    if (decodedPayload.contains("\"" + field + "\"")) {
+                        String userId = extractJsonValue(decodedPayload, field);
                         if (StringUtils.hasText(userId)) {
-                            return userId;
-                        }
-                    }
-
-                    if (payload.contains("\"user_id\"")) {
-                        String userId = extractJsonValue(payload, "user_id");
-                        if (StringUtils.hasText(userId)) {
+                            log.debug("从JWT中提取到用户ID: {} = {}", field, userId);
                             return userId;
                         }
                     }
                 }
+            } catch (IllegalArgumentException e) {
+                log.debug("JWT Base64解码失败: {}", e.getMessage());
             } catch (Exception e) {
-                // JWT解析失败，忽略
+                log.debug("JWT解析失败: {}", e.getMessage());
             }
             return null;
         }
 
         /**
          * 从JSON字符串中提取指定字段的值
+         * 支持字符串值和数字值
          */
         private String extractJsonValue(String json, String key) {
-            String pattern = "\"" + key + "\"\\s*:\\s*\"([^\"]+)\"";
-            java.util.regex.Pattern p = java.util.regex.Pattern.compile(pattern);
-            java.util.regex.Matcher m = p.matcher(json);
-            if (m.find()) {
-                return m.group(1);
+            if (!StringUtils.hasText(json) || !StringUtils.hasText(key)) {
+                return null;
             }
+
+            try {
+                // 匹配字符串值: "key": "value"
+                String stringPattern = "\"" + java.util.regex.Pattern.quote(key) + "\"\\s*:\\s*\"([^\"]+)\"";
+                java.util.regex.Pattern stringP = java.util.regex.Pattern.compile(stringPattern);
+                java.util.regex.Matcher stringM = stringP.matcher(json);
+                if (stringM.find()) {
+                    return stringM.group(1);
+                }
+
+                // 匹配数字值: "key": 123 或 "key": 123.45
+                String numberPattern = "\"" + java.util.regex.Pattern.quote(key) + "\"\\s*:\\s*([0-9]+(?:\\.[0-9]+)?)";
+                java.util.regex.Pattern numberP = java.util.regex.Pattern.compile(numberPattern);
+                java.util.regex.Matcher numberM = numberP.matcher(json);
+                if (numberM.find()) {
+                    return numberM.group(1);
+                }
+
+                // 匹配布尔值: "key": true/false
+                String boolPattern = "\"" + java.util.regex.Pattern.quote(key) + "\"\\s*:\\s*(true|false)";
+                java.util.regex.Pattern boolP = java.util.regex.Pattern.compile(boolPattern);
+                java.util.regex.Matcher boolM = boolP.matcher(json);
+                if (boolM.find()) {
+                    return boolM.group(1);
+                }
+            } catch (Exception e) {
+                log.debug("JSON值提取失败，key: {}, error: {}", key, e.getMessage());
+            }
+
             return null;
         }
     }
@@ -336,13 +368,35 @@ public class RateLimiterKeyGenerator {
         @Override
         public String getUserId(HttpServletRequest request) {
             try {
-                Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-                if (authentication != null && authentication.isAuthenticated()
-                    && !"anonymousUser".equals(authentication.getName())) {
-                    return authentication.getName();
+                // 使用反射来避免Spring Security依赖问题
+                Class<?> securityContextHolderClass = Class.forName("org.springframework.security.core.context.SecurityContextHolder");
+                Method getContextMethod = securityContextHolderClass.getMethod("getContext");
+                Object securityContext = getContextMethod.invoke(null);
+
+                if (securityContext != null) {
+                    Method getAuthenticationMethod = securityContext.getClass().getMethod("getAuthentication");
+                    Object authentication = getAuthenticationMethod.invoke(securityContext);
+
+                    if (authentication != null) {
+                        Method isAuthenticatedMethod = authentication.getClass().getMethod("isAuthenticated");
+                        Boolean isAuthenticated = (Boolean) isAuthenticatedMethod.invoke(authentication);
+
+                        if (Boolean.TRUE.equals(isAuthenticated)) {
+                            Method getNameMethod = authentication.getClass().getMethod("getName");
+                            String name = (String) getNameMethod.invoke(authentication);
+
+                            if (StringUtils.hasText(name) && !"anonymousUser".equals(name)) {
+                                return name;
+                            }
+                        }
+                    }
                 }
+            } catch (ClassNotFoundException e) {
+                // Spring Security不在类路径中
+                log.debug("Spring Security不可用: {}", e.getMessage());
             } catch (Exception e) {
                 // Spring Security不可用或未配置
+                log.debug("Spring Security获取用户信息失败: {}", e.getMessage());
             }
             return null;
         }
