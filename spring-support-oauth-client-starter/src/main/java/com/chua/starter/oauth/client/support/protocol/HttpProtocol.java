@@ -8,6 +8,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.IdUtils;
 import com.chua.common.support.utils.SignUtils;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
@@ -57,6 +58,7 @@ public class HttpProtocol extends AbstractProtocol {
         jsonObject.put("x-oauth-secret-key", authClientProperties.getKey().getSecretKey());
         jsonObject.put("x-oauth-sub-protocol", StringUtils.defaultString(subProtocol, "DEFAULT").toUpperCase());
         jsonObject.put("x-oauth-param-address", RequestUtils.getIpAddress());
+        jsonObject.put("x-oauth-param-app-name", SpringBeanUtils.getEnvironment().resolvePlaceholders("${spring.application.name:}"));
         return createAuthenticationInformation(jsonObject, null, authClientProperties.getOauthUrl());
     }
 
