@@ -8,6 +8,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.IdUtils;
 import com.chua.common.support.utils.SignUtils;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.enums.UpgradeType;
@@ -47,7 +48,7 @@ public class HttpProtocol extends AbstractProtocol {
     }
 
     @Override
-    protected AuthenticationInformation upgradeInformation(Cookie cookie, String token, String subProtocol) {
+    protected AuthenticationInformation approve(Cookie cookie, String token, String subProtocol) {
         JsonObject jsonObject = new JsonObject();
         // 构建认证数据
         jsonObject.put("x-oauth-cookie", cookie.getValue());
@@ -55,6 +56,7 @@ public class HttpProtocol extends AbstractProtocol {
         jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
         jsonObject.put("x-oauth-secret-key", authClientProperties.getKey().getSecretKey());
         jsonObject.put("x-oauth-sub-protocol", StringUtils.defaultString(subProtocol, "DEFAULT").toUpperCase());
+        jsonObject.put("x-oauth-param-address", RequestUtils.getIpAddress());
         return createAuthenticationInformation(jsonObject, null, authClientProperties.getOauthUrl());
     }
 
