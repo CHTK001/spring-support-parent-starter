@@ -66,7 +66,7 @@ public abstract class AbstractProtocol implements Protocol {
      * @param subProtocol 认证协议
      * @return 认证信息
      */
-    protected abstract AuthenticationInformation upgradeInformation(Cookie cookies, String token, String subProtocol);
+    protected abstract AuthenticationInformation approve(Cookie cookies, String token, String subProtocol);
 
     /**
      * 获取认证信息（升级用）
@@ -147,7 +147,7 @@ public abstract class AbstractProtocol implements Protocol {
                 return authenticationInformation;
             }
         }
-        AuthenticationInformation authenticationInformation = upgradeInformation(cookie, token, subProtocol);
+        AuthenticationInformation authenticationInformation = approve(cookie, token, subProtocol);
 
         CACHEABLE.put(cacheKey, authenticationInformation);
         return authenticationInformation;
