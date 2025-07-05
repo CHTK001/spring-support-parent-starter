@@ -20,6 +20,7 @@ import com.chua.starter.oauth.client.support.enums.UpgradeType;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.infomation.Information;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
+import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.LoginResult;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import jakarta.servlet.http.Cookie;
@@ -76,6 +77,15 @@ public abstract class AbstractProtocol implements Protocol {
      */
     protected abstract AuthenticationInformation upgradeInformation(Cookie cookie, String token, UpgradeType upgradeType, String refreshToken);
 
+
+    /**
+     * 是否加密
+     *
+     * @return 是否加密
+     */
+    protected boolean isEncode() {
+        return enableEncryption;
+    }
     /**
      * 创建数据
      *
@@ -193,7 +203,7 @@ public abstract class AbstractProtocol implements Protocol {
                 body = data.toString();
             }
             LoginResult loginResult = Json.fromJson(body, LoginResult.class);
-            UserResume userResume = BeanUtils.copyProperties(loginResult.getUserResult(), UserResume.class);
+            UserResume userResume = BeanUtils.copyProperties(loginResult.getUserResume(), UserResume.class);
             return loginResult;
         }
 
@@ -208,12 +218,12 @@ public abstract class AbstractProtocol implements Protocol {
      * @param key          密钥
      * @return 认证信息
      */
-    protected AuthenticationInformation createAuthenticationInformation(ReturnResult returnResult, String key) {
+    protected AuthenticationInformation createAuthenticationInformation(ReturnResult returnResult, String key, String path) {
         String code = returnResult.getCode();
+        HttpServletRequest servletRequest = RequestUtils.getRequest();
         if (RESOURCE_OAUTH_ERROR.getCode().equals(code) || RESULT_ACCESS_UNAUTHORIZED.getCode().equals(code)) {
-            HttpServletRequest servletRequest = RequestUtils.getRequest();
             if (null != servletRequest) {
-                CookieUtil.remove(servletRequest, ResponseUtils.getResponse(), "x-oauth-cookie");
+                unregisterFromRequest(servletRequest);
             }
 
             return new AuthenticationInformation(AUTHENTICATION_FAILURE, null);
@@ -221,6 +231,7 @@ public abstract class AbstractProtocol implements Protocol {
 
         Object data = returnResult.getData();
         if (Objects.isNull(data)) {
+            unregisterFromRequest(servletRequest);
             return new AuthenticationInformation(AUTHENTICATION_SERVER_EXCEPTION, null);
         }
 
@@ -233,14 +244,51 @@ public abstract class AbstractProtocol implements Protocol {
                 body = data.toString();
             }
 
+            if(path.endsWith("login")) {
+                LoginResult loginResult = Json.fromJson(body, LoginResult.class);
+                UserResume userResume = loginResult.getUserResume();
+                registerToRequest(userResume);
+                AuthenticationInformation authenticationInformation = new AuthenticationInformation(OK, userResume);
+                authenticationInformation.setRefreshToken(loginResult.getRefreshToken());
+                authenticationInformation.setToken(loginResult.getToken());
+                return authenticationInformation;
+            }
+
+            if(path.endsWith("logout")) {
+                unregisterFromRequest(servletRequest);
+                return new AuthenticationInformation(Information.OK, null);
+            }
             UserResume userResume = Json.fromJson(body, UserResume.class);
-            RequestUtils.setUsername(userResume.getUsername());
-            RequestUtils.setUserInfo(userResume);
             return new AuthenticationInformation(Information.OK, userResume);
         }
 
 
         return new AuthenticationInformation(OTHER, null);
+    }
+
+    /**
+     * 删除hook
+     *
+     */
+    private void unregisterFromRequest(HttpServletRequest servletRequest) {
+        RequestUtils.removeUsername();
+        RequestUtils.removeUserInfo();
+        RequestUtils.removeUserId();
+        RequestUtils.removeTenantId();
+        if(null != servletRequest) {
+            CookieUtil.remove(servletRequest, ResponseUtils.getResponse(), "x-oauth-cookie");
+        }
+    }
+    /**
+     * 注册
+     *
+     * @return {@link LoginAuthResult}
+     */
+    public static void registerToRequest(UserResume userResume) {
+        RequestUtils.setUsername(userResume.getUsername());
+        RequestUtils.setUserId(userResume.getUserId());
+        RequestUtils.setTenantId(userResume.getTenantId());
+        RequestUtils.setUserInfo(userResume);
     }
 
     /**

@@ -1,8 +1,12 @@
 package com.chua.starter.oauth.client.support.user;
 
+import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.common.support.constant.DataFilterTypeEnum;
 import com.google.common.base.Strings;
+import lombok.Builder;
 import lombok.Data;
+import lombok.Singular;
+import lombok.experimental.SuperBuilder;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.util.CollectionUtils;
 
@@ -17,6 +21,7 @@ import java.util.Set;
  * @since 2022/7/23 8:48
  */
 @Data
+@SuperBuilder
 public class UserResume  {
 
     /**
@@ -36,11 +41,20 @@ public class UserResume  {
      * 用户id
      */
     private String userId;
+
+    /**
+     * 登录方式
+     */
+    private String loginType;
     /**
      * 租户id
      */
     private String tenantId;
 
+    /**
+     * 地址
+     */
+    private String address;
     /**
      * 机构id
      */
@@ -49,6 +63,26 @@ public class UserResume  {
      * 名称
      */
     private String username;
+
+    /**
+     * 登录次数
+     */
+    private int loginCnt;
+
+    /**
+     * 昵称
+     */
+    private String nickName;
+
+    /**
+     * 过期时间
+     */
+    private Long expireTime;
+
+    /**
+     * 真实姓名
+     */
+    private String realName;
     /**
      * 电话号码
      */
@@ -78,7 +112,7 @@ public class UserResume  {
     /**
      * 角色
      */
-    private Set<UserResult.RoleInfo> rolesByRole;
+    private Set<RoleInfo> rolesByRole;
 
     /**
      * 数据权限(部门)
@@ -93,10 +127,15 @@ public class UserResume  {
      */
     private String lastIp;
 
+    @Singular("optional")
     private Map<String, Object> ext;
 
     private static final String ANY = "*";
 
+    /**
+     * 登录信息
+     */
+    private String message;
     /**
      * 是否具备某个权限
      *
@@ -197,5 +236,111 @@ public class UserResume  {
 
     public boolean isAdmin() {
         return null != this.roles && this.roles.contains("ADMIN");
+    }
+
+    /**
+     * 获取扩展信息
+     *
+     * @param name 名称
+     * @return 扩展信息
+     */
+    public String getOption(String name) {
+        return MapUtils.getString(ext, name);
+    }
+
+    /**
+     * 获取扩展信息
+     *
+     * @param name          名称
+     * @param defaultValue 默认值
+     * @return 扩展信息
+     */
+    public String getOption(String name, String defaultValue) {
+        return MapUtils.getString(ext, name, defaultValue);
+    }
+
+    /**
+     * 获取扩展信息
+     *
+     * @param name          名称
+     * @param defaultValue 默认值
+     * @return 扩展信息
+     */
+    public Integer getOption(String name, Integer defaultValue) {
+        return MapUtils.getInteger(ext, name, defaultValue);
+    }
+
+    /**
+     * 获取扩展信息
+     *
+     * @param name          名称
+     * @param defaultValue 默认值
+     * @return 扩展信息
+     */
+    public Long getOption(String name, Long defaultValue) {
+        return MapUtils.getLong(ext, name, defaultValue);
+    }
+
+    /**
+     * 获取扩展信息
+     *
+     * @param name          名称
+     * @param defaultValue 默认值
+     * @return 扩展信息
+     */
+    public Double getOption(String name, Double defaultValue) {
+        return MapUtils.getDouble(ext, name, defaultValue);
+    }
+
+    /**
+     * 获取扩展信息
+     *
+     * @param name          名称
+     * @param defaultValue 默认值
+     * @return 扩展信息
+     */
+    public Boolean getOption(String name, Boolean defaultValue) {
+        return MapUtils.getBoolean(ext, name, defaultValue);
+    }
+
+
+
+
+
+    @Data
+    public static class RoleInfo {
+
+        /**
+         * 角色名称
+         */
+        private String roleName;
+        /**
+         * 角色id
+         */
+        private String roleId;
+
+        /**
+         * 角色编码
+         */
+        private String roleCode;
+        /**
+         * 角色描述
+         */
+        private String roleDesc;
+
+        /**
+         * 是否可读
+         */
+        private boolean readable;
+
+        /**
+         * 是否可写
+         */
+        private boolean writeable;
+
+        /**
+         * 是否可执行
+         */
+        private boolean executable;
     }
 }

@@ -125,7 +125,7 @@ public class UserStatisticProvider {
         UserResult userLoginInfo = AuthClientExecute.getInstance().getUserResult();
         UserInfoVO userInfoVO = new UserInfoVO();
         userInfoVO.setUserName(userLoginInfo.getUsername());
-        userInfoVO.setUserRealName(userLoginInfo.getExtValue("userRealName"));
+        userInfoVO.setUserRealName(userLoginInfo.getOption("userRealName"));
         userInfoVO.setNickname(userLoginInfo.getName());
         userInfoVO.setUserId(MapUtils.getString(userLoginInfo.getExt(), "userId"));
         userInfoVO.setUserMobile(MapUtils.getString(userLoginInfo.getExt(), "userMobile"));

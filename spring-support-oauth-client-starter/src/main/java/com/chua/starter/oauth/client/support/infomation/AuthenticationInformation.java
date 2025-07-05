@@ -3,6 +3,8 @@ package com.chua.starter.oauth.client.support.infomation;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 
 import static com.chua.starter.oauth.client.support.infomation.Information.*;
 
@@ -13,17 +15,25 @@ import static com.chua.starter.oauth.client.support.infomation.Information.*;
  * @since 2022/7/23 13:05
  */
 @Data
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class AuthenticationInformation {
     /**
      * 状态信息
      */
-    private Information information;
+    private final Information information;
     /**
      * 结果
      */
-    private UserResume returnResult;
+    private final UserResume returnResult;
+    /**
+     * token信息
+     */
+    private String token;
 
+    /**
+     * 刷新token
+     */
+    private String refreshToken;
     /**
      * 无密钥
      *

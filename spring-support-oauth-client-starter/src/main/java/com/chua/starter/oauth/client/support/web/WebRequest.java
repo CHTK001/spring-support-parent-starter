@@ -221,7 +221,7 @@ public class WebRequest {
         Cookie[] cookie = getCookie();
         String token = getToken();
         // 快速确定协议类型
-        return ServiceProvider.of(Protocol.class).getExtension(protocol).approve(cookie, token, request.getHeader("x-oauth-protocol"));
+        return ServiceProvider.of(Protocol.class).getNewExtension(protocol, authProperties).approve(cookie, token, request.getHeader("x-oauth-protocol"));
     }
 
 
@@ -275,7 +275,7 @@ public class WebRequest {
         if ((cookie == null || cookie.length == 0) && (token == null || token.isEmpty())) {
             return null;
         }
-        return ServiceProvider.of(Protocol.class).getExtension(protocol).upgrade(cookie, token,
+        return ServiceProvider.of(Protocol.class).getNewExtension(protocol, authProperties).upgrade(cookie, token,
                 upgradeType, refreshToken);
     }
 }
