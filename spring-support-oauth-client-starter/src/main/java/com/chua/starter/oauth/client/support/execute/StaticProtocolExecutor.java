@@ -67,7 +67,7 @@ public class StaticProtocolExecutor implements ProtocolExecutor{
                 List<String> userAndPassword = Splitter.on(":").omitEmptyStrings().limit(2).trimResults().splitToList(string);
                 if(isMatch(userAndPassword, username, password)) {
                     loginAuthResult.setCode(200);
-                    UserResume userResult = UserResume.builder().build();
+                    UserResume userResult = new UserResume();
                     userResult.setUserId("0");
                     userResult.setLoginType(AuthType.STATIC.name());
                     userResult.setUsername(username);

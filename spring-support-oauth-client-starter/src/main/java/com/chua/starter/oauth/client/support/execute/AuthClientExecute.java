@@ -87,7 +87,7 @@ public class AuthClientExecute {
             }
 
             if (attribute instanceof UserResume) {
-                UserResult userResult = UserResult.builder().build();
+                UserResult userResult = new UserResult();
                 com.chua.common.support.bean.BeanUtils.copyProperties(attribute, userResult);
                 request.getSession().setAttribute(SESSION_USER_INFO, userResult);
                 return userResult;
@@ -98,7 +98,7 @@ public class AuthClientExecute {
                 authClientProperties,
                 request, null);
 
-        UserResult userResult =UserResult.builder().build();
+        UserResult userResult = new UserResult();
         AuthenticationInformation authentication = webRequest1.authentication();
         UserResume returnResult = authentication.getReturnResult();
         if (null == returnResult) {
@@ -130,7 +130,7 @@ public class AuthClientExecute {
             }
 
             if (attribute instanceof UserResume) {
-                UserResult userResult = UserResult.builder().build();
+                UserResult userResult = new UserResult();
                 com.chua.common.support.bean.BeanUtils.copyProperties(attribute, userResult);
                 request.getSession().setAttribute(SESSION_USER_INFO, userResult);
                 return userResult;
@@ -141,7 +141,7 @@ public class AuthClientExecute {
                 authClientProperties,
                 request, null);
 
-        UserResult userResult = UserResult.builder().build();
+        UserResult userResult = new UserResult();
         AuthenticationInformation authentication = webRequest1.authentication();
         UserResume returnResult = authentication.getReturnResult();
         if (null == returnResult) {
@@ -199,10 +199,10 @@ public class AuthClientExecute {
      * @return UID
      */
     public static String createUid(String username, String authType) {
-        UserResult userResult = UserResult.builder().build();
+        UserResult userResult = new UserResult();
         userResult.setLoginType(authType);
 
-        return Md5Utils.getInstance().getMd5String( username +
+        return Md5Utils.getInstance().getMd5String(username +
                 userResult.getLoginType());
     }
 
@@ -253,7 +253,7 @@ public class AuthClientExecute {
         HttpServletRequest request = attributes.getRequest();
         Protocol protocol = ServiceProvider.of(Protocol.class).getExtension(authClientProperties.getProtocol());
         AuthenticationInformation approve = protocol.approve(null, token, request.getHeader("x-oauth-protocol"));
-        if(approve.getInformation().getCode() != 200) {
+        if (approve.getInformation().getCode() != 200) {
             return null;
         }
         UserResult userResult = BeanUtils.copyProperties(approve.getReturnResult(), UserResult.class);
@@ -279,6 +279,7 @@ public class AuthClientExecute {
         Object attribute = request.getSession().getAttribute(SESSION_TENANT_ID);
         return null == attribute ? null : attribute.toString();
     }
+
     /**
      * 获取用户名
      *
