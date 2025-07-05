@@ -12,6 +12,7 @@ import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.enums.UpgradeType;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
+import com.chua.starter.oauth.client.support.infomation.Information;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
@@ -22,6 +23,8 @@ import kong.unirest.HttpResponse;
 import kong.unirest.Unirest;
 import kong.unirest.UnirestException;
 import lombok.extern.slf4j.Slf4j;
+import me.zhyd.oauth.exception.AuthException;
+import me.zhyd.oauth.log.Log;
 
 import java.util.Map;
 import java.util.UUID;
@@ -96,7 +99,10 @@ public class HttpProtocol extends AbstractProtocol {
         jsonObject.put("x-oauth-uid", uid);
         jsonObject.put("x-oauth-logout-type", logoutType);
         AuthenticationInformation information = createAuthenticationInformation(jsonObject, null, authClientProperties.getLogoutPage());
-        return null;
+        if(information.getInformation() == Information.OK) {
+            return LoginAuthResult.OK;
+        }
+        throw new AuthException(information.getInformation().getMessage());
     }
 
 
