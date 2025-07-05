@@ -60,13 +60,13 @@ public class DefaultProtocolExecutor implements ProtocolExecutor{
 
     @Override
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
-        return ServiceProvider.of(Protocol.class).getExtension(protocol)
+        return ServiceProvider.of(Protocol.class).getNewExtension(protocol, authClientProperties)
                 .getAccessToken(username, password, authType, ext);
     }
 
     @Override
     public LoginAuthResult logout(String uid, LogoutType logoutType, UserResult userResult ) {
-        return ServiceProvider.of(Protocol.class).getExtension(protocol)
+        return ServiceProvider.of(Protocol.class).getNewExtension(protocol, authClientProperties)
                 .logout(uid, logoutType, userResult);
     }
 

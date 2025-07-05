@@ -27,5 +27,5 @@ public class LoginResult {
     /**
      * 用户信息
      */
-    private UserResult userResult;
+    private UserResume userResume;
 }

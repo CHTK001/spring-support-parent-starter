@@ -5,6 +5,7 @@ import com.chua.common.support.annotations.SpiDefault;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.utils.IdUtils;
 import com.chua.common.support.utils.SignUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.oauth.client.support.enums.AuthType;
@@ -77,7 +78,13 @@ public class HttpProtocol extends AbstractProtocol {
         jsonObject.put("x-oauth-auth-type", authType);
         jsonObject.put("x-oauth-ext", ext);
         AuthenticationInformation information = createAuthenticationInformation(jsonObject, null, authClientProperties.getLoginPage());
-        return null;
+        LoginAuthResult loginAuthResult = new LoginAuthResult();
+        loginAuthResult.setCode(information.getInformation().getCode());
+        loginAuthResult.setMessage(information.getInformation().getMessage());
+        loginAuthResult.setUserResume(information.getReturnResult());
+        loginAuthResult.setToken(information.getToken());
+        loginAuthResult.setRefreshToken(information.getRefreshToken());
+        return loginAuthResult;
     }
 
     @Override
@@ -109,11 +116,12 @@ public class HttpProtocol extends AbstractProtocol {
         }
 
         // 生成随机密钥和请求头参数
-        String key = UUID.randomUUID().toString();
+        String key =  IdUtils.simpleUuid();
         jsonObject.put("x-ext-request-key", UUID.randomUUID().toString());
         jsonObject.put("x-ext-timestamp", System.currentTimeMillis());
 
-        String timestamp = System.currentTimeMillis() + "";
+        String timestamp = System.nanoTime() + "";
+        String key1 = IdUtils.simpleUuid();
 
         HttpResponse<String> httpResponse = null;
         try {
@@ -125,8 +133,10 @@ public class HttpProtocol extends AbstractProtocol {
             // 设置基础请求头
             HttpRequestWithBody requestWithBody = withBody
                     .header("x-oauth-timestamp", timestamp)
-                    .header("x-oauth-serial", createData(key, timestamp))
-                    .header("x-oauth-sign", SignUtils.generateObjectSignString(jsonObject));
+                    .header("x-oauth-uuid", key1)
+                    .header("x-oauth-encode", String.valueOf(isEncode()))
+                    .header("x-oauth-serial", createData(key, key1))
+                    .header("x-oauth-sign", SignUtils.generateSignFromMap(jsonObject));
 
             // 如果有升级类型，则添加相应请求头
             if (null != upgradeType) {
@@ -161,7 +171,8 @@ public class HttpProtocol extends AbstractProtocol {
         // 成功响应时解析返回结果
         if (status == 200) {
             return createAuthenticationInformation(Json.fromJson(body, ReturnResult.class),
-                    httpResponse.getHeaders().getFirst("x-oauth-response-serial"));
+                    httpResponse.getHeaders().getFirst("x-oauth-response-serial"),
+                    path);
         }
 
         // 默认返回服务器错误

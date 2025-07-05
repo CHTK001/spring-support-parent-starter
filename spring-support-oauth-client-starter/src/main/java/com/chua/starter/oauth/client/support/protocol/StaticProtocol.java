@@ -63,7 +63,7 @@ public class StaticProtocol extends AbstractProtocol {
      * @return {@link AuthenticationInformation}
      */
     private AuthenticationInformation newAuthenticationInformation(String token, Cookie[] cookie) {
-        UserResume userResume = new UserResume();
+        UserResume userResume = UserResume.builder().build();
         UserResult userResult = null;
         if (StringUtils.isNotBlank(token) && !NULL.equals(token)) {
             userResult = Json.fromJson(SM4.decodeHex(token), UserResult.class);
