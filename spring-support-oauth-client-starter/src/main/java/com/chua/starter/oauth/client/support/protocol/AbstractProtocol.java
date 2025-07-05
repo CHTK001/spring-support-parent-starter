@@ -50,9 +50,11 @@ public abstract class AbstractProtocol implements Protocol {
         this.authClientProperties = authClientProperties;
         this.encryption = authClientProperties.getEncryption();
         this.enableEncryption = authClientProperties.isEnableEncryption();
-        CACHEABLE = new GuavaCacheable((int) authClientProperties.getCacheTimeout() / 3600);
-        CACHEABLE.afterPropertiesSet();
-        CACHEABLE = CACHEABLE.cacheHotColdBackup(authClientProperties.isCacheHotColdBackup());
+        if(null == CACHEABLE) {
+            CACHEABLE = new GuavaCacheable((int) authClientProperties.getCacheTimeout() / 3600);
+            CACHEABLE.afterPropertiesSet();
+            CACHEABLE = CACHEABLE.cacheHotColdBackup(authClientProperties.isCacheHotColdBackup());
+        }
     }
 
 
