@@ -3,13 +3,13 @@ package com.chua.starter.oauth.client.support.user;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.common.support.constant.DataFilterTypeEnum;
 import com.google.common.base.Strings;
-import lombok.Builder;
 import lombok.Data;
-import lombok.Singular;
-import lombok.experimental.SuperBuilder;
+import lombok.NoArgsConstructor;
+import lombok.experimental.Accessors;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.util.CollectionUtils;
 
+import java.io.Serializable;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -21,8 +21,13 @@ import java.util.Set;
  * @since 2022/7/23 8:48
  */
 @Data
-@SuperBuilder
-public class UserResume  {
+@Accessors(chain = true)
+@NoArgsConstructor
+public class UserResume implements Serializable {
+
+    public UserResume(String message) {
+        this.message = message;
+    }
 
     /**
      * unionId
@@ -127,15 +132,21 @@ public class UserResume  {
      */
     private String lastIp;
 
-    @Singular("optional")
+    /**
+     * 扩展信息
+     */
     private Map<String, Object> ext;
 
+    /**
+     * 扩展信息
+     */
     private static final String ANY = "*";
 
     /**
      * 登录信息
      */
     private String message;
+
     /**
      * 是否具备某个权限
      *
@@ -172,11 +183,11 @@ public class UserResume  {
      * @return 是否具备某个角色
      */
     public boolean hasRole(String[] roles) {
-        if(roles.length == 0) {
+        if (roles.length == 0) {
             return true;
         }
 
-        if(CollectionUtils.isEmpty(this.roles)) {
+        if (CollectionUtils.isEmpty(this.roles)) {
             return false;
         }
 
@@ -218,15 +229,15 @@ public class UserResume  {
     }
 
     public boolean hasPermission(String[] value) {
-        if(value.length == 0) {
+        if (value.length == 0) {
             return true;
         }
 
-        if(CollectionUtils.isEmpty(this.permission)) {
+        if (CollectionUtils.isEmpty(this.permission)) {
             return false;
         }
         for (String s : value) {
-            if(this.permission.contains(s)) {
+            if (this.permission.contains(s)) {
                 return true;
             }
         }
@@ -251,7 +262,7 @@ public class UserResume  {
     /**
      * 获取扩展信息
      *
-     * @param name          名称
+     * @param name         名称
      * @param defaultValue 默认值
      * @return 扩展信息
      */
@@ -262,7 +273,7 @@ public class UserResume  {
     /**
      * 获取扩展信息
      *
-     * @param name          名称
+     * @param name         名称
      * @param defaultValue 默认值
      * @return 扩展信息
      */
@@ -273,7 +284,7 @@ public class UserResume  {
     /**
      * 获取扩展信息
      *
-     * @param name          名称
+     * @param name         名称
      * @param defaultValue 默认值
      * @return 扩展信息
      */
@@ -284,7 +295,7 @@ public class UserResume  {
     /**
      * 获取扩展信息
      *
-     * @param name          名称
+     * @param name         名称
      * @param defaultValue 默认值
      * @return 扩展信息
      */
@@ -295,7 +306,7 @@ public class UserResume  {
     /**
      * 获取扩展信息
      *
-     * @param name          名称
+     * @param name         名称
      * @param defaultValue 默认值
      * @return 扩展信息
      */
@@ -304,43 +315,4 @@ public class UserResume  {
     }
 
 
-
-
-
-    @Data
-    public static class RoleInfo {
-
-        /**
-         * 角色名称
-         */
-        private String roleName;
-        /**
-         * 角色id
-         */
-        private String roleId;
-
-        /**
-         * 角色编码
-         */
-        private String roleCode;
-        /**
-         * 角色描述
-         */
-        private String roleDesc;
-
-        /**
-         * 是否可读
-         */
-        private boolean readable;
-
-        /**
-         * 是否可写
-         */
-        private boolean writeable;
-
-        /**
-         * 是否可执行
-         */
-        private boolean executable;
-    }
 }

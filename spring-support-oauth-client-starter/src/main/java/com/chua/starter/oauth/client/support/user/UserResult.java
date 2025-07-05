@@ -20,17 +20,20 @@ import java.util.Set;
  * @since 2022/7/23 8:48
  */
 @EqualsAndHashCode(callSuper = true)
-@SuperBuilder
+@Accessors(chain = true)
 @Data
-@JsonIgnoreProperties({"beanType", "accessSecret", "expire", "password", "salt", "password", "salt", "userEnable", "address", "lastArea", "lastLatitude", "lastIp", "lastLongitude"})
+@NoArgsConstructor
+@JsonIgnoreProperties({"beanType", "accessSecret", "expire", "password", "salt", "password", "salt", "userEnable", "lastArea", "lastLatitude", "lastIp", "lastLongitude"})
 public class UserResult extends UserResume implements Serializable {
 
+    public UserResult(String message) {
+        super(message);
+    }
 
     /**
      * 令牌
      */
     private String token;
-
     /**
      * 刷新令牌
      */
@@ -40,4 +43,5 @@ public class UserResult extends UserResume implements Serializable {
      * 过期时间
      */
     private Long refreshExpireTime;
+
 }

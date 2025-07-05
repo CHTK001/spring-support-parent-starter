@@ -14,6 +14,10 @@ import lombok.*;
 @EqualsAndHashCode(callSuper = true)
 public class LoginAuthResult extends LoginResult {
 
+    public static final LoginAuthResult OK = new LoginAuthResult(
+            200, "成功"
+    );
+
     /**
      * code
      */
