@@ -87,7 +87,7 @@ public class AuthClientExecute {
             }
 
             if (attribute instanceof UserResume) {
-                UserResult userResult = new UserResult();
+                UserResult userResult = UserResult.builder().build();
                 com.chua.common.support.bean.BeanUtils.copyProperties(attribute, userResult);
                 request.getSession().setAttribute(SESSION_USER_INFO, userResult);
                 return userResult;
@@ -98,7 +98,7 @@ public class AuthClientExecute {
                 authClientProperties,
                 request, null);
 
-        UserResult userResult = new UserResult();
+        UserResult userResult =UserResult.builder().build();
         AuthenticationInformation authentication = webRequest1.authentication();
         UserResume returnResult = authentication.getReturnResult();
         if (null == returnResult) {
@@ -130,7 +130,7 @@ public class AuthClientExecute {
             }
 
             if (attribute instanceof UserResume) {
-                UserResult userResult = new UserResult();
+                UserResult userResult = UserResult.builder().build();
                 com.chua.common.support.bean.BeanUtils.copyProperties(attribute, userResult);
                 request.getSession().setAttribute(SESSION_USER_INFO, userResult);
                 return userResult;
@@ -141,7 +141,7 @@ public class AuthClientExecute {
                 authClientProperties,
                 request, null);
 
-        UserResult userResult = new UserResult();
+        UserResult userResult = UserResult.builder().build();
         AuthenticationInformation authentication = webRequest1.authentication();
         UserResume returnResult = authentication.getReturnResult();
         if (null == returnResult) {
@@ -168,11 +168,7 @@ public class AuthClientExecute {
         }
 
         ProtocolExecutor protocolExecutor = ServiceProvider.of(ProtocolExecutor.class).getExtension(authType);
-        LoginAuthResult loginAuthResult = protocolExecutor.logout(uid, logoutType, getUserResult());
-        if (null != loginAuthResult && loginAuthResult.getCode() == NUM_200) {
-            return dehook(loginAuthResult);
-        }
-        return loginAuthResult;
+        return protocolExecutor.logout(uid, logoutType, getUserResult());
     }
 
     /**
@@ -191,55 +187,7 @@ public class AuthClientExecute {
         }
 
         ProtocolExecutor protocolExecutor = ServiceProvider.of(ProtocolExecutor.class).getExtension(authType);
-        LoginAuthResult loginAuthResult = protocolExecutor.getAccessToken(username, password, authType, ext);
-        if (null == loginAuthResult || loginAuthResult.getCode() != NUM_200) {
-            return dehook(loginAuthResult);
-        }
-        return hook(loginAuthResult);
-
-    }
-
-    /**
-     * 删除hook
-     *
-     * @param loginAuthResult 登录身份验证结果
-     * @return {@link LoginAuthResult}
-     */
-    private LoginAuthResult dehook(LoginAuthResult loginAuthResult) {
-        RequestUtils.removeUsername();
-        RequestUtils.removeUserInfo();
-        return loginAuthResult;
-    }
-
-    /**
-     * dehook
-     * 删除hook
-     *
-     * @param uid) 登录身份验证结果
-     * @return {@link LoginAuthResult}
-     */
-    private void dehookUid(String uid) {
-        RequestUtils.removeUsername();
-        RequestUtils.removeUserInfo();
-    }
-
-    /**
-     * 注册
-     *
-     * @param loginAuthResult 登录身份验证结果
-     * @return {@link LoginAuthResult}
-     */
-    public static LoginAuthResult hook(LoginAuthResult loginAuthResult) {
-        UserResult userResult = loginAuthResult.getUserResult();
-        if (null == userResult) {
-            return loginAuthResult;
-        }
-
-        RequestUtils.setUsername(userResult.getUsername());
-        RequestUtils.setUserId(userResult.getId());
-        RequestUtils.setTenantId(userResult.getTenantId());
-        RequestUtils.setUserInfo(userResult);
-        return loginAuthResult;
+        return protocolExecutor.getAccessToken(username, password, authType, ext);
     }
 
 
@@ -251,11 +199,11 @@ public class AuthClientExecute {
      * @return UID
      */
     public static String createUid(String username, String authType) {
-        UserResult userResult = new UserResult();
-        userResult.setAuthType(authType);
+        UserResult userResult = UserResult.builder().build();
+        userResult.setLoginType(authType);
 
         return Md5Utils.getInstance().getMd5String( username +
-                userResult.getAuthType());
+                userResult.getLoginType());
     }
 
     /**

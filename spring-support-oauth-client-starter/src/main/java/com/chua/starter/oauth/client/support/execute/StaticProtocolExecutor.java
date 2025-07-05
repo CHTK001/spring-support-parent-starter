@@ -12,6 +12,7 @@ import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
+import com.chua.starter.oauth.client.support.user.UserResume;
 import com.google.common.collect.Sets;
 
 import java.util.List;
@@ -66,15 +67,14 @@ public class StaticProtocolExecutor implements ProtocolExecutor{
                 List<String> userAndPassword = Splitter.on(":").omitEmptyStrings().limit(2).trimResults().splitToList(string);
                 if(isMatch(userAndPassword, username, password)) {
                     loginAuthResult.setCode(200);
-                    UserResult userResult = new UserResult();
-                    userResult.setId("0");
-                    userResult.setAuthType(AuthType.STATIC.name());
+                    UserResume userResult = UserResume.builder().build();
+                    userResult.setUserId("0");
+                    userResult.setLoginType(AuthType.STATIC.name());
                     userResult.setUsername(username);
-                    userResult.setExpire(System.nanoTime());
                     if("admin".equals(username)) {
                         userResult.setRoles(Sets.newHashSet("admin"));
                     }
-                    loginAuthResult.setUserResult(userResult);
+                    loginAuthResult.setUserResume(userResult);
                     try {
                         loginAuthResult.setToken(Codec.build(encryption, DEFAULT_KEY).encodeHex(Json.toJson(userResult)));
                     } catch (Exception ignored) {
