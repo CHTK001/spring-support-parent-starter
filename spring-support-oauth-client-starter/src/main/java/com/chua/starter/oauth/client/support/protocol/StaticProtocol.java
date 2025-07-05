@@ -35,7 +35,7 @@ public class StaticProtocol extends AbstractProtocol {
     }
 
     @Override
-    protected AuthenticationInformation upgradeInformation(Cookie cookie, String token, String subProtocol) {
+    protected AuthenticationInformation approve(Cookie cookie, String token, String subProtocol) {
         initial();
         return newAuthenticationInformation(token, new Cookie[]{cookie});
     }
