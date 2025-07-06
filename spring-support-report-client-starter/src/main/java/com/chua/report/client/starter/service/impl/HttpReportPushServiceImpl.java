@@ -126,6 +126,43 @@ public class HttpReportPushServiceImpl implements ReportPushService {
         }
     }
 
+    @Override
+    public boolean pushClientHealth(String clientIp, Integer clientPort) {
+        if (!isConfigValid()) {
+            log.warn("推送配置无效，跳过客户端健康状态上报");
+            return false;
+        }
+
+        try {
+            String url = buildUrl("/api/client-health/report");
+
+            Map<String, Object> healthData = new HashMap<>();
+            healthData.put("clientIp", clientIp);
+            healthData.put("clientPort", clientPort);
+            healthData.put("timestamp", System.currentTimeMillis());
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(healthData, headers);
+
+            ResponseEntity<?> response = deviceReportRestTemplate.exchange(
+                url, HttpMethod.POST, request, Map.class);
+
+            if (response.getStatusCode().is2xxSuccessful()) {
+                log.debug("客户端健康状态上报成功: {}:{}", clientIp, clientPort);
+                return true;
+            } else {
+                log.warn("客户端健康状态上报失败，状态码: {}", response.getStatusCode());
+                return false;
+            }
+
+        } catch (Exception e) {
+            log.error("客户端健康状态上报异常: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
     /**
      * 构建完整的URL
      */
