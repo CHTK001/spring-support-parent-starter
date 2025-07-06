@@ -28,4 +28,12 @@ public interface ReportPushService {
      * @return 是否连接成功
      */
     boolean testConnection();
+
+    /**
+     * 推送客户端健康状态
+     * @param clientIp 客户端IP地址
+     * @param clientPort 客户端端口
+     * @return 是否推送成功
+     */
+    boolean pushClientHealth(String clientIp, Integer clientPort);
 }

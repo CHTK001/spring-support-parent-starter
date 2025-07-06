@@ -11,6 +11,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
+import java.net.InetAddress;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -131,6 +132,41 @@ public class DeviceReportTask {
     }
 
     /**
+     * 定时推送客户端健康状态
+     */
+    @Scheduled(fixedDelayString = "#{@reportClientProperties.pushInterval * 1000}",
+               initialDelayString = "#{@reportClientProperties.initialDelay * 1000}")
+    public void pushClientHealthStatus() {
+        if (!properties.isEnable()) {
+            log.debug("设备数据上报已禁用，跳过客户端健康状态上报");
+            return;
+        }
+
+        try {
+            // 获取客户端IP地址
+            String clientIp = getClientIpAddress();
+            // 获取客户端端口（从配置中获取）
+            Integer clientPort = properties.getReceivablePort();
+
+            // 如果端口未配置，使用默认值
+            if (clientPort == null || clientPort <= 0) {
+                clientPort = 8080; // 默认端口
+            }
+
+            boolean success = reportPushService.pushClientHealth(clientIp, clientPort);
+
+            if (success) {
+                log.debug("客户端健康状态上报成功: {}:{}", clientIp, clientPort);
+            } else {
+                log.warn("客户端健康状态上报失败: {}:{}", clientIp, clientPort);
+            }
+
+        } catch (Exception e) {
+            log.error("推送客户端健康状态异常", e);
+        }
+    }
+
+    /**
      * 健康检查任务
      */
     @Scheduled(fixedRate = 60000, initialDelay = 30000) // 每分钟检查一次
@@ -173,10 +209,31 @@ public class DeviceReportTask {
     }
 
     /**
+     * 获取客户端IP地址
+     */
+    private String getClientIpAddress() {
+        try {
+            // 首先尝试从设备信息中获取IP地址
+            DeviceMetrics deviceInfo = deviceDataService.getDeviceInfo();
+            if (deviceInfo != null && deviceInfo.getIpAddress() != null) {
+                return deviceInfo.getIpAddress();
+            }
+
+            // 如果设备信息中没有IP地址，则获取本机IP地址
+            InetAddress localHost = InetAddress.getLocalHost();
+            return localHost.getHostAddress();
+
+        } catch (Exception e) {
+            log.warn("获取客户端IP地址失败，使用默认值: {}", e.getMessage());
+            return "127.0.0.1"; // 默认IP地址
+        }
+    }
+
+    /**
      * 获取推送统计信息
      */
     public String getStatistics() {
-        return String.format("连续失败次数: %d, 最后成功时间: %s", 
+        return String.format("连续失败次数: %d, 最后成功时间: %s",
             failureCount.get(),
             lastSuccessTime.get() > 0 ? new java.util.Date(lastSuccessTime.get()) : "从未成功");
     }
