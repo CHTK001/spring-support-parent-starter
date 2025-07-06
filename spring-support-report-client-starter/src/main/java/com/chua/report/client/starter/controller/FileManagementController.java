@@ -16,7 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.validation.Valid;
+
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
@@ -359,7 +359,7 @@ public class FileManagementController {
      * 执行文件操作
      */
     @PostMapping("/operation")
-    public ResponseEntity<FileOperationResponse> executeOperation(@Valid @RequestBody FileOperationRequest request) {
+    public ResponseEntity<FileOperationResponse> executeOperation(@RequestBody FileOperationRequest request) {
         
         if (!checkHealth()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)

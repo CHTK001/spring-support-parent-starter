@@ -90,28 +90,28 @@ public class FileManagementConfiguration {
      */
     private String getEnabledOperations(FileManagementProperties properties) {
         StringBuilder operations = new StringBuilder();
-        
-        if (properties.getAllowCreateDirectory()) {
+
+        if (properties.isAllowCreateDirectory()) {
             operations.append("CREATE_DIR,");
         }
-        if (properties.getAllowDeleteFile()) {
+        if (properties.isAllowDeleteFile()) {
             operations.append("DELETE_FILE,");
         }
-        if (properties.getAllowDeleteDirectory()) {
+        if (properties.isAllowDeleteDirectory()) {
             operations.append("DELETE_DIR,");
         }
-        if (properties.getAllowRenameFile()) {
+        if (properties.isAllowRenameFile()) {
             operations.append("RENAME,");
         }
-        if (properties.getAllowMoveFile()) {
+        if (properties.isAllowMoveFile()) {
             operations.append("MOVE,");
         }
-        if (properties.getAllowChangePermissions()) {
+        if (properties.isAllowChangePermissions()) {
             operations.append("CHMOD,");
         }
-        
+
         operations.append("LIST,UPLOAD,DOWNLOAD,INFO,PREVIEW,SEARCH,TREE");
-        
+
         return operations.toString();
     }
 }
