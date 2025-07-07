@@ -747,7 +747,7 @@ public class FileManagementServiceImpl implements FileManagementService {
 
         boolean ascending = !"desc".equalsIgnoreCase(sortOrder);
 
-        Comparator<FileInfo> comparator;
+        Comparator<FileInfo> comparator = null;
         switch (sortBy.toLowerCase()) {
             case "name":
                 comparator = Comparator.comparing(FileInfo::getName, String.CASE_INSENSITIVE_ORDER);
