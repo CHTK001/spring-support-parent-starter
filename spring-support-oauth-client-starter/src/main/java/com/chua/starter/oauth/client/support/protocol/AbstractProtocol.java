@@ -165,7 +165,7 @@ public abstract class AbstractProtocol implements Protocol {
      * @return 是否有效
      */
     private boolean hasValid(Cookie cookie, String token) {
-        return null != cookie && StringUtils.isNotBlank(token);
+        return null != cookie || StringUtils.isNotBlank(token);
     }
 
     @Override
