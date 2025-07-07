@@ -1,6 +1,6 @@
 package com.chua.starter.swagger.support;
 
-import com.chua.starter.swagger.support.customize.Knife4jOpenApiCustomizer;
+import com.chua.starter.swagger.support.customize.CustomKnife4jOpenApiCustomizer;
 import com.github.xiaoymin.knife4j.spring.annotations.EnableKnife4j;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
@@ -50,6 +50,16 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
     private com.github.xiaoymin.knife4j.spring.configuration.Knife4jProperties knife4j;
     private SpringDocConfigProperties springDocConfigProperties;
 
+//
+//    /**
+//     * 创建自定义的ModelResolver
+//     *
+//     * @return
+//     */
+//    @Bean
+//    public CustomModelResolver resolver(ObjectMapper  objectMapper) {
+//        return new CustomModelResolver(objectMapper);
+//    }
 
 //    @Bean
 //    @Primary
@@ -57,11 +67,11 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
 //        return new CustomOperationCustomizer(knife4jProperties);
 //    }
 
-//
-//    @Bean("knife4jOpenApiCustomizer")
+
+//    @Bean
 //    @Primary
-//    public Knife4jOpenApiCustomizer knife4jOpenApiCustomizer(com.github.xiaoymin.knife4j.spring.configuration.Knife4jProperties  knife4jProperties, SpringDocConfigProperties springDocConfigProperties) {
-//        return new Knife4jOpenApiCustomizer(knife4jProperties, springDocConfigProperties);
+//    public CustomKnife4jOpenApiCustomizer customKnife4jOpenApiCustomizer(com.github.xiaoymin.knife4j.spring.configuration.Knife4jProperties  knife4jProperties, SpringDocConfigProperties springDocConfigProperties) {
+//        return new CustomKnife4jOpenApiCustomizer(knife4jProperties, springDocConfigProperties);
 //    }
 
 
@@ -69,7 +79,7 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
     public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
         Class<?> aClass = bean.getClass();
         if (aClass == com.github.xiaoymin.knife4j.spring.extension.Knife4jOpenApiCustomizer.class) {
-            return new Knife4jOpenApiCustomizer(knife4j, springDocConfigProperties);
+            return new CustomKnife4jOpenApiCustomizer(knife4j, springDocConfigProperties);
         }
         return BeanPostProcessor.super.postProcessAfterInitialization(bean, beanName);
     }
