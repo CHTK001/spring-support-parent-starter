@@ -1,17 +1,12 @@
 package com.chua.starter.oauth.client.support.user;
 
-import com.chua.common.support.utils.ClassUtils;
-import com.chua.common.support.utils.MapUtils;
-import com.chua.starter.common.support.constant.DataFilterTypeEnum;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import lombok.*;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
-import lombok.experimental.SuperBuilder;
-import org.springframework.util.ReflectionUtils;
 
 import java.io.Serializable;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * 用户信息
@@ -43,5 +38,6 @@ public class UserResult extends UserResume implements Serializable {
      * 过期时间
      */
     private Long refreshExpireTime;
+
 
 }
