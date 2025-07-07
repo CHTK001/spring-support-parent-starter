@@ -24,6 +24,8 @@ import com.github.xiaoymin.knife4j.spring.configuration.Knife4jSetting;
 import com.github.xiaoymin.knife4j.spring.extension.OpenApiExtensionResolver;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.Operation;
+import io.swagger.v3.oas.models.parameters.Parameter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ArrayUtils;
 import org.springdoc.core.customizers.GlobalOpenApiCustomizer;
@@ -48,12 +50,11 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Primary
-public class Knife4jOpenApiCustomizer extends com.github.xiaoymin.knife4j.spring.extension.Knife4jOpenApiCustomizer implements GlobalOpenApiCustomizer {
+public class CustomKnife4jOpenApiCustomizer implements GlobalOpenApiCustomizer {
     final Knife4jProperties knife4jProperties;
     final SpringDocConfigProperties properties;
 
-    public Knife4jOpenApiCustomizer(Knife4jProperties knife4jProperties, SpringDocConfigProperties properties) {
-        super(knife4jProperties, properties);
+    public CustomKnife4jOpenApiCustomizer(Knife4jProperties knife4jProperties, SpringDocConfigProperties properties) {
         this.knife4jProperties = knife4jProperties;
         this.properties = properties;
     }
@@ -62,6 +63,9 @@ public class Knife4jOpenApiCustomizer extends com.github.xiaoymin.knife4j.spring
     public void customise(OpenAPI openApi) {
         log.debug("Knife4j OpenApiCustomizer");
         if (knife4jProperties.isEnable()) {
+            openApi.getPaths().forEach((path, pathItem) -> {
+                pathItem.readOperations().forEach(this::removeUserResumeParameters);
+            });
             Knife4jSetting setting = knife4jProperties.getSetting();
             OpenApiExtensionResolver openApiExtensionResolver = new OpenApiExtensionResolver(setting, knife4jProperties.getDocuments());
             // 解析初始化
@@ -74,6 +78,15 @@ public class Knife4jOpenApiCustomizer extends com.github.xiaoymin.knife4j.spring
         }
     }
 
+    private void removeUserResumeParameters(Operation operation) {
+        List<Parameter> parameters = operation.getParameters();
+        if (null == parameters) {
+            return;
+        }
+        // 移除所有 UserResume 展开的参数
+        parameters.removeIf(param ->
+                param.getName().matches("unionId|openId|uid|userId|loginType|tenantId|address|deptId|rolesByRole|dataPermission|dataPermissionRule|lastIp"));
+    }
     /**
      * 往OpenAPI内tags字段添加x-order属性
      *

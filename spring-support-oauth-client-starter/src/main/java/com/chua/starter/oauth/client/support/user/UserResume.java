@@ -3,6 +3,7 @@ package com.chua.starter.oauth.client.support.user;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.common.support.constant.DataFilterTypeEnum;
 import com.google.common.base.Strings;
+import io.swagger.v3.oas.annotations.Hidden;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
@@ -23,6 +24,7 @@ import java.util.Set;
 @Data
 @Accessors(chain = true)
 @NoArgsConstructor
+@Hidden
 public class UserResume implements Serializable {
 
     public UserResume(String message) {
