@@ -315,4 +315,14 @@ public class UserResume implements Serializable {
     }
 
 
+    /**
+     * 获取扩展信息
+     *
+     * @param name 名称
+     * @return 扩展信息
+     */
+    public String getExtValue(String name) {
+        return getOption(name);
+    }
+
 }

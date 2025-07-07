@@ -24,6 +24,17 @@ public class BeanDefinitionRegistryUtils {
      * 注册定义
      *
      * @param registry 注册器
+     * @param type     类型
+     */
+    public static <T> void registerBeanDefinition(BeanDefinitionRegistry registry, Class<T> type, T bean) {
+        registry.registerBeanDefinition(type.getName(),
+                BeanDefinitionBuilder.genericBeanDefinition(type, () -> bean).getBeanDefinition());
+    }
+
+    /**
+     * 注册定义
+     *
+     * @param registry 注册器
      * @param name     beanName
      * @param type     类型
      */
