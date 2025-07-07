@@ -10,7 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
@@ -316,11 +318,7 @@ public class FileManagementServiceImpl implements FileManagementService {
             return false;
         }
 
-        if (fileSize != null && !properties.isFileSizeAllowed(fileSize)) {
-            return false;
-        }
-
-        return true;
+        return fileSize == null || properties.isFileSizeAllowed(fileSize);
     }
 
     @Override
@@ -625,7 +623,7 @@ public class FileManagementServiceImpl implements FileManagementService {
 
                     if (!matches && searchContent) {
                         try {
-                            String content = new String(Files.readAllBytes(file), "UTF-8");
+                            String content = new String(Files.readAllBytes(file), StandardCharsets.UTF_8);
                             matches = content.contains(pattern);
                         } catch (Exception e) {
                             // 忽略无法读取的文件
@@ -761,8 +759,8 @@ public class FileManagementServiceImpl implements FileManagementService {
                 comparator = Comparator.comparing(f -> f.getLastModified() != null ? f.getLastModified() : LocalDateTime.MIN);
                 break;
             case "type":
-                comparator = Comparator.comparing(f -> f.getIsDirectory() != null && f.getIsDirectory() ? "0" : "1")
-                    .thenComparing(f -> f.getExtension() != null ? f.getExtension() : "");
+//                comparator = Comparator.comparing(f -> f.getIsDirectory() != null && f.getIsDirectory() ? "0" : "1")
+//                    .thenComparing(f -> f.getExtension() != null ? f.getExtension() : "");
                 break;
             default:
                 return;
