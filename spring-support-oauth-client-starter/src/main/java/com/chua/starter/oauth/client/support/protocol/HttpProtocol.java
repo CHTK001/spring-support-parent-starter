@@ -26,7 +26,6 @@ import kong.unirest.Unirest;
 import kong.unirest.UnirestException;
 import lombok.extern.slf4j.Slf4j;
 import me.zhyd.oauth.exception.AuthException;
-import me.zhyd.oauth.log.Log;
 
 import java.util.Map;
 import java.util.UUID;
@@ -52,7 +51,7 @@ public class HttpProtocol extends AbstractProtocol {
     protected AuthenticationInformation approve(Cookie cookie, String token, String subProtocol) {
         JsonObject jsonObject = new JsonObject();
         // 构建认证数据
-        jsonObject.put("x-oauth-cookie", cookie.getValue());
+        jsonObject.put("x-oauth-cookie", null == cookie ? null : cookie.getValue());
         jsonObject.put("x-oauth-token", token);
         jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
         jsonObject.put("x-oauth-secret-key", authClientProperties.getKey().getSecretKey());
@@ -66,7 +65,7 @@ public class HttpProtocol extends AbstractProtocol {
     protected AuthenticationInformation upgradeInformation(Cookie cookie, String token, UpgradeType upgradeType, String refreshToken) {
         JsonObject jsonObject = new JsonObject();
         // 构建认证数据
-        jsonObject.put("x-oauth-cookie", cookie.getValue());
+        jsonObject.put("x-oauth-cookie", null == cookie ? null : cookie.getValue());
         jsonObject.put("x-oauth-token", token);
         jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
         jsonObject.put("x-oauth-secret-key", authClientProperties.getKey().getSecretKey());
