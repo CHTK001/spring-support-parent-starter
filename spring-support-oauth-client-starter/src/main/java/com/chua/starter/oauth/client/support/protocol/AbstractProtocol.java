@@ -147,20 +147,38 @@ public abstract class AbstractProtocol implements Protocol {
                 return authenticationInformation;
             }
         }
+
+        if (!hasValid(cookie, token)) {
+            return AuthenticationInformation.noAuth();
+        }
         AuthenticationInformation authenticationInformation = approve(cookie, token, subProtocol);
 
         CACHEABLE.put(cacheKey, authenticationInformation);
         return authenticationInformation;
     }
 
+    /**
+     * 是否有效
+     *
+     * @param cookie cookie
+     * @param token  令牌
+     * @return 是否有效
+     */
+    private boolean hasValid(Cookie cookie, String token) {
+        return null != cookie && StringUtils.isNotBlank(token);
+    }
+
     @Override
     public LoginResult upgrade(Cookie[] cookies, String token, UpgradeType upgradeType, String refreshToken) {
         Cookie cookie = CookieUtil.get(cookies, "x-oauth-cookie");
+        if (!hasValid(cookie, token)) {
+            throw new IllegalArgumentException("认证失败");
+        }
         AuthenticationInformation authenticationInformation = upgradeInformation(cookie, token, upgradeType, refreshToken);
         if(authenticationInformation.getInformation() != OK) {
-
+            throw new IllegalArgumentException("升级失败");
         }
-        return null;
+        return new LoginResult(authenticationInformation.getToken(), authenticationInformation.getRefreshToken(), authenticationInformation.getReturnResult());
     }
 
     /**
@@ -169,6 +187,9 @@ public abstract class AbstractProtocol implements Protocol {
      * @return 是否有缓存
      */
     protected boolean hasCache(String cacheKey) {
+        if (null == cacheKey) {
+            return false;
+        }
         Object value = CACHEABLE.get(cacheKey);
         return null != value;
     }
