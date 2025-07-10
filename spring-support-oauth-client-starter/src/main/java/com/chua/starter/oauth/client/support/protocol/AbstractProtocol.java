@@ -347,6 +347,10 @@ public abstract class AbstractProtocol implements Protocol {
             return token;
         }
 
+        if (null == cookies) {
+            return null;
+        }
+
         for (Cookie cookie : cookies) {
             if ("x-oauth-cookie".equals(cookie.getName())) {
                 return cookie.getValue();
