@@ -68,12 +68,36 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
     public Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
                                   NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
 
+        return resolveArgumentValue(parameter, mavContainer, webRequest, binderFactory);
+    }
+
+    /**
+     * 单个参数
+     *
+     * @param parameter
+     * @param mavContainer
+     * @param webRequest
+     * @param binderFactory
+     * @return
+     * @throws Exception
+     */
+    public Object resolveArgumentValue(MethodParameter parameter, ModelAndViewContainer mavContainer, NativeWebRequest webRequest, WebDataBinderFactory binderFactory) throws Exception {
         if (parameter.hasParameterAnnotation(RequestParamMapping.class)) {
             return resolveArgumentOne(parameter, mavContainer, webRequest, binderFactory);
         }
         return resolveArgumentObject(parameter, mavContainer, webRequest, binderFactory);
     }
 
+    /**
+     * 单个参数
+     *
+     * @param parameter
+     * @param mavContainer
+     * @param webRequest
+     * @param binderFactory
+     * @return
+     * @throws Exception
+     */
     private Object resolveArgumentObject(MethodParameter parameter, ModelAndViewContainer mavContainer, NativeWebRequest webRequest, WebDataBinderFactory binderFactory) throws Exception {
         Object argument = super.resolveArgument(parameter, mavContainer, webRequest, binderFactory);
         Parameter parameter1 = parameter.getParameter();
