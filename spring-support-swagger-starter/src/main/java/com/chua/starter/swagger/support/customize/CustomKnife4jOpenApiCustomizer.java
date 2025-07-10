@@ -63,9 +63,9 @@ public class CustomKnife4jOpenApiCustomizer implements GlobalOpenApiCustomizer {
     public void customise(OpenAPI openApi) {
         log.debug("Knife4j OpenApiCustomizer");
         if (knife4jProperties.isEnable()) {
-            openApi.getPaths().forEach((path, pathItem) -> {
-                pathItem.readOperations().forEach(this::removeUserResumeParameters);
-            });
+//            openApi.getPaths().forEach((path, pathItem) -> {
+//                pathItem.readOperations().forEach(this::removeUserResumeParameters);
+//            });
             Knife4jSetting setting = knife4jProperties.getSetting();
             OpenApiExtensionResolver openApiExtensionResolver = new OpenApiExtensionResolver(setting, knife4jProperties.getDocuments());
             // 解析初始化

@@ -1,4 +1,4 @@
-package com.chua.starter.common.support.annotations;
+package com.chua.starter.plugin.annotations;
 
 import java.lang.annotation.*;
 
