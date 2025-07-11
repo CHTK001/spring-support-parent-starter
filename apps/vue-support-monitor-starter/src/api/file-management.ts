@@ -75,24 +75,53 @@ export function getFileList(
  * @param path 根路径
  * @param maxDepth 最大深度
  * @param includeHidden 是否包含隐藏文件
+ * @param lazyLoad 是否启用懒加载模式
+ * @param pageSize 每页文件数量限制
+ * @param pageIndex 页码（从0开始）
  * @returns 文件树
  */
 export function getFileTree(
   serverId: number,
   path: string,
   maxDepth: number = 3,
-  includeHidden: boolean = false
+  includeHidden: boolean = false,
+  lazyLoad?: boolean,
+  pageSize?: number,
+  pageIndex?: number
 ) {
+  console.log("API: getFileTree called with", {
+    serverId,
+    path,
+    maxDepth,
+    includeHidden,
+    lazyLoad,
+    pageSize,
+    pageIndex,
+  });
+
+  const params: any = {
+    serverId,
+    path,
+    maxDepth,
+    includeHidden,
+  };
+
+  // 添加懒加载参数
+  if (lazyLoad !== undefined) {
+    params.lazyLoad = lazyLoad;
+  }
+  if (pageSize !== undefined) {
+    params.pageSize = pageSize;
+  }
+  if (pageIndex !== undefined) {
+    params.pageIndex = pageIndex;
+  }
+
   return http.request<ReturnResult<FileOperationResponse>>(
     "get",
-    "v1/gen/file-management/tree",
+    "v1/file-management/tree",
     {
-      params: {
-        serverId,
-        path,
-        maxDepth,
-        includeHidden,
-      },
+      params,
     }
   );
 }
@@ -135,17 +164,13 @@ export function uploadFile(
  * @returns 文件数据
  */
 export function downloadFile(serverId: number, filePath: string) {
-  return http.request<Blob>(
-    "get",
-    "v1/gen/file-management/download",
-    {
-      params: {
-        serverId,
-        filePath,
-      },
-      responseType: "blob",
-    }
-  );
+  return http.request<Blob>("get", "v1/gen/file-management/download", {
+    params: {
+      serverId,
+      filePath,
+    },
+    responseType: "blob",
+  });
 }
 
 /**
@@ -205,11 +230,7 @@ export function deleteFile(
  * @param newName 新名称
  * @returns 重命名结果
  */
-export function renameFile(
-  serverId: number,
-  oldPath: string,
-  newName: string
-) {
+export function renameFile(serverId: number, oldPath: string, newName: string) {
   return http.request<ReturnResult<FileOperationResponse>>(
     "post",
     "v1/gen/file-management/rename",
@@ -343,6 +364,25 @@ export function saveFileContent(
         serverId,
         filePath,
         content,
+      },
+    }
+  );
+}
+
+/**
+ * 预览文件
+ * @param serverId 服务器ID
+ * @param filePath 文件路径
+ * @returns 预览结果
+ */
+export function previewFile(serverId: number, filePath: string) {
+  return http.request<ReturnResult<FileOperationResponse>>(
+    "get",
+    "v1/gen/file-management/preview",
+    {
+      params: {
+        serverId,
+        filePath,
       },
     }
   );

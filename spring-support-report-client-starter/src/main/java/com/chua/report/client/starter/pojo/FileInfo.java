@@ -11,6 +11,7 @@ import java.util.List;
 
 /**
  * 文件信息
+ * 
  * @author CH
  * @since 2024/12/19
  */
@@ -103,13 +104,23 @@ public class FileInfo {
     private List<FileInfo> children;
 
     /**
+     * 额外属性（JSON格式）
+     */
+    private String extraProperties;
+
+    /**
+     * 是否为叶子节点（用于Element Plus el-tree组件）
+     */
+    private Boolean leaf;
+
+    /**
      * 获取格式化的文件大小
      */
     public String getFormattedSize() {
         if (size == null || isDirectory) {
             return "-";
         }
-        
+
         if (size < 1024) {
             return size + " B";
         } else if (size < 1024 * 1024) {
@@ -139,34 +150,20 @@ public class FileInfo {
      * 创建简单文件信息
      */
     public static FileInfo createSimple(String name, String path, boolean isDirectory) {
-        return FileInfo.builder()
-                .name(name)
-                .path(path)
-                .isDirectory(isDirectory)
-                .build();
+        return FileInfo.builder().name(name).path(path).isDirectory(isDirectory).build();
     }
 
     /**
      * 创建目录信息
      */
     public static FileInfo createDirectory(String name, String path) {
-        return FileInfo.builder()
-                .name(name)
-                .path(path)
-                .isDirectory(true)
-                .size(0L)
-                .build();
+        return FileInfo.builder().name(name).path(path).isDirectory(true).size(0L).build();
     }
 
     /**
      * 创建文件信息
      */
     public static FileInfo createFile(String name, String path, long size) {
-        return FileInfo.builder()
-                .name(name)
-                .path(path)
-                .isDirectory(false)
-                .size(size)
-                .build();
+        return FileInfo.builder().name(name).path(path).isDirectory(false).size(size).build();
     }
 }

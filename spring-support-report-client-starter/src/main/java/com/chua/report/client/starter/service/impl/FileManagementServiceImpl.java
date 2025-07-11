@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -25,6 +26,7 @@ import java.util.stream.Stream;
 
 /**
  * 文件管理服务实现
+ * 
  * @author CH
  * @since 2024/12/19
  */
@@ -38,7 +40,7 @@ public class FileManagementServiceImpl implements FileManagementService {
     @Override
     public FileOperationResponse listFiles(String path, Boolean includeHidden, String sortBy, String sortOrder) {
         long startTime = System.currentTimeMillis();
-        
+
         try {
             if (!isPathSafe(path)) {
                 return FileOperationResponse.error("LIST", "路径不安全或超出允许范围", "INVALID_PATH");
@@ -54,14 +56,11 @@ public class FileManagementServiceImpl implements FileManagementService {
             }
 
             boolean showHidden = includeHidden != null ? includeHidden : properties.isShowHiddenFiles();
-            
+
             List<FileInfo> files = new ArrayList<>();
             try (Stream<Path> stream = Files.list(dirPath)) {
-                files = stream
-                    .filter(p -> showHidden || !isHidden(p))
-                    .map(this::convertToFileInfo)
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toList());
+                files = stream.filter(p -> showHidden || !isHidden(p)).map(this::convertToFileInfo)
+                        .filter(Objects::nonNull).collect(Collectors.toList());
             }
 
             // 排序
@@ -69,12 +68,11 @@ public class FileManagementServiceImpl implements FileManagementService {
 
             FileOperationResponse response = FileOperationResponse.success("LIST", "列出文件成功", files);
             response.setDuration(System.currentTimeMillis() - startTime);
-            
-            log.debug("列出目录文件成功: path={}, count={}, duration={}ms", 
-                path, files.size(), response.getDuration());
-            
+
+            log.debug("列出目录文件成功: path={}, count={}, duration={}ms", path, files.size(), response.getDuration());
+
             return response;
-            
+
         } catch (Exception e) {
             log.error("列出目录文件失败: path={}", path, e);
             return FileOperationResponse.error("LIST", "列出文件失败: " + e.getMessage(), "LIST_ERROR");
@@ -83,31 +81,56 @@ public class FileManagementServiceImpl implements FileManagementService {
 
     @Override
     public FileOperationResponse getFileTree(String path, Integer maxDepth, Boolean includeHidden) {
+        return getFileTree(path, maxDepth, includeHidden, false, 1000, 0);
+    }
+
+    @Override
+    public FileOperationResponse getFileTree(String path, Integer maxDepth, Boolean includeHidden, Boolean lazyLoad,
+            Integer pageSize, Integer pageIndex) {
         long startTime = System.currentTimeMillis();
-        
+
         try {
+            log.info("客户端文件管理: 获取文件树 - path={}, maxDepth={}, lazyLoad={}, pageSize={}, pageIndex={}", path, maxDepth,
+                    lazyLoad, pageSize, pageIndex);
+
             if (!isPathSafe(path)) {
                 return FileOperationResponse.error("TREE", "路径不安全或超出允许范围", "INVALID_PATH");
-            }
-
-            Path rootPath = Paths.get(path);
-            if (!Files.exists(rootPath)) {
-                return FileOperationResponse.error("TREE", "路径不存在", "PATH_NOT_FOUND");
             }
 
             int depth = maxDepth != null ? maxDepth : properties.getMaxTreeDepth();
             boolean showHidden = includeHidden != null ? includeHidden : properties.isShowHiddenFiles();
 
-            FileInfo rootInfo = buildFileTree(rootPath, depth, showHidden, 0);
-            
+            FileInfo rootInfo;
+
+            // 特殊处理根目录请求
+            if ("/".equals(path)) {
+                log.info("处理根目录请求，检测系统类型");
+                rootInfo = buildSystemRootTree(depth, showHidden, lazyLoad, pageSize != null ? pageSize : 1000,
+                        pageIndex != null ? pageIndex : 0);
+            } else {
+                Path rootPath = Paths.get(path);
+                if (!Files.exists(rootPath)) {
+                    return FileOperationResponse.error("TREE", "路径不存在", "PATH_NOT_FOUND");
+                }
+
+                if (Boolean.TRUE.equals(lazyLoad)) {
+                    // 懒加载模式：只加载当前层级的文件，支持分页
+                    rootInfo = buildFileTreeLazy(rootPath, depth, showHidden, pageSize != null ? pageSize : 1000,
+                            pageIndex != null ? pageIndex : 0);
+                } else {
+                    // 传统模式：递归加载所有层级
+                    rootInfo = buildFileTree(rootPath, depth, showHidden, 0);
+                }
+            }
+
             FileOperationResponse response = FileOperationResponse.successWithTree("TREE", "获取文件树成功", rootInfo);
             response.setDuration(System.currentTimeMillis() - startTime);
-            
-            log.debug("获取文件树成功: path={}, maxDepth={}, duration={}ms", 
-                path, depth, response.getDuration());
-            
+
+            log.debug("获取文件树成功: path={}, maxDepth={}, lazyLoad={}, duration={}ms", path, depth, lazyLoad,
+                    response.getDuration());
+
             return response;
-            
+
         } catch (Exception e) {
             log.error("获取文件树失败: path={}", path, e);
             return FileOperationResponse.error("TREE", "获取文件树失败: " + e.getMessage(), "TREE_ERROR");
@@ -117,7 +140,7 @@ public class FileManagementServiceImpl implements FileManagementService {
     @Override
     public FileOperationResponse uploadFile(String targetPath, MultipartFile file, Boolean overwrite) {
         long startTime = System.currentTimeMillis();
-        
+
         try {
             if (file == null || file.isEmpty()) {
                 return FileOperationResponse.error("UPLOAD", "文件为空", "EMPTY_FILE");
@@ -132,7 +155,7 @@ public class FileManagementServiceImpl implements FileManagementService {
             }
 
             Path target = Paths.get(targetPath, file.getOriginalFilename());
-            
+
             if (Files.exists(target) && !(overwrite != null && overwrite)) {
                 return FileOperationResponse.error("UPLOAD", "文件已存在", "FILE_EXISTS");
             }
@@ -146,18 +169,17 @@ public class FileManagementServiceImpl implements FileManagementService {
             }
 
             FileInfo fileInfo = convertToFileInfo(target);
-            
+
             FileOperationResponse response = FileOperationResponse.success("UPLOAD", "文件上传成功", fileInfo);
             response.setDuration(System.currentTimeMillis() - startTime);
-            
-            log.info("文件上传成功: target={}, size={}, duration={}ms", 
-                target, file.getSize(), response.getDuration());
-            
+
+            log.info("文件上传成功: target={}, size={}, duration={}ms", target, file.getSize(), response.getDuration());
+
             return response;
-            
+
         } catch (Exception e) {
-            log.error("文件上传失败: targetPath={}, filename={}", targetPath, 
-                file != null ? file.getOriginalFilename() : "null", e);
+            log.error("文件上传失败: targetPath={}, filename={}", targetPath,
+                    file != null ? file.getOriginalFilename() : "null", e);
             return FileOperationResponse.error("UPLOAD", "文件上传失败: " + e.getMessage(), "UPLOAD_ERROR");
         }
     }
@@ -165,7 +187,7 @@ public class FileManagementServiceImpl implements FileManagementService {
     @Override
     public FileOperationResponse downloadFile(String filePath) {
         long startTime = System.currentTimeMillis();
-        
+
         try {
             if (!isPathSafe(filePath)) {
                 return FileOperationResponse.error("DOWNLOAD", "文件路径不安全", "INVALID_PATH");
@@ -182,16 +204,15 @@ public class FileManagementServiceImpl implements FileManagementService {
 
             byte[] data = Files.readAllBytes(path);
             FileInfo fileInfo = convertToFileInfo(path);
-            
+
             FileOperationResponse response = FileOperationResponse.success("DOWNLOAD", "文件下载成功", fileInfo);
             response.setData(data);
             response.setDuration(System.currentTimeMillis() - startTime);
-            
-            log.debug("文件下载成功: path={}, size={}, duration={}ms", 
-                filePath, data.length, response.getDuration());
-            
+
+            log.debug("文件下载成功: path={}, size={}, duration={}ms", filePath, data.length, response.getDuration());
+
             return response;
-            
+
         } catch (Exception e) {
             log.error("文件下载失败: path={}", filePath, e);
             return FileOperationResponse.error("DOWNLOAD", "文件下载失败: " + e.getMessage(), "DOWNLOAD_ERROR");
@@ -201,7 +222,7 @@ public class FileManagementServiceImpl implements FileManagementService {
     @Override
     public FileOperationResponse deleteFile(String path, Boolean recursive) {
         long startTime = System.currentTimeMillis();
-        
+
         try {
             if (!isPathSafe(path)) {
                 return FileOperationResponse.error("DELETE", "文件路径不安全", "INVALID_PATH");
@@ -213,12 +234,12 @@ public class FileManagementServiceImpl implements FileManagementService {
             }
 
             boolean isDirectory = Files.isDirectory(filePath);
-            
+
             // 检查权限
             if (isDirectory && !properties.isAllowDeleteDirectory()) {
                 return FileOperationResponse.error("DELETE", "不允许删除目录", "DELETE_DIR_FORBIDDEN");
             }
-            
+
             if (!isDirectory && !properties.isAllowDeleteFile()) {
                 return FileOperationResponse.error("DELETE", "不允许删除文件", "DELETE_FILE_FORBIDDEN");
             }
@@ -240,12 +261,12 @@ public class FileManagementServiceImpl implements FileManagementService {
 
             FileOperationResponse response = FileOperationResponse.success("DELETE", "删除成功");
             response.setDuration(System.currentTimeMillis() - startTime);
-            
-            log.info("文件删除成功: path={}, isDirectory={}, recursive={}, duration={}ms", 
-                path, isDirectory, recursive, response.getDuration());
-            
+
+            log.info("文件删除成功: path={}, isDirectory={}, recursive={}, duration={}ms", path, isDirectory, recursive,
+                    response.getDuration());
+
             return response;
-            
+
         } catch (Exception e) {
             log.error("文件删除失败: path={}", path, e);
             return FileOperationResponse.error("DELETE", "文件删除失败: " + e.getMessage(), "DELETE_ERROR");
@@ -256,22 +277,18 @@ public class FileManagementServiceImpl implements FileManagementService {
     private FileInfo convertToFileInfo(Path path) {
         try {
             BasicFileAttributes attrs = Files.readAttributes(path, BasicFileAttributes.class);
-            
-            return FileInfo.builder()
-                .name(path.getFileName().toString())
-                .path(path.getParent() != null ? path.getParent().toString() : "")
-                .size(attrs.isDirectory() ? 0L : attrs.size())
-                .isDirectory(attrs.isDirectory())
-                .isHidden(isHidden(path))
-                .canRead(Files.isReadable(path))
-                .canWrite(Files.isWritable(path))
-                .canExecute(Files.isExecutable(path))
-                .lastModified(LocalDateTime.ofInstant(attrs.lastModifiedTime().toInstant(), ZoneId.systemDefault()))
-                .createTime(LocalDateTime.ofInstant(attrs.creationTime().toInstant(), ZoneId.systemDefault()))
-                .extension(getFileExtension(path.getFileName().toString()))
-                .permissions(getPermissions(path))
-                .build();
-                
+
+            return FileInfo.builder().name(path.getFileName().toString())
+                    .path(path.getParent() != null ? path.getParent().toString() : "")
+                    .size(attrs.isDirectory() ? 0L : attrs.size()).isDirectory(attrs.isDirectory())
+                    .isHidden(isHidden(path)).canRead(Files.isReadable(path)).canWrite(Files.isWritable(path))
+                    .canExecute(Files.isExecutable(path))
+                    .lastModified(LocalDateTime.ofInstant(attrs.lastModifiedTime().toInstant(), ZoneId.systemDefault()))
+                    .createTime(LocalDateTime.ofInstant(attrs.creationTime().toInstant(), ZoneId.systemDefault()))
+                    .extension(getFileExtension(path.getFileName().toString())).permissions(getPermissions(path))
+                    .leaf(!attrs.isDirectory()) // 设置 leaf 属性：文件为叶子节点，目录不是叶子节点
+                    .build();
+
         } catch (Exception e) {
             log.warn("转换文件信息失败: path={}", path, e);
             return null;
@@ -419,9 +436,9 @@ public class FileManagementServiceImpl implements FileManagementService {
             // 确保目标目录存在
             Files.createDirectories(target.getParent());
 
-            StandardCopyOption[] options = overwrite != null && overwrite ?
-                new StandardCopyOption[]{StandardCopyOption.REPLACE_EXISTING} :
-                new StandardCopyOption[0];
+            StandardCopyOption[] options = overwrite != null && overwrite
+                    ? new StandardCopyOption[] { StandardCopyOption.REPLACE_EXISTING }
+                    : new StandardCopyOption[0];
 
             Files.move(source, target, options);
 
@@ -464,9 +481,9 @@ public class FileManagementServiceImpl implements FileManagementService {
             if (Files.isDirectory(source)) {
                 copyDirectoryRecursively(source, target, overwrite);
             } else {
-                StandardCopyOption[] options = overwrite != null && overwrite ?
-                    new StandardCopyOption[]{StandardCopyOption.REPLACE_EXISTING} :
-                    new StandardCopyOption[0];
+                StandardCopyOption[] options = overwrite != null && overwrite
+                        ? new StandardCopyOption[] { StandardCopyOption.REPLACE_EXISTING }
+                        : new StandardCopyOption[0];
                 Files.copy(source, target, options);
             }
 
@@ -512,8 +529,7 @@ public class FileManagementServiceImpl implements FileManagementService {
             FileOperationResponse response = FileOperationResponse.success("CHMOD", "文件权限修改成功", fileInfo);
             response.setDuration(System.currentTimeMillis() - startTime);
 
-            log.info("文件权限修改成功: path={}, permissions={}, duration={}ms",
-                path, permissions, response.getDuration());
+            log.info("文件权限修改成功: path={}, permissions={}, duration={}ms", path, permissions, response.getDuration());
             return response;
 
         } catch (Exception e) {
@@ -550,11 +566,12 @@ public class FileManagementServiceImpl implements FileManagementService {
             String fileEncoding = encoding != null ? encoding : "UTF-8";
             String content = new String(Files.readAllBytes(path), fileEncoding);
 
-            FileOperationResponse response = FileOperationResponse.successWithContent("PREVIEW", "文件预览成功", content, "text/plain");
+            FileOperationResponse response = FileOperationResponse.successWithContent("PREVIEW", "文件预览成功", content,
+                    "text/plain");
             response.setDuration(System.currentTimeMillis() - startTime);
 
-            log.debug("文件预览成功: path={}, size={}, encoding={}, duration={}ms",
-                filePath, fileSize, fileEncoding, response.getDuration());
+            log.debug("文件预览成功: path={}, size={}, encoding={}, duration={}ms", filePath, fileSize, fileEncoding,
+                    response.getDuration());
             return response;
 
         } catch (Exception e) {
@@ -618,8 +635,8 @@ public class FileManagementServiceImpl implements FileManagementService {
                     }
 
                     String fileName = file.getFileName().toString();
-                    boolean matches = pattern == null || fileName.contains(pattern) ||
-                        fileName.matches(pattern.replace("*", ".*"));
+                    boolean matches = pattern == null || fileName.contains(pattern)
+                            || fileName.matches(pattern.replace("*", ".*"));
 
                     if (!matches && searchContent) {
                         try {
@@ -644,8 +661,8 @@ public class FileManagementServiceImpl implements FileManagementService {
             FileOperationResponse response = FileOperationResponse.success("SEARCH", "文件搜索成功", results);
             response.setDuration(System.currentTimeMillis() - startTime);
 
-            log.debug("文件搜索完成: path={}, pattern={}, results={}, duration={}ms",
-                path, pattern, results.size(), response.getDuration());
+            log.debug("文件搜索完成: path={}, pattern={}, results={}, duration={}ms", path, pattern, results.size(),
+                    response.getDuration());
             return response;
 
         } catch (Exception e) {
@@ -676,20 +693,15 @@ public class FileManagementServiceImpl implements FileManagementService {
             double usagePercentage = totalSpace > 0 ? (double) usedSpace / totalSpace * 100 : 0;
 
             FileOperationResponse.FileSystemInfo fsInfo = FileOperationResponse.FileSystemInfo.builder()
-                .totalSpace(totalSpace)
-                .freeSpace(freeSpace)
-                .usedSpace(usedSpace)
-                .usagePercentage(usagePercentage)
-                .fileSystemType(store.type())
-                .rootPath(filePath.getRoot().toString())
-                .build();
+                    .totalSpace(totalSpace).freeSpace(freeSpace).usedSpace(usedSpace).usagePercentage(usagePercentage)
+                    .fileSystemType(store.type()).rootPath(filePath.getRoot().toString()).build();
 
             FileOperationResponse response = FileOperationResponse.success("FSINFO", "获取文件系统信息成功");
             response.setFileSystemInfo(fsInfo);
             response.setDuration(System.currentTimeMillis() - startTime);
 
-            log.debug("获取文件系统信息成功: path={}, totalSpace={}, freeSpace={}, duration={}ms",
-                path, totalSpace, freeSpace, response.getDuration());
+            log.debug("获取文件系统信息成功: path={}, totalSpace={}, freeSpace={}, duration={}ms", path, totalSpace, freeSpace,
+                    response.getDuration());
             return response;
 
         } catch (Exception e) {
@@ -707,35 +719,34 @@ public class FileManagementServiceImpl implements FileManagementService {
         String operation = request.getOperation().toUpperCase();
 
         switch (operation) {
-            case "LIST":
-                return listFiles(request.getPath(), request.getIncludeHiddenOrDefault(),
-                    request.getSortBy(), request.getSortOrder());
-            case "TREE":
-                return getFileTree(request.getPath(), request.getMaxDepthOrDefault(),
-                    request.getIncludeHiddenOrDefault());
-            case "DELETE":
-                return deleteFile(request.getPath(), request.getRecursiveOrDefault());
-            case "RENAME":
-                return renameFile(request.getPath(), request.getNewName());
-            case "MKDIR":
-                return createDirectory(request.getPath());
-            case "MOVE":
-                return moveFile(request.getPath(), request.getTargetPath(), request.getOverwriteOrDefault());
-            case "COPY":
-                return copyFile(request.getPath(), request.getTargetPath(), request.getOverwriteOrDefault());
-            case "CHMOD":
-                return changePermissions(request.getPath(), request.getPermissions());
-            case "PREVIEW":
-                return previewFile(request.getPath(), request.getEncoding(), request.getMaxSize());
-            case "INFO":
-                return getFileInfo(request.getPath());
-            case "SEARCH":
-                return searchFiles(request.getPath(), request.getPattern(),
-                    request.getIncludeContentOrDefault(), request.getMaxResultsOrDefault());
-            case "FSINFO":
-                return getFileSystemInfo(request.getPath());
-            default:
-                return FileOperationResponse.error(operation, "不支持的操作类型", "UNSUPPORTED_OPERATION");
+        case "LIST":
+            return listFiles(request.getPath(), request.getIncludeHiddenOrDefault(), request.getSortBy(),
+                    request.getSortOrder());
+        case "TREE":
+            return getFileTree(request.getPath(), request.getMaxDepthOrDefault(), request.getIncludeHiddenOrDefault());
+        case "DELETE":
+            return deleteFile(request.getPath(), request.getRecursiveOrDefault());
+        case "RENAME":
+            return renameFile(request.getPath(), request.getNewName());
+        case "MKDIR":
+            return createDirectory(request.getPath());
+        case "MOVE":
+            return moveFile(request.getPath(), request.getTargetPath(), request.getOverwriteOrDefault());
+        case "COPY":
+            return copyFile(request.getPath(), request.getTargetPath(), request.getOverwriteOrDefault());
+        case "CHMOD":
+            return changePermissions(request.getPath(), request.getPermissions());
+        case "PREVIEW":
+            return previewFile(request.getPath(), request.getEncoding(), request.getMaxSize());
+        case "INFO":
+            return getFileInfo(request.getPath());
+        case "SEARCH":
+            return searchFiles(request.getPath(), request.getPattern(), request.getIncludeContentOrDefault(),
+                    request.getMaxResultsOrDefault());
+        case "FSINFO":
+            return getFileSystemInfo(request.getPath());
+        default:
+            return FileOperationResponse.error(operation, "不支持的操作类型", "UNSUPPORTED_OPERATION");
         }
     }
 
@@ -749,30 +760,33 @@ public class FileManagementServiceImpl implements FileManagementService {
 
         Comparator<FileInfo> comparator = null;
         switch (sortBy.toLowerCase()) {
-            case "name":
-                comparator = Comparator.comparing(FileInfo::getName, String.CASE_INSENSITIVE_ORDER);
-                break;
-            case "size":
-                comparator = Comparator.comparing(f -> f.getSize() != null ? f.getSize() : 0L);
-                break;
-            case "modified":
-                comparator = Comparator.comparing(f -> f.getLastModified() != null ? f.getLastModified() : LocalDateTime.MIN);
-                break;
-            case "type":
-//                comparator = Comparator.comparing(f -> f.getIsDirectory() != null && f.getIsDirectory() ? "0" : "1")
-//                    .thenComparing(f -> f.getExtension() != null ? f.getExtension() : "");
-                break;
-            default:
-                return;
+        case "name":
+            comparator = Comparator.comparing(FileInfo::getName, String.CASE_INSENSITIVE_ORDER);
+            break;
+        case "size":
+            comparator = Comparator.comparing(f -> f.getSize() != null ? f.getSize() : 0L);
+            break;
+        case "modified":
+            comparator = Comparator
+                    .comparing(f -> f.getLastModified() != null ? f.getLastModified() : LocalDateTime.MIN);
+            break;
+        case "type":
+            comparator = Comparator
+                    .comparing((FileInfo f) -> f.getIsDirectory() != null && f.getIsDirectory() ? "0" : "1")
+                    .thenComparing((FileInfo f) -> f.getExtension() != null ? f.getExtension() : "");
+            break;
+        default:
+            comparator = Comparator.comparing(FileInfo::getName, String.CASE_INSENSITIVE_ORDER);
+            break;
         }
 
-        if (!ascending) {
+        if (comparator != null && !ascending) {
             comparator = comparator.reversed();
         }
 
         // 目录总是排在前面
         files.sort(Comparator.comparing((FileInfo f) -> f.getIsDirectory() != null && f.getIsDirectory() ? 0 : 1)
-            .thenComparing(comparator));
+                .thenComparing(comparator));
     }
 
     private FileInfo buildFileTree(Path path, int maxDepth, boolean includeHidden, int currentDepth) {
@@ -788,15 +802,89 @@ public class FileManagementServiceImpl implements FileManagementService {
         if (fileInfo.getIsDirectory() != null && fileInfo.getIsDirectory()) {
             List<FileInfo> children = new ArrayList<>();
             try (Stream<Path> stream = Files.list(path)) {
-                children = stream
-                    .filter(p -> includeHidden || !isHidden(p))
-                    .map(p -> buildFileTree(p, maxDepth, includeHidden, currentDepth + 1))
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toList());
+                children = stream.filter(p -> includeHidden || !isHidden(p))
+                        .map(p -> buildFileTree(p, maxDepth, includeHidden, currentDepth + 1)).filter(Objects::nonNull)
+                        .collect(Collectors.toList());
             } catch (Exception e) {
                 log.warn("构建文件树失败: path={}", path, e);
             }
             fileInfo.setChildren(children);
+        }
+
+        return fileInfo;
+    }
+
+    /**
+     * 构建文件树（懒加载模式） 只加载当前层级的文件夹，不递归加载子目录
+     */
+    private FileInfo buildFileTreeLazy(Path path, int maxDepth, boolean includeHidden, int pageSize, int pageIndex) {
+        FileInfo fileInfo = convertToFileInfo(path);
+        if (fileInfo == null) {
+            return null;
+        }
+
+        if (fileInfo.getIsDirectory() != null && fileInfo.getIsDirectory()) {
+            List<FileInfo> children = new ArrayList<>();
+            List<Path> allDirectories = new ArrayList<>();
+
+            try (Stream<Path> stream = Files.list(path)) {
+                // 先收集所有目录
+                allDirectories = stream.filter(p -> includeHidden || !isHidden(p)).filter(Files::isDirectory).sorted()
+                        .collect(Collectors.toList());
+
+                // 实现分页
+                int totalEntries = allDirectories.size();
+                int startIndex = pageIndex * pageSize;
+                int endIndex = Math.min(startIndex + pageSize, totalEntries);
+
+                if (startIndex < totalEntries) {
+                    for (int i = startIndex; i < endIndex; i++) {
+                        Path childPath = allDirectories.get(i);
+                        // 创建目录节点，但不递归加载其子目录
+                        FileInfo childInfo = createDirectoryNodeLazy(childPath, includeHidden);
+                        if (childInfo != null) {
+                            children.add(childInfo);
+                        }
+                    }
+                }
+
+                // 如果有更多数据，设置hasMore标志
+                if (endIndex < totalEntries) {
+                    fileInfo.setExtraProperties("{\"hasMore\": true, \"totalCount\": " + totalEntries + "}");
+                }
+
+            } catch (Exception e) {
+                log.warn("构建懒加载文件树失败: path={}", path, e);
+            }
+
+            fileInfo.setChildren(children);
+        }
+
+        return fileInfo;
+    }
+
+    /**
+     * 创建目录节点（懒加载模式） 只创建节点信息，不加载子目录
+     */
+    private FileInfo createDirectoryNodeLazy(Path path, boolean includeHidden) {
+        FileInfo fileInfo = convertToFileInfo(path);
+        if (fileInfo == null) {
+            return null;
+        }
+
+        // 检查是否有子目录，用于前端显示展开图标
+        boolean hasChildren = false;
+        try (Stream<Path> stream = Files.list(path)) {
+            hasChildren = stream.filter(p -> includeHidden || !isHidden(p)).filter(Files::isDirectory).findFirst()
+                    .isPresent();
+        } catch (Exception e) {
+            log.debug("检查子目录失败: {}", path, e);
+        }
+
+        // 如果有子目录，设置一个空的children列表，让前端知道这个节点可以展开
+        if (hasChildren) {
+            fileInfo.setChildren(new ArrayList<>());
+            fileInfo.setExtraProperties("{\"hasChildren\": true}");
         }
 
         return fileInfo;
@@ -832,12 +920,119 @@ public class FileManagementServiceImpl implements FileManagementService {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                 Path targetFile = target.resolve(source.relativize(file));
-                StandardCopyOption[] options = overwrite != null && overwrite ?
-                    new StandardCopyOption[]{StandardCopyOption.REPLACE_EXISTING} :
-                    new StandardCopyOption[0];
+                StandardCopyOption[] options = overwrite != null && overwrite
+                        ? new StandardCopyOption[] { StandardCopyOption.REPLACE_EXISTING }
+                        : new StandardCopyOption[0];
                 Files.copy(file, targetFile, options);
                 return FileVisitResult.CONTINUE;
             }
         });
+    }
+
+    /**
+     * 构建系统根目录树（处理"/"路径请求）
+     */
+    private FileInfo buildSystemRootTree(int maxDepth, boolean includeHidden, Boolean lazyLoad, int pageSize,
+            int pageIndex) throws IOException {
+        String osName = System.getProperty("os.name").toLowerCase();
+        log.info("检测到操作系统: {}", osName);
+
+        if (osName.contains("win")) {
+            // Windows系统：返回所有可用磁盘驱动器
+            return buildWindowsRootTree(maxDepth, includeHidden, lazyLoad, pageSize, pageIndex);
+        } else {
+            // Linux/Unix系统：返回真正的根目录"/"
+            return buildUnixRootTree(maxDepth, includeHidden, lazyLoad, pageSize, pageIndex);
+        }
+    }
+
+    /**
+     * 构建Windows系统根目录树（磁盘驱动器列表）
+     */
+    private FileInfo buildWindowsRootTree(int maxDepth, boolean includeHidden, Boolean lazyLoad, int pageSize,
+            int pageIndex) throws IOException {
+        log.info("构建Windows系统根目录树");
+
+        // 创建虚拟根节点
+        FileInfo rootNode = new FileInfo();
+        rootNode.setName("我的电脑");
+        rootNode.setPath("/");
+        rootNode.setIsDirectory(true);
+        rootNode.setSize(0L);
+        rootNode.setCreateTime(LocalDateTime.now());
+        rootNode.setLastModified(LocalDateTime.now());
+
+        List<FileInfo> drives = new ArrayList<>();
+
+        // 获取所有可用的文件系统根目录（磁盘驱动器）
+        File[] roots = File.listRoots();
+        if (roots != null) {
+            for (File root : roots) {
+                try {
+                    FileInfo driveInfo = new FileInfo();
+                    String drivePath = root.getAbsolutePath();
+                    String driveName = drivePath.replace("\\", "");
+
+                    driveInfo.setName(driveName);
+                    driveInfo.setPath(drivePath);
+                    driveInfo.setIsDirectory(true);
+                    driveInfo.setSize(0L);
+                    driveInfo.setCreateTime(LocalDateTime.now());
+                    driveInfo.setLastModified(LocalDateTime.now());
+
+                    // 检查驱动器是否可访问
+                    if (root.exists() && root.canRead()) {
+                        // 检查是否有子目录，用于懒加载
+                        boolean hasChildren = hasSubDirectories(root.toPath(), includeHidden);
+                        if (hasChildren) {
+                            driveInfo.setChildren(new ArrayList<>());
+                            driveInfo.setExtraProperties("{\"hasChildren\": true}");
+                        }
+
+                        drives.add(driveInfo);
+                        log.debug("添加可用驱动器: {}", driveName);
+                    }
+                } catch (Exception e) {
+                    log.warn("处理驱动器失败: {}", root.getAbsolutePath(), e);
+                }
+            }
+        }
+
+        rootNode.setChildren(drives);
+        return rootNode;
+    }
+
+    /**
+     * 构建Unix/Linux系统根目录树
+     */
+    private FileInfo buildUnixRootTree(int maxDepth, boolean includeHidden, Boolean lazyLoad, int pageSize,
+            int pageIndex) throws IOException {
+        log.info("构建Unix/Linux系统根目录树");
+
+        Path rootPath = Paths.get("/");
+        if (Boolean.TRUE.equals(lazyLoad)) {
+            return buildFileTreeLazy(rootPath, maxDepth, includeHidden, pageSize, pageIndex);
+        } else {
+            return buildFileTree(rootPath, maxDepth, includeHidden, 0);
+        }
+    }
+
+    /**
+     * 检查目录是否有子目录
+     */
+    private boolean hasSubDirectories(Path path, boolean includeHidden) {
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(path)) {
+            for (Path entry : stream) {
+                if (Files.isDirectory(entry)) {
+                    String entryName = entry.getFileName().toString();
+                    if (includeHidden || !entryName.startsWith(".")) {
+                        return true;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.debug("检查子目录失败: {}", path, e);
+        }
+        return false;
     }
 }
