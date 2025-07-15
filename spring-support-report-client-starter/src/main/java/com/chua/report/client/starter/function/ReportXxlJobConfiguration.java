@@ -49,7 +49,7 @@ public class ReportXxlJobConfiguration implements BeanFactoryAware, SmartInstant
         String profile = jsonObject.getString("profile");
         String applicationActive = Project.getInstance().getApplicationActive();
         String applicationActiveInclude = Project.getInstance().getApplicationActiveInclude();
-        if(!profile.equals(applicationActive) && !applicationActiveInclude.contains(profile)) {
+        if (!profile.equals(applicationActive) && !applicationActiveInclude.contains(profile)) {
             return new BadResponse(request, "环境不支持");
         }
 
@@ -75,6 +75,7 @@ public class ReportXxlJobConfiguration implements BeanFactoryAware, SmartInstant
         LogResult logResult = JobFileAppender.readLog(fileName, jobCat.getFromLineNum());
         return new OkResponse(request, Json.toJson(logResult));
     }
+
     /**
      * bean
      *
@@ -92,7 +93,6 @@ public class ReportXxlJobConfiguration implements BeanFactoryAware, SmartInstant
         return SmartInstantiationAwareBeanPostProcessor.super.postProcessAfterInstantiation(bean, beanName);
     }
 
-
     @Override
     public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
         if (!(beanFactory instanceof ConfigurableListableBeanFactory)) {
@@ -107,7 +107,8 @@ public class ReportXxlJobConfiguration implements BeanFactoryAware, SmartInstant
         Map<Method, Job> annotatedMethods = null;
         try {
             annotatedMethods = MethodIntrospector.selectMethods(bean.getClass(),
-                    (MethodIntrospector.MetadataLookup<Job>) method -> AnnotatedElementUtils.findMergedAnnotation(method, Job.class));
+                    (MethodIntrospector.MetadataLookup<Job>) method -> AnnotatedElementUtils
+                            .findMergedAnnotation(method, Job.class));
         } catch (Throwable ex) {
             log.error("job method-jobhandler resolve error for bean[" + beanDefinitionName + "].", ex);
         }
@@ -134,7 +135,8 @@ public class ReportXxlJobConfiguration implements BeanFactoryAware, SmartInstant
         Map<Method, Job> annotatedMethods = null;
         try {
             annotatedMethods = MethodIntrospector.selectMethods(bean.getClass(),
-                    (MethodIntrospector.MetadataLookup<Job>) method -> AnnotatedElementUtils.findMergedAnnotation(method, Job.class));
+                    (MethodIntrospector.MetadataLookup<Job>) method -> AnnotatedElementUtils
+                            .findMergedAnnotation(method, Job.class));
         } catch (Throwable ex) {
             log.error("job method-jobhandler resolve error for bean[" + beanDefinitionName + "].", ex);
         }
@@ -152,18 +154,20 @@ public class ReportXxlJobConfiguration implements BeanFactoryAware, SmartInstant
 
         return annotatedMethods;
     }
-    protected void registJobHandler(Object job, Object bean, Method executeMethod){
+
+    protected void registJobHandler(Object job, Object bean, Method executeMethod) {
         if (job == null) {
             return;
         }
 
-        if(job instanceof Job) {
+        if (job instanceof Job) {
             registerJob((Job) job, bean, executeMethod);
         }
     }
+
     private void registerJob(Job job, Object bean, Method executeMethod) {
         String name = job.value();
-        //make and simplify the variables since they'll be called several times later
+        // make and simplify the variables since they'll be called several times later
         Class<?> clazz = bean.getClass();
         String methodName = executeMethod.getName();
         if (name.trim().isEmpty()) {
@@ -184,7 +188,8 @@ public class ReportXxlJobConfiguration implements BeanFactoryAware, SmartInstant
                 initMethod = clazz.getDeclaredMethod(job.init());
                 ClassUtils.setAccessible(initMethod);
             } catch (NoSuchMethodException e) {
-                throw new RuntimeException("job method-jobhandler initMethod invalid, for[" + clazz + "#" + methodName + "] .");
+                throw new RuntimeException(
+                        "job method-jobhandler initMethod invalid, for[" + clazz + "#" + methodName + "] .");
             }
         }
         if (!job.destroy().trim().isEmpty()) {
@@ -192,18 +197,19 @@ public class ReportXxlJobConfiguration implements BeanFactoryAware, SmartInstant
                 destroyMethod = clazz.getDeclaredMethod(job.destroy());
                 ClassUtils.setAccessible(destroyMethod);
             } catch (NoSuchMethodException e) {
-                throw new RuntimeException("job method-jobhandler destroyMethod invalid, for[" + clazz + "#" + methodName + "] .");
+                throw new RuntimeException(
+                        "job method-jobhandler destroyMethod invalid, for[" + clazz + "#" + methodName + "] .");
             }
         }
 
         log.info("注册任务: {} ", job.value());
         // registry jobhandler
-        JobHandlerFactory.getInstance().register(name, new BeanJobHandler(bean, executeMethod, initMethod, destroyMethod));
+        JobHandlerFactory.getInstance().register(name,
+                new BeanJobHandler(bean, executeMethod, initMethod, destroyMethod));
 
     }
 
-
-    public static JobHandler loadJobHandler(String name){
+    public static JobHandler loadJobHandler(String name) {
         return JobHandlerFactory.getInstance().get(name);
     }
 
