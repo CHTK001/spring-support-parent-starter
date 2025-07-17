@@ -1,5 +1,6 @@
 package com.chua.starter.plugin.entity;
 
+import com.chua.starter.plugin.annotation.RateLimit;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -18,72 +19,72 @@ public class PluginRateLimitConfig {
     /**
      * 主键ID
      */
-    private Long pluginRateLimitConfigId;
+    private Long id;
 
     /**
      * 限流类型：IP、API
      */
-    private LimitType pluginRateLimitConfigLimitType;
+    private LimitType limitType;
 
     /**
      * 限流键（IP地址或API路径）
      */
-    private String pluginRateLimitConfigLimitKey;
+    private String limitKey;
 
     /**
      * 每秒允许的请求数（QPS）
      */
-    private Integer pluginRateLimitConfigQps = 100;
+    private Integer qps = 100;
 
     /**
      * 突发容量（令牌桶算法使用）
      */
-    private Integer pluginRateLimitConfigBurstCapacity = 200;
+    private Integer burstCapacity = 200;
 
     /**
      * 限流算法类型
      */
-    private AlgorithmType pluginRateLimitConfigAlgorithmType = AlgorithmType.TOKEN_BUCKET;
+    private AlgorithmType algorithmType = AlgorithmType.TOKEN_BUCKET;
 
     /**
      * 是否启用
      */
-    private Boolean pluginRateLimitConfigEnabled = true;
+    private Boolean enabled = true;
 
     /**
      * 超出限制时的处理策略
      */
-    private OverflowStrategy pluginRateLimitConfigOverflowStrategy = OverflowStrategy.REJECT;
+    private OverflowStrategy overflowStrategy = OverflowStrategy.REJECT;
 
     /**
      * 时间窗口大小（秒）
      */
-    private Integer pluginRateLimitConfigWindowSizeSeconds = 1;
+    private Integer windowSizeSeconds = 1;
 
     /**
      * 配置描述
      */
-    private String pluginRateLimitConfigDescription;
+    private String description;
 
     /**
      * 创建时间
      */
-    private LocalDateTime pluginRateLimitConfigCreatedTime;
+    private LocalDateTime createdTime;
 
     /**
      * 更新时间
      */
-    private LocalDateTime pluginRateLimitConfigUpdatedTime;
+    private LocalDateTime updatedTime;
 
     /**
      * 创建者
      */
-    private String pluginRateLimitConfigCreatedBy;
+    private String createdBy;
 
     /**
      * 更新者
      */
-    private String pluginRateLimitConfigUpdatedBy;
+    private String updatedBy;
 
     /**
      * 限流类型枚举
@@ -173,17 +174,17 @@ public class PluginRateLimitConfig {
     /**
      * 构造函数
      */
-    public RateLimitConfig() {
+    public PluginRateLimitConfig() {
     }
 
     /**
      * 构造函数
-     * 
+     *
      * @param limitType 限流类型
      * @param limitKey  限流键
      * @param qps       QPS限制
      */
-    public RateLimitConfig(LimitType limitType, String limitKey, Integer qps) {
+    public PluginRateLimitConfig(LimitType limitType, String limitKey, Integer qps) {
         this.limitType = limitType;
         this.limitKey = limitKey;
         this.qps = qps;
@@ -195,29 +196,86 @@ public class PluginRateLimitConfig {
 
     /**
      * 创建IP限流配置
-     * 
+     *
      * @param ipAddress IP地址
      * @param qps       QPS限制
      * @return 限流配置
      */
-    public static RateLimitConfig createIpConfig(String ipAddress, Integer qps) {
-        return new RateLimitConfig(LimitType.IP, ipAddress, qps);
+    public static PluginRateLimitConfig createIpConfig(String ipAddress, Integer qps) {
+        return new PluginRateLimitConfig(LimitType.IP, ipAddress, qps);
     }
 
     /**
      * 创建API限流配置
-     * 
+     *
      * @param apiPath API路径
      * @param qps     QPS限制
      * @return 限流配置
      */
-    public static RateLimitConfig createApiConfig(String apiPath, Integer qps) {
-        return new RateLimitConfig(LimitType.API, apiPath, qps);
+    public static PluginRateLimitConfig createApiConfig(String apiPath, Integer qps) {
+        return new PluginRateLimitConfig(LimitType.API, apiPath, qps);
+    }
+
+    /**
+     * 从 RateLimit 注解的 LimitType 转换为实体的 LimitType
+     *
+     * @param annotationLimitType 注解中的限流类型
+     * @return 实体中的限流类型
+     */
+    public static LimitType fromAnnotationLimitType(RateLimit.LimitType annotationLimitType) {
+        switch (annotationLimitType) {
+            case IP:
+                return LimitType.IP;
+            case API:
+                return LimitType.API;
+            default:
+                return LimitType.API;
+        }
+    }
+
+    /**
+     * 从 RateLimit 注解的 AlgorithmType 转换为实体的 AlgorithmType
+     *
+     * @param annotationAlgorithmType 注解中的算法类型
+     * @return 实体中的算法类型
+     */
+    public static AlgorithmType fromAnnotationAlgorithmType(RateLimit.AlgorithmType annotationAlgorithmType) {
+        switch (annotationAlgorithmType) {
+            case TOKEN_BUCKET:
+                return AlgorithmType.TOKEN_BUCKET;
+            case LEAKY_BUCKET:
+                return AlgorithmType.LEAKY_BUCKET;
+            case FIXED_WINDOW:
+                return AlgorithmType.FIXED_WINDOW;
+            case SLIDING_WINDOW:
+                return AlgorithmType.SLIDING_WINDOW;
+            default:
+                return AlgorithmType.TOKEN_BUCKET;
+        }
+    }
+
+    /**
+     * 从 RateLimit 注解的 OverflowStrategy 转换为实体的 OverflowStrategy
+     *
+     * @param annotationOverflowStrategy 注解中的溢出策略
+     * @return 实体中的溢出策略
+     */
+    public static OverflowStrategy fromAnnotationOverflowStrategy(RateLimit.OverflowStrategy annotationOverflowStrategy) {
+        switch (annotationOverflowStrategy) {
+            case REJECT:
+                return OverflowStrategy.REJECT;
+            case QUEUE:
+                return OverflowStrategy.QUEUE;
+            case FALLBACK:
+                return OverflowStrategy.FALLBACK;
+            default:
+                return OverflowStrategy.REJECT;
+        }
     }
 
     /**
      * 获取唯一键
-     * 
+     *
      * @return 唯一键
      */
     public String getUniqueKey() {
@@ -226,7 +284,7 @@ public class PluginRateLimitConfig {
 
     /**
      * 检查配置是否有效
-     * 
+     *
      * @return 是否有效
      */
     public boolean isValid() {

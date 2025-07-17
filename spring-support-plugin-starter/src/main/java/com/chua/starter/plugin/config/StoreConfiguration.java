@@ -1,8 +1,7 @@
 package com.chua.starter.plugin.config;
 
-import com.chua.starter.plugin.entity.BlackWhiteList;
-import com.chua.starter.plugin.entity.PluginNodeLoggerConfig;
-import com.chua.starter.plugin.entity.PluginXssAttackLog;
+import com.chua.starter.plugin.entity.PluginBlackWhiteList;
+import com.chua.starter.plugin.entity.PluginRateLimitConfig;
 import com.chua.starter.plugin.entity.PluginXssConfig;
 import com.chua.starter.plugin.store.PersistenceStore;
 import com.chua.starter.plugin.store.StoreFactory;
@@ -25,16 +24,16 @@ public class StoreConfiguration {
     /**
      * 限流配置存储Bean
      */
-    // @Bean
-    // public PersistenceStore<RateLimitConfig, Long> rateLimitConfigStore() {
-    // return storeFactory.createRateLimitConfigStore();
-    // }
+    @Bean
+    public PersistenceStore<PluginRateLimitConfig, Long> rateLimitConfigStore() {
+        return storeFactory.createRateLimitConfigStore();
+    }
 
     /**
      * 黑白名单存储Bean
      */
     @Bean
-    public PersistenceStore<BlackWhiteList, Long> blackWhiteListStore() {
+    public PersistenceStore<PluginBlackWhiteList, Long> blackWhiteListStore() {
         return storeFactory.createBlackWhiteListStore();
     }
 
@@ -46,19 +45,4 @@ public class StoreConfiguration {
         return storeFactory.createXssConfigStore();
     }
 
-    /**
-     * XSS攻击日志存储Bean
-     */
-    @Bean
-    public PersistenceStore<PluginXssAttackLog, Long> xssAttackLogStore() {
-        return storeFactory.createXssAttackLogStore();
-    }
-
-    /**
-     * 节点日志配置存储Bean
-     */
-    @Bean
-    public PersistenceStore<PluginNodeLoggerConfig, Long> nodeLoggerConfigStore() {
-        return storeFactory.createNodeLoggerConfigStore();
-    }
 }
