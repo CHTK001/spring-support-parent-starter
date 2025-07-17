@@ -1,12 +1,10 @@
 package com.chua.starter.plugin.annotation;
 
-import com.chua.starter.plugin.entity.RateLimitConfig;
-
 import java.lang.annotation.*;
 
 /**
  * 限流注解
- * 
+ *
  * @author CH
  * @since 2025/1/16
  */
@@ -18,7 +16,7 @@ public @interface RateLimit {
     /**
      * 限流类型
      */
-    RateLimitConfig.LimitType limitType() default RateLimitConfig.LimitType.API;
+    LimitType limitType() default LimitType.API;
 
     /**
      * 限流键，如果为空则使用方法路径
@@ -38,12 +36,12 @@ public @interface RateLimit {
     /**
      * 限流算法类型
      */
-    RateLimitConfig.AlgorithmType algorithm() default RateLimitConfig.AlgorithmType.TOKEN_BUCKET;
+    AlgorithmType algorithm() default AlgorithmType.TOKEN_BUCKET;
 
     /**
      * 超出限制时的处理策略
      */
-    RateLimitConfig.OverflowStrategy overflowStrategy() default RateLimitConfig.OverflowStrategy.REJECT;
+    OverflowStrategy overflowStrategy() default OverflowStrategy.REJECT;
 
     /**
      * 时间窗口大小（秒）
@@ -79,4 +77,58 @@ public @interface RateLimit {
      * 错误代码
      */
     int errorCode() default 429;
+
+    /**
+     * 限流类型枚举
+     */
+    enum LimitType {
+        /**
+         * IP限流
+         */
+        IP,
+        /**
+         * API限流
+         */
+        API
+    }
+
+    /**
+     * 限流算法类型枚举
+     */
+    enum AlgorithmType {
+        /**
+         * 令牌桶算法
+         */
+        TOKEN_BUCKET,
+        /**
+         * 漏桶算法
+         */
+        LEAKY_BUCKET,
+        /**
+         * 固定窗口算法
+         */
+        FIXED_WINDOW,
+        /**
+         * 滑动窗口算法
+         */
+        SLIDING_WINDOW
+    }
+
+    /**
+     * 超出限制时的处理策略枚举
+     */
+    enum OverflowStrategy {
+        /**
+         * 拒绝请求
+         */
+        REJECT,
+        /**
+         * 排队等待
+         */
+        QUEUE,
+        /**
+         * 降级处理
+         */
+        FALLBACK
+    }
 }

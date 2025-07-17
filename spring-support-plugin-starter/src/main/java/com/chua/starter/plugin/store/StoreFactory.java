@@ -1,5 +1,8 @@
 package com.chua.starter.plugin.store;
 
+import com.chua.starter.plugin.entity.PluginBlackWhiteList;
+import com.chua.starter.plugin.entity.PluginRateLimitConfig;
+import com.chua.starter.plugin.entity.PluginXssConfig;
 import com.chua.starter.plugin.store.impl.MemoryPersistenceStore;
 import com.chua.starter.plugin.store.impl.SqlitePersistenceStore;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +19,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class StoreFactory {
 
-    @Value("${plugin.store.type:MEMORY}")
+    @Value("${plugin.store.type:SQLITE}")
     private String storeType;
 
     @Value("${plugin.sqlite.database-path:plugin.db}")
@@ -61,8 +64,8 @@ public class StoreFactory {
      * 
      * @return 限流配置存储
      */
-    public PersistenceStore<com.chua.starter.plugin.entity.RateLimitConfig, Long> createRateLimitConfigStore() {
-        return createStore(com.chua.starter.plugin.entity.RateLimitConfig.class, "rate_limit_config");
+    public PersistenceStore<PluginRateLimitConfig, Long> createRateLimitConfigStore() {
+        return createStore(PluginRateLimitConfig.class, "rate_limit_config");
     }
 
     /**
@@ -70,8 +73,8 @@ public class StoreFactory {
      *
      * @return 黑白名单存储
      */
-    public PersistenceStore<com.chua.starter.plugin.entity.BlackWhiteList, Long> createBlackWhiteListStore() {
-        return createStore(com.chua.starter.plugin.entity.BlackWhiteList.class, "black_white_list");
+    public PersistenceStore<PluginBlackWhiteList, Long> createBlackWhiteListStore() {
+        return createStore(PluginBlackWhiteList.class, "black_white_list");
     }
 
     /**
@@ -79,25 +82,9 @@ public class StoreFactory {
      *
      * @return XSS配置存储
      */
-    public PersistenceStore<com.chua.starter.plugin.entity.PluginXssConfig, Long> createXssConfigStore() {
-        return createStore(com.chua.starter.plugin.entity.PluginXssConfig.class, "plugin_xss_config");
+    public PersistenceStore<PluginXssConfig, Long> createXssConfigStore() {
+        return createStore(PluginXssConfig.class, "plugin_xss_config");
     }
 
-    /**
-     * 创建XSS攻击日志存储
-     *
-     * @return XSS攻击日志存储
-     */
-    public PersistenceStore<com.chua.starter.plugin.entity.PluginXssAttackLog, Long> createXssAttackLogStore() {
-        return createStore(com.chua.starter.plugin.entity.PluginXssAttackLog.class, "plugin_xss_attack_log");
-    }
 
-    /**
-     * 创建节点日志配置存储
-     *
-     * @return 节点日志配置存储
-     */
-    public PersistenceStore<com.chua.starter.plugin.entity.PluginNodeLoggerConfig, Long> createNodeLoggerConfigStore() {
-        return createStore(com.chua.starter.plugin.entity.PluginNodeLoggerConfig.class, "plugin_node_logger_config");
-    }
 }

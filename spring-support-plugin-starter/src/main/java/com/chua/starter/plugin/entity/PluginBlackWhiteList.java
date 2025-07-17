@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-public class BlackWhiteList {
+public class PluginBlackWhiteList {
 
     /**
      * 主键ID
@@ -123,7 +123,7 @@ public class BlackWhiteList {
     /**
      * 构造函数
      */
-    public BlackWhiteList() {
+    public PluginBlackWhiteList() {
     }
 
     /**
@@ -133,7 +133,7 @@ public class BlackWhiteList {
      * @param listValue 名单值
      * @param matchType 匹配类型
      */
-    public BlackWhiteList(ListType listType, String listValue, MatchType matchType) {
+    public PluginBlackWhiteList(ListType listType, String listValue, MatchType matchType) {
         this.listType = listType;
         this.listValue = listValue;
         this.matchType = matchType;
@@ -149,8 +149,8 @@ public class BlackWhiteList {
      * @param matchType 匹配类型
      * @return 黑名单条目
      */
-    public static BlackWhiteList createBlacklist(String value, MatchType matchType) {
-        return new BlackWhiteList(ListType.BLACKLIST, value, matchType);
+    public static PluginBlackWhiteList createBlacklist(String value, MatchType matchType) {
+        return new PluginBlackWhiteList(ListType.BLACKLIST, value, matchType);
     }
 
     /**
@@ -160,8 +160,8 @@ public class BlackWhiteList {
      * @param matchType 匹配类型
      * @return 白名单条目
      */
-    public static BlackWhiteList createWhitelist(String value, MatchType matchType) {
-        return new BlackWhiteList(ListType.WHITELIST, value, matchType);
+    public static PluginBlackWhiteList createWhitelist(String value, MatchType matchType) {
+        return new PluginBlackWhiteList(ListType.WHITELIST, value, matchType);
     }
 
     /**
