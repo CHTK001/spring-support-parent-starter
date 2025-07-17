@@ -1,6 +1,5 @@
 package com.chua.starter.plugin.service;
 
-import com.chua.starter.plugin.entity.PluginXssAttackLog;
 import com.chua.starter.plugin.entity.PluginXssConfig;
 import com.chua.starter.plugin.filter.XssFilter;
 import com.chua.starter.plugin.store.PersistenceStore;
@@ -13,12 +12,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
@@ -34,7 +34,6 @@ import java.util.regex.Pattern;
 public class XssProtectionService implements ApplicationRunner {
 
     private final PersistenceStore<PluginXssConfig, Long> xssConfigStore;
-    private final PersistenceStore<PluginXssAttackLog, Long> xssAttackLogStore;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
@@ -214,43 +213,6 @@ public class XssProtectionService implements ApplicationRunner {
         return content;
     }
 
-    /**
-     * 记录XSS攻击日志
-     * 
-     * @param request   请求对象
-     * @param exception XSS攻击异常
-     */
-    @Transactional
-    public void logXssAttack(HttpServletRequest request, XssFilter.XssAttackException exception) {
-        try {
-            String attackerIp = getClientIpAddress(request);
-
-            PluginXssAttackLog attackLog = new PluginXssAttackLog(attackerIp, request.getRequestURI(),
-                    exception.getParameterName(), exception.getOriginalContent());
-
-            attackLog.setPluginXssAttackLogHttpMethod(request.getMethod());
-            attackLog.setPluginXssAttackLogUserAgent(request.getHeader("User-Agent"));
-            attackLog.setPluginXssAttackLogReferer(request.getHeader("Referer"));
-            attackLog.setPluginXssAttackLogSessionId(request.getSession().getId());
-            attackLog.setPluginXssAttackLogAction("BLOCKED");
-
-            // 分析攻击类型和风险等级
-            XssDetectionResult result = detectXssAttack(exception.getOriginalContent());
-            attackLog.setPluginXssAttackLogAttackType(getAttackType(result.getAttackType()));
-            attackLog.setPluginXssAttackLogRiskLevel(getRiskLevel(result));
-
-            // 保存攻击日志
-            xssAttackLogStore.save(attackLog);
-
-            // 更新攻击统计
-            updateAttackStatistics(attackerIp);
-
-            log.warn("XSS attack detected and logged: {} from {}", exception.getMessage(), attackerIp);
-
-        } catch (Exception e) {
-            log.error("Failed to log XSS attack", e);
-        }
-    }
 
     /**
      * XSS检测结果
@@ -541,61 +503,6 @@ public class XssProtectionService implements ApplicationRunner {
         }
 
         return request.getRemoteAddr();
-    }
-
-    /**
-     * 获取攻击类型枚举
-     *
-     * @param attackType 攻击类型字符串
-     * @return 攻击类型枚举
-     */
-    private PluginXssAttackLog.AttackType getAttackType(String attackType) {
-        if (attackType == null) {
-            return PluginXssAttackLog.AttackType.OTHER;
-        }
-
-        switch (attackType.toLowerCase()) {
-        case "script":
-            return PluginXssAttackLog.AttackType.SCRIPT_INJECTION;
-        case "javascript":
-            return PluginXssAttackLog.AttackType.JAVASCRIPT_PROTOCOL;
-        case "onload":
-        case "onerror":
-        case "onclick":
-        case "onmouseover":
-        case "onfocus":
-        case "onblur":
-            return PluginXssAttackLog.AttackType.EVENT_HANDLER;
-        case "expression":
-            return PluginXssAttackLog.AttackType.CSS_EXPRESSION;
-        case "iframe":
-        case "object":
-        case "embed":
-        case "form":
-            return PluginXssAttackLog.AttackType.HTML_INJECTION;
-        default:
-            return PluginXssAttackLog.AttackType.OTHER;
-        }
-    }
-
-    /**
-     * 获取风险等级
-     *
-     * @param result 检测结果
-     * @return 风险等级
-     */
-    private PluginXssAttackLog.RiskLevel getRiskLevel(XssDetectionResult result) {
-        int score = result.getRiskScore();
-
-        if (score >= 80) {
-            return PluginXssAttackLog.RiskLevel.CRITICAL;
-        } else if (score >= 60) {
-            return PluginXssAttackLog.RiskLevel.HIGH;
-        } else if (score >= 40) {
-            return PluginXssAttackLog.RiskLevel.MEDIUM;
-        } else {
-            return PluginXssAttackLog.RiskLevel.LOW;
-        }
     }
 
     /**

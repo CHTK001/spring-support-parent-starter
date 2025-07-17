@@ -21,7 +21,6 @@ import org.springframework.context.annotation.Import;
     SqliteConfiguration.SqliteProperties.class
 })
 @Import({
-    SqliteConfiguration.class,
     RateLimitConfiguration.class,
     RateLimitWebConfiguration.class
 })

@@ -4,7 +4,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 /**
  * XSS防护配置实体
@@ -151,68 +150,71 @@ public class PluginXssConfig {
         TEMP_BAN
     }
 
-    public void onCreate() {
-        LocalDateTime now = LocalDateTime.now();
-        createdTime = now;
-        updatedTime = now;
-    }
-
-    public void onUpdate() {
-        updatedTime = LocalDateTime.now();
-    }
-
     /**
      * 构造函数
      */
-    public XssConfig() {
+    public PluginXssConfig() {
     }
 
     /**
      * 构造函数
-     * 
+     *
      * @param configName 配置名称
      * @param enabled 是否启用
      */
-    public XssConfig(String configName, Boolean enabled) {
-        this.configName = configName;
-        this.enabled = enabled;
+    public PluginXssConfig(String configName, Boolean enabled) {
+        this.pluginXssConfigName = configName;
+        this.pluginXssConfigEnabled = enabled;
         onCreate();
     }
 
     /**
+     * 创建默认配置
+     *
+     * @return 默认配置
+     */
+    public static PluginXssConfig createDefault() {
+        PluginXssConfig config = new PluginXssConfig("default", true);
+        config.setPluginXssConfigProtectionMode(ProtectionMode.FILTER);
+        config.setPluginXssConfigUrlPatterns("/**");
+        config.setPluginXssConfigExcludePatterns("/static/**,/public/**,/webjars/**");
+        config.setPluginXssConfigStrictMode(false);
+        config.setPluginXssConfigLogAttacks(true);
+        config.setPluginXssConfigAttackThreshold(10);
+        config.setPluginXssConfigThresholdWindow(5);
+        config.setPluginXssConfigThresholdAction(ThresholdAction.LOG);
+        config.setPluginXssConfigDescription("默认XSS防护配置");
+        return config;
+    }
+
+    public void onCreate() {
+        LocalDateTime now = LocalDateTime.now();
+        pluginXssConfigCreatedTime = now;
+        pluginXssConfigUpdatedTime = now;
+    }
+
+    public void onUpdate() {
+        pluginXssConfigUpdatedTime = LocalDateTime.now();
+    }
+
+    /**
      * 获取唯一键
-     * 
+     *
      * @return 唯一键
      */
     public String getUniqueKey() {
-        return "XSS:" + configName;
+        return "XSS:" + pluginXssConfigName;
     }
 
     /**
      * 检查配置是否有效
-     * 
+     *
      * @return 是否有效
      */
     public boolean isValid() {
-        return configName != null && !configName.trim().isEmpty() && enabled != null && protectionMode != null;
-    }
-
-    /**
-     * 创建默认配置
-     * 
-     * @return 默认配置
-     */
-    public static XssConfig createDefault() {
-        XssConfig config = new XssConfig("default", true);
-        config.setProtectionMode(ProtectionMode.FILTER);
-        config.setUrlPatterns("/**");
-        config.setExcludePatterns("/static/**,/public/**,/webjars/**");
-        config.setStrictMode(false);
-        config.setLogAttacks(true);
-        config.setAttackThreshold(10);
-        config.setThresholdWindow(5);
-        config.setThresholdAction(ThresholdAction.LOG);
-        config.setDescription("默认XSS防护配置");
-        return config;
+        return pluginXssConfigName != null
+                && !pluginXssConfigName.trim().isEmpty()
+                && pluginXssConfigEnabled != null
+                && pluginXssConfigProtectionMode != null;
     }
 }

@@ -2,74 +2,56 @@ package com.chua.starter.plugin.config;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
-import org.springframework.orm.jpa.JpaTransactionManager;
-import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
-import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
-import org.springframework.transaction.PlatformTransactionManager;
-
-import javax.sql.DataSource;
-import java.util.Properties;
 
 /**
  * SQLite 数据库配置
- * 
+ * 内部使用，不注入 Bean
+ *
  * @author CH
  * @since 2025/1/16
  */
-@Configuration
-@EnableJpaRepositories(
-    basePackages = "com.chua.starter.plugin.repository",
-    entityManagerFactoryRef = "sqliteEntityManagerFactory",
-    transactionManagerRef = "sqliteTransactionManager"
-)
 public class SqliteConfiguration {
 
     /**
-     * SQLite 数据源配置
+     * 获取默认的 SQLite 数据库路径
+     *
+     * @return 数据库路径
      */
-    @Bean
-    @ConfigurationProperties(prefix = "plugin.sqlite.datasource")
-    public DataSource sqliteDataSource() {
-        org.springframework.boot.jdbc.DataSourceBuilder<?> builder = 
-            org.springframework.boot.jdbc.DataSourceBuilder.create();
-        builder.driverClassName("org.sqlite.JDBC");
-        builder.url("jdbc:sqlite:plugin.db");
-        return builder.build();
+    public static String getDefaultDatabasePath() {
+        return "plugin.db";
     }
 
     /**
-     * SQLite EntityManagerFactory
+     * 获取 SQLite JDBC URL
+     *
+     * @param databasePath 数据库文件路径
+     * @return JDBC URL
      */
-    @Bean
-    public LocalContainerEntityManagerFactoryBean sqliteEntityManagerFactory() {
-        LocalContainerEntityManagerFactoryBean em = new LocalContainerEntityManagerFactoryBean();
-        em.setDataSource(sqliteDataSource());
-        em.setPackagesToScan("com.chua.starter.plugin.entity");
-        
-        HibernateJpaVendorAdapter vendorAdapter = new HibernateJpaVendorAdapter();
-        em.setJpaVendorAdapter(vendorAdapter);
-        
-        Properties properties = new Properties();
-        properties.setProperty("hibernate.dialect", "org.hibernate.dialect.SQLiteDialect");
-        properties.setProperty("hibernate.hbm2ddl.auto", "update");
-        properties.setProperty("hibernate.show_sql", "false");
-        properties.setProperty("hibernate.format_sql", "true");
-        em.setJpaProperties(properties);
-        
-        return em;
+    public static String getSqliteJdbcUrl(String databasePath) {
+        return "jdbc:sqlite:" + databasePath;
     }
 
     /**
-     * SQLite 事务管理器
+     * 获取 SQLite 驱动类名
+     *
+     * @return 驱动类名
      */
-    @Bean
-    public PlatformTransactionManager sqliteTransactionManager() {
-        JpaTransactionManager transactionManager = new JpaTransactionManager();
-        transactionManager.setEntityManagerFactory(sqliteEntityManagerFactory().getObject());
-        return transactionManager;
+    public static String getSqliteDriverClassName() {
+        return "org.sqlite.JDBC";
+    }
+
+    /**
+     * 检查 SQLite 驱动是否可用
+     *
+     * @return 是否可用
+     */
+    public static boolean isSqliteDriverAvailable() {
+        try {
+            Class.forName(getSqliteDriverClassName());
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
     }
 
     /**

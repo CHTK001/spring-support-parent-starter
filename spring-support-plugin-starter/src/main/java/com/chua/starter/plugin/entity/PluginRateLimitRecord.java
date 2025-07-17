@@ -21,7 +21,7 @@ import java.time.LocalDateTime;
     @Index(name = "idx_created_time", columnList = "createdTime")
 })
 @EqualsAndHashCode(callSuper = false)
-public class RateLimitRecord {
+public class PluginRateLimitRecord {
 
     /**
      * 主键ID
@@ -134,7 +134,7 @@ public class RateLimitRecord {
     /**
      * 构造函数
      */
-    public RateLimitRecord() {
+    public PluginRateLimitRecord() {
     }
 
     /**
@@ -144,7 +144,7 @@ public class RateLimitRecord {
      * @param ipAddress IP地址
      * @param apiPath API路径
      */
-    public RateLimitRecord(String limitKey, String ipAddress, String apiPath) {
+    public PluginRateLimitRecord(String limitKey, String ipAddress, String apiPath) {
         this.limitKey = limitKey;
         this.ipAddress = ipAddress;
         this.apiPath = apiPath;

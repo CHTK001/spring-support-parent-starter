@@ -1,6 +1,6 @@
 package com.chua.starter.plugin.service;
 
-import com.chua.starter.plugin.entity.RateLimitConfig;
+import com.chua.starter.plugin.entity.PluginRateLimitConfig;
 import com.google.common.util.concurrent.RateLimiter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * 限流缓存管理器
  * 负责管理内存中的限流配置和限流器实例
- * 
+ *
  * @author CH
  * @since 2025/1/16
  */
@@ -22,9 +22,9 @@ public class RateLimitCacheManager {
     /**
      * 内存中的限流配置缓存
      * Key: limitType:limitKey
-     * Value: RateLimitConfig
+     * Value: PluginRateLimitConfig
      */
-    private final ConcurrentMap<String, RateLimitConfig> configCache = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, PluginRateLimitConfig> configCache = new ConcurrentHashMap<>();
 
     /**
      * 限流器实例缓存
@@ -35,10 +35,10 @@ public class RateLimitCacheManager {
 
     /**
      * 添加或更新限流配置到内存
-     * 
+     *
      * @param config 限流配置
      */
-    public void putConfig(RateLimitConfig config) {
+    public void putConfig(PluginRateLimitConfig config) {
         if (config == null || !config.isValid()) {
             log.warn("Invalid rate limit config: {}", config);
             return;
@@ -62,35 +62,35 @@ public class RateLimitCacheManager {
 
     /**
      * 从内存中获取限流配置
-     * 
+     *
      * @param limitType 限流类型
      * @param limitKey 限流键
      * @return 限流配置
      */
-    public RateLimitConfig getConfig(RateLimitConfig.LimitType limitType, String limitKey) {
+    public PluginRateLimitConfig getConfig(PluginRateLimitConfig.LimitType limitType, String limitKey) {
         String key = limitType + ":" + limitKey;
         return configCache.get(key);
     }
 
     /**
      * 获取限流器
-     * 
+     *
      * @param limitType 限流类型
      * @param limitKey 限流键
      * @return 限流器
      */
-    public RateLimiter getRateLimiter(RateLimitConfig.LimitType limitType, String limitKey) {
+    public RateLimiter getRateLimiter(PluginRateLimitConfig.LimitType limitType, String limitKey) {
         String key = limitType + ":" + limitKey;
         return rateLimiterCache.get(key);
     }
 
     /**
      * 移除限流配置
-     * 
+     *
      * @param limitType 限流类型
      * @param limitKey 限流键
      */
-    public void removeConfig(RateLimitConfig.LimitType limitType, String limitKey) {
+    public void removeConfig(PluginRateLimitConfig.LimitType limitType, String limitKey) {
         String key = limitType + ":" + limitKey;
         configCache.remove(key);
         rateLimiterCache.remove(key);
@@ -108,21 +108,21 @@ public class RateLimitCacheManager {
 
     /**
      * 获取所有配置
-     * 
+     *
      * @return 所有配置
      */
-    public ConcurrentMap<String, RateLimitConfig> getAllConfigs() {
+    public ConcurrentMap<String, PluginRateLimitConfig> getAllConfigs() {
         return new ConcurrentHashMap<>(configCache);
     }
 
     /**
      * 检查是否存在配置
-     * 
+     *
      * @param limitType 限流类型
      * @param limitKey 限流键
      * @return 是否存在
      */
-    public boolean hasConfig(RateLimitConfig.LimitType limitType, String limitKey) {
+    public boolean hasConfig(PluginRateLimitConfig.LimitType limitType, String limitKey) {
         String key = limitType + ":" + limitKey;
         return configCache.containsKey(key);
     }
@@ -151,7 +151,7 @@ public class RateLimitCacheManager {
      * @param key 缓存键
      * @param config 限流配置
      */
-    private void updateRateLimiter(String key, RateLimitConfig config) {
+    private void updateRateLimiter(String key, PluginRateLimitConfig config) {
         try {
             RateLimiter rateLimiter = rateLimiterCache.get(key);
             
@@ -176,7 +176,7 @@ public class RateLimitCacheManager {
      * @param config 限流配置
      * @return 限流器
      */
-    private RateLimiter createRateLimiter(RateLimitConfig config) {
+    private RateLimiter createRateLimiter(PluginRateLimitConfig config) {
         switch (config.getAlgorithmType()) {
             case TOKEN_BUCKET:
                 // 使用Guava的RateLimiter（基于令牌桶算法）
@@ -197,7 +197,7 @@ public class RateLimitCacheManager {
      * @param limitKey 限流键
      * @return 是否获取成功
      */
-    public boolean tryAcquire(RateLimitConfig.LimitType limitType, String limitKey) {
+    public boolean tryAcquire(PluginRateLimitConfig.LimitType limitType, String limitKey) {
         RateLimiter rateLimiter = getRateLimiter(limitType, limitKey);
         if (rateLimiter == null) {
             // 如果没有限流器，默认允许通过
@@ -215,7 +215,7 @@ public class RateLimitCacheManager {
      * @param permits 许可数量
      * @return 是否获取成功
      */
-    public boolean tryAcquire(RateLimitConfig.LimitType limitType, String limitKey, int permits) {
+    public boolean tryAcquire(PluginRateLimitConfig.LimitType limitType, String limitKey, int permits) {
         RateLimiter rateLimiter = getRateLimiter(limitType, limitKey);
         if (rateLimiter == null) {
             return true;
@@ -231,7 +231,7 @@ public class RateLimitCacheManager {
      * @param limitKey 限流键
      * @return 当前QPS
      */
-    public double getCurrentQps(RateLimitConfig.LimitType limitType, String limitKey) {
+    public double getCurrentQps(PluginRateLimitConfig.LimitType limitType, String limitKey) {
         RateLimiter rateLimiter = getRateLimiter(limitType, limitKey);
         if (rateLimiter == null) {
             return 0.0;

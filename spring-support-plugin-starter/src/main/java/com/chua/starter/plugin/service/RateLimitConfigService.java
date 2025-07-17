@@ -1,6 +1,6 @@
 package com.chua.starter.plugin.service;
 
-import com.chua.starter.plugin.entity.RateLimitConfig;
+import com.chua.starter.plugin.entity.PluginRateLimitConfig;
 import com.chua.starter.plugin.store.PersistenceStore;
 import com.chua.starter.plugin.store.QueryCondition;
 import lombok.RequiredArgsConstructor;
@@ -10,13 +10,12 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 /**
  * 限流配置服务 负责限流配置的CRUD操作和缓存同步
- * 
+ *
  * @author CH
  * @since 2025/1/16
  */
@@ -25,7 +24,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class RateLimitConfigService implements ApplicationRunner {
 
-    private final PersistenceStore<RateLimitConfig, Long> store;
+    private final PersistenceStore<PluginRateLimitConfig, Long> store;
     private final RateLimitCacheManager cacheManager;
 
     /**
@@ -42,14 +41,14 @@ public class RateLimitConfigService implements ApplicationRunner {
     public void loadAllConfigsToCache() {
         try {
             QueryCondition condition = QueryCondition.empty().eq("enabled", true);
-            List<RateLimitConfig> configs = store.findByCondition(condition);
+            List<PluginRateLimitConfig> configs = store.findByCondition(condition);
             log.info("Loading {} rate limit configs to cache", configs.size());
 
             // 清空现有缓存
             cacheManager.clearAll();
 
             // 加载配置到缓存
-            for (RateLimitConfig config : configs) {
+            for (PluginRateLimitConfig config : configs) {
                 cacheManager.putConfig(config);
             }
 
@@ -61,19 +60,19 @@ public class RateLimitConfigService implements ApplicationRunner {
 
     /**
      * 保存或更新配置
-     * 
+     *
      * @param config 限流配置
      * @return 保存后的配置
      */
     @Transactional
-    public RateLimitConfig saveConfig(RateLimitConfig config) {
+    public PluginRateLimitConfig saveConfig(PluginRateLimitConfig config) {
         if (config == null || !config.isValid()) {
             throw new IllegalArgumentException("Invalid rate limit config");
         }
 
         try {
             // 保存到数据库
-            RateLimitConfig savedConfig = store.save(config);
+            PluginRateLimitConfig savedConfig = store.save(config);
 
             // 更新内存缓存
             cacheManager.putConfig(savedConfig);
@@ -88,24 +87,24 @@ public class RateLimitConfigService implements ApplicationRunner {
 
     /**
      * 根据类型和键获取配置
-     * 
+     *
      * @param limitType 限流类型
      * @param limitKey  限流键
      * @return 限流配置
      */
-    public Optional<RateLimitConfig> getConfig(RateLimitConfig.LimitType limitType, String limitKey) {
+    public Optional<PluginRateLimitConfig> getConfig(PluginRateLimitConfig.LimitType limitType, String limitKey) {
         // 先从缓存获取
-        RateLimitConfig cachedConfig = cacheManager.getConfig(limitType, limitKey);
+        PluginRateLimitConfig cachedConfig = cacheManager.getConfig(limitType, limitKey);
         if (cachedConfig != null) {
             return Optional.of(cachedConfig);
         }
 
         // 缓存中没有，从数据库获取
         QueryCondition condition = QueryCondition.empty().eq("limitType", limitType).eq("limitKey", limitKey);
-        List<RateLimitConfig> configs = store.findByCondition(condition);
+        List<PluginRateLimitConfig> configs = store.findByCondition(condition);
 
         if (!configs.isEmpty()) {
-            RateLimitConfig config = configs.get(0);
+            PluginRateLimitConfig config = configs.get(0);
             if (config.getEnabled()) {
                 // 加载到缓存
                 cacheManager.putConfig(config);
@@ -118,19 +117,19 @@ public class RateLimitConfigService implements ApplicationRunner {
 
     /**
      * 删除配置
-     * 
+     *
      * @param limitType 限流类型
      * @param limitKey  限流键
      * @return 是否删除成功
      */
     @Transactional
-    public boolean deleteConfig(RateLimitConfig.LimitType limitType, String limitKey) {
+    public boolean deleteConfig(PluginRateLimitConfig.LimitType limitType, String limitKey) {
         try {
             QueryCondition condition = QueryCondition.empty().eq("limitType", limitType).eq("limitKey", limitKey);
-            List<RateLimitConfig> configs = store.findByCondition(condition);
+            List<PluginRateLimitConfig> configs = store.findByCondition(condition);
 
             if (!configs.isEmpty()) {
-                RateLimitConfig config = configs.get(0);
+                PluginRateLimitConfig config = configs.get(0);
                 // 从数据库删除
                 store.delete(config);
 
@@ -149,24 +148,24 @@ public class RateLimitConfigService implements ApplicationRunner {
 
     /**
      * 更新配置的QPS
-     * 
+     *
      * @param limitType 限流类型
      * @param limitKey  限流键
      * @param qps       新的QPS值
      * @return 是否更新成功
      */
     @Transactional
-    public boolean updateQps(RateLimitConfig.LimitType limitType, String limitKey, Integer qps) {
+    public boolean updateQps(PluginRateLimitConfig.LimitType limitType, String limitKey, Integer qps) {
         if (qps == null || qps <= 0) {
             throw new IllegalArgumentException("QPS must be positive");
         }
 
         try {
             QueryCondition condition = QueryCondition.empty().eq("limitType", limitType).eq("limitKey", limitKey);
-            List<RateLimitConfig> configs = store.findByCondition(condition);
+            List<PluginRateLimitConfig> configs = store.findByCondition(condition);
 
             if (!configs.isEmpty()) {
-                RateLimitConfig config = configs.get(0);
+                PluginRateLimitConfig config = configs.get(0);
                 config.setQps(qps);
                 config.setBurstCapacity(qps * 2); // 更新突发容量
 
@@ -188,20 +187,20 @@ public class RateLimitConfigService implements ApplicationRunner {
 
     /**
      * 启用或禁用配置
-     * 
+     *
      * @param limitType 限流类型
      * @param limitKey  限流键
      * @param enabled   是否启用
      * @return 是否操作成功
      */
     @Transactional
-    public boolean setEnabled(RateLimitConfig.LimitType limitType, String limitKey, boolean enabled) {
+    public boolean setEnabled(PluginRateLimitConfig.LimitType limitType, String limitKey, boolean enabled) {
         try {
             QueryCondition condition = QueryCondition.empty().eq("limitType", limitType).eq("limitKey", limitKey);
-            List<RateLimitConfig> configs = store.findByCondition(condition);
+            List<PluginRateLimitConfig> configs = store.findByCondition(condition);
 
             if (!configs.isEmpty()) {
-                RateLimitConfig config = configs.get(0);
+                PluginRateLimitConfig config = configs.get(0);
                 config.setEnabled(enabled);
 
                 // 保存到数据库
@@ -229,7 +228,7 @@ public class RateLimitConfigService implements ApplicationRunner {
      *
      * @return 所有配置列表
      */
-    public List<RateLimitConfig> getAllConfigs() {
+    public List<PluginRateLimitConfig> getAllConfigs() {
         return store.findAll();
     }
 
@@ -238,7 +237,7 @@ public class RateLimitConfigService implements ApplicationRunner {
      *
      * @return 启用的配置列表
      */
-    public List<RateLimitConfig> getEnabledConfigs() {
+    public List<PluginRateLimitConfig> getEnabledConfigs() {
         QueryCondition condition = QueryCondition.empty().eq("enabled", true);
         return store.findByCondition(condition);
     }
@@ -249,7 +248,7 @@ public class RateLimitConfigService implements ApplicationRunner {
      * @param limitType 限流类型
      * @return 配置列表
      */
-    public List<RateLimitConfig> getConfigsByType(RateLimitConfig.LimitType limitType) {
+    public List<PluginRateLimitConfig> getConfigsByType(PluginRateLimitConfig.LimitType limitType) {
         QueryCondition condition = QueryCondition.empty().eq("limitType", limitType).eq("enabled", true);
         return store.findByCondition(condition);
     }
@@ -261,13 +260,13 @@ public class RateLimitConfigService implements ApplicationRunner {
      * @return 保存后的配置列表
      */
     @Transactional
-    public List<RateLimitConfig> batchSaveConfigs(List<RateLimitConfig> configs) {
+    public List<PluginRateLimitConfig> batchSaveConfigs(List<PluginRateLimitConfig> configs) {
         try {
             // 保存到数据库
-            List<RateLimitConfig> savedConfigs = store.saveAll(configs);
+            List<PluginRateLimitConfig> savedConfigs = store.saveAll(configs);
 
             // 更新缓存
-            for (RateLimitConfig config : savedConfigs) {
+            for (PluginRateLimitConfig config : savedConfigs) {
                 if (config.getEnabled()) {
                     cacheManager.putConfig(config);
                 }

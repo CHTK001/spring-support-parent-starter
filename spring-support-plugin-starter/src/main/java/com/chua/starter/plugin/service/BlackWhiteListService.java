@@ -1,6 +1,6 @@
 package com.chua.starter.plugin.service;
 
-import com.chua.starter.plugin.entity.BlackWhiteList;
+import com.chua.starter.plugin.entity.PluginBlackWhiteList;
 import com.chua.starter.plugin.store.PersistenceStore;
 import com.chua.starter.plugin.store.QueryCondition;
 import lombok.RequiredArgsConstructor;
@@ -27,17 +27,17 @@ import java.util.concurrent.ConcurrentMap;
 @RequiredArgsConstructor
 public class BlackWhiteListService implements ApplicationRunner {
 
-    private final PersistenceStore<BlackWhiteList, Long> store;
+    private final PersistenceStore<PluginBlackWhiteList, Long> store;
 
     /**
      * 黑名单缓存
      */
-    private final ConcurrentMap<String, BlackWhiteList> blacklistCache = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, PluginBlackWhiteList> blacklistCache = new ConcurrentHashMap<>();
 
     /**
      * 白名单缓存
      */
-    private final ConcurrentMap<String, BlackWhiteList> whitelistCache = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, PluginBlackWhiteList> whitelistCache = new ConcurrentHashMap<>();
 
     /**
      * 应用启动时加载所有名单到内存
@@ -53,20 +53,20 @@ public class BlackWhiteListService implements ApplicationRunner {
     public void loadAllListsToCache() {
         try {
             // 加载黑名单
-            QueryCondition blacklistCondition = QueryCondition.empty().eq("listType", BlackWhiteList.ListType.BLACKLIST)
+            QueryCondition blacklistCondition = QueryCondition.empty().eq("listType", PluginBlackWhiteList.ListType.BLACKLIST)
                     .eq("enabled", true).orderByAsc("priority");
-            List<BlackWhiteList> blacklists = store.findByCondition(blacklistCondition);
+            List<PluginBlackWhiteList> blacklists = store.findByCondition(blacklistCondition);
             blacklistCache.clear();
-            for (BlackWhiteList item : blacklists) {
+            for (PluginBlackWhiteList item : blacklists) {
                 blacklistCache.put(item.getListValue(), item);
             }
 
             // 加载白名单
-            QueryCondition whitelistCondition = QueryCondition.empty().eq("listType", BlackWhiteList.ListType.WHITELIST)
+            QueryCondition whitelistCondition = QueryCondition.empty().eq("listType", PluginBlackWhiteList.ListType.WHITELIST)
                     .eq("enabled", true).orderByAsc("priority");
-            List<BlackWhiteList> whitelists = store.findByCondition(whitelistCondition);
+            List<PluginBlackWhiteList> whitelists = store.findByCondition(whitelistCondition);
             whitelistCache.clear();
-            for (BlackWhiteList item : whitelists) {
+            for (PluginBlackWhiteList item : whitelists) {
                 whitelistCache.put(item.getListValue(), item);
             }
 
@@ -89,12 +89,12 @@ public class BlackWhiteListService implements ApplicationRunner {
 
         // 先检查精确匹配
         if (blacklistCache.containsKey(value)) {
-            BlackWhiteList item = blacklistCache.get(value);
+            PluginBlackWhiteList item = blacklistCache.get(value);
             return item.getEnabled() && !item.isExpired();
         }
 
         // 检查通配符和正则匹配
-        for (BlackWhiteList item : blacklistCache.values()) {
+        for (PluginBlackWhiteList item : blacklistCache.values()) {
             if (item.getEnabled() && !item.isExpired() && item.matches(value)) {
                 return true;
             }
@@ -116,12 +116,12 @@ public class BlackWhiteListService implements ApplicationRunner {
 
         // 先检查精确匹配
         if (whitelistCache.containsKey(value)) {
-            BlackWhiteList item = whitelistCache.get(value);
+            PluginBlackWhiteList item = whitelistCache.get(value);
             return item.getEnabled() && !item.isExpired();
         }
 
         // 检查通配符和正则匹配
-        for (BlackWhiteList item : whitelistCache.values()) {
+        for (PluginBlackWhiteList item : whitelistCache.values()) {
             if (item.getEnabled() && !item.isExpired() && item.matches(value)) {
                 return true;
             }
@@ -155,13 +155,13 @@ public class BlackWhiteListService implements ApplicationRunner {
      * @return 保存的条目
      */
     @Transactional
-    public BlackWhiteList addToBlacklist(String value, BlackWhiteList.MatchType matchType, String description) {
-        BlackWhiteList item = BlackWhiteList.createBlacklist(value, matchType);
+    public PluginBlackWhiteList addToBlacklist(String value, PluginBlackWhiteList.MatchType matchType, String description) {
+        PluginBlackWhiteList item = PluginBlackWhiteList.createBlacklist(value, matchType);
         item.setDescription(description);
         item.setCreatedBy("SYSTEM");
         item.setUpdatedBy("SYSTEM");
 
-        BlackWhiteList saved = store.save(item);
+        PluginBlackWhiteList saved = store.save(item);
 
         // 更新缓存
         blacklistCache.put(value, saved);
@@ -179,13 +179,13 @@ public class BlackWhiteListService implements ApplicationRunner {
      * @return 保存的条目
      */
     @Transactional
-    public BlackWhiteList addToWhitelist(String value, BlackWhiteList.MatchType matchType, String description) {
-        BlackWhiteList item = BlackWhiteList.createWhitelist(value, matchType);
+    public PluginBlackWhiteList addToWhitelist(String value, PluginBlackWhiteList.MatchType matchType, String description) {
+        PluginBlackWhiteList item = PluginBlackWhiteList.createWhitelist(value, matchType);
         item.setDescription(description);
         item.setCreatedBy("SYSTEM");
         item.setUpdatedBy("SYSTEM");
 
-        BlackWhiteList saved = store.save(item);
+        PluginBlackWhiteList saved = store.save(item);
 
         // 更新缓存
         whitelistCache.put(value, saved);
@@ -202,9 +202,9 @@ public class BlackWhiteListService implements ApplicationRunner {
      */
     @Transactional
     public boolean removeFromBlacklist(String value) {
-        QueryCondition condition = QueryCondition.empty().eq("listType", BlackWhiteList.ListType.BLACKLIST)
+        QueryCondition condition = QueryCondition.empty().eq("listType", PluginBlackWhiteList.ListType.BLACKLIST)
                 .eq("listValue", value);
-        List<BlackWhiteList> items = store.findByCondition(condition);
+        List<PluginBlackWhiteList> items = store.findByCondition(condition);
 
         if (!items.isEmpty()) {
             store.delete(items.get(0));
@@ -224,9 +224,9 @@ public class BlackWhiteListService implements ApplicationRunner {
      */
     @Transactional
     public boolean removeFromWhitelist(String value) {
-        QueryCondition condition = QueryCondition.empty().eq("listType", BlackWhiteList.ListType.WHITELIST)
+        QueryCondition condition = QueryCondition.empty().eq("listType", PluginBlackWhiteList.ListType.WHITELIST)
                 .eq("listValue", value);
-        List<BlackWhiteList> items = store.findByCondition(condition);
+        List<PluginBlackWhiteList> items = store.findByCondition(condition);
 
         if (!items.isEmpty()) {
             store.delete(items.get(0));
@@ -243,8 +243,8 @@ public class BlackWhiteListService implements ApplicationRunner {
      * 
      * @return 黑名单列表
      */
-    public List<BlackWhiteList> getAllBlacklist() {
-        QueryCondition condition = QueryCondition.empty().eq("listType", BlackWhiteList.ListType.BLACKLIST)
+    public List<PluginBlackWhiteList> getAllBlacklist() {
+        QueryCondition condition = QueryCondition.empty().eq("listType", PluginBlackWhiteList.ListType.BLACKLIST)
                 .eq("enabled", true).orderByAsc("priority");
         return store.findByCondition(condition);
     }
@@ -254,8 +254,8 @@ public class BlackWhiteListService implements ApplicationRunner {
      * 
      * @return 白名单列表
      */
-    public List<BlackWhiteList> getAllWhitelist() {
-        QueryCondition condition = QueryCondition.empty().eq("listType", BlackWhiteList.ListType.WHITELIST)
+    public List<PluginBlackWhiteList> getAllWhitelist() {
+        QueryCondition condition = QueryCondition.empty().eq("listType", PluginBlackWhiteList.ListType.WHITELIST)
                 .eq("enabled", true).orderByAsc("priority");
         return store.findByCondition(condition);
     }
@@ -269,21 +269,21 @@ public class BlackWhiteListService implements ApplicationRunner {
      */
     @Transactional
     public boolean setEnabled(Long id, boolean enabled) {
-        Optional<BlackWhiteList> itemOpt = store.findById(id);
+        Optional<PluginBlackWhiteList> itemOpt = store.findById(id);
         if (itemOpt.isPresent()) {
-            BlackWhiteList item = itemOpt.get();
+            PluginBlackWhiteList item = itemOpt.get();
             item.setEnabled(enabled);
             store.save(item);
 
             // 更新缓存
             if (enabled) {
-                if (item.getListType() == BlackWhiteList.ListType.BLACKLIST) {
+                if (item.getListType() == PluginBlackWhiteList.ListType.BLACKLIST) {
                     blacklistCache.put(item.getListValue(), item);
                 } else {
                     whitelistCache.put(item.getListValue(), item);
                 }
             } else {
-                if (item.getListType() == BlackWhiteList.ListType.BLACKLIST) {
+                if (item.getListType() == PluginBlackWhiteList.ListType.BLACKLIST) {
                     blacklistCache.remove(item.getListValue());
                 } else {
                     whitelistCache.remove(item.getListValue());

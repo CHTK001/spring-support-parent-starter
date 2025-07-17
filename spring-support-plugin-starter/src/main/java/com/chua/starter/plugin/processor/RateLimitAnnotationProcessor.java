@@ -1,7 +1,7 @@
 package com.chua.starter.plugin.processor;
 
 import com.chua.starter.plugin.annotation.RateLimit;
-import com.chua.starter.plugin.entity.RateLimitConfig;
+import com.chua.starter.plugin.entity.PluginRateLimitConfig;
 import com.chua.starter.plugin.service.RateLimitConfigService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,8 +13,6 @@ import org.springframework.util.ReflectionUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * 限流注解处理器 扫描和处理@RateLimit注解，将配置保存到数据库和内存
@@ -82,7 +80,7 @@ public class RateLimitAnnotationProcessor implements BeanPostProcessor {
 
     /**
      * 创建限流配置
-     * 
+     *
      * @param rateLimit   注解
      * @param path        API路径
      * @param description 描述
@@ -93,22 +91,18 @@ public class RateLimitAnnotationProcessor implements BeanPostProcessor {
             String limitKey = rateLimit.key().isEmpty() ? path : rateLimit.key();
 
             // 创建API限流配置
-            if (rateLimit.limitType() == RateLimitConfig.LimitType.API
-                    || rateLimit.limitType() == RateLimitConfig.LimitType.IP) {
-
-                RateLimitConfig config = createConfigFromAnnotation(rateLimit, limitKey, description);
-                saveConfigIfNotExists(config);
-            }
+            PluginRateLimitConfig config = createConfigFromAnnotation(rateLimit, limitKey, description);
+            saveConfigIfNotExists(config);
 
             // 如果同时限制IP，创建IP限流配置
             if (rateLimit.limitIp()) {
-                RateLimitConfig ipConfig = new RateLimitConfig();
-                ipConfig.setLimitType(RateLimitConfig.LimitType.IP);
+                PluginRateLimitConfig ipConfig = new PluginRateLimitConfig();
+                ipConfig.setLimitType(PluginRateLimitConfig.LimitType.IP);
                 ipConfig.setLimitKey("*"); // 通配符表示所有IP
                 ipConfig.setQps(rateLimit.ipQps());
                 ipConfig.setBurstCapacity(rateLimit.ipQps() * 2);
-                ipConfig.setAlgorithmType(rateLimit.algorithm());
-                ipConfig.setOverflowStrategy(rateLimit.overflowStrategy());
+                ipConfig.setAlgorithmType(PluginRateLimitConfig.fromAnnotationAlgorithmType(rateLimit.algorithm()));
+                ipConfig.setOverflowStrategy(PluginRateLimitConfig.fromAnnotationOverflowStrategy(rateLimit.overflowStrategy()));
                 ipConfig.setWindowSizeSeconds(rateLimit.windowSizeSeconds());
                 ipConfig.setEnabled(rateLimit.enabled());
                 ipConfig.setDescription("IP限流 - " + description);
@@ -123,20 +117,20 @@ public class RateLimitAnnotationProcessor implements BeanPostProcessor {
 
     /**
      * 从注解创建配置对象
-     * 
+     *
      * @param rateLimit   注解
      * @param limitKey    限流键
      * @param description 描述
      * @return 配置对象
      */
-    private RateLimitConfig createConfigFromAnnotation(RateLimit rateLimit, String limitKey, String description) {
-        RateLimitConfig config = new RateLimitConfig();
-        config.setLimitType(rateLimit.limitType());
+    private PluginRateLimitConfig createConfigFromAnnotation(RateLimit rateLimit, String limitKey, String description) {
+        PluginRateLimitConfig config = new PluginRateLimitConfig();
+        config.setLimitType(PluginRateLimitConfig.fromAnnotationLimitType(rateLimit.limitType()));
         config.setLimitKey(limitKey);
         config.setQps(rateLimit.qps());
         config.setBurstCapacity(rateLimit.burstCapacity());
-        config.setAlgorithmType(rateLimit.algorithm());
-        config.setOverflowStrategy(rateLimit.overflowStrategy());
+        config.setAlgorithmType(PluginRateLimitConfig.fromAnnotationAlgorithmType(rateLimit.algorithm()));
+        config.setOverflowStrategy(PluginRateLimitConfig.fromAnnotationOverflowStrategy(rateLimit.overflowStrategy()));
         config.setWindowSizeSeconds(rateLimit.windowSizeSeconds());
         config.setEnabled(rateLimit.enabled());
         config.setDescription(rateLimit.description().isEmpty() ? description : rateLimit.description());
@@ -148,10 +142,10 @@ public class RateLimitAnnotationProcessor implements BeanPostProcessor {
 
     /**
      * 如果配置不存在则保存
-     * 
+     *
      * @param config 配置
      */
-    private void saveConfigIfNotExists(RateLimitConfig config) {
+    private void saveConfigIfNotExists(PluginRateLimitConfig config) {
         try {
             // 检查是否已存在
             if (!configService.getConfig(config.getLimitType(), config.getLimitKey()).isPresent()) {

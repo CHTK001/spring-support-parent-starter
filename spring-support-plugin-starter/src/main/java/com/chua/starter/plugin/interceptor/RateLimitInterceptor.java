@@ -1,6 +1,6 @@
 package com.chua.starter.plugin.interceptor;
 
-import com.chua.starter.plugin.entity.RateLimitConfig;
+import com.chua.starter.plugin.entity.PluginRateLimitConfig;
 import com.chua.starter.plugin.service.BlackWhiteListService;
 import com.chua.starter.plugin.service.RateLimitCacheManager;
 import com.chua.starter.plugin.service.RateLimitConfigService;
@@ -61,11 +61,7 @@ public class RateLimitInterceptor implements HandlerInterceptor {
         }
 
         // 5. 检查IP限流
-        if (!checkIpRateLimit(clientIp, response)) {
-            return false;
-        }
-
-        return true;
+        return checkIpRateLimit(clientIp, response);
     }
 
     /**
@@ -95,14 +91,14 @@ public class RateLimitInterceptor implements HandlerInterceptor {
      */
     private boolean checkGlobalQpsLimit(HttpServletResponse response) throws IOException {
         // 检查全局QPS限流
-        boolean acquired = cacheManager.tryAcquire(RateLimitConfig.LimitType.QPS, "GLOBAL");
+        boolean acquired = cacheManager.tryAcquire(PluginRateLimitConfig.LimitType.QPS, "GLOBAL");
 
         if (!acquired) {
-            Optional<RateLimitConfig> configOpt = configService.getConfig(RateLimitConfig.LimitType.QPS, "GLOBAL");
+            Optional<PluginRateLimitConfig> configOpt = configService.getConfig(PluginRateLimitConfig.LimitType.QPS, "GLOBAL");
             String message = "全局QPS超出限制，请稍后再试";
 
             if (configOpt.isPresent()) {
-                RateLimitConfig config = configOpt.get();
+                PluginRateLimitConfig config = configOpt.get();
                 message = String.format("全局QPS超出限制，当前限制: %d QPS", config.getQps());
             }
 
@@ -123,16 +119,16 @@ public class RateLimitInterceptor implements HandlerInterceptor {
      */
     private boolean checkApiRateLimit(String requestPath, HttpServletResponse response) throws IOException {
         // 尝试获取许可
-        boolean acquired = cacheManager.tryAcquire(RateLimitConfig.LimitType.API, requestPath);
+        boolean acquired = cacheManager.tryAcquire(PluginRateLimitConfig.LimitType.API, requestPath);
 
         if (!acquired) {
             // 获取配置信息用于错误响应
-            Optional<RateLimitConfig> configOpt = configService.getConfig(RateLimitConfig.LimitType.API, requestPath);
+            Optional<PluginRateLimitConfig> configOpt = configService.getConfig(PluginRateLimitConfig.LimitType.API, requestPath);
             String message = "API请求过于频繁，请稍后再试";
             int errorCode = 429;
 
             if (configOpt.isPresent()) {
-                RateLimitConfig config = configOpt.get();
+                PluginRateLimitConfig config = configOpt.get();
                 message = String.format("API请求超出限制，当前限制: %d QPS", config.getQps());
             }
 
@@ -153,25 +149,25 @@ public class RateLimitInterceptor implements HandlerInterceptor {
      */
     private boolean checkIpRateLimit(String clientIp, HttpServletResponse response) throws IOException {
         // 先检查具体IP的限流配置
-        boolean acquired = cacheManager.tryAcquire(RateLimitConfig.LimitType.IP, clientIp);
+        boolean acquired = cacheManager.tryAcquire(PluginRateLimitConfig.LimitType.IP, clientIp);
 
         if (!acquired) {
             // 检查通配符IP限流配置
-            acquired = cacheManager.tryAcquire(RateLimitConfig.LimitType.IP, "*");
+            acquired = cacheManager.tryAcquire(PluginRateLimitConfig.LimitType.IP, "*");
         }
 
         if (!acquired) {
             // 获取配置信息用于错误响应
-            Optional<RateLimitConfig> configOpt = configService.getConfig(RateLimitConfig.LimitType.IP, clientIp);
+            Optional<PluginRateLimitConfig> configOpt = configService.getConfig(PluginRateLimitConfig.LimitType.IP, clientIp);
             if (!configOpt.isPresent()) {
-                configOpt = configService.getConfig(RateLimitConfig.LimitType.IP, "*");
+                configOpt = configService.getConfig(PluginRateLimitConfig.LimitType.IP, "*");
             }
 
             String message = "IP请求过于频繁，请稍后再试";
             int errorCode = 429;
 
             if (configOpt.isPresent()) {
-                RateLimitConfig config = configOpt.get();
+                PluginRateLimitConfig config = configOpt.get();
                 message = String.format("IP请求超出限制，当前限制: %d QPS", config.getQps());
             }
 
