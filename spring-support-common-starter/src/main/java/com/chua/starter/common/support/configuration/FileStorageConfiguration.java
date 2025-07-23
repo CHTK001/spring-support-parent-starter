@@ -1,10 +1,9 @@
 package com.chua.starter.common.support.configuration;
 
 
-import com.chua.common.support.chain.filter.storage.FileStorageChainFilter;
 import com.chua.common.support.oss.FileStorage;
 import com.chua.common.support.oss.setting.BucketSetting;
-import com.chua.common.support.protocol.server.Server;
+import com.chua.common.support.protocol.server.ProtocolServer;
 import com.chua.common.support.utils.NumberUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.filestorage.FileStorageProperties;
@@ -71,7 +70,7 @@ public class FileStorageConfiguration implements BeanDefinitionRegistryPostProce
             if (!NumberUtils.isNumber(s)) {
                 continue;
             }
-            var server = Server.create("http", Integer.parseInt(s));
+            var server = ProtocolServer.create("http", Integer.parseInt(s));
             server.addFilter(new FileStorageChainFilter(FileStorageChainFilter.FileStorageFactory.create(
                             FileStorageChainFilter.FileStorageSetting.builder()
                                     .webjars(true)
@@ -81,7 +80,7 @@ public class FileStorageConfiguration implements BeanDefinitionRegistryPostProce
                     .addFileStorage("/" + value.getBucket(), fileStorage)));
 
             registry.registerBeanDefinition("fileStorage" + UUID.randomUUID(), BeanDefinitionBuilder
-                    .rootBeanDefinition(Server.class, () -> server)
+                    .rootBeanDefinition(ProtocolServer.class, () -> server)
                     .setInitMethodName("start")
                     .setDestroyMethodName("stop")
                     .getBeanDefinition()
