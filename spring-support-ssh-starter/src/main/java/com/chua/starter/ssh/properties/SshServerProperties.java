@@ -13,7 +13,7 @@ import java.util.List;
  * @version 4.0.0.32
  */
 @Data
-@ConfigurationProperties(prefix = "ssh.server")
+@ConfigurationProperties(prefix = "plugin.ssh.server")
 public class SshServerProperties {
 
     /**

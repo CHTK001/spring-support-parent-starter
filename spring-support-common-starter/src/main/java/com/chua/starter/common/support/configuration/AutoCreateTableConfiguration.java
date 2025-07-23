@@ -104,7 +104,12 @@ public class AutoCreateTableConfiguration implements ApplicationContextAware {
             return;
         }
         log.info("开始创建<{}>任务", type.getTypeName());
-        if(type.isEnum() || type.isInterface() || type.isAnonymousClass()) {
+        if(type.isEnum() || type.isInterface() || type.isAnonymousClass() || type.isLocalClass()) {
+            return;
+        }
+
+        String typeName = type.getTypeName();
+        if(typeName.contains("$")) {
             return;
         }
         engine.createTable().doIt(type, createTableProperties.getType());

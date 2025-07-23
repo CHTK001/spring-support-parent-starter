@@ -3,6 +3,7 @@ package com.chua.report.client.starter.configuration;
 import com.chua.common.support.protocol.protocol.Protocol;
 import com.chua.common.support.protocol.server.ProtocolServer;
 import com.chua.report.client.starter.function.ReportXxlJobConfiguration;
+import com.chua.report.client.starter.function.NodeManagementConfiguration;
 import com.chua.report.client.starter.properties.ReportClientProperties;
 import com.chua.report.client.starter.setting.SettingFactory;
 import lombok.Data;
@@ -20,18 +21,20 @@ import org.springframework.core.env.Environment;
 
 /**
  * 上报设置
+ * 
  * @author CH
  * @since 2024/9/11
  */
 @Data
-@EnableConfigurationProperties({ReportClientProperties.class})
-public class ReportClientConfiguration implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware, EnvironmentAware, DisposableBean {
+@EnableConfigurationProperties({ ReportClientProperties.class })
+public class ReportClientConfiguration
+        implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware, EnvironmentAware, DisposableBean {
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
-        //注册协议
+        // 注册协议
         registerProtocol(registry);
-        //注册服务
+        // 注册服务
         registerService(registry);
     }
 
@@ -46,10 +49,8 @@ public class ReportClientConfiguration implements BeanDefinitionRegistryPostProc
     }
 
     private void registerService(BeanDefinitionRegistry registry) {
-        registry.registerBeanDefinition("reportXxlJobConfiguration", BeanDefinitionBuilder
-                .rootBeanDefinition(ReportXxlJobConfiguration.class)
-                .getBeanDefinition()
-        );
+        registry.registerBeanDefinition("reportXxlJobConfiguration",
+                BeanDefinitionBuilder.rootBeanDefinition(ReportXxlJobConfiguration.class).getBeanDefinition());
     }
 
     /**
@@ -69,12 +70,8 @@ public class ReportClientConfiguration implements BeanDefinitionRegistryPostProc
 
         Protocol protocol = settingFactory.getProtocol();
         registry.registerBeanDefinition("reportClientEndpointConfiguration",
-                BeanDefinitionBuilder.rootBeanDefinition(ProtocolServerFactoryBean.class)
-                        .setDestroyMethodName("close")
-                        .setInitMethodName("start")
-                        .addConstructorArgValue(protocol)
-                        .getBeanDefinition()
-        );
+                BeanDefinitionBuilder.rootBeanDefinition(ProtocolServerFactoryBean.class).setDestroyMethodName("close")
+                        .setInitMethodName("start").addConstructorArgValue(protocol).getBeanDefinition());
         try {
             settingFactory.afterPropertiesSet();
         } catch (Exception ignored) {
@@ -93,9 +90,11 @@ public class ReportClientConfiguration implements BeanDefinitionRegistryPostProc
         public ProtocolServerFactoryBean(Protocol protocol) {
             this.protocol = protocol;
             endpointServer = protocol.createServer();
+            // 添加任务执行配置
             endpointServer.addDefinition(new ReportXxlJobConfiguration());
+            // 添加节点管理配置
+            endpointServer.addDefinition(new NodeManagementConfiguration());
         }
-
 
         @Override
         public void close() throws Exception {
