@@ -1,6 +1,5 @@
 package com.chua.starter.swagger.support;
 
-import com.chua.starter.swagger.support.customize.CustomKnife4jOpenApiCustomizer;
 import com.github.xiaoymin.knife4j.spring.annotations.EnableKnife4j;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
@@ -50,15 +49,15 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
     private com.github.xiaoymin.knife4j.spring.configuration.Knife4jProperties knife4j;
     private SpringDocConfigProperties springDocConfigProperties;
 
-//
-//    /**
-//     * 创建自定义的ModelResolver
-//     *
-//     * @return
-//     */
+
+    /**
+     * 创建自定义的ModelResolver
+     *
+     * @return
+     */
 //    @Bean
-//    public CustomModelResolver resolver(ObjectMapper  objectMapper) {
-//        return new CustomModelResolver(objectMapper);
+//    public InheritedPropertyResolver resolver() {
+//        return new InheritedPropertyResolver();
 //    }
 
 //    @Bean
@@ -75,14 +74,6 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
 //    }
 
 
-    @Override
-    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
-        Class<?> aClass = bean.getClass();
-        if (aClass == com.github.xiaoymin.knife4j.spring.extension.Knife4jOpenApiCustomizer.class) {
-            return new CustomKnife4jOpenApiCustomizer(knife4j, springDocConfigProperties);
-        }
-        return BeanPostProcessor.super.postProcessAfterInitialization(bean, beanName);
-    }
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {

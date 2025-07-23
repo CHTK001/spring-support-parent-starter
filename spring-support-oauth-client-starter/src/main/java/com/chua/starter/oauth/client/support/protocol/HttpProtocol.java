@@ -28,7 +28,6 @@ import lombok.extern.slf4j.Slf4j;
 import me.zhyd.oauth.exception.AuthException;
 
 import java.util.Map;
-import java.util.UUID;
 
 import static com.chua.common.support.http.HttpClientUtils.APPLICATION_JSON;
 
@@ -126,7 +125,6 @@ public class HttpProtocol extends AbstractProtocol {
 
         // 生成随机密钥和请求头参数
         String key =  IdUtils.simpleUuid();
-        jsonObject.put("x-ext-request-key", UUID.randomUUID().toString());
         jsonObject.put("x-ext-timestamp", System.currentTimeMillis());
 
         String timestamp = System.nanoTime() + "";

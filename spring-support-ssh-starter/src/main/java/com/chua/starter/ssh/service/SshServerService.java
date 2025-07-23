@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.sshd.common.file.virtualfs.VirtualFileSystemFactory;
 import org.apache.sshd.server.SshServer;
 import org.apache.sshd.server.auth.password.PasswordAuthenticator;
+import org.apache.sshd.server.forward.AcceptAllForwardingFilter;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.apache.sshd.server.session.ServerSession;
 import org.apache.sshd.server.shell.ProcessShellFactory;
@@ -53,6 +54,9 @@ public class SshServerService implements InitializingBean, DisposableBean {
         // 设置监听地址和端口
         sshServer.setHost(properties.getHost());
         sshServer.setPort(properties.getPort());
+
+        // 启用X11转发（新版本方式）
+        sshServer.setForwardingFilter(AcceptAllForwardingFilter.INSTANCE);
 
         // 设置主机密钥
         sshServer.setKeyPairProvider(new SimpleGeneratorHostKeyProvider(Paths.get("hostkey.ser")));

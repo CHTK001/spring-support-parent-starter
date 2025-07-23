@@ -248,13 +248,14 @@ public abstract class AbstractProtocol implements Protocol {
             if (null != servletRequest) {
                 unregisterFromRequest(servletRequest);
             }
-
+            log.error("认证失败 ==> {}", returnResult.getMsg());
             return new AuthenticationInformation(AUTHENTICATION_FAILURE, null);
         }
 
         Object data = returnResult.getData();
         if (Objects.isNull(data)) {
             unregisterFromRequest(servletRequest);
+            log.error("认证失败 ==> {}", returnResult.getMsg());
             return new AuthenticationInformation(AUTHENTICATION_SERVER_EXCEPTION, null);
         }
 
@@ -345,6 +346,10 @@ public abstract class AbstractProtocol implements Protocol {
     protected String getCacheKey(Cookie[] cookies, String token) {
         if (StringUtils.isNotEmpty(StringUtils.ifValid(token, ""))) {
             return token;
+        }
+
+        if (null == cookies) {
+            return null;
         }
 
         for (Cookie cookie : cookies) {
