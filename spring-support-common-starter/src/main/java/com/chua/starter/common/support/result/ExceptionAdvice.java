@@ -1,9 +1,9 @@
 package com.chua.starter.common.support.result;
 
+import cn.hutool.core.lang.Validator;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.exception.AuthenticationException;
 import com.chua.common.support.lang.exception.RemoteExecutionException;
-import com.chua.common.support.lang.file.adaptor.univocity.parsers.conversions.Validator;
 import com.chua.common.support.unit.name.NamingCase;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.exception.BusinessException;

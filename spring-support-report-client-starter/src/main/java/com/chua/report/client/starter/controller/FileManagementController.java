@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
@@ -129,7 +130,7 @@ public class FileManagementController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
             }
 
-            String filename = response.getFileInfo() != null ? response.getFileInfo().getName() : "download";
+            String filename = response.getFile() != null ? response.getFile().getName() : "download";
             String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8);
             
             ByteArrayResource resource = new ByteArrayResource(response.getData());

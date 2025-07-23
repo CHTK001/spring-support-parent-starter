@@ -1,11 +1,11 @@
 package com.chua.starter.common.support.codec;
 
+import cn.hutool.core.util.HexUtil;
 import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.crypto.CodecKeyPair;
 import com.chua.common.support.function.Upgrade;
 import com.chua.common.support.matcher.PathMatcher;
 import com.chua.common.support.utils.DigestUtils;
-import com.chua.common.support.utils.Hex;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.application.GlobalSettingFactory;
@@ -163,7 +163,7 @@ public class CodecFactory implements Upgrade<CodecSetting>, ApplicationListener<
      */
     public byte[] decodeRequest(String data) {
         try {
-            return requestCodec.decode(Hex.decodeHex(data));
+            return requestCodec.decode(HexUtil.decodeHex(data));
         } catch (Exception e) {
             throw new RuntimeException("请求解析失败!");
         }
