@@ -13,6 +13,5 @@ com.chua.starter.common.support.configuration.InterceptorWebMvcConfigurer
 com.chua.starter.common.support.configuration.FilterConfiguration
 com.chua.starter.common.support.scheduler.SchedulingRegistration
 com.chua.starter.common.support.configuration.FileStorageConfiguration
-com.chua.starter.common.support.advice.ApiIpLimitMethodPointcutAdvisor
 com.chua.starter.common.support.configuration.CacheProxyCachingConfiguration
 com.chua.starter.common.support.configuration.CacheCustomTenantedKeyGenerator
