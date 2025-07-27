@@ -314,7 +314,7 @@
             <!-- RPC远程调用框架 -->
             <dependency>
                 <groupId>com.chua</groupId>
-                <artifactId>utils-support-rpc-starter</artifactId>
+                <artifactId>utils-support-rpc-dubbo-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
 
