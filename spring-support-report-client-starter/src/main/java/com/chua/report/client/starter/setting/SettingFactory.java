@@ -7,8 +7,8 @@ import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.http.HttpClient;
 import com.chua.common.support.http.HttpResponse;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.protocol.Protocol;
 import com.chua.common.support.protocol.ProtocolSetting;
-import com.chua.common.support.protocol.protocol.Protocol;
 import com.chua.common.support.utils.*;
 import com.chua.report.client.starter.endpoint.ModuleType;
 import com.chua.report.client.starter.properties.ReportClientProperties;
@@ -43,6 +43,8 @@ public class SettingFactory implements AutoCloseable, InitializingBean {
     private static final AtomicBoolean RUNNING = new AtomicBoolean(false);
     @Getter
     private Integer endpointPort;
+    @Getter
+    private ProtocolSetting protocolSetting;
 
     public SettingFactory() {
         this.isServer = ClassUtils.isPresent("com.chua.report.server.starter.properties.ReportServerProperties");
@@ -100,7 +102,7 @@ public class SettingFactory implements AutoCloseable, InitializingBean {
             bindHost = address.getHostAddress();
         }
         Codec codec = new AesCodec("1234567890123456".getBytes(StandardCharsets.UTF_8));
-        ProtocolSetting protocolSetting = ProtocolSetting.builder()
+        protocolSetting = ProtocolSetting.builder()
                 .host(bindHost)
                 .port(getEndpointPort())
                 .codec(codec)

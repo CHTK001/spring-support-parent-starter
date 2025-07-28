@@ -1,6 +1,6 @@
 package com.chua.report.client.starter.configuration;
 
-import com.chua.common.support.protocol.protocol.Protocol;
+import com.chua.common.support.protocol.Protocol;
 import com.chua.common.support.protocol.server.ProtocolServer;
 import com.chua.report.client.starter.function.ReportXxlJobConfiguration;
 import com.chua.report.client.starter.function.NodeManagementConfiguration;
@@ -29,6 +29,8 @@ import org.springframework.core.env.Environment;
 @EnableConfigurationProperties({ ReportClientProperties.class })
 public class ReportClientConfiguration
         implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware, EnvironmentAware, DisposableBean {
+
+    private SettingFactory settingFactory;
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
@@ -59,7 +61,7 @@ public class ReportClientConfiguration
      * @param registry 注册
      */
     private void registerProtocol(BeanDefinitionRegistry registry) {
-        SettingFactory settingFactory = SettingFactory.getInstance();
+        settingFactory = SettingFactory.getInstance();
         if (!settingFactory.isEnable()) {
             return;
         }
@@ -89,7 +91,7 @@ public class ReportClientConfiguration
 
         public ProtocolServerFactoryBean(Protocol protocol) {
             this.protocol = protocol;
-            endpointServer = protocol.createServer();
+            endpointServer = protocol.createServer(SettingFactory.getInstance().getProtocolSetting());
             // 添加任务执行配置
             endpointServer.addDefinition(new ReportXxlJobConfiguration());
             // 添加节点管理配置
