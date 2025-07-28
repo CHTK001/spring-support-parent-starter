@@ -57,7 +57,6 @@
         <module>spring-support-socketio-starter</module>        <!-- Socket.IO实时通信 -->
         <module>spring-support-sse-starter</module>             <!-- Server-Sent Events -->
         <module>spring-support-rpc-starter</module>             <!-- RPC远程调用 -->
-        <module>spring-support-websockify-starter</module>      <!-- WebSocket代理 -->
 
         <!-- 搜索和数据处理模块 -->
         <module>spring-support-elasticsearch-starter</module>   <!-- Elasticsearch搜索引擎 -->
