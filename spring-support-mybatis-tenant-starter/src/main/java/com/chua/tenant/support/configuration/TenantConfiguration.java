@@ -133,7 +133,7 @@ public class TenantConfiguration implements EnvironmentAware, BeanClassLoaderAwa
             table.setTableName(tableName);
             table.setCatalog(databaseName);
             Column column = new Column();
-            column.setNodeId(tenantProperties.getTenantId());
+            column.setColumnName(tenantProperties.getTenantId());
             column.setJavaType(new JavaType(Integer.class, null));
             column.setComment("租户ID");
             column.setNullable(true);
