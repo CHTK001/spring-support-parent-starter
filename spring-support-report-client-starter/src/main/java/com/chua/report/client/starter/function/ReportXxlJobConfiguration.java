@@ -3,6 +3,8 @@ package com.chua.report.client.starter.function;
 import com.chua.common.support.invoke.annotation.RequestLine;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.json.JsonObject;
+import com.chua.common.support.protocol.request.ServletRequest;
+import com.chua.common.support.protocol.request.ServletResponse;
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.report.client.starter.entity.JobCat;
 import com.chua.report.client.starter.entity.JobValue;
@@ -40,13 +42,13 @@ public class ReportXxlJobConfiguration implements BeanFactoryAware, SmartInstant
     private ConfigurableListableBeanFactory beanFactory;
 
     @RequestLine("job")
-    public Response listen(Request request) {
+    public ServletResponse listen(ServletRequest request) {
         JsonObject jsonObject = Json.getJsonObject(new String(request.getBody()));
         String profile = jsonObject.getString("profile");
         String applicationActive = Project.getInstance().getApplicationActive();
         String applicationActiveInclude = Project.getInstance().getApplicationActiveInclude();
         if (!profile.equals(applicationActive) && !applicationActiveInclude.contains(profile)) {
-            return new BadResponse(request, "环境不支持");
+            return ServletResponse.error("环境不支持");
         }
 
         String content = jsonObject.getString("content");
@@ -59,28 +61,28 @@ public class ReportXxlJobConfiguration implements BeanFactoryAware, SmartInstant
      * bean
      *
      * @param request 要求
-     * @return {@link Response}
+     * @return {@link ServletResponse}
      */
     @RequestLine("job_log_cat")
-    public Response log(Request request) {
+    public ServletResponse log(ServletRequest request) {
         JsonObject jsonObject = Json.getJsonObject(new String(request.getBody()));
         String content = jsonObject.getString("content");
         JobCat jobCat = Json.fromJson(content, JobCat.class);
 
         String fileName = JobFileAppender.makeLogFileName(jobCat.getDate(), jobCat.getLogId());
         LogResult logResult = JobFileAppender.readLog(fileName, jobCat.getFromLineNum());
-        return new OkResponse(request, Json.toJson(logResult));
+        return ServletResponse.ok(Json.toJson(logResult));
     }
 
     /**
      * bean
      *
      * @param request 要求
-     * @return {@link Response}
+     * @return {@link ServletResponse}
      */
     @RequestLine("job-bean")
-    public Response bean(Request request) {
-        return new OkResponse(request, Json.toJson(JobHandlerFactory.getInstance().keys()));
+    public ServletResponse bean(ServletRequest request) {
+        return ServletResponse.ok(Json.toJson(JobHandlerFactory.getInstance().keys()));
     }
 
     @Override
