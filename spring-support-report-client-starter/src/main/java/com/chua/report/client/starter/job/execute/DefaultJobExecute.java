@@ -1,10 +1,8 @@
 package com.chua.report.client.starter.job.execute;
 
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.protocol.request.BadResponse;
-import com.chua.common.support.protocol.request.DefaultResponse;
-import com.chua.common.support.protocol.request.Request;
-import com.chua.common.support.protocol.request.Response;
+import com.chua.common.support.protocol.request.ServletRequest;
+import com.chua.common.support.protocol.request.ServletResponse;
 import com.chua.report.client.starter.job.GlueTypeEnum;
 import com.chua.report.client.starter.job.TriggerParam;
 import com.chua.report.client.starter.job.glue.GlueFactory;
@@ -30,7 +28,7 @@ public class DefaultJobExecute implements JobExecute {
 
 
     @Override
-    public Response run(Request request, TriggerParam triggerParam) {
+    public ServletResponse run(ServletRequest request, TriggerParam triggerParam) {
 
         boolean inProfile = SettingFactory.getInstance().isProfileActive(triggerParam.getProfile());
 
@@ -38,8 +36,8 @@ public class DefaultJobExecute implements JobExecute {
         GlueTypeEnum glueTypeEnum = GlueTypeEnum.match(triggerParam.getGlueType());
 
         HandlerResult handler = getJobHandler(triggerParam, glueTypeEnum);
-        if (!inProfile || null == handler  || handler.getJobHandler() == null ) {
-            return new BadResponse(request, "job handler [" + triggerParam.getExecutorHandler() + "] not found.");
+        if (!inProfile || null == handler || handler.getJobHandler() == null) {
+            return ServletResponse.error("job handler [" + triggerParam.getExecutorHandler() + "] not found.");
         }
         JobThread jobThread = handler.getJobThread();
         // replace thread (new or exists invalid)
@@ -49,7 +47,7 @@ public class DefaultJobExecute implements JobExecute {
 
         // push data to queue
         ReturnResult<String> pushResult = jobThread.pushTriggerQueue(triggerParam);
-        return new DefaultResponse(request, pushResult.isOk() ? 200 : 400, pushResult.getMsg());
+        return pushResult.isOk() ? ServletResponse.ok() : ServletResponse.error(pushResult.getMsg());
     }
 
     private HandlerResult getJobHandler(TriggerParam triggerParam, GlueTypeEnum glueTypeEnum) {
@@ -64,7 +62,7 @@ public class DefaultJobExecute implements JobExecute {
             JobHandler newJobHandler = JobHandlerFactory.getInstance().get(triggerParam.getExecutorHandler());
 
             // valid old jobThread
-            if (jobThread!=null && jobHandler != newJobHandler) {
+            if (jobThread != null && jobHandler != newJobHandler) {
                 // change handler, need kill old thread
                 removeOldReason = "change jobhandler or glue type, and terminate the old job thread.";
 
@@ -86,7 +84,7 @@ public class DefaultJobExecute implements JobExecute {
             // valid old jobThread
             if (jobThread != null &&
                     !(jobThread.getHandler() instanceof GlueJobHandler
-                            && ((GlueJobHandler) jobThread.getHandler()).getGlueUpdatetime()==triggerParam.getGlueUpdatetime() )) {
+                            && ((GlueJobHandler) jobThread.getHandler()).getGlueUpdatetime() == triggerParam.getGlueUpdatetime())) {
                 // change handler or gluesource updated, need kill old thread
                 removeOldReason = "change job source or glue type, and terminate the old job thread.";
 
@@ -108,12 +106,12 @@ public class DefaultJobExecute implements JobExecute {
         }
 
 
-        if (glueTypeEnum!=null && glueTypeEnum.isScript()) {
+        if (glueTypeEnum != null && glueTypeEnum.isScript()) {
 
             // valid old jobThread
             if (jobThread != null &&
                     !(jobThread.getHandler() instanceof ScriptJobHandler
-                            && ((ScriptJobHandler) jobThread.getHandler()).getGlueUpdatetime()==triggerParam.getGlueUpdatetime() )) {
+                            && ((ScriptJobHandler) jobThread.getHandler()).getGlueUpdatetime() == triggerParam.getGlueUpdatetime())) {
                 // change script or gluesource updated, need kill old thread
                 removeOldReason = "change job source or glue type, and terminate the old job thread.";
 
@@ -132,6 +130,7 @@ public class DefaultJobExecute implements JobExecute {
         return result;
     }
 }
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
