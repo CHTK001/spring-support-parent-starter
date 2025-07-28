@@ -79,9 +79,6 @@ public class XssFilter implements Filter {
     private void handleXssAttack(HttpServletRequest request, HttpServletResponse response, 
                                 XssAttackException e) throws IOException {
         
-        // 记录攻击日志
-        xssProtectionService.logXssAttack(request, e);
-        
         // 根据配置的处理策略响应
         response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
         response.setContentType("application/json;charset=UTF-8");
