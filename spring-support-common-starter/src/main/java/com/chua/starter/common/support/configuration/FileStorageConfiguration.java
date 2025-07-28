@@ -3,6 +3,9 @@ package com.chua.starter.common.support.configuration;
 
 import com.chua.common.support.oss.FileStorage;
 import com.chua.common.support.oss.setting.BucketSetting;
+import com.chua.common.support.protocol.ServerSetting;
+import com.chua.common.support.protocol.filter.FileStorageServletFilter;
+import com.chua.common.support.protocol.filter.storage.FileStorageFactory;
 import com.chua.common.support.protocol.server.ProtocolServer;
 import com.chua.common.support.utils.NumberUtils;
 import com.chua.common.support.utils.StringUtils;
@@ -70,14 +73,16 @@ public class FileStorageConfiguration implements BeanDefinitionRegistryPostProce
             if (!NumberUtils.isNumber(s)) {
                 continue;
             }
-            var server = ProtocolServer.create("http", Integer.parseInt(s));
-            server.addFilter(new FileStorageChainFilter(FileStorageChainFilter.FileStorageFactory.create(
-                            FileStorageChainFilter.FileStorageSetting.builder()
-                                    .webjars(true)
-                                    .build()
-
-                    )
-                    .addFileStorage("/" + value.getBucket(), fileStorage)));
+            var server = ProtocolServer.create("http",
+                    ServerSetting.builder()
+                            .port(Integer.parseInt(s))
+                            .build());
+            FileStorageFactory.FileStorageSetting config = FileStorageFactory.FileStorageSetting.builder()
+                    .openWebjars(true)
+                    .build();
+            FileStorageServletFilter fileStorageServletFilter = new FileStorageServletFilter(config);
+            server.addFilter(fileStorageServletFilter);
+            fileStorageServletFilter.addFileStorage("/" + value.getBucket(), fileStorage);
 
             registry.registerBeanDefinition("fileStorage" + UUID.randomUUID(), BeanDefinitionBuilder
                     .rootBeanDefinition(ProtocolServer.class, () -> server)

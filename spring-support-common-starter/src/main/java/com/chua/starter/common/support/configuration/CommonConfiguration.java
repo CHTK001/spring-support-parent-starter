@@ -2,6 +2,7 @@ package com.chua.starter.common.support.configuration;
 
 import com.chua.common.support.objects.ConfigureObjectContext;
 import com.chua.common.support.objects.DefaultConfigureObjectContext;
+import com.chua.common.support.objects.ObjectContextSetting;
 import com.chua.starter.common.support.debounce.DebounceAspect;
 import com.chua.starter.common.support.logger.SysLoggerPointcutAdvisor;
 import com.chua.starter.common.support.logger.UserLoggerPointcutAdvisor;
@@ -52,7 +53,7 @@ public class CommonConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public ConfigureObjectContext configureObjectContext() {
-        return new DefaultConfigureObjectContext();
+        return new DefaultConfigureObjectContext(ObjectContextSetting.builder().build());
     }
     @Bean
     @ConditionalOnMissingBean
