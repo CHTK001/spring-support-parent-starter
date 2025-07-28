@@ -5,7 +5,6 @@ import com.chua.common.support.task.cache.Cacheable;
 import com.chua.common.support.task.cache.GuavaCacheable;
 import com.chua.common.support.utils.IdUtils;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.redis.support.client.RedisChannelSession;
 import com.chua.redis.support.client.RedisClient;
 import com.chua.redis.support.client.RedisSearch;
 import com.chua.redis.support.search.*;
@@ -37,9 +36,8 @@ public class RedisSearchServiceImpl implements RedisSearchService {
         if(!CACHEABLE.exist(index)) {
             return ReturnResult.ok();
         }
-        RedisChannelSession redisSession  = (RedisChannelSession) redisClient.getSession();
 
-        try (Jedis jedis = redisSession.getJedis().getResource()) {
+        try (Jedis jedis = redisClient.getJedisPool().getResource()) {
             String s = jedis.get(index + ":CREATE_INIT");
             if(StringUtils.isEmpty(s)) {
                 return ReturnResult.ok();
@@ -53,7 +51,10 @@ public class RedisSearchServiceImpl implements RedisSearchService {
             }
 
             if(System.currentTimeMillis() - l > expireTime) {
-                redisSession.remove(index + ":CREATE_INIT");
+                try {
+                    redisClient.delete(index + ":CREATE_INIT");
+                } catch (Exception ignored) {
+                }
                 return ReturnResult.ok();
             }
         }
@@ -69,16 +70,14 @@ public class RedisSearchServiceImpl implements RedisSearchService {
         if(CACHEABLE.exist(searchIndex.getName())) {
             return ReturnResult.ok();
         }
-        RedisChannelSession redisSession  = (RedisChannelSession) redisClient.getSession();
-
-        if(!redisSession.checkModule("search")) {
+        if(!redisClient.checkModule("search")) {
             return ReturnResult.error("模块未加载");
         }
 
-        try (Jedis jedis = redisSession.getJedis().getResource()) {
+        try (Jedis jedis = redisClient.getJedisPool().getResource()) {
             jedis.set(searchIndex.getName() + ":CREATE_INIT", String.valueOf(System.currentTimeMillis()));
         }
-        RedisSearch redisSearch = redisSession.getRedisSearch();
+        RedisSearch redisSearch = redisClient.getRedisSearch();
         try {
             redisSearch.ftInfo(searchIndex.getName());
             CACHEABLE.put(searchIndex.getName(), searchIndex.getName(), 30);
@@ -94,12 +93,10 @@ public class RedisSearchServiceImpl implements RedisSearchService {
         if(null == redisClient) {
             return ReturnResult.error("redisClient未初始化");
         }
-        RedisChannelSession redisSession  = (RedisChannelSession) redisClient.getSession();
-
-        if(!redisSession.checkModule("search")) {
+        if(!redisClient.checkModule("search")) {
             return ReturnResult.error("模块未加载");
         }
-        RedisSearch redisSearch = redisSession.getRedisSearch();
+        RedisSearch redisSearch = redisClient.getRedisSearch();
         redisSearch.addDocument(LANGUAGE, key + ":" + IdUtils.createSimpleUuid(), document);
         return ReturnResult.ok();
     }
@@ -123,14 +120,12 @@ public class RedisSearchServiceImpl implements RedisSearchService {
             return ReturnResult.error("redisClient未初始化");
         }
 
-        RedisChannelSession redisSession  = (RedisChannelSession) redisClient.getSession();
-
-        if(!redisSession.checkModule("search")) {
+        if(!redisClient.checkModule("search")) {
             return ReturnResult.error("模块未加载");
         }
 
 
-        RedisSearch redisSearch = redisSession.getRedisSearch();
+        RedisSearch redisSearch = redisClient.getRedisSearch();
         return ReturnResult.ok(redisSearch.queryAll(query, offset, limit));
     }
 
@@ -140,14 +135,12 @@ public class RedisSearchServiceImpl implements RedisSearchService {
             return ReturnResult.error("redisClient未初始化");
         }
 
-        RedisChannelSession redisSession  = (RedisChannelSession) redisClient.getSession();
-
-        if(!redisSession.checkModule("search")) {
+        if(!redisClient.checkModule("search")) {
             return ReturnResult.error("模块未加载");
         }
 
 
-        RedisSearch redisSearch = redisSession.getRedisSearch();
+        RedisSearch redisSearch = redisClient.getRedisSearch();
         return ReturnResult.ok(redisSearch.aggregate(query, aggregateQuery, offset, count));
     }
 }
