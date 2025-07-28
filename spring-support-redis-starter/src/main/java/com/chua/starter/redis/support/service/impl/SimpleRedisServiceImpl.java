@@ -2,7 +2,6 @@ package com.chua.starter.redis.support.service.impl;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.NumberUtils;
-import com.chua.redis.support.client.RedisChannelSession;
 import com.chua.redis.support.client.RedisClient;
 import com.chua.starter.redis.support.service.SimpleRedisService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,8 +23,7 @@ public class SimpleRedisServiceImpl implements SimpleRedisService {
     private RedisClient redisClient;
     @Override
     public void increment(String indicator, String key, long expire) {
-        RedisChannelSession redisSession  = (RedisChannelSession) redisClient.getSession();
-        JedisPool jedis = redisSession.getJedis();
+        JedisPool jedis = redisClient.getJedisPool();
         try (Jedis resource = jedis.getResource()) {
             resource.hincrBy(indicator ,  key, 1);
             resource.expire(indicator, expire);
@@ -34,8 +32,7 @@ public class SimpleRedisServiceImpl implements SimpleRedisService {
 
     @Override
     public void increment(String indicator, String key) {
-        RedisChannelSession redisSession  = (RedisChannelSession) redisClient.getSession();
-        JedisPool jedis = redisSession.getJedis();
+        JedisPool jedis = redisClient.getJedisPool();
         try (Jedis resource = jedis.getResource()) {
             resource.hincrBy(indicator ,  key, 1);
         }
@@ -43,8 +40,7 @@ public class SimpleRedisServiceImpl implements SimpleRedisService {
 
     @Override
     public void decrement(String indicator, String key, long expire) {
-        RedisChannelSession redisSession  = (RedisChannelSession) redisClient.getSession();
-        JedisPool jedis = redisSession.getJedis();
+        JedisPool jedis = redisClient.getJedisPool();
         try (Jedis resource = jedis.getResource()) {
             resource.hincrBy(indicator ,  key, -1);
             resource.expire(indicator, expire);
@@ -53,8 +49,7 @@ public class SimpleRedisServiceImpl implements SimpleRedisService {
 
     @Override
     public void decrement(String indicator, String key) {
-        RedisChannelSession redisSession  = (RedisChannelSession) redisClient.getSession();
-        JedisPool jedis = redisSession.getJedis();
+        JedisPool jedis = redisClient.getJedisPool();
         try (Jedis resource = jedis.getResource()) {
             resource.hincrBy(indicator ,  key, -1);
         }
@@ -62,8 +57,7 @@ public class SimpleRedisServiceImpl implements SimpleRedisService {
 
     @Override
     public ReturnResult<BigDecimal> qps(String key) {
-        RedisChannelSession redisSession  = (RedisChannelSession) redisClient.getSession();
-        JedisPool jedis = redisSession.getJedis();
+        JedisPool jedis = redisClient.getJedisPool();
         try (Jedis resource = jedis.getResource()) {
             Map<String, String> stringStringMap = resource.hgetAll(key);
             BigDecimal sum = new BigDecimal(0);
