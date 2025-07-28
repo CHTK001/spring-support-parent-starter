@@ -3,10 +3,8 @@ package com.chua.report.client.starter.function;
 import com.chua.common.support.invoke.annotation.RequestLine;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.json.JsonObject;
-import com.chua.common.support.protocol.request.BadResponse;
-import com.chua.common.support.protocol.request.OkResponse;
-import com.chua.common.support.protocol.request.Request;
-import com.chua.common.support.protocol.request.Response;
+import com.chua.common.support.protocol.request.ServletRequest;
+import com.chua.common.support.protocol.request.ServletResponse;
 import com.chua.report.client.starter.pojo.FileOperationRequest;
 import com.chua.report.client.starter.pojo.FileOperationResponse;
 import com.chua.report.client.starter.pojo.ScriptExecuteRequest;
@@ -57,11 +55,11 @@ public class NodeManagementConfiguration {
      * 文件列表
      */
     @RequestLine("node-file-list")
-    public Response fileList(Request request) {
+    public ServletResponse fileList(ServletRequest request) {
         try {
             JsonObject jsonObject = Json.getJsonObject(new String(request.getBody()));
             if (!checkEnvironment(jsonObject)) {
-                return new BadResponse(request, "环境不支持");
+                return ServletResponse.error( "环境不支持");
             }
 
             String content = jsonObject.getString("content");
@@ -70,10 +68,10 @@ public class NodeManagementConfiguration {
             FileOperationResponse response = fileManagementService.listFiles(fileRequest.getPath(),
                     fileRequest.getIncludeHidden(), fileRequest.getSortBy(), fileRequest.getSortOrder());
 
-            return new OkResponse(request, Json.toJson(response));
+            return ServletResponse.ok(Json.toJson(response));
         } catch (Exception e) {
             log.error("文件列表操作失败", e);
-            return new BadResponse(request, "文件列表操作失败: " + e.getMessage());
+            return ServletResponse.error( "文件列表操作失败: " + e.getMessage());
         }
     }
 
@@ -328,7 +326,7 @@ public class NodeManagementConfiguration {
      * 进程列表
      */
     @RequestLine("node-process-list")
-    public Response processList(Request request) {
+    public ServletResponse processList(ServletRequest request) {
         try {
             JsonObject jsonObject = Json.getJsonObject(new String(request.getBody()));
             if (!checkEnvironment(jsonObject)) {
