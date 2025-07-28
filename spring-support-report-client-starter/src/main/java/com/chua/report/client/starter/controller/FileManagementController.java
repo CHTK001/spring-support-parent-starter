@@ -1,5 +1,6 @@
 package com.chua.report.client.starter.controller;
 
+import com.chua.common.support.utils.FileUtils;
 import com.chua.report.client.starter.pojo.FileOperationRequest;
 import com.chua.report.client.starter.pojo.FileOperationResponse;
 import com.chua.report.client.starter.service.ClientHealthService;
@@ -133,7 +134,7 @@ public class FileManagementController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
             }
 
-            String filename = response.getFile() != null ? response.getFile().getName() : "download";
+            String filename = FileUtils.getName(filePath);
             String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8);
 
             ByteArrayResource resource = new ByteArrayResource(response.getData());
