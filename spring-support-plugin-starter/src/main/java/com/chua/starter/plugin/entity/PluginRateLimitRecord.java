@@ -3,6 +3,7 @@ package com.chua.starter.plugin.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import org.dizitart.no2.repository.annotations.Entity;
 
 import java.time.LocalDateTime;
 
@@ -14,12 +15,7 @@ import java.time.LocalDateTime;
  */
 @Data
 @Entity
-@Table(name = "rate_limit_record", indexes = {
-    @Index(name = "idx_key_window", columnList = "limitKey,windowStart"),
-    @Index(name = "idx_ip", columnList = "ipAddress"),
-    @Index(name = "idx_api", columnList = "apiPath"),
-    @Index(name = "idx_created_time", columnList = "createdTime")
-})
+@Table(name = "rate_limit_record")
 @EqualsAndHashCode(callSuper = false)
 public class PluginRateLimitRecord {
 
