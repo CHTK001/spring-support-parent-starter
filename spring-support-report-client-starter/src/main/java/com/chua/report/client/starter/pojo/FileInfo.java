@@ -114,6 +114,10 @@ public class FileInfo {
     private Boolean leaf;
 
     /**
+     * 文件最后修改时间
+     */
+    private LocalDateTime modifyTime;
+    /**
      * 获取格式化的文件大小
      */
     public String getFormattedSize() {
