@@ -1,7 +1,7 @@
 package com.chua.starter.plugin.interceptor;
 
+import com.chua.starter.plugin.entity.PluginBlackWhiteList;
 import com.chua.starter.plugin.entity.PluginRateLimitConfig;
-import com.chua.starter.plugin.service.BlackWhiteListService;
 import com.chua.starter.plugin.service.RateLimitCacheManager;
 import com.chua.starter.plugin.service.RateLimitConfigService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -31,7 +31,6 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 
     private final RateLimitCacheManager cacheManager;
     private final RateLimitConfigService configService;
-    private final BlackWhiteListService blackWhiteListService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
@@ -73,13 +72,19 @@ public class RateLimitInterceptor implements HandlerInterceptor {
      * @return 是否通过检查
      */
     private boolean checkBlackWhiteList(String value, HttpServletResponse response, String type) throws IOException {
-        // 检查是否允许访问（白名单优先级高于黑名单）
-        if (!blackWhiteListService.isAccessAllowed(value)) {
+        // 先检查白名单，如果在白名单中则允许通过
+        if (configService.isInBlackWhiteList(PluginBlackWhiteList.ListType.WHITELIST, value)) {
+            return true;
+        }
+
+        // 检查黑名单，如果在黑名单中则拒绝
+        if (configService.isInBlackWhiteList(PluginBlackWhiteList.ListType.BLACKLIST, value)) {
             String message = String.format("%s访问被拒绝: %s", type, value);
             sendRateLimitResponse(response, 403, message, type + "_BLOCKED");
-            log.warn("{} blocked by black/white list: {}", type, value);
+            log.warn("{} blocked by black list: {}", type, value);
             return false;
         }
+
         return true;
     }
 
@@ -90,11 +95,11 @@ public class RateLimitInterceptor implements HandlerInterceptor {
      * @return 是否通过限流检查
      */
     private boolean checkGlobalQpsLimit(HttpServletResponse response) throws IOException {
-        // 检查全局QPS限流
-        boolean acquired = cacheManager.tryAcquire(PluginRateLimitConfig.LimitType.QPS, "GLOBAL");
+        // 检查全局QPS限流（使用特殊的API键）
+        boolean acquired = cacheManager.tryAcquire(PluginRateLimitConfig.LimitType.API, "GLOBAL");
 
         if (!acquired) {
-            Optional<PluginRateLimitConfig> configOpt = configService.getConfig(PluginRateLimitConfig.LimitType.QPS, "GLOBAL");
+            Optional<PluginRateLimitConfig> configOpt = configService.getConfig(PluginRateLimitConfig.LimitType.API, "GLOBAL");
             String message = "全局QPS超出限制，请稍后再试";
 
             if (configOpt.isPresent()) {

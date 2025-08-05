@@ -1,11 +1,8 @@
 package com.chua.report.client.starter.pojo;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import jakarta.validation.constraints.NotBlank;
+import lombok.*;
+
 import java.util.List;
 
 /**
@@ -131,50 +128,246 @@ public class FileOperationRequest {
     private Integer maxDepth;
 
     /**
-     * 获取递归标志，默认为false
+     * 获取操作类型枚举
      */
-    public Boolean getRecursiveOrDefault() {
+    public OperationType getOperationTypeEnum() {
+        return OperationType.fromCode(operation);
+    }
+
+    /**
+     * 设置操作类型枚举
+     */
+    public void setOperationTypeEnum(OperationType operationType) {
+        this.operation = operationType.getCode();
+    }
+
+    /**
+     * 获取递归操作标志（带默认值）
+     */
+    public boolean getRecursiveOrDefault() {
         return recursive != null ? recursive : false;
     }
 
     /**
-     * 获取覆盖标志，默认为false
+     * 获取覆盖标志（带默认值）
      */
-    public Boolean getOverwriteOrDefault() {
+    public boolean getOverwriteOrDefault() {
         return overwrite != null ? overwrite : false;
     }
 
     /**
-     * 获取包含内容标志，默认为false
+     * 获取包含隐藏文件标志（带默认值）
      */
-    public Boolean getIncludeContentOrDefault() {
-        return includeContent != null ? includeContent : false;
-    }
-
-    /**
-     * 获取最大结果数，默认为100
-     */
-    public Integer getMaxResultsOrDefault() {
-        return maxResults != null ? maxResults : 100;
-    }
-
-    /**
-     * 获取包含隐藏文件标志，默认为false
-     */
-    public Boolean getIncludeHiddenOrDefault() {
+    public boolean getIncludeHiddenOrDefault() {
         return includeHidden != null ? includeHidden : false;
     }
 
     /**
-     * 获取最大深度，默认为10
+     * 获取排序字段（带默认值）
      */
-    public Integer getMaxDepthOrDefault() {
-        return maxDepth != null ? maxDepth : 10;
+    public String getSortByOrDefault() {
+        return sortBy != null ? sortBy : "name";
+    }
+
+    /**
+     * 获取排序顺序（带默认值）
+     */
+    public String getSortOrderOrDefault() {
+        return sortOrder != null ? sortOrder : "asc";
+    }
+
+    /**
+     * 获取最大深度（带默认值）
+     */
+    public int getMaxDepthOrDefault() {
+        return maxDepth != null ? maxDepth : 3;
+    }
+
+    /**
+     * 获取包含内容搜索标志（带默认值）
+     */
+    public boolean getIncludeContentOrDefault() {
+        return includeContent != null ? includeContent : false;
+    }
+
+    /**
+     * 获取最大结果数量（带默认值）
+     */
+    public int getMaxResultsOrDefault() {
+        return maxResults != null ? maxResults : 100;
+    }
+
+    /**
+     * 获取文件编码（带默认值）
+     */
+    public String getEncodingOrDefault() {
+        return encoding != null ? encoding : "UTF-8";
+    }
+
+    /**
+     * 获取最大文件大小（带默认值）
+     */
+    public long getMaxSizeOrDefault() {
+        return maxSize != null ? maxSize : 1024 * 1024; // 1MB
+    }
+
+    /**
+     * 获取压缩格式（带默认值）
+     */
+    public String getFormatOrDefault() {
+        return format != null ? format : "zip";
+    }
+
+    /**
+     * 验证请求参数
+     */
+    public boolean isValid() {
+        if (operation == null || operation.trim().isEmpty()) {
+            return false;
+        }
+
+        try {
+            OperationType operationType = getOperationTypeEnum();
+
+            switch (operationType) {
+                case LIST:
+                case TREE:
+                case DELETE:
+                case MKDIR:
+                case INFO:
+                case PREVIEW:
+                    return path != null && !path.trim().isEmpty();
+                case RENAME:
+                    return path != null && !path.trim().isEmpty() &&
+                            newName != null && !newName.trim().isEmpty();
+                case COPY:
+                case MOVE:
+                    return path != null && !path.trim().isEmpty() &&
+                            targetPath != null && !targetPath.trim().isEmpty();
+                case SEARCH:
+                    return path != null && !path.trim().isEmpty() &&
+                            pattern != null && !pattern.trim().isEmpty();
+                case COMPRESS:
+                    return paths != null && !paths.isEmpty() &&
+                            archivePath != null && !archivePath.trim().isEmpty();
+                case EXTRACT:
+                    return path != null && !path.trim().isEmpty() &&
+                            extractPath != null && !extractPath.trim().isEmpty();
+                case CHMOD:
+                    return path != null && !path.trim().isEmpty() &&
+                            permissions != null && !permissions.trim().isEmpty();
+                case CHOWN:
+                    return path != null && !path.trim().isEmpty() &&
+                            (owner != null || group != null);
+                default:
+                    return true;
+            }
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    /**
+     * 获取验证错误信息
+     */
+    public String getValidationError() {
+        if (operation == null || operation.trim().isEmpty()) {
+            return "操作类型不能为空";
+        }
+
+        try {
+            OperationType operationType = getOperationTypeEnum();
+
+            switch (operationType) {
+                case LIST:
+                case TREE:
+                case DELETE:
+                case MKDIR:
+                case INFO:
+                case PREVIEW:
+                    if (path == null || path.trim().isEmpty()) {
+                        return "文件路径不能为空";
+                    }
+                    break;
+                case RENAME:
+                    if (path == null || path.trim().isEmpty()) {
+                        return "文件路径不能为空";
+                    }
+                    if (newName == null || newName.trim().isEmpty()) {
+                        return "新名称不能为空";
+                    }
+                    break;
+                case COPY:
+                case MOVE:
+                    if (path == null || path.trim().isEmpty()) {
+                        return "源路径不能为空";
+                    }
+                    if (targetPath == null || targetPath.trim().isEmpty()) {
+                        return "目标路径不能为空";
+                    }
+                    break;
+                case SEARCH:
+                    if (path == null || path.trim().isEmpty()) {
+                        return "搜索路径不能为空";
+                    }
+                    if (pattern == null || pattern.trim().isEmpty()) {
+                        return "搜索模式不能为空";
+                    }
+                    break;
+                case COMPRESS:
+                    if (paths == null || paths.isEmpty()) {
+                        return "压缩文件列表不能为空";
+                    }
+                    if (archivePath == null || archivePath.trim().isEmpty()) {
+                        return "归档路径不能为空";
+                    }
+                    break;
+                case EXTRACT:
+                    if (path == null || path.trim().isEmpty()) {
+                        return "压缩文件路径不能为空";
+                    }
+                    if (extractPath == null || extractPath.trim().isEmpty()) {
+                        return "解压路径不能为空";
+                    }
+                    break;
+                case CHMOD:
+                    if (path == null || path.trim().isEmpty()) {
+                        return "文件路径不能为空";
+                    }
+                    if (permissions == null || permissions.trim().isEmpty()) {
+                        return "文件权限不能为空";
+                    }
+                    break;
+                case CHOWN:
+                    if (path == null || path.trim().isEmpty()) {
+                        return "文件路径不能为空";
+                    }
+                    if (owner == null && group == null) {
+                        return "所有者或组不能都为空";
+                    }
+                    break;
+            }
+
+            return null;
+        } catch (IllegalArgumentException e) {
+            return "未知的操作类型: " + operation;
+        }
+    }
+
+    /**
+     * 验证请求参数，如果无效则抛出异常
+     */
+    public void validate() {
+        String error = getValidationError();
+        if (error != null) {
+            throw new IllegalArgumentException(error);
+        }
     }
 
     /**
      * 操作类型枚举
      */
+    @Getter
     public enum OperationType {
         LIST("LIST", "列出文件"),
         TREE("TREE", "获取文件树"),
@@ -201,12 +394,13 @@ public class FileOperationRequest {
             this.desc = desc;
         }
 
-        public String getCode() {
-            return code;
-        }
-
-        public String getDesc() {
-            return desc;
+        public static OperationType fromCode(String code) {
+            for (OperationType type : values()) {
+                if (type.getCode().equals(code)) {
+                    return type;
+                }
+            }
+            throw new IllegalArgumentException("未知的操作类型: " + code);
         }
     }
 

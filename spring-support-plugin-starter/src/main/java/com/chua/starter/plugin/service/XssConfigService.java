@@ -5,6 +5,7 @@ import com.chua.starter.plugin.store.PersistenceStore;
 import com.chua.starter.plugin.store.QueryCondition;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +26,7 @@ public class XssConfigService {
 
     private final PersistenceStore<PluginXssConfig, Long> xssConfigStore;
     private final XssProtectionService xssProtectionService;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 保存XSS配置
@@ -311,5 +313,81 @@ public class XssConfigService {
         public int getTotalCount() { return totalCount; }
         public int getEnabledCount() { return enabledCount; }
         public int getDisabledCount() { return totalCount - enabledCount; }
+    }
+
+    // ==================== 实时更新方法 ====================
+
+    /**
+     * 实时更新XSS配置
+     *
+     * @param config XSS配置
+     * @return 是否更新成功
+     */
+    @Transactional
+    public boolean updateConfigRealtime(PluginXssConfig config) {
+        try {
+            PluginXssConfig savedConfig = saveConfig(config);
+
+            log.info("Real-time updated XSS config: {}", savedConfig.getUniqueKey());
+            return true;
+        } catch (Exception e) {
+            log.error("Failed to update XSS config in real-time", e);
+            return false;
+        }
+    }
+
+    /**
+     * 实时删除XSS配置
+     *
+     * @param configName 配置名称
+     * @return 是否删除成功
+     */
+    @Transactional
+    public boolean deleteConfigRealtime(String configName) {
+        try {
+            Optional<PluginXssConfig> configOpt = getConfigByName(configName);
+            if (configOpt.isPresent()) {
+                PluginXssConfig config = configOpt.get();
+                boolean success = deleteConfig(configName);
+
+                if (success) {
+
+                    log.info("Real-time deleted XSS config: {}", configName);
+                    return true;
+                }
+            }
+            return false;
+        } catch (Exception e) {
+            log.error("Failed to delete XSS config in real-time: {}", configName, e);
+            return false;
+        }
+    }
+
+    /**
+     * 实时启用/禁用XSS配置
+     *
+     * @param configName 配置名称
+     * @param enabled    是否启用
+     * @return 是否操作成功
+     */
+    @Transactional
+    public boolean toggleConfigRealtime(String configName, boolean enabled) {
+        try {
+            Optional<PluginXssConfig> configOpt = getConfigByName(configName);
+            if (configOpt.isPresent()) {
+                PluginXssConfig config = configOpt.get();
+                config.setPluginXssConfigEnabled(enabled);
+                config.onUpdate();
+
+                xssConfigStore.save(config);
+
+                log.info("Real-time {} XSS config: {}", enabled ? "enabled" : "disabled", configName);
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            log.error("Failed to toggle XSS config in real-time: {}", configName, e);
+            return false;
+        }
     }
 }

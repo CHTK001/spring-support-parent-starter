@@ -16,6 +16,7 @@ import org.springframework.boot.env.SystemEnvironmentPropertySourceEnvironmentPo
 import org.springframework.core.Ordered;
 import org.springframework.core.env.ConfigurableEnvironment;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -45,6 +46,8 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
                 .address(configCenterProperties.getAddress())
                 .username(configCenterProperties.getUsername())
                 .password(configCenterProperties.getPassword())
+                        .connectionTimeout(configCenterProperties.getConnectTimeout())
+                        .readTimeout(configCenterProperties.getReadTimeout())
                 .profile(StringUtils.defaultString(configCenterProperties.getNamespaceId(), active))
                 .build());
         if (null == configCenter) {
@@ -56,19 +59,25 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
 
         String include = environment.getProperty("spring.profiles.include");
         List<String> strings = Splitter.on(",").trimResults().omitEmptyStrings().splitToList(include);
+        List<String> loaded = new ArrayList<>(strings.size());
         for (String string : strings) {
-            String newName = "application-" + string + ".yml";
+            String newName = "application-%s-%s.yml".formatted(string, active);
             Map<String, Object> stringObjectMap = configCenter.get(newName);
-            if (null == stringObjectMap) {
+            if (null == stringObjectMap || stringObjectMap.isEmpty()) {
                 continue;
             }
 
             environment.getPropertySources()
                     .addLast(new OriginTrackedMapPropertySource(newName, stringObjectMap));
             log.info("加载nacos配置中心: {}", newName);
+            loaded.add(string);
         }
         for (String string : strings) {
-            String newName = "application-%s-%s.yml".formatted(string, active);
+            if (loaded.contains(string)) {
+                log.warn("已加载: {}-{}, 忽略{}", string, active, string);
+                continue;
+            }
+            String newName = "application-" + string + ".yml";
             Map<String, Object> stringObjectMap = configCenter.get(newName);
             if (null == stringObjectMap) {
                 continue;

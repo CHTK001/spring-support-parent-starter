@@ -1,7 +1,6 @@
 package com.chua.starter.plugin.config;
 
-import com.chua.starter.plugin.entity.PluginBlackWhiteList;
-import com.chua.starter.plugin.entity.PluginRateLimitConfig;
+import com.chua.starter.plugin.entity.PluginSecurityConfig;
 import com.chua.starter.plugin.entity.PluginXssConfig;
 import com.chua.starter.plugin.store.PersistenceStore;
 import com.chua.starter.plugin.store.StoreFactory;
@@ -22,19 +21,11 @@ public class StoreConfiguration {
     private final StoreFactory storeFactory;
 
     /**
-     * 限流配置存储Bean
+     * 安全配置存储Bean（统一的限流和黑白名单存储）
      */
     @Bean
-    public PersistenceStore<PluginRateLimitConfig, Long> rateLimitConfigStore() {
-        return storeFactory.createRateLimitConfigStore();
-    }
-
-    /**
-     * 黑白名单存储Bean
-     */
-    @Bean
-    public PersistenceStore<PluginBlackWhiteList, Long> blackWhiteListStore() {
-        return storeFactory.createBlackWhiteListStore();
+    public PersistenceStore<PluginSecurityConfig, Long> securityConfigStore() {
+        return storeFactory.createSecurityConfigStore();
     }
 
     /**

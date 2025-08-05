@@ -1,6 +1,5 @@
 package com.chua.starter.common.support.codec;
 
-import cn.hutool.core.util.HexUtil;
 import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.crypto.CodecKeyPair;
 import com.chua.common.support.function.Upgrade;
@@ -12,6 +11,7 @@ import com.chua.starter.common.support.application.GlobalSettingFactory;
 import com.chua.starter.common.support.properties.CodecProperties;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import org.apache.commons.codec.binary.Hex;
 import org.springframework.context.ApplicationListener;
 
 import java.util.List;
@@ -163,7 +163,7 @@ public class CodecFactory implements Upgrade<CodecSetting>, ApplicationListener<
      */
     public byte[] decodeRequest(String data) {
         try {
-            return requestCodec.decode(HexUtil.decodeHex(data));
+            return requestCodec.decode(Hex.decodeHex(data));
         } catch (Exception e) {
             throw new RuntimeException("请求解析失败!");
         }

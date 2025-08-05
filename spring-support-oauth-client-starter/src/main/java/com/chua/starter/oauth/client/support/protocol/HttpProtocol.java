@@ -69,7 +69,18 @@ public class HttpProtocol extends AbstractProtocol {
         jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
         jsonObject.put("x-oauth-secret-key", authClientProperties.getKey().getSecretKey());
         jsonObject.put("x-oauth-refresh-token", refreshToken);
-        return createAuthenticationInformation(jsonObject, upgradeType, "upgrade");
+        jsonObject.put("x-oauth-upgrade-type", upgradeType.name().toUpperCase());
+        AuthenticationInformation authenticationInformation = createAuthenticationInformation(jsonObject, upgradeType, "upgrade");
+        if (authenticationInformation.getInformation() == Information.OK) {
+            if (upgradeType == UpgradeType.VERSION) {
+                RequestUtils.removeUserInfo();
+                String cacheKey = getCacheKey(new Cookie[]{cookie}, token);
+                if (hasCache(cacheKey)) {
+                    clearAuthenticationInformation(cacheKey);
+                }
+            }
+        }
+        return authenticationInformation;
     }
 
     @Override

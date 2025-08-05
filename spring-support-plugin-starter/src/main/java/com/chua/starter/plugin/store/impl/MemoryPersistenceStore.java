@@ -1,6 +1,9 @@
 package com.chua.starter.plugin.store.impl;
 
-import com.chua.starter.plugin.store.*;
+import com.chua.starter.plugin.store.PageResult;
+import com.chua.starter.plugin.store.PersistenceStore;
+import com.chua.starter.plugin.store.QueryCondition;
+import com.chua.starter.plugin.store.UpdateData;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.Field;
@@ -262,9 +265,9 @@ public class MemoryPersistenceStore<T, ID> implements PersistenceStore<T, ID> {
 
     // 私有辅助方法
 
+    @SuppressWarnings("unchecked")
     private ID generateId() {
-        long andIncrement = idGenerator.getAndIncrement();
-        return null;
+        return (ID) idGenerator.getAndIncrement();
     }
 
     @SuppressWarnings("unchecked")

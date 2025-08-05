@@ -51,12 +51,11 @@ public class RedisSearchServiceImpl implements RedisSearchService {
             }
 
             if(System.currentTimeMillis() - l > expireTime) {
-                try {
-                    redisClient.delete(index + ":CREATE_INIT");
-                } catch (Exception ignored) {
-                }
+                redisClient.delete(index + ":CREATE_INIT");
                 return ReturnResult.ok();
             }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
         return ReturnResult.ok();
     }
@@ -70,6 +69,7 @@ public class RedisSearchServiceImpl implements RedisSearchService {
         if(CACHEABLE.exist(searchIndex.getName())) {
             return ReturnResult.ok();
         }
+
         if(!redisClient.checkModule("search")) {
             return ReturnResult.error("模块未加载");
         }
@@ -93,6 +93,7 @@ public class RedisSearchServiceImpl implements RedisSearchService {
         if(null == redisClient) {
             return ReturnResult.error("redisClient未初始化");
         }
+
         if(!redisClient.checkModule("search")) {
             return ReturnResult.error("模块未加载");
         }
