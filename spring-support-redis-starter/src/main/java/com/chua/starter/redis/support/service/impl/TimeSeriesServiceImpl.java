@@ -31,6 +31,7 @@ public class TimeSeriesServiceImpl implements TimeSeriesService {
 
     @Override
     public ReturnResult<Boolean> save(String indicator, long timestamp, double value, LinkedHashMap<String, String> label, long retentionPeriod) {
+
         if(!redisClient.checkModule("timeseries")) {
             return ReturnResult.error("模块未加载");
         }
@@ -52,11 +53,12 @@ public class TimeSeriesServiceImpl implements TimeSeriesService {
 
     @Override
     public ReturnResult<Boolean> save(String indicator, long timestamp, double value, long retentionPeriod) {
+
         if(!redisClient.checkModule("timeseries")) {
             return ReturnResult.error("模块未加载");
         }
 
-        RedisTimeSeries redisTimeSeries =redisClient.getRedisTimeSeries();
+        RedisTimeSeries redisTimeSeries = redisClient.getRedisTimeSeries();
         TSElement tsElement = redisTimeSeries.tsGet(indicator);
         if(null == tsElement) {
             redisTimeSeries.tsCreate(indicator);
@@ -88,6 +90,7 @@ public class TimeSeriesServiceImpl implements TimeSeriesService {
 
     @Override
     public ReturnResult<List<TimeIndicator>> range(String indicator, long fromTimestamp, long toTimestamp, boolean latest, int count) {
+
         if(!redisClient.checkModule("timeseries")) {
             return ReturnResult.error("模块未加载");
         }
@@ -115,6 +118,7 @@ public class TimeSeriesServiceImpl implements TimeSeriesService {
 
     @Override
     public ReturnResult<Map<String, List<TimeIndicator>>> mRange(String indicator, long fromTimestamp, long toTimestamp, boolean latest, int count) {
+
         if(!redisClient.checkModule("timeseries")) {
             return ReturnResult.error("模块未加载");
         }

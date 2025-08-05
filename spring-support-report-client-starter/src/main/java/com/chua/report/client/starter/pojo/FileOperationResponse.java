@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.http.MediaType;
+import org.springframework.http.MediaTypeFactory;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -75,6 +77,11 @@ public class FileOperationResponse implements Serializable {
     private String contentType;
 
     /**
+     * 文件内容类型
+     */
+    private MediaType mediaType;
+
+    /**
      * 文件编码
      */
     private String encoding;
@@ -82,7 +89,7 @@ public class FileOperationResponse implements Serializable {
     /**
      * 文件内容字节数组（用于下载等操作）
      */
-    private byte[] data;
+    private byte[] contentBytes;
 
     /**
      * 处理的文件数量
@@ -323,6 +330,7 @@ public class FileOperationResponse implements Serializable {
                 .message(message)
                 .content(content)
                 .contentType(contentType)
+                .mediaType(MediaTypeFactory.getMediaType(contentType).orElse(MediaType.TEXT_PLAIN))
                 .endTime(LocalDateTime.now())
                 .build();
     }
@@ -441,6 +449,12 @@ public class FileOperationResponse implements Serializable {
         return withDuration(startTime, endTime);
     }
 
+    /**
+     * 获取所有内容
+     */
+    public byte[] getAll() {
+        return contentBytes;
+    }
     /**
      * 文件系统信息
      */

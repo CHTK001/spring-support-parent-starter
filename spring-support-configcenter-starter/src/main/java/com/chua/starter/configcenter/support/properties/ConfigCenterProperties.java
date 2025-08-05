@@ -5,6 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * 配置配置
+ *
  * @author CH
  * @since 2024/9/9
  */
@@ -18,7 +19,14 @@ public class ConfigCenterProperties {
      * 是否启用
      */
     private boolean enable = false;
-
+    /**
+     * 连接超时
+     */
+    private int connectTimeout = 5000;
+    /**
+     * 连接超时
+     */
+    private int readTimeout = 5000;
     /**
      * 协议
      */

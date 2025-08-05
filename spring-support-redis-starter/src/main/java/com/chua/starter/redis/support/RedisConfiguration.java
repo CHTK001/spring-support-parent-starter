@@ -78,7 +78,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
                         .host(redisProperties.getHost())
                         .port(redisProperties.getPort())
                         .password(redisProperties.getPassword())
-                        .connectTimeoutMillis(null ==  redisProperties.getTimeout()? 10000: (int) redisProperties.getTimeout().toMillis())
+                        .connectTimeoutMillis(null == redisProperties.getTimeout() ? 10_000L : redisProperties.getTimeout().toMillis())
                         .build()
         );
 

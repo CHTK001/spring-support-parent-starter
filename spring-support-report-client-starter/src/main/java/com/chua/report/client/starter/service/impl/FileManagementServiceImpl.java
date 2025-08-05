@@ -206,7 +206,7 @@ public class FileManagementServiceImpl implements FileManagementService {
             FileInfo fileInfo = convertToFileInfo(path);
 
             FileOperationResponse response = FileOperationResponse.success("DOWNLOAD", "文件下载成功", fileInfo);
-            response.setData(data);
+            response.setContentBytes(data);
             response.setDuration(System.currentTimeMillis() - startTime);
 
             log.debug("文件下载成功: path={}, size={}, duration={}ms", filePath, data.length, response.getDuration());

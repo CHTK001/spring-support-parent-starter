@@ -1,7 +1,6 @@
 package com.chua.starter.plugin.store;
 
-import com.chua.starter.plugin.entity.PluginBlackWhiteList;
-import com.chua.starter.plugin.entity.PluginRateLimitConfig;
+import com.chua.starter.plugin.entity.PluginSecurityConfig;
 import com.chua.starter.plugin.entity.PluginXssConfig;
 import com.chua.starter.plugin.store.impl.MemoryPersistenceStore;
 import com.chua.starter.plugin.store.impl.SqlitePersistenceStore;
@@ -60,21 +59,12 @@ public class StoreFactory {
     }
 
     /**
-     * 创建限流配置存储
-     * 
-     * @return 限流配置存储
-     */
-    public PersistenceStore<PluginRateLimitConfig, Long> createRateLimitConfigStore() {
-        return createStore(PluginRateLimitConfig.class, "rate_limit_config");
-    }
-
-    /**
-     * 创建黑白名单存储
+     * 创建安全配置存储（统一的限流和黑白名单存储）
      *
-     * @return 黑白名单存储
+     * @return 安全配置存储
      */
-    public PersistenceStore<PluginBlackWhiteList, Long> createBlackWhiteListStore() {
-        return createStore(PluginBlackWhiteList.class, "black_white_list");
+    public PersistenceStore<PluginSecurityConfig, Long> createSecurityConfigStore() {
+        return createStore(PluginSecurityConfig.class, "security_config");
     }
 
     /**

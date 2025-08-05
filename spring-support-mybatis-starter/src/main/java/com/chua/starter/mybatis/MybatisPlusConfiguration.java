@@ -2,6 +2,7 @@ package com.chua.starter.mybatis;
 
 import com.baomidou.mybatisplus.autoconfigure.ConfigurationCustomizer;
 import com.baomidou.mybatisplus.core.config.GlobalConfig;
+import com.baomidou.mybatisplus.extension.parser.JsqlParserGlobal;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.DataPermissionInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
@@ -18,6 +19,7 @@ import com.chua.starter.mybatis.reloader.MapperReload;
 import com.chua.starter.mybatis.reloader.Reload;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
@@ -45,6 +47,17 @@ public class MybatisPlusConfiguration {
 
     final  MybatisPlusProperties mybatisProperties;
     final MybatisPlusDataScopeProperties methodSecurityInterceptor;
+
+    static {
+        JsqlParserGlobal.setParserMultiFunc((sql) -> {
+            String formatSql = CCJSqlParserUtil.sanitizeSingleSql(sql);
+            return CCJSqlParserUtil.parseStatements(formatSql, JsqlParserGlobal.getExecutorService(), null);
+        });
+        JsqlParserGlobal.setParserSingleFunc((sql) -> {
+            String formatSql = CCJSqlParserUtil.sanitizeSingleSql(sql);
+            return CCJSqlParserUtil.parse(formatSql, JsqlParserGlobal.getExecutorService(), null);
+        });
+    }
     /**
      * 分页
      *
