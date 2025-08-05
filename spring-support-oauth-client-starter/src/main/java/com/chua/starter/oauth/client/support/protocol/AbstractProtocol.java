@@ -22,6 +22,7 @@ import com.chua.starter.oauth.client.support.infomation.Information;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.LoginResult;
+import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -282,8 +283,10 @@ public abstract class AbstractProtocol implements Protocol {
                 unregisterFromRequest(servletRequest);
                 return new AuthenticationInformation(Information.OK, null);
             }
-            UserResume userResume = Json.fromJson(body, UserResume.class);
-            return new AuthenticationInformation(Information.OK, userResume);
+            UserResult userResume = Json.fromJson(body, UserResult.class);
+            AuthenticationInformation authenticationInformation = new AuthenticationInformation(OK, userResume);
+            authenticationInformation.setToken(userResume.getToken());
+            return authenticationInformation;
         }
 
 
@@ -315,6 +318,14 @@ public abstract class AbstractProtocol implements Protocol {
         RequestUtils.setUserInfo(userResume);
     }
 
+    /**
+     * 清除缓存信息
+     *
+     * @param cacheKey 缓存key
+     */
+    protected void clearAuthenticationInformation(String cacheKey) {
+        CACHEABLE.remove(cacheKey);
+    }
     /**
      * 缓存认证信息
      *

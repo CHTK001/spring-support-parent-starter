@@ -17,7 +17,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
@@ -130,19 +129,19 @@ public class FileManagementController {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
             }
 
-            if (response.getData() == null) {
+            if (response.getContentBytes() == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
             }
 
             String filename = FileUtils.getName(filePath);
             String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8);
 
-            ByteArrayResource resource = new ByteArrayResource(response.getData());
+            ByteArrayResource resource = new ByteArrayResource(response.getContentBytes());
 
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodedFilename)
                     .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE)
-                    .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(response.getData().length)).body(resource);
+                    .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(response.getContentBytes().length)).body(resource);
 
         } catch (Exception e) {
             log.error("下载文件失败: filePath={}", filePath, e);

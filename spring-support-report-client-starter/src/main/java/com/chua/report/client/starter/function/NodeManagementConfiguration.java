@@ -5,11 +5,7 @@ import com.chua.common.support.json.Json;
 import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.protocol.request.ServletRequest;
 import com.chua.common.support.protocol.request.ServletResponse;
-import com.chua.report.client.starter.pojo.FileOperationRequest;
-import com.chua.report.client.starter.pojo.FileOperationResponse;
-import com.chua.report.client.starter.pojo.ScriptExecuteRequest;
-import com.chua.report.client.starter.pojo.ScriptExecuteResponse;
-import com.chua.report.client.starter.pojo.SystemInfoResponse;
+import com.chua.report.client.starter.pojo.*;
 import com.chua.report.client.starter.service.FileManagementService;
 import com.chua.report.client.starter.service.ScriptExecuteService;
 import com.chua.report.client.starter.service.SystemInfoService;
@@ -153,8 +149,8 @@ public class NodeManagementConfiguration {
             FileOperationResponse response = fileManagementService.downloadFile(filePath);
 
             // 如果下载成功，将文件数据转换为Base64
-            if (response.getSuccess() && response.getData() != null) {
-                byte[] fileData = response.getData();
+            if (response.getSuccess() && response.getContentBytes() != null) {
+                byte[] fileData = response.getContentBytes();
                 String fileDataBase64 = java.util.Base64.getEncoder().encodeToString(fileData);
 
                 // 创建一个新的响应对象，包含Base64编码的数据

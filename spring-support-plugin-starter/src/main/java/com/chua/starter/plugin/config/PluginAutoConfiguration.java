@@ -22,7 +22,8 @@ import org.springframework.context.annotation.Import;
 })
 @Import({
     RateLimitConfiguration.class,
-    RateLimitWebConfiguration.class
+        StoreConfiguration.class,
+        XssFilterConfiguration.class
 })
 @ConditionalOnProperty(prefix = "plugin", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class PluginAutoConfiguration {
