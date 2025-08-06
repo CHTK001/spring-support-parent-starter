@@ -267,7 +267,8 @@ public class MemoryPersistenceStore<T, ID> implements PersistenceStore<T, ID> {
 
     @SuppressWarnings("unchecked")
     private ID generateId() {
-        return (ID) idGenerator.getAndIncrement();
+        Object andIncrement = idGenerator.getAndIncrement();
+        return (ID) andIncrement;
     }
 
     @SuppressWarnings("unchecked")
