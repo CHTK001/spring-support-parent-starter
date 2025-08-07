@@ -98,7 +98,9 @@ public class SocketConfiguration implements BeanDefinitionRegistryPostProcessor,
         // 是否启用Linux的NativeEpoll
         configuration.setUseLinuxNativeEpoll(socketIoProperties.isUseLinuxNativeEpoll());
 
-        configuration.setContext(room.getContextPath());
+        if (null != room.getContextPath()) {
+            configuration.setContext(room.getContextPath());
+        }
         if(null != socketAuthFactory) {
             configuration.setAuthorizationListener(new AuthorizationListener() {
                 @Override

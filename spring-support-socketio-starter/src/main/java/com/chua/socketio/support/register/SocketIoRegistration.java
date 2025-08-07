@@ -1,15 +1,14 @@
 package com.chua.socketio.support.register;
 
+import com.chua.common.support.printer.TablePrinter;
 import com.chua.socketio.support.SocketIOListener;
 import com.chua.socketio.support.properties.SocketIoProperties;
 import com.chua.socketio.support.resolver.DefaultSocketSessionResolver;
 import com.chua.socketio.support.resolver.SocketSessionResolver;
 import com.chua.socketio.support.server.DelegateSocketIOServer;
-import com.chua.socketio.support.session.DelegateSocketSessionFactory;
 import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.socketio.support.wrapper.WrapperConfiguration;
 import com.corundumstudio.socketio.Configuration;
-import com.google.common.base.Joiner;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +26,7 @@ import java.util.List;
 @Slf4j
 public class SocketIoRegistration implements InitializingBean, DisposableBean {
 
-    private List<WrapperConfiguration> configurations;
+    private final List<WrapperConfiguration> configurations;
     private final SocketIoProperties properties;
     private final SocketSessionTemplate socketSessionTemplate;
     private final List<SocketIOListener> listenerList;
@@ -42,7 +41,8 @@ public class SocketIoRegistration implements InitializingBean, DisposableBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        List<String> startedPort  = new LinkedList<>();
+
+        TablePrinter printer = new TablePrinter("客户端ID", "上下文", "端口", "状态");
         for (WrapperConfiguration wrapperConfiguration : configurations) {
             Configuration configuration = wrapperConfiguration.getConfiguration();
             String clientId = wrapperConfiguration.getClientId();
@@ -66,14 +66,14 @@ public class SocketIoRegistration implements InitializingBean, DisposableBean {
                     socketIOServer.addNamespace(namespace.startsWith("/") ? namespace : "/" + namespace);
                 }
                 socketIOServer.start();
-                startedPort.add(clientId + "#" + configuration.getPort()  + "(started)");
+                printer.addRow(clientId, configuration.getContext(), String.valueOf(configuration.getPort()), "已启动");
                 socketIOServers.add(new SocketInfo(socketIOServer, socketSessionResolver, socketSessionTemplate));
             } catch (Exception e) {
                 log.error(e.getLocalizedMessage());
-                startedPort.add(clientId + "#" + configuration.getPort()  + "(breakdown)");
+                printer.addRow(clientId, configuration.getContext(), String.valueOf(configuration.getPort()), "启动失败");
             }
         }
-        log.info("当前启动socket.io端口: {}", Joiner.on(",").join(startedPort));
+        log.info("当前启动socket.io端口: \n{}", printer.print());
     }
 
     @Override
