@@ -4,10 +4,12 @@ import com.chua.common.support.discovery.*;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.project.Project;
 import com.chua.starter.discovery.support.properties.DiscoveryListProperties;
 import com.chua.starter.discovery.support.properties.DiscoveryNodeProperties;
 import com.chua.starter.discovery.support.properties.DiscoveryProperties;
+import com.chua.starter.discovery.support.service.DiscoveryEnvironment;
 import com.chua.starter.discovery.support.service.DiscoveryService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
@@ -23,10 +25,7 @@ import org.springframework.context.EnvironmentAware;
 import org.springframework.core.env.Environment;
 
 import java.io.IOException;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * 发现服务
@@ -50,6 +49,8 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
             log.warn("未开启 discovery 服务");
             return;
         }
+
+        log.info(">>>>>>> 开启 discovery 服务");
         List<DiscoveryProperties> properties1 = properties.getProperties();
         for (DiscoveryProperties discoveryProperties : properties1) {
             if(discoveryProperties.isEnabled()) {
@@ -97,6 +98,16 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
         Map<String, String> newMetaData = new LinkedHashMap<>(project.getProject());
         String serverIdValue = DigestUtils.md5Hex(project.getApplicationHost() + project.getApplicationPort());
         newMetaData.put("serverId", serverIdValue);
+        Collection<DiscoveryEnvironment> beanList = SpringBeanUtils.getBeanList(DiscoveryEnvironment.class);
+        for (DiscoveryEnvironment discoveryEnvironment : beanList) {
+            Properties properties = discoveryEnvironment.getProperties();
+            properties.forEach((key, value) -> {
+                if(null == value) {
+                    return;
+                }
+                newMetaData.put(key.toString(), value.toString());
+            });
+        }
 
         return Discovery.builder()
                 .id(serverId)
