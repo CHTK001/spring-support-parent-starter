@@ -7,6 +7,7 @@ import com.chua.common.support.json.Json5;
 import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.ArrayUtils;
+import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
@@ -33,6 +34,8 @@ import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 import static com.chua.common.support.constant.Constants.CAPTCHA_SESSION_KEY;
@@ -203,8 +206,9 @@ public class UserStatisticProvider {
         UserMenuResult userMenuResult = new UserMenuResult();
         userMenuResult.setPermissions(AuthClientExecute.getInstance().getUserResult().getPermission());
         Environment environment = SpringBeanUtils.getEnvironment();
-        try {
-            List<RouteVO> routeVOS = Json5.fromJsonToList(UserStatisticProvider.class.getResourceAsStream(StringUtils.defaultString(authProperties.getTemp().getMenuPath(), "/menu.json5")), RouteVO.class);
+        try (InputStream resourceAsStream = UserStatisticProvider.class.getResourceAsStream(StringUtils.defaultString(authProperties.getTemp().getMenuPath(), "/menu.json5"));){
+            List<RouteVO> routeVOS =
+                    Json5.fromJsonList(IoUtils.toString(resourceAsStream, StandardCharsets.UTF_8), RouteVO.class);
             List<RouteVO> result = new ArrayList<>(routeVOS.size());
             for (RouteVO routeVO : routeVOS) {
                 String condition = routeVO.getCondition();
