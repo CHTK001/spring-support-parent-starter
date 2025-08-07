@@ -8,7 +8,6 @@ import com.chua.common.support.utils.Md5Utils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.value.Value;
 import com.chua.starter.common.support.application.Binder;
-import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.common.support.watch.Watch;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
@@ -34,7 +33,6 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import static com.chua.common.support.constant.NumberConstant.NUM_200;
 import static com.chua.starter.common.support.utils.RequestUtils.*;
 import static com.chua.starter.oauth.client.support.enums.AuthType.AUTO;
 import static com.chua.starter.oauth.client.support.enums.AuthType.STATIC;
@@ -244,15 +242,16 @@ public class AuthClientExecute {
             return null;
         }
         RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
-        if (requestAttributes == null) {
-            return null;
+        String protocolName = null;
+        if (requestAttributes != null) {
+            ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
+            HttpServletRequest request = attributes.getRequest();
+            protocolName = request.getHeader("x-oauth-protocol");
         }
 
-        ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
+        Protocol protocol = ServiceProvider.of(Protocol.class).getNewExtension(authClientProperties.getProtocol(), authClientProperties);
+        AuthenticationInformation approve = protocol.approve(null, token, protocolName);
 
-        HttpServletRequest request = attributes.getRequest();
-        Protocol protocol = ServiceProvider.of(Protocol.class).getExtension(authClientProperties.getProtocol());
-        AuthenticationInformation approve = protocol.approve(null, token, request.getHeader("x-oauth-protocol"));
         if (approve.getInformation().getCode() != 200) {
             return null;
         }

@@ -155,6 +155,6 @@ public class AuthClientProperties {
         /**
          * 临时账号(只用于账号类型为Embed)
          */
-        private String user = "guest:guest;ops:opsAdmin2023;admin:admin202433";
+        private String user = "guest:guest;ops:opsAdmin2023;admin:admin@123!456";
     }
 }
