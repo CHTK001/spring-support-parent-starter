@@ -12,6 +12,7 @@ import com.chua.common.support.protocol.ProtocolSetting;
 import com.chua.common.support.utils.*;
 import com.chua.report.client.starter.endpoint.ModuleType;
 import com.chua.report.client.starter.properties.ReportClientProperties;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.reflect.TypeToken;
 import lombok.Getter;
 import org.springframework.beans.factory.InitializingBean;
@@ -19,6 +20,7 @@ import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.core.env.Environment;
 
+import java.lang.reflect.Type;
 import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
@@ -141,7 +143,12 @@ public class SettingFactory implements AutoCloseable, InitializingBean {
                         , KEY))
                 .newInvoker().execute();
         String content = response.content(String.class);
-        return Json.fromJson(content, type);
+        return Json.fromJson(content, new TypeReference<E>() {
+            @Override
+            public Type getType() {
+                return type.getType();
+            }
+        });
     }
 
     /**
