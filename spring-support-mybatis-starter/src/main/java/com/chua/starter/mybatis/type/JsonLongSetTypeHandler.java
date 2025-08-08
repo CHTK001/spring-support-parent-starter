@@ -2,7 +2,7 @@ package com.chua.starter.mybatis.type;
 
 import com.baomidou.mybatisplus.extension.handlers.AbstractJsonTypeHandler;
 import com.chua.common.support.json.Json;
-import com.chua.common.support.json.TypeReference;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 import java.lang.reflect.Field;
 import java.util.Set;

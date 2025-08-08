@@ -242,7 +242,7 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
                     if (nativeRequest instanceof CustomHttpServletRequestWrapper) {
                         String s = IoUtils.toString(((CustomHttpServletRequestWrapper) nativeRequest).getInputStream(), StandardCharsets.UTF_8);
                         if (s.startsWith(CommonConstant.SYMBOL_LEFT_BIG_PARENTHESES)) {
-                            return Json.toMapStringObject(s);
+                            return Json.getJsonObject(s);
                         }
 
                         if (s.startsWith(CommonConstant.SYMBOL_LEFT_SQUARE_BRACKET)) {
@@ -255,7 +255,7 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
                     if(nativeRequest instanceof ContentCachingRequestWrapper contentCachingRequestWrapper) {
                         String s = IoUtils.toString(contentCachingRequestWrapper.getContentAsByteArray(), StandardCharsets.UTF_8);
                         if (s.startsWith(CommonConstant.SYMBOL_LEFT_BIG_PARENTHESES)) {
-                            return Json.toMapStringObject(s);
+                            return Json.getJsonObject(s);
                         }
 
                         if (s.startsWith(CommonConstant.SYMBOL_LEFT_SQUARE_BRACKET)) {
