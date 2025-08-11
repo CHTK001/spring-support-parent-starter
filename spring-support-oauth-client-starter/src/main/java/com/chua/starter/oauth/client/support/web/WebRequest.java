@@ -105,7 +105,7 @@ public class WebRequest {
                 try {
                     throw exception;
                 } catch (HttpRequestMethodNotSupportedException e) {
-                    throw new RuntimeException(e);
+                    throw new RuntimeException(e.getMessage());
                 }
             } catch (Exception ignored) {
             }
