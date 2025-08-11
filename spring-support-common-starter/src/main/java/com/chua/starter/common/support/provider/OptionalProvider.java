@@ -55,7 +55,6 @@ public class OptionalProvider {
             return ReturnResult.error();
         }
 
-        type = StringUtils.utf8Str(Base64.getDecoder().decode(type));
         Class<?> aClass = ClassUtils.toType(getType(type));
         Map<String, ?> beanOfTypes = ObjectContext.getInstance().getBeanOfTypes(aClass);
         List<SpiOption> options = MapUtils.mapToList(beanOfTypes, (key, value) -> {
@@ -114,7 +113,7 @@ public class OptionalProvider {
             return ReturnResult.error();
         }
 
-        type = StringUtils.utf8Str(Base64.getDecoder().decode(type));
+        type = StringUtils.utf8Str(type);
         List<SpiOption> options = ServiceProvider.of(getType(type)).options();
         if(!StringUtils.isBlank(name)) {
             List<SpiOption> collect = options.stream().filter(spiOption -> ArrayUtils.containsIgnoreCase(spiOption.getSupportedTypes(), name) || StringUtils.containsIgnoreCase(spiOption.getName(), name)).toList();
@@ -136,8 +135,7 @@ public class OptionalProvider {
         if(StringUtils.isBlank(type)) {
             return ReturnResult.error();
         }
-
-        String[] split = StringUtils.utf8Str(Base64.getDecoder().decode(type)).split(",");
+        String[] split = StringUtils.utf8Str(type).split(",");
         Map<String, List<SpiOption>> map = MapUtils.newHashMap();
         for (String s : split) {
             String[] types = getTypes(s);
