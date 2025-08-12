@@ -1,5 +1,6 @@
 package com.chua.report.client.starter.configuration;
 
+import com.chua.common.support.objects.ConfigureObjectContext;
 import com.chua.common.support.protocol.Protocol;
 import com.chua.common.support.protocol.server.ProtocolServer;
 import com.chua.report.client.starter.function.ReportXxlJobConfiguration;
@@ -93,9 +94,10 @@ public class ReportClientConfiguration
             this.protocol = protocol;
             endpointServer = protocol.createServer(SettingFactory.getInstance().getProtocolSetting());
             // 添加任务执行配置
-            endpointServer.addDefinition(new ReportXxlJobConfiguration());
+            ConfigureObjectContext objectContext = endpointServer.getObjectContext();
+            objectContext.registerMapping(new ReportXxlJobConfiguration());
             // 添加节点管理配置
-            endpointServer.addDefinition(new NodeManagementConfiguration());
+            objectContext.registerMapping(new NodeManagementConfiguration());
         }
 
         @Override

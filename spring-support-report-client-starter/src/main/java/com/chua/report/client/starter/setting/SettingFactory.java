@@ -49,7 +49,7 @@ public class SettingFactory implements AutoCloseable, InitializingBean {
     private ProtocolSetting protocolSetting;
 
     public SettingFactory() {
-        this.isServer = ClassUtils.isPresent("com.chua.report.server.starter.properties.ReportServerProperties");
+        this.isServer = ClassUtils.isPresent("com.chua.starter.monitor.properties.ReportServerProperties");
         this.executorService = ThreadUtils.newVirtualThreadExecutor();
     }
 
@@ -63,7 +63,7 @@ public class SettingFactory implements AutoCloseable, InitializingBean {
      * @return 服务端
      */
     public boolean isServer() {
-        return isServer;
+        return false;//isServer;
     }
     /**
      * 注册环境配置
