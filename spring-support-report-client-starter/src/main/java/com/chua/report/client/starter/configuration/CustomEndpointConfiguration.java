@@ -1,6 +1,7 @@
 package com.chua.report.client.starter.configuration;
 
 import com.chua.report.client.starter.environment.ReportDiscoveryEnvironment;
+import com.chua.report.client.starter.properties.ReportClientProperties;
 import com.chua.report.client.starter.spring.endpoint.MapEndpoint;
 import com.chua.report.client.starter.spring.endpoint.ThreadEndpoint;
 import io.micrometer.core.instrument.Counter;
@@ -43,8 +44,8 @@ public class CustomEndpointConfiguration implements WebMvcConfigurer {
      */
     @Bean
     @ConditionalOnMissingBean
-    public ReportDiscoveryEnvironment reportDiscoveryEnvironment() {
-        return new ReportDiscoveryEnvironment();
+    public ReportDiscoveryEnvironment reportDiscoveryEnvironment(ReportClientProperties reportClientProperties) {
+        return new ReportDiscoveryEnvironment(reportClientProperties);
     }
 
     /**
@@ -118,6 +119,9 @@ public class CustomEndpointConfiguration implements WebMvcConfigurer {
          */
         @Override
         public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+            if(null == registry) {
+                return true;
+            }
             String uri = request.getRequestURI();
 
             // 开始计时并将样本存储到映射中

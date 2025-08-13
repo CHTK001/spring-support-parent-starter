@@ -44,9 +44,11 @@ public class SettingFactory implements AutoCloseable, InitializingBean {
     private ServerProperties serverProperties;
     private static final AtomicBoolean RUNNING = new AtomicBoolean(false);
     @Getter
-    private Integer endpointPort;
+    private Integer receivePort;
     @Getter
     private ProtocolSetting protocolSetting;
+    @Getter
+    final Codec codec = new AesCodec("1234567890123456".getBytes(StandardCharsets.UTF_8));
 
     public SettingFactory() {
         this.isServer = ClassUtils.isPresent("com.chua.starter.monitor.properties.ReportServerProperties");
@@ -76,7 +78,7 @@ public class SettingFactory implements AutoCloseable, InitializingBean {
         reportClientProperties = Binder.get(environment).bindOrCreate(ReportClientProperties.PRE, ReportClientProperties.class);
         serverProperties = Binder.get(environment).bindOrCreate("server", ServerProperties.class);
         this.reportServerAddress = reportClientProperties.getAddress();
-        this.endpointPort = -1 == reportClientProperties.getReceivablePort() ?
+        this.receivePort = -1 == reportClientProperties.getReceivablePort() ?
                 Converter.convertIfNecessary(environment.resolvePlaceholders("${server.port:8080}"), Integer.class) + 10000
                 : reportClientProperties.getReceivablePort();
     }
@@ -103,10 +105,9 @@ public class SettingFactory implements AutoCloseable, InitializingBean {
         if(null != address) {
             bindHost = address.getHostAddress();
         }
-        Codec codec = new AesCodec("1234567890123456".getBytes(StandardCharsets.UTF_8));
         protocolSetting = ProtocolSetting.builder()
                 .host(bindHost)
-                .port(getEndpointPort())
+                .port(getReceivePort())
                 .codec(codec)
                 .build();
         return Protocol.create(reportClientProperties.getReceivableProtocol(), protocolSetting);
@@ -159,9 +160,9 @@ public class SettingFactory implements AutoCloseable, InitializingBean {
      */
     private Object endpoint() {
         return ImmutableBuilder.builderOfStringStringMap()
-                .put("port", String.valueOf(getEndpointPort()))
+                .put("port", String.valueOf(getReceivePort()))
                 .put("protocol", reportClientProperties.getReceivableProtocol())
-                .put("host", String.valueOf(getEndpointPort()))
+                .put("host", String.valueOf(getReceivePort()))
                 .newHashMap();
     }
 
