@@ -19,7 +19,7 @@ public class ReportDiscoveryEnvironment implements DiscoveryEnvironment {
     public static final String REPORT_CLIENT_PORT = "report.client.receive.port";
     @Override
     public String getName() {
-        return "report";
+        return "monitor";
     }
 
     @Override
