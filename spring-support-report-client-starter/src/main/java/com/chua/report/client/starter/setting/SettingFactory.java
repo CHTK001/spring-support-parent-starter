@@ -7,8 +7,8 @@ import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.http.HttpClient;
 import com.chua.common.support.http.HttpResponse;
 import com.chua.common.support.json.Json;
-import com.chua.common.support.protocol.Protocol;
-import com.chua.common.support.protocol.ProtocolSetting;
+import com.chua.common.support.protocol.ServerSetting;
+import com.chua.common.support.protocol.server.ProtocolServer;
 import com.chua.common.support.utils.*;
 import com.chua.report.client.starter.endpoint.ModuleType;
 import com.chua.report.client.starter.properties.ReportClientProperties;
@@ -46,7 +46,7 @@ public class SettingFactory implements AutoCloseable, InitializingBean {
     @Getter
     private Integer receivePort;
     @Getter
-    private ProtocolSetting protocolSetting;
+    private ServerSetting protocolSetting;
     @Getter
     final Codec codec = new AesCodec("1234567890123456".getBytes(StandardCharsets.UTF_8));
 
@@ -99,18 +99,19 @@ public class SettingFactory implements AutoCloseable, InitializingBean {
      *
      * @return 协议服务器对象
      */
-    public Protocol getProtocol() {
+    public ProtocolServer getProtocolServer() {
         InetAddress address = serverProperties.getAddress();
         String bindHost = "0.0.0.0";
         if(null != address) {
             bindHost = address.getHostAddress();
         }
-        protocolSetting = ProtocolSetting.builder()
+        protocolSetting = ServerSetting.builder()
                 .host(bindHost)
                 .port(getReceivePort())
                 .codec(codec)
+                .allCodec(true)
                 .build();
-        return Protocol.create(reportClientProperties.getReceivableProtocol(), protocolSetting);
+        return ProtocolServer.create(reportClientProperties.getReceivableProtocol(), protocolSetting);
     }
 
     /**

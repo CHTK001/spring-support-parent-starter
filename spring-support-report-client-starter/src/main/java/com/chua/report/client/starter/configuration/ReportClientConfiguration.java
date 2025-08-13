@@ -1,10 +1,10 @@
 package com.chua.report.client.starter.configuration;
 
 import com.chua.common.support.objects.ConfigureObjectContext;
-import com.chua.common.support.protocol.Protocol;
+import com.chua.common.support.protocol.filter.MappingServletFilter;
 import com.chua.common.support.protocol.server.ProtocolServer;
-import com.chua.report.client.starter.function.ReportXxlJobConfiguration;
 import com.chua.report.client.starter.function.NodeManagementConfiguration;
+import com.chua.report.client.starter.function.ReportXxlJobConfiguration;
 import com.chua.report.client.starter.properties.ReportClientProperties;
 import com.chua.report.client.starter.setting.SettingFactory;
 import lombok.Data;
@@ -71,10 +71,10 @@ public class ReportClientConfiguration
             return;
         }
 
-        Protocol protocol = settingFactory.getProtocol();
+        ProtocolServer protocolServer = settingFactory.getProtocolServer();
         registry.registerBeanDefinition("reportClientEndpointConfiguration",
                 BeanDefinitionBuilder.rootBeanDefinition(ProtocolServerFactoryBean.class).setDestroyMethodName("close")
-                        .setInitMethodName("start").addConstructorArgValue(protocol).getBeanDefinition());
+                        .setInitMethodName("start").addConstructorArgValue(protocolServer).getBeanDefinition());
         try {
             settingFactory.afterPropertiesSet();
         } catch (Exception ignored) {
@@ -87,17 +87,16 @@ public class ReportClientConfiguration
     }
 
     static class ProtocolServerFactoryBean implements FactoryBean<ProtocolServer>, AutoCloseable {
-        final Protocol protocol;
         private final ProtocolServer endpointServer;
 
-        public ProtocolServerFactoryBean(Protocol protocol) {
-            this.protocol = protocol;
-            endpointServer = protocol.createServer(SettingFactory.getInstance().getProtocolSetting());
-            // 添加任务执行配置
+        public ProtocolServerFactoryBean(ProtocolServer protocolServer) {
+            this.endpointServer = protocolServer;
             ConfigureObjectContext objectContext = endpointServer.getObjectContext();
+            // 添加任务执行配置
             objectContext.registerMapping(new ReportXxlJobConfiguration());
             // 添加节点管理配置
             objectContext.registerMapping(new NodeManagementConfiguration());
+            endpointServer.addFilter(new MappingServletFilter(objectContext));
         }
 
         @Override
