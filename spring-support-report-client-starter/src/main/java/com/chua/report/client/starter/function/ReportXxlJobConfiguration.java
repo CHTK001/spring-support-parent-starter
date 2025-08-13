@@ -7,6 +7,7 @@ import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.protocol.request.ServletRequest;
 import com.chua.common.support.protocol.request.ServletResponse;
 import com.chua.common.support.utils.ClassUtils;
+import com.chua.common.support.utils.ObjectUtils;
 import com.chua.report.client.starter.entity.JobCat;
 import com.chua.report.client.starter.entity.JobValue;
 import com.chua.report.client.starter.job.execute.DefaultJobExecute;
@@ -28,6 +29,7 @@ import org.springframework.core.MethodIntrospector;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 
 import java.lang.reflect.Method;
+import java.util.Date;
 import java.util.Map;
 
 /**
@@ -68,7 +70,7 @@ public class ReportXxlJobConfiguration implements BeanFactoryAware, SmartInstant
         JsonObject jsonObject = Json.getJsonObject(new String(request.getBody()));
         JobCat jobCat = BeanUtils.copyProperties(jsonObject, JobCat.class);
 
-        String fileName = JobFileAppender.makeLogFileName(jobCat.getDate(), jobCat.getLogId());
+        String fileName = JobFileAppender.makeLogFileName(ObjectUtils.defaultIfNull(jobCat.getDate(), new Date()), jobCat.getLogId());
         LogResult logResult = JobFileAppender.readLog(fileName, jobCat.getFromLineNum());
         return ServletResponse.ok(Json.toJson(logResult));
     }
