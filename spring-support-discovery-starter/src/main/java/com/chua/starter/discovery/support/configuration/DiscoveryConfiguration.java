@@ -100,6 +100,15 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
         newMetaData.put("serverId", serverIdValue);
         Collection<DiscoveryEnvironment> beanList = SpringBeanUtils.getBeanList(DiscoveryEnvironment.class);
         for (DiscoveryEnvironment discoveryEnvironment : beanList) {
+            String name = discoveryEnvironment.getName();
+            if(null == name) {
+                continue;
+            }
+
+            if(!name.equals(discoveryNodeProperties.getNamespace())) {
+                continue;
+            }
+
             Properties properties = discoveryEnvironment.getProperties();
             properties.forEach((key, value) -> {
                 if(null == value) {
