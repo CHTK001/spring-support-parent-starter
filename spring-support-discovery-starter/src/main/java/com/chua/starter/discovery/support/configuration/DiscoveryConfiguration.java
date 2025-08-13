@@ -46,7 +46,12 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         DiscoveryListProperties properties = Binder.get(environment).bindOrCreate(DiscoveryListProperties.PRE, DiscoveryListProperties.class);
         if(!properties.isEnable()) {
-            log.warn("未开启 discovery 服务");
+            log.warn("未开启 discovery 服务, 注册默认的服务");
+            registry.registerBeanDefinition("discoveryService#embedd", BeanDefinitionBuilder.rootBeanDefinition(DiscoveryService.class, () ->{
+                            return new DiscoveryService(new DefaultServiceDiscovery());
+                    })
+                    .setAutowireMode(AutowireCapableBeanFactory.AUTOWIRE_BY_TYPE)
+                    .getBeanDefinition());
             return;
         }
 
@@ -75,6 +80,8 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
         ServiceDiscovery serviceDiscovery = serviceProvider.getNewExtension(discoveryProperties.getProtocol(), discoveryOption);
         if(null == serviceDiscovery) {
             log.warn("未发现可用的 discovery 服务");
+            registry.registerBeanDefinition(
+                    discoveryProperties.getProtocol(), BeanDefinitionBuilder.rootBeanDefinition(ServiceDiscovery.class, DefaultServiceDiscovery::new).getBeanDefinition());
             return;
         }
 
