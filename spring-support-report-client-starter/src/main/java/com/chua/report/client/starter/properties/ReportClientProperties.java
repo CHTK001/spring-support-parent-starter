@@ -28,7 +28,6 @@ public class ReportClientProperties {
      * 上报接口
      */
     private String addressReportPath = "/monitor/api";
-
     /**
      * 接收协议
      */
