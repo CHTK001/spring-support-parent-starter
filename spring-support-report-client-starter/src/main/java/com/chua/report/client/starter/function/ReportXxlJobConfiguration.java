@@ -1,5 +1,6 @@
 package com.chua.report.client.starter.function;
 
+import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.invoke.annotation.RequestLine;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.json.JsonObject;
@@ -51,8 +52,7 @@ public class ReportXxlJobConfiguration implements BeanFactoryAware, SmartInstant
             return ServletResponse.error("环境不支持");
         }
 
-        String content = jsonObject.getString("content");
-        JobValue jobValue = Json.fromJson(content, JobValue.class);
+        JobValue jobValue = BeanUtils.copyProperties(jsonObject, JobValue.class);
         JobExecute jobExecute = new DefaultJobExecute();
         return jobExecute.run(request, jobValue);
     }
@@ -66,8 +66,7 @@ public class ReportXxlJobConfiguration implements BeanFactoryAware, SmartInstant
     @RequestLine("job_log_cat")
     public ServletResponse log(ServletRequest request) {
         JsonObject jsonObject = Json.getJsonObject(new String(request.getBody()));
-        String content = jsonObject.getString("content");
-        JobCat jobCat = Json.fromJson(content, JobCat.class);
+        JobCat jobCat = BeanUtils.copyProperties(jsonObject, JobCat.class);
 
         String fileName = JobFileAppender.makeLogFileName(jobCat.getDate(), jobCat.getLogId());
         LogResult logResult = JobFileAppender.readLog(fileName, jobCat.getFromLineNum());
