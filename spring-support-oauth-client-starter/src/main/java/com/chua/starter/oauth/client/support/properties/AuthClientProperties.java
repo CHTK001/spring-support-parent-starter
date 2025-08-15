@@ -93,7 +93,6 @@ public class AuthClientProperties {
      * token-name
      */
     private String tokenName = "x-oauth-token";
-
     /**
      * token 别名
      */

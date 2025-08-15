@@ -130,14 +130,16 @@ public class UrlFilterConfiguration {
                 chain.doFilter(contentCachingRequestWrapper, response);
                 long endTime = System.currentTimeMillis();
 
-                PER_TASK_EXECUTOR.execute(() -> {
-                    String contentAsString = contentCachingRequestWrapper.getContentAsString();
-                    repository.insert(new UrlCat(
-                            httpServletRequest.getMethod(),
-                            httpServletRequest.getRequestURI(),
-                            httpServletRequest.getRemoteAddr(),
-                            endTime - startTime, contentAsString));
-                });
+                if(null != repository) {
+                    PER_TASK_EXECUTOR.execute(() -> {
+                        String contentAsString = contentCachingRequestWrapper.getContentAsString();
+                        repository.insert(new UrlCat(
+                                httpServletRequest.getMethod(),
+                                httpServletRequest.getRequestURI(),
+                                httpServletRequest.getRemoteAddr(),
+                                endTime - startTime, contentAsString));
+                    });
+                }
                 return;
             }
             chain.doFilter(request, response);
