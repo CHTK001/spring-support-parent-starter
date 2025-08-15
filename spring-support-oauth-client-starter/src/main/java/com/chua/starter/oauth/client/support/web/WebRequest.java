@@ -221,6 +221,7 @@ public class WebRequest {
         Cookie[] cookie = getCookie();
         String token = getToken();
         // 快速确定协议类型
+        log.debug("获取默认协议: {}", protocol);
         return ServiceProvider.of(Protocol.class).getNewExtension(protocol, authProperties).approve(cookie, token, request.getHeader("x-oauth-protocol"));
     }
 
