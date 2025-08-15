@@ -94,6 +94,8 @@ public class HttpProtocol extends AbstractProtocol {
         jsonObject.put("x-oauth-auth-type", authType);
         jsonObject.put("x-oauth-ext", ext);
         AuthenticationInformation information = createAuthenticationInformation(jsonObject, null, authClientProperties.getLoginPage());
+        log.info("当前状态: {}", information.getInformation().getCode());
+        log.info("当前信息: {}", information.getInformation().getMessage());
         LoginAuthResult loginAuthResult = new LoginAuthResult();
         loginAuthResult.setCode(information.getInformation().getCode());
         loginAuthResult.setMessage(information.getInformation().getMessage());
