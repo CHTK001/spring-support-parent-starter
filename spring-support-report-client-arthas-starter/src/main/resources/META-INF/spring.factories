@@ -1,0 +1,3 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+  com.chua.report.client.arthas.starter.configuration.ArthasReportClientAutoConfiguration
+

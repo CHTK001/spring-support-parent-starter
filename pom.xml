@@ -70,6 +70,7 @@
 
         <!-- 监控和日志模块 -->
         <module>spring-support-report-client-starter</module>   <!-- 设备数据上报客户端 -->
+        <module>spring-support-report-client-arthas-starter</module>   <!-- 上报客户端 Arthas 集成 -->
         <module>spring-support-prometheus-starter</module>      <!-- Prometheus监控 -->
         <module>spring-support-loki-starter</module>            <!-- Loki日志收集 -->
 
@@ -179,6 +180,12 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-report-client-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-report-client-arthas-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
 
