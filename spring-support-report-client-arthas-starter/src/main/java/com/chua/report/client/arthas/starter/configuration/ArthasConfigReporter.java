@@ -7,6 +7,7 @@ import com.chua.report.client.starter.setting.SettingFactory;
 import com.taobao.arthas.agent.attach.ArthasAgent;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.core.env.Environment;
 
 import java.util.LinkedHashMap;
 
@@ -19,11 +20,13 @@ public class ArthasConfigReporter implements InitializingBean {
 
     private final ArthasClientProperties arthasClientProperties;
     private final ObjectProvider<ProtocolServer> protocolServerProvider;
+    private final Environment environment;
 
     public ArthasConfigReporter(ArthasClientProperties arthasClientProperties,
-                                ObjectProvider<ProtocolServer> protocolServerProvider) {
+                                ObjectProvider<ProtocolServer> protocolServerProvider, Environment environment) {
         this.arthasClientProperties = arthasClientProperties;
         this.protocolServerProvider = protocolServerProvider;
+        this.environment = environment;
     }
 
     @Override
@@ -45,7 +48,7 @@ public class ArthasConfigReporter implements InitializingBean {
         if (StringUtils.isNotBlank(appName)) {
             config.put("appName", appName);
         }
-        config.put("agentId", arthasClientProperties.getAgentId());
+        config.put("agentId", environment.resolvePlaceholders(arthasClientProperties.getAgentId()));
         // 默认启用 telnet/http 端口，保留 Arthas 默认值即可
         try {
             ArthasAgent.attach(config);

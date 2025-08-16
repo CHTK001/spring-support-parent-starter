@@ -24,7 +24,7 @@ public class ArthasClientProperties {
     /**
      * tunnel 服务地址，例如: ws://arthas-tunnel-server:7777/ws
      */
-    private String tunnelAddress;
+    private String tunnelAddress = "ws://127.0.0.1:7777/ws";
 }
 
 
