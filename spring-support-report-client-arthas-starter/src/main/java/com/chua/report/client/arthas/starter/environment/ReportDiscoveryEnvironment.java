@@ -1,7 +1,6 @@
-package com.chua.report.client.starter.environment;
+package com.chua.report.client.arthas.starter.environment;
 
-import com.chua.report.client.starter.properties.ReportClientProperties;
-import com.chua.report.client.starter.setting.SettingFactory;
+import com.chua.report.client.arthas.starter.properties.ArthasClientProperties;
 import com.chua.starter.discovery.support.service.DiscoveryEnvironment;
 import lombok.RequiredArgsConstructor;
 
