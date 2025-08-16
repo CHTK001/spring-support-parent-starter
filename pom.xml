@@ -76,7 +76,6 @@
         <!-- 第三方服务集成模块 -->
         <module>spring-support-tencent-starter</module>         <!-- 腾讯云服务集成 -->
         <module>spring-support-pay-client-starter</module>      <!-- 支付客户端 -->
-        <module>spring-support-guacamole-starter</module>       <!-- Apache Guacamole远程桌面 -->
 
         <!-- 容错和稳定性模块 -->
         <module>spring-support-circuit-breaker-starter</module> <!-- 熔断降级模块 -->
