@@ -41,14 +41,10 @@ public class ArthasConfigReporter implements InitializingBean {
         // 使用 ArthasAgent 自我注入
         LinkedHashMap<String, String> config = new LinkedHashMap<>();
         if (StringUtils.isNotBlank(tunnelAddress)) {
-            config.put("tunnelServer", tunnelAddress);
+            config.put("arthas.tunnelServer", tunnelAddress);
         }
         // 允许使用 spring.application.name 作为 appName（若存在）
-        String appName = System.getProperty("spring.application.name");
-        if (StringUtils.isNotBlank(appName)) {
-            config.put("appName", appName);
-        }
-        config.put("agentId", environment.resolvePlaceholders(arthasClientProperties.getAgentId()));
+        config.put("arthas.appName", environment.resolvePlaceholders(arthasClientProperties.getAgentId()));
         // 默认启用 telnet/http 端口，保留 Arthas 默认值即可
         try {
             ArthasAgent.attach(config);
