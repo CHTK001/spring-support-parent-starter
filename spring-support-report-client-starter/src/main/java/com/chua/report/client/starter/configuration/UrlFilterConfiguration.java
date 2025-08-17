@@ -73,6 +73,9 @@ public class UrlFilterConfiguration {
                 nitriteProtocolClient1.connect();
                 nitriteProtocolClient1.registerEntityConverter(new UrlCat());
                 NitriteRepository<UrlCat> client1Repository = nitriteProtocolClient1.createRepository(UrlCat.class);
+                if(null == client1Repository) {
+                    continue;
+                }
                 List<UrlCat> query = client1Repository.query(urlsQuery.getFilterQuery());
                 if(null == query) {
                     continue;
