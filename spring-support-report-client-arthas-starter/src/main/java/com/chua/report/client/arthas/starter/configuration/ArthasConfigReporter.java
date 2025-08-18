@@ -4,6 +4,8 @@ import com.chua.common.support.protocol.server.ProtocolServer;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.report.client.arthas.starter.properties.ArthasClientProperties;
 import com.chua.report.client.starter.setting.SettingFactory;
+import com.chua.starter.common.support.project.SpringProjects;
+import com.chua.starter.common.support.utils.EnvironmentUtils;
 import com.taobao.arthas.agent.attach.ArthasAgent;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.ObjectProvider;
@@ -44,7 +46,8 @@ public class ArthasConfigReporter implements InitializingBean {
             config.put("arthas.tunnelServer", tunnelAddress);
         }
         // 允许使用 spring.application.name 作为 appName（若存在）
-        config.put("arthas.appName", environment.resolvePlaceholders(arthasClientProperties.getAgentId()));
+        config.put("arthas.appName", EnvironmentUtils.resolvePlaceholders(arthasClientProperties.getAgentName(), SpringProjects.getNodeId()));
+        config.put("arthas.agentId", EnvironmentUtils.resolvePlaceholders(arthasClientProperties.getAgentId(), SpringProjects.getNodeId()));
         // 默认启用 telnet/http 端口，保留 Arthas 默认值即可
         try {
             ArthasAgent.attach(config);
