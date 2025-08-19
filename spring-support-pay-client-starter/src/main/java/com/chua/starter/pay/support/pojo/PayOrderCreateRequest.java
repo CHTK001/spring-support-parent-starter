@@ -77,6 +77,11 @@ public class PayOrderCreateRequest {
     @NotNull(message = "实际支付价格不能为空", groups = {AddGroup.class})
     private BigDecimal totalPrice;
 
+    /**
+     * 优惠券编码
+     */
+    @Schema(description = "优惠券编码")
+    private String couponCode;
 
     /**
      * 备注
