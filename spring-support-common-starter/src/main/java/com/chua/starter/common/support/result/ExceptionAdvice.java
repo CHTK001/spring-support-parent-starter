@@ -75,6 +75,24 @@ public class ExceptionAdvice {
     }
 
     /**
+     * 处理类型转换异常
+     *
+     * @param e   类型转换异常对象，包含类型转换的错误信息
+     * @param <T> 泛型类型
+     * @return 返回错误结果，包含详细的类型转换错误信息
+     * <p>
+     * 示例：
+     * 当请求参数类型转换失败时抛出此异常
+     * 如：@RequestParam("id") Integer id
+     */
+    @ExceptionHandler(ClassCastException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public <T> Result<T> classCastException(ClassCastException e) {
+        e.printStackTrace();
+        return Result.failed(REQUEST_PARAM_ERROR, e.getMessage());
+    }
+
+    /**
      * 处理远程执行异常
      *
      * @param e 远程执行异常对象，包含远程服务调用的错误信息
