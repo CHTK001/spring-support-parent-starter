@@ -6,7 +6,7 @@ import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.common.support.application.Binder;
+import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
@@ -27,16 +27,17 @@ import static com.chua.starter.oauth.client.support.execute.AuthClientExecute.DE
  * 该类旨在处理特定的协议执行逻辑，通过静态方法提供协议处理能力。
  * 作为协议执行器，它负责解析和执行特定格式的协议数据。
  * </p>
+ *
  * @author CH
  * @since 2024/6/12
  */
-public class StaticProtocolExecutor implements ProtocolExecutor{
+public class StaticProtocolExecutor implements ProtocolExecutor {
 
     private final AuthClientProperties authClientProperties;
     private final String encryption;
 
     public StaticProtocolExecutor() {
-        this.authClientProperties = Binder.binder(AuthClientProperties.PRE, AuthClientProperties.class);
+        this.authClientProperties = SpringBeanUtils.getBinderBean(AuthClientProperties.PRE, AuthClientProperties.class);
         this.encryption = "SM4";
     }
 
@@ -61,17 +62,17 @@ public class StaticProtocolExecutor implements ProtocolExecutor{
         AuthClientProperties.TempUser temp = authClientProperties.getTemp();
         LoginAuthResult loginAuthResult = new LoginAuthResult();
         String user = temp.getUser();
-        if(StringUtils.isNotEmpty(user)) {
+        if (StringUtils.isNotEmpty(user)) {
             Set<String> strings = Splitter.on(";").omitEmptyStrings().trimResults().splitToSet(user);
             for (String string : strings) {
                 List<String> userAndPassword = Splitter.on(":").omitEmptyStrings().limit(2).trimResults().splitToList(string);
-                if(isMatch(userAndPassword, username, password)) {
+                if (isMatch(userAndPassword, username, password)) {
                     loginAuthResult.setCode(200);
                     UserResume userResult = new UserResume();
                     userResult.setUserId("0");
                     userResult.setLoginType(AuthType.STATIC.name());
                     userResult.setUsername(username);
-                    if("admin".equals(username)) {
+                    if ("admin".equals(username)) {
                         userResult.setRoles(Sets.newHashSet("admin"));
                     }
                     loginAuthResult.setUserResume(userResult);
@@ -92,7 +93,6 @@ public class StaticProtocolExecutor implements ProtocolExecutor{
     }
 
 
-
     /**
      * 匹配
      *
@@ -102,12 +102,12 @@ public class StaticProtocolExecutor implements ProtocolExecutor{
      * @return boolean
      */
     private boolean isMatch(List<String> userAndPassword, String username, String password) {
-        if(userAndPassword.isEmpty()) {
+        if (userAndPassword.isEmpty()) {
             return false;
         }
 
         String user = CollectionUtils.find(userAndPassword, 0);
-        if(userAndPassword.size() == 1) {
+        if (userAndPassword.size() == 1) {
             return user.equals(username) && user.equals(password);
         }
 

@@ -1,40 +1,16 @@
 package com.chua.starter.oauth.client.support.execute;
 
 import com.chua.common.support.annotations.SpiDefault;
-import com.chua.common.support.crypto.Codec;
-import com.chua.common.support.json.Json;
-import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.lang.robin.Node;
-import com.chua.common.support.lang.robin.Robin;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.utils.DigestUtils;
-import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.common.support.application.Binder;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
-import com.chua.starter.oauth.client.support.advice.def.DefSecret;
-import com.chua.starter.oauth.client.support.contants.AuthConstant;
-import com.chua.starter.oauth.client.support.entity.AuthRequest;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.protocol.Protocol;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
-import com.google.common.base.Strings;
-import kong.unirest.HttpResponse;
-import kong.unirest.Unirest;
-import kong.unirest.UnirestException;
 
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.UUID;
-
-import static com.chua.common.support.constant.NumberConstant.NUM_200;
-import static com.chua.common.support.http.HttpClientUtils.APPLICATION_JSON;
-import static com.chua.common.support.lang.code.ReturnCode.OK;
-import static com.chua.starter.oauth.client.support.contants.AuthConstant.ACCESS_KEY;
-import static com.chua.starter.oauth.client.support.contants.AuthConstant.SECRET_KEY;
 
 /**
  * 实现了ProtocolExecutor接口的StaticProtocolExecutor类。
@@ -53,7 +29,7 @@ public class DefaultProtocolExecutor implements ProtocolExecutor{
     private final String protocol;
 
     public DefaultProtocolExecutor() {
-        this.authClientProperties = Binder.binder(AuthClientProperties.PRE, AuthClientProperties.class);
+        this.authClientProperties = SpringBeanUtils.getBinderBean(AuthClientProperties.PRE, AuthClientProperties.class);
         this.encryption = authClientProperties.getEncryption();
         this.protocol = authClientProperties.getProtocol();
     }

@@ -1,6 +1,5 @@
 package com.chua.starter.common.support.application;
 
-import com.chua.common.support.collection.ConcurrentReferenceHashMap;
 import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.function.Upgrade;
 import com.chua.common.support.reflection.FieldStation;
@@ -8,7 +7,6 @@ import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 
-import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -27,14 +25,8 @@ public class GlobalSettingFactory {
     public static String PREFIX = "";
 
 
-    // 保存所有全局设置对象的集合，使用ConcurrentHashMap保证线程安全
-    private static final Map<String, List<Object>> GROUP = new ConcurrentHashMap<>();
-    private static final Map<String, String> CHANGE = new ConcurrentReferenceHashMap<>(512);
-
-    // 静态初始化块，用于初始化全局设置对象集合
-    static {
-        GROUP.computeIfAbsent(PREFIX + "sign", it -> new LinkedList<>()).add(new Sign());
-    }
+    static final Map<String, Object> CONFIG = new ConcurrentHashMap<>();
+    static final Map<String, List<Object>> GROUP = new ConcurrentHashMap<>();
 
     /**
      * 获取全局设置对象
@@ -44,15 +36,14 @@ public class GlobalSettingFactory {
      * @return 对应的设置对象，如果不存在则返回null
      */
     public <T> T get(Class<T> type) {
-        Collection<List<Object>> values = GROUP.values();
-        for (List<Object> value : values) {
-            for (Object item : value) {
-                if (type.isInstance(item)) {
-                    return (T) item;
+        for (Map.Entry<String, List<Object>> entry : GROUP.entrySet()) {
+            List<Object> value = entry.getValue();
+            for (Object o : value) {
+                if (o.getClass().isInstance(type)) {
+                    return (T) o;
                 }
             }
         }
-
         return null;
     }
 
@@ -85,7 +76,7 @@ public class GlobalSettingFactory {
         }
 
         for (T t1 : t) {
-            if(clazz.isInstance(t1)) {
+            if (clazz.isInstance(t1)) {
                 return t1;
             }
         }
@@ -104,13 +95,13 @@ public class GlobalSettingFactory {
             return;
         }
         List<Object> objects = GROUP.get(PREFIX + group);
-        if(null == objects) {
+        if (null == objects) {
             GROUP.put(PREFIX + group, new LinkedList<>());
             objects = GROUP.get(PREFIX + group);
         }
 
         for (Object object : objects) {
-            if(object.getClass().isAssignableFrom(t.getClass())) {
+            if (object.getClass().isAssignableFrom(t.getClass())) {
                 return;
             }
         }
@@ -136,24 +127,24 @@ public class GlobalSettingFactory {
      * @param value 要设置的新值，可以是任何类型的对象 如果配置项自上次检查后未改变，将设置此值
      * @param <T>   值的类型，泛型使用以支持各种类型的配置项值
      */
-    public synchronized  <T> void setIfNoChange(String group, String name, Object value) {
-        if (CHANGE.containsKey(PREFIX + group + name)) {
+    public synchronized <T> void setIfNoChange(String group, String name, Object value) {
+        if (CONFIG.containsKey(PREFIX + group + name)) {
             return;
         }
 
         set(group, name, value);
-        CHANGE.put(PREFIX + group + name, CommonConstant.SYMBOL_EMPTY);
+        CONFIG.put(PREFIX + group + name, CommonConstant.SYMBOL_EMPTY);
     }
 
     /**
      * 设置全局设置对象的属性值
      *
-     * @param group 设置名称
-     * @param params  属性
-     * @param <T>   泛型标记
+     * @param group  设置名称
+     * @param params 属性
+     * @param <T>    泛型标记
      */
     public synchronized <T> void set(String group, Map<String, Object> params) {
-        if(MapUtils.isEmpty(params)) {
+        if (MapUtils.isEmpty(params)) {
             return;
         }
 
@@ -169,6 +160,7 @@ public class GlobalSettingFactory {
             }
         }
     }
+
     /**
      * 设置全局设置对象的属性值
      *

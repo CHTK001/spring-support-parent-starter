@@ -7,7 +7,7 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.Md5Utils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.value.Value;
-import com.chua.starter.common.support.application.Binder;
+import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.watch.Watch;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
@@ -60,7 +60,7 @@ public class AuthClientExecute {
             .build();
 
     public AuthClientExecute() {
-        this.authClientProperties = Binder.binder(AuthClientProperties.PRE, AuthClientProperties.class);
+        this.authClientProperties = SpringBeanUtils.getBinderBean(AuthClientProperties.PRE, AuthClientProperties.class);
         this.encryption = authClientProperties.getEncryption();
     }
 
