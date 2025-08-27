@@ -39,7 +39,7 @@ public class GlobalSettingFactory {
         for (Map.Entry<String, List<Object>> entry : GROUP.entrySet()) {
             List<Object> value = entry.getValue();
             for (Object o : value) {
-                if (o.getClass().isInstance(type)) {
+                if (type.isAssignableFrom(o.getClass())) {
                     return (T) o;
                 }
             }
