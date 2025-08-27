@@ -42,6 +42,9 @@ public class SocketIoRegistration implements InitializingBean, DisposableBean {
     @Override
     public void afterPropertiesSet() throws Exception {
 
+        if (configurations.isEmpty()) {
+            return;
+        }
         TablePrinter printer = new TablePrinter("客户端ID", "上下文", "端口", "状态");
         for (WrapperConfiguration wrapperConfiguration : configurations) {
             Configuration configuration = wrapperConfiguration.getConfiguration();
