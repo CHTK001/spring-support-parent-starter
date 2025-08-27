@@ -8,4 +8,5 @@ com.chua.starter.oauth.client.support.advice.AdviceResolver=\
 org.springframework.boot.env.EnvironmentPostProcessor=\
   com.chua.starter.oauth.client.support.configuration.AuthClientEnvironmentPostProcessor
 com.chua.starter.oauth.client.support.protocol.Protocol=\
-  com.chua.starter.oauth.client.support.protocol.HttpProtocol
+  com.chua.starter.oauth.client.support.protocol.HttpProtocol,\
+  com.chua.starter.oauth.client.support.protocol.GrpcProtocol
