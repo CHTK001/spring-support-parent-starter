@@ -58,7 +58,7 @@ public class AuthClientConfiguration implements ApplicationContextAware, BeanDef
      */
     @Bean
     @Primary
-    @ConditionalOnMissingBean(AuthService.class)
+    @ConditionalOnMissingBean
     public AuthService authService() {
         return new OauthAuthService();
     }
