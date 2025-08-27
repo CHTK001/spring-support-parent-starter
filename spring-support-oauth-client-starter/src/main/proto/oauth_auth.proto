@@ -1,0 +1,120 @@
+syntax = "proto3";
+
+package oauth.auth;
+
+option java_package = "com.chua.starter.oauth.client.support.grpc";
+option java_outer_classname = "OAuthAuthProto";
+option java_multiple_files = true;
+
+// OAuth认证服务
+service OAuthAuthService {
+  // 认证方法
+  rpc Approve(ApproveRequest) returns (ApproveResponse);
+
+  // 升级认证信息
+  rpc Upgrade(UpgradeRequest) returns (UpgradeResponse);
+
+  // 获取访问令牌
+  rpc GetAccessToken(GetAccessTokenRequest) returns (GetAccessTokenResponse);
+
+  // 用户登出
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+}
+
+// 认证请求
+message ApproveRequest {
+  string cookie = 1;
+  string token = 2;
+  string access_key = 3;
+  string secret_key = 4;
+  string sub_protocol = 5;
+  string param_address = 6;
+  string param_app_name = 7;
+  int64 ext_timestamp = 8;
+}
+
+// 认证响应
+message ApproveResponse {
+  int32 code = 1;
+  string message = 2;
+  UserResult data = 3;
+  string token = 4;
+  string refresh_token = 5;
+}
+
+// 升级请求
+message UpgradeRequest {
+  string cookie = 1;
+  string token = 2;
+  string access_key = 3;
+  string secret_key = 4;
+  string refresh_token = 5;
+  string upgrade_type = 6;
+}
+
+// 升级响应
+message UpgradeResponse {
+  int32 code = 1;
+  string message = 2;
+  UserResult data = 3;
+  string token = 4;
+  string refresh_token = 5;
+}
+
+// 获取访问令牌请求
+message GetAccessTokenRequest {
+  string access_key = 1;
+  string secret_key = 2;
+  string username = 3;
+  string password = 4;
+  string auth_type = 5;
+  map<string, string> ext = 6;
+}
+
+// 获取访问令牌响应
+message GetAccessTokenResponse {
+  int32 code = 1;
+  string message = 2;
+  UserResume user_resume = 3;
+  string token = 4;
+  string refresh_token = 5;
+}
+
+// 登出请求
+message LogoutRequest {
+  string access_key = 1;
+  string secret_key = 2;
+  string uid = 3;
+  string logout_type = 4;
+}
+
+// 登出响应
+message LogoutResponse {
+  int32 code = 1;
+  string message = 2;
+}
+
+// 用户结果
+message UserResult {
+  string username = 1;
+  string token = 2;
+  string user_id = 3;
+  string tenant_id = 4;
+  string real_name = 5;
+  repeated string roles = 6;
+  repeated string permissions = 7;
+  map<string, string> ext = 8;
+}
+
+// 用户摘要
+message UserResume {
+  string username = 1;
+  string user_id = 2;
+  string tenant_id = 3;
+  string real_name = 4;
+  repeated string roles = 5;
+  repeated string permissions = 6;
+  map<string, string> ext = 7;
+  string dept_id = 8;
+  bool is_admin = 9;
+}
