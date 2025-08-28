@@ -35,7 +35,7 @@ public class SpringEnvironmentPostProcessor implements EnvironmentPostProcessor 
             properties.setProperty("spring.jpa.database-platform", "com.chua.hibernate.support.dialect.SQLiteDialect");
         }
         properties.setProperty("spring.jpa.hibernate.ddl-auto", "update");
-        properties.setProperty("spring.jpa.show-sql", "true");
+        properties.setProperty("spring.jpa.show-db", "true");
 
         properties.setProperty("spring.main.allow-circular-references", "true");
 
