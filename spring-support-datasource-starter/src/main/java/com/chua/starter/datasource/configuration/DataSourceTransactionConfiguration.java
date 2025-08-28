@@ -1,9 +1,6 @@
 package com.chua.starter.datasource.configuration;
 
-import com.chua.starter.datasource.properties.MultiDataSourceProperties;
-import com.chua.starter.datasource.properties.MultiDataSourceSettingProperties;
-import com.chua.starter.datasource.properties.MultiHikariDataSourceProperties;
-import com.chua.starter.datasource.properties.TransactionProperties;
+import com.chua.starter.datasource.properties.*;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import org.springframework.aop.aspectj.AspectJExpressionPointcut;
@@ -40,6 +37,7 @@ import java.util.Optional;
         TransactionProperties.class,
         MultiDataSourceSettingProperties.class,
         MultiDataSourceProperties.class,
+        DataSourceScriptProperties.class,
         MultiHikariDataSourceProperties.class,
 })
 @ConditionalOnClass(name = "org.springframework.jdbc.datasource.DataSourceTransactionManager")

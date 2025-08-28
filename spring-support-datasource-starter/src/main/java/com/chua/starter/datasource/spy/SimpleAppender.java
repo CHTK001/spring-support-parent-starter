@@ -36,7 +36,7 @@ public class SimpleAppender implements MessageFormattingStrategy {
             log.debug("查询时间: {}", DateTime.of(now).toStandard());
             log.debug("数据库连接地址: {}", url);
         }
-//        log.info("查询SQL \r\n {}", HighlightingFormatter.INSTANCE.format(SqlFormatter.format(sql)));
+//        log.info("查询SQL \r\n {}", HighlightingFormatter.INSTANCE.format(SqlFormatter.format(db)));
         log.info("查询SQL \r\n {}", sql);
         return "";
     }
