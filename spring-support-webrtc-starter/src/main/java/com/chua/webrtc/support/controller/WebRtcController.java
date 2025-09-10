@@ -1,5 +1,6 @@
 package com.chua.webrtc.support.controller;
 
+import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.webrtc.support.model.Room;
 import com.chua.webrtc.support.model.User;
 import com.chua.webrtc.support.properties.WebRtcProperties;
@@ -29,6 +30,8 @@ public class WebRtcController {
 
     private final WebRtcRoomService roomService;
     private final WebRtcProperties properties;
+    final WebRtcProperties webRtcProperties;
+    private SocketSessionTemplate socketSessionTemplate;
 
     /**
      * 获取WebRTC配置信息
@@ -145,7 +148,7 @@ public class WebRtcController {
             throw new RuntimeException("Room not found");
         }
 
-        User user = new User(userId, username);
+        User user = new User(userId, username, null);
         boolean joined = roomService.joinRoom(room.getId(), user);
 
         Map<String, Object> response = new HashMap<>();

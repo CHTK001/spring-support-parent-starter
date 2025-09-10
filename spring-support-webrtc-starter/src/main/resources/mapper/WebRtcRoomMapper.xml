@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.webrtc.support.mapper.WebRtcRoomMapper">
+
+    <!-- WebRTC房间结果映射 -->
+    <resultMap id="BaseResultMap" type="com.chua.webrtc.support.entity.WebRtcRoom">
+        <id column="webrtc_room_id" property="webrtcRoomId" jdbcType="VARCHAR"/>
+        <result column="webrtc_room_number" property="webrtcRoomNumber" jdbcType="BIGINT"/>
+        <result column="webrtc_room_creator_id" property="webrtcRoomCreatorId" jdbcType="VARCHAR"/>
+        <result column="webrtc_room_status" property="webrtcRoomStatus" jdbcType="VARCHAR"/>
+        <result column="webrtc_room_max_users" property="webrtcRoomMaxUsers" jdbcType="INTEGER"/>
+        <result column="webrtc_room_current_users" property="webrtcRoomCurrentUsers" jdbcType="INTEGER"/>
+        <result column="webrtc_room_create_time" property="webrtcRoomCreateTime" jdbcType="TIMESTAMP"/>
+        <result column="webrtc_room_update_time" property="webrtcRoomUpdateTime" jdbcType="TIMESTAMP"/>
+        <result column="webrtc_room_last_active_time" property="webrtcRoomLastActiveTime" jdbcType="TIMESTAMP"/>
+        <result column="webrtc_room_close_time" property="webrtcRoomCloseTime" jdbcType="TIMESTAMP"/>
+        <result column="webrtc_room_is_deleted" property="webrtcRoomIsDeleted" jdbcType="TINYINT"/>
+        <result column="webrtc_room_version" property="webrtcRoomVersion" jdbcType="INTEGER"/>
+        <result column="webrtc_room_remark" property="webrtcRoomRemark" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <!-- 基础列名 -->
+    <sql id="Base_Column_List">
+        webrtc_room_id, webrtc_room_number, webrtc_room_creator_id, webrtc_room_status,
+        webrtc_room_max_users, webrtc_room_current_users, webrtc_room_create_time,
+        webrtc_room_update_time, webrtc_room_last_active_time, webrtc_room_close_time,
+        webrtc_room_is_deleted, webrtc_room_version, webrtc_room_remark
+    </sql>
+
+    <!-- 根据房间号查询房间 -->
+    <select id="selectByRoomNumber" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM webrtc_room
+        WHERE webrtc_room_number = #{roomNumber}
+        AND webrtc_room_is_deleted = 0
+    </select>
+
+    <!-- 根据创建人ID查询房间列表 -->
+    <select id="selectByCreatorId" parameterType="java.lang.String" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM webrtc_room
+        WHERE webrtc_room_creator_id = #{creatorId}
+        AND webrtc_room_is_deleted = 0
+        ORDER BY webrtc_room_create_time DESC
+    </select>
+
+    <!-- 查询活跃房间列表 -->
+    <select id="selectActiveRooms" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM webrtc_room
+        WHERE webrtc_room_status = 'ACTIVE'
+        AND webrtc_room_is_deleted = 0
+        ORDER BY webrtc_room_last_active_time DESC
+    </select>
+
+    <!-- 查询过期的非活跃房间 -->
+    <select id="selectExpiredRooms" parameterType="java.time.LocalDateTime" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM webrtc_room
+        WHERE webrtc_room_status = 'ACTIVE'
+        AND webrtc_room_last_active_time &lt; #{expireTime}
+        AND webrtc_room_is_deleted = 0
+    </select>
+
+    <!-- 更新房间状态 -->
+    <update id="updateRoomStatus">
+        UPDATE webrtc_room
+        SET webrtc_room_status = #{status},
+            webrtc_room_update_time = NOW()
+        WHERE webrtc_room_id = #{roomId}
+    </update>
+
+    <!-- 更新房间最后活跃时间 -->
+    <update id="updateLastActiveTime">
+        UPDATE webrtc_room
+        SET webrtc_room_last_active_time = #{lastActiveTime},
+            webrtc_room_update_time = NOW()
+        WHERE webrtc_room_id = #{roomId}
+    </update>
+
+    <!-- 更新房间当前用户数 -->
+    <update id="updateCurrentUsers">
+        UPDATE webrtc_room
+        SET webrtc_room_current_users = #{currentUsers},
+            webrtc_room_last_active_time = NOW(),
+            webrtc_room_update_time = NOW()
+        WHERE webrtc_room_id = #{roomId}
+    </update>
+
+    <!-- 关闭房间 -->
+    <update id="closeRoom">
+        UPDATE webrtc_room
+        SET webrtc_room_status = 'CLOSED',
+            webrtc_room_close_time = #{closeTime},
+            webrtc_room_update_time = NOW()
+        WHERE webrtc_room_id = #{roomId}
+    </update>
+
+</mapper>

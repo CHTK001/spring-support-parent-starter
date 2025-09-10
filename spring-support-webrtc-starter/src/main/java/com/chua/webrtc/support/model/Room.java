@@ -4,10 +4,10 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.List;
-import java.util.ArrayList;
 
 /**
  * WebRTC房间模型
@@ -115,6 +115,10 @@ public class Room {
      */
     public void setRoomId(String roomId) {
         this.id = roomId;
+    }
+
+    public void clearUsers() {
+        users.clear();
     }
 
 

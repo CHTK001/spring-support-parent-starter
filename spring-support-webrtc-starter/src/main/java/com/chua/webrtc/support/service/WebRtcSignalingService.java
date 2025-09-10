@@ -7,9 +7,9 @@ import com.corundumstudio.socketio.SocketIOClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -47,7 +47,34 @@ public class WebRtcSignalingService {
             room.setRoomId(roomId);
         }
 
-        // 创建用户并加入房间
+        // 检查用户是否已经在房间中
+        User existingUser = room.getUser(userId);
+        if (existingUser != null) {
+            // 如果用户已存在，关闭旧的连接并更新SocketIOClient
+            SocketIOClient oldClient = existingUser.getClient();
+            if (oldClient != null && !oldClient.equals(client)) {
+                // 通知旧客户端连接被替换
+                oldClient.sendEvent("connectionReplaced", "Your connection has been replaced by a new one");
+                oldClient.disconnect();
+            }
+
+            // 更新现有用户的SocketIOClient
+            existingUser.setSocketIOClient(client);
+
+            // 通知用户重新连接成功
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("roomId", roomId);
+            response.put("userId", userId);
+            response.put("reconnected", true);
+            client.sendEvent("joined", response);
+
+            // 发送房间内现有用户列表
+            sendRoomUsers(client, room);
+            return;
+        }
+
+        // 创建新用户并加入房间
         User user = new User(userId, username != null ? username : userId, client);
         boolean joined = roomService.joinRoom(roomId, user);
 
@@ -57,7 +84,7 @@ public class WebRtcSignalingService {
             response.put("success", true);
             response.put("roomId", roomId);
             response.put("userId", userId);
-            client.sendEvent("joinedRoom", response);
+            client.sendEvent("joined", response);
 
             // 通知房间内其他用户
             notifyOthersInRoom(room, userId, "userJoined", user.toUserInfo());
@@ -65,7 +92,7 @@ public class WebRtcSignalingService {
             // 发送房间内现有用户列表
             sendRoomUsers(client, room);
         } else {
-            client.sendEvent("error", "Failed to join room");
+            client.sendEvent("joinFailed", "Failed to join room");
         }
     }
 
