@@ -3,6 +3,7 @@ package com.chua.starter.oauth.client.support.protocol;
 import com.chua.common.support.annotations.Extension;
 import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.json.Json;
+import com.chua.common.support.utils.DigestUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
@@ -134,6 +135,10 @@ public class StaticProtocol extends AbstractProtocol {
         } else {
             userResume.setRoles(Sets.newHashSet(OPS));
         }
+        userResume.setUserId("1");
+        userResume.setUid(DigestUtils.sha1Hex(userResume.getUserId()));
+        userResume.setOpenId(userResume.getUid());
+        userResume.setUnionId(userResume.getUid());
         // 设置空权限集合
         userResume.setPermission(Collections.emptySet());
         // 将用户信息保存到请求上下文
