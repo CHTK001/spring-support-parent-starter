@@ -9,14 +9,11 @@ import com.chua.socketio.support.server.DelegateSocketIOServer;
 import com.chua.socketio.support.session.SocketSessionTemplate;
 import com.chua.socketio.support.wrapper.WrapperConfiguration;
 import com.corundumstudio.socketio.Configuration;
-import lombok.AllArgsConstructor;
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.util.StringUtils;
 
-import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -30,13 +27,14 @@ public class SocketIoRegistration implements InitializingBean, DisposableBean {
     private final SocketIoProperties properties;
     private final SocketSessionTemplate socketSessionTemplate;
     private final List<SocketIOListener> listenerList;
-    private final List<SocketInfo> socketIOServers = new LinkedList<>();
+    private final List<SocketSessionTemplate.SocketInfo> socketIOServers;
 
     public SocketIoRegistration(List<WrapperConfiguration> configurations, SocketIoProperties properties, SocketSessionTemplate socketSessionTemplate, List<SocketIOListener> listenerList) {
         this.configurations = configurations;
         this.properties = properties;
         this.socketSessionTemplate = socketSessionTemplate;
         this.listenerList = listenerList;
+        socketIOServers = this.socketSessionTemplate.createSocketInfo();
     }
 
     @Override
@@ -70,7 +68,7 @@ public class SocketIoRegistration implements InitializingBean, DisposableBean {
                 }
                 socketIOServer.start();
                 printer.addRow(clientId, configuration.getContext(), String.valueOf(configuration.getPort()), "已启动");
-                socketIOServers.add(new SocketInfo(socketIOServer, socketSessionResolver, socketSessionTemplate));
+                socketIOServers.add(new SocketSessionTemplate.SocketInfo(socketIOServer, socketSessionResolver, socketSessionTemplate, wrapperConfiguration));
             } catch (Exception e) {
                 log.error(e.getLocalizedMessage());
                 printer.addRow(clientId, configuration.getContext(), String.valueOf(configuration.getPort()), "启动失败");
@@ -81,7 +79,7 @@ public class SocketIoRegistration implements InitializingBean, DisposableBean {
 
     @Override
     public void destroy() throws Exception {
-        for (SocketInfo socketIOServer : socketIOServers) {
+        for (SocketSessionTemplate.SocketInfo socketIOServer : socketIOServers) {
             try {
                 socketIOServer.getServer().stop();
             } catch (Exception ignored) {
@@ -89,11 +87,5 @@ public class SocketIoRegistration implements InitializingBean, DisposableBean {
         }
     }
 
-    @Data
-    @AllArgsConstructor
-    private static class SocketInfo {
-        private DelegateSocketIOServer server;
-        private SocketSessionResolver resolver;
-        private SocketSessionTemplate template;
-    }
+
 }

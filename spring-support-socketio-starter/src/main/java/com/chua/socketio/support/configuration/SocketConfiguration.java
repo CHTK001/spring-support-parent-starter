@@ -31,38 +31,61 @@ import java.util.Set;
  * socket.io配置
  *
  * @author CH
+ * @since 2023-04-04
  */
 @Slf4j
 @SuppressWarnings("ALL")
 @EnableConfigurationProperties(SocketIoProperties.class)
 public class SocketConfiguration implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware {
 
-
     private SocketIoProperties socketIoProperties;
     private ServerProperties serverProperties;
 
+    /**
+     * 创建Socket会话模板Bean
+     *
+     * @param properties SocketIO配置属性
+     * @return Socket会话模板实例
+     */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = SocketIoProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = false)
-    public SocketSessionTemplate socketSessionFactory( SocketIoProperties properties) {
+    public SocketSessionTemplate socketSessionFactory(SocketIoProperties properties) {
         return new DelegateSocketSessionFactory(properties);
-    }
-    @Bean
-    @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = SocketIoProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = false)
-    public SocketIoRegistration socketIoRegistration(List<WrapperConfiguration> configurations,  SocketIoProperties properties,
-                                                     SocketSessionTemplate socketSessionTemplate,
-                                                     List<SocketIOListener> listenerList) {
-        return new SocketIoRegistration(configurations, properties, socketSessionTemplate, listenerList);
-
     }
 
     /**
-     * 配置
-     * @return
+     * 创建SocketIO注册Bean
+     *
+     * @param configurations        包装配置列表
+     * @param properties            SocketIO配置属性
+     * @param socketSessionTemplate Socket会话模板
+     * @param listenerList          SocketIO监听器列表
+     * @return SocketIO注册实例
      */
-    private WrapperConfiguration newConfiguration(SocketIoProperties.Room room, SocketAuthFactory socketAuthFactory) {
-        com.corundumstudio.socketio.Configuration configuration = new Configuration();
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = SocketIoProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = false)
+    public SocketIoRegistration socketIoRegistration(
+            List<WrapperConfiguration> configurations,
+            SocketIoProperties properties,
+            SocketSessionTemplate socketSessionTemplate,
+            List<SocketIOListener> listenerList) {
+        return new SocketIoRegistration(configurations, properties, socketSessionTemplate, listenerList);
+    }
+
+    /**
+     * 创建包装配置实例
+     *
+     * @param room              房间配置信息
+     * @param socketAuthFactory Socket认证工厂
+     * @return 包装配置实例
+     */
+    private WrapperConfiguration newConfiguration(
+            SocketIoProperties.Room room,
+            SocketAuthFactory socketAuthFactory) {
+
+        com.corundumstudio.socketio.Configuration configuration = new com.corundumstudio.socketio.Configuration();
         SocketConfig socketConfig = new SocketConfig();
         socketConfig.setReuseAddress(true);
         socketConfig.setTcpNoDelay(true);
@@ -75,39 +98,48 @@ public class SocketConfiguration implements BeanDefinitionRegistryPostProcessor,
         configuration.setWebsocketCompression(true);
         configuration.setHttpCompression(true);
         configuration.setJsonSupport(new JacksonJsonSupport());
+
         // host在本地测试可以设置为localhost或者本机IP，在Linux服务器跑可换成服务器IP
         configuration.setHostname(socketIoProperties.getHost());
         configuration.setPort(port < 0 ? (-1 * port) + serverProperties.getPort() + 10010 : port);
         configuration.setTransports(Transport.POLLING, Transport.WEBSOCKET);
+
         // socket连接数大小（如只监听一个端口boss线程组为1即可）
         configuration.setBossThreads(socketIoProperties.getBossCount());
-        configuration.setWorkerThreads(socketIoProperties.getBossCount());
+        configuration.setWorkerThreads(socketIoProperties.getWorkCount());
         configuration.setAllowCustomRequests(socketIoProperties.isAllowCustomRequests());
+
         // 协议升级超时时间（毫秒），默认10秒。HTTP握手升级为ws协议超时时间
         configuration.setUpgradeTimeout(socketIoProperties.getUpgradeTimeout());
+
         // Ping消息超时时间（毫秒），默认60秒，这个时间间隔内没有接收到心跳消息就会发送超时事件
         configuration.setPingTimeout(socketIoProperties.getPingTimeout());
+
         // Ping消息间隔（毫秒），默认25秒。客户端向服务器发送一条心跳消息间隔
         configuration.setPingInterval(socketIoProperties.getPingInterval());
+
         // 允许最大消息内容大小（单位：字节），默认50M
         configuration.setMaxFramePayloadLength(socketIoProperties.getMaxFramePayloadLength());
+
         // HTTP消息最大内容大小（单位：字节），默认50M
         configuration.setMaxHttpContentLength(socketIoProperties.getMaxHttpContentLength());
+
         // 是否启用websocket的Compression（RFC 7692）
         configuration.setWebsocketCompression(true);
+
         // 是否启用Linux的NativeEpoll
         configuration.setUseLinuxNativeEpoll(socketIoProperties.isUseLinuxNativeEpoll());
 
         if (null != room.getContextPath()) {
             configuration.setContext(room.getContextPath());
         }
-        if(null != socketAuthFactory) {
+
+        if (null != socketAuthFactory) {
             configuration.setAuthorizationListener(new AuthorizationListener() {
                 @Override
                 public AuthorizationResult getAuthorizationResult(HandshakeData data) {
                     return new AuthorizationResult(socketAuthFactory.isAuthorized(data));
                 }
-
             });
         }
 
@@ -116,23 +148,36 @@ public class SocketConfiguration implements BeanDefinitionRegistryPostProcessor,
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
-        if(!socketIoProperties.isEnable()) {
+        if (!socketIoProperties.isEnable()) {
             return;
         }
 
-        Set<SocketIoProperties.Room> port = socketIoProperties.getRoom();
-        Object object = ClassUtils.forObject(socketIoProperties.getAuthFactory());
-        for (SocketIoProperties.Room s : port) {
-            WrapperConfiguration configuration = newConfiguration(s, (SocketAuthFactory) object);
-            registry.registerBeanDefinition("configuration_" + s, BeanDefinitionBuilder.genericBeanDefinition(WrapperConfiguration.class, () -> configuration).getBeanDefinition());
+        Set<SocketIoProperties.Room> rooms = socketIoProperties.getRoom();
+        Object authFactoryObject = ClassUtils.forObject(socketIoProperties.getAuthFactory());
+
+        for (SocketIoProperties.Room room : rooms) {
+            try {
+                WrapperConfiguration configuration = newConfiguration(room, (SocketAuthFactory) authFactoryObject);
+                registry.registerBeanDefinition(
+                        "configuration_" + room.getClientId(),
+                        BeanDefinitionBuilder.genericBeanDefinition(WrapperConfiguration.class, () -> configuration).getBeanDefinition()
+                );
+            } catch (Exception e) {
+                log.error("注册SocketIO配置失败，房间名称: {}", room.getClientId(), e);
+            }
         }
     }
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        socketIoProperties = Binder.get(applicationContext.getEnvironment())
-                .bindOrCreate(SocketIoProperties.PRE, SocketIoProperties.class);
-        serverProperties = Binder.get(applicationContext.getEnvironment())
-                .bindOrCreate("server", ServerProperties.class);
+        try {
+            socketIoProperties = Binder.get(applicationContext.getEnvironment())
+                    .bindOrCreate(SocketIoProperties.PRE, SocketIoProperties.class);
+            serverProperties = Binder.get(applicationContext.getEnvironment())
+                    .bindOrCreate("server", ServerProperties.class);
+        } catch (Exception e) {
+            log.error("初始化SocketIO配置属性失败", e);
+            throw new RuntimeException("初始化SocketIO配置属性失败", e);
+        }
     }
 }

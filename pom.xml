@@ -55,6 +55,7 @@
         <module>spring-support-email-starter</module>           <!-- 邮件发送服务 -->
         <module>spring-support-mqtt-starter</module>            <!-- MQTT消息队列 -->
         <module>spring-support-socketio-starter</module>        <!-- Socket.IO实时通信 -->
+        <module>spring-support-webrtc-starter</module>          <!-- WebRTC视频通话和会议 -->
         <module>spring-support-sse-starter</module>             <!-- Server-Sent Events -->
         <module>spring-support-rpc-starter</module>             <!-- RPC远程调用 -->
 
