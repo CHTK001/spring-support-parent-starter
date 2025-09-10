@@ -72,10 +72,24 @@ public class CodecResponseBodyAdvice implements ResponseBodyAdvice<Object> {
 
             HttpHeaders headers = serverHttpResponse.getHeaders();
             JsonObject jsonObject = new JsonObject();
-            CodecFactory.CodecResult codecResult = codecFactory.encode(Json.toJson(o));
+
+            // 使用一次性密钥加密
+            CodecFactory.CodecResult codecResult = codecFactory.encodeWithOtk(Json.toJson(o));
+
+            // 设置响应头
             headers.set(codecFactory.getKeyHeader(), codecResult.getKey());
             headers.set("access-control-timestamp-user", codecResult.getTimestamp());
+
+            // 如果有一次性密钥ID，添加到响应头
+            if (codecResult.getOtkId() != null) {
+                headers.set("access-control-otk-id", codecResult.getOtkId());
+                log.debug("[CodecResponse] 响应包含一次性密钥ID: {}", codecResult.getOtkId());
+            }
+
+            // 构建响应数据（保持原有的混淆格式）
             jsonObject.put("data", "02" + RandomUtils.randomInt(1) + "200" + codecResult.getData() + "ffff");
+
+            log.debug("[CodecResponse] 响应加密完成，数据长度: {}", codecResult.getData() != null ? codecResult.getData().length() : 0);
             return jsonObject;
         }
 

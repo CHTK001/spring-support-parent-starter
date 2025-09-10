@@ -275,6 +275,16 @@ public class UserResume implements Serializable {
     /**
      * 获取扩展信息
      *
+     * @param name 名称
+     * @return 扩展信息
+     */
+    public String getOptions(String... name) {
+        return MapUtils.getString(ext, name);
+    }
+
+    /**
+     * 获取扩展信息
+     *
      * @param name         名称
      * @param defaultValue 默认值
      * @return 扩展信息
