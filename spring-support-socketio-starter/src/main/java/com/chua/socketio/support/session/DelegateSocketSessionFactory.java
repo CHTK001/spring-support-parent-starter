@@ -1,7 +1,10 @@
 package com.chua.socketio.support.session;
 
 import com.chua.socketio.support.properties.SocketIoProperties;
+import com.chua.socketio.support.server.DelegateSocketIOServer;
+import com.chua.socketio.support.wrapper.WrapperConfiguration;
 import com.corundumstudio.socketio.SocketIOClient;
+import com.corundumstudio.socketio.SocketIOServer;
 
 import java.util.Collections;
 import java.util.LinkedList;
@@ -17,6 +20,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class DelegateSocketSessionFactory implements SocketSessionTemplate {
 
     private final Map<String, List<SocketSession>> cache = new ConcurrentHashMap<>();
+    private final List<SocketInfo> socketInfos = new LinkedList<>();
     private final SocketIoProperties socketIoProperties;
 
     public DelegateSocketSessionFactory(SocketIoProperties socketIoProperties) {
@@ -127,5 +131,31 @@ public class DelegateSocketSessionFactory implements SocketSessionTemplate {
         }
 
         return rs;
+    }
+
+    @Override
+    public List<SocketInfo> createSocketInfo() {
+        return socketInfos;
+    }
+
+    @Override
+    public DelegateSocketIOServer getSocketServer(String serverId) {
+        return socketInfos.stream().filter(it -> {
+            WrapperConfiguration wrapperConfiguration = it.getWrapperConfiguration();
+            String clientId = wrapperConfiguration.getClientId();
+            if (clientId.equals(serverId)) {
+                return true;
+            }
+
+            String contentPath = wrapperConfiguration.getContentPath();
+            if (contentPath.equals(serverId)) {
+                return true;
+            }
+
+            if (contentPath.endsWith(serverId)) {
+                return true;
+            }
+            return false;
+        }).map(SocketInfo::getServer).findFirst().orElse(null);
     }
 }
