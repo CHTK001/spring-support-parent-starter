@@ -1,8 +1,8 @@
 package com.chua.webrtc.support.model;
 
+import com.corundumstudio.socketio.SocketIOClient;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import com.corundumstudio.socketio.SocketIOClient;
 
 import java.time.LocalDateTime;
 
@@ -35,6 +35,21 @@ public class User {
         this.audioEnabled = true;
         this.videoEnabled = true;
         this.screenSharing = false;
+    }
+
+    /**
+     * 设置SocketIO客户端连接
+     *
+     * @param client SocketIO客户端连接
+     * @author CH
+     * @since 4.1.0
+     */
+    public void setSocketIOClient(SocketIOClient client) {
+        this.client = client;
+        // 如果之前是离线状态，重新设置为在线
+        if (this.status == UserStatus.OFFLINE) {
+            this.status = UserStatus.ONLINE;
+        }
     }
 
     /**
