@@ -14,3 +14,4 @@ com.chua.starter.common.support.configuration.FilterConfiguration
 com.chua.starter.common.support.scheduler.SchedulingRegistration
 com.chua.starter.common.support.configuration.CacheProxyCachingConfiguration
 com.chua.starter.common.support.configuration.CacheCustomTenantedKeyGenerator
+com.chua.starter.common.support.configuration.AutoControllerRegistrar

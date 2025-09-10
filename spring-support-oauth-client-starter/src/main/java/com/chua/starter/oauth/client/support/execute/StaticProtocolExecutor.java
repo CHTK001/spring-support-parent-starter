@@ -7,6 +7,9 @@ import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.starter.common.support.utils.CookieUtil;
+import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.starter.common.support.utils.ResponseUtils;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
@@ -14,6 +17,7 @@ import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.google.common.collect.Sets;
+import jakarta.servlet.http.Cookie;
 
 import java.util.List;
 import java.util.Map;
@@ -48,6 +52,10 @@ public class StaticProtocolExecutor implements ProtocolExecutor {
 
     @Override
     public LoginAuthResult logout(String uid, LogoutType logoutType, UserResult userResult) {
+        Cookie cookie = CookieUtil.get(RequestUtils.getRequest(), "x-oauth-cookie");
+        if (null != cookie) {
+            CookieUtil.remove(RequestUtils.getRequest(), ResponseUtils.getResponse(), "x-oauth-cookie");
+        }
         return new LoginAuthResult(200, "");
     }
 
@@ -69,7 +77,7 @@ public class StaticProtocolExecutor implements ProtocolExecutor {
                 if (isMatch(userAndPassword, username, password)) {
                     loginAuthResult.setCode(200);
                     UserResume userResult = new UserResume();
-                    userResult.setUserId("0");
+                    userResult.setUserId("1");
                     userResult.setLoginType(AuthType.STATIC.name());
                     userResult.setUsername(username);
                     if ("admin".equals(username)) {
@@ -80,7 +88,10 @@ public class StaticProtocolExecutor implements ProtocolExecutor {
                         loginAuthResult.setToken(Codec.build(encryption, DEFAULT_KEY).encodeHex(Json.toJson(userResult)));
                     } catch (Exception ignored) {
                     }
-                    userResult.setUid(loginAuthResult.getToken());
+
+                    userResult.setUid(DigestUtils.md5Hex(userResult.getUserId()));
+                    userResult.setOpenId(userResult.getUid());
+                    userResult.setUnionId(userResult.getUid());
                     return loginAuthResult;
                 }
             }

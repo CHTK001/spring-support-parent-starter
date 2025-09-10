@@ -8,10 +8,9 @@ import com.baomidou.mybatisplus.extension.plugins.inner.DataPermissionIntercepto
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
+import com.chua.starter.common.support.oauth.AuthService;
 import com.chua.starter.mybatis.endpoint.MybatisEndpoint;
-import com.chua.starter.mybatis.interceptor.MapperTracingInterceptor;
-import com.chua.starter.mybatis.interceptor.MybatisPlusV2DataPermissionHandler;
-import com.chua.starter.mybatis.interceptor.MybatisPlusV2DataPermissionInterceptor;
+import com.chua.starter.mybatis.interceptor.*;
 import com.chua.starter.mybatis.method.SupportInjector;
 import com.chua.starter.mybatis.properties.MybatisPlusDataScopeProperties;
 import com.chua.starter.mybatis.properties.MybatisPlusProperties;
@@ -82,6 +81,17 @@ public class MybatisPlusConfiguration {
         return globalConfig;
     }
 
+
+    /**
+     * 删除权限
+     *
+     * @return OptimisticLockerInnerInterceptor
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public DeleteOnlySelfInterceptor deleteOnlySelfInterceptor(AuthService authService) {
+        return new DeleteOnlySelfInterceptor(authService);
+    }
     /**
      * 数据权限
      *
@@ -127,6 +137,17 @@ public class MybatisPlusConfiguration {
         return new OptimisticLockerInnerInterceptor();
     }
     /**
+     * 加密
+     *
+     * @return OptimisticLockerInnerInterceptor
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public CryptoInterceptor cryptoInterceptor() {
+        return new CryptoInterceptor();
+    }
+
+    /**
      * MybatisPlusInterceptor
      *
      * @return MybatisPlusInterceptor
@@ -143,6 +164,7 @@ public class MybatisPlusConfiguration {
         mybatisPlusInterceptor.addInnerInterceptor(optimisticLockerInnerInterceptor);
         mybatisPlusInterceptor.addInnerInterceptor(dataPermissionInterceptor);
         mybatisPlusInterceptor.addInnerInterceptor(paginationInnerInterceptor);
+
         if(null != tenantLineInnerInterceptor) {
             mybatisPlusInterceptor.addInnerInterceptor(tenantLineInnerInterceptor);
         }
