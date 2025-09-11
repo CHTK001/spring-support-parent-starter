@@ -2,7 +2,6 @@ package com.chua.webrtc.support.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
 
 /**
  * WebRTC配置属性
@@ -11,7 +10,6 @@ import org.springframework.stereotype.Component;
  * @since 2023-09-20
  */
 @Data
-@Component
 @ConfigurationProperties(prefix = "plugin.webrtc")
 public class WebRtcProperties {
 
