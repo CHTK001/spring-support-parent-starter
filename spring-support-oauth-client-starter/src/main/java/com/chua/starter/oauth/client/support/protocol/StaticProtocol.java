@@ -25,6 +25,7 @@ import java.util.Map;
 import static com.chua.common.support.constant.NameConstant.NULL;
 import static com.chua.starter.common.support.constant.Constant.ADMIN;
 import static com.chua.starter.common.support.constant.Constant.OPS;
+import static com.chua.starter.oauth.client.support.contants.AuthConstant.SUPER_ADMIN;
 import static com.chua.starter.oauth.client.support.execute.AuthClientExecute.DEFAULT_KEY;
 
 /**
@@ -131,7 +132,7 @@ public class StaticProtocol extends AbstractProtocol {
 
         // 根据用户名设置角色信息
         if (ADMIN.equalsIgnoreCase(userResume.getUsername())) {
-            userResume.setRoles(Sets.newHashSet(ADMIN));
+            userResume.setRoles(Sets.newHashSet(SUPER_ADMIN));
         } else {
             userResume.setRoles(Sets.newHashSet(OPS));
         }

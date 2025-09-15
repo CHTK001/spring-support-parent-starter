@@ -1,5 +1,6 @@
 package com.chua.socketio.support.session;
 
+import com.chua.common.support.json.Json;
 import com.chua.socketio.support.MsgEvent;
 import com.chua.socketio.support.MsgStep;
 import com.chua.socketio.support.resolver.SocketSessionResolver;
@@ -55,6 +56,16 @@ public interface SocketSessionTemplate {
     void send(String sessionId, String event, String msg);
 
     /**
+     * 向指定会话ID的SocketIO客户端发送消息。
+     *
+     * @param sessionId 目标客户端的会话ID，例如："session_abc123"
+     * @param event     触发的事件名称，例如："message"
+     * @param msg       要发送的消息内容对象，包含详细消息信息
+     */
+    default void send(String sessionId, String event, Object msg) {
+        send(sessionId, event, msg instanceof String ? msg : Json.toJson(msg));
+    }
+    /**
      * 向所有客户端发送消息。
      *
      * @param event 触发的事件名称，例如："broadcast"
@@ -62,6 +73,15 @@ public interface SocketSessionTemplate {
      */
     void send(String event, String msg);
 
+    /**
+     * 向所有客户端发送消息。
+     *
+     * @param event 触发的事件名称，例如："broadcast"
+     * @param msg   要发送的消息内容对象，包含详细消息信息
+     */
+    default void send(String event, Object msg) {
+        send(event, msg instanceof String ? msg : Json.toJson(msg));
+    }
     /**
      * 向所有客户端发送消息。
      *
