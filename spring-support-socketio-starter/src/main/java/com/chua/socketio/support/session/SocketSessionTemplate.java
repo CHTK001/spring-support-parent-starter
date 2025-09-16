@@ -62,8 +62,8 @@ public interface SocketSessionTemplate {
      * @param event     触发的事件名称，例如："message"
      * @param msg       要发送的消息内容对象，包含详细消息信息
      */
-    default void send(String sessionId, String event, Object msg) {
-        send(sessionId, event, msg instanceof String ? msg : Json.toJson(msg));
+    default void sendObject(String sessionId, String event, Object msg) {
+        send(sessionId, event, msg instanceof String ? msg.toString() : Json.toJson(msg));
     }
     /**
      * 向所有客户端发送消息。
@@ -79,8 +79,8 @@ public interface SocketSessionTemplate {
      * @param event 触发的事件名称，例如："broadcast"
      * @param msg   要发送的消息内容对象，包含详细消息信息
      */
-    default void send(String event, Object msg) {
-        send(event, msg instanceof String ? msg : Json.toJson(msg));
+    default void sendObject(String event, Object msg) {
+        send(event, msg instanceof String ? msg.toString() : Json.toJson(msg));
     }
     /**
      * 向所有客户端发送消息。
