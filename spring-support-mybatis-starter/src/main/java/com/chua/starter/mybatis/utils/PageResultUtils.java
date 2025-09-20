@@ -46,15 +46,15 @@ public class PageResultUtils {
      * @return PageResult
      * @param <T> 类型
      */
-    public static <T> PageResult<T> transfer(List<T> result, int pageNo, int pageSize, int pages) {
+    public static <T> PageResult<T> transfer(List<T> result, int pageNo, int pageSize, int total) {
         if (null == result) {
             return PageResult.empty();
         }
         return PageResult.<T>builder()
                 .pageNo(pageNo)
-                .totalPages(pages)
+                .totalPages(Math.floorDiv(total, pageSize) + 1)
                 .pageSize(pageSize)
-                .total(result.size())
+                .total(total)
                 .data(result)
                 .build();
     }
@@ -96,8 +96,8 @@ public class PageResultUtils {
      * @param <T>    类型
      * @return ReturnPageResult
      */
-    public static <T> ReturnPageResult<T> ok(List<T> result, int pageNo, int pageSize, int pages) {
-        return ReturnPageResult.ok(transfer(result, pageNo, pageSize, pages));
+    public static <T> ReturnPageResult<T> ok(List<T> result, int pageNo, int pageSize, int total) {
+        return ReturnPageResult.ok(transfer(result, pageNo, pageSize, total));
     }
 
     /**
