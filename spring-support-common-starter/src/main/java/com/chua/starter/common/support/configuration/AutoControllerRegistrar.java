@@ -23,7 +23,9 @@ public class AutoControllerRegistrar implements BeanDefinitionRegistryPostProces
         for (String beanName : registry.getBeanDefinitionNames()) {
             var bd = registry.getBeanDefinition(beanName);
             String clazzName = bd.getBeanClassName();
-            if (clazzName == null) continue;
+            if (clazzName == null) {
+                continue;
+            }
             try {
                 Class<?> clazz = Class.forName(clazzName);
                 for (Class<?> ifc : clazz.getInterfaces()) {
@@ -38,7 +40,7 @@ public class AutoControllerRegistrar implements BeanDefinitionRegistryPostProces
                         break;
                     }
                 }
-            } catch (Exception ignored) {
+            } catch (Throwable ignored) {
             }
         }
     }
