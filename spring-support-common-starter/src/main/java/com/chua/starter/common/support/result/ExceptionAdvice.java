@@ -8,14 +8,19 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.validator.Validator;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.common.support.exception.RuntimeMessageException;
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import jakarta.servlet.ServletException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
+import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.jdbc.BadSqlGrammarException;
 import org.springframework.validation.BindException;
@@ -30,10 +35,15 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
+import javax.validation.ConstraintViolationException;
+import java.net.ConnectException;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.sql.SQLException;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.sql.SQLSyntaxErrorException;
 import java.text.DecimalFormat;
+import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -41,7 +51,8 @@ import java.util.stream.Collectors;
 import static com.chua.common.support.lang.code.ReturnCode.*;
 
 /**
- * 统一异常处理
+ * 统一异常处理器
+ * 提供详细的中文错误提示，帮助快速定位问题
  *
  * @author CH
  * @since 2023-08-01
@@ -50,547 +61,666 @@ import static com.chua.common.support.lang.code.ReturnCode.*;
 @Slf4j
 public class ExceptionAdvice {
 
-    /**
-     * 匹配数据库字段过长错误信息的正则表达式
-     */
-    static final Pattern DATA_TOO_LONG_PATTERN = Pattern.compile("Data too long for column '([^']*)' at row");
+    // 常用正则表达式
+    private static final Pattern DATA_TOO_LONG_PATTERN = Pattern.compile("Data too long for column '([^']*)' at row");
+    private static final Pattern DUPLICATE_ENTRY_PATTERN = Pattern.compile("Duplicate entry '([^']*)' for key '([^']*)'");
+    private static final Pattern CONVERTER_PATTERN = Pattern.compile("\\[\"(.*?)\"]+");
+    private static final DecimalFormat DECIMAL_FORMAT = new DecimalFormat("0.##");
 
     /**
-     * 处理参数绑定异常
+     * 参数绑定异常 - 表单参数验证失败
      *
-     * @param e 参数绑定异常对象，包含详细的错误信息
-     * @param <T> 泛型类型
-     * @return 返回错误结果，包含具体的错误信息
-     * 
-     * 示例：
-     * 当请求参数不符合验证规则时，会抛出此异常
-     * 如：@NotNull(message = "用户名不能为空") String username
+     * @param e {@link BindException} 表单参数绑定异常
+     * @return {@link ReturnResult} 错误响应结果
+     * @example 当表单参数不符合验证规则时抛出此异常，如字段长度超出限制
      */
     @ExceptionHandler(BindException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public <T> Result<T> processException(BindException e) {
-        e.printStackTrace();
-        String msg = e.getAllErrors().stream().map(DefaultMessageSourceResolvable::getDefaultMessage).collect(Collectors.joining("；"));
-        return Result.failed(REQUEST_PARAM_ERROR, msg);
+    public <T> ReturnResult<T> handleBindException(BindException e) {
+        log.warn("表单参数验证失败: {}", e.getMessage());
+        String msg = e.getAllErrors().stream()
+                .map(DefaultMessageSourceResolvable::getDefaultMessage)
+                .collect(Collectors.joining("；"));
+        return ReturnResult.error(REQUEST_PARAM_ERROR, "表单参数验证失败：" + msg);
     }
 
     /**
-     * 处理类型转换异常
+     * 方法参数验证异常 - JSON参数验证失败
      *
-     * @param e   类型转换异常对象，包含类型转换的错误信息
-     * @param <T> 泛型类型
-     * @return 返回错误结果，包含详细的类型转换错误信息
-     * <p>
-     * 示例：
-     * 当请求参数类型转换失败时抛出此异常
-     * 如：@RequestParam("id") Integer id
-     */
-    @ExceptionHandler(ClassCastException.class)
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public <T> Result<T> classCastException(ClassCastException e) {
-        e.printStackTrace();
-        return Result.failed(REQUEST_PARAM_ERROR, e.getMessage());
-    }
-
-    /**
-     * 处理远程执行异常
-     *
-     * @param e 远程执行异常对象，包含远程服务调用的错误信息
-     * @param <T> 泛型类型
-     * @return 返回错误结果，根据异常类型返回不同的错误信息
-     * 
-     * 示例：
-     * 当调用远程服务失败时抛出此异常
-     * 如：远程服务认证失败、超时等
-     */
-    @ExceptionHandler(RemoteExecutionException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public <T> Result<T> remoteExecutionException(RemoteExecutionException e) {
-        String message = e.getMessage();
-        log.error("远程调用异常");
-        e.printStackTrace();
-        if(null != message && message.contains("Auth fail")) {
-            return Result.failed(e.getType() + "登录认证失败");
-        }
-        return Result.failed(REMOTE_EXECUTION_TIMEOUT, REMOTE_EXECUTION_TIMEOUT.getMsg());
-    }
-
-    /**
-     * 处理HTTP请求方法不支持异常
-     *
-     * @param e HTTP请求方法不支持异常对象，包含请求方法和允许的方法信息
-     * @param <T> 泛型类型
-     * @return 返回错误结果，包含详细的错误描述
-     * 
-     * 示例：
-     * 当客户端使用GET方法访问只支持POST的接口时抛出此异常
-     */
-    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public <T> Result<T> processException(HttpRequestMethodNotSupportedException e) {
-        e.printStackTrace();
-        ProblemDetail body = e.getBody();
-        return Result.failed(REQUEST_PARAM_ERROR, body.getDetail());
-    }
-
-    /**
-     * 处理方法参数验证异常
-     *
-     * @param e 方法参数验证异常对象，包含参数验证的错误信息
-     * @param <T> 泛型类型
-     * @return 返回错误结果，包含具体的验证错误信息
-     * 
-     * 示例：
-     * 当使用@RequestBody接收参数且参数不符合验证规则时抛出此异常
-     * 如：@Valid @RequestBody User user
+     * @param e {@link MethodArgumentNotValidException} 方法参数验证异常
+     * @return {@link ReturnResult} 错误响应结果
+     * @example 当JSON请求体中的字段不符合验证规则时抛出此异常
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public <T> Result<T> processException(MethodArgumentNotValidException e) {
-        e.printStackTrace();
-        String msg = e.getBindingResult().getAllErrors().stream().map(DefaultMessageSourceResolvable::getDefaultMessage).collect(Collectors.joining("；"));
-        return Result.failed(REQUEST_PARAM_ERROR, msg);
+    public <T> ReturnResult<T> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
+        log.warn("JSON参数验证失败: {}", e.getMessage());
+        String msg = e.getBindingResult().getAllErrors().stream()
+                .map(DefaultMessageSourceResolvable::getDefaultMessage)
+                .collect(Collectors.joining("；"));
+        return ReturnResult.error(REQUEST_PARAM_ERROR, "请求参数验证失败：" + msg);
     }
 
     /**
-     * 处理找不到处理器异常
+     * 约束违反异常 - 数据库约束验证失败
      *
-     * @param e 找不到处理器异常对象，表示请求的资源不存在
-     * @param <T> 泛型类型
-     * @return 返回错误结果，提示资源未找到
-     * 
-     * 示例：
-     * 当访问一个不存在的URL路径时抛出此异常
+     * @param e {@link ConstraintViolationException} 约束违反异常
+     * @return {@link ReturnResult} 错误响应结果
+     * @example 当数据库约束（如唯一性约束）被违反时抛出此异常
      */
-    @ExceptionHandler(NoHandlerFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    public <T> Result<T> processException(NoHandlerFoundException e) {
-        e.printStackTrace();
-        return Result.failed(RESOURCE_NOT_FOUND);
+    @ExceptionHandler(ConstraintViolationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public <T> ReturnResult<T> handleConstraintViolationException(ConstraintViolationException e) {
+        log.warn("数据验证约束违反: {}", e.getMessage());
+        String msg = e.getConstraintViolations().stream()
+                .map(violation -> violation.getPropertyPath() + ": " + violation.getMessage())
+                .collect(Collectors.joining("；"));
+        return ReturnResult.error(REQUEST_PARAM_ERROR, "数据验证失败：" + msg);
     }
 
     /**
-     * 处理缺少请求参数异常
+     * 缺少请求参数异常
      *
-     * @param e 缺少请求参数异常对象，包含缺失参数的名称
-     * @param <T> 泛型类型
-     * @return 返回错误结果，提示具体缺失的参数名
-     * 
-     * 示例：
-     * 当请求需要参数id但未提供时抛出此异常
+     * @param e {@link MissingServletRequestParameterException} 缺少请求参数异常
+     * @return {@link ReturnResult} 错误响应结果
+     * @example 当请求缺少必需的参数时抛出此异常
      */
     @ExceptionHandler(MissingServletRequestParameterException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public <T> ReturnResult<T> processException(MissingServletRequestParameterException e) {
-        e.printStackTrace();
-        return Result.illegal(REQUEST_PARAM_ERROR, REQUEST_PARAM_ERROR.getMsg() + "(" + e.getParameterName() + ")缺失");
+    public <T> ReturnResult<T> handleMissingServletRequestParameterException(MissingServletRequestParameterException e) {
+        log.warn("缺少必需参数: {}", e.getParameterName());
+        return ReturnResult.error(REQUEST_PARAM_ERROR,
+                String.format("缺少必需参数：%s（类型：%s）", e.getParameterName(), e.getParameterType()));
     }
 
     /**
-     * 处理方法参数类型不匹配异常
+     * 方法参数类型不匹配异常
      *
-     * @param e 方法参数类型不匹配异常对象，包含参数类型错误信息
-     * @param <T> 泛型类型
-     * @return 返回错误结果，提示参数类型错误
-     * 
-     * 示例：
-     * 当请求参数期望是Integer类型但传入了字符串时抛出此异常
+     * @param e {@link MethodArgumentTypeMismatchException} 方法参数类型不匹配异常
+     * @return {@link ReturnResult} 错误响应结果
+     * @example 当请求参数类型与方法签名不匹配时抛出此异常
      */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public <T> Result<T> processException(MethodArgumentTypeMismatchException e) {
-        e.printStackTrace();
-        return Result.failed(REQUEST_PARAM_ERROR, "类型错误");
+    public <T> ReturnResult<T> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException e) {
+        log.warn("参数类型转换失败: {} -> {}", e.getValue(), e.getRequiredType());
+        String expectedType = getSimpleTypeName(e.getRequiredType());
+        return ReturnResult.error(REQUEST_PARAM_ERROR,
+                String.format("参数'%s'类型错误，期望类型：%s，实际值：%s",
+                        e.getName(), expectedType, e.getValue()));
     }
 
     /**
-     * 处理Servlet异常
+     * 类型转换异常
      *
-     * @param e Servlet异常对象，包含具体的Servlet错误信息
-     * @param <T> 泛型类型
-     * @return 返回错误结果，根据异常类型返回不同的错误信息
-     * 
-     * 示例：
-     * 当请求的Content-Type不支持时抛出HttpMediaTypeNotSupportedException
-     */
-    @ExceptionHandler(ServletException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public <T> Result<T> processException(ServletException e) {
-        e.printStackTrace();
-        if(e instanceof HttpMediaTypeNotSupportedException httpMediaTypeNotSupportedException) {
-            return Result.failed("当前不支持: {}, 支持: {}",
-                    httpMediaTypeNotSupportedException.getContentType(),
-                    httpMediaTypeNotSupportedException.getSupportedMediaTypes()
-                    );
-        }
-        return Result.failed("当前请求方法不支持{}", e.getMessage());
-    }
-
-    /**
-     * 处理未知主机异常
-     *
-     * @param e 未知主机异常对象，表示无法解析的主机名
-     * @param <T> 泛型类型
-     * @return 返回错误结果，提示服务不可用
-     * 
-     * 示例：
-     * 当尝试连接一个不存在的域名时抛出此异常
-     */
-    @ExceptionHandler(UnknownHostException.class)
-    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
-    public <T> Result<T> unknow(UnknownHostException e) {
-        e.printStackTrace();
-        return Result.failed(e.getMessage());
-    }
-
-    /**
-     * 处理非法参数异常
-     *
-     * @param e 非法参数异常对象，包含参数错误的具体信息
-     * @param <T> 泛型类型
-     * @return 返回错误结果，根据错误信息返回相应的提示
-     * 
-     * 示例：
-     * 当传入无效的URL参数时抛出此异常
-     */
-    @ExceptionHandler(IllegalArgumentException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public <T> Result<T> handleIllegalArgumentException(IllegalArgumentException e) {
-        log.error("非法参数异常，异常原因：{}", e.getMessage(), e);
-        e.printStackTrace();
-        String message = e.getMessage();
-        if(message.contains("Unable to parse url")) {
-            return Result.failed(message.replace("Unable to parse url", "无法解析地址"));
-        }
-        return Result.failed(e.getMessage());
-    }
-
-    /**
-     * 处理JSON处理异常
-     *
-     * @param e JSON处理异常对象，包含JSON转换的错误信息
-     * @param <T> 泛型类型
-     * @return 返回错误结果，提示JSON格式错误
-     * 
-     * 示例：
-     * 当请求体中的JSON格式不正确时抛出此异常
-     */
-    @ExceptionHandler(JsonProcessingException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public <T> Result<T> handleJsonProcessingException(JsonProcessingException e) {
-        log.error("Json转换异常，异常原因：{}", e.getMessage(), e);
-        e.printStackTrace();
-        return Result.failed(e.getMessage());
-    }
-
-    /**
-     * 处理HTTP消息不可读异常
-     *
-     * @param e HTTP消息不可读异常对象，通常表示请求体格式错误
-     * @param <T> 泛型类型
-     * @return 返回错误结果，提示请求体错误信息
-     * 
-     * 示例：
-     * 当请求体为空或格式不正确时抛出此异常
-     */
-    @ExceptionHandler(HttpMessageNotReadableException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public <T> Result<T> processException(HttpMessageNotReadableException e) {
-        e.printStackTrace();
-        String errorMessage = "请求体不可为空";
-        Throwable cause = e.getCause();
-        if (cause != null) {
-            errorMessage = convertMessage(cause);
-        }
-        return Result.failed(errorMessage);
-    }
-
-    /**
-     * 处理类型不匹配异常
-     *
-     * @param e 类型不匹配异常对象，包含类型转换错误信息
-     * @param <T> 泛型类型
-     * @return 返回错误结果，提示类型错误
-     * 
-     * 示例：
-     * 当请求参数类型与期望类型不匹配时抛出此异常
+     * @param e {@link TypeMismatchException} 类型转换异常
+     * @return {@link ReturnResult} 错误响应结果
+     * @example 当请求参数无法转换为目标类型时抛出此异常
      */
     @ExceptionHandler(TypeMismatchException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public <T> Result<T> processException(TypeMismatchException e) {
-        e.printStackTrace();
-        return Result.failed(e.getMessage());
+    public <T> ReturnResult<T> handleTypeMismatchException(TypeMismatchException e) {
+        log.warn("类型转换异常: {}", e.getMessage());
+        return ReturnResult.error(REQUEST_PARAM_ERROR, "数据类型转换失败：" + e.getPropertyName());
     }
 
     /**
-     * 处理SQL语法错误异常
+     * HTTP消息不可读异常 - 通常是JSON格式错误
      *
-     * @param e SQL语法错误异常对象，表示SQL语句存在语法问题
-     * @param <T> 泛型类型
-     * @return 返回错误结果，提示无权限操作
-     * 
-     * 示例：
-     * 当执行的SQL语句语法不正确时抛出此异常
+     * @param e {@link HttpMessageNotReadableException} HTTP消息不可读异常
+     * @return {@link ReturnResult} 错误响应结果
+     * @example 当请求体格式不正确或无法解析时抛出此异常
      */
-    @ExceptionHandler(SQLSyntaxErrorException.class)
-    @ResponseStatus(HttpStatus.FORBIDDEN)
-    public <T> Result<T> processSQLSyntaxErrorException(SQLSyntaxErrorException e) {
-        e.printStackTrace();
-        return Result.failed("无权限操作");
-    }
-
-    /**
-     * 处理认证异常
-     *
-     * @param e 认证异常对象，表示用户认证失败
-     * @param <T> 泛型类型
-     * @return 返回错误结果，提示无权限操作
-     * 
-     * 示例：
-     * 当用户未登录或登录凭证无效时抛出此异常
-     */
-    @ExceptionHandler(AuthenticationException.class)
-    @ResponseStatus(HttpStatus.UNAUTHORIZED)
-    public <T> Result<T> authenticationException(AuthenticationException e) {
-        e.printStackTrace();
-        return Result.failed(RESULT_ACCESS_UNAUTHORIZED, "无权限操作");
-    }
-
-    /**
-     * 处理业务异常
-     *
-     * @param e 业务异常对象，包含业务逻辑错误信息
-     * @param <T> 泛型类型
-     * @return 返回错误结果，根据异常码返回相应提示
-     * 
-     * 示例：
-     * 当业务逻辑检查失败时抛出此异常
-     * 如：用户不存在、余额不足等业务相关错误
-     */
-    @ExceptionHandler(BusinessException.class)
+    @ExceptionHandler(HttpMessageNotReadableException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public <T> Result<T> handleBizException(BusinessException e) {
-        e.printStackTrace();
-        if (e.getResultCode() != null) {
-            return Result.failed(e.getLocalizedMessage());
+    public <T> ReturnResult<T> handleHttpMessageNotReadableException(HttpMessageNotReadableException e) {
+        log.warn("HTTP消息不可读: {}", e.getMessage());
+
+        Throwable cause = e.getCause();
+        if (cause instanceof JsonParseException) {
+            return ReturnResult.error("JSON格式错误：语法不正确，请检查JSON格式");
+        } else if (cause instanceof JsonMappingException jsonMappingException) {
+            return handleJsonMappingException(jsonMappingException);
+        } else if (cause != null) {
+            String errorMessage = convertJsonErrorMessage(cause);
+            return ReturnResult.error("请求体解析失败：" + errorMessage);
         }
-        return Result.failed("系统繁忙");
+
+        return ReturnResult.error("请求体不能为空或格式不正确");
     }
 
     /**
-     * 文件大小格式化器
+     * JSON处理异常
+     *
+     * @param e {@link JsonProcessingException} JSON处理异常
+     * @return {@link ReturnResult} 错误响应结果
+     * @example 当JSON处理过程中发生错误时抛出此异常
      */
-    static final DecimalFormat DECIMAL_FORMAT = new DecimalFormat("0.##");
+    @ExceptionHandler(JsonProcessingException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public <T> ReturnResult<T> handleJsonProcessingException(JsonProcessingException e) {
+        log.warn("JSON处理异常: {}", e.getMessage());
+
+        if (e instanceof JsonParseException) {
+            return ReturnResult.error("JSON语法错误：" + e.getOriginalMessage());
+        } else if (e instanceof InvalidFormatException invalidFormatException) {
+            return ReturnResult.error(String.format("字段'%s'格式错误，期望类型：%s",
+                    invalidFormatException.getPath().get(0).getFieldName(),
+                    getSimpleTypeName(invalidFormatException.getTargetType())));
+        } else if (e instanceof MismatchedInputException mismatchedInputException) {
+            return ReturnResult.error("JSON字段类型不匹配：" +
+                    mismatchedInputException.getPath().get(0).getFieldName());
+        }
+
+        return ReturnResult.error("JSON处理失败：" + e.getOriginalMessage());
+    }
 
     /**
-     * 处理文件上传大小超限异常
+     * HTTP请求方法不支持异常
      *
-     * @param e 文件上传大小超限异常对象，包含最大允许的文件大小
-     * @param <T> 泛型类型
-     * @return 返回错误结果，提示文件过大及限制大小
-     * 
-     * 示例：
-     * 当上传的文件超过配置的最大大小时抛出此异常
+     * @param e {@link HttpRequestMethodNotSupportedException} HTTP请求方法不支持异常
+     * @return {@link ReturnResult} 错误响应结果
+     * @example 当请求使用了不支持的HTTP方法时抛出此异常
+     */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
+    public <T> ReturnResult<T> handleHttpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException e) {
+        log.warn("HTTP请求方法不支持: {}", e.getMethod());
+        return ReturnResult.error(REQUEST_PARAM_ERROR,
+                String.format("请求方法'%s'不支持，支持的方法：%s",
+                        e.getMethod(), String.join(", ", e.getSupportedMethods())));
+    }
+
+    /**
+     * HTTP媒体类型不支持异常
+     *
+     * @param e {@link HttpMediaTypeNotSupportedException} HTTP媒体类型不支持异常
+     * @return {@link ReturnResult} 错误响应结果
+     * @example 当请求的Content-Type不被支持时抛出此异常
+     */
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    @ResponseStatus(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+    public <T> ReturnResult<T> handleHttpMediaTypeNotSupportedException(HttpMediaTypeNotSupportedException e) {
+        log.warn("HTTP媒体类型不支持: {}", e.getContentType());
+        return ReturnResult.error("请求的Content-Type不支持：" + e.getContentType() +
+                "，支持的类型：" + e.getSupportedMediaTypes());
+    }
+
+    /**
+     * 找不到处理器异常 - 404错误
+     *
+     * @param e {@link NoHandlerFoundException} 找不到处理器异常
+     * @return {@link ReturnResult} 错误响应结果
+     * @example 当请求的资源不存在时抛出此异常
+     */
+    @ExceptionHandler(NoHandlerFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public <T> ReturnResult<T> handleNoHandlerFoundException(NoHandlerFoundException e) {
+        log.warn("找不到请求处理器: {} {}", e.getHttpMethod(), e.getRequestURL());
+        return ReturnResult.error(RESOURCE_NOT_FOUND.getCode(),
+                String.format("请求的资源不存在：%s %s", e.getHttpMethod(), e.getRequestURL()));
+    }
+
+    /**
+     * 文件上传大小超限异常
+     *
+     * @param e {@link MaxUploadSizeExceededException} 文件上传大小超限异常
+     * @return {@link ReturnResult} 错误响应结果
+     * @example 当上传文件大小超过限制时抛出此异常
      */
     @ExceptionHandler(MaxUploadSizeExceededException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public <T> Result<T> maxUploadSizeExceededException(MaxUploadSizeExceededException e) {
-        log.error("文件过大", e);
-        e.printStackTrace();
-        if(e.getMaxUploadSize() > 0) {
-            return Result.failed("文件过大, 当前服务器支支持{}大小文件", StringUtils.getNetFileSizeDescription(e.getMaxUploadSize(), DECIMAL_FORMAT));
+    @ResponseStatus(HttpStatus.PAYLOAD_TOO_LARGE)
+    public <T> ReturnResult<T> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException e) {
+        log.warn("文件上传超出大小限制: {}", e.getMaxUploadSize());
+        if (e.getMaxUploadSize() > 0) {
+            String maxSize = StringUtils.getNetFileSizeDescription(e.getMaxUploadSize(), DECIMAL_FORMAT);
+            return ReturnResult.error("文件过大，最大允许上传：" + maxSize);
         }
-        return Result.failed("文件过大");
+        return ReturnResult.error("上传文件过大，请选择较小的文件");
     }
 
     /**
-     * 处理通用异常
+     * SQL异常处理
      *
-     * @param e 通用异常对象，捕获所有未被特定处理的异常
-     * @param <T> 泛型类型
-     * @return 返回错误结果，提示请求失败
-     * 
-     * 示例：
-     * 当发生未预期的运行时异常时被捕获
-     */
-    @ExceptionHandler(Exception.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public <T> Result<T> handleException(Exception e) {
-        log.error("handleException exception: {}", e.getMessage());
-        e.printStackTrace();
-        return Result.failed("请求失败,请稍后重试");
-    }
-
-    /**
-     * 处理SQL异常
-     *
-     * @param e SQL异常对象，包含数据库操作的错误信息
-     * @param <T> 泛型类型
-     * @return 返回错误结果，根据错误信息返回相应提示
-     * 
-     * 示例：
-     * 当数据库操作失败时抛出此异常
-     * 如：违反唯一约束、连接超时等
+     * @param e {@link SQLException} SQL异常
+     * @return {@link ReturnResult} 错误响应结果
+     * @example 当SQL执行过程中发生错误时抛出此异常
      */
     @ExceptionHandler(SQLException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public <T> Result<T> sqlException(SQLException e) {
-        log.error("SQLException: {}", e.getMessage());
-        e.printStackTrace();
-        if(Validator.hasChinese(e.getMessage())) {
-            return Result.failed(e);
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public <T> ReturnResult<T> handleSQLException(SQLException e) {
+        log.error("SQL执行异常: {}", e.getMessage(), e);
+
+        // 根据SQL状态码返回不同提示
+        String sqlState = e.getSQLState();
+        if (sqlState != null) {
+            return switch (sqlState.substring(0, 2)) {
+                case "08" -> ReturnResult.error("数据库连接异常，请稍后重试");
+                case "22" -> ReturnResult.error("数据格式错误：" + extractUserFriendlyMessage(e.getMessage()));
+                case "23" -> ReturnResult.error("数据完整性约束违反：" + extractConstraintMessage(e.getMessage()));
+                case "42" -> ReturnResult.error("SQL语法错误，请联系管理员");
+                default -> ReturnResult.error("数据库操作失败：" + extractUserFriendlyMessage(e.getMessage()));
+            };
         }
-        return Result.failed(e.getSQLState());
+
+        return ReturnResult.error("数据库操作异常，请联系管理员");
     }
 
     /**
-     * 处理SQL语法异常
+     * SQL语法错误异常
      *
-     * @param ex SQL语法异常对象，包含错误的SQL语句和错误信息
-     * @param <T> 泛型类型
-     * @return 返回错误结果，提示SQL语法错误
-     * 
-     * 示例：
-     * 当执行的SQL语句存在语法错误时抛出此异常
+     * @param e {@link SQLSyntaxErrorException} SQL语法错误异常
+     * @return {@link ReturnResult} 错误响应结果
+     * @example 当SQL语句存在语法错误时抛出此异常
+     */
+    @ExceptionHandler(SQLSyntaxErrorException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public <T> ReturnResult<T> handleSQLSyntaxErrorException(SQLSyntaxErrorException e) {
+        log.error("SQL语法错误: {}", e.getMessage(), e);
+        return ReturnResult.error("数据查询出现语法错误，请联系管理员");
+    }
+
+    /**
+     * SQL完整性约束违反异常
+     *
+     * @param e {@link SQLIntegrityConstraintViolationException} SQL完整性约束违反异常
+     * @return {@link ReturnResult} 错误响应结果
+     * @example 当SQL操作违反完整性约束时抛出此异常
+     */
+    @ExceptionHandler(SQLIntegrityConstraintViolationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public <T> ReturnResult<T> handleSQLIntegrityConstraintViolationException(SQLIntegrityConstraintViolationException e) {
+        log.warn("SQL完整性约束违反: {}", e.getMessage());
+        return ReturnResult.error("数据完整性校验失败：" + extractConstraintMessage(e.getMessage()));
+    }
+
+    /**
+     * 数据库访问异常
+     *
+     * @param e {@link DataAccessException} 数据库访问异常
+     * @return {@link ReturnResult} 错误响应结果
+     * @example 当数据库访问过程中发生错误时抛出此异常
+     */
+    @ExceptionHandler(DataAccessException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public <T> ReturnResult<T> handleDataAccessException(DataAccessException e) {
+        log.error("数据库访问异常: {}", e.getMessage(), e);
+
+        if (e instanceof DuplicateKeyException) {
+            return ReturnResult.error("数据已存在，不能重复添加");
+        } else if (e instanceof DataIntegrityViolationException) {
+            return ReturnResult.error("数据完整性违反：" + extractConstraintMessage(e.getMessage()));
+        }
+
+        return ReturnResult.error("数据库访问失败，请稍后重试");
+    }
+
+    /**
+     * SQL语法错误异常 - Spring包装
+     *
+     * @param e {@link BadSqlGrammarException} SQL语法错误异常
+     * @return {@link ReturnResult} 错误响应结果
+     * @example 当SQL语句存在语法错误时抛出此异常
      */
     @ExceptionHandler(BadSqlGrammarException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public <T> Result<T> badSqlGrammarException(BadSqlGrammarException ex) {
-        ex.printStackTrace();
-        // 提取异常中的关键词信息
-        log.error("错误SQL: " + ex.getSql());
-        log.error("错误代码: " + ex.getSQLException().getErrorCode());
-        log.error("错误信息: " + ex.getSQLException().getMessage());
-        String sql = ex.getSql().toLowerCase(); // 获取有问题的SQL语句
+    public <T> ReturnResult<T> handleBadSqlGrammarException(BadSqlGrammarException e) {
+        log.error("SQL语法错误 - SQL: {}, 错误: {}", e.getSql(), e.getSQLException().getMessage());
 
-        // 提取INSERT语句中的表名
-        if (sql.startsWith("insert")) {
-            Pattern insertPattern = Pattern.compile("insert\\s+into\\s+([\\w\\.]+)", Pattern.CASE_INSENSITIVE);
-            Matcher m = insertPattern.matcher(sql);
-            if (m.find()) {
-                System.out.println("INSERT表名: " + m.group(1));
-            }
+        String sql = e.getSql().toLowerCase().trim();
+        String operation = "操作";
+        if (sql.startsWith("select")) {
+            operation = "查询";
+        } else if (sql.startsWith("insert")) {
+            operation = "新增";
+        } else if (sql.startsWith("update")) {
+            operation = "更新";
+        } else if (sql.startsWith("delete")) {
+            operation = "删除";
         }
 
-        // 提取SELECT语句中的表名
-       else if (sql.startsWith("select")) {
-            Pattern selectPattern = Pattern.compile("from\\s+([\\w\\.]+)", Pattern.CASE_INSENSITIVE);
-            Matcher m = selectPattern.matcher(sql);
-            if (m.find()) {
-                System.out.println("SELECT表名: " + m.group(1));
-            }
-        }
-
-        // 提取UPDATE语句中的表名
-        else  if (sql.startsWith("update")) {
-            Pattern updatePattern = Pattern.compile("update\\s+([\\w\\.]+)", Pattern.CASE_INSENSITIVE);
-            Matcher m = updatePattern.matcher(sql);
-            if (m.find()) {
-                System.out.println("UPDATE表名: " + m.group(1));
-            }
-        }
-
-        // 提取DELETE语句中的表名
-        else  if (sql.startsWith("delete")) {
-            // 处理DELETE语句
-            Pattern deletePattern = Pattern.compile(
-                    "delete\\s+(?:from\\s+)?([\\w\\.]+)",
-                    Pattern.CASE_INSENSITIVE
-            );
-            Matcher m = deletePattern.matcher(sql);
-            if (m.find()) {
-                System.out.println("DELETE操作表名: " + m.group(1));
-            }
-        }
-
-
-        return Result.failed(ex.getRootCause());
+        return ReturnResult.error(String.format("数据库%s操作失败，请联系管理员", operation));
     }
 
     /**
-     * 处理运行时异常
+     * 网络相关异常
      *
-     * @param e 运行时异常对象，包含运行时错误信息
-     * @param response HTTP响应对象，用于设置响应头信息
-     * @param <T> 泛型类型
-     * @return 返回错误结果，根据异常类型返回不同提示
-     * 
-     * 示例：
-     * 当发生各种运行时错误时被捕获，如空指针异常、数组越界等
+     * @param e {@link Exception} 网络相关异常
+     * @return {@link ReturnResult} 错误响应结果
+     * @example 当网络连接失败或超时时抛出此异常
+     */
+    @ExceptionHandler({UnknownHostException.class, ConnectException.class, SocketTimeoutException.class, TimeoutException.class})
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public <T> ReturnResult<T> handleNetworkException(Exception e) {
+        log.error("网络异常: {}", e.getMessage(), e);
+
+        if (e instanceof UnknownHostException) {
+            return ReturnResult.error("网络连接失败：无法解析主机地址");
+        } else if (e instanceof ConnectException) {
+            return ReturnResult.error("网络连接失败：连接被拒绝");
+        } else if (e instanceof SocketTimeoutException || e instanceof TimeoutException) {
+            return ReturnResult.error("网络请求超时，请稍后重试");
+        }
+
+        return ReturnResult.error("网络异常，请检查网络连接");
+    }
+
+    /**
+     * 远程执行异常
+     *
+     * @param e {@link RemoteExecutionException} 远程执行异常
+     * @return {@link ReturnResult} 错误响应结果
+     * @example 当远程服务调用失败时抛出此异常
+     */
+    @ExceptionHandler(RemoteExecutionException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public <T> ReturnResult<T> handleRemoteExecutionException(RemoteExecutionException e) {
+        log.error("远程服务调用异常: {}", e.getMessage(), e);
+
+        String message = e.getMessage();
+        if (message != null && message.contains("Auth fail")) {
+            return ReturnResult.error("远程服务认证失败，请检查登录状态");
+        } else if (message != null && message.contains("timeout")) {
+            return ReturnResult.error("远程服务调用超时，请稍后重试");
+        }
+
+        return ReturnResult.error("远程服务调用失败：" + extractUserFriendlyMessage(message));
+    }
+
+    /**
+     * 认证异常
+     *
+     * @param e {@link AuthenticationException} 认证异常
+     * @return {@link ReturnResult} 错误响应结果
+     * @example 当用户身份认证失败时抛出此异常
+     */
+    @ExceptionHandler(AuthenticationException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public <T> ReturnResult<T> handleAuthenticationException(AuthenticationException e) {
+        log.warn("认证异常: {}", e.getMessage());
+        return ReturnResult.error(RESULT_ACCESS_UNAUTHORIZED.getCode(), "身份认证失败，请重新登录");
+    }
+
+    /**
+     * 业务异常
+     *
+     * @param e {@link BusinessException} 业务异常
+     * @return {@link ReturnResult} 错误响应结果
+     * @example 当业务逻辑处理失败时抛出此异常
+     */
+    @ExceptionHandler(BusinessException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public <T> ReturnResult<T> handleBusinessException(BusinessException e) {
+        log.warn("业务异常: {}", e.getMessage());
+        String message = e.getLocalizedMessage();
+        if (StringUtils.isBlank(message)) {
+            message = "业务处理失败";
+        }
+        return ReturnResult.error(message);
+    }
+
+    /**
+     * 运行时消息异常
+     *
+     * @param e {@link RuntimeMessageException} 运行时消息异常
+     * @return {@link ReturnResult} 错误响应结果
+     * @example 当运行时发生消息相关错误时抛出此异常
+     */
+    @ExceptionHandler(RuntimeMessageException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public <T> ReturnResult<T> handleRuntimeMessageException(RuntimeMessageException e) {
+        log.warn("运行时消息异常: {}", e.getMessage());
+        return ReturnResult.error(e.getMessage());
+    }
+
+    /**
+     * 非法参数异常
+     *
+     * @param e {@link IllegalArgumentException} 非法参数异常
+     * @return {@link ReturnResult} 错误响应结果
+     * @example 当传递了非法参数时抛出此异常
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public <T> ReturnResult<T> handleIllegalArgumentException(IllegalArgumentException e) {
+        log.warn("非法参数异常: {}", e.getMessage());
+
+        String message = e.getMessage();
+        if (message != null) {
+            if (message.contains("Unable to parse url")) {
+                return ReturnResult.error("URL地址格式不正确，请检查URL格式");
+            } else if (message.contains("Invalid UUID")) {
+                return ReturnResult.error("UUID格式不正确");
+            }
+        }
+
+        return ReturnResult.error("参数不合法：" + extractUserFriendlyMessage(message));
+    }
+
+    /**
+     * 类型转换异常
+     *
+     * @param e {@link ClassCastException} 类型转换异常
+     * @return {@link ReturnResult} 错误响应结果
+     * @example 当对象类型转换失败时抛出此异常
+     */
+    @ExceptionHandler(ClassCastException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public <T> ReturnResult<T> handleClassCastException(ClassCastException e) {
+        log.error("类型转换异常: {}", e.getMessage(), e);
+        return ReturnResult.error("数据类型转换失败，请检查数据格式");
+    }
+
+    /**
+     * 空指针异常
+     *
+     * @param e {@link NullPointerException} 空指针异常
+     * @return {@link ReturnResult} 错误响应结果
+     * @example 当尝试访问空对象的属性或方法时抛出此异常
+     */
+    @ExceptionHandler(NullPointerException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public <T> ReturnResult<T> handleNullPointerException(NullPointerException e) {
+        log.error("空指针异常: {}", e.getMessage(), e);
+        return ReturnResult.error("系统处理异常，缺少必要的数据");
+    }
+
+    /**
+     * 数组越界异常
+     *
+     * @param e {@link ArrayIndexOutOfBoundsException} 数组越界异常
+     * @return {@link ReturnResult} 错误响应结果
+     * @example 当访问数组时索引超出范围时抛出此异常
+     */
+    @ExceptionHandler(ArrayIndexOutOfBoundsException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public <T> ReturnResult<T> handleArrayIndexOutOfBoundsException(ArrayIndexOutOfBoundsException e) {
+        log.error("数组越界异常: {}", e.getMessage(), e);
+        return ReturnResult.error("数据访问越界，请检查数据完整性");
+    }
+
+    /**
+     * 数字格式异常
+     *
+     * @param e {@link NumberFormatException} 数字格式异常
+     * @return {@link ReturnResult} 错误响应结果
+     * @example 当字符串无法转换为数字时抛出此异常
+     */
+    @ExceptionHandler(NumberFormatException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public <T> ReturnResult<T> handleNumberFormatException(NumberFormatException e) {
+        log.warn("数字格式异常: {}", e.getMessage());
+        return ReturnResult.error("数字格式不正确，请输入有效的数字");
+    }
+
+    /**
+     * 运行时异常 - 兜底处理
+     *
+     * @param e        {@link RuntimeException} 运行时异常
+     * @param response {@link HttpServletResponse} HTTP响应对象
+     * @return {@link ReturnResult} 错误响应结果
+     * @example 当发生未被捕获的运行时异常时抛出此异常
      */
     @ExceptionHandler(RuntimeException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public <T> Result<T> handleRuntimeException(RuntimeException e, HttpServletResponse response) {
-        e.printStackTrace();
+    public <T> ReturnResult<T> handleRuntimeException(RuntimeException e, HttpServletResponse response) {
+        log.error("运行时异常: {}", e.getMessage(), e);
         response.setContentType("application/json");
-        if("org.apache.ibatis.exceptions.TooManyResultsException".equals(e.getClass().getName())) {
-            log.error("SQL只允许返回一条数据, 但是查询到多条数据", e);
-        } else {
-            log.error("handleRuntimeException exception", e);
+
+        // 特殊的运行时异常处理
+        if ("org.apache.ibatis.exceptions.TooManyResultsException".equals(e.getClass().getName())) {
+            return ReturnResult.error("数据查询异常：期望返回一条记录，但查询到多条数据");
         }
 
-        String message = e.getMessage();
         Throwable cause = e.getCause();
-        if (cause instanceof Exception e1 && !(e1 instanceof NullPointerException)) {
-            message = e1.getMessage();
-        }
-
-        if (Validator.hasChinese(message)) {
-            return Result.failed(e);
-        }
-
-        if (e instanceof RuntimeMessageException) {
-            return Result.failed(e.getMessage());
-        }
-
-        if(cause instanceof UnsupportedOperationException) {
-            return Result.failed("当前系统版本/软件不支持该功能");
-        }
-        if(cause instanceof RemoteExecutionException) {
-            return remoteExecutionException((RemoteExecutionException) cause);
-        }
-
-        if(cause instanceof IllegalArgumentException) {
+        if (cause instanceof UnsupportedOperationException) {
+            return ReturnResult.error("当前操作不被支持，请联系管理员");
+        } else if (cause instanceof RemoteExecutionException) {
+            return handleRemoteExecutionException((RemoteExecutionException) cause);
+        } else if (cause instanceof IllegalArgumentException) {
             return handleIllegalArgumentException((IllegalArgumentException) cause);
         }
 
+        String message = e.getMessage();
         if (message != null && message.contains("Data truncation: Data too long for column")) {
             Matcher matcher = DATA_TOO_LONG_PATTERN.matcher(message);
             if (matcher.find()) {
-                if (matcher.groupCount() == 1) {
-                    return Result.failed("选项%s长度过长".formatted(NamingCase.toCamelCase(matcher.group(1))));
-                }
+                return ReturnResult.error(String.format("字段'%s'数据长度超出限制",
+                        NamingCase.toCamelCase(matcher.group(1))));
             }
-            return Result.failed("数据长度过长");
+            return ReturnResult.error("数据长度超出限制，请减少输入内容");
         }
-        return Result.failed("当前系统版本不支持或者系统不开放");
+
+        return ReturnResult.error("系统运行异常，请稍后重试或联系管理员");
     }
 
     /**
-     * 参数转换错误信息匹配模式
+     * 通用异常 - 最后的兜底
+     *
+     * @param e {@link Exception} 通用异常
+     * @return {@link ReturnResult} 错误响应结果
+     * @example 当发生未被捕获的通用异常时抛出此异常
      */
-    static Pattern CONVERTER_PATTERN = Pattern.compile("\\[\"(.*?)\"]+");
+    @ExceptionHandler(Exception.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public <T> ReturnResult<T> handleException(Exception e) {
+        log.error("系统异常: {}", e.getMessage(), e);
+        return ReturnResult.error("系统异常，请联系管理员");
+    }
+
+    // ==================== 私有工具方法 ====================
 
     /**
-     * 传参类型错误时，用于消息转换
+     * 处理JSON映射异常
      *
-     * @param throwable 异常对象，包含类型转换错误的详细信息
-     * @return 错误信息字符串，描述具体的字段类型错误
-     * 
-     * 示例：
-     * 当请求参数类型不匹配时，提取并格式化错误信息
-     * 如：将"Cannot convert value of type 'java.lang.String' to required type 'java.lang.Integer'"转换为更友好的提示
+     * @param e {@link JsonMappingException} JSON映射异常
+     * @return {@link ReturnResult} 错误响应结果
      */
-    private String convertMessage(Throwable throwable) {
+    private <T> ReturnResult<T> handleJsonMappingException(JsonMappingException e) {
+        if (e instanceof InvalidFormatException invalidFormatException) {
+            String fieldName = invalidFormatException.getPath().isEmpty() ?
+                    "未知字段" : invalidFormatException.getPath().get(0).getFieldName();
+            String expectedType = getSimpleTypeName(invalidFormatException.getTargetType());
+            return ReturnResult.error(String.format("字段'%s'格式错误，期望类型：%s，实际值：%s",
+                    fieldName, expectedType, invalidFormatException.getValue()));
+        } else if (e instanceof MismatchedInputException mismatchedInputException) {
+            String fieldName = mismatchedInputException.getPath().isEmpty() ?
+                    "根对象" : mismatchedInputException.getPath().get(0).getFieldName();
+            return ReturnResult.error(String.format("字段'%s'类型不匹配或格式错误", fieldName));
+        }
+        return ReturnResult.error("JSON字段映射错误：" + e.getOriginalMessage());
+    }
+
+    /**
+     * 转换JSON错误消息
+     *
+     * @param throwable {@link Throwable} 异常对象
+     * @return 转换后的错误消息
+     */
+    private String convertJsonErrorMessage(Throwable throwable) {
         String error = throwable.toString();
         Matcher matcher = CONVERTER_PATTERN.matcher(error);
-        String group = "";
         if (matcher.find()) {
-            String matchString = matcher.group();
-            matchString = matchString.replace("[", "").replace("]", "");
-            matchString = String.format("%s字段类型错误", matchString.replaceAll("\\\"", ""));
-            group += matchString;
+            String field = matcher.group(1);
+            return String.format("字段'%s'格式错误", field);
         }
-        return group;
+        return "格式不正确";
+    }
+
+    /**
+     * 获取简化的类型名称
+     *
+     * @param type {@link Class} 类型
+     * @return 简化的类型名称
+     */
+    private String getSimpleTypeName(Class<?> type) {
+        if (type == null) return "未知类型";
+
+        return switch (type.getSimpleName()) {
+            case "Integer" -> "整数";
+            case "Long" -> "长整数";
+            case "Double" -> "小数";
+            case "Boolean" -> "布尔值(true/false)";
+            case "String" -> "字符串";
+            case "Date" -> "日期";
+            case "LocalDateTime" -> "日期时间";
+            case "LocalDate" -> "日期";
+            case "LocalTime" -> "时间";
+            case "BigDecimal" -> "精确小数";
+            default -> type.getSimpleName();
+        };
+    }
+
+    /**
+     * 提取用户友好的错误消息
+     *
+     * @param message 错误消息
+     * @return 用户友好的错误消息
+     */
+    private String extractUserFriendlyMessage(String message) {
+        if (StringUtils.isBlank(message)) return "操作失败";
+
+        // 如果消息包含中文，直接返回
+        if (Validator.hasChinese(message)) {
+            return message;
+        }
+
+        // 常见英文错误消息翻译
+        if (message.contains("Connection refused")) {
+            return "连接被拒绝";
+        } else if (message.contains("timeout")) {
+            return "操作超时";
+        } else if (message.contains("Access denied")) {
+            return "访问被拒绝";
+        } else if (message.contains("Invalid")) {
+            return "数据无效";
+        }
+
+        return "操作异常";
+    }
+
+    /**
+     * 提取约束错误消息
+     *
+     * @param message 错误消息
+     * @return 约束错误消息
+     */
+    private String extractConstraintMessage(String message) {
+        if (StringUtils.isBlank(message)) return "数据约束验证失败";
+
+        Matcher duplicateMatcher = DUPLICATE_ENTRY_PATTERN.matcher(message);
+        if (duplicateMatcher.find()) {
+            return String.format("数据'%s'已存在，不能重复", duplicateMatcher.group(1));
+        }
+
+        if (message.contains("foreign key constraint")) {
+            return "关联数据不存在，请先确保相关数据完整";
+        } else if (message.contains("unique")) {
+            return "数据重复，请检查唯一性约束";
+        } else if (message.contains("not null")) {
+            return "必需字段不能为空";
+        }
+
+        return extractUserFriendlyMessage(message);
     }
 }
