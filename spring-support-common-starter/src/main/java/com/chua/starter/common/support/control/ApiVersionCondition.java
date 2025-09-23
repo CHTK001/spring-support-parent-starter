@@ -1,6 +1,7 @@
 package com.chua.starter.common.support.control;
 
 
+import com.chua.common.support.lang.version.Version;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.common.support.annotations.ApiVersion;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,6 +18,7 @@ import java.util.regex.Pattern;
  * @author ch
  * @since 2020-11-16
  */
+@Getter
 @Slf4j
 public class ApiVersionCondition implements RequestCondition<ApiVersionCondition> {
     /**
@@ -27,7 +29,6 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
     /**
      * API VERSION interface
      **/
-    @Getter
     private final ApiVersion apiVersion;
 
     ApiVersionCondition(ApiVersion apiVersion) {
@@ -73,13 +74,8 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
         }
 
         String currentVersion = currentApiVersion.version();
-
-        // 转换为双精度比较
-        double requestVersion = normalizeVersion(versionStr);
-        double apiVersion = normalizeVersion(currentVersion);
-
         // 判断版本号是否符合要求
-        if (isVersionCompatible(requestVersion, apiVersion)) {
+        if (Version.of(versionStr).isHigherThan(currentVersion)) {
             return this;
         }
 

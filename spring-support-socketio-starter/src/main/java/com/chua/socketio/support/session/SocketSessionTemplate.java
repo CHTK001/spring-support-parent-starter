@@ -80,6 +80,14 @@ public interface SocketSessionTemplate {
      * @param msg   要发送的消息内容对象，包含详细消息信息
      */
     default void sendObject(String event, Object msg) {
+        if (msg instanceof MsgEvent message) {
+            send(event, message);
+            return;
+        }
+        if (msg instanceof MsgStep message) {
+            send(event, message);
+            return;
+        }
         send(event, msg instanceof String ? msg.toString() : Json.toJson(msg));
     }
     /**
