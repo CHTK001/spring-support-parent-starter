@@ -18,9 +18,9 @@ public class ResourceWebMvcConfigurer implements WebMvcConfigurer {
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         log.info("当前运行目录: {}", new File(".").getAbsolutePath());
         registry.addResourceHandler("/static/**").addResourceLocations("classpath:/static/", "file:./static/").setCachePeriod(3600);
-        registry.addResourceHandler("/modules/**").addResourceLocations("classpath:/modules/",
-                        "file:./modules/",
-                        "classpath:/META-INF/resources/modules/")
+        registry.addResourceHandler("/webjars/**").addResourceLocations("classpath:/webjars/",
+                        "file:./webjars/",
+                        "classpath:/META-INF/resources/webjars/")
                 .setCachePeriod(3600)
                 .resourceChain(true);
     }
