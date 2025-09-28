@@ -29,6 +29,8 @@ public class SpringEnvironmentPostProcessor implements EnvironmentPostProcessor 
         properties.setProperty("spring.datasource.password", "");
         properties.setProperty("logging.level.org.zbus.net.tcp.TcpClient", "OFF");
 
+        properties.setProperty("spring.web.resources.add-mappings", "false");
+
         String property1 = StringUtils.defaultString(environment.getProperty("spring.datasource.url"),
                 properties.getProperty("spring.datasource.url"));
         if (null != property1 && property1.contains("jdbc:sqlite")) {
