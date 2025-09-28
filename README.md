@@ -92,7 +92,7 @@ Spring Support Parent Starter
 
 #### Gradle
 
-```gradle
+```
 implementation 'com.chua:spring-support-common-starter:4.0.0.32'
 implementation 'com.chua:spring-support-circuit-breaker-starter:4.0.0.32'
 ```
@@ -101,7 +101,7 @@ implementation 'com.chua:spring-support-circuit-breaker-starter:4.0.0.32'
 
 在 `application.yml` 中添加基本配置：
 
-```yaml
+```
 # 通用功能配置
 plugin:
   parameter:
@@ -121,7 +121,7 @@ plugin:
 
 ### 简单示例
 
-```java
+```
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
@@ -288,7 +288,7 @@ plugin:
 ```
 
 **使用示例：**
-```java
+```
 // 使用组合注解
 @CircuitBreakerProtection(
     circuitBreaker = "userService",
@@ -461,6 +461,24 @@ OAuth 2.0客户端集成：
 <dependency>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-oauth-client-starter</artifactId>
+    <version>4.0.0.32</version>
+</dependency>
+```
+
+#### spring-support-token-starter
+**令牌认证模块**
+
+基于数据库的令牌认证功能：
+- 令牌生成和验证
+- IP白名单控制
+- 令牌有效期管理
+- 用户关联认证
+
+**Maven依赖：**
+```xml
+<dependency>
+    <groupId>com.chua</groupId>
+    <artifactId>spring-support-token-starter</artifactId>
     <version>4.0.0.32</version>
 </dependency>
 ```
