@@ -135,15 +135,7 @@ public class CodecRequestBodyAdvice implements RequestBodyAdvice {
         log.debug("[RequestDecrypt] 提取到加密数据，格式: {}, 长度: {} chars",
                 isArrayFormat ? "数组" : "对象", encryptedData.length());
 
-        // === 一次性密钥验证（如果提供） ===
-        if (StringUtils.isNotEmpty(otkId)) {
-            String otkKey = codecFactory.getAndValidateOtk(otkId);
-            if (StringUtils.isEmpty(otkKey)) {
-                log.error("[RequestDecrypt] 一次性密钥验证失败 - OTK_ID: {}", otkId);
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "一次性密钥验证失败");
-            }
-            log.debug("[RequestDecrypt] 一次性密钥验证成功 - OTK_ID: {}", otkId);
-        }
+
 
         // === 执行解密 ===
         byte[] decryptedByteArray;

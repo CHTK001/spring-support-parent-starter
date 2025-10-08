@@ -2,7 +2,6 @@ package com.chua.starter.common.support.result;
 
 import com.chua.common.support.converter.Converter;
 import com.chua.common.support.json.Json;
-import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.RandomUtils;
 import com.chua.starter.common.support.codec.CodecFactory;
@@ -18,6 +17,8 @@ import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
+
+import java.nio.charset.StandardCharsets;
 
 /**
  * 响应加密
@@ -71,26 +72,20 @@ public class CodecResponseBodyAdvice implements ResponseBodyAdvice<Object> {
 
 
             HttpHeaders headers = serverHttpResponse.getHeaders();
-            JsonObject jsonObject = new JsonObject();
 
-            // 使用一次性密钥加密
-            CodecFactory.CodecResult codecResult = codecFactory.encodeWithOtk(Json.toJson(o));
+            // 使用主密钥加密（去除OTK）
+            CodecFactory.CodecResult codecResult = codecFactory.encode(Json.toJson(o));
 
             // 设置响应头
             headers.set(codecFactory.getKeyHeader(), codecResult.getKey());
             headers.set("access-control-timestamp-user", codecResult.getTimestamp());
 
-            // 如果有一次性密钥ID，添加到响应头
-            if (codecResult.getOtkId() != null) {
-                headers.set("access-control-otk-id", codecResult.getOtkId());
-                log.debug("[CodecResponse] 响应包含一次性密钥ID: {}", codecResult.getOtkId());
-            }
-
             // 构建响应数据（保持原有的混淆格式）
-            jsonObject.put("data", "02" + RandomUtils.randomInt(1) + "200" + codecResult.getData() + "ffff");
-
+            String responseData = "02" + RandomUtils.randomInt(1) + "200" + codecResult.getData() + "ffff";
+            
+            // 返回二进制数据而不是JSON
             log.debug("[CodecResponse] 响应加密完成，数据长度: {}", codecResult.getData() != null ? codecResult.getData().length() : 0);
-            return jsonObject;
+            return responseData.getBytes(StandardCharsets.UTF_8);
         }
 
         return o;
