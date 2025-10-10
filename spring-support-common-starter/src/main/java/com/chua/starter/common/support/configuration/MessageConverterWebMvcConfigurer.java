@@ -1,6 +1,8 @@
 package com.chua.starter.common.support.configuration;
 
+import com.chua.starter.common.support.codec.CodecFactory;
 import com.chua.starter.common.support.configuration.resolver.RequestParamsMapMethodArgumentResolver;
+import com.chua.starter.common.support.converter.BinaryHttpMessageConverter;
 import com.chua.starter.common.support.jackson.configuration.JacksonConfiguration;
 import com.chua.starter.common.support.mdc.MdcHandlerFilter;
 import com.chua.starter.common.support.mdc.RestTemplateTraceIdInterceptor;
@@ -8,10 +10,8 @@ import com.chua.starter.common.support.processor.ResponseModelViewMethodProcesso
 import com.chua.starter.common.support.properties.JacksonProperties;
 import com.chua.starter.common.support.properties.MdcProperties;
 import com.chua.starter.common.support.properties.MessageConverterProperties;
-import com.fasterxml.jackson.databind.JavaType;
+import com.chua.starter.common.support.strategies.CustomContentNegotiationStrategy;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectReader;
-import io.micrometer.observation.ObservationHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
@@ -23,20 +23,21 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.format.FormatterRegistry;
-import org.springframework.http.HttpInputMessage;
 import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.converter.StringHttpMessageConverter;
+import org.springframework.http.converter.cbor.MappingJackson2CborHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.http.converter.protobuf.ProtobufHttpMessageConverter;
 import org.springframework.http.converter.support.AllEncompassingFormHttpMessageConverter;
+import org.springframework.http.converter.xml.MappingJackson2XmlHttpMessageConverter;
+import org.springframework.http.converter.yaml.MappingJackson2YamlHttpMessageConverter;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandler;
+import org.springframework.web.servlet.config.annotation.ContentNegotiationConfigurer;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import java.io.IOException;
-import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -56,7 +57,9 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     final MdcProperties mdcProperties;
     private List<HttpMessageConverter<?>> messageConverters;
     private ApplicationContext applicationContext;
+    private CodecFactory codecFactory;
 
+    @Override
     public void addReturnValueHandlers(List<HandlerMethodReturnValueHandler> handlers) {
         handlers.add(new ResponseModelViewMethodProcessor(messageConverters));
     }
@@ -65,11 +68,19 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
         resolvers.add(new RequestParamsMapMethodArgumentResolver());
     }
-
+    @Override
+    public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
+        converters.addFirst(new BinaryHttpMessageConverter(messageConverters));
+    }
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        if(!mdcProperties.isEnable()) {
-        }
+//        if(!mdcProperties.isEnable()) {
+//        }
+    }
+
+    @Override
+    public void configureContentNegotiation(ContentNegotiationConfigurer configurer) {
+        configurer.strategies(List.of(new CustomContentNegotiationStrategy(codecFactory)));
     }
 
 
@@ -173,9 +184,14 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
         this.messageConverters = new LinkedList<>();
+        this.codecFactory = applicationContext.getBean(CodecFactory.class);
         messageConverters.add(new MappingJackson2HttpMessageConverter(applicationContext.getBean(ObjectMapper.class)));
 //        messageConverters.add(new FastJsonHttpMessageConverter());
         messageConverters.add(new StringHttpMessageConverter());
+        messageConverters.add(new MappingJackson2XmlHttpMessageConverter());
+        messageConverters.add(new MappingJackson2YamlHttpMessageConverter());
+        messageConverters.add(new MappingJackson2CborHttpMessageConverter());
+        messageConverters.add(new ProtobufHttpMessageConverter());
 
         try {
             RestTemplate restTemplate = applicationContext.getBean(RestTemplate.class);
