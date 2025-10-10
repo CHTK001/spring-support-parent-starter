@@ -26,6 +26,7 @@ import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.async.DeferredResult;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
+import reactor.core.publisher.Flux;
 
 import java.lang.reflect.Method;
 import java.util.concurrent.Callable;
@@ -60,22 +61,13 @@ public class UniformResponseBodyAdvice implements ResponseBodyAdvice<Object>, En
     @SneakyThrows
     @Override
     public Object beforeBodyWrite(Object o, MethodParameter methodParameter, MediaType mediaType, Class<? extends HttpMessageConverter<?>> aClass, ServerHttpRequest serverHttpRequest, ServerHttpResponse serverHttpResponse) {
-        Class<?> parameterDeclaringClass = methodParameter.getDeclaringClass();
-        if (isIgnorePackages(parameterDeclaringClass)) {
-            return o;
-        }
-        Method method = methodParameter.getMethod();
-        Class<?> declaringClass = method.getReturnType();
-        if (isIgnoreReturnFormat(methodParameter, method, declaringClass, serverHttpRequest, mediaType)) {
-            return o;
-        }
-
         if (o instanceof ReturnPreconditioning<?> preconditioning) {
             return bodyWithPreconditioning(preconditioning, serverHttpResponse);
         }
 
         if (o instanceof org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice
                 || o instanceof byte[]
+                || o instanceof ResponseEntity
                 || o instanceof Callable
                 || o instanceof DeferredResult
         ) {
@@ -97,7 +89,25 @@ public class UniformResponseBodyAdvice implements ResponseBodyAdvice<Object>, En
             return o;
         }
 
+        Class<?> parameterDeclaringClass = methodParameter.getDeclaringClass();
+        if (isIgnorePackages(parameterDeclaringClass)) {
+            return o;
+        }
+        Method method = methodParameter.getMethod();
+        Class<?> declaringClass = method.getReturnType();
+        if (isIgnoreReturnFormat(methodParameter, method, declaringClass, serverHttpRequest, mediaType)) {
+            return o;
+        }
+
+        if(o instanceof Flux<?> flux) {
+            return createFluxBody(flux, serverHttpResponse);
+        }
+
         return Result.success(o);
+    }
+
+    private Object createFluxBody(Flux<?> flux, ServerHttpResponse serverHttpResponse) {
+        return flux.map(it -> Result.success(it));
     }
 
     /**
