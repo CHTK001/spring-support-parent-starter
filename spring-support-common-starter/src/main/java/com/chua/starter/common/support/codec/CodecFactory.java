@@ -96,18 +96,22 @@ public class CodecFactory implements Upgrade<CodecSetting>, ApplicationListener<
         try {
             // === 直接使用主密钥加密数据 ===
             String encryptedData = codecKeyPair.encode(data, publicKeyHex);
-            String nanoTime = StringUtils.padAfter(System.nanoTime() + "", 16, "0");
-            String transportKey = DigestUtils.aesEncrypt(codecKeyPair.getPrivateKeyHex(), nanoTime);
+            // key不再加密，直接使用私钥十六进制字符串
+            String transportKey = codecKeyPair.getPrivateKeyHex();
+            // timestamp设置为key的长度
+            String keyLength = String.valueOf(transportKey.length());
             
             log.debug("[CodecFactory] 数据加密完成，数据长度={}", data.length());
-            return new CodecResult(transportKey, encryptedData, nanoTime);
+            return new CodecResult(transportKey, encryptedData, keyLength);
         } catch (Exception e) {
             log.error("[CodecFactory] 数据加密失败", e);
             // === 降级到原始加密方式 ===
             String encode = codecKeyPair.encode(data, publicKeyHex);
-            String nanoTime = StringUtils.padAfter(System.nanoTime() + "", 16, "0");
-            String encrypt = DigestUtils.aesEncrypt(codecKeyPair.getPrivateKeyHex(), nanoTime);
-            return new CodecResult(encrypt, encode, nanoTime);
+            // key不再加密，直接使用私钥十六进制字符串
+            String transportKey = codecKeyPair.getPrivateKeyHex();
+            // timestamp设置为key的长度
+            String keyLength = String.valueOf(transportKey.length());
+            return new CodecResult(transportKey, encode, keyLength);
         }
     }
 
