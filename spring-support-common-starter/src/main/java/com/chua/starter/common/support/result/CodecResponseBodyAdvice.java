@@ -78,7 +78,6 @@ public class CodecResponseBodyAdvice implements ResponseBodyAdvice<Object> {
         CodecFactory.CodecResult codecResult = codecFactory.encode(Json.toJson(o));
 
         // 设置响应头
-        headers.set(codecFactory.getKeyHeader(), codecResult.getKey());
         headers.set("access-control-timestamp-user", codecResult.getTimestamp());
         headers.set("access-control-no-data", String.valueOf(true));
 
@@ -88,8 +87,8 @@ public class CodecResponseBodyAdvice implements ResponseBodyAdvice<Object> {
         // 添加X-Content-Type-Options: nosniff响应头
         headers.set("X-Content-Type-Options", "nosniff");
 
-        // 构建响应数据（保持原有的混淆格式）
-        String responseData = "02" + RandomUtils.randomInt(1) + "200" + codecResult.getData() + "ffff";
+        // 构建响应数据（key直接拼接到02后面）
+        String responseData = "02" + codecResult.getKey() + "200" + codecResult.getData() + "ffff";
 
         // 将响应数据转换为字节数组（使用更真实的二进制转换方法）
         byte[] responseBytes = convertToBinary(responseData);

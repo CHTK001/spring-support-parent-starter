@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.configuration;
 
+import com.chua.common.support.utils.ClassUtils;
 import com.chua.starter.common.support.codec.CodecFactory;
 import com.chua.starter.common.support.configuration.resolver.RequestParamsMapMethodArgumentResolver;
 import com.chua.starter.common.support.converter.BinaryHttpMessageConverter;
@@ -70,7 +71,7 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     }
     @Override
     public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
-        converters.addFirst(new BinaryHttpMessageConverter(messageConverters));
+        converters.addFirst(new BinaryHttpMessageConverter(codecFactory, messageConverters));
     }
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
@@ -188,10 +189,21 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
         messageConverters.add(new MappingJackson2HttpMessageConverter(applicationContext.getBean(ObjectMapper.class)));
 //        messageConverters.add(new FastJsonHttpMessageConverter());
         messageConverters.add(new StringHttpMessageConverter());
-        messageConverters.add(new MappingJackson2XmlHttpMessageConverter());
-        messageConverters.add(new MappingJackson2YamlHttpMessageConverter());
-        messageConverters.add(new MappingJackson2CborHttpMessageConverter());
-        messageConverters.add(new ProtobufHttpMessageConverter());
+        if(ClassUtils.isPresent("com.fasterxml.jackson.dataformat.xml.XmlMapper")) {
+            messageConverters.add(new MappingJackson2XmlHttpMessageConverter());
+        }
+
+        if(ClassUtils.isPresent("com.fasterxml.jackson.dataformat.yaml.YAMLFactory")) {
+            messageConverters.add(new MappingJackson2YamlHttpMessageConverter());
+        }
+
+        if(ClassUtils.isPresent("com.fasterxml.jackson.dataformat.cbor.CBORFactory")) {
+            messageConverters.add(new MappingJackson2CborHttpMessageConverter());
+        }
+
+        if(ClassUtils.isPresent("com.google.protobuf.CodedOutputStream")) {
+            messageConverters.add(new ProtobufHttpMessageConverter());
+        }
 
         try {
             RestTemplate restTemplate = applicationContext.getBean(RestTemplate.class);

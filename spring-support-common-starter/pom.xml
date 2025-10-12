@@ -147,6 +147,12 @@
             <artifactId>caffeine</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-xml</artifactId>
+            <version>2.20.0</version>
+        </dependency>
+
         <!-- Spring Boot缓存支持 - 提供缓存抽象和管理功能 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
