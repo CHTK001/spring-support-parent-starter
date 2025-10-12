@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.converter;
 
+import com.chua.starter.common.support.codec.CodecFactory;
 import org.springframework.http.*;
 import org.springframework.http.converter.AbstractGenericHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
@@ -16,10 +17,12 @@ import java.util.List;
  */
 public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConverter<Object> {
 
+    private final CodecFactory codecFactory;
     private final List<HttpMessageConverter<?>> messageConverters;
 
-    public BinaryHttpMessageConverter(List<HttpMessageConverter<?>> messageConverters) {
+    public BinaryHttpMessageConverter(CodecFactory codecFactory, List<HttpMessageConverter<?>> messageConverters) {
         super(MediaType.parseMediaType("application/encrypted-data"));
+        this.codecFactory = codecFactory;
         this.messageConverters = messageConverters;
     }
 
@@ -74,5 +77,21 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
     @Override
     public Object read(Type type, Class<?> contextClass, HttpInputMessage inputMessage) throws IOException, HttpMessageNotReadableException {
         return null;
+    }
+
+    @Override
+    public boolean canRead(Type type, Class<?> contextClass, MediaType mediaType) {
+        if(codecFactory.isPass()) {
+            return false;
+        }
+        return super.canRead(type, contextClass, mediaType);
+    }
+
+    @Override
+    public boolean canWrite(Type type, Class<?> clazz, MediaType mediaType) {
+        if(codecFactory.isPass()) {
+            return false;
+        }
+        return super.canWrite(type, clazz, mediaType);
     }
 }
