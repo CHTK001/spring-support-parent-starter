@@ -1,6 +1,8 @@
 package com.chua.starter.common.support.converter;
 
 import com.chua.starter.common.support.codec.CodecFactory;
+import com.chua.starter.common.support.utils.RequestUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.*;
 import org.springframework.http.converter.AbstractGenericHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
@@ -44,10 +46,12 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
             return;
         }
 
-        HttpHeaders headers = outputMessage.getHeaders();
-        String string = headers.getFirst("access-control-no-data");
-        String accept = headers.getFirst(HttpHeaders.ACCEPT);
-        if(accept != null && accept.contains("application/json")) {
+        HttpServletRequest request = RequestUtils.getRequest();
+
+        String string = request.getHeader("access-control-no-data");
+        String accept = request.getHeader(HttpHeaders.ACCEPT);
+        if(accept != null) {
+            outputMessage.getHeaders().remove("access-control-no-data");
             registerAccept(outputMessage, o);
             return;
         }
@@ -55,9 +59,17 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
 
     private void registerAccept(HttpOutputMessage outputMessage, Object o) throws IOException {
         for (HttpMessageConverter<?> messageConverter : messageConverters) {
-            if(messageConverter.canWrite(o.getClass(), null)) {
-                ((HttpMessageConverter) messageConverter).write(o, null, outputMessage);
-                return;
+            Class<?> aClass = o.getClass();
+            List<MediaType> supportedMediaTypes = messageConverter.getSupportedMediaTypes(aClass);
+            if(supportedMediaTypes.isEmpty()) {
+                continue;
+            }
+            for (MediaType supportedMediaType : supportedMediaTypes) {
+                if(messageConverter.canWrite(aClass, supportedMediaType)) {
+                    outputMessage.getHeaders().setContentType(supportedMediaType);
+                    ((HttpMessageConverter) messageConverter).write(o, null, outputMessage);
+                    return;
+                }
             }
         }
     }
