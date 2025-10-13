@@ -30,7 +30,7 @@ public class CodecConfiguration {
      */
     @Bean("codeResponseBodyAdvice")
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(name = "plugin.codec.enable", havingValue = "true", matchIfMissing = false)
+    @ConditionalOnProperty(name = "plugin.codec.enable", havingValue = "true", matchIfMissing = true)
     public CodecResponseBodyAdvice codeResponseBodyAdvice(CodecFactory codecFactory) {
         return new CodecResponseBodyAdvice(codecFactory);
     }
@@ -43,7 +43,7 @@ public class CodecConfiguration {
      */
     @Bean("codecRequestBodyAdvice")
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(name = "plugin.codec.enable", havingValue = "true", matchIfMissing = false)
+    @ConditionalOnProperty(name = "plugin.codec.enable", havingValue = "true", matchIfMissing = true)
     public CodecRequestBodyAdvice codecRequestBodyAdvice(CodecFactory codecFactory) {
         return new CodecRequestBodyAdvice(codecFactory);
     }
@@ -55,7 +55,7 @@ public class CodecConfiguration {
      */
     @Bean("codecFactory")
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(name = "plugin.codec.enable", havingValue = "true", matchIfMissing = false)
+    @ConditionalOnProperty(name = "plugin.codec.enable", havingValue = "true", matchIfMissing = true)
     public CodecFactory codecFactory() {
         return new CodecFactory(codecProperties);
     }
