@@ -221,7 +221,7 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
         beanDefinition.setAttribute(RpcAttribute.INTERFACE_NAME, interfaceName);
 
         // create decorated definition for reference bean, Avoid being instantiated when getting the beanType of ReferenceBean
-        // see org.springframework.beans.factory.support.AbstractBeanFactory#getTypeForFactoryBean()
+        // see org.springframework.beans.order.support.AbstractBeanFactory#getTypeForFactoryBean()
         GenericBeanDefinition targetDefinition = new GenericBeanDefinition();
         targetDefinition.setBeanClass(injectedType);
         beanDefinition.setDecoratedDefinition(new BeanDefinitionHolder(targetDefinition, referenceBeanName + "_decorated"));
