@@ -18,11 +18,10 @@ import com.chua.starter.pay.support.service.PayUserWalletService;
 import com.wechat.pay.java.core.Config;
 import com.wechat.pay.java.core.RSAAutoCertificateConfig;
 import com.wechat.pay.java.core.exception.ServiceException;
-import com.wechat.pay.java.service.payments.jsapi.JsapiService;
-import com.wechat.pay.java.service.payments.jsapi.model.Amount;
-import com.wechat.pay.java.service.payments.jsapi.model.Payer;
-import com.wechat.pay.java.service.payments.jsapi.model.PrepayRequest;
-import com.wechat.pay.java.service.payments.jsapi.model.PrepayResponse;
+import com.wechat.pay.java.service.payments.h5.H5Service;
+import com.wechat.pay.java.service.payments.h5.model.Amount;
+import com.wechat.pay.java.service.payments.h5.model.PrepayRequest;
+import com.wechat.pay.java.service.payments.h5.model.PrepayResponse;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -32,13 +31,13 @@ import java.math.RoundingMode;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 微信小程序支付
+ * 微信扫码支付
  *
  * @author CH
  * @since 2025/10/14 13:51
  */
-@Spi("wechat_js_api")
-public class WechatJsApiCreateOrderAdaptor extends WalletCreateOrderAdaptor {
+@Spi("WECHAT_H5")
+public class WechatH5CreateOrderAdaptor extends WalletCreateOrderAdaptor {
 
     @AutoInject
     private PayUserWalletService payUserWalletService;
@@ -87,7 +86,7 @@ public class WechatJsApiCreateOrderAdaptor extends WalletCreateOrderAdaptor {
                         .apiV3Key(payMerchantConfigWechat.getPayMerchantConfigWechatApiKeyV3())
                         .build();
         // 构建service
-        JsapiService service = new JsapiService.Builder().config(config).build();
+        H5Service service = new H5Service.Builder().config(config).build();
         PrepayRequest request = getPrepayRequest(payMerchantOrder, payMerchantConfigWechat);
 
         PrepayResponse response = null;
@@ -98,7 +97,7 @@ public class WechatJsApiCreateOrderAdaptor extends WalletCreateOrderAdaptor {
         }
 
         CreateOrderV2Response payOrderResponse = new CreateOrderV2Response(payMerchantOrder.getPayMerchantOrderCode());
-        payOrderResponse.setPrepayId(response.getPrepayId());
+        payOrderResponse.setUrl(response.getH5Url());
         return ReturnResult.ok(payOrderResponse);
     }
 
@@ -121,9 +120,6 @@ public class WechatJsApiCreateOrderAdaptor extends WalletCreateOrderAdaptor {
         request.setOutTradeNo(payMerchantOrder.getPayMerchantOrderCode());
         request.setAttach(payMerchantOrder.getPayMerchantOrderAttach());
 
-        Payer payer = new Payer();
-        payer.setOpenid(payMerchantOrder.getPayMerchantOrderOpenid());
-        request.setPayer(payer);
         return request;
     }
 

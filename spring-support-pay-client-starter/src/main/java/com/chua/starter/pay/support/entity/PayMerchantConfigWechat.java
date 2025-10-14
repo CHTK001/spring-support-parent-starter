@@ -4,10 +4,13 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.common.support.validator.group.SaveGroup;
 import com.chua.starter.mybatis.pojo.SysBase;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.io.Serializable;
 import java.time.LocalDateTime;
+
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -63,6 +66,7 @@ public class PayMerchantConfigWechat extends SysBase implements Serializable {
      */
     @TableField(value = "pay_merchant_config_wechat_trade_type")
     @Schema(description="支付类型; ")
+    @NotBlank(message = "支付类型不能为空", groups = {SaveGroup.class})
     private String payMerchantConfigWechatTradeType;
 
     /**
@@ -112,6 +116,7 @@ public class PayMerchantConfigWechat extends SysBase implements Serializable {
      */
     @TableField(value = "pay_merchant_id")
     @Schema(description="商户ID")
+    @NotBlank(message = "商户ID不能为空", groups = {SaveGroup.class})
     private Integer payMerchantId;
 
     /**

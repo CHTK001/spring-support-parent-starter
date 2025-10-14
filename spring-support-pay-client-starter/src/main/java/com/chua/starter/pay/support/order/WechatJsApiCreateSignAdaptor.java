@@ -15,10 +15,11 @@ import jakarta.validation.constraints.NotNull;
 import org.apache.commons.lang3.RandomStringUtils;
 
 /**
+ * 微信签名
  * @author CH
  * @since 2025/10/14 14:57
  */
-@Spi("wechat_js_api")
+@Spi({"wechat_js_api", "wechat_native", "WECHAT_H5"})
 public class WechatJsApiCreateSignAdaptor implements CreateSignAdaptor{
 
 
@@ -35,7 +36,8 @@ public class WechatJsApiCreateSignAdaptor implements CreateSignAdaptor{
             return ReturnResult.illegal("商户不存在");
         }
         PayMerchant payMerchant = payMerchantWrapper.getPayMerchant();
-        PayMerchantConfigWechatWrapper payMerchantConfigWechatWrapper = payMerchantConfigWechatService.getByCodeForPayMerchantConfigWechat(payMerchant.getPayMerchantId(), "WECHAT_JS_API");
+        PayMerchantConfigWechatWrapper payMerchantConfigWechatWrapper = payMerchantConfigWechatService.getByCodeForPayMerchantConfigWechat
+                (payMerchant.getPayMerchantId(), merchantOrder.getPayMerchantTradeType().getName());
         if(!payMerchantConfigWechatWrapper.hasConfig()) {
             return ReturnResult.illegal("商户未开启微信支付不存在");
         }
