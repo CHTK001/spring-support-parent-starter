@@ -18,6 +18,8 @@ public class MybatisPlusEnvironmentPostProcessor implements EnvironmentPostProce
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         Properties properties = new Properties();
         properties.setProperty("mybatis-plus.configuration.default-enum-type-handler", "org.apache.ibatis.type.EnumOrdinalTypeHandler");
+        properties.setProperty("mybatis-plus.type-handlers-package",
+                "com.chua.starter.pay.support.handler,com.chua.starter.mybatis.support.handler");
 
         PropertiesPropertySource propertiesPropertySource = new PropertiesPropertySource("mybatis-plus-extension", properties);
         MutablePropertySources propertySources = environment.getPropertySources();

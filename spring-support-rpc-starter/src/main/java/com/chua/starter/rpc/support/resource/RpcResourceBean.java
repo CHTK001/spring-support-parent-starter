@@ -133,7 +133,7 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
             this.lazyProxy = Proxy.getProxy(interfaces.toArray(new Class[0]))
                     .newInstance(new LazyTargetInvocationHandler(new DubboReferenceLazyInitTargetSource()));
         } catch (Throwable fromJavassist) {
-            // try fall back to JDK proxy factory
+            // try fall back to JDK proxy order
             try {
                 this.lazyProxy = java.lang.reflect.Proxy.newProxyInstance(
                         classLoader,

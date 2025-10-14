@@ -19,15 +19,6 @@
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-rpc-starter</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-mqtt-starter</artifactId>
-        </dependency>
 
         <dependency>
             <groupId>com.chua</groupId>
@@ -42,6 +33,11 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-mybatis-starter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-oauth-client-starter</artifactId>
         </dependency>
 
         <dependency>
