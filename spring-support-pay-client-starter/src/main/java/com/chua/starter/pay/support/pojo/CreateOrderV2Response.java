@@ -6,6 +6,7 @@ import jakarta.annotation.Nonnull;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 
 import java.io.Serializable;
@@ -31,5 +32,5 @@ public class CreateOrderV2Response implements Serializable {
      */
     @ApiModelProperty("预支付ID")
     @NotNull(message = "预支付ID不能为空", groups = {AddGroup.class})
-    private final String prepayId;
+    private String prepayId;
 }
