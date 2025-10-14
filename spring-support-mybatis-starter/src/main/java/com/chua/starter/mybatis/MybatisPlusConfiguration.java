@@ -75,8 +75,8 @@ public class MybatisPlusConfiguration {
         GlobalConfig.DbConfig dbConfig = new GlobalConfig.DbConfig();
         // 设置逻辑删除的全局值
         dbConfig.setLogicDeleteField("sys_deleted");
-        dbConfig.setLogicDeleteValue("1"); // 删除值
-        dbConfig.setLogicNotDeleteValue("0"); // 未删除值
+        dbConfig.setLogicDeleteValue("1");
+        dbConfig.setLogicNotDeleteValue("0");
         globalConfig.setDbConfig(dbConfig);
         return globalConfig;
     }
