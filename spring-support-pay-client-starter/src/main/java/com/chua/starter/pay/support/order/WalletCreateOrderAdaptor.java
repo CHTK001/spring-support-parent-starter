@@ -55,8 +55,8 @@ public class WalletCreateOrderAdaptor implements CreateOrderAdaptor{
                 return ReturnResult.error("余额不足");
             }
             return transactionTemplate.execute(it -> {
-                PayMerchantOrder payMerchantOrder = createOrderObject(request, payUserWallet, openId);
-                CreateOrderV2Response createOrderV2Response = new CreateOrderV2Response(payMerchantOrder.getPayMerchantOrderCode(), null);
+                PayMerchantOrder payMerchantOrder = createOrderObject(request, payUserWallet, openId, PayTradeType.PAY_WALLET, PayOrderStatus.PAY_SUCCESS);
+                CreateOrderV2Response createOrderV2Response = new CreateOrderV2Response(payMerchantOrder.getPayMerchantOrderCode());
                 payUserWalletService.updateWallet(userId, payMerchantOrder);
                 return ReturnResult.ok(createOrderV2Response);
             });
@@ -74,7 +74,11 @@ public class WalletCreateOrderAdaptor implements CreateOrderAdaptor{
      * @param openId openId
      * @return 订单
      */
-    private PayMerchantOrder createOrderObject(CreateOrderV2Request request, PayUserWallet payUserWallet, String openId) {
+    protected PayMerchantOrder createOrderObject(CreateOrderV2Request request,
+                                               PayUserWallet payUserWallet,
+                                               String openId,
+                                               PayTradeType payTradeType,
+                                               PayOrderStatus payOrderStatus) {
         PayMerchantOrder payMerchantOrder = new PayMerchantOrder();
         payMerchantOrder.setPayMerchantOrderCode("P" + IdUtils.createTimeId(31));
         payMerchantOrder.setPayMerchantOrderOpenid(openId);
@@ -89,9 +93,9 @@ public class WalletCreateOrderAdaptor implements CreateOrderAdaptor{
             payMerchantOrder.setPayMerchantOrderBrowser(userAgent.getBrowser().toString());
         } catch (Exception ignored) {
         }
-        payMerchantOrder.setPayMerchantTradeType(PayTradeType.PAY_WALLET);
+        payMerchantOrder.setPayMerchantTradeType(payTradeType);
         payMerchantOrder.setPayMerchantOrderOriginId(request.getOriginalDataId());
-        payMerchantOrder.setPayMerchantOrderStatus(PayOrderStatus.PAY_SUCCESS);
+        payMerchantOrder.setPayMerchantOrderStatus(payOrderStatus);
         payMerchantOrder.setPayMerchantId(request.getPayMerchantId());
         payMerchantOrder.setPayMerchantCurrentWalletAmount(payUserWallet.getPayUserWalletAmount());
         payMerchantOrderService.saveOrder(payMerchantOrder);

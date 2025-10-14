@@ -91,11 +91,19 @@ public class PayMerchantOrder extends SysBase implements Serializable {
     private Integer payMerchantOrderProject;
 
     /**
-     * 订单金额(保留4位，实际支付四舍)
+     * 订单实际支付金额(保留4位，实际支付四舍)
      */
     @TableField(value = "pay_merchant_order_amount")
-    @Schema(description="订单金额(保留4位，实际支付四舍)")
+    @Schema(description="订单实际支付金额(保留4位，实际支付四舍)")
     private BigDecimal payMerchantOrderAmount;
+
+
+    /**
+     * 订单原始金额(保留4位，实际支付四舍)
+     */
+    @TableField(value = "pay_merchant_order_origin_amount")
+    @Schema(description="订单原始金额(保留4位，实际支付四舍)")
+    private BigDecimal payMerchantOrderOriginAmount;
 
     /**
      * 支付时间

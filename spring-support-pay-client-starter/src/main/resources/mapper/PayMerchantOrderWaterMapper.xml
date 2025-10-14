@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.pay.support.mapper.PayMerchantOrderWaterMapper">
+  <resultMap id="BaseResultMap" type="com.chua.starter.pay.support.entity.PayMerchantOrderWater">
+    <!--@mbg.generated-->
+    <!--@Table pay_merchant_order_water-->
+    <id column="pay_merchant_order_water_id" jdbcType="INTEGER" property="payMerchantOrderWaterId" />
+    <result column="pay_merchant_order_water_code" jdbcType="VARCHAR" property="payMerchantOrderWaterCode" />
+    <result column="pay_merchant_order_code" jdbcType="VARCHAR" property="payMerchantOrderCode" />
+    <result column="pay_merchant_order_status" jdbcType="VARCHAR" property="payMerchantOrderStatus" />
+    <result column="create_name" jdbcType="VARCHAR" property="createName" />
+    <result column="create_by" jdbcType="INTEGER" property="createBy" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+    <result column="update_name" jdbcType="VARCHAR" property="updateName" />
+    <result column="update_by" jdbcType="INTEGER" property="updateBy" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    pay_merchant_order_water_id, pay_merchant_order_water_code, pay_merchant_order_code, 
+    pay_merchant_order_status, create_name, create_by, create_time, update_time, update_name, 
+    update_by
+  </sql>
+</mapper>

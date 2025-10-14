@@ -48,4 +48,12 @@ public interface PayMerchantOrderService extends IService<PayMerchantOrder> {
      * @return 订单信息
      */
     PayMerchantOrder getByCode(String payMerchantOrderCode);
+
+    /**
+     * 更新微信订单信息
+     *
+     * @param merchantOrder 订单信息
+     * @return 更新结果 true-更新成功 false-更新失败
+     */
+    boolean updateWechatOrder(PayMerchantOrder merchantOrder);
 }

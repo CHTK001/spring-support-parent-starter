@@ -1,0 +1,57 @@
+
+package com.chua.starter.pay.support.callback;
+
+import lombok.Data;
+
+import java.io.Serializable;
+
+/**
+ * 订单回调
+ * @author CH
+ * @since 2024/12/31
+ */
+@Data
+public class OrderCallbackRequest implements Serializable {
+
+    /**
+     * 订单号
+     */
+    private String dataId;
+    /**
+     * 业务订单号
+     */
+    private String outTradeId;
+    /**
+     * 状态
+     */
+    private Status status;
+
+    /**
+     * 业务状态
+     */
+    private Status businessStatus;
+
+    /**
+     * 支付单号
+     */
+    private String transactionId;
+
+    /**
+     * 错误信息
+     */
+    private String message;
+
+
+    public enum Status {
+
+        /**
+         * 成功
+         */
+        SUCCESS,
+
+        /**
+         * 失败
+         */
+        FAILURE
+    }
+}
