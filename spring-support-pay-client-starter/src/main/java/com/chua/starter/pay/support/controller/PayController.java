@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class PayController {
 
-    private PayMerchantOrderService payMerchantOrderService;
+    private final PayMerchantOrderService payMerchantOrderService;
 
     /**
      * 创建订单
