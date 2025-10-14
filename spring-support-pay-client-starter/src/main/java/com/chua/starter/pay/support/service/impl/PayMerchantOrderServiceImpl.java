@@ -8,6 +8,7 @@ import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.chua.starter.pay.support.entity.PayMerchantOrderWater;
 import com.chua.starter.pay.support.enums.PayOrderStatus;
+import com.chua.starter.pay.support.event.FinishOrderPayEvent;
 import com.chua.starter.pay.support.order.CreateOrderAdaptor;
 import com.chua.starter.pay.support.order.CreateSignAdaptor;
 import com.chua.starter.pay.support.pojo.CreateOrderV2Request;
@@ -17,12 +18,15 @@ import com.chua.starter.pay.support.postprocessor.PayCreateOrderPostprocessor;
 import com.chua.starter.pay.support.preprocess.PayCreateOrderPreprocess;
 import com.chua.starter.pay.support.service.PayMerchantOrderWaterService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.starter.pay.support.mapper.PayMerchantOrderMapper;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.service.PayMerchantOrderService;
 import org.springframework.transaction.support.TransactionTemplate;
+
+import java.time.LocalDateTime;
 
 /**
  *
@@ -35,6 +39,7 @@ public class PayMerchantOrderServiceImpl extends ServiceImpl<PayMerchantOrderMap
 
     final TransactionTemplate transactionTemplate;
     final PayMerchantOrderWaterService payMerchantOrderWaterService;
+    final ApplicationContext applicationContext;
 
     @Override
     public ReturnResult<CreateOrderV2Response> createOrder(CreateOrderV2Request request) {
@@ -94,11 +99,36 @@ public class PayMerchantOrderServiceImpl extends ServiceImpl<PayMerchantOrderMap
         if(null == createSignAdaptor) {
             return ReturnResult.illegal("当前订单不支持签名");
         }
-        return createSignAdaptor.createSign(merchantOrder, request.getPrepayId());
+        ReturnResult<PaySignResponse> sign = createSignAdaptor.createSign(merchantOrder, request.getPrepayId());
+        if(sign.isSuccess()) {
+            merchantOrder.setPayMerchantOrderPayTime(LocalDateTime.now());
+            merchantOrder.setPayMerchantOrderStatus(PayOrderStatus.PAY_WAITING);
+            this.updateById(merchantOrder);
+        }
+        return sign;
     }
 
     @Override
     public PayMerchantOrder getByCode(String payMerchantOrderCode) {
         return this.getOne(Wrappers.<PayMerchantOrder>lambdaQuery().eq(PayMerchantOrder::getPayMerchantOrderCode, payMerchantOrderCode), false);
+    }
+
+    @Override
+    public boolean updateWechatOrder(PayMerchantOrder payMerchantOrder) {
+        return Boolean.TRUE.equals(transactionTemplate.execute(status -> {
+            payMerchantOrder.setPayMerchantOrderFinishedTime(LocalDateTime.now());
+            this.updateById(payMerchantOrder);
+            PayMerchantOrderWater payMerchantOrderWater = new PayMerchantOrderWater();
+            payMerchantOrderWater.setPayMerchantOrderCode(payMerchantOrder.getPayMerchantOrderCode());
+            payMerchantOrderWater.setPayMerchantOrderStatus(payMerchantOrder.getPayMerchantOrderStatus());
+            payMerchantOrderWater.setPayMerchantOrderWaterCode("W" + IdUtils.createTimeId(31));
+            boolean save = payMerchantOrderWaterService.save(payMerchantOrderWater);
+            if(save) {
+                FinishOrderPayEvent finishOrderPayEvent = new FinishOrderPayEvent(payMerchantOrder.getPayMerchantOrderCode());
+                finishOrderPayEvent.setPayMerchantOrder(payMerchantOrder);
+                applicationContext.publishEvent(finishOrderPayEvent);
+            }
+            return save;
+        }));
     }
 }
