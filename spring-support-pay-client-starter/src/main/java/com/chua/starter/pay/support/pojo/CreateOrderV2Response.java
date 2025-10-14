@@ -2,11 +2,10 @@ package com.chua.starter.pay.support.pojo;
 
 import com.chua.common.support.validator.group.AddGroup;
 import io.swagger.annotations.ApiModelProperty;
-import jakarta.annotation.Nonnull;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 
 import java.io.Serializable;
@@ -31,6 +30,11 @@ public class CreateOrderV2Response implements Serializable {
      * 预支付ID
      */
     @ApiModelProperty("预支付ID")
-    @NotNull(message = "预支付ID不能为空", groups = {AddGroup.class})
     private String prepayId;
+
+    /**
+     * H5支付地址
+     */
+    @Schema(description = "支付地址")
+    private String url;
 }

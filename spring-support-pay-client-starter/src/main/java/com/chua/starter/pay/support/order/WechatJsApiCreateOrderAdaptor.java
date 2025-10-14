@@ -32,12 +32,12 @@ import java.math.RoundingMode;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 钱包创建订单适配器
+ * 微信小程序支付
  *
  * @author CH
  * @since 2025/10/14 13:51
  */
-@Spi("pay_wallet")
+@Spi("wechat_js_api")
 public class WechatJsApiCreateOrderAdaptor extends WalletCreateOrderAdaptor {
 
     @AutoInject
