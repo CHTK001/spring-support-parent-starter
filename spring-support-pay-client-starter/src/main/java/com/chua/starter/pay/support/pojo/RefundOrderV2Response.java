@@ -12,7 +12,7 @@ import lombok.Data;
  * @since 2025/10/14 16:31
  */
 @Data
-@Schema(title = "订单退款")
+@Schema(description = "订单退款")
 public class RefundOrderV2Response {
 
     /**
