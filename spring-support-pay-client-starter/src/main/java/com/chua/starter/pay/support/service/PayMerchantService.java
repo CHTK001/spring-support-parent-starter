@@ -6,6 +6,8 @@ import com.chua.starter.pay.support.entity.PayMerchant;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.starter.pay.support.pojo.PayMerchantWrapper;
 
+import java.util.List;
+
 /**
  * 商户服务接口
  *
@@ -55,4 +57,10 @@ public interface PayMerchantService extends IService<PayMerchant> {
      */
     IPage<PayMerchant> pageForMerchant(Query<PayMerchant> page, PayMerchant payMerchant);
 
+    /**
+     * 获取所有有效的商户信息
+     *
+     * @return 商户信息
+     */
+    List<PayMerchant> allEffective();
 }

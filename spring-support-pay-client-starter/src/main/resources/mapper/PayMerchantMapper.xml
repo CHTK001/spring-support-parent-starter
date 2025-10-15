@@ -11,6 +11,8 @@
     <result column="pay_merchant_status" jdbcType="INTEGER" property="payMerchantStatus" />
     <result column="pay_merchant_delete" jdbcType="INTEGER" property="payMerchantDelete" />
     <result column="pay_merchant_open_wallet" jdbcType="INTEGER" property="payMerchantOpenWallet" />
+    <result column="pay_merchant_open_timeout" jdbcType="INTEGER" property="payMerchantOpenTimeout" />
+    <result column="pay_merchant_open_timeout_time" jdbcType="INTEGER" property="payMerchantOpenTimeoutTime" />
     <result column="create_name" jdbcType="VARCHAR" property="createName" />
     <result column="create_by" jdbcType="INTEGER" property="createBy" />
     <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
@@ -21,7 +23,7 @@
   <sql id="Base_Column_List">
     <!--@mbg.generated-->
     pay_merchant_id, pay_merchant_name, pay_merchant_code, pay_merchant_remark, pay_merchant_status, 
-    pay_merchant_delete, pay_merchant_open_wallet, create_name, create_by, create_time, 
-    update_time, update_name, update_by
+    pay_merchant_delete, pay_merchant_open_wallet, pay_merchant_open_timeout, pay_merchant_open_timeout_time, 
+    create_name, create_by, create_time, update_time, update_name, update_by
   </sql>
 </mapper>

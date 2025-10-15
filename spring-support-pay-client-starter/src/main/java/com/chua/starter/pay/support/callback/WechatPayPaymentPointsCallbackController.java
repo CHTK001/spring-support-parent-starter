@@ -9,6 +9,7 @@ import com.chua.starter.pay.support.callback.parser.WebchatCallbackTransferNotif
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.pojo.PayMerchantConfigWechatWrapper;
 import com.chua.starter.pay.support.service.PayMerchantConfigWechatService;
+import com.chua.starter.pay.support.service.PayMerchantFailureRecordService;
 import com.chua.starter.pay.support.service.PayMerchantOrderService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -40,6 +41,7 @@ public class WechatPayPaymentPointsCallbackController {
 
     final PayMerchantOrderService payMerchantOrderService;
     final PayMerchantConfigWechatService payMerchantConfigWechatService;
+    final PayMerchantFailureRecordService payMerchantFailureRecordService;
 
     /**
      * 微信支付订单结果通知
@@ -78,7 +80,8 @@ public class WechatPayPaymentPointsCallbackController {
                 wechatPaySerial,
                 wechatTimestamp,
                 wechatpaySignatureType,
-                payMerchantOrderService);
+                payMerchantOrderService,
+                payMerchantFailureRecordService);
         WechatOrderCallbackResponse response = null;
         try {
             response = parser.parse();
