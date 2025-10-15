@@ -53,7 +53,11 @@ public enum PayOrderStatus implements SwaggerEnum {
     /**
      * 部分退款
      */
-    PAY_REFUND_PART_SUCCESS("6001", "订单部分退款")
+    PAY_REFUND_PART_SUCCESS("6001", "订单部分退款"),
+    /**
+     * 订单退款失败
+     */
+    PAY_REFUND_WAITING("6002", "订单退款失败")
     ;
 
     private final String code;

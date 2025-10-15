@@ -18,7 +18,6 @@ import java.math.BigDecimal;
 @Schema(name = "创建订单")
 public class CreateOrderV2Request {
 
-
     /**
      * 交易类型
      */

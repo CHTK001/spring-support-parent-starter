@@ -80,4 +80,14 @@ public class PayController {
         }
         return payMerchantOrderService.refundOrderToWallet(payMerchantOrderCode, request);
     }
+
+
+    /**
+     * 关闭订单
+     */
+    @PutMapping("/closeOrder/{payMerchantOrderCode}")
+    @Operation(summary = "关闭订单")
+    public ReturnResult<Boolean> closeOrder(@PathVariable String payMerchantOrderCode) {
+        return payMerchantOrderService.closeOrder(payMerchantOrderCode);
+    }
 }

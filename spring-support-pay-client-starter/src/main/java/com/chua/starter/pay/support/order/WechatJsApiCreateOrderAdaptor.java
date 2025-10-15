@@ -37,7 +37,7 @@ import java.util.concurrent.TimeUnit;
  * @author CH
  * @since 2025/10/14 13:51
  */
-@Spi("pay_wechat_js_api")
+@Spi({"pay_wechat_js_api", "WECHAT_PREPAYMENT"})
 public class WechatJsApiCreateOrderAdaptor extends WalletCreateOrderAdaptor {
 
     @AutoInject
@@ -117,7 +117,7 @@ public class WechatJsApiCreateOrderAdaptor extends WalletCreateOrderAdaptor {
         request.setAmount(amount);
         request.setAppid(payMerchantConfigWechat.getPayMerchantConfigWechatAppId());
         request.setMchid(payMerchantConfigWechat.getPayMerchantConfigWechatMchId());
-        request.setNotifyUrl(payMerchantConfigWechat.getPayMerchantConfigWechatPayNotifyUrl()+ "/" +payMerchantOrder.getPayMerchantOrderCode());
+        request.setNotifyUrl(payMerchantConfigWechat.getPayMerchantConfigWechatPayNotifyUrl() + "/" + payMerchantOrder.getPayMerchantOrderCode());
         request.setOutTradeNo(payMerchantOrder.getPayMerchantOrderCode());
         request.setAttach(payMerchantOrder.getPayMerchantOrderAttach());
 

@@ -46,7 +46,7 @@ public interface PayMerchantOrderService extends IService<PayMerchantOrder> {
     PayMerchantOrder getByCode(String payMerchantOrderCode);
 
     /**
-     * 更新微信订单信息
+     * 更新微信订单信息(状态由调用方设置)
      *
      * @param merchantOrder 订单信息
      * @return 更新结果 true-更新成功 false-更新失败
@@ -86,4 +86,12 @@ public interface PayMerchantOrderService extends IService<PayMerchantOrder> {
      * @return 订单超时数量
      */
     int timeout(Integer payMerchantId, Integer payMerchantOpenTimeoutTime);
+
+    /**
+     * 关闭订单
+     *
+     * @param payMerchantOrderCode 订单编号
+     * @return 关闭结果
+     */
+    ReturnResult<Boolean> closeOrder(String payMerchantOrderCode);
 }
