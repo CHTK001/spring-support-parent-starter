@@ -128,7 +128,7 @@ public class WebchatCallbackRefundNotificationParser implements CallbackNotifica
 
             merchantOrder.setPayMerchantOrderRefundCode(refund.getRefundId());
             merchantOrder.setPayMerchantOrderStatus(PayOrderStatus.PAY_REFUND_SUCCESS);
-            payMerchantOrderService.updateWechatOrder(merchantOrder);
+            payMerchantOrderService.finishWechatOrder(merchantOrder);
             return new WechatOrderCallbackResponse("SUCCESS", "OK", null);
         } catch (Exception e) {
             // 签名验证失败，返回 401 UNAUTHORIZED 状态码

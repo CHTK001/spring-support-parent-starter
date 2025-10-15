@@ -68,12 +68,7 @@ public class WechatJsApiRefundOrderAdaptor implements RefundOrderAdaptor {
         try {
             return transactionTemplate.execute(it -> {
                 RefundOrderV2Response refundOrderV2Response = refundOrderItem(payMerchantConfigWechat, merchantOrder, request);
-                merchantOrder.setPayMerchantOrderStatus(PayOrderStatus.PAY_REFUND_SUCCESS);
-                merchantOrder.setPayMerchantOrderRefundCreateTime(LocalDateTime.now());
-                merchantOrder.setPayMerchantOrderRefundCode(refundOrderV2Response.getOutRefundNo());
-                merchantOrder.setPayMerchantOrderRefundReason(request.getRefundReason());
-                merchantOrder.setPayMerchantOrderRefundUserReceivedAccount(merchantOrder.getPayMerchantOrderOpenid());
-                payMerchantOrderService.updateRefundOrder(merchantOrder);
+                updateRefundOrder(merchantOrder, refundOrderV2Response, request);
                 return ReturnResult.ok(refundOrderV2Response);
             });
         } catch (Exception e) {
@@ -81,6 +76,49 @@ public class WechatJsApiRefundOrderAdaptor implements RefundOrderAdaptor {
         } finally {
             lock.unlock();
         }
+    }
+
+    /**
+     * 更新订单
+     *
+     * @param merchantOrder         支付订单
+     * @param refundOrderV2Response 退款结果
+     * @param request               退款请求
+     */
+    private void updateRefundOrder(PayMerchantOrder merchantOrder, RefundOrderV2Response refundOrderV2Response, RefundOrderV2Request request) {
+        PayRefundStatus status = refundOrderV2Response.getStatus();
+        if(status == PayRefundStatus.SUCCESS) {
+            merchantOrder.setPayMerchantOrderStatus(PayOrderStatus.PAY_REFUND_SUCCESS);
+            merchantOrder.setPayMerchantOrderRefundSuccessTime(refundOrderV2Response.getSuccessTime());
+            merchantOrder.setPayMerchantOrderRefundCreateTime(LocalDateTime.now());
+            merchantOrder.setPayMerchantOrderRefundCode(refundOrderV2Response.getOutRefundNo());
+            merchantOrder.setPayMerchantOrderRefundReason(request.getRefundReason());
+            merchantOrder.setPayMerchantOrderRefundUserReceivedAccount(merchantOrder.getPayMerchantOrderOpenid());
+            payMerchantOrderService.refundOrder(merchantOrder);
+            return;
+        }
+
+        if(status == PayRefundStatus.PROCESSING) {
+            merchantOrder.setPayMerchantOrderStatus(PayOrderStatus.PAY_REFUND_WAITING);
+            merchantOrder.setPayMerchantOrderRefundCreateTime(LocalDateTime.now());
+            merchantOrder.setPayMerchantOrderRefundCode(refundOrderV2Response.getOutRefundNo());
+            merchantOrder.setPayMerchantOrderRefundReason(request.getRefundReason());
+            merchantOrder.setPayMerchantOrderRefundUserReceivedAccount(merchantOrder.getPayMerchantOrderOpenid());
+            payMerchantOrderService.updateById(merchantOrder);
+            return;
+        }
+
+        if(status == PayRefundStatus.CLOSED) {
+            merchantOrder.setPayMerchantOrderStatus(PayOrderStatus.PAY_CLOSE_SUCCESS);
+            merchantOrder.setPayMerchantOrderRefundCreateTime(LocalDateTime.now());
+            merchantOrder.setPayMerchantOrderRefundSuccessTime(refundOrderV2Response.getSuccessTime());
+            merchantOrder.setPayMerchantOrderRefundCode(refundOrderV2Response.getOutRefundNo());
+            merchantOrder.setPayMerchantOrderRefundReason(request.getRefundReason());
+            merchantOrder.setPayMerchantOrderRefundUserReceivedAccount(merchantOrder.getPayMerchantOrderOpenid());
+            payMerchantOrderService.updateById(merchantOrder);
+            return;
+        }
+
     }
 
     /**

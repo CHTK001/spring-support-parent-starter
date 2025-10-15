@@ -3,6 +3,8 @@ package com.chua.starter.pay.support.controller;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.common.support.validator.group.UpdateGroup;
+import com.chua.starter.pay.support.entity.PayMerchantOrder;
+import com.chua.starter.pay.support.enums.PayOrderStatus;
 import com.chua.starter.pay.support.pojo.*;
 import com.chua.starter.pay.support.service.PayMerchantOrderService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,10 +35,26 @@ public class PayController {
      */
     @PutMapping("createOrder")
     @Operation(summary = "创建订单")
-    public ReturnResult<CreateOrderV2Response> createOrder(CreateOrderV2Request request) {
+    public ReturnResult<CreateOrderV2Response> createOrder(@Validated(AddGroup.class)  @RequestBody CreateOrderV2Request request,  BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
+        }
        return payMerchantOrderService.createOrder(request);
     }
 
+
+    /**
+     * 获取订单状态
+     */
+    @PutMapping("/getOrderStatus")
+    @Operation(summary = "获取订单状态")
+    public ReturnResult<PayOrderStatus> getOrderStatus(@Validated(UpdateGroup.class) @RequestBody PayOrderStatusRequest request,
+                                                      BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
+        }
+        return ReturnResult.success(payMerchantOrderService.getOrderStatus(request.getPayMerchantOrderCode()));
+     }
 
     /**
      * 创建签名

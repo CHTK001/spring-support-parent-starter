@@ -14,15 +14,21 @@ import com.chua.starter.pay.support.enums.PayOrderStatus;
 import com.chua.starter.pay.support.enums.PayTradeType;
 import com.chua.starter.pay.support.pojo.CreateOrderV2Request;
 import com.chua.starter.pay.support.pojo.CreateOrderV2Response;
+import com.chua.starter.pay.support.postprocessor.PayCreateOrderPostprocessor;
 import com.chua.starter.pay.support.service.PayMerchantOrderService;
 import com.chua.starter.pay.support.service.PayUserWalletService;
 import com.chua.starter.pay.support.service.impl.PayUserWalletServiceImpl;
+import com.wechat.pay.java.core.http.JsonRequestBody;
+import com.wechat.pay.java.core.http.RequestBody;
 import jakarta.servlet.http.HttpServletRequest;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
+
+import static com.wechat.pay.java.core.util.GsonUtil.toJson;
 
 /**
  * 钱包创建订单适配器
@@ -58,6 +64,8 @@ public class WalletCreateOrderAdaptor implements CreateOrderAdaptor{
                 PayMerchantOrder payMerchantOrder = createOrderObject(request, payUserWallet, openId, PayTradeType.PAY_WALLET, PayOrderStatus.PAY_SUCCESS);
                 CreateOrderV2Response createOrderV2Response = new CreateOrderV2Response(payMerchantOrder.getPayMerchantOrderCode());
                 payUserWalletService.updateWallet(userId, payMerchantOrder);
+                PayCreateOrderPostprocessor postprocessor = PayCreateOrderPostprocessor.createProcessor();
+                postprocessor.publish(payMerchantOrder);
                 return ReturnResult.ok(createOrderV2Response);
             });
         } catch (Exception e) {
@@ -85,6 +93,7 @@ public class WalletCreateOrderAdaptor implements CreateOrderAdaptor{
         payMerchantOrder.setPayMerchantOrderAmount(request.getAmount());
         payMerchantOrder.setPayMerchantOrderType(request.getPayMerchantOrderType());
         payMerchantOrder.setPayMerchantOrderProject(request.getPayMerchantOrderProject());
+        payMerchantOrder.setPayMerchantOrderCreateTime(LocalDateTime.now());
         try {
             HttpServletRequest servletRequest = RequestUtils.getRequest();
             String header = servletRequest.getHeader("user-agent");
@@ -98,7 +107,20 @@ public class WalletCreateOrderAdaptor implements CreateOrderAdaptor{
         payMerchantOrder.setPayMerchantOrderStatus(payOrderStatus);
         payMerchantOrder.setPayMerchantId(request.getPayMerchantId());
         payMerchantOrder.setPayMerchantCurrentWalletAmount(payUserWallet.getPayUserWalletAmount());
+        if(payOrderStatus == PayOrderStatus.PAY_SUCCESS) {
+            payMerchantOrder.setPayMerchantOrderPayTime(LocalDateTime.now());
+            payMerchantOrder.setPayMerchantOrderFinishedTime(LocalDateTime.now());
+        }
         payMerchantOrderService.saveOrder(payMerchantOrder);
         return payMerchantOrder;
+    }
+
+    /**
+     * 创建请求体
+     * @param request 请求
+     * @return 请求体
+     */
+    protected RequestBody createRequestBody(Object request) {
+        return new JsonRequestBody.Builder().body(toJson(request)).build();
     }
 }

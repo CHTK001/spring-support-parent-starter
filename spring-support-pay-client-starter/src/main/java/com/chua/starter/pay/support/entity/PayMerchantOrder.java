@@ -113,6 +113,12 @@ public class PayMerchantOrder extends SysBase implements Serializable {
     private LocalDateTime payMerchantOrderPayTime;
 
     /**
+     * 创建时间
+     */
+    @TableField(value = "pay_merchant_order_create_time")
+    @Schema(description="创建时间")
+    private LocalDateTime payMerchantOrderCreateTime;
+    /**
      * 完成时间
      */
     @TableField(value = "pay_merchant_order_finished_time")
@@ -126,6 +132,12 @@ public class PayMerchantOrder extends SysBase implements Serializable {
     @Schema(description="订单状态")
     private PayOrderStatus payMerchantOrderStatus;
 
+    /**
+     * 订单失败原因
+     */
+    @TableField(value = "pay_merchant_order_failure_reason")
+    @Schema(description="订单失败原因")
+    private String payMerchantOrderFailureReason;
 
     /**
      * 交易类型

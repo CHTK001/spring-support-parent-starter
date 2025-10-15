@@ -12,6 +12,7 @@ import com.chua.starter.pay.support.enums.PayTradeType;
 import com.chua.starter.pay.support.pojo.CreateOrderV2Request;
 import com.chua.starter.pay.support.pojo.CreateOrderV2Response;
 import com.chua.starter.pay.support.pojo.PayMerchantConfigWechatWrapper;
+import com.chua.starter.pay.support.postprocessor.PayCreateOrderPostprocessor;
 import com.chua.starter.pay.support.service.PayMerchantConfigWechatService;
 import com.chua.starter.pay.support.service.PayMerchantOrderService;
 import com.chua.starter.pay.support.service.PayUserWalletService;
@@ -99,6 +100,8 @@ public class WechatJsApiCreateOrderAdaptor extends WalletCreateOrderAdaptor {
 
         CreateOrderV2Response payOrderResponse = new CreateOrderV2Response(payMerchantOrder.getPayMerchantOrderCode());
         payOrderResponse.setPrepayId(response.getPrepayId());
+        PayCreateOrderPostprocessor postprocessor = PayCreateOrderPostprocessor.createProcessor();
+        postprocessor.publish(payMerchantOrder);
         return ReturnResult.ok(payOrderResponse);
     }
 

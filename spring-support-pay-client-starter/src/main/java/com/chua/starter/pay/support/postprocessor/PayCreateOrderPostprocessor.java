@@ -2,8 +2,10 @@ package com.chua.starter.pay.support.postprocessor;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.pojo.CreateOrderV2Request;
 import com.chua.starter.pay.support.pojo.CreateOrderV2Response;
+import lombok.Data;
 
 /**
  * 订单预处理
@@ -32,5 +34,5 @@ public interface PayCreateOrderPostprocessor {
      *             "data": "PRE_ORDER_20251014001"
      *             }
      */
-    void publish(CreateOrderV2Response data);
+    void publish(PayMerchantOrder data);
 }

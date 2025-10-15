@@ -4,6 +4,8 @@ import com.chua.starter.swagger.support.SwaggerEnum;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import java.io.Serializable;
+
 /**
  * 订单状态
  * @author CH
@@ -11,12 +13,21 @@ import lombok.Getter;
  */
 @Getter
 @AllArgsConstructor
-public enum PayOrderStatus implements SwaggerEnum {
+public enum PayOrderStatus implements SwaggerEnum, Serializable {
 
+    /**
+     * 订单不存在
+     */
+    PAY_NOT_EXIST("9999", "订单不存在"),
     /**
      * 创建
      */
     PAY_CREATE("0000", "创建"),
+
+    /**
+     * 创建失败
+     */
+    PAY_CREATE_FAILED("0100", "订单创建失败"),
     /**
      * 待支付
      */
@@ -57,7 +68,7 @@ public enum PayOrderStatus implements SwaggerEnum {
     /**
      * 订单退款失败
      */
-    PAY_REFUND_WAITING("6002", "订单退款失败")
+    PAY_REFUND_WAITING("6002", "正在退款"),
     ;
 
     private final String code;

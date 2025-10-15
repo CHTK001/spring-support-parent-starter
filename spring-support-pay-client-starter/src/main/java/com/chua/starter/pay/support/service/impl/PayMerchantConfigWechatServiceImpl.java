@@ -9,7 +9,8 @@ import com.chua.starter.pay.support.entity.PayMerchantConfigWechat;
 import com.chua.starter.pay.support.mapper.PayMerchantConfigWechatMapper;
 import com.chua.starter.pay.support.service.PayMerchantConfigWechatService;
 
-import static com.chua.starter.common.support.constant.CacheConstant.SYSTEM;
+import static com.chua.starter.common.support.constant.CacheConstant.CACHE_MANAGER_FOR_SYSTEM;
+import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE_ALWAYS;
 
 /**
  *
@@ -20,7 +21,7 @@ import static com.chua.starter.common.support.constant.CacheConstant.SYSTEM;
 public class PayMerchantConfigWechatServiceImpl extends ServiceImpl<PayMerchantConfigWechatMapper, PayMerchantConfigWechat> implements PayMerchantConfigWechatService{
 
     @Override
-    @Cacheable(cacheManager = SYSTEM, cacheNames = SYSTEM, key = "'PAY:WECHAT:' + #wechatType + '-' + #payMerchantId", keyGenerator = "customTenantedKeyGenerator")
+    @Cacheable(cacheManager = CACHE_MANAGER_FOR_SYSTEM, cacheNames = REDIS_CACHE_ALWAYS, key = "'PAY:WECHAT:' + #wechatType + '-' + #payMerchantId", keyGenerator = "customTenantedKeyGenerator")
     public PayMerchantConfigWechatWrapper getByCodeForPayMerchantConfigWechat(Integer payMerchantId, String wechatType) {
         return new PayMerchantConfigWechatWrapper(
                 this.getOne(Wrappers.<PayMerchantConfigWechat>lambdaQuery().eq(PayMerchantConfigWechat::getPayMerchantId, payMerchantId).eq(PayMerchantConfigWechat::getPayMerchantConfigWechatTradeType, wechatType), false)
@@ -28,7 +29,7 @@ public class PayMerchantConfigWechatServiceImpl extends ServiceImpl<PayMerchantC
     }
 
     @Override
-    @Cacheable(cacheManager = SYSTEM, cacheNames = SYSTEM, key = "'PAY:WECHAT:' + #payMerchantConfigWechat.payMerchantConfigWechatTradeType + '-' + #payMerchantConfigWechat.payMerchantId", keyGenerator = "customTenantedKeyGenerator")
+    @Cacheable(cacheManager = CACHE_MANAGER_FOR_SYSTEM, cacheNames = REDIS_CACHE_ALWAYS, key = "'PAY:WECHAT:' + #payMerchantConfigWechat.payMerchantConfigWechatTradeType + '-' + #payMerchantConfigWechat.payMerchantId", keyGenerator = "customTenantedKeyGenerator")
     public PayMerchantConfigWechat updateForPayMerchantConfigWechat(PayMerchantConfigWechat payMerchantConfigWechat) {
         updateById(payMerchantConfigWechat);
         return payMerchantConfigWechat;

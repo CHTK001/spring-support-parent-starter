@@ -6,6 +6,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.pay.support.pojo.CreateOrderV2Request;
 
 /**
+ * 订单预处理
  * @author CH
  * @since 2025/10/14 14:19
  */

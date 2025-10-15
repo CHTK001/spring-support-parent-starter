@@ -7,9 +7,11 @@ import com.chua.starter.pay.support.callback.WechatOrderCallbackResponse;
 import com.chua.starter.pay.support.entity.PayMerchantConfigWechat;
 import com.chua.starter.pay.support.entity.PayMerchantFailureRecord;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
+import com.chua.starter.pay.support.entity.PayMerchantTransferRecord;
 import com.chua.starter.pay.support.pojo.PayMerchantConfigWechatWrapper;
 import com.chua.starter.pay.support.service.PayMerchantFailureRecordService;
 import com.chua.starter.pay.support.service.PayMerchantOrderService;
+import com.chua.starter.pay.support.service.PayMerchantTransferRecordService;
 import com.wechat.pay.java.core.RSAAutoCertificateConfig;
 import com.wechat.pay.java.core.notification.NotificationConfig;
 import com.wechat.pay.java.core.notification.NotificationParser;
@@ -27,7 +29,7 @@ import java.time.LocalDateTime;
 @Slf4j
 public class WebchatCallbackTransferNotificationParser implements CallbackNotificationParser {
 
-    private final PayMerchantOrder merchantOrder;
+    private final PayMerchantTransferRecord merchantOrder;
     private final String requestBody;
     private final String wechatSignature;
     private final String wechatpayNonce;
@@ -36,12 +38,12 @@ public class WebchatCallbackTransferNotificationParser implements CallbackNotifi
     private final String wechatpaySignatureType;
     private final OrderCallbackRequest request = new OrderCallbackRequest();
     private final WechatOrderCallbackRequest wechatOrderCallbackRequest;
-    private final PayMerchantOrderService payMerchantOrderService;
+    private final PayMerchantTransferRecordService transferRecordService;
     private final PayMerchantFailureRecordService payMerchantFailureRecordService;
     private final PayMerchantConfigWechat payMerchantConfigWechat;
 
     public WebchatCallbackTransferNotificationParser(
-            PayMerchantOrder merchantOrder,
+            PayMerchantTransferRecord merchantOrder,
             PayMerchantConfigWechatWrapper byCodeForPayMerchantConfigWechat,
             String requestBody,
             String wechatSignature,
@@ -49,7 +51,7 @@ public class WebchatCallbackTransferNotificationParser implements CallbackNotifi
             String wechatPaySerial,
             String wechatTimestamp,
             String wechatpaySignatureType,
-            PayMerchantOrderService payMerchantOrderService,
+            PayMerchantTransferRecordService transferRecordService,
             PayMerchantFailureRecordService payMerchantFailureRecordService) {
         this.merchantOrder = merchantOrder;
         this.requestBody = requestBody;
@@ -60,7 +62,7 @@ public class WebchatCallbackTransferNotificationParser implements CallbackNotifi
         this.wechatTimestamp = wechatTimestamp;
         this.wechatpaySignatureType = wechatpaySignatureType;
         this.wechatOrderCallbackRequest = JSON.parseObject(requestBody, WechatOrderCallbackRequest.class);
-        this.payMerchantOrderService = payMerchantOrderService;
+        this.transferRecordService = transferRecordService;
         this.payMerchantFailureRecordService = payMerchantFailureRecordService;
         request.setStatus("TRANSACTION.SUCCESS".equals(wechatOrderCallbackRequest.getEventType()) ? OrderCallbackRequest.Status.SUCCESS : OrderCallbackRequest.Status.FAILURE);
         request.setBusinessStatus("TRANSACTION.SUCCESS".equals(wechatOrderCallbackRequest.getEventType()) ? OrderCallbackRequest.Status.SUCCESS : OrderCallbackRequest.Status.FAILURE);
@@ -105,7 +107,9 @@ public class WebchatCallbackTransferNotificationParser implements CallbackNotifi
         // 初始化 NotificationParser
         NotificationParser notificationParser = new NotificationParser(config);
         try {
-
+            merchantOrder.setPayMerchantTransferRecordStatus("SUCCESS");
+            merchantOrder.setPayMerchantTransferRecordFinishTime(LocalDateTime.now());
+            transferRecordService.updateById(merchantOrder);
             return new WechatOrderCallbackResponse("SUCCESS", "OK", null);
         } catch (Exception e) {
             // 签名验证失败，返回 401 UNAUTHORIZED 状态码
@@ -128,9 +132,9 @@ public class WebchatCallbackTransferNotificationParser implements CallbackNotifi
         record.setPayMerchantFailureRecordSignatureType(wechatpaySignatureType);
         record.setPayMerchantFailureRecordNonce(wechatpayNonce);
         record.setPayMerchantFailureRecordSerial(wechatPaySerial);
-        record.setPayMerchantMerchantOrderCode(merchantOrder.getPayMerchantOrderCode());
+        record.setPayMerchantMerchantOrderCode(merchantOrder.getPayMerchantTransferRecordCode());
         record.setPayMerchantFailureReason(e.getMessage());
-        record.setPayMerchantFailureType("WECHAT_PAY");
+        record.setPayMerchantFailureType("WECHAT_TRANSFER");
         record.setCreateTime(LocalDateTime.now());
         record.setUpdateTime(LocalDateTime.now());
         return record;
