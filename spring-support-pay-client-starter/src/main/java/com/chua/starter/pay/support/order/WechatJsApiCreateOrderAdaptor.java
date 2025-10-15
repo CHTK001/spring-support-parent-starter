@@ -37,7 +37,7 @@ import java.util.concurrent.TimeUnit;
  * @author CH
  * @since 2025/10/14 13:51
  */
-@Spi("wechat_js_api")
+@Spi("pay_wechat_js_api")
 public class WechatJsApiCreateOrderAdaptor extends WalletCreateOrderAdaptor {
 
     @AutoInject

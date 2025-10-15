@@ -16,18 +16,19 @@ import com.wechat.pay.java.core.notification.NotificationConfig;
 import com.wechat.pay.java.core.notification.NotificationParser;
 import com.wechat.pay.java.core.notification.RequestParam;
 import com.wechat.pay.java.service.payments.model.Transaction;
+import com.wechat.pay.java.service.refund.model.Refund;
 import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;
 
 /**
- * 微信支付解析
+ * 微信退款解析
  *
  * @author CH
  * @since 2024/12/31
  */
 @Slf4j
-public class WebchatCallbackNotificationParser implements CallbackNotificationParser {
+public class WebchatCallbackRefundNotificationParser implements CallbackNotificationParser {
 
     private final PayMerchantOrder merchantOrder;
     private final String requestBody;
@@ -41,7 +42,7 @@ public class WebchatCallbackNotificationParser implements CallbackNotificationPa
     private final PayMerchantOrderService payMerchantOrderService;
     private final PayMerchantConfigWechat payMerchantConfigWechat;
 
-    public WebchatCallbackNotificationParser(
+    public WebchatCallbackRefundNotificationParser(
             PayMerchantOrder merchantOrder,
             PayMerchantConfigWechatWrapper byCodeForPayMerchantConfigWechat,
             String requestBody,
@@ -105,9 +106,9 @@ public class WebchatCallbackNotificationParser implements CallbackNotificationPa
         NotificationParser notificationParser = new NotificationParser(config);
         try {
             // 以支付通知回调为例，验签、解密并转换成 Transaction
-            Transaction transaction = null;
+            Refund refund = null;
             try {
-                transaction = notificationParser.parse(requestParam, Transaction.class);
+                refund = notificationParser.parse(requestParam, Refund.class);
             } catch (Exception e) {
                 JSONObject jsonObject = JSON.parseObject(requestBody);
                 JSONObject resource = jsonObject.getJSONObject("resource");
@@ -117,11 +118,11 @@ public class WebchatCallbackNotificationParser implements CallbackNotificationPa
                         resource.getString("nonce").getBytes(StandardCharsets.UTF_8),
                         resource.getString("ciphertext")
                 );
-                transaction = JSON.parseObject(decryptedData, Transaction.class);
+                refund = JSON.parseObject(decryptedData, Refund.class);
             }
 
-            merchantOrder.setPayMerchantOrderTransactionId(transaction.getTransactionId());
-            merchantOrder.setPayMerchantOrderStatus(PayOrderStatus.PAY_SUCCESS);
+            merchantOrder.setPayMerchantOrderRefundCode(refund.getRefundId());
+            merchantOrder.setPayMerchantOrderStatus(PayOrderStatus.PAY_REFUND_SUCCESS);
             payMerchantOrderService.updateWechatOrder(merchantOrder);
             return new WechatOrderCallbackResponse("SUCCESS", "OK", null);
         } catch (Exception e) {

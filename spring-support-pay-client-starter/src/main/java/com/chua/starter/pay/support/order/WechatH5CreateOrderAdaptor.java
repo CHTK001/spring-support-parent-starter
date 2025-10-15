@@ -36,7 +36,7 @@ import java.util.concurrent.TimeUnit;
  * @author CH
  * @since 2025/10/14 13:51
  */
-@Spi("WECHAT_H5")
+@Spi("pay_WECHAT_H5")
 public class WechatH5CreateOrderAdaptor extends WalletCreateOrderAdaptor {
 
     @AutoInject

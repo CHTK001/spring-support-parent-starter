@@ -2,6 +2,9 @@ package com.chua.starter.pay.support.callback.parser;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.chua.common.support.json.Json;
+import com.chua.common.support.json.JsonObject;
 import com.chua.starter.pay.support.callback.AesUtil;
 import com.chua.starter.pay.support.callback.OrderCallbackRequest;
 import com.chua.starter.pay.support.callback.WechatOrderCallbackRequest;
@@ -15,19 +18,19 @@ import com.wechat.pay.java.core.RSAAutoCertificateConfig;
 import com.wechat.pay.java.core.notification.NotificationConfig;
 import com.wechat.pay.java.core.notification.NotificationParser;
 import com.wechat.pay.java.core.notification.RequestParam;
-import com.wechat.pay.java.service.payments.model.Transaction;
+import com.wechat.pay.java.service.refund.model.Refund;
 import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;
 
 /**
- * 微信支付解析
+ * 微信信用分解析
  *
  * @author CH
  * @since 2024/12/31
  */
 @Slf4j
-public class WebchatCallbackNotificationParser implements CallbackNotificationParser {
+public class WebchatCallbackPaymentPointsNotificationParser implements CallbackNotificationParser {
 
     private final PayMerchantOrder merchantOrder;
     private final String requestBody;
@@ -41,7 +44,7 @@ public class WebchatCallbackNotificationParser implements CallbackNotificationPa
     private final PayMerchantOrderService payMerchantOrderService;
     private final PayMerchantConfigWechat payMerchantConfigWechat;
 
-    public WebchatCallbackNotificationParser(
+    public WebchatCallbackPaymentPointsNotificationParser(
             PayMerchantOrder merchantOrder,
             PayMerchantConfigWechatWrapper byCodeForPayMerchantConfigWechat,
             String requestBody,
@@ -103,25 +106,16 @@ public class WebchatCallbackNotificationParser implements CallbackNotificationPa
         NotificationConfig config = getNotificationConfig();
         // 初始化 NotificationParser
         NotificationParser notificationParser = new NotificationParser(config);
+        JsonObject jsonObject1 = Json.getJsonObject(requestBody);
+        String eventType = jsonObject1.getString("event_type");
+        log.info("当前订单事件类型{}", eventType);
         try {
-            // 以支付通知回调为例，验签、解密并转换成 Transaction
-            Transaction transaction = null;
-            try {
-                transaction = notificationParser.parse(requestParam, Transaction.class);
-            } catch (Exception e) {
-                JSONObject jsonObject = JSON.parseObject(requestBody);
-                JSONObject resource = jsonObject.getJSONObject("resource");
-                AesUtil aesUtil = new AesUtil(payMerchantConfigWechat.getPayMerchantConfigWechatApiKeyV3().getBytes(StandardCharsets.UTF_8));
-                String decryptedData = aesUtil.decryptToString(
-                        resource.getString("associated_data").getBytes(StandardCharsets.UTF_8),
-                        resource.getString("nonce").getBytes(StandardCharsets.UTF_8),
-                        resource.getString("ciphertext")
-                );
-                transaction = JSON.parseObject(decryptedData, Transaction.class);
+            //信用分扣款回调
+            if("PAYSCORE.USER_PAID".equals(eventType)) {
             }
-
-            merchantOrder.setPayMerchantOrderTransactionId(transaction.getTransactionId());
-            merchantOrder.setPayMerchantOrderStatus(PayOrderStatus.PAY_SUCCESS);
+            //用户确认
+            if ("PAYSCORE.USER_CONFIRM".equals(eventType)){
+            }
             payMerchantOrderService.updateWechatOrder(merchantOrder);
             return new WechatOrderCallbackResponse("SUCCESS", "OK", null);
         } catch (Exception e) {
