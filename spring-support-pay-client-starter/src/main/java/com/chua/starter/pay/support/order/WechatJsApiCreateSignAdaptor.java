@@ -39,7 +39,7 @@ public class WechatJsApiCreateSignAdaptor implements CreateSignAdaptor{
         PayMerchantConfigWechatWrapper payMerchantConfigWechatWrapper = payMerchantConfigWechatService.getByCodeForPayMerchantConfigWechat
                 (payMerchant.getPayMerchantId(), merchantOrder.getPayMerchantTradeType().getName());
         if(!payMerchantConfigWechatWrapper.hasConfig()) {
-            return ReturnResult.illegal("商户未开启微信支付不存在");
+            return ReturnResult.illegal("商户未开启微信支付");
         }
 
         WechatPaySignatureCertificate certificate = new WechatPaySignatureCertificate(payMerchantConfigWechatWrapper.getPayMerchantConfigWechat());
