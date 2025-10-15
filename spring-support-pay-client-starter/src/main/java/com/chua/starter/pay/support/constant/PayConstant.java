@@ -11,4 +11,8 @@ public interface PayConstant {
      * 创建订单前缀
      */
     String CREATE_ORDER_PREFIX = "pay:create:order:";
+    /**
+     * 退款订单前缀
+     */
+    String CREATE_REFUND_PREFIX = "pay:refund:order:";
 }

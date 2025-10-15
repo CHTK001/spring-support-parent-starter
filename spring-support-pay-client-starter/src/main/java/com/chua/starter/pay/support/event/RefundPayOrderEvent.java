@@ -11,8 +11,8 @@ import org.springframework.context.ApplicationEvent;
  */
 @Getter
 @Setter
-public class FinishOrderPayEvent extends ApplicationEvent {
-    public FinishOrderPayEvent(Object source) {
+public class RefundPayOrderEvent extends ApplicationEvent {
+    public RefundPayOrderEvent(Object source) {
         super(source);
     }
 

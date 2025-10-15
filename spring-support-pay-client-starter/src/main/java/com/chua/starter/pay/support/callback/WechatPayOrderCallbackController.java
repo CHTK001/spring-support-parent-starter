@@ -17,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 /**
+ * 支付回调(后端内部使用)
  * @author CH
  * @since 2025/9/29 16:52
  */
@@ -53,6 +54,8 @@ public class WechatPayOrderCallbackController {
             @RequestHeader("Wechatpay-Timestamp") String wechatTimestamp,
             @RequestHeader("Wechatpay-Signature-Type") String wechatpaySignatureType
     ) {
+        log.info("订单结果通知");
+        log.info("当前订单{}", payMerchantCode);
         PayMerchantOrder merchantOrder = payMerchantOrderService.getByCode(payMerchantCode);
         PayMerchantConfigWechatWrapper byCodeForPayMerchantConfigWechat = payMerchantConfigWechatService.getByCodeForPayMerchantConfigWechat(merchantOrder.getPayMerchantId(), merchantOrder.getPayMerchantTradeType().getName());
         CallbackNotificationParser parser = new WebchatCallbackNotificationParser(

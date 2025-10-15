@@ -21,7 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.nio.charset.StandardCharsets;
 
 /**
- * 微信解析
+ * 微信支付解析
  *
  * @author CH
  * @since 2024/12/31

@@ -19,7 +19,7 @@ import org.apache.commons.lang3.RandomStringUtils;
  * @author CH
  * @since 2025/10/14 14:57
  */
-@Spi({"wechat_js_api", "wechat_native", "WECHAT_H5"})
+@Spi({"pay_wechat_js_api", "pay_wechat_native", "pay_WECHAT_H5"})
 public class WechatJsApiCreateSignAdaptor implements CreateSignAdaptor{
 
 
