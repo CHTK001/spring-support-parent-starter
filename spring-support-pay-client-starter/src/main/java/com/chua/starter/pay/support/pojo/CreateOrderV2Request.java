@@ -80,4 +80,23 @@ public class CreateOrderV2Request {
         }
         return null != amount && amount.compareTo(BigDecimal.ZERO) > 0;
     }
+
+
+
+    /**
+     * 克隆并获取
+     *
+     * @return {@link CreateOrderV2Request}
+     */
+    public CreateOrderV2Request cloneAndGet() {
+        CreateOrderV2Request request = new CreateOrderV2Request();
+        request.setPayMerchantId(payMerchantId);
+        request.setPayMerchantOrderProject(payMerchantOrderProject);
+        request.setPayMerchantOrderType(payMerchantOrderType);
+        request.setPayTradeType(payTradeType);
+        request.setAmount(amount);
+        request.setRequestId(requestId);
+        request.setOriginalDataId(originalDataId);
+        return request;
+    }
 }

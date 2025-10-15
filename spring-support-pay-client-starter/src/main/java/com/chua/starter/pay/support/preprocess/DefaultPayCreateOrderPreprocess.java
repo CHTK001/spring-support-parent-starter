@@ -13,7 +13,7 @@ import com.chua.starter.pay.support.pojo.CreateOrderV2Request;
 @Spi("default")
 public class DefaultPayCreateOrderPreprocess implements PayCreateOrderPreprocess{
     @Override
-    public ReturnResult<String> preprocess(CreateOrderV2Request request, String userId, String openId) {
-        return ReturnResult.SUCCESS;
+    public ReturnResult<CreateOrderV2Request> preprocess(CreateOrderV2Request request, String userId, String openId) {
+        return ReturnResult.ok(request);
     }
 }

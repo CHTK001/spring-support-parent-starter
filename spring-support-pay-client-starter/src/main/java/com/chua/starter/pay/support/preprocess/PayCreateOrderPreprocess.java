@@ -42,5 +42,5 @@ public interface PayCreateOrderPreprocess {
      *         成功示例: ReturnResult.success("预处理成功")
      *         失败示例: ReturnResult.failed("订单金额不能为负数")
      */
-    ReturnResult<String> preprocess(CreateOrderV2Request request, String userId, String openId);
+    ReturnResult<CreateOrderV2Request> preprocess(CreateOrderV2Request request, String userId, String openId);
 }

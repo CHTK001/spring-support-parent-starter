@@ -3,10 +3,8 @@ package com.chua.starter.pay.support.controller;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.common.support.validator.group.UpdateGroup;
-import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.pojo.*;
 import com.chua.starter.pay.support.service.PayMerchantOrderService;
-import io.swagger.annotations.ApiOperation;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -16,13 +14,13 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  *
- * 支付接口
+ * 通用支付接口
  * @author CH
  * @since 2025/10/14 11:34
  */
 @RestController
 @RequestMapping("/v2/pay")
-@Tag(name = "支付接口")
+@Tag(name = "通用支付接口")
 @RequiredArgsConstructor
 public class PayController {
 

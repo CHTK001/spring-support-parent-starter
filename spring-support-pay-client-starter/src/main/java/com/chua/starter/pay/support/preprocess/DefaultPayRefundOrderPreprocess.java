@@ -14,7 +14,7 @@ import com.chua.starter.pay.support.pojo.RefundOrderV2Request;
 public class DefaultPayRefundOrderPreprocess implements PayRefundOrderPreprocess{
 
     @Override
-    public ReturnResult<String> preprocess(RefundOrderV2Request request, PayMerchantOrder payMerchantOrder) {
-        return ReturnResult.SUCCESS;
+    public ReturnResult<RefundOrderV2Request> preprocess(RefundOrderV2Request request, PayMerchantOrder payMerchantOrder) {
+        return ReturnResult.ok(request);
     }
 }

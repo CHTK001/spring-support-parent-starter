@@ -62,11 +62,12 @@ public class PayMerchantOrderServiceImpl extends ServiceImpl<PayMerchantOrderMap
         }
         //创建订单预处理 -> 支持SPI优先级覆盖
         PayCreateOrderPreprocess createOrderPreprocess = PayCreateOrderPreprocess.createProcessor();
-        ReturnResult<String> preprocess = createOrderPreprocess.preprocess(request, userId, openId);
+        ReturnResult<CreateOrderV2Request> preprocess = createOrderPreprocess.preprocess(request, userId, openId);
         if(preprocess.isFailure()) {
             return ReturnResult.illegal(preprocess.getMsg());
         }
-
+        //以预处理的结果作为依据, 预处理可能讲原始数据ID转成后端数据库中的金额, 防止前端参数异常
+        request = preprocess.getData();
         CreateOrderAdaptor createOrderAdaptor = ServiceProvider.of(CreateOrderAdaptor.class).getNewExtension(request.getPayTradeType());
         if(null == createOrderAdaptor) {
             return ReturnResult.illegal("请选择正确的交易类型");
@@ -158,10 +159,12 @@ public class PayMerchantOrderServiceImpl extends ServiceImpl<PayMerchantOrderMap
     @Override
     public ReturnResult<RefundOrderV2Response> refundOrder(String payMerchantOrderCode, RefundOrderV2Request request) {
         PayMerchantOrder merchantOrder = this.getByCode(payMerchantOrderCode);
-        ReturnResult<String> stringReturnResult = hasReasonRefuse(merchantOrder, request);
+        ReturnResult<RefundOrderV2Request> stringReturnResult = hasReasonRefuse(merchantOrder, request);
         if(stringReturnResult.isFailure()) {
             return ReturnResult.illegal(stringReturnResult.getMsg());
         }
+
+        request = stringReturnResult.getData();
         RefundOrderAdaptor refundOrderAdaptor = ServiceProvider.of(RefundOrderAdaptor.class).getNewExtension(merchantOrder.getPayMerchantTradeType());
         return refundOrderAdaptor.refundOrder(merchantOrder, request);
     }
@@ -169,10 +172,11 @@ public class PayMerchantOrderServiceImpl extends ServiceImpl<PayMerchantOrderMap
     @Override
     public ReturnResult<RefundOrderV2Response> refundOrderToWallet(String payMerchantOrderCode, RefundOrderV2Request request) {
         PayMerchantOrder merchantOrder = this.getByCode(payMerchantOrderCode);
-        ReturnResult<String> stringReturnResult = hasReasonRefuse(merchantOrder, request);
+        ReturnResult<RefundOrderV2Request> stringReturnResult = hasReasonRefuse(merchantOrder, request);
         if(stringReturnResult.isFailure()) {
             return ReturnResult.illegal(stringReturnResult.getMsg());
         }
+        request = stringReturnResult.getData();
         RefundOrderAdaptor refundOrderAdaptor = ServiceProvider.of(RefundOrderAdaptor.class).getNewExtension(PayTradeType.PAY_WALLET);
         return refundOrderAdaptor.refundOrder(merchantOrder, request);
     }
@@ -183,7 +187,7 @@ public class PayMerchantOrderServiceImpl extends ServiceImpl<PayMerchantOrderMap
      * @param request 退款参数
      * @return 检测订单是否可以退款
      */
-    private ReturnResult<String> hasReasonRefuse(PayMerchantOrder merchantOrder, RefundOrderV2Request request) {
+    private ReturnResult<RefundOrderV2Request> hasReasonRefuse(PayMerchantOrder merchantOrder, RefundOrderV2Request request) {
         if(null == merchantOrder) {
             return ReturnResult.illegal("订单不存在");
         }
@@ -194,7 +198,7 @@ public class PayMerchantOrderServiceImpl extends ServiceImpl<PayMerchantOrderMap
         }
 
         PayRefundOrderPreprocess processor = PayRefundOrderPreprocess.createProcessor();
-        ReturnResult<String> preprocess = processor.preprocess(request, merchantOrder);
+        ReturnResult<RefundOrderV2Request> preprocess = processor.preprocess(request, merchantOrder);
         if(preprocess.isFailure()) {
             return ReturnResult.illegal("当前订单不支持退款");
         }
