@@ -6,6 +6,7 @@ import lombok.Setter;
 import org.springframework.context.ApplicationEvent;
 
 /**
+ * 确认支付订单事件
  * @author CH
  * @since 2025/10/14 16:06
  */

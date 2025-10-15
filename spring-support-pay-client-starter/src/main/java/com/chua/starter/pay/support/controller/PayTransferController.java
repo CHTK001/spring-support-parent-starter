@@ -26,10 +26,10 @@ import static com.chua.starter.oauth.client.support.contants.AuthConstant.SUPER_
  * @since 2025/10/14 11:34
  */
 @RestController
-@RequestMapping("/v2/transfer")
+@RequestMapping("/v2/pay/transfer")
 @Tag(name = "转账接口")
 @RequiredArgsConstructor
-public class TransferController {
+public class PayTransferController {
 
 
     final PayMerchantTransferRecordService payMerchantTransferRecordService;
@@ -44,7 +44,7 @@ public class TransferController {
     @Permission(value = "sys:pay:transfer", role = {ADMIN, SUPER_ADMIN})
     public ReturnResult<CreateTransferV2Response> transfer(@Validated(AddGroup.class) @RequestBody CreateTransferV2Request request, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ReturnResult.illegal(bindingResult.getFieldError().getDefaultMessage());
+            return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
         return payMerchantTransferRecordService.transfer(request);
     }

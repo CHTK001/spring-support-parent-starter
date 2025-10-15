@@ -29,6 +29,10 @@ public enum PayTradeType implements SwaggerEnum {
      */
     PAY_WECHAT_NATIVE("WECHAT_NATIVE", "微信扫码支付"),
     /**
+     * 微信支付分
+     */
+    PAY_WECHAT_PAYMENT_POINTS("WECHAT_PAYMENT_POINTS", "微信支付分呢"),
+    /**
      * 微信预支付
      */
     PAY_PREPAYMENT("WECHAT_PREPAYMENT",  "微信预支付");

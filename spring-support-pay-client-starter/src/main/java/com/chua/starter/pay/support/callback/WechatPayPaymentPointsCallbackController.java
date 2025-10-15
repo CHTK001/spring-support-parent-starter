@@ -16,6 +16,7 @@ import io.swagger.annotations.ApiOperation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -42,6 +43,7 @@ public class WechatPayPaymentPointsCallbackController {
     final PayMerchantOrderService payMerchantOrderService;
     final PayMerchantConfigWechatService payMerchantConfigWechatService;
     final PayMerchantFailureRecordService payMerchantFailureRecordService;
+    final ApplicationContext applicationContext;
 
     /**
      * 微信支付订单结果通知
@@ -81,7 +83,8 @@ public class WechatPayPaymentPointsCallbackController {
                 wechatTimestamp,
                 wechatpaySignatureType,
                 payMerchantOrderService,
-                payMerchantFailureRecordService);
+                payMerchantFailureRecordService,
+                applicationContext);
         WechatOrderCallbackResponse response = null;
         try {
             response = parser.parse();

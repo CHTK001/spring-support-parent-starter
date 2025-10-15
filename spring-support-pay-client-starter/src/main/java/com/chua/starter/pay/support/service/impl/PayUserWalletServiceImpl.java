@@ -14,7 +14,8 @@ import com.chua.starter.pay.support.service.PayUserWalletService;
 
 import java.math.BigDecimal;
 
-import static com.chua.starter.common.support.constant.CacheConstant.SYSTEM;
+import static com.chua.starter.common.support.constant.CacheConstant.CACHE_MANAGER_FOR_SYSTEM;
+import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE_ALWAYS;
 
 /**
  *
@@ -25,7 +26,7 @@ import static com.chua.starter.common.support.constant.CacheConstant.SYSTEM;
 public class PayUserWalletServiceImpl extends ServiceImpl<PayUserWalletMapper, PayUserWallet> implements PayUserWalletService{
 
     @Override
-    @Cacheable(cacheManager = SYSTEM, cacheNames = SYSTEM, key = "'PAY:WALLET:' + #userId", keyGenerator = "customTenantedKeyGenerator")
+    @Cacheable(cacheManager = CACHE_MANAGER_FOR_SYSTEM, cacheNames = REDIS_CACHE_ALWAYS, key = "'PAY:WALLET:' + #userId", keyGenerator = "customTenantedKeyGenerator")
     public PayUserWallet getByUser(String userId) {
         PayUserWallet payUserWallet = this.getOne(Wrappers.<PayUserWallet>lambdaQuery()
                 .eq(PayUserWallet::getUserId, userId));
@@ -40,7 +41,7 @@ public class PayUserWalletServiceImpl extends ServiceImpl<PayUserWalletMapper, P
     }
 
     @Override
-    @CacheEvict(cacheManager = SYSTEM, cacheNames = SYSTEM, key = "'PAY:WALLET:' + #userId", keyGenerator = "customTenantedKeyGenerator")
+    @CacheEvict(cacheManager = CACHE_MANAGER_FOR_SYSTEM, cacheNames = REDIS_CACHE_ALWAYS, key = "'PAY:WALLET:' + #userId", keyGenerator = "customTenantedKeyGenerator")
     public boolean updateWallet(String userId, PayMerchantOrder payMerchantOrder) {
         PayTradeType payMerchantTradeType = payMerchantOrder.getPayMerchantTradeType();
         if(payMerchantTradeType != PayTradeType.PAY_WALLET) {
