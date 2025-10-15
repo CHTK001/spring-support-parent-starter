@@ -38,5 +38,5 @@ public interface PayRefundOrderPreprocess {
      *         成功示例: ReturnResult.success("预处理成功")
      *         失败示例: ReturnResult.failed("退款金额不能为负数")
      */
-    ReturnResult<String> preprocess(RefundOrderV2Request request, PayMerchantOrder payMerchantOrder);
+    ReturnResult<RefundOrderV2Request> preprocess(RefundOrderV2Request request, PayMerchantOrder payMerchantOrder);
 }

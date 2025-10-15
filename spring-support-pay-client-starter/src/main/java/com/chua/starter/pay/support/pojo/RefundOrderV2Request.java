@@ -31,4 +31,15 @@ public class RefundOrderV2Request {
     @NotNull(message = "退款原因不能为空", groups = UpdateGroup.class)
     private String refundReason;
 
+    /**
+     * 克隆
+     * @return 退款
+     */
+    public RefundOrderV2Request cloneAndGet() {
+        RefundOrderV2Request refundOrderV2Request = new RefundOrderV2Request();
+        refundOrderV2Request.setRefundAmount(this.getRefundAmount());
+        refundOrderV2Request.setRefundReason(this.getRefundReason());
+        return refundOrderV2Request;
+    }
+
 }
