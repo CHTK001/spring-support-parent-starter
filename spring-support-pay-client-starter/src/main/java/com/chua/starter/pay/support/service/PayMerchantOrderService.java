@@ -113,4 +113,16 @@ public interface PayMerchantOrderService extends IService<PayMerchantOrder> {
      * @return 订单状态
      */
     PayOrderStatus getOrderStatus(String payMerchantOrderCode);
+
+    /**
+     * 分页查询订单（含关联字段）
+     * @param page 分页
+     * @param entity 条件
+     * @param cond 额外条件
+     * @return 分页结果
+     */
+    com.baomidou.mybatisplus.core.metadata.IPage<com.chua.starter.pay.support.pojo.PayMerchantOrderVO> pageForPayMerchantOrder(
+            com.chua.starter.mybatis.entity.Query<PayMerchantOrder> page,
+            PayMerchantOrder entity,
+            com.chua.starter.pay.support.pojo.PayMerchantOrderPageRequest cond);
 }
