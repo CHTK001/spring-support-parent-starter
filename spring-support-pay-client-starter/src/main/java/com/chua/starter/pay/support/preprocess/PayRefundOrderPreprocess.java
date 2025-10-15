@@ -26,17 +26,8 @@ public interface PayRefundOrderPreprocess {
      * 预处理订单
      *
      * @param request          退款订单请求参数
-     *                         示例: {
-     *                         "refundOrderId": "20251014001",
-     *                         "orderId": "20251014001",
-     *                         "refundAmount": 100,
-     *                         "refundReason": "用户取消订单"
-     *                         }
      * @param payMerchantOrder 商户订单信息
-     *                         示例: PayMerchantOrder对象
      * @return 预处理结果，包含预处理后的订单信息或错误信息
-     *         成功示例: ReturnResult.success("预处理成功")
-     *         失败示例: ReturnResult.failed("退款金额不能为负数")
      */
     ReturnResult<RefundOrderV2Request> preprocess(RefundOrderV2Request request, PayMerchantOrder payMerchantOrder);
 }
