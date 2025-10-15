@@ -1,6 +1,12 @@
 package com.chua.starter.pay.support.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.chua.starter.mybatis.entity.Query;
+import com.chua.starter.pay.support.mapper.PayMerchantOrderMapper;
+import com.chua.starter.pay.support.pojo.PayMerchantOrderPageRequest;
+import com.chua.starter.pay.support.pojo.PayMerchantOrderVO;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.date.DateUtils;
 import com.chua.common.support.spi.ServiceProvider;
@@ -262,6 +268,15 @@ public class PayMerchantOrderServiceImpl extends ServiceImpl<PayMerchantOrderMap
     public PayOrderStatus getOrderStatus(String payMerchantOrderCode) {
         PayMerchantOrder merchantOrder = getByCode(payMerchantOrderCode);
         return ObjectUtils.defaultIfNull(merchantOrder.getPayMerchantOrderStatus(), PayOrderStatus.PAY_NOT_EXIST);
+    }
+
+    /**
+     * 分页查询订单
+     */
+    @Override
+    public IPage<PayMerchantOrderVO> pageForPayMerchantOrder(Query<PayMerchantOrder> page, PayMerchantOrder entity, PayMerchantOrderPageRequest cond) {
+        Page<?> mpPage = page.createFullPage();
+        return baseMapper.selectPageForOrder(mpPage, entity, cond);
     }
 
     /**

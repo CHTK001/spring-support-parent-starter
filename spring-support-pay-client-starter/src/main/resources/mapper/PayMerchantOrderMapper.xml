@@ -49,4 +49,50 @@
     pay_merchant_order_refund_create_time, pay_merchant_order_refund_code, pay_merchant_order_refund_reason, 
     create_name, create_by, create_time, update_time, update_name, update_by
   </sql>
+
+  <resultMap id="OrderVoMap" type="com.chua.starter.pay.support.pojo.PayMerchantOrderVO" extends="BaseResultMap">
+    <result column="pay_merchant_name" jdbcType="VARCHAR" property="payMerchantName" />
+  </resultMap>
+
+  <select id="selectPageForOrder" resultMap="OrderVoMap">
+    SELECT
+      <include refid="Base_Column_List"/>,
+      pm.pay_merchant_name
+    FROM pay_merchant_order pmo
+    LEFT JOIN pay_merchant pm ON pm.pay_merchant_id = pmo.pay_merchant_id
+    <where>
+      <if test="entity != null">
+        <if test="entity.payMerchantOrderCode != null and entity.payMerchantOrderCode != ''">
+          AND pmo.pay_merchant_order_code = #{entity.payMerchantOrderCode}
+        </if>
+        <if test="entity.payMerchantId != null">
+          AND pmo.pay_merchant_id = #{entity.payMerchantId}
+        </if>
+        <if test="entity.payMerchantOrderStatus != null and entity.payMerchantOrderStatus != ''">
+          AND pmo.pay_merchant_order_status = #{entity.payMerchantOrderStatus}
+        </if>
+      </if>
+      <if test="cond != null">
+        <if test="cond.payMerchantId != null">
+          AND pmo.pay_merchant_id = #{cond.payMerchantId}
+        </if>
+        <if test="cond.payMerchantOrderStatus != null and cond.payMerchantOrderStatus != ''">
+          AND pmo.pay_merchant_order_status = #{cond.payMerchantOrderStatus}
+        </if>
+        <if test="cond.payMerchantOrderPayTimeStart != null">
+          AND pmo.pay_merchant_order_pay_time &gt;= #{cond.payMerchantOrderPayTimeStart}
+        </if>
+        <if test="cond.payMerchantOrderPayTimeEnd != null">
+          AND pmo.pay_merchant_order_pay_time &lt;= #{cond.payMerchantOrderPayTimeEnd}
+        </if>
+        <if test="cond.payMerchantOrderFinishedTimeStart != null">
+          AND pmo.pay_merchant_order_finished_time &gt;= #{cond.payMerchantOrderFinishedTimeStart}
+        </if>
+        <if test="cond.payMerchantOrderFinishedTimeEnd != null">
+          AND pmo.pay_merchant_order_finished_time &lt;= #{cond.payMerchantOrderFinishedTimeEnd}
+        </if>
+      </if>
+    </where>
+    ORDER BY pmo.create_time DESC
+  </select>
 </mapper>
