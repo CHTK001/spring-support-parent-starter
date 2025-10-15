@@ -181,6 +181,17 @@ public class PayMerchantOrderServiceImpl extends ServiceImpl<PayMerchantOrderMap
         return refundOrderAdaptor.refundOrder(merchantOrder, request);
     }
 
+    @Override
+    public int timeout(Integer payMerchantId, Integer payMerchantOpenTimeoutTime) {
+        return baseMapper.update(
+                Wrappers.<PayMerchantOrder>lambdaUpdate()
+                        .eq(PayMerchantOrder::getPayMerchantId, payMerchantId)
+                        .in(PayMerchantOrder::getPayMerchantOrderStatus, PayOrderStatus.PAY_WAITING, PayOrderStatus.PAY_CREATE)
+                        .lt(PayMerchantOrder::getCreateTime, LocalDateTime.now().minusMinutes(payMerchantOpenTimeoutTime))
+                        .set(PayMerchantOrder::getPayMerchantOrderStatus, PayOrderStatus.PAY_TIMEOUT)
+        );
+    }
+
     /**
      * 检测订单是否可以退款
      * @param merchantOrder 订单
@@ -238,6 +249,6 @@ public class PayMerchantOrderServiceImpl extends ServiceImpl<PayMerchantOrderMap
             return ReturnResult.error("订单已关闭");
         }
 
-        return ReturnResult.SUCCESS;
+        return ReturnResult.ok(preprocess.getData());
     }
 }

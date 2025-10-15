@@ -4,76 +4,125 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.chua.common.support.validator.group.AddGroup;
-import com.chua.common.support.validator.group.SaveGroup;
-import com.chua.starter.mybatis.pojo.SysBase;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.io.Serializable;
 import java.time.LocalDateTime;
-
-import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 
 /**
  *
  * @author CH
- * @since 2025/10/14 11:28
+ * @since 2025/10/15 9:31
  */
+
 /**
  * 支付商户管理
  */
-@EqualsAndHashCode(callSuper = true)
-@Schema(description="支付商户管理")
+@Schema(description = "支付商户管理")
 @Data
 @TableName(value = "pay_merchant")
-public class PayMerchant extends SysBase implements Serializable {
+public class PayMerchant implements Serializable {
     private static final long serialVersionUID = 1L;
 
     @TableId(value = "pay_merchant_id", type = IdType.AUTO)
-    @Schema(description="")
+    @Schema(description = "")
     private Integer payMerchantId;
 
     /**
      * 商户名称
      */
     @TableField(value = "pay_merchant_name")
-    @Schema(description="商户名称")
-    @NotBlank(message = "商户名称不能为空", groups = {SaveGroup.class})
+    @Schema(description = "商户名称")
     private String payMerchantName;
 
     /**
      * 商户编码
      */
     @TableField(value = "pay_merchant_code")
-    @Schema(description="商户编码")
+    @Schema(description = "商户编码")
     private String payMerchantCode;
 
     /**
      * 备注
      */
     @TableField(value = "pay_merchant_remark")
-    @Schema(description="备注")
+    @Schema(description = "备注")
     private String payMerchantRemark;
 
     /**
      * 是否启用; 0:未启用
      */
     @TableField(value = "pay_merchant_status")
-    @Schema(description="是否启用; 0:未启用")
+    @Schema(description = "是否启用; 0:未启用")
     private Integer payMerchantStatus;
 
     /**
      * 是否删除;0:未删除
      */
     @TableField(value = "pay_merchant_delete")
-    @Schema(description="是否删除;0:未删除")
+    @Schema(description = "是否删除;0:未删除")
     private Integer payMerchantDelete;
 
     /**
      * 是否启用钱包; 0:未启用
      */
     @TableField(value = "pay_merchant_open_wallet")
-    @Schema(description="是否启用钱包; 0:未启用")
+    @Schema(description = "是否启用钱包; 0:未启用")
     private Integer payMerchantOpenWallet;
+
+    /**
+     * 是否开启订单超时功能
+     */
+    @TableField(value = "pay_merchant_open_timeout")
+    @Schema(description = "是否开启订单超时功能")
+    private Integer payMerchantOpenTimeout;
+
+    /**
+     * 订单超时时间(min)
+     */
+    @TableField(value = "pay_merchant_open_timeout_time")
+    @Schema(description = "订单超时时间(min)")
+    private Integer payMerchantOpenTimeoutTime;
+
+    /**
+     * 创建人姓名
+     */
+    @TableField(value = "create_name")
+    @Schema(description = "创建人姓名")
+    private String createName;
+
+    /**
+     * 创建人
+     */
+    @TableField(value = "create_by")
+    @Schema(description = "创建人")
+    private Integer createBy;
+
+    /**
+     * 创建时间
+     */
+    @TableField(value = "create_time")
+    @Schema(description = "创建时间")
+    private LocalDateTime createTime;
+
+    /**
+     * 更新时间
+     */
+    @TableField(value = "update_time")
+    @Schema(description = "更新时间")
+    private LocalDateTime updateTime;
+
+    /**
+     * 更新人姓名
+     */
+    @TableField(value = "update_name")
+    @Schema(description = "更新人姓名")
+    private String updateName;
+
+    /**
+     * 更新人
+     */
+    @TableField(value = "update_by")
+    @Schema(description = "更新人")
+    private Integer updateBy;
 }

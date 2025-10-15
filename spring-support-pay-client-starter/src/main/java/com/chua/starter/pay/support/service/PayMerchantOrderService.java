@@ -77,4 +77,13 @@ public interface PayMerchantOrderService extends IService<PayMerchantOrder> {
      * @return 退款结果
      */
     ReturnResult<RefundOrderV2Response> refundOrderToWallet(String payMerchantOrderCode, RefundOrderV2Request request);
+
+    /**
+     * 订单超时
+     *
+     * @param payMerchantId 商户ID
+     * @param payMerchantOpenTimeoutTime 商户订单超时时间
+     * @return 订单超时数量
+     */
+    int timeout(Integer payMerchantId, Integer payMerchantOpenTimeoutTime);
 }
