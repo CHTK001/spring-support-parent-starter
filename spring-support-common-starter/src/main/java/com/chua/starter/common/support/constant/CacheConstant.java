@@ -30,6 +30,20 @@ public interface CacheConstant {
     String REDIS_CACHE_MIN = "redis-cache-600";
 
     /**
+     * Redis缓存一分钟时间(60秒)
+     */
+    String REDIS_CACHE_MINUTES = "redis-cache-60";
+
+    /**
+     * Redis缓存半小时时间(30秒)
+     */
+    String REDIS_CACHE_HALF_MINUTES = "redis-cache-30";
+    /**
+     * Redis缓存十秒时间(10秒)
+     */
+    String REDIS_CACHE_TEN_SECOND = "redis-cache-10";
+
+    /**
      * Redis缓存一小时时间(3600秒)
      */
     String REDIS_CACHE_HOUR = "redis-cache-3600";

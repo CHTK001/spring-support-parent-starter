@@ -254,10 +254,11 @@ public class PayMerchantOrderServiceImpl extends ServiceImpl<PayMerchantOrderMap
         } catch (Exception e) {
             e.printStackTrace();
         }
+        return ReturnResult.ok();
     }
 
     @Override
-    @Cacheable(cacheManager = CACHE_MANAGER_FOR_SYSTEM, cacheNames = REDIS_CACHE_MIN, key = "'PAY:ORDER:CODE:' +#payMerchantOrderCode" , keyGenerator = "customTenantedKeyGenerator")
+    @Cacheable(cacheManager = CACHE_MANAGER_FOR_SYSTEM, cacheNames = REDIS_CACHE_TEN_SECOND, key = "'PAY:ORDER:CODE:' +#payMerchantOrderCode" , keyGenerator = "customTenantedKeyGenerator")
     public PayOrderStatus getOrderStatus(String payMerchantOrderCode) {
         PayMerchantOrder merchantOrder = getByCode(payMerchantOrderCode);
         return ObjectUtils.defaultIfNull(merchantOrder.getPayMerchantOrderStatus(), PayOrderStatus.PAY_NOT_EXIST);
