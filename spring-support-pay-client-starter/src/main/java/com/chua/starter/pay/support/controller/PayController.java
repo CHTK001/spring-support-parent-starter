@@ -2,10 +2,9 @@ package com.chua.starter.pay.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.validator.group.AddGroup;
+import com.chua.common.support.validator.group.UpdateGroup;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
-import com.chua.starter.pay.support.pojo.CreateOrderV2Request;
-import com.chua.starter.pay.support.pojo.CreateOrderV2Response;
-import com.chua.starter.pay.support.pojo.PaySignResponse;
+import com.chua.starter.pay.support.pojo.*;
 import com.chua.starter.pay.support.service.PayMerchantOrderService;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,10 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  *
@@ -55,5 +51,35 @@ public class PayController {
             return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
         return payMerchantOrderService.createSign(request);
+    }
+
+
+    /**
+     * 订单退款
+     */
+    @PutMapping("/refundOrder/{payMerchantOrderCode}")
+    @Operation(summary = "订单退款")
+    public ReturnResult<RefundOrderV2Response> refundOrder(@PathVariable String payMerchantOrderCode,
+                                                           @Validated(UpdateGroup.class) @RequestBody RefundOrderV2Request request,
+                                                           BindingResult bindingResult
+                                                           ) {
+        if (bindingResult.hasErrors()) {
+            return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
+        }
+        return payMerchantOrderService.refundOrder(payMerchantOrderCode, request);
+    }
+    /**
+     * 订单退款
+     */
+    @PutMapping("/refundOrderToWallet/{payMerchantOrderCode}")
+    @Operation(summary = "订单退款到钱包")
+    public ReturnResult<RefundOrderV2Response> refundOrderToWallet(@PathVariable String payMerchantOrderCode,
+                                                           @Validated(UpdateGroup.class) @RequestBody RefundOrderV2Request request,
+                                                           BindingResult bindingResult
+                                                           ) {
+        if (bindingResult.hasErrors()) {
+            return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
+        }
+        return payMerchantOrderService.refundOrderToWallet(payMerchantOrderCode, request);
     }
 }

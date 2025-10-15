@@ -4,6 +4,8 @@ import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.entity.PayUserWallet;
 import com.baomidou.mybatisplus.extension.service.IService;
 
+import java.math.BigDecimal;
+
 /**
  * 用户钱包服务接口
  *
@@ -30,4 +32,13 @@ public interface PayUserWalletService extends IService<PayUserWallet> {
      * @throws RuntimeException 当数据库更新异常时抛出
      */
     boolean updateWallet(String userId, PayMerchantOrder payMerchantOrder);
+    /**
+     * 添加/减少用户钱包信息
+     *
+     * @param userId            用户ID，不能为空，例如："user_123456"
+     * @param amount  金额
+     * @return 添加成功失败
+     * @throws RuntimeException 当数据库添加异常时抛出
+     */
+    boolean addOrSubWallet(String userId, BigDecimal  amount);
 }

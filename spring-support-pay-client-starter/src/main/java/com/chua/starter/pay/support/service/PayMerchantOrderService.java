@@ -1,13 +1,9 @@
 package com.chua.starter.pay.support.service;
 
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.validator.group.AddGroup;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.chua.starter.pay.support.pojo.CreateOrderV2Request;
-import com.chua.starter.pay.support.pojo.CreateOrderV2Response;
-import com.chua.starter.pay.support.pojo.PaySignResponse;
-import jakarta.validation.constraints.NotEmpty;
+import com.chua.starter.pay.support.pojo.*;
 
 /**
  * 商户订单服务接口
@@ -56,4 +52,29 @@ public interface PayMerchantOrderService extends IService<PayMerchantOrder> {
      * @return 更新结果 true-更新成功 false-更新失败
      */
     boolean updateWechatOrder(PayMerchantOrder merchantOrder);
+    /**
+     * 更新订单信息(退款包含部分退款, 状态由调用方设置)
+     *
+     * @param merchantOrder 订单信息
+     * @return 更新结果 true-更新成功 false-更新失败
+     */
+    boolean updateRefundOrder(PayMerchantOrder merchantOrder);
+
+    /**
+     * 退款订单
+     *
+     * @param payMerchantOrderCode 订单编号
+     * @param request 退款请求参数
+     * @return 退款结果
+     */
+    ReturnResult<RefundOrderV2Response> refundOrder(String payMerchantOrderCode, RefundOrderV2Request request);
+
+    /**
+     * 退款订单到钱包
+     *
+     * @param payMerchantOrderCode 订单编号
+     * @param request 退款请求参数
+     * @return 退款结果
+     */
+    ReturnResult<RefundOrderV2Response> refundOrderToWallet(String payMerchantOrderCode, RefundOrderV2Request request);
 }
