@@ -5,9 +5,8 @@ import com.chua.starter.pay.support.entity.PayMerchantConfigWechat;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- *
  * @author CH
- * @since 2025/10/14 11:28
+ * @since 2025/10/15 11:23
  */
 @Mapper
 public interface PayMerchantConfigWechatMapper extends BaseMapper<PayMerchantConfigWechat> {

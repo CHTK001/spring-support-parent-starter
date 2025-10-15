@@ -36,7 +36,7 @@ public class CacheConfiguration extends CachingConfigurerSupport implements Cons
         return CACHE_MANAGER;
     }
 
-    @Bean({SYSTEM})
+    @Bean({CACHE_MANAGER_FOR_SYSTEM})
     public CacheManager systemCacheManager() {
         return new CustomCacheManager();
     }

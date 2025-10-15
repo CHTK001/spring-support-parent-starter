@@ -5,11 +5,13 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.date.DateUtils;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.IdUtils;
+import com.chua.common.support.utils.ObjectUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.chua.starter.pay.support.entity.PayMerchantOrderWater;
 import com.chua.starter.pay.support.enums.PayOrderStatus;
 import com.chua.starter.pay.support.enums.PayTradeType;
+import com.chua.starter.pay.support.event.CloseOrderEvent;
 import com.chua.starter.pay.support.event.FinishPayOrderEvent;
 import com.chua.starter.pay.support.event.RefundPayOrderEvent;
 import com.chua.starter.pay.support.order.CreateOrderAdaptor;
@@ -17,10 +19,12 @@ import com.chua.starter.pay.support.order.CreateSignAdaptor;
 import com.chua.starter.pay.support.pojo.*;
 import com.chua.starter.pay.support.postprocessor.PayCreateOrderPostprocessor;
 import com.chua.starter.pay.support.preprocess.PayCreateOrderPreprocess;
+import com.chua.starter.pay.support.preprocess.PayPaymentPointsCreateOrderPreprocess;
 import com.chua.starter.pay.support.preprocess.PayRefundOrderPreprocess;
 import com.chua.starter.pay.support.refund.RefundOrderAdaptor;
 import com.chua.starter.pay.support.service.PayMerchantOrderWaterService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -31,6 +35,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+
+import static com.chua.starter.common.support.constant.CacheConstant.*;
 
 /**
  * @author CH
@@ -71,13 +77,30 @@ public class PayMerchantOrderServiceImpl extends ServiceImpl<PayMerchantOrderMap
         if (null == createOrderAdaptor) {
             return ReturnResult.illegal("请选择正确的交易类型");
         }
-        ReturnResult<CreateOrderV2Response> order = createOrderAdaptor.createOrder(request, userId, openId);
-        if (order.isOk()) {
-            //后缀 处理
-            PayCreateOrderPostprocessor postprocessor = PayCreateOrderPostprocessor.createProcessor();
-            postprocessor.publish(order.getData());
+        return createOrderAdaptor.createOrder(request, userId, openId);
+    }
+
+    @Override
+    public ReturnResult<CreateOrderV2Response> createOrder(CreatePaymentPointsOrderV2Request request) {
+        String userId = RequestUtils.getUserId();
+        String openId = RequestUtils.getUserInfo(UserResume.class).getOpenId();
+
+        if (null == request.getPayMerchantId()) {
+            return ReturnResult.illegal("请选择商户");
         }
-        return order;
+        //创建订单预处理 -> 支持SPI优先级覆盖
+        PayPaymentPointsCreateOrderPreprocess createOrderPreprocess = PayPaymentPointsCreateOrderPreprocess.createProcessor();
+        ReturnResult<CreatePaymentPointsOrderV2Request> preprocess = createOrderPreprocess.preprocess(request, userId, openId);
+        if (preprocess.isFailure()) {
+            return ReturnResult.illegal(preprocess.getMsg());
+        }
+        //以预处理的结果作为依据, 预处理可能讲原始数据ID转成后端数据库中的金额, 防止前端参数异常
+        request = preprocess.getData();
+        CreateOrderAdaptor createOrderAdaptor = ServiceProvider.of(CreateOrderAdaptor.class).getNewExtension(PayTradeType.PAY_WECHAT_PAYMENT_POINTS);
+        if (null == createOrderAdaptor) {
+            return ReturnResult.illegal("请选择正确的交易类型");
+        }
+        return createOrderAdaptor.createOrder(request.cloneAndGet(), userId, openId);
     }
 
     @Override
@@ -118,9 +141,10 @@ public class PayMerchantOrderServiceImpl extends ServiceImpl<PayMerchantOrderMap
     }
 
     @Override
-    public boolean updateWechatOrder(PayMerchantOrder payMerchantOrder) {
+    public boolean finishWechatOrder(PayMerchantOrder payMerchantOrder) {
         return Boolean.TRUE.equals(transactionTemplate.execute(status -> {
             payMerchantOrder.setPayMerchantOrderFinishedTime(LocalDateTime.now());
+            payMerchantOrder.setPayMerchantOrderPayTime(LocalDateTime.now());
             this.updateById(payMerchantOrder);
             PayMerchantOrderWater payMerchantOrderWater = new PayMerchantOrderWater();
             payMerchantOrderWater.setPayMerchantOrderCode(payMerchantOrder.getPayMerchantOrderCode());
@@ -137,9 +161,8 @@ public class PayMerchantOrderServiceImpl extends ServiceImpl<PayMerchantOrderMap
     }
 
     @Override
-    public boolean updateRefundOrder(PayMerchantOrder payMerchantOrder) {
+    public boolean refundOrder(PayMerchantOrder payMerchantOrder) {
         return Boolean.TRUE.equals(transactionTemplate.execute(status -> {
-            payMerchantOrder.setPayMerchantOrderRefundSuccessTime(DateUtils.currentDateString());
             this.updateById(payMerchantOrder);
             PayMerchantOrderWater payMerchantOrderWater = new PayMerchantOrderWater();
             payMerchantOrderWater.setPayMerchantOrderCode(payMerchantOrder.getPayMerchantOrderCode());
@@ -216,11 +239,28 @@ public class PayMerchantOrderServiceImpl extends ServiceImpl<PayMerchantOrderMap
         }
 
 
-        return baseMapper.update(
-                Wrappers.<PayMerchantOrder>lambdaUpdate()
-                        .eq(PayMerchantOrder::getPayMerchantOrderCode, payMerchantOrderCode)
-                        .set(PayMerchantOrder::getPayMerchantOrderStatus, PayOrderStatus.PAY_CLOSE_SUCCESS)
-        ) > 0 ? ReturnResult.ok() : ReturnResult.error();
+        try {
+            int update = baseMapper.update(
+                    Wrappers.<PayMerchantOrder>lambdaUpdate()
+                            .eq(PayMerchantOrder::getPayMerchantOrderCode, payMerchantOrderCode)
+                            .set(PayMerchantOrder::getPayMerchantOrderStatus, PayOrderStatus.PAY_CLOSE_SUCCESS)
+            );
+            if (update <= 0) {
+                return ReturnResult.illegal("订单不存在");
+            }
+            CloseOrderEvent closeOrderEvent = new CloseOrderEvent(payMerchantOrderCode);
+            closeOrderEvent.setPayMerchantOrder(merchantOrder);
+            applicationContext.publishEvent(closeOrderEvent);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    @Cacheable(cacheManager = CACHE_MANAGER_FOR_SYSTEM, cacheNames = REDIS_CACHE_MIN, key = "'PAY:ORDER:CODE:' +#payMerchantOrderCode" , keyGenerator = "customTenantedKeyGenerator")
+    public PayOrderStatus getOrderStatus(String payMerchantOrderCode) {
+        PayMerchantOrder merchantOrder = getByCode(payMerchantOrderCode);
+        return ObjectUtils.defaultIfNull(merchantOrder.getPayMerchantOrderStatus(), PayOrderStatus.PAY_NOT_EXIST);
     }
 
     /**

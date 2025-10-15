@@ -1,9 +1,11 @@
 package com.chua.starter.pay.support.pojo;
 
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.chua.common.support.validator.group.AddGroup;
 import com.chua.starter.pay.support.enums.PayTradeType;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -22,28 +24,33 @@ public class CreateOrderV2Request {
      * 交易类型
      */
     @Schema(name = "交易类型")
+    @NotNull(message = "交易类型不能为空", groups = {AddGroup.class})
     private PayTradeType payTradeType;
     /**
      * 商户ID
      */
     @Schema(name = "商户ID")
+    @NotNull(message = "商户ID不能为空", groups = {AddGroup.class})
     private Integer payMerchantId;
 
     /**
      * 订单金额
      */
     @Schema(name = "订单金额")
+    @NotNull(message = "订单金额不能为空", groups = {AddGroup.class})
     private BigDecimal amount;
 
     /**
      * 请求ID
      */
     @Schema(name = "请求ID")
+    @NotNull(message = "请求ID不能为空", groups = {AddGroup.class})
     private String requestId;
     /**
      * 原始数据ID
      */
     @Schema(name = "原始数据ID")
+    @NotNull(message = "原始数据ID不能为空", groups = {AddGroup.class})
     private String originalDataId;
 
     /**

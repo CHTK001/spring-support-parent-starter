@@ -25,7 +25,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.*;
 
-import static com.chua.starter.common.support.constant.CacheConstant.SYSTEM;
+import static com.chua.starter.common.support.constant.CacheConstant.CACHE_MANAGER_FOR_SYSTEM;
+import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE_ALWAYS;
 
 /**
  * 获取选项
@@ -49,7 +50,7 @@ public class OptionalProvider {
      */
     @Operation(summary = "获取已经加载选项")
     @GetMapping("objects/get")
-    @Cacheable(cacheManager = SYSTEM, cacheNames = SYSTEM, key = "'OPTION:OBJECT_GET' + #type + '' + #name")
+    @Cacheable(cacheManager = CACHE_MANAGER_FOR_SYSTEM, cacheNames = REDIS_CACHE_ALWAYS, key = "'OPTION:OBJECT_GET' + #type + '' + #name")
     public ReturnResult<List<SpiOption>> objects(String type, @RequestParam(required =false) String name) {
         if(StringUtils.isBlank(type)) {
             return ReturnResult.error();
@@ -107,7 +108,7 @@ public class OptionalProvider {
      */
     @Operation(summary = "获取选项")
     @GetMapping("get")
-    @Cacheable(cacheManager = SYSTEM, cacheNames = SYSTEM, key = "'OPTION:GET' + #type + '' + #name")
+    @Cacheable(cacheManager = CACHE_MANAGER_FOR_SYSTEM, cacheNames = REDIS_CACHE_ALWAYS, key = "'OPTION:GET' + #type + '' + #name")
     public ReturnResult<List<SpiOption>> get(String type, @RequestParam(required =false) String name) {
         if(StringUtils.isBlank(type)) {
             return ReturnResult.error();
@@ -130,7 +131,7 @@ public class OptionalProvider {
      */
     @Operation(summary = "获取选项")
     @GetMapping("list")
-    @Cacheable(cacheManager = SYSTEM, cacheNames = SYSTEM, key = "'OPTION:LIST' + #type + '' + #name")
+    @Cacheable(cacheManager = CACHE_MANAGER_FOR_SYSTEM, cacheNames = REDIS_CACHE_ALWAYS, key = "'OPTION:LIST' + #type + '' + #name")
     public ReturnResult<Map<String, List<SpiOption>>> list(String type, @RequestParam(required =false) String name) {
         if(StringUtils.isBlank(type)) {
             return ReturnResult.error();

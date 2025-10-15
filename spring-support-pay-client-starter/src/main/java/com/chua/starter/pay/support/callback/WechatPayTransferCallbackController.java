@@ -6,10 +6,12 @@ import com.chua.starter.oauth.client.support.annotation.AuthIgnore;
 import com.chua.starter.pay.support.callback.parser.CallbackNotificationParser;
 import com.chua.starter.pay.support.callback.parser.WebchatCallbackTransferNotificationParser;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
+import com.chua.starter.pay.support.entity.PayMerchantTransferRecord;
 import com.chua.starter.pay.support.pojo.PayMerchantConfigWechatWrapper;
 import com.chua.starter.pay.support.service.PayMerchantConfigWechatService;
 import com.chua.starter.pay.support.service.PayMerchantFailureRecordService;
 import com.chua.starter.pay.support.service.PayMerchantOrderService;
+import com.chua.starter.pay.support.service.PayMerchantTransferRecordService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -38,7 +40,7 @@ public class WechatPayTransferCallbackController {
 
 
 
-    final PayMerchantOrderService payMerchantOrderService;
+    final PayMerchantTransferRecordService payMerchantTransferRecordService;
     final PayMerchantConfigWechatService payMerchantConfigWechatService;
     final PayMerchantFailureRecordService payMerchantFailureRecordService;
     /**
@@ -67,7 +69,7 @@ public class WechatPayTransferCallbackController {
 
         log.info("微信转账回调");
         log.info("当前订单{}", payMerchantCode);
-        PayMerchantOrder merchantOrder = payMerchantOrderService.getByCode(payMerchantCode);
+        PayMerchantTransferRecord merchantOrder = payMerchantTransferRecordService.getByCode(payMerchantCode);
         PayMerchantConfigWechatWrapper byCodeForPayMerchantConfigWechat = payMerchantConfigWechatService.getByCodeForPayMerchantConfigWechat(merchantOrder.getPayMerchantId(), merchantOrder.getPayMerchantTradeType().getName());
         CallbackNotificationParser parser = new WebchatCallbackTransferNotificationParser(
                 merchantOrder,
@@ -78,7 +80,7 @@ public class WechatPayTransferCallbackController {
                 wechatPaySerial,
                 wechatTimestamp,
                 wechatpaySignatureType,
-                payMerchantOrderService,
+                payMerchantTransferRecordService,
                 payMerchantFailureRecordService);
         com.chua.starter.pay.support.callback.WechatOrderCallbackResponse response = null;
         try {

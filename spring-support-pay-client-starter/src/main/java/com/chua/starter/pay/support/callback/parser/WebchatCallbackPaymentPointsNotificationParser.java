@@ -9,6 +9,8 @@ import com.chua.starter.pay.support.callback.WechatOrderCallbackResponse;
 import com.chua.starter.pay.support.entity.PayMerchantConfigWechat;
 import com.chua.starter.pay.support.entity.PayMerchantFailureRecord;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
+import com.chua.starter.pay.support.enums.PayOrderStatus;
+import com.chua.starter.pay.support.event.ConfirmPayOrderEvent;
 import com.chua.starter.pay.support.pojo.PayMerchantConfigWechatWrapper;
 import com.chua.starter.pay.support.service.PayMerchantFailureRecordService;
 import com.chua.starter.pay.support.service.PayMerchantOrderService;
@@ -17,6 +19,7 @@ import com.wechat.pay.java.core.notification.NotificationConfig;
 import com.wechat.pay.java.core.notification.NotificationParser;
 import com.wechat.pay.java.core.notification.RequestParam;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationContext;
 
 import java.time.LocalDateTime;
 
@@ -40,6 +43,7 @@ public class WebchatCallbackPaymentPointsNotificationParser implements CallbackN
     private final WechatOrderCallbackRequest wechatOrderCallbackRequest;
     private final PayMerchantOrderService payMerchantOrderService;
     private final PayMerchantFailureRecordService payMerchantFailureRecordService;
+    private final ApplicationContext applicationContext;
     private final PayMerchantConfigWechat payMerchantConfigWechat;
 
     public WebchatCallbackPaymentPointsNotificationParser(
@@ -52,7 +56,8 @@ public class WebchatCallbackPaymentPointsNotificationParser implements CallbackN
             String wechatTimestamp,
             String wechatpaySignatureType,
             PayMerchantOrderService payMerchantOrderService,
-            PayMerchantFailureRecordService payMerchantFailureRecordService) {
+            PayMerchantFailureRecordService payMerchantFailureRecordService,
+            ApplicationContext applicationContext) {
         this.merchantOrder = merchantOrder;
         this.requestBody = requestBody;
         this.payMerchantConfigWechat = byCodeForPayMerchantConfigWechat.getPayMerchantConfigWechat();
@@ -64,6 +69,7 @@ public class WebchatCallbackPaymentPointsNotificationParser implements CallbackN
         this.wechatOrderCallbackRequest = JSON.parseObject(requestBody, WechatOrderCallbackRequest.class);
         this.payMerchantOrderService = payMerchantOrderService;
         this.payMerchantFailureRecordService = payMerchantFailureRecordService;
+        this.applicationContext = applicationContext;
         request.setStatus("TRANSACTION.SUCCESS".equals(wechatOrderCallbackRequest.getEventType()) ? OrderCallbackRequest.Status.SUCCESS : OrderCallbackRequest.Status.FAILURE);
         request.setBusinessStatus("TRANSACTION.SUCCESS".equals(wechatOrderCallbackRequest.getEventType()) ? OrderCallbackRequest.Status.SUCCESS : OrderCallbackRequest.Status.FAILURE);
     }
@@ -111,12 +117,20 @@ public class WebchatCallbackPaymentPointsNotificationParser implements CallbackN
         log.info("当前订单事件类型{}", eventType);
         try {
             //信用分扣款回调
-            if("PAYSCORE.USER_PAID".equals(eventType)) {
+            if ("PAYSCORE.USER_PAID".equals(eventType)) {
+                merchantOrder.setPayMerchantOrderFinishedTime(LocalDateTime.now());
+                merchantOrder.setPayMerchantOrderStatus(PayOrderStatus.PAY_SUCCESS);
+                merchantOrder.setPayMerchantOrderPayTime(LocalDateTime.now());
+                payMerchantOrderService.finishWechatOrder(merchantOrder);
             }
             //用户确认
-            if ("PAYSCORE.USER_CONFIRM".equals(eventType)){
+            if ("PAYSCORE.USER_CONFIRM".equals(eventType)) {
+                merchantOrder.setPayMerchantOrderStatus(PayOrderStatus.PAY_WAITING);
+                ConfirmPayOrderEvent confirmPayOrderEvent = new ConfirmPayOrderEvent(merchantOrder);
+                confirmPayOrderEvent.setPayMerchantOrder(merchantOrder);
+                applicationContext.publishEvent(confirmPayOrderEvent);
+                payMerchantOrderService.updateById(merchantOrder);
             }
-            payMerchantOrderService.updateWechatOrder(merchantOrder);
             return new WechatOrderCallbackResponse("SUCCESS", "OK", null);
         } catch (Exception e) {
             payMerchantFailureRecordService.saveRecord(createRecord(e));

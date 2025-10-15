@@ -3,8 +3,8 @@ package com.chua.starter.pay.support.postprocessor;
 import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.annotations.SpiDefault;
 import com.chua.common.support.objects.annotation.AutoInject;
+import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.event.CreateOrderEvent;
-import com.chua.starter.pay.support.pojo.CreateOrderV2Response;
 import org.springframework.context.ApplicationContext;
 
 /**
@@ -19,9 +19,9 @@ public class DefaultPayCreateOrderPostprocessor implements PayCreateOrderPostpro
     private ApplicationContext applicationContext;
 
     @Override
-    public void publish(CreateOrderV2Response data) {
-        CreateOrderEvent event = new CreateOrderEvent(data.getPayMerchantOrderCode());
-        event.setPayMerchantOrderCode(data.getPayMerchantOrderCode());
+    public void publish(PayMerchantOrder data) {
+        CreateOrderEvent event = new CreateOrderEvent(data);
+        event.setPayMerchantOrder(data);
         applicationContext.publishEvent(event);
     }
 }

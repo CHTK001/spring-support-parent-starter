@@ -1,6 +1,6 @@
 package com.chua.starter.pay.support.event;
 
-import lombok.Data;
+import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.context.ApplicationEvent;
@@ -17,5 +17,5 @@ public class CreateOrderEvent extends ApplicationEvent {
         super(source);
     }
 
-    private String payMerchantOrderCode;
+    private PayMerchantOrder payMerchantOrder;
 }

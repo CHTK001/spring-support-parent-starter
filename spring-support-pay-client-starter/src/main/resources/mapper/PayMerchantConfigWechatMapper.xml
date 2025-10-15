@@ -14,6 +14,9 @@
     <result column="pay_merchant_config_wechat_api_key_v3" jdbcType="VARCHAR" property="payMerchantConfigWechatApiKeyV3" />
     <result column="pay_merchant_config_wechat_private_key_path" jdbcType="VARCHAR" property="payMerchantConfigWechatPrivateKeyPath" />
     <result column="pay_merchant_config_wechat_payment_point_service_id" jdbcType="VARCHAR" property="payMerchantConfigWechatPaymentPointServiceId" />
+    <result column="pay_merchant_config_wechat_payment_point_service_name" jdbcType="VARCHAR" property="payMerchantConfigWechatPaymentPointServiceName" />
+    <result column="pay_merchant_config_wechat_payment_point_risk_amount" jdbcType="DECIMAL" property="payMerchantConfigWechatPaymentPointRiskAmount" />
+    <result column="pay_merchant_config_wechat_payment_point_rule" jdbcType="VARCHAR" property="payMerchantConfigWechatPaymentPointRule" />
     <result column="pay_merchant_config_status" jdbcType="INTEGER" property="payMerchantConfigStatus" />
     <result column="pay_merchant_config_test_account" jdbcType="VARCHAR" property="payMerchantConfigTestAccount" />
     <result column="pay_merchant_id" jdbcType="INTEGER" property="payMerchantId" />
@@ -34,9 +37,10 @@
     pay_merchant_config_wechat_mch_serial_no, pay_merchant_config_wechat_app_secret, 
     pay_merchant_config_wechat_trade_type, pay_merchant_config_wechat_notify_url, pay_merchant_config_wechat_api_key_v3, 
     pay_merchant_config_wechat_private_key_path, pay_merchant_config_wechat_payment_point_service_id, 
-    pay_merchant_config_status, pay_merchant_config_test_account, pay_merchant_id, pay_merchant_config_wechat_pay_notify_url, 
-    pay_merchant_config_wechat_refund_notify_url, pay_merchant_config_wechat_transfer_url, 
-    pay_merchant_config_wechat_payment_point_notify_url, create_name, create_by, create_time, 
-    update_time, update_name, update_by
+    pay_merchant_config_wechat_payment_point_service_name, pay_merchant_config_wechat_payment_point_risk_amount, 
+    pay_merchant_config_wechat_payment_point_rule, pay_merchant_config_status, pay_merchant_config_test_account, 
+    pay_merchant_id, pay_merchant_config_wechat_pay_notify_url, pay_merchant_config_wechat_refund_notify_url, 
+    pay_merchant_config_wechat_transfer_url, pay_merchant_config_wechat_payment_point_notify_url, 
+    create_name, create_by, create_time, update_time, update_name, update_by
   </sql>
 </mapper>

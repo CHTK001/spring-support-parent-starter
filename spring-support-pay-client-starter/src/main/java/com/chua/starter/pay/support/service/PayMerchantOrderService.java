@@ -1,9 +1,13 @@
 package com.chua.starter.pay.support.service;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.validator.group.AddGroup;
+import com.chua.common.support.validator.group.UpdateGroup;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.chua.starter.pay.support.enums.PayOrderStatus;
 import com.chua.starter.pay.support.pojo.*;
+import jakarta.validation.constraints.NotBlank;
 
 /**
  * 商户订单服务接口
@@ -21,6 +25,13 @@ public interface PayMerchantOrderService extends IService<PayMerchantOrder> {
      */
     ReturnResult<CreateOrderV2Response> createOrder(CreateOrderV2Request request);
 
+    /**
+     * 创建微信信用分订单
+     *
+     * @param request 创建微信信用分订单请求参数
+     * @return 创建微信信用分订单结果
+     */
+    ReturnResult<CreateOrderV2Response> createOrder(CreatePaymentPointsOrderV2Request request);
     /**
      * 保存订单
      *
@@ -51,14 +62,14 @@ public interface PayMerchantOrderService extends IService<PayMerchantOrder> {
      * @param merchantOrder 订单信息
      * @return 更新结果 true-更新成功 false-更新失败
      */
-    boolean updateWechatOrder(PayMerchantOrder merchantOrder);
+    boolean finishWechatOrder(PayMerchantOrder merchantOrder);
     /**
      * 更新订单信息(退款包含部分退款, 状态由调用方设置)
      *
      * @param merchantOrder 订单信息
      * @return 更新结果 true-更新成功 false-更新失败
      */
-    boolean updateRefundOrder(PayMerchantOrder merchantOrder);
+    boolean refundOrder(PayMerchantOrder merchantOrder);
 
     /**
      * 退款订单
@@ -94,4 +105,12 @@ public interface PayMerchantOrderService extends IService<PayMerchantOrder> {
      * @return 关闭结果
      */
     ReturnResult<Boolean> closeOrder(String payMerchantOrderCode);
+
+    /**
+     * 获取订单状态
+     *
+     * @param payMerchantOrderCode 订单编号
+     * @return 订单状态
+     */
+    PayOrderStatus getOrderStatus(String payMerchantOrderCode);
 }

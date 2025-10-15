@@ -1,6 +1,7 @@
 package com.chua.starter.pay.support.transfer;
 
 import com.chua.common.support.annotations.Spi;
+import com.chua.common.support.constant.Action;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.common.support.utils.CollectionUtils;
@@ -10,6 +11,7 @@ import com.chua.starter.pay.support.entity.PayMerchantConfigWechat;
 import com.chua.starter.pay.support.entity.PayMerchantTransferRecord;
 import com.chua.starter.pay.support.enums.WechatTransferBatchStatus;
 import com.chua.starter.pay.support.pojo.*;
+import com.chua.starter.pay.support.postprocessor.PayTransferPostprocessor;
 import com.chua.starter.pay.support.service.PayMerchantConfigWechatService;
 import com.chua.starter.pay.support.service.PayMerchantOrderService;
 import com.chua.starter.pay.support.service.PayMerchantTransferRecordService;
@@ -118,7 +120,7 @@ public class WechatBillsTransferBillsAdaptor implements TransferBillsAdaptor {
         try {
             return transactionTemplate.execute(it -> {
                 ReturnResult<TransferBillsStatusResponse> transferRecord = createQueryTransferRecord(payMerchantConfigWechat, request);
-                return updataTransferRecord(transferRecord.getData(), request);
+                return updateTransferRecord(transferRecord.getData(), request);
             });
         } catch (Exception e) {
             return ReturnResult.error("查询转账状态失败：" + e.getMessage());
@@ -134,7 +136,7 @@ public class WechatBillsTransferBillsAdaptor implements TransferBillsAdaptor {
      * @param request 查询请求参数 {@link QueryTransferV2Request}
      * @return 查询结果 {@link QueryTransferV2Response}
      */
-    private ReturnResult<QueryTransferV2Response> updataTransferRecord(TransferBillsStatusResponse data, QueryTransferV2Request request) {
+    private ReturnResult<QueryTransferV2Response> updateTransferRecord(TransferBillsStatusResponse data, QueryTransferV2Request request) {
         PayMerchantTransferRecord payMerchantTransferRecord = payMerchantTransferRecordService.getByCode(request.getTransferBillNo());
         QueryTransferV2Response queryTransferV2Response = new QueryTransferV2Response();
         queryTransferV2Response.setState(data.getState());
@@ -142,6 +144,8 @@ public class WechatBillsTransferBillsAdaptor implements TransferBillsAdaptor {
             payMerchantTransferRecord.setPayMerchantTransferRecordStatus(data.getState());
             payMerchantTransferRecord.setPayMerchantTransferRecordReason(data.getFailReason());
             payMerchantTransferRecordService.updateById(payMerchantTransferRecord);
+            PayTransferPostprocessor processor = PayTransferPostprocessor.createProcessor();
+            processor.publish(payMerchantTransferRecord, Action.UPDATE);
             return ReturnResult.success(queryTransferV2Response);
         }
 
@@ -215,8 +219,12 @@ public class WechatBillsTransferBillsAdaptor implements TransferBillsAdaptor {
         payMerchantTransferRecord.setPayMerchantTransferRecordRealName(request.getRealName());
         payMerchantTransferRecord.setPayMerchantTransferRecordDescription(request.getDescription());
         payMerchantTransferRecord.setPayMerchantId(request.getMerchantId());
+        payMerchantTransferRecord.setPayMerchantTransferRecordCreateTime(LocalDateTime.now());
 
         payMerchantTransferRecordService.save(payMerchantTransferRecord);
+
+        PayTransferPostprocessor processor = PayTransferPostprocessor.createProcessor();
+        processor.publish(payMerchantTransferRecord, Action.CREATE);
         return result;
     }
 

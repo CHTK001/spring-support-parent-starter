@@ -6,7 +6,6 @@ import com.chua.starter.pay.support.callback.AesUtil;
 import com.chua.starter.pay.support.callback.OrderCallbackRequest;
 import com.chua.starter.pay.support.callback.WechatOrderCallbackRequest;
 import com.chua.starter.pay.support.callback.WechatOrderCallbackResponse;
-import com.chua.starter.pay.support.entity.PayMerchant;
 import com.chua.starter.pay.support.entity.PayMerchantConfigWechat;
 import com.chua.starter.pay.support.entity.PayMerchantFailureRecord;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
@@ -129,7 +128,7 @@ public class WebchatCallbackNotificationParser implements CallbackNotificationPa
 
             merchantOrder.setPayMerchantOrderTransactionId(transaction.getTransactionId());
             merchantOrder.setPayMerchantOrderStatus(PayOrderStatus.PAY_SUCCESS);
-            payMerchantOrderService.updateWechatOrder(merchantOrder);
+            payMerchantOrderService.finishWechatOrder(merchantOrder);
             return new WechatOrderCallbackResponse("SUCCESS", "OK", null);
         } catch (Exception e) {
             // 签名验证失败，返回 401 UNAUTHORIZED 状态码
