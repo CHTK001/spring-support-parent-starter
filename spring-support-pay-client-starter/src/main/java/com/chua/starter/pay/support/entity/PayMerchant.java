@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.starter.mybatis.pojo.SysBase;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -21,7 +22,7 @@ import lombok.Data;
 @Schema(description = "支付商户管理")
 @Data
 @TableName(value = "pay_merchant")
-public class PayMerchant implements Serializable {
+public class PayMerchant extends SysBase implements Serializable {
     private static final long serialVersionUID = 1L;
 
     @TableId(value = "pay_merchant_id", type = IdType.AUTO)
@@ -84,45 +85,4 @@ public class PayMerchant implements Serializable {
     @Schema(description = "订单超时时间(min)")
     private Integer payMerchantOpenTimeoutTime;
 
-    /**
-     * 创建人姓名
-     */
-    @TableField(value = "create_name")
-    @Schema(description = "创建人姓名")
-    private String createName;
-
-    /**
-     * 创建人
-     */
-    @TableField(value = "create_by")
-    @Schema(description = "创建人")
-    private Integer createBy;
-
-    /**
-     * 创建时间
-     */
-    @TableField(value = "create_time")
-    @Schema(description = "创建时间")
-    private LocalDateTime createTime;
-
-    /**
-     * 更新时间
-     */
-    @TableField(value = "update_time")
-    @Schema(description = "更新时间")
-    private LocalDateTime updateTime;
-
-    /**
-     * 更新人姓名
-     */
-    @TableField(value = "update_name")
-    @Schema(description = "更新人姓名")
-    private String updateName;
-
-    /**
-     * 更新人
-     */
-    @TableField(value = "update_by")
-    @Schema(description = "更新人")
-    private Integer updateBy;
 }
