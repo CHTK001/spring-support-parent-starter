@@ -33,13 +33,12 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- *
  * @author CH
  * @since 2025/10/14 11:28
  */
 @Service
 @RequiredArgsConstructor
-public class PayMerchantOrderServiceImpl extends ServiceImpl<PayMerchantOrderMapper, PayMerchantOrder> implements PayMerchantOrderService{
+public class PayMerchantOrderServiceImpl extends ServiceImpl<PayMerchantOrderMapper, PayMerchantOrder> implements PayMerchantOrderService {
 
     final TransactionTemplate transactionTemplate;
     final PayMerchantOrderWaterService payMerchantOrderWaterService;
@@ -49,31 +48,31 @@ public class PayMerchantOrderServiceImpl extends ServiceImpl<PayMerchantOrderMap
     public ReturnResult<CreateOrderV2Response> createOrder(CreateOrderV2Request request) {
         String userId = RequestUtils.getUserId();
         String openId = RequestUtils.getUserInfo(UserResume.class).getOpenId();
-        if(!request.hasTradeType()) {
+        if (!request.hasTradeType()) {
             return ReturnResult.illegal("请选择交易类型");
         }
 
-        if(!request.hasAmount()) {
+        if (!request.hasAmount()) {
             return ReturnResult.illegal("请选择金额");
         }
 
-        if(null == request.getPayMerchantId()) {
+        if (null == request.getPayMerchantId()) {
             return ReturnResult.illegal("请选择商户");
         }
         //创建订单预处理 -> 支持SPI优先级覆盖
         PayCreateOrderPreprocess createOrderPreprocess = PayCreateOrderPreprocess.createProcessor();
         ReturnResult<CreateOrderV2Request> preprocess = createOrderPreprocess.preprocess(request, userId, openId);
-        if(preprocess.isFailure()) {
+        if (preprocess.isFailure()) {
             return ReturnResult.illegal(preprocess.getMsg());
         }
         //以预处理的结果作为依据, 预处理可能讲原始数据ID转成后端数据库中的金额, 防止前端参数异常
         request = preprocess.getData();
         CreateOrderAdaptor createOrderAdaptor = ServiceProvider.of(CreateOrderAdaptor.class).getNewExtension(request.getPayTradeType());
-        if(null == createOrderAdaptor) {
+        if (null == createOrderAdaptor) {
             return ReturnResult.illegal("请选择正确的交易类型");
         }
         ReturnResult<CreateOrderV2Response> order = createOrderAdaptor.createOrder(request, userId, openId);
-        if(order.isOk()) {
+        if (order.isOk()) {
             //后缀 处理
             PayCreateOrderPostprocessor postprocessor = PayCreateOrderPostprocessor.createProcessor();
             postprocessor.publish(order.getData());
@@ -96,16 +95,16 @@ public class PayMerchantOrderServiceImpl extends ServiceImpl<PayMerchantOrderMap
     @Override
     public ReturnResult<PaySignResponse> createSign(CreateOrderV2Response request) {
         PayMerchantOrder merchantOrder = this.getByCode(request.getPayMerchantOrderCode());
-        if(null == merchantOrder) {
+        if (null == merchantOrder) {
             return ReturnResult.illegal("订单不存在");
         }
 
         CreateSignAdaptor createSignAdaptor = ServiceProvider.of(CreateSignAdaptor.class).getNewExtension(merchantOrder.getPayMerchantTradeType());
-        if(null == createSignAdaptor) {
+        if (null == createSignAdaptor) {
             return ReturnResult.illegal("当前订单不支持签名");
         }
         ReturnResult<PaySignResponse> sign = createSignAdaptor.createSign(merchantOrder, request.getPrepayId());
-        if(sign.isSuccess()) {
+        if (sign.isSuccess()) {
             merchantOrder.setPayMerchantOrderPayTime(LocalDateTime.now());
             merchantOrder.setPayMerchantOrderStatus(PayOrderStatus.PAY_WAITING);
             this.updateById(merchantOrder);
@@ -128,7 +127,7 @@ public class PayMerchantOrderServiceImpl extends ServiceImpl<PayMerchantOrderMap
             payMerchantOrderWater.setPayMerchantOrderStatus(payMerchantOrder.getPayMerchantOrderStatus());
             payMerchantOrderWater.setPayMerchantOrderWaterCode("W" + IdUtils.createTimeId(31));
             boolean save = payMerchantOrderWaterService.save(payMerchantOrderWater);
-            if(save) {
+            if (save) {
                 FinishPayOrderEvent finishPayOrderEvent = new FinishPayOrderEvent(payMerchantOrder.getPayMerchantOrderCode());
                 finishPayOrderEvent.setPayMerchantOrder(payMerchantOrder);
                 applicationContext.publishEvent(finishPayOrderEvent);
@@ -147,7 +146,7 @@ public class PayMerchantOrderServiceImpl extends ServiceImpl<PayMerchantOrderMap
             payMerchantOrderWater.setPayMerchantOrderStatus(payMerchantOrder.getPayMerchantOrderStatus());
             payMerchantOrderWater.setPayMerchantOrderWaterCode("W" + IdUtils.createTimeId(31));
             boolean save = payMerchantOrderWaterService.save(payMerchantOrderWater);
-            if(save) {
+            if (save) {
                 RefundPayOrderEvent refundPayOrderEvent = new RefundPayOrderEvent(payMerchantOrder.getPayMerchantOrderCode());
                 refundPayOrderEvent.setPayMerchantOrder(payMerchantOrder);
                 applicationContext.publishEvent(refundPayOrderEvent);
@@ -160,7 +159,7 @@ public class PayMerchantOrderServiceImpl extends ServiceImpl<PayMerchantOrderMap
     public ReturnResult<RefundOrderV2Response> refundOrder(String payMerchantOrderCode, RefundOrderV2Request request) {
         PayMerchantOrder merchantOrder = this.getByCode(payMerchantOrderCode);
         ReturnResult<RefundOrderV2Request> stringReturnResult = hasReasonRefuse(merchantOrder, request);
-        if(stringReturnResult.isFailure()) {
+        if (stringReturnResult.isFailure()) {
             return ReturnResult.illegal(stringReturnResult.getMsg());
         }
 
@@ -173,7 +172,7 @@ public class PayMerchantOrderServiceImpl extends ServiceImpl<PayMerchantOrderMap
     public ReturnResult<RefundOrderV2Response> refundOrderToWallet(String payMerchantOrderCode, RefundOrderV2Request request) {
         PayMerchantOrder merchantOrder = this.getByCode(payMerchantOrderCode);
         ReturnResult<RefundOrderV2Request> stringReturnResult = hasReasonRefuse(merchantOrder, request);
-        if(stringReturnResult.isFailure()) {
+        if (stringReturnResult.isFailure()) {
             return ReturnResult.illegal(stringReturnResult.getMsg());
         }
         request = stringReturnResult.getData();
@@ -192,60 +191,93 @@ public class PayMerchantOrderServiceImpl extends ServiceImpl<PayMerchantOrderMap
         );
     }
 
+    @Override
+    public ReturnResult<Boolean> closeOrder(String payMerchantOrderCode) {
+        PayMerchantOrder merchantOrder = this.getByCode(payMerchantOrderCode);
+        if (null == merchantOrder) {
+            return ReturnResult.illegal("订单不存在");
+        }
+
+        if (!merchantOrder.getUserId().equals(RequestUtils.getUserId())) {
+            return ReturnResult.illegal("无权限");
+        }
+
+        PayOrderStatus payMerchantOrderStatus = merchantOrder.getPayMerchantOrderStatus();
+        if (payMerchantOrderStatus == PayOrderStatus.PAY_WAITING) {
+            return ReturnResult.illegal("订单正在支付, 无法关闭");
+        }
+
+        if (payMerchantOrderStatus == PayOrderStatus.PAY_CREATE) {
+            return ReturnResult.illegal("订单已创建, 暂无法关闭");
+        }
+
+        if(payMerchantOrderStatus == PayOrderStatus.PAY_REFUND_WAITING) {
+            return ReturnResult.illegal("订单正在退款, 暂无法关闭");
+        }
+
+
+        return baseMapper.update(
+                Wrappers.<PayMerchantOrder>lambdaUpdate()
+                        .eq(PayMerchantOrder::getPayMerchantOrderCode, payMerchantOrderCode)
+                        .set(PayMerchantOrder::getPayMerchantOrderStatus, PayOrderStatus.PAY_CLOSE_SUCCESS)
+        ) > 0 ? ReturnResult.ok() : ReturnResult.error();
+    }
+
     /**
      * 检测订单是否可以退款
+     *
      * @param merchantOrder 订单
-     * @param request 退款参数
+     * @param request       退款参数
      * @return 检测订单是否可以退款
      */
     private ReturnResult<RefundOrderV2Request> hasReasonRefuse(PayMerchantOrder merchantOrder, RefundOrderV2Request request) {
-        if(null == merchantOrder) {
+        if (null == merchantOrder) {
             return ReturnResult.illegal("订单不存在");
         }
 
         String userId = RequestUtils.getUserId();
-        if(!merchantOrder.getUserId().equals(userId)) {
+        if (!merchantOrder.getUserId().equals(userId)) {
             return ReturnResult.illegal("订单不属于当前用户");
         }
 
         PayRefundOrderPreprocess processor = PayRefundOrderPreprocess.createProcessor();
         ReturnResult<RefundOrderV2Request> preprocess = processor.preprocess(request, merchantOrder);
-        if(preprocess.isFailure()) {
+        if (preprocess.isFailure()) {
             return ReturnResult.illegal("当前订单不支持退款");
         }
 
         BigDecimal refundAmount = request.getRefundAmount();
-        if(refundAmount.compareTo(BigDecimal.ZERO) <= 0) {
+        if (refundAmount.compareTo(BigDecimal.ZERO) <= 0) {
             return ReturnResult.error("退款金额不能小于零元");
         }
 
         BigDecimal decimal = merchantOrder.getPayMerchantOrderAmount();
-        if(decimal.compareTo(refundAmount) < 0) {
+        if (decimal.compareTo(refundAmount) < 0) {
             return ReturnResult.error("退款金额不能大于订单金额");
         }
 
         PayOrderStatus payMerchantOrderStatus = merchantOrder.getPayMerchantOrderStatus();
-        if(payMerchantOrderStatus == PayOrderStatus.PAY_CREATE) {
+        if (payMerchantOrderStatus == PayOrderStatus.PAY_CREATE) {
             return ReturnResult.error("订单未支付");
         }
 
-        if(payMerchantOrderStatus == PayOrderStatus.PAY_PAYING) {
+        if (payMerchantOrderStatus == PayOrderStatus.PAY_PAYING) {
             return ReturnResult.error("订单正在支付中");
         }
 
-        if(payMerchantOrderStatus == PayOrderStatus.PAY_REFUND_SUCCESS) {
+        if (payMerchantOrderStatus == PayOrderStatus.PAY_REFUND_SUCCESS) {
             return ReturnResult.error("订单已退款");
         }
 
-        if(payMerchantOrderStatus == PayOrderStatus.PAY_CANCEL_SUCCESS) {
+        if (payMerchantOrderStatus == PayOrderStatus.PAY_CANCEL_SUCCESS) {
             return ReturnResult.error("订单已取消");
         }
 
-        if(payMerchantOrderStatus == PayOrderStatus.PAY_TIMEOUT) {
+        if (payMerchantOrderStatus == PayOrderStatus.PAY_TIMEOUT) {
             return ReturnResult.error("订单已超时");
         }
 
-        if(payMerchantOrderStatus == PayOrderStatus.PAY_CLOSE_SUCCESS) {
+        if (payMerchantOrderStatus == PayOrderStatus.PAY_CLOSE_SUCCESS) {
             return ReturnResult.error("订单已关闭");
         }
 
