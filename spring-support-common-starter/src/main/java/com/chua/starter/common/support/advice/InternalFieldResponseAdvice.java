@@ -74,11 +74,14 @@ public class InternalFieldResponseAdvice implements ResponseBodyAdvice<Object> {
      * 字段和注解的映射关系
      */
     @Data
-    @AllArgsConstructor
     static class FieldAndAnnotation {
         private Field field;
         private ApiParam apiParam;
 
+        public FieldAndAnnotation(Field field, ApiParam apiParam) {
+            this.field = field;
+            this.apiParam = apiParam;
+        }
         /**
          * 是否允许返回
          */
