@@ -7,6 +7,7 @@ import com.chua.starter.pay.support.callback.parser.CallbackNotificationParser;
 import com.chua.starter.pay.support.callback.parser.WebchatCallbackTransferNotificationParser;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.entity.PayMerchantTransferRecord;
+import com.chua.starter.pay.support.enums.PayTradeType;
 import com.chua.starter.pay.support.pojo.PayMerchantConfigWechatWrapper;
 import com.chua.starter.pay.support.service.PayMerchantConfigWechatService;
 import com.chua.starter.pay.support.service.PayMerchantFailureRecordService;
@@ -70,7 +71,7 @@ public class WechatPayTransferCallbackController {
         log.info("微信转账回调");
         log.info("当前订单{}", payMerchantCode);
         PayMerchantTransferRecord merchantOrder = payMerchantTransferRecordService.getByCode(payMerchantCode);
-        PayMerchantConfigWechatWrapper byCodeForPayMerchantConfigWechat = payMerchantConfigWechatService.getByCodeForPayMerchantConfigWechat(merchantOrder.getPayMerchantId(), merchantOrder.getPayMerchantTradeType().getName());
+        PayMerchantConfigWechatWrapper byCodeForPayMerchantConfigWechat = payMerchantConfigWechatService.getByCodeForPayMerchantConfigWechat(merchantOrder.getPayMerchantId(), PayTradeType.PAY_WECHAT_JS_API.getName());
         CallbackNotificationParser parser = new WebchatCallbackTransferNotificationParser(
                 merchantOrder,
                 byCodeForPayMerchantConfigWechat,
