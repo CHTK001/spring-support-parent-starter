@@ -76,6 +76,9 @@ public class GlobalSettingFactory {
         }
 
         for (T t1 : t) {
+            if(null == t1) {
+                continue;
+            }
             if (clazz.isInstance(t1)) {
                 return t1;
             }
