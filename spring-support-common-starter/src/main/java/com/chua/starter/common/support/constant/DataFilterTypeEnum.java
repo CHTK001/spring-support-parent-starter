@@ -2,6 +2,7 @@ package com.chua.starter.common.support.constant;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 /**
  * 权限
