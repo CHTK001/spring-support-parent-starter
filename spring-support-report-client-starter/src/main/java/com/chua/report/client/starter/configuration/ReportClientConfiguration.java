@@ -96,8 +96,6 @@ public class ReportClientConfiguration
             objectContext.registerMapping(new ReportXxlJobConfiguration());
             // 添加节点管理配置
             objectContext.registerMapping(new NodeManagementConfiguration());
-            // 添加url过滤器
-            objectContext.registerMapping(new UrlFilterConfiguration());
             // 添加映射
             endpointServer.addFilter(new MappingServletFilter(objectContext));
         }
