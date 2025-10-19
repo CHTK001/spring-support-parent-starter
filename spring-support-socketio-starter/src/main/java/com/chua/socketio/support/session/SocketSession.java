@@ -87,13 +87,14 @@ public class SocketSession {
         CodecKeyPair codecKeyPair = (CodecKeyPair) codec;
         String publicKeyHex = codecKeyPair.getPublicKeyHex();
         String encode = ((CodecKeyPair) codec).encode(Json.toJSONString(returnResult), publicKeyHex);
-        String nanoTime = (System.nanoTime() + "000" + RandomUtils.randomInt(16)).substring(0, 16);
-        String encrypt = DigestUtils.aesEncrypt(codecKeyPair.getPrivateKeyHex(), nanoTime);
+        // 使用明文密钥（解密后的密钥）直接拼接到 02 和 200 之间，不再进行 AES 加密
+        String key = codecKeyPair.getPrivateKeyHex();
+        String keyLength = String.valueOf(key.length());
         client.sendEvent(event,
                 new JsonObject()
-                .fluent("data", "02" + RandomUtils.randomInt(1) + "200" + encode + "ffff")
-                .fluent("uuid", encrypt)
-                .fluent("timestamp", nanoTime).toJSONString()
+                        .fluent("data", "02" + key + "200" + encode + "ffff")
+                        .fluent("uuid", key)
+                        .fluent("timestamp", keyLength).toJSONString()
         );
     }
 
