@@ -2,7 +2,7 @@ package com.chua.starter.mybatis.pojo;
 
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
-import com.chua.starter.common.support.annotations.ApiIgnore;
+import com.chua.starter.common.support.annotations.ApiFieldIgnore;
 import com.chua.starter.common.support.group.IgnoreGroup;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
@@ -27,14 +27,14 @@ public class SysBase implements Serializable {
      */
     @TableField(fill = FieldFill.INSERT)
     @Schema(description = "创建人姓名")
-    @ApiIgnore(IgnoreGroup.class)
+    @ApiFieldIgnore(IgnoreGroup.class)
     private String createName;
     /**
      * 创建人
      */
     @TableField(fill = FieldFill.INSERT)
     @Schema(description = "创建人")
-    @ApiIgnore(IgnoreGroup.class)
+    @ApiFieldIgnore(IgnoreGroup.class)
     private Integer createBy;
 
     /**
@@ -63,7 +63,7 @@ public class SysBase implements Serializable {
      */
     @TableField(fill = FieldFill.UPDATE)
     @Schema(description = "更新人姓名")
-    @ApiIgnore(IgnoreGroup.class)
+    @ApiFieldIgnore(IgnoreGroup.class)
     private String updateName;
 
     /**
@@ -71,6 +71,6 @@ public class SysBase implements Serializable {
      */
     @TableField(fill = FieldFill.UPDATE)
     @Schema(description = "更新人")
-    @ApiIgnore(IgnoreGroup.class)
+    @ApiFieldIgnore(IgnoreGroup.class)
     private Integer updateBy;
 }

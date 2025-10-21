@@ -2,7 +2,7 @@ package com.chua.starter.common.support.rule;
 
 import com.chua.common.support.utils.ArrayUtils;
 import com.chua.starter.common.support.annotations.ApiGroup;
-import com.chua.starter.common.support.annotations.ApiIgnore;
+import com.chua.starter.common.support.annotations.ApiFieldIgnore;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -22,7 +22,7 @@ import java.io.IOException;
  * 忽略字段
  *
  * @author CH
- * @see com.chua.starter.common.support.annotations.ApiIgnore
+ * @see ApiFieldIgnore
  * @see com.chua.starter.common.support.annotations.ApiGroup
  * @since 2025/1/1
  */
@@ -47,20 +47,20 @@ public class ApiIgnoreSerializer extends JsonSerializer<Object> implements Conte
     @Override
     public JsonSerializer<?> createContextual(SerializerProvider serializerProvider, BeanProperty beanProperty) throws JsonMappingException {
         if (beanProperty != null) {
-            ApiIgnore apiIgnore = beanProperty.getAnnotation(ApiIgnore.class);
-            if (apiIgnore == null) {
-                apiIgnore = beanProperty.getContextAnnotation(ApiIgnore.class);
+            ApiFieldIgnore apiFieldIgnore = beanProperty.getAnnotation(ApiFieldIgnore.class);
+            if (apiFieldIgnore == null) {
+                apiFieldIgnore = beanProperty.getContextAnnotation(ApiFieldIgnore.class);
             }
-            if (apiIgnore != null&& isMatch(apiIgnore)) {
-                return new ApiIgnoreSerializer(apiIgnore.value());
+            if (apiFieldIgnore != null&& isMatch(apiFieldIgnore)) {
+                return new ApiIgnoreSerializer(apiFieldIgnore.value());
             }
             return serializerProvider.findValueSerializer(beanProperty.getType(), beanProperty);
         }
         return serializerProvider.findNullValueSerializer(null);
     }
 
-    private boolean isMatch(ApiIgnore apiIgnore) {
-        Class<?>[] value = apiIgnore.value();
+    private boolean isMatch(ApiFieldIgnore apiFieldIgnore) {
+        Class<?>[] value = apiFieldIgnore.value();
         if(value.length == 0) {
             return true;
         }

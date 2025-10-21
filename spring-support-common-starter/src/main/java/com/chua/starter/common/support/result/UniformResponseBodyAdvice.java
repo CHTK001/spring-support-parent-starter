@@ -39,6 +39,7 @@ import static com.chua.common.support.utils.ClassUtils.isAssignableFrom;
 
 /**
  * 统一返回值
+ *
  * @author CH
  */
 @RestControllerAdvice
@@ -79,7 +80,7 @@ public class UniformResponseBodyAdvice implements ResponseBodyAdvice<Object>, En
         }
 
         if (o instanceof ResultData resultData) {
-            if(resultData.getData() instanceof byte[] && resultData.getCode().equals(SUCCESS.getCode())) {
+            if (resultData.getData() instanceof byte[] && resultData.getCode().equals(SUCCESS.getCode())) {
                 return resultData.getData();
             }
             return o;
@@ -99,7 +100,7 @@ public class UniformResponseBodyAdvice implements ResponseBodyAdvice<Object>, En
             return o;
         }
 
-        if(o instanceof Flux<?> flux) {
+        if (o instanceof Flux<?> flux) {
             return createFluxBody(flux, serverHttpResponse);
         }
 
@@ -202,14 +203,17 @@ public class UniformResponseBodyAdvice implements ResponseBodyAdvice<Object>, En
         if (methodParameter.hasMethodAnnotation(ApiReturnFormatIgnore.class)) {
             return true;
         }
+
         if (declaringClass.isAnnotationPresent(ApiReturnFormatIgnore.class) ||
                 isAssignableFrom(ResponseEntity.class, declaringClass)
         ) {
             return true;
         }
+
         if (methodParameter.hasMethodAnnotation(ReturnOrigin.class)) {
             return true;
         }
+
         if (declaringClass.isAnnotationPresent(ReturnOrigin.class) ||
                 isAssignableFrom(ResponseEntity.class, declaringClass)
         ) {
