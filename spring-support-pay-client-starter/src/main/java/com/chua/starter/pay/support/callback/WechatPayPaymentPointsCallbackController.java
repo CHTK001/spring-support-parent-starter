@@ -2,10 +2,9 @@ package com.chua.starter.pay.support.callback;
 
 import com.alibaba.fastjson.JSONObject;
 import com.chua.common.support.annotations.Ignore;
-import com.chua.starter.oauth.client.support.annotation.AuthIgnore;
+import com.chua.starter.oauth.client.support.annotation.TokenForIgnore;
 import com.chua.starter.pay.support.callback.parser.CallbackNotificationParser;
 import com.chua.starter.pay.support.callback.parser.WebchatCallbackPaymentPointsNotificationParser;
-import com.chua.starter.pay.support.callback.parser.WebchatCallbackTransferNotificationParser;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.pojo.PayMerchantConfigWechatWrapper;
 import com.chua.starter.pay.support.service.PayMerchantConfigWechatService;
@@ -34,7 +33,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/v2/pay/callback/wechat/payment")
 @Slf4j
 @Ignore
-@AuthIgnore
+@TokenForIgnore
 @RequiredArgsConstructor
 public class WechatPayPaymentPointsCallbackController {
 

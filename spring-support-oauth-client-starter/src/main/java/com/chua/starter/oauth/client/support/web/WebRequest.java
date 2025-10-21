@@ -5,7 +5,7 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.ObjectUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
-import com.chua.starter.oauth.client.support.annotation.AuthIgnore;
+import com.chua.starter.oauth.client.support.annotation.TokenForIgnore;
 import com.chua.starter.oauth.client.support.enums.UpgradeType;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.infomation.Information;
@@ -114,7 +114,7 @@ public class WebRequest {
                     return true;
                 }
                 Method method = handlerMethod.getMethod();
-                boolean annotationPresent = method.isAnnotationPresent(AuthIgnore.class);
+                boolean annotationPresent = method.isAnnotationPresent(TokenForIgnore.class);
                 if (annotationPresent) {
                     PASS.put(handlerMethod, handlerMethod);
                     return true;
@@ -126,7 +126,7 @@ public class WebRequest {
                 }
 
                 Class<?> beanType = handlerMethod.getBeanType();
-                boolean annotationPresent1 = beanType.isAnnotationPresent(AuthIgnore.class);
+                boolean annotationPresent1 = beanType.isAnnotationPresent(TokenForIgnore.class);
                 if (annotationPresent1) {
                     PASS.put(handlerMethod, handlerMethod);
                     return true;

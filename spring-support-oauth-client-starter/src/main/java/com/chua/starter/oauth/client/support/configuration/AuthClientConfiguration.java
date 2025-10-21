@@ -3,7 +3,8 @@ package com.chua.starter.oauth.client.support.configuration;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.oauth.AuthService;
 import com.chua.starter.oauth.client.support.filter.AuthFilter;
-import com.chua.starter.oauth.client.support.interceptor.PermissionPointcut;
+import com.chua.starter.oauth.client.support.interceptor.PermissionInterceptor;
+import com.chua.starter.oauth.client.support.interceptor.TokenForTypeInterceptor;
 import com.chua.starter.oauth.client.support.oauth.OauthAuthService;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.provider.UserStatisticProvider;
@@ -73,8 +74,21 @@ public class AuthClientConfiguration implements ApplicationContextAware, BeanDef
      */
     @Bean
     @ConditionalOnMissingBean
-    public PermissionPointcut permissionProxyFactoryBean() {
-        return new PermissionPointcut();
+    public PermissionInterceptor permissionProxyFactoryBean() {
+        return new PermissionInterceptor();
+    }
+    /**
+     * 权限拦截器
+     *
+     * 提供基于注解的权限控制功能，支持方法级别的权限验证。
+     * 集成OAuth用户信息进行权限检查。
+     *
+     * @return 权限拦截器实例
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public TokenForTypeInterceptor tokenForTypeInterceptor() {
+        return new TokenForTypeInterceptor();
     }
 
     /**
@@ -131,6 +145,7 @@ public class AuthClientConfiguration implements ApplicationContextAware, BeanDef
     @Override
     public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
         resolvers.add(new UserRequestHandlerMethodArgumentResolver(new WebRequest(authProperties)));
+        resolvers.add(new TokenRequestHandlerMethodArgumentResolver(new WebRequest(authProperties)));
     }
 
     @Override
