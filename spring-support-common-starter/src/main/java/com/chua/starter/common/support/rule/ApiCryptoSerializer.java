@@ -3,17 +3,15 @@ package com.chua.starter.common.support.rule;
 import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.crypto.CodecKeyPair;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.common.support.annotations.ApiCrypto;
-import com.chua.starter.common.support.annotations.ApiCryptoKey;
+import com.chua.starter.common.support.annotations.ApiFieldCrypto;
+import com.chua.starter.common.support.annotations.ApiFieldCryptoKey;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
-import com.chua.starter.common.support.utils.RequestUtils;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.ContextualSerializer;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.springframework.util.ConcurrentReferenceHashMap;
@@ -89,7 +87,7 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
 
         Class<?> aClass = currentValue.getClass();
         return KEY_MAP.computeIfAbsent(aClass, it -> {
-            Field[] fields = FieldUtils.getFieldsWithAnnotation(aClass, ApiCryptoKey.class);
+            Field[] fields = FieldUtils.getFieldsWithAnnotation(aClass, ApiFieldCryptoKey.class);
             if(fields.length == 0) {
                 return key;
             }
@@ -109,9 +107,9 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
                                               final BeanProperty beanProperty) throws JsonMappingException {
         if (beanProperty != null) {
             if (Objects.equals(beanProperty.getType().getRawClass(), String.class)) {
-                ApiCrypto crypto = beanProperty.getAnnotation(ApiCrypto.class);
+                ApiFieldCrypto crypto = beanProperty.getAnnotation(ApiFieldCrypto.class);
                 if (crypto == null) {
-                    crypto = beanProperty.getContextAnnotation(ApiCrypto.class);
+                    crypto = beanProperty.getContextAnnotation(ApiFieldCrypto.class);
                 }
                 if (crypto != null) {
                     String key = SpringBeanUtils.getEnvironment().resolvePlaceholders(crypto.key());

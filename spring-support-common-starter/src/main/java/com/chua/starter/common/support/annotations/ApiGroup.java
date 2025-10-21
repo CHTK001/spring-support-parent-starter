@@ -4,6 +4,7 @@ import java.lang.annotation.*;
 
 /**
  * API 分组
+ * @see com.chua.starter.common.support.annotations.ApiGroup
  * @author CH
  * @since 2025/1/1
  */
