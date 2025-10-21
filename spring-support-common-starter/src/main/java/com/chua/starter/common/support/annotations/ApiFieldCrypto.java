@@ -70,7 +70,6 @@ public @interface ApiFieldCrypto {
      * @since 2023-01-01
      */
     @Getter
-    @Setter
     public static enum ApiCryptoType {
         /**
          * AES对称加密算法
