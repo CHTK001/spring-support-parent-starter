@@ -1,7 +1,7 @@
 package com.chua.starter.common.support.rule;
 
 import com.chua.common.support.utils.PrivacyUtils;
-import com.chua.starter.common.support.annotations.PrivacyEncrypt;
+import com.chua.starter.common.support.annotations.ApiFieldPrivacyEncrypt;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -87,13 +87,13 @@ public class PrivacySerializer extends JsonSerializer<String> implements Context
                                               final BeanProperty beanProperty) throws JsonMappingException {
         if (beanProperty != null) {
             if (Objects.equals(beanProperty.getType().getRawClass(), String.class)) {
-                PrivacyEncrypt privacyEncrypt = beanProperty.getAnnotation(PrivacyEncrypt.class);
-                if (privacyEncrypt == null) {
-                    privacyEncrypt = beanProperty.getContextAnnotation(PrivacyEncrypt.class);
+                ApiFieldPrivacyEncrypt apiFieldPrivacyEncrypt = beanProperty.getAnnotation(ApiFieldPrivacyEncrypt.class);
+                if (apiFieldPrivacyEncrypt == null) {
+                    apiFieldPrivacyEncrypt = beanProperty.getContextAnnotation(ApiFieldPrivacyEncrypt.class);
                 }
-                if (privacyEncrypt != null) {
-                    return new PrivacySerializer(privacyEncrypt.type(), privacyEncrypt.prefixNoMaskLen(),
-                            privacyEncrypt.suffixNoMaskLen(), privacyEncrypt.symbol());
+                if (apiFieldPrivacyEncrypt != null) {
+                    return new PrivacySerializer(apiFieldPrivacyEncrypt.type(), apiFieldPrivacyEncrypt.prefixNoMaskLen(),
+                            apiFieldPrivacyEncrypt.suffixNoMaskLen(), apiFieldPrivacyEncrypt.symbol());
                 }
             }
             return serializerProvider.findValueSerializer(beanProperty.getType(), beanProperty);

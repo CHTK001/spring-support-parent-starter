@@ -8,6 +8,7 @@ import java.lang.annotation.*;
 
 /**
  * API 忽略返回字段
+ * @see com.chua.starter.common.support.annotations.ApiFieldIgnore
  * @author CH
  * @since 2025/1/1
  */
@@ -16,10 +17,11 @@ import java.lang.annotation.*;
 @Documented
 @JacksonAnnotationsInside
 @JsonSerialize(using = ApiIgnoreSerializer.class)
-public @interface ApiIgnore {
+public @interface ApiFieldIgnore {
 
     /**
      * 忽略分组
+     *
      * @return 忽略分组
      */
     Class<?>[] value();
