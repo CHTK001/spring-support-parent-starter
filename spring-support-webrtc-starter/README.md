@@ -28,14 +28,14 @@
 <dependency>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-webrtc-starter</artifactId>
-    <version>4.0.0.33</version>
+    <version>4.0.0.34</version>
 </dependency>
 
 <!-- 如果需要数据库持久化功能，还需要添加MyBatis依赖 -->
 <dependency>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-mybatis-starter</artifactId>
-    <version>4.0.0.33</version>
+    <version>4.0.0.34</version>
 </dependency>
 ```
 
@@ -1329,7 +1329,7 @@ socket.on('iceCandidate', handleIceCandidate);
 <dependency>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-webrtc-starter</artifactId>
-    <version>4.0.0.33</version>
+    <version>4.0.0.34</version>
 </dependency>
 ```
 
