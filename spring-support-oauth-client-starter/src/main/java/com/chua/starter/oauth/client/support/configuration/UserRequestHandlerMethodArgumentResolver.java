@@ -7,6 +7,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.starter.oauth.client.support.annotation.TokenValue;
 import com.chua.starter.oauth.client.support.annotation.UserValue;
 import com.chua.starter.oauth.client.support.entity.RoleJudge;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
@@ -26,9 +27,11 @@ import org.springframework.web.context.request.RequestScope;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Parameter;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 /**
  * 用户信息
@@ -50,33 +53,48 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
 
     @Override
     public boolean supportsParameter(MethodParameter parameter) {
-        if (null == configurableBeanFactory) {
-            try {
-                configurableBeanFactory = (ConfigurableBeanFactory) SpringBeanUtils.getApplicationContext().getAutowireCapableBeanFactory();
-            } catch (Throwable ignored) {
-            }
-        }
-
-        if (null == configurableBeanFactory) {
-            return false;
-        }
-
-        if (null == expressionContext) {
-            this.expressionContext = new BeanExpressionContext(configurableBeanFactory, new RequestScope());
-        }
-
-        if (null == conversionService) {
-            conversionService = configurableBeanFactory.getConversionService();
-        }
-
-        UserValue requestValue = parameter.getParameterAnnotation(UserValue.class);
-        return null != requestValue;
+        return this.supportsParameter(parameter, UserValue.class);
     }
 
     @Override
     @SuppressWarnings("ALL")
-    public Object resolveArgument(MethodParameter methodParameter, ModelAndViewContainer mavContainer, NativeWebRequest webRequest, WebDataBinderFactory binderFactory) throws Exception {
+    public Object resolveArgument(MethodParameter methodParameter,
+                                  ModelAndViewContainer mavContainer,
+                                  NativeWebRequest webRequest,
+                                  WebDataBinderFactory binderFactory) throws Exception {
         UserValue requestValue = methodParameter.getParameterAnnotation(UserValue.class);
+        Parameter parameter = methodParameter.getParameter();
+        return resolveEmbeddedValuesAndExpressions(
+                methodParameter,
+                mavContainer,
+                webRequest,
+                binderFactory,
+                methodParameter1 -> {
+                    return requestValue.defaultValue();
+                },
+                methodParameter1 -> {
+                    return StringUtils.defaultString(requestValue.name(),
+                            StringUtils.defaultString(parameter.getName(), methodParameter.getParameterName()));
+                }
+        );
+    }
+
+    /**
+     * 解析参数
+     *
+     * @param methodParameter 参数
+     * @param mavContainer    容器
+     * @param webRequest      请求
+     * @param binderFactory   工厂
+     * @return 结果
+     */
+
+    public Object resolveEmbeddedValuesAndExpressions(MethodParameter methodParameter,
+                                                      ModelAndViewContainer mavContainer,
+                                                      NativeWebRequest webRequest,
+                                                      WebDataBinderFactory binderFactory,
+                                                      Function<MethodParameter, String> defaultFunction,
+                                                      Function<MethodParameter, String> nameFunction) throws Exception {
         WebRequest webRequest1 = new WebRequest(
                 this.webRequest.getAuthProperties(),
                 webRequest.getNativeRequest(HttpServletRequest.class), null);
@@ -84,20 +102,20 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
         Parameter parameter = methodParameter.getParameter();
         Class<?> parameterType = parameter.getType();
 
-        if(RoleJudge.class.isAssignableFrom(parameterType)) {
+        if (RoleJudge.class.isAssignableFrom(parameterType)) {
             return new RoleJudge(userResume.getRoles());
         }
 
-        if(UserResume.class.isAssignableFrom(parameterType)) {
+        if (UserResume.class.isAssignableFrom(parameterType)) {
             return userResume;
         }
 
-        String paramName = StringUtils.defaultString(requestValue.name(), StringUtils.defaultString(parameter.getName(), methodParameter.getParameterName()));
-        if("userId".equalsIgnoreCase(paramName)) {
+        String paramName = nameFunction.apply(methodParameter);
+        if ("userId".equalsIgnoreCase(paramName)) {
             return Converter.convertIfNecessary(userResume.getUserId(), parameterType);
         }
 
-        if(null == userResume) {
+        if (null == userResume) {
             return null;
         }
 
@@ -115,7 +133,7 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
 
 
         if (null == o) {
-            o = requestValue.defaultValue();
+            o = defaultFunction.apply(methodParameter);
         }
 
 
@@ -158,8 +176,8 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
      * @return 结果
      */
     @SuppressWarnings("ALL")
-    private Map<String, Object> asMap(NativeWebRequest webRequest, UserResume returnResult) {
-        Map<String , Object> rs = new LinkedHashMap<>();
+    protected Map<String, Object> asMap(NativeWebRequest webRequest, UserResume returnResult) {
+        Map<String, Object> rs = new LinkedHashMap<>();
         rs.putAll(BeanMap.create(returnResult));
         rs.put("all", returnResult);
         rs.put("token", StringUtils.defaultString(
@@ -169,7 +187,7 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
         return rs;
     }
 
-    private Object resolveEmbeddedValuesAndExpressions(String value) {
+    protected Object resolveEmbeddedValuesAndExpressions(String value) {
         if (this.configurableBeanFactory == null || this.expressionContext == null) {
             return value;
         }
@@ -187,9 +205,38 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
      * @param webRequest 请求参数
      * @return 结果
      */
-    private UserResume analysis(WebRequest webRequest) {
+    protected UserResume analysis(WebRequest webRequest) {
         AuthenticationInformation authentication = webRequest.authentication();
         return authentication.getReturnResult();
 
+    }
+
+    /**
+     * 支持参数
+     *
+     * @param annotationType 注解类型
+     * @return 结果
+     */
+    protected boolean supportsParameter(MethodParameter methodParameter, Class<? extends Annotation> annotationType) {
+        if (null == configurableBeanFactory) {
+            try {
+                configurableBeanFactory = (ConfigurableBeanFactory) SpringBeanUtils.getApplicationContext().getAutowireCapableBeanFactory();
+            } catch (Throwable ignored) {
+            }
+        }
+
+        if (null == configurableBeanFactory) {
+            return false;
+        }
+
+        if (null == expressionContext) {
+            this.expressionContext = new BeanExpressionContext(configurableBeanFactory, new RequestScope());
+        }
+
+        if (null == conversionService) {
+            conversionService = configurableBeanFactory.getConversionService();
+        }
+
+        return null != methodParameter.getParameterAnnotation(annotationType);
     }
 }
