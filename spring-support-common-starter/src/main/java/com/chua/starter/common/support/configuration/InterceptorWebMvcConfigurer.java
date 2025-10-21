@@ -1,7 +1,5 @@
 package com.chua.starter.common.support.configuration;
 
-import com.chua.starter.common.support.advice.InternalFieldResponseAdvice;
-import com.chua.starter.common.support.argument.InternalFieldArgumentResolver;
 import com.chua.starter.common.support.interceptor.address.AddressHandlerInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationContext;
@@ -42,16 +40,5 @@ public class InterceptorWebMvcConfigurer implements WebMvcConfigurer {
                 .excludePathPatterns("/", "/login", "/logout");
     }
 
-
-    @Override
-    public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
-        resolvers.add(new InternalFieldArgumentResolver());
-    }
-
-
-    @Bean
-    public InternalFieldResponseAdvice internalFieldResponseAdvice() {
-        return new InternalFieldResponseAdvice();
-    }
 }
 
