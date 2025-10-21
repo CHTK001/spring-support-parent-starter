@@ -3,7 +3,7 @@ package com.chua.starter.oauth.client.support.annotation;
 import java.lang.annotation.*;
 
 /**
- * 权限
+ * 登录类型注解，用于标识不同的登录方式
  *
  * @author CH
  * @since 2022/7/29 8:23
@@ -13,9 +13,9 @@ import java.lang.annotation.*;
 @Documented
 public @interface LoginType {
     /**
-     * 类型
+     * 登录类型值
      *
-     * @return 类型
+     * @return 登录类型，例如："oauth2"表示OAuth2登录，"ldap"表示LDAP登录，"local"表示本地登录
      */
     String value();
 }

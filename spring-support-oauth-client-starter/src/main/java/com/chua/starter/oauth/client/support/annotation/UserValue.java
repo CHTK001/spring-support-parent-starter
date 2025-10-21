@@ -1,6 +1,5 @@
 package com.chua.starter.oauth.client.support.annotation;
 
-
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.*;
@@ -9,6 +8,7 @@ import java.lang.annotation.*;
  * 解析参数 (Header: application/json)
  *
  * @author CH
+ * @since 2023-08-01
  * @see org.springframework.web.bind.annotation.RequestParam
  */
 @Target(ElementType.PARAMETER)
@@ -17,35 +17,44 @@ import java.lang.annotation.*;
 public @interface UserValue {
 
     /**
-     * Alias for {@link #name}.
+     * 参数名称别名
+     * <p>等同于 {@link #name()} 方法</p>
+     * <p>例如: \@UserValue("userId") String userId</p>
+     *
+     * @return 参数名称
      */
     @AliasFor("name")
     String value() default "";
 
     /**
-     * The name of the request parameter to bind to.
+     * 请求参数的名称
+     * <p>用于绑定HTTP请求中的指定参数</p>
+     * <p>例如: \@UserValue(name = "userName") String name</p>
      *
      * @since 4.2
+     * @return 参数名称
      */
     @AliasFor("value")
     String name() default "";
 
     /**
-     * Whether the parameter is required.
-     * <p>Defaults to {@code true}, leading to an exception being thrown
-     * if the parameter is missing in the request. Switch this to
-     * {@code false} if you prefer a {@code null} value if the parameter is
-     * not present in the request.
-     * <p>Alternatively, provide a {@link #defaultValue}, which implicitly
-     * sets this flag to {@code false}.
+     * 是否为必需参数
+     * <p>默认值为true，如果请求中缺少该参数将抛出异常</p>
+     * <p>设置为false时，若参数不存在则使用null值</p>
+     * <p>注意：如果设置了{@link #defaultValue()}，此属性将隐式设置为false</p>
+     * <p>例如: \@UserValue(name = "age", required = false) Integer age</p>
+     *
+     * @return 是否必需
      */
     boolean required() default true;
 
     /**
-     * The default value to use as a fallback when the request parameter is
-     * not provided or has an empty value.
-     * <p>Supplying a default value implicitly sets {@link #required} to
-     * {@code false}.
+     * 参数默认值
+     * <p>当请求参数未提供或值为空时使用的回退值</p>
+     * <p>例如: \@UserValue(name = "status", defaultValue = "ACTIVE") String status</p>
+     * <p>注意：提供默认值会隐式将{@link #required()}设置为false</p>
+     *
+     * @return 默认值
      */
     String defaultValue() default "";
 
