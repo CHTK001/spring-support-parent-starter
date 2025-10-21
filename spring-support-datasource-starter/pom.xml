@@ -14,7 +14,7 @@
     7. 数据源健康检查 - 提供数据源连接状态监控
 
     @author CH
-    @version 4.0.0.33
+    @version 4.0.0.34
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -24,7 +24,7 @@
     <parent>
         <artifactId>spring-support-parent-starter</artifactId>
         <groupId>com.chua</groupId>
-        <version>4.0.0.33</version>
+        <version>4.0.0.34</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>

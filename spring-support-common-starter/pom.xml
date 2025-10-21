@@ -16,7 +16,7 @@
     9. 工具类集成 - 集成各种常用工具类库
 
     @author CH
-    @version 4.0.0.33
+    @version 4.0.0.34
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -27,7 +27,7 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.33</version>
+        <version>4.0.0.34</version>
     </parent>
 
     <!-- 项目基本信息 -->
