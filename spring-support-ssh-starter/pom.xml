@@ -15,7 +15,7 @@
     8. 日志记录 - 记录SSH连接和操作日志
 
     @author CH
-    @version 4.0.0.33
+    @version 4.0.0.34
 -->
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xmlns="http://maven.apache.org/POM/4.0.0"
@@ -26,7 +26,7 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.33</version>
+        <version>4.0.0.34</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
