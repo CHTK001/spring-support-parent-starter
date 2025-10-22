@@ -11,6 +11,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * SocketSessionTemplate 接口定义了会话管理与消息发送的方法。
@@ -89,6 +90,15 @@ public interface SocketSessionTemplate {
             return;
         }
         send(event, msg instanceof String ? msg.toString() : Json.toJson(msg));
+    }
+    /**
+     * 向所有客户端发送消息。
+     *
+     * @param event    触发的事件名称，例如："notification"
+     * @param msgEvent 要发送的消息内容对象，包含详细的消息信息
+     */
+    default void send(String event, Map<String, Object> msgEvent) {
+        send(event, Json.toJSONString(msgEvent));
     }
     /**
      * 向所有客户端发送消息。
