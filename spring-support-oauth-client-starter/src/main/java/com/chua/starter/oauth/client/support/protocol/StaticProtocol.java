@@ -5,6 +5,7 @@ import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.DigestUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.starter.oauth.client.support.entity.AppKeySecret;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.enums.UpgradeType;
@@ -60,6 +61,11 @@ public class StaticProtocol extends AbstractProtocol {
     protected AuthenticationInformation approve(Cookie cookie, String token, String subProtocol) {
         initial();
         return newAuthenticationInformation(token, new Cookie[]{cookie});
+    }
+
+    @Override
+    protected AuthenticationInformation authenticationUserCode(AppKeySecret appKeySecret) {
+        return null;
     }
 
     /**
