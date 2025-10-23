@@ -6,6 +6,7 @@ import com.chua.common.support.utils.IdUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.starter.oauth.client.support.entity.AppKeySecret;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.enums.UpgradeType;
@@ -94,6 +95,45 @@ public class GrpcProtocol extends AbstractProtocol {
 
         } catch (StatusRuntimeException e) {
             log.error("gRPC认证调用失败: {}", e.getStatus());
+            return AuthenticationInformation.authServerError();
+        }
+    }
+
+    @Override
+    protected AuthenticationInformation authenticationUserCode(AppKeySecret appKeySecret) {
+        initializeChannel();
+
+        try {
+            // 构建 gRPC 请求
+            AuthenticateUserCodeRequest.Builder requestBuilder = AuthenticateUserCodeRequest.newBuilder()
+                    .setAccessKey(authClientProperties.getKey().getAccessKey())
+                    .setSecretKey(authClientProperties.getKey().getSecretKey())
+                    .setAppId(StringUtils.defaultString(appKeySecret.getAppId(), ""))
+                    .setUserCode(StringUtils.defaultString(appKeySecret.getUserCode(), ""))
+                    .setXTime(StringUtils.defaultString(appKeySecret.getXTime(), ""))
+                    .setXRandom(StringUtils.defaultString(appKeySecret.getXRandom(), ""))
+                    .setBody(StringUtils.defaultString(appKeySecret.getBody(), ""))
+                    .setXSign(StringUtils.defaultString(appKeySecret.getXSign(), ""))
+                    .setParamAddress(RequestUtils.getIpAddress())
+                    .setParamAppName(SpringBeanUtils.getEnvironment().resolvePlaceholders("${spring.application.name:}"));
+
+            log.info("gRPC UserCode 认证请求: appId={}, userCode={}, timestamp={}", 
+                    appKeySecret.getAppId(), appKeySecret.getUserCode(), appKeySecret.getXTime());
+
+            // 调用 gRPC 服务
+            AuthenticateUserCodeResponse response = blockingStub.authenticateUserCode(requestBuilder.build());
+
+            log.info("gRPC UserCode 认证响应: code={}, message={}", response.getCode(), response.getMessage());
+
+            // 转换响应
+            return createAuthenticationInformationFromUserCode(response);
+
+        } catch (StatusRuntimeException e) {
+            log.error("gRPC UserCode 认证调用失败: status={}, description={}", 
+                    e.getStatus().getCode(), e.getStatus().getDescription());
+            return AuthenticationInformation.authServerError();
+        } catch (Exception e) {
+            log.error("gRPC UserCode 认证异常", e);
             return AuthenticationInformation.authServerError();
         }
     }
@@ -220,6 +260,29 @@ public class GrpcProtocol extends AbstractProtocol {
         }
 
         AuthenticationInformation authInfo = createAuthenticationInformation(returnResult, IdUtils.simpleUuid(), "upgrade");
+        if (StringUtils.isNotBlank(response.getToken())) {
+            authInfo.setToken(response.getToken());
+        }
+        if (StringUtils.isNotBlank(response.getRefreshToken())) {
+            authInfo.setRefreshToken(response.getRefreshToken());
+        }
+
+        return authInfo;
+    }
+
+    /**
+     * 创建认证信息（UserCode认证用）
+     */
+    private AuthenticationInformation createAuthenticationInformationFromUserCode(AuthenticateUserCodeResponse response) {
+        ReturnResult<UserResult> returnResult = new ReturnResult<>();
+        returnResult.setCode(String.valueOf(response.getCode()));
+        returnResult.setMsg(response.getMessage());
+
+        if (response.hasData()) {
+            returnResult.setData(convertToUserResult(response.getData()));
+        }
+
+        AuthenticationInformation authInfo = createAuthenticationInformation(returnResult, IdUtils.simpleUuid(), "userCode");
         if (StringUtils.isNotBlank(response.getToken())) {
             authInfo.setToken(response.getToken());
         }
