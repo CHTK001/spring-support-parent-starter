@@ -246,7 +246,7 @@ public class MessagePublisher {
         message.put("event", event);
         message.put("timestamp", System.currentTimeMillis());
         
-        redisTemplate.convertAndSend("user:events", message);
+        redisTemplate.convertAndSend("login:events", message);
     }
 }
 ```
@@ -270,7 +270,7 @@ public class UserEventListener implements RedisListener {
     
     @Override
     public Collection<Topic> getTopics() {
-        return List.of(new ChannelTopic("user:events"));
+        return List.of(new ChannelTopic("login:events"));
     }
     
     private void handleUserEvent(String message) {
@@ -324,7 +324,7 @@ public class MetricsService {
     }
     
     public void recordUserActivity(String userId, String activity) {
-        String metricName = "user:activity:" + activity;
+        String metricName = "login:activity:" + activity;
         recordMetric(metricName, 1.0);
     }
 }
@@ -381,7 +381,7 @@ public class CounterService {
     }
     
     public void incrementUserAction(String userId, String action) {
-        String indicator = "user:actions:" + action;
+        String indicator = "login:actions:" + action;
         simpleRedisService.increment(indicator, userId);
     }
     

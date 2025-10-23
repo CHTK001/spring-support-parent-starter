@@ -133,7 +133,7 @@ public class UserService {
 @RestController
 public class AuthController {
     
-    @GetMapping("/user-info")
+    @GetMapping("/login-info")
     public ResponseEntity<?> getUserInfo(HttpServletRequest request) {
         // 获取认证类型
         String authType = request.getAuthType(); // 返回: OAUTH_HTTP, OAUTH_STATIC等
@@ -394,7 +394,7 @@ public class CustomAuthService implements AuthService {
     @Override
     public String getCurrentUserId() {
         // 自定义用户ID获取逻辑
-        return "custom-user-id";
+        return "custom-login-id";
     }
     
     @Override

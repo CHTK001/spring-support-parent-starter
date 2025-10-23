@@ -4,6 +4,7 @@ import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.lang.exception.AuthenticationException;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.Md5Utils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.value.Value;
@@ -25,6 +26,8 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -41,13 +44,16 @@ import static com.chua.starter.oauth.client.support.enums.AuthType.STATIC;
  * 鉴权客户端操作
  *
  * @author CH
+ * @since 2023/10/09
  */
 public class AuthClientExecute {
 
     private final AuthClientProperties authClientProperties;
 
     public static final AuthClientExecute INSTANCE = new AuthClientExecute();
+    
     private final String encryption;
+    
     public static final String DEFAULT_KEY = "1234567980123456";
 
     public static AuthClientExecute getInstance() {
@@ -65,9 +71,9 @@ public class AuthClientExecute {
     }
 
     /**
-     * 获取UserResult
+     * 获取用户结果信息
      *
-     * @return token
+     * @return 用户结果信息
      */
     public UserResult getUserResult() {
         RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
@@ -108,9 +114,9 @@ public class AuthClientExecute {
     }
 
     /**
-     * 获取UserResult
+     * 安全获取用户结果信息，不抛出异常
      *
-     * @return token
+     * @return 用户结果信息，如果未登录则返回null
      */
     public UserResult getSafeUserResult() {
         RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
@@ -151,11 +157,12 @@ public class AuthClientExecute {
     }
 
     /**
-     * 登出
+     * 用户登出操作
      *
-     * @param loginType
-     * @param logoutType 账号类型
-     * @return token
+     * @param uid        用户唯一标识，例如："123456"
+     * @param loginType  登录类型，例如："mobile"、"email"
+     * @param logoutType 登出类型，例如：LogoutType.NORMAL
+     * @return 登录认证结果
      */
     public LoginAuthResult logout(String uid, String loginType, LogoutType logoutType) {
         AuthType authType = null;
@@ -170,13 +177,13 @@ public class AuthClientExecute {
     }
 
     /**
-     * 获取token
+     * 获取访问令牌
      *
-     * @param username 账号
-     * @param password 密码
-     * @param authType 账号类型
-     * @param ext      额外参数
-     * @return token
+     * @param username 账号，例如："zhangsan"
+     * @param password 密码，例如："123456"
+     * @param authType 认证类型，例如：AuthType.PASSWORD
+     * @param ext      额外参数，例如：Map.of("captcha", "abcd")
+     * @return 登录认证结果
      */
     @Watch
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
@@ -190,22 +197,25 @@ public class AuthClientExecute {
 
 
     /**
-     * 创建UID
+     * 创建用户唯一标识
      *
-     * @param authType 登录方式
-     * @param username 账号
+     * @param username 账号，例如："zhangsan"
+     * @param authType 登录方式，例如："mobile"
      * @return UID
      */
     public static String createUid(String username, String authType) {
         UserResult userResult = new UserResult();
         userResult.setLoginType(authType);
 
-        return Md5Utils.getInstance().getMd5String(username +
-                userResult.getLoginType());
+        return DigestUtils.md5Hex(username + userResult.getLoginType());
     }
 
     /**
      * 刷新token
+     *
+     * @param refreshToken  刷新令牌，例如："refresh_token_abc123"
+     * @param upgradeType   更新类型，例如：UpgradeType.REFRESH
+     * @return 登录结果
      */
     public LoginResult upgrade(String refreshToken, UpgradeType upgradeType) {
         RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
@@ -224,10 +234,10 @@ public class AuthClientExecute {
 
 
     /**
-     * 获取用户结果
+     * 根据token获取用户结果
      *
-     * @param token token
-     * @return {@link UserResult}
+     * @param token token令牌，例如："access_token_xyz789"
+     * @return {@link UserResult} 用户结果对象
      */
     public UserResult getUserResult(String token) {
         if (StringUtils.isEmpty(token)) {
@@ -262,9 +272,9 @@ public class AuthClientExecute {
 
 
     /**
-     * 获取租户
+     * 获取租户ID
      *
-     * @return {@link String}
+     * @return {@link String} 租户ID，例如："tenant_001"
      */
     public static String getTenantId() {
         RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
@@ -280,9 +290,9 @@ public class AuthClientExecute {
     }
 
     /**
-     * 获取用户名
+     * 获取用户ID
      *
-     * @return {@link String}
+     * @return {@link String} 用户ID，例如："user_001"
      */
     public static String getUserId() {
         RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
@@ -300,7 +310,7 @@ public class AuthClientExecute {
     /**
      * 获取用户名
      *
-     * @return {@link String}
+     * @return {@link String} 用户名，例如："zhangsan"
      */
     public static String getUsername() {
         RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
@@ -318,7 +328,7 @@ public class AuthClientExecute {
     /**
      * 设置用户名
      *
-     * @param username 用户名
+     * @param username 用户名，例如："zhangsan"
      */
     public static void setUsername(String username) {
         RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
@@ -335,7 +345,7 @@ public class AuthClientExecute {
     /**
      * 设置用户信息
      *
-     * @param userInfo 用户名
+     * @param userInfo 用户信息对象，例如：new UserResult()
      */
     public static void setUserInfo(Object userInfo) {
         RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
@@ -351,6 +361,10 @@ public class AuthClientExecute {
 
     /**
      * 获取用户信息
+     * 
+     * @param target 目标类型，例如：UserResult.class
+     * @param <T> 泛型类型
+     * @return 用户信息对象
      */
     @SuppressWarnings("ALL")
     public static <T> T getUserInfo(Class<T> target) {
@@ -400,6 +414,11 @@ public class AuthClientExecute {
         request.getSession().removeAttribute(SESSION_USER_INFO);
     }
 
+    /**
+     * 获取请求中的token
+     *
+     * @return token字符串，例如："access_token_xyz789"
+     */
     public String getToken() {
         HttpServletRequest request = getRequest();
         if (null == request) {

@@ -171,9 +171,9 @@ public class SystemInfoServiceImpl implements SystemInfoService {
                 .usedMemory(runtime.totalMemory() - runtime.freeMemory())
                 .memoryUsage((double) (runtime.totalMemory() - runtime.freeMemory()) / runtime.totalMemory() * 100)
                 .availableProcessors(runtime.availableProcessors())
-                .workingDirectory(System.getProperty("user.dir"))
-                .userName(System.getProperty("user.name"))
-                .userHome(System.getProperty("user.home"))
+                .workingDirectory(System.getProperty("login.dir"))
+                .userName(System.getProperty("login.name"))
+                .userHome(System.getProperty("login.home"))
                 .tempDirectory(System.getProperty("java.io.tmpdir"))
                 .build();
     }
@@ -299,7 +299,7 @@ public class SystemInfoServiceImpl implements SystemInfoService {
                 .path(System.getProperty("java.home"))
                 .commandLine(String.join(" ", runtimeBean.getInputArguments()))
                 .state("RUNNING")
-                .user(System.getProperty("user.name"))
+                .user(System.getProperty("login.name"))
                 .startTime(LocalDateTime.ofInstant(
                     java.time.Instant.ofEpochMilli(runtimeBean.getStartTime()),
                     ZoneId.systemDefault()))

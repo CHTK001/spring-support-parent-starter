@@ -132,7 +132,7 @@ public interface SocketSessionTemplate {
     /**
      * 获取所有在线用户列表。
      *
-     * @param type 用户类型，例如："admin", "user"
+     * @param type 用户类型，例如："admin", "login"
      * @return 在线用户列表
      */
     List<SocketUser> getOnlineSession(String type);

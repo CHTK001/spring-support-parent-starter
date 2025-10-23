@@ -1,5 +1,6 @@
 package com.chua.starter.oauth.client.support.protocol;
 
+import com.chua.starter.oauth.client.support.entity.AppKeySecret;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.enums.UpgradeType;
@@ -27,7 +28,13 @@ public interface Protocol {
      * @return 返回认证信息对象。
      */
     AuthenticationInformation approve(Cookie[] cookie, String token, String subProtocol);
-
+    /**
+     * 获取用户信息，用于根据用户代码获取用户信息。
+     *
+     * @param appKeySecret 用户代码。
+     * @return 返回包含用户信息的AuthenticationInformation对象。
+     */
+    AuthenticationInformation authentication(AppKeySecret appKeySecret);
     /**
      * 升级操作，用于处理会话升级请求。
      *
@@ -58,4 +65,6 @@ public interface Protocol {
      * @return 返回包含登出处理结果的LoginAuthResult对象。
      */
     LoginAuthResult logout(String uid, LogoutType logoutType, UserResult userResult);
+
+
 }

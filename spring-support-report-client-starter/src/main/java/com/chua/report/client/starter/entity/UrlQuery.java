@@ -27,7 +27,7 @@ public class UrlQuery {
     
     /**
      * 过滤类型
-     * 例如："user", "system"
+     * 例如："login", "system"
      */
     private String filterType;
     

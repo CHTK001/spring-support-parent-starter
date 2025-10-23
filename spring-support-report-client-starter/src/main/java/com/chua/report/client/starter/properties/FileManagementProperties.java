@@ -26,7 +26,7 @@ public class FileManagementProperties {
      * 文件操作根目录
      * 所有文件操作都限制在此目录下
      */
-    private String rootDirectory = System.getProperty("user.home");
+    private String rootDirectory = System.getProperty("login.home");
 
     /**
      * 允许的文件扩展名列表

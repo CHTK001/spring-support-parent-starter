@@ -93,7 +93,7 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
             if (selectBody instanceof PlainSelect) {
                 this.setWhere((PlainSelect) selectBody, obj.toString(), currentUser);
             } else if (selectBody instanceof SetOperationList setOperationList) {
-                // 多个sql，用;号隔开，一般不会用到。例如：select * from user;select * from role;
+                // 多个sql，用;号隔开，一般不会用到。例如：select * from login;select * from role;
                 List<Select> selects = setOperationList.getSelects();
                 selects.forEach(s -> this.setWhere((PlainSelect) s, obj.toString(), currentUser));
             }

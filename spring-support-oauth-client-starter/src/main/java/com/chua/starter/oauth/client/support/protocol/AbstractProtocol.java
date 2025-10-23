@@ -16,6 +16,7 @@ import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.common.support.utils.ResponseUtils;
+import com.chua.starter.oauth.client.support.entity.AppKeySecret;
 import com.chua.starter.oauth.client.support.enums.UpgradeType;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.infomation.Information;
@@ -68,6 +69,18 @@ public abstract class AbstractProtocol implements Protocol {
      * @return 认证信息
      */
     protected abstract AuthenticationInformation approve(Cookie cookies, String token, String subProtocol);
+    /**
+     * 根据用户编码获取认证信息
+     * 
+     * @param appKeySecret 用户编码，用于唯一标识一个用户
+     *                 示例: "USER_001" - 系统中唯一的用户编码
+     * @return AuthenticationInformation 认证信息对象，包含用户的认证状态和用户信息
+     *         示例: AuthenticationInformation{information=OK, returnResult=UserResume{userId='1', username='admin'}}
+     *         
+     * @author CH
+     * @since 2023-01-01
+     */
+    protected abstract AuthenticationInformation authenticationUserCode(AppKeySecret appKeySecret);
 
     /**
      * 获取认证信息（升级用）
@@ -158,6 +171,30 @@ public abstract class AbstractProtocol implements Protocol {
         return authenticationInformation;
     }
 
+    /**
+     * 获取缓存key
+     *
+     * @param appKeySecret userCode
+     * @return 缓存key
+     */
+    @Override
+    public AuthenticationInformation authentication(AppKeySecret appKeySecret) {
+        if (null == appKeySecret) {
+            return AuthenticationInformation.noAuth();
+        }
+        String cacheKey = appKeySecret.getBody();
+        if (hasCache(cacheKey)) {
+            AuthenticationInformation authenticationInformation = cacheAuthenticationInformation(cacheKey);
+            if (null != authenticationInformation) {
+                return authenticationInformation;
+            }
+        }
+
+        AuthenticationInformation authenticationInformation = authenticationUserCode(appKeySecret);
+
+        CACHEABLE.put(cacheKey, authenticationInformation);
+        return authenticationInformation;
+    }
     /**
      * 是否有效
      *
