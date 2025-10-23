@@ -11,6 +11,9 @@ service OAuthAuthService {
   // 认证方法
   rpc Approve(ApproveRequest) returns (ApproveResponse);
 
+  // 基于 UserCode 认证（AppKey/AppSecret 签名方式）
+  rpc AuthenticateUserCode(AuthenticateUserCodeRequest) returns (AuthenticateUserCodeResponse);
+
   // 升级认证信息
   rpc Upgrade(UpgradeRequest) returns (UpgradeResponse);
 
@@ -35,6 +38,29 @@ message ApproveRequest {
 
 // 认证响应
 message ApproveResponse {
+  int32 code = 1;
+  string message = 2;
+  UserResult data = 3;
+  string token = 4;
+  string refresh_token = 5;
+}
+
+// UserCode 认证请求
+message AuthenticateUserCodeRequest {
+  string access_key = 1;          // 服务端AccessKey
+  string secret_key = 2;          // 服务端SecretKey
+  string app_id = 3;              // 客户端AppID
+  string user_code = 4;           // 用户代码（uid）
+  string x_time = 5;              // 时间戳
+  string x_random = 6;            // 随机数
+  string body = 7;                // 请求体
+  string x_sign = 8;              // 签名
+  string param_address = 9;       // 客户端IP
+  string param_app_name = 10;     // 应用名称
+}
+
+// UserCode 认证响应
+message AuthenticateUserCodeResponse {
   int32 code = 1;
   string message = 2;
   UserResult data = 3;
