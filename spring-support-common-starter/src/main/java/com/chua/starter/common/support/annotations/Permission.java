@@ -19,7 +19,7 @@ public @interface Permission {
     /**
      * 权限标识列表
      * <p>可配置多个权限标识，用户拥有其中任一权限即可访问该方法</p>
-     * <p>示例：{@code @Permission({"user:create", "admin"})}</p>
+     * <p>示例：{@code @Permission({"login:create", "admin"})}</p>
      *
      * @return 权限标识数组
      */
@@ -29,7 +29,7 @@ public @interface Permission {
     /**
      * 权限标识列表(与value属性互为别名)
      * <p>可配置多个权限标识，用户拥有其中任一权限即可访问该方法</p>
-     * <p>示例：{@code @Permission(permission = {"user:create", "admin"})}</p>
+     * <p>示例：{@code @Permission(permission = {"login:create", "admin"})}</p>
      *
      * @return 权限标识数组
      */

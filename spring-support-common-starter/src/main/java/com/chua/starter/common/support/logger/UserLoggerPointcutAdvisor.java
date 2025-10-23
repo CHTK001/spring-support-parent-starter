@@ -99,7 +99,7 @@ public class UserLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdviso
             return;
         }
 
-        String header = request.getHeader("user-agent");
+        String header = request.getHeader("login-agent");
         UserAgent userAgent = UserAgent.parseUserAgentString(header);
         String module = getModule(method);
         UserLoggerInfo userLoggerInfo = new UserLoggerInfo(name);

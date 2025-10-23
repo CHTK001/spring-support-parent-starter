@@ -218,7 +218,7 @@ public class UserStatisticProvider {
                 }
 
                 Boolean aBoolean = false;
-                if(condition.startsWith("#user.role.")) {
+                if(condition.startsWith("#login.role.")) {
                     String substring = condition.substring(11);
                     aBoolean = ArrayUtils.containsAny(roles, substring.split(","), true);
                 } else {

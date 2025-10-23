@@ -90,8 +90,8 @@ public class StaticProtocolExecutor implements ProtocolExecutor {
                     }
 
                     userResult.setUid(DigestUtils.md5Hex(userResult.getUserId()));
-                    userResult.setOpenId(userResult.getUid());
-                    userResult.setUnionId(userResult.getUid());
+                    userResult.setOpenId(userResult.getOpenId());
+                    userResult.setUnionId(userResult.getUnionId());
                     return loginAuthResult;
                 }
             }

@@ -115,9 +115,9 @@ public class SystemInfoCommand {
         sb.append(String.format("  操作系统: %s\n", helper.getColored(System.getProperty("os.name"), PromptColor.GREEN)));
         sb.append(String.format("  系统版本: %s\n", helper.getColored(System.getProperty("os.version"), PromptColor.GREEN)));
         sb.append(String.format("  系统架构: %s\n", helper.getColored(System.getProperty("os.arch"), PromptColor.GREEN)));
-        sb.append(String.format("  用户名: %s\n", helper.getColored(System.getProperty("user.name"), PromptColor.BLUE)));
-        sb.append(String.format("  用户目录: %s\n", helper.getColored(System.getProperty("user.home"), PromptColor.BLUE)));
-        sb.append(String.format("  工作目录: %s\n", helper.getColored(System.getProperty("user.dir"), PromptColor.BLUE)));
+        sb.append(String.format("  用户名: %s\n", helper.getColored(System.getProperty("login.name"), PromptColor.BLUE)));
+        sb.append(String.format("  用户目录: %s\n", helper.getColored(System.getProperty("login.home"), PromptColor.BLUE)));
+        sb.append(String.format("  工作目录: %s\n", helper.getColored(System.getProperty("login.dir"), PromptColor.BLUE)));
         
         // 处理器信息
         int processors = Runtime.getRuntime().availableProcessors();

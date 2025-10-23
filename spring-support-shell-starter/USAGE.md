@@ -242,7 +242,7 @@ shell:
 @ShellCommandGroup("业务命令")
 public class BusinessCommand {
 
-    @ShellMethod(value = "查询用户信息", key = {"user-info", "ui"})
+    @ShellMethod(value = "查询用户信息", key = {"login-info", "ui"})
     public String userInfo(@ShellOption(value = {"-u", "--username"}) String username) {
         // 实现用户信息查询逻辑
         return "用户信息: " + username;
