@@ -63,7 +63,7 @@ public class RateLimiterKeyGenerator {
                 
             case USER:
                 String userId = getCurrentUserId();
-                return baseKey + ":user:" + userId;
+                return baseKey + ":login:" + userId;
                 
             case API:
                 String apiPath = getApiPath();

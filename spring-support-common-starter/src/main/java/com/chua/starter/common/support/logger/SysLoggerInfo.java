@@ -65,7 +65,7 @@ public class SysLoggerInfo extends ApplicationEvent {
 
     /**
      * 访问地址映射
-     * <p>示例: "/api/user/info", "/login"</p>
+     * <p>示例: "/api/login/info", "/login"</p>
      */
     private String logMapping;
 

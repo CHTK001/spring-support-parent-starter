@@ -271,7 +271,7 @@ public class ScriptExecuteRequest implements Serializable {
      * 获取默认工作目录
      */
     public String getWorkingDirectoryOrDefault() {
-        return workingDirectory != null ? workingDirectory : System.getProperty("user.dir");
+        return workingDirectory != null ? workingDirectory : System.getProperty("login.dir");
     }
 
     /**

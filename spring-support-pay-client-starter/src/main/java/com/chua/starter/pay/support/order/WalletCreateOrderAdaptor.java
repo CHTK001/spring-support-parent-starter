@@ -96,7 +96,7 @@ public class WalletCreateOrderAdaptor implements CreateOrderAdaptor{
         payMerchantOrder.setPayMerchantOrderCreateTime(LocalDateTime.now());
         try {
             HttpServletRequest servletRequest = RequestUtils.getRequest();
-            String header = servletRequest.getHeader("user-agent");
+            String header = servletRequest.getHeader("login-agent");
             UserAgent userAgent = UserAgent.parseUserAgentString(header);
             payMerchantOrder.setPayMerchantOrderBrowserSystem(userAgent.getOperatingSystem().getName());
             payMerchantOrder.setPayMerchantOrderBrowser(userAgent.getBrowser().toString());

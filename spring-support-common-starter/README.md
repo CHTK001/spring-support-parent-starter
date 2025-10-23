@@ -110,7 +110,7 @@ public class UserController {
         return userService.findAll();
     }
     
-    @GetMapping("/user/{id}")
+    @GetMapping("/login/{id}")
     @ReturnOrigin  // 返回原始数据，不进行包装
     public User getUser(@PathVariable Long id) {
         return userService.findById(id);
@@ -205,7 +205,7 @@ public class UserService {
         return userRepository.findById(id);
     }
     
-    @CacheEvict(cacheManager = "systemCacheManager", cacheNames = "users", key = "#user.id")
+    @CacheEvict(cacheManager = "systemCacheManager", cacheNames = "users", key = "#login.id")
     public User updateUser(User user) {
         return userRepository.save(user);
     }

@@ -92,7 +92,7 @@ public class ConfigurationManagementController {
     /**
      * 获取当前用户信息
      */
-    @GetMapping("/user-info")
+    @GetMapping("/login-info")
     public Map<String, Object> getCurrentUserInfo() {
         Map<String, Object> result = new HashMap<>();
 
@@ -411,7 +411,7 @@ public class ConfigurationManagementController {
                     }
 
                     function refreshUserInfo() {
-                        fetch('/actuator/circuit-breaker-config/user-info')
+                        fetch('/actuator/circuit-breaker-config/login-info')
                             .then(response => response.json())
                             .then(data => {
                                 if (data.success) {

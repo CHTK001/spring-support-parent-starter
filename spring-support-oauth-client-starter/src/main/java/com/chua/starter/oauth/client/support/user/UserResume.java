@@ -45,9 +45,18 @@ public class UserResume implements Serializable {
     private String uid;
 
     /**
+     * 用户编码
+     */
+    private String userCode;
+    /**
      * 用户id
      */
     private String userId;
+
+    /**
+     * 应用id
+     */
+    private String appId;
 
     /**
      * 登录方式

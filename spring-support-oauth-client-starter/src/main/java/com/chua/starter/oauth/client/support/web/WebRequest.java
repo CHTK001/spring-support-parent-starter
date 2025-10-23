@@ -6,6 +6,7 @@ import com.chua.common.support.utils.ObjectUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.oauth.client.support.annotation.TokenForIgnore;
+import com.chua.starter.oauth.client.support.entity.AppKeySecret;
 import com.chua.starter.oauth.client.support.enums.UpgradeType;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.infomation.Information;
@@ -225,7 +226,20 @@ public class WebRequest {
         return ServiceProvider.of(Protocol.class).getNewExtension(protocol, authProperties).approve(cookie, token, request.getHeader("x-oauth-protocol"));
     }
 
-
+    /**
+     * 获取用户信息
+     *
+     * @param appKeySecret 用户编码
+     * @return 用户信息
+     */
+    public AuthenticationInformation authentication(AppKeySecret appKeySecret) {
+        // 快速获取认证数据
+        Cookie[] cookie = getCookie();
+        String token = getToken();
+        // 快速确定协议类型
+        log.debug("获取默认协议: {}", protocol);
+        return ServiceProvider.of(Protocol.class).getNewExtension(protocol, authProperties).authentication(appKeySecret);
+    }
 
     /**
      * 获取默认协议
@@ -279,4 +293,6 @@ public class WebRequest {
         return ServiceProvider.of(Protocol.class).getNewExtension(protocol, authProperties).upgrade(cookie, token,
                 upgradeType, refreshToken);
     }
+
+
 }

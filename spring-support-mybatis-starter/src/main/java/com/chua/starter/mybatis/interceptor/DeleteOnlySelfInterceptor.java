@@ -76,7 +76,7 @@ public class DeleteOnlySelfInterceptor implements Interceptor {
         }
 
         // 4. 在原始SQL基础上追加创建人过滤条件
-        // 例如：原始SQL为"DELETE FROM user WHERE id = ?"，追加后变为"DELETE FROM user WHERE id = ? AND create_by = 1001"
+        // 例如：原始SQL为"DELETE FROM login WHERE id = ?"，追加后变为"DELETE FROM login WHERE id = ? AND create_by = 1001"
         BoundSql boundSql = ms.getBoundSql(parameter);
         String newSql = boundSql.getSql() + " AND " + anno.createUserColumn() + " = " + loginUserId;
         setSql(boundSql, newSql);
@@ -130,7 +130,7 @@ public class DeleteOnlySelfInterceptor implements Interceptor {
      *
      * @param boundSql BoundSql对象，包含待执行的SQL语句
      * @param sql      新的SQL语句
-     *                 例如："DELETE FROM user WHERE id = ? AND create_by = 1001"
+     *                 例如："DELETE FROM login WHERE id = ? AND create_by = 1001"
      * @throws Exception 当反射操作失败时抛出异常
      */
     private void setSql(BoundSql boundSql, String sql) throws Exception {

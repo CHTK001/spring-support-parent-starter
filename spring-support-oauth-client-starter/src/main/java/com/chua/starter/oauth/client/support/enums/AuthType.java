@@ -11,12 +11,8 @@ public enum AuthType {
     /**
      * 微信小程序
      */
-    WX_MINI_APP,
+    WECHAT_MINI_APP,
 
-    /**
-     * 专家
-     */
-    PROFESSOR,
     /**
      * app
      */
@@ -29,12 +25,10 @@ public enum AuthType {
      * 系统
      */
     SYSTEM,
-
     /**
      * 租户
      */
     TENANT,
-
     /**
      * 三方
      */
@@ -47,9 +41,12 @@ public enum AuthType {
      * 根据URL自动判断是WEB还是EMBED
      */
     AUTO,
-
     /**
      * 嵌入式
      */
-    STATIC
+    STATIC,
+    /**
+     * ak, sk
+     */
+    AK_SK
 }
