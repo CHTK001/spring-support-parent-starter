@@ -55,7 +55,7 @@
         <module>spring-support-email-starter</module>           <!-- 邮件发送服务 -->
         <module>spring-support-mqtt-starter</module>            <!-- MQTT消息队列 -->
         <module>spring-support-socketio-starter</module>        <!-- Socket.IO实时通信 -->
-        <module>spring-support-rsocket-starter</module>         <!-- RSocket响应式通信 -->
+        <module>spring-support-rsocket-starter</module>         <!-- RSocket响应式通信（依赖utils-support-rsocket-starter） -->
         <module>spring-support-webrtc-starter</module>          <!-- WebRTC视频通话和会议 -->
         <module>spring-support-sse-starter</module>             <!-- Server-Sent Events -->
         <module>spring-support-rpc-starter</module>             <!-- RPC远程调用 -->
@@ -407,11 +407,18 @@
                 <version>${module.version}</version>
             </dependency>
 
-            <!-- RSocket响应式通信模块 -->
+            <!-- RSocket响应式通信模块（依赖utils-support-rsocket-starter） -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-rsocket-starter</artifactId>
                 <version>${module.version}</version>
+            </dependency>
+
+            <!-- Utils Support RSocket模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-rsocket-starter</artifactId>
+                <version>${utils.version}</version>
             </dependency>
 
             <!-- Server-Sent Events模块 -->

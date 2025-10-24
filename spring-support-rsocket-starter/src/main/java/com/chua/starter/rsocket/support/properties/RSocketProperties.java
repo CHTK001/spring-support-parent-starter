@@ -42,7 +42,16 @@ public class RSocketProperties {
     private int workCount = 100;
 
     /**
+     * 最大帧大小（字节）
+     * <p>
+     * 与maxFramePayloadLength作用相同，优先使用maxFrameSize
+     */
+    private int maxFrameSize = 1048576;
+
+    /**
      * 最大帧载荷长度（字节）
+     * <p>
+     * 为了保持向后兼容，建议使用maxFrameSize
      */
     private int maxFramePayloadLength = 1048576;
 
