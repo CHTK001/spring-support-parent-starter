@@ -75,12 +75,17 @@ public class DelegateRSocketServer {
     public void start() {
         try {
             // 创建服务器配置
+            // 优先使用maxFrameSize，如果未设置则使用maxFramePayloadLength
+            int frameSize = properties.getMaxFrameSize() > 0 
+                    ? properties.getMaxFrameSize() 
+                    : properties.getMaxFramePayloadLength();
+            
             ServerSetting serverSetting = ServerSetting.builder()
                     .host(properties.getHost())
                     .port(properties.getPort())
                     .bossThreads(properties.getBossCount())
                     .workerThreads(properties.getWorkCount())
-                    .maxFrameSize(properties.getMaxFramePayloadLength())
+                    .maxFrameSize(frameSize)
                     .build();
 
             // 创建并启动协议服务器

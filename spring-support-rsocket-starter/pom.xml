@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>spring-support-rsocket-starter</artifactId>
-    <description>RSocket服务器 - 基于RSocket实现的高性能响应式双向通信协议</description>
+    <description>RSocket响应式通信服务器 - Spring Boot集成</description>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
@@ -19,40 +19,30 @@
     </properties>
 
     <dependencies>
-        <!-- Spring Boot RSocket Starter -->
+        <!-- Utils Support RSocket Starter - 底层RSocket协议实现 -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-rsocket</artifactId>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-rsocket-starter</artifactId>
+            <version>4.0.0.31</version>
         </dependency>
 
-        <!-- Reactor Core -->
-        <dependency>
-            <groupId>io.projectreactor</groupId>
-            <artifactId>reactor-core</artifactId>
-        </dependency>
-
-        <!-- RSocket Core -->
-        <dependency>
-            <groupId>io.rsocket</groupId>
-            <artifactId>rsocket-core</artifactId>
-        </dependency>
-
-        <!-- RSocket Transport Netty -->
-        <dependency>
-            <groupId>io.rsocket</groupId>
-            <artifactId>rsocket-transport-netty</artifactId>
-        </dependency>
-
-        <!-- Utils Support Common Starter -->
+        <!-- Utils Support Common Starter - 通用工具 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-common-starter</artifactId>
         </dependency>
 
-        <!-- Jackson for JSON serialization -->
+        <!-- Spring Boot Starter - Spring Boot核心 -->
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+
+        <!-- Spring Boot Configuration Processor - 配置元数据处理器 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
         </dependency>
     </dependencies>
 
