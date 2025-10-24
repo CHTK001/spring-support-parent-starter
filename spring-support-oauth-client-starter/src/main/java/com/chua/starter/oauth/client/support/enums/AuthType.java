@@ -48,5 +48,10 @@ public enum AuthType {
     /**
      * ak, sk
      */
-    AK_SK
+    AK_SK,
+
+    /**
+     * none
+     */
+    NONE
 }
