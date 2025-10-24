@@ -2,113 +2,52 @@
 
 ## 模块简介
 
-`spring-support-rsocket-starter` 是一个基于 RSocket 实现的高性能响应式双向通信模块，提供了完整的 RSocket 协议支持，包括服务器端和客户端实现。
+`spring-support-rsocket-starter` 是一个基于 RSocket 的 Spring Boot 集成模块，提供了响应式双向通信的完整支持。本模块依赖 `utils-support-rsocket-starter`（底层协议实现），并提供了 Spring Boot 风格的自动配置、注解支持和会话管理功能。
 
-RSocket 是一个应用层协议，提供了四种交互模式（Request/Response、Fire-and-Forget、Request/Stream、Channel），支持响应式流（Reactive Streams）规范，具有背压（Backpressure）机制，适用于微服务之间的高性能通信。
+## 架构设计
+
+```
+spring-support-rsocket-starter（Spring Boot 集成层）
+    ↓ 依赖
+utils-support-rsocket-starter（底层协议实现）
+    ↓ 依赖
+RSocket Core + Reactor（RSocket核心库）
+```
 
 ## 主要特性
 
-### 核心功能
+### 1. Spring Boot 自动配置
+- ✅ 基于 `@ConfigurationProperties` 的配置管理
+- ✅ 条件化 Bean 注册（`@ConditionalOnProperty`）
+- ✅ 自动装配支持
+- ✅ 配置元数据生成
 
-1. **四种交互模式**
-   - **Request/Response**: 请求-响应模式，一对一通信
-   - **Fire-and-Forget**: 单向消息模式，不需要响应
-   - **Request/Stream**: 请求-流模式，一对多通信
-   - **Channel**: 双向流模式，多对多通信
+### 2. 注解驱动开发
+- ✅ `@OnConnect` - 连接事件处理
+- ✅ `@OnDisconnect` - 断开连接事件处理
+- ✅ `@OnEvent` - 自定义事件处理
 
-2. **响应式编程**
-   - 基于 Project Reactor 实现
-   - 支持异步非阻塞 I/O
-   - 完整的响应式流（Reactive Streams）支持
-   - 背压（Backpressure）机制
+### 3. 会话管理
+- ✅ RSocketSession - 会话抽象
+- ✅ RSocketUser - 用户信息管理
+- ✅ RSocketSessionResolver - 会话解析器
+- ✅ RSocketSessionTemplate - 操作模板
 
-3. **高性能通信**
-   - 基于 Netty 实现的高性能网络传输
-   - 多路复用支持
-   - 零拷贝技术
-   - 低延迟、高吞吐量
+### 4. 认证与授权
+- ✅ RSocketAuthFactory - 认证工厂接口
+- ✅ 可插拔认证机制
 
-4. **传输协议支持**
-   - TCP 传输
-   - WebSocket 传输
-   - HTTP/2 传输
-
-5. **元数据路由**
-   - 复合元数据支持
-   - 路由元数据
-   - 自定义元数据
-
-6. **连接管理**
-   - 自动重连
-   - 会话恢复
-   - Keep-Alive 心跳机制
-   - 连接状态监控
-
-7. **流量控制**
-   - 租约（Lease）机制
-   - 请求限流
-   - 背压控制
-
-8. **安全认证**
-   - 支持自定义认证机制
-   - 元数据认证
-   - Token 认证
-
-## 技术架构
-
-### 核心组件
-
-1. **RSocketProtocol**: RSocket 协议实现类
-2. **RSocketProtocolServer**: RSocket 服务器实现
-3. **RSocketProtocolClient**: RSocket 客户端实现
-4. **RSocketServletRequest**: RSocket 请求封装
-5. **RSocketServletResponse**: RSocket 响应封装
-
-### 交互模式
-
-#### 1. Request/Response（请求-响应）
-
-```java
-// 服务器端自动处理
-// 客户端发送
-ServletResponse response = client.sendSync(request);
-```
-
-#### 2. Fire-and-Forget（单向消息）
-
-```java
-// 客户端发送
-client.sendOneWay(request);
-```
-
-#### 3. Request/Stream（请求-流）
-
-```java
-// 客户端请求流数据
-client.requestStream(request, payload -> {
-    // 处理每个流数据
-    System.out.println("Received: " + payload.getDataUtf8());
-});
-```
-
-#### 4. Channel（双向流）
-
-```java
-// 客户端建立双向通道
-Flux<Payload> requestFlux = Flux.interval(Duration.ofSeconds(1))
-    .map(i -> ByteBufPayload.create("Request " + i));
-
-client.requestChannel(requestFlux, responsePayload -> {
-    // 处理响应流
-    System.out.println("Response: " + responsePayload.getDataUtf8());
-});
-```
+### 5. 响应式特性
+- ✅ 基于 Project Reactor 的响应式编程
+- ✅ 背压（Backpressure）支持
+- ✅ 流式数据处理
+- ✅ 异步非阻塞
 
 ## 快速开始
 
 ### 1. 添加依赖
 
-在项目的 `pom.xml` 中添加依赖：
+在 `pom.xml` 中添加：
 
 ```xml
 <dependency>
@@ -118,351 +57,285 @@ client.requestChannel(requestFlux, responsePayload -> {
 </dependency>
 ```
 
-### 2. 服务器端使用
+### 2. 配置文件
 
-#### 2.1 创建服务器
+在 `application.yml` 中配置：
 
-```java
-import com.chua.common.support.protocol.ServerSetting;
-import com.chua.starter.rsocket.support.server.RSocketProtocolServer;
-
-public class RSocketServerExample {
-    public static void main(String[] args) throws Exception {
-        // 创建服务器配置
-        ServerSetting setting = ServerSetting.builder()
-                .host("0.0.0.0")
-                .port(7000)
-                .maxConnections(1000)
-                .maxFrameSize(16 * 1024 * 1024) // 16MB
-                .workerThreads(4)
-                .bossThreads(1)
-                .build();
-
-        // 创建并启动服务器
-        RSocketProtocolServer server = new RSocketProtocolServer(setting);
-        server.start();
-
-        System.out.println("RSocket服务器已启动: " + setting.host() + ":" + setting.port());
-    }
-}
+```yaml
+plugin:
+  rsocket:
+    enable: true                    # 启用RSocket
+    host: 0.0.0.0                  # 监听地址
+    port: 7000                      # 监听端口
+    boss-count: 1                   # Boss线程数
+    work-count: 100                 # Worker线程数
+    max-frame-payload-length: 1048576  # 最大帧长度
+    ping-timeout: 60000             # Ping超时时间（毫秒）
+    ping-interval: 25000            # Ping间隔（毫秒）
+    auth-factory: com.example.MyAuthFactory  # 认证工厂类
 ```
 
-#### 2.2 处理请求事件
+### 3. 使用注解处理事件
 
 ```java
-import com.chua.common.support.objects.ConfigureObjectContext;
-import com.chua.common.support.protocol.annotation.OnMessage;
-import com.chua.common.support.protocol.annotation.OnOpen;
-import com.chua.common.support.protocol.annotation.OnClose;
-import com.chua.common.support.protocol.annotation.OnEvent;
-import com.chua.common.support.protocol.request.ServletRequest;
+package com.example.handler;
 
+import com.chua.starter.rsocket.support.annotations.*;
+import com.chua.starter.rsocket.support.session.RSocketSession;
+import org.springframework.stereotype.Component;
+
+/**
+ * RSocket 事件处理器
+ * 
+ * @author CH
+ * @version 4.0.0.34
+ * @since 2024/10/24
+ */
+@Component
 public class RSocketEventHandler {
     
-    @OnOpen
-    public void onConnect(String connectionId) {
-        System.out.println("客户端连接: " + connectionId);
+    /**
+     * 客户端连接事件
+     */
+    @OnConnect
+    public void onConnect(RSocketSession session) {
+        System.out.println("客户端连接: " + session.getId());
+        // 可以在这里进行认证、初始化等操作
     }
     
-    @OnClose
-    public void onDisconnect(String connectionId) {
-        System.out.println("客户端断开: " + connectionId);
+    /**
+     * 客户端断开连接事件
+     */
+    @OnDisconnect
+    public void onDisconnect(RSocketSession session) {
+        System.out.println("客户端断开: " + session.getId());
+        // 清理资源、记录日志等
     }
     
-    @OnMessage
-    public String onMessage(String connectionId, String message, ServletRequest request) {
-        System.out.println("收到消息: " + message);
+    /**
+     * 处理自定义事件
+     */
+    @OnEvent("chat.message")
+    public String onChatMessage(RSocketSession session, String message) {
+        System.out.println("收到消息: " + message + " from " + session.getId());
         return "Echo: " + message;
     }
     
-    @OnEvent("custom.event")
-    public void onCustomEvent(String eventName, String connectionId, Object[] data, ServletRequest request) {
-        System.out.println("收到自定义事件: " + eventName);
+    /**
+     * 处理用户登录事件
+     */
+    @OnEvent("user.login")
+    public void onUserLogin(RSocketSession session, Map<String, Object> data) {
+        String username = (String) data.get("username");
+        session.setAttribute("username", username);
+        System.out.println("用户登录: " + username);
     }
 }
 ```
 
-#### 2.3 广播消息
+### 4. 使用 RSocketSessionTemplate
 
 ```java
-// 广播到所有客户端
-server.broadcast("notification", "系统消息");
+package com.example.service;
 
-// 发送到指定客户端
-server.sendToClient("connectionId", "message", "私信内容");
+import com.chua.starter.rsocket.support.session.RSocketSessionTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
-// 断开指定客户端
-server.disconnectClient("connectionId");
-```
-
-### 3. 客户端使用
-
-#### 3.1 创建客户端
-
-```java
-import com.chua.common.support.protocol.ClientSetting;
-import com.chua.starter.rsocket.support.client.RSocketProtocolClient;
-import com.chua.common.support.protocol.request.ServletRequest;
-import com.chua.common.support.protocol.request.ServletResponse;
-
-public class RSocketClientExample {
-    public static void main(String[] args) throws Exception {
-        // 创建客户端配置
-        ClientSetting setting = ClientSetting.builder()
-                .host("localhost")
-                .port(7000)
-                .connectTimeoutMillis(5000)
-                .readTimeoutMillis(10000)
-                .reconnectAttempts(3)
-                .build();
-
-        // 创建并连接客户端
-        RSocketProtocolClient client = new RSocketProtocolClient(setting);
-        client.connect();
-
-        System.out.println("RSocket客户端已连接");
+/**
+ * RSocket 消息服务
+ * 
+ * @author CH
+ * @version 4.0.0.34
+ * @since 2024/10/24
+ */
+@Service
+public class RSocketMessageService {
+    
+    @Autowired
+    private RSocketSessionTemplate rsocketSessionTemplate;
+    
+    /**
+     * 发送消息到指定会话
+     */
+    public void sendToSession(String sessionId, String event, Object data) {
+        rsocketSessionTemplate.send(sessionId, event, data);
+    }
+    
+    /**
+     * 广播消息到所有会话
+     */
+    public void broadcast(String event, Object data) {
+        rsocketSessionTemplate.broadcast(event, data);
+    }
+    
+    /**
+     * 发送消息到指定用户
+     */
+    public void sendToUser(String userId, String event, Object data) {
+        rsocketSessionTemplate.sendToUser(userId, event, data);
     }
 }
 ```
 
-#### 3.2 发送消息
+### 5. 自定义认证工厂
 
 ```java
-// Request/Response 模式（同步）
-ServletRequest request = ServletRequest.post("/rsocket/echo")
-        .body("Hello RSocket");
-ServletResponse response = client.sendSync(request);
-System.out.println("响应: " + response.getBodyString());
+package com.example.auth;
 
-// Request/Response 模式（异步）
-client.sendAsync(request)
-        .thenAccept(resp -> System.out.println("响应: " + resp.getBodyString()))
-        .exceptionally(ex -> {
-            System.err.println("错误: " + ex.getMessage());
-            return null;
-        });
+import com.chua.starter.rsocket.support.auth.RSocketAuthFactory;
+import com.chua.starter.rsocket.support.session.RSocketSession;
+import org.springframework.stereotype.Component;
 
-// Fire-and-Forget 模式（单向消息）
-ServletRequest oneWayRequest = ServletRequest.post("/rsocket/notify")
-        .body("Notification");
-client.sendOneWay(oneWayRequest);
-```
-
-#### 3.3 流式通信
-
-```java
-// Request/Stream 模式
-ServletRequest streamRequest = ServletRequest.post("/rsocket/stream")
-        .body("Get stream data");
-
-client.requestStream(streamRequest, payload -> {
-    String data = payload.getDataUtf8();
-    System.out.println("收到流数据: " + data);
-    payload.release();
-});
-
-// Request/Channel 模式（双向流）
-Flux<Payload> requestFlux = Flux.interval(Duration.ofSeconds(1))
-        .take(10)
-        .map(i -> ByteBufPayload.create("Request " + i));
-
-client.requestChannel(requestFlux, responsePayload -> {
-    System.out.println("收到响应: " + responsePayload.getDataUtf8());
-    responsePayload.release();
-});
-```
-
-#### 3.4 元数据推送
-
-```java
-// 推送元数据
-client.metadataPush("Custom metadata information");
+/**
+ * 自定义认证工厂
+ * 
+ * @author CH
+ * @version 4.0.0.34
+ * @since 2024/10/24
+ */
+@Component
+public class MyAuthFactory implements RSocketAuthFactory {
+    
+    @Override
+    public boolean authenticate(RSocketSession session, Map<String, Object> credentials) {
+        // 实现认证逻辑
+        String token = (String) credentials.get("token");
+        
+        if (validateToken(token)) {
+            // 认证成功，设置用户信息
+            session.setAttribute("userId", getUserIdFromToken(token));
+            session.setAttribute("username", getUsernameFromToken(token));
+            return true;
+        }
+        
+        return false;
+    }
+    
+    private boolean validateToken(String token) {
+        // 验证token逻辑
+        return token != null && !token.isEmpty();
+    }
+    
+    private String getUserIdFromToken(String token) {
+        // 从token中提取用户ID
+        return "user-123";
+    }
+    
+    private String getUsernameFromToken(String token) {
+        // 从token中提取用户名
+        return "admin";
+    }
+}
 ```
 
 ## 配置说明
 
-### 服务器配置（ServerSetting）
+### 完整配置示例
 
-| 配置项              | 类型      | 默认值      | 说明                   |
-|------------------|---------|----------|----------------------|
-| host             | String  | 0.0.0.0  | 监听地址                 |
-| port             | int     | 7000     | 监听端口                 |
-| maxConnections   | int     | 0（无限制）   | 最大连接数                |
-| maxFrameSize     | int     | 16777216 | 最大帧大小（字节）            |
-| workerThreads    | int     | CPU核心数*2 | Worker线程数            |
-| bossThreads      | int     | 1        | Boss线程数              |
-| contextPath      | String  | /        | 上下文路径                |
-
-### 客户端配置（ClientSetting）
-
-| 配置项                    | 类型      | 默认值   | 说明         |
-|------------------------|---------|-------|------------|
-| host                   | String  | -     | 服务器地址      |
-| port                   | int     | -     | 服务器端口      |
-| connectTimeoutMillis   | long    | 5000  | 连接超时（毫秒）   |
-| readTimeoutMillis      | long    | 10000 | 读取超时（毫秒）   |
-| reconnectAttempts      | int     | 3     | 重连尝试次数     |
-| ssl                    | boolean | false | 是否启用SSL    |
-
-## 高级特性
-
-### 1. 自定义元数据
-
-```java
-// 服务器端添加自定义元数据
-RSocketServletResponse response = new RSocketServletResponse("custom");
-response.addMetadata("userId", "12345");
-response.addMetadata("timestamp", String.valueOf(System.currentTimeMillis()));
-response.setBodyString("Response with metadata");
-
-// 客户端读取元数据
-String userId = request.getHeader("X-Metadata-userId");
+```yaml
+plugin:
+  rsocket:
+    # 基础配置
+    enable: true                      # 是否启用RSocket，默认false
+    host: 0.0.0.0                    # 监听地址，默认0.0.0.0
+    port: 7000                        # 监听端口，默认7000
+    
+    # 线程配置
+    boss-count: 1                     # Boss线程数，默认1
+    work-count: 100                   # Worker线程数，默认100
+    use-linux-native-epoll: false    # 是否使用Epoll（Linux），默认false
+    
+    # 帧配置
+    max-frame-size: 1048576            # 最大帧大小（字节），默认1MB（推荐使用）
+    max-frame-payload-length: 1048576  # 最大帧载荷长度（字节），默认1MB（向后兼容）
+    max-http-content-length: 1048576   # 最大HTTP内容长度（字节），默认1MB
+    
+    # 心跳配置
+    ping-timeout: 60000               # Ping超时时间（毫秒），默认60秒
+    ping-interval: 25000              # Ping间隔（毫秒），默认25秒
+    
+    # 认证配置
+    auth-factory: com.example.MyAuthFactory  # 认证工厂类全限定名
+    
+    # 其他配置
+    allow-custom-requests: true       # 是否允许自定义请求，默认true
+    codec-type: json                  # 编解码器类型，默认json
 ```
 
-### 2. 租约（Lease）机制
+## 与 Socket.IO 功能对比
 
-服务器端自动配置租约机制，控制客户端请求频率：
+本模块实现了 `spring-support-socketio-starter` 的所有核心功能：
 
-```java
-// 服务器启动时自动启用租约
-// 每5秒续约一次，每次允许100个请求
-```
+| 功能 | Socket.IO | RSocket | 说明 |
+|------|-----------|---------|------|
+| 自动配置 | ✅ | ✅ | Spring Boot自动配置 |
+| 注解支持 | ✅ (@OnConnect, @OnDisconnect, @OnEvent) | ✅ (相同注解) | 一致的API |
+| 会话管理 | ✅ (SocketSession) | ✅ (RSocketSession) | 相同的抽象 |
+| 用户管理 | ✅ (SocketUser) | ✅ (RSocketUser) | 用户信息封装 |
+| 操作模板 | ✅ (SocketSessionTemplate) | ✅ (RSocketSessionTemplate) | 统一的操作接口 |
+| 认证工厂 | ✅ (SocketAuthFactory) | ✅ (RSocketAuthFactory) | 可插拔认证 |
+| 广播消息 | ✅ | ✅ | - |
+| 点对点消息 | ✅ | ✅ | - |
+| 房间管理 | ✅ | ❌ | RSocket使用路由替代 |
+| 背压支持 | ❌ | ✅ | **RSocket独有** |
+| 响应式流 | ❌ | ✅ | **RSocket独有** |
+| 四种交互模式 | ❌ | ✅ | **RSocket独有** |
 
-### 3. 背压控制
+## 使用场景
 
-RSocket 原生支持背压机制，当消费者处理速度慢时自动减缓生产者速度：
+### 适用场景
+- ✅ 微服务之间的高性能通信
+- ✅ 实时数据流传输
+- ✅ 需要背压控制的场景
+- ✅ 响应式系统架构
+- ✅ 高并发实时通信
 
-```java
-// 消费者控制流速
-Flux.from(payloadPublisher)
-    .onBackpressureBuffer(100)  // 缓冲区大小
-    .subscribe(payload -> {
-        // 慢速处理
-        Thread.sleep(100);
-    });
-```
+### 推荐使用
+- 当需要比 Socket.IO 更高性能时
+- 当需要背压机制时
+- 当需要流式数据处理时
+- 当使用响应式技术栈时
 
-### 4. 连接监控
+## 技术栈
 
-```java
-// 获取当前连接数
-long connectionCount = server.getConnectionCount();
+- Spring Boot 3.4.5
+- Utils Support RSocket Starter 4.0.0.31
+- RSocket Core 1.1.4
+- Project Reactor 3.6.2
+- Java 21
 
-// 获取所有客户端
-Map<String, RSocket> clients = server.getClients();
+## 示例代码
 
-// 客户端连接状态
-boolean isConnected = client.isConnected();
-int pendingRequests = client.getPendingRequestCount();
-```
-
-## 性能优化
-
-### 1. 零拷贝
-
-RSocket 使用零拷贝技术，避免数据在内存中的多次复制：
-
-```java
-// 服务器配置中启用零拷贝解码器
-.payloadDecoder(PayloadDecoder.ZERO_COPY)
-```
-
-### 2. 多路复用
-
-RSocket 支持在单个连接上进行多路复用，减少连接开销。
-
-### 3. 线程池配置
-
-根据实际负载调整线程池大小：
-
-```java
-ServerSetting setting = ServerSetting.builder()
-    .workerThreads(Runtime.getRuntime().availableProcessors() * 2)
-    .bossThreads(1)
-    .build();
-```
-
-## 最佳实践
-
-### 1. 选择合适的交互模式
-
-- **Request/Response**: 适用于需要立即响应的场景（如 REST API）
-- **Fire-and-Forget**: 适用于不需要响应的通知场景（如日志上报）
-- **Request/Stream**: 适用于需要返回大量数据的场景（如分页数据）
-- **Channel**: 适用于实时双向通信场景（如聊天、游戏）
-
-### 2. 资源释放
-
-及时释放 Payload 资源：
-
-```java
-try (RSocketServletRequest request = new RSocketServletRequest(payload, mimeType)) {
-    // 处理请求
-} // 自动释放资源
-```
-
-### 3. 错误处理
-
-```java
-client.sendAsync(request)
-    .exceptionally(throwable -> {
-        log.error("请求失败", throwable);
-        return ServletResponse.error(throwable.getMessage());
-    });
-```
-
-### 4. 连接池管理
-
-对于高并发场景，建议使用连接池管理客户端连接。
-
-## 与 Socket.IO 的对比
-
-| 特性       | RSocket              | Socket.IO         |
-|----------|----------------------|-------------------|
-| 协议层      | 应用层协议                | 基于 WebSocket      |
-| 交互模式     | 4种（支持流式）             | 基于事件的双向通信         |
-| 背压支持     | ✅ 原生支持               | ❌                 |
-| 响应式编程    | ✅ 基于 Reactor          | ❌                 |
-| 传输协议     | TCP/WebSocket/HTTP/2 | WebSocket/轮询     |
-| 性能       | 更高（零拷贝、多路复用）         | 较高                |
-| 学习曲线     | 较陡                   | 较平缓               |
-| 适用场景     | 微服务通信、高性能实时通信        | Web实时应用、聊天、推送通知 |
+完整示例代码请参考：
+- [服务器端示例](examples/server)
+- [客户端示例](examples/client)
+- [集成测试](src/test/java)
 
 ## 常见问题
 
-### 1. RSocket 服务器启动失败？
+### 1. 如何启用RSocket？
 
-检查端口是否被占用，确保配置正确：
+在配置文件中设置 `plugin.rsocket.enable=true`。
 
-```bash
-netstat -ano | findstr 7000
-```
+### 2. 如何修改端口？
 
-### 2. 客户端连接超时？
+在配置文件中设置 `plugin.rsocket.port=8000`。
 
-增加连接超时时间：
+### 3. 如何实现自定义认证？
 
-```java
-ClientSetting.builder()
-    .connectTimeoutMillis(10000)
-    .build();
-```
+实现 `RSocketAuthFactory` 接口并在配置中指定类名。
 
-### 3. Payload 释放错误？
+### 4. 如何获取当前会话？
 
-确保每个 Payload 都被正确释放：
+在事件处理方法中注入 `RSocketSession` 参数。
 
-```java
-payload.release();
-```
+### 5. 如何发送消息？
 
-或使用 try-with-resources：
-
-```java
-try (RSocketServletRequest request = new RSocketServletRequest(payload, mimeType)) {
-    // 处理请求
-}
-```
+使用 `RSocketSessionTemplate` 的方法：
+- `send(sessionId, event, data)` - 发送到指定会话
+- `broadcast(event, data)` - 广播到所有会话
+- `sendToUser(userId, event, data)` - 发送到指定用户
 
 ## 技术支持
 
@@ -472,7 +345,12 @@ try (RSocketServletRequest request = new RSocketServletRequest(payload, mimeType
 
 ## 更新日志
 
-请参阅 [CHANGELOG.md](CHANGELOG.md)
+### v4.0.0.34 (2024-10-24)
+- ✨ 初始版本发布
+- ✨ 实现完整的Spring Boot集成
+- ✨ 提供注解驱动的事件处理
+- ✨ 实现会话管理和操作模板
+- ✨ 支持自定义认证机制
 
 ## 许可证
 
