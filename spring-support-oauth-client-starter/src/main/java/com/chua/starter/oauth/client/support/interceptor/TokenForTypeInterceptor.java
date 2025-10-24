@@ -1,7 +1,9 @@
 package com.chua.starter.oauth.client.support.interceptor;
 
+import com.chua.common.support.utils.EnumUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.annotation.TokenForType;
+import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.exception.OauthException;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import jakarta.annotation.Nonnull;
@@ -46,6 +48,10 @@ public class TokenForTypeInterceptor extends StaticMethodMatcherPointcutAdvisor 
                     throw new OauthException("您的账号没有权限, 请联系管理员分配!");
                 }
 
+                AuthType[] authTypes = tokenForType.value();
+                if(null != authTypes && isMatch(authTypes, userResume)) {
+                    return invocation.proceed();
+                }
                 String annotationLoginType = tokenForType.value().toUpperCase();
                 if ("ALL".equals(annotationLoginType)) {
                     return invocation.proceed();
@@ -59,6 +65,14 @@ public class TokenForTypeInterceptor extends StaticMethodMatcherPointcutAdvisor 
 
 
         });
+    }
+
+    private boolean isMatch(AuthType[] authTypes, UserResume userResume) {
+        if(EnumUtils.inArray(ALL, authTypes)) {
+            return true;
+        }
+
+
     }
 
 

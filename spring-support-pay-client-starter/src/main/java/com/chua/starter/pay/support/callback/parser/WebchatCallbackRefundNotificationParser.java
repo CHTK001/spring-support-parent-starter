@@ -126,9 +126,13 @@ public class WebchatCallbackRefundNotificationParser implements CallbackNotifica
                 refund = JSON.parseObject(decryptedData, Refund.class);
             }
 
+            // 设置退款相关信息
             merchantOrder.setPayMerchantOrderRefundCode(refund.getRefundId());
+            merchantOrder.setPayMerchantOrderRefundUserReceivedAccount(refund.getUserReceivedAccount());
             merchantOrder.setPayMerchantOrderStatus(PayOrderStatus.PAY_REFUND_SUCCESS);
-            payMerchantOrderService.finishWechatOrder(merchantOrder);
+            
+            // 调用退款方法（而不是支付成功方法）
+            payMerchantOrderService.refundOrder(merchantOrder);
             return new WechatOrderCallbackResponse("SUCCESS", "OK", null);
         } catch (Exception e) {
             // 签名验证失败，返回 401 UNAUTHORIZED 状态码
