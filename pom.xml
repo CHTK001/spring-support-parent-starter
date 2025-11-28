@@ -169,7 +169,7 @@
         <!-- Protocol 基础能力 -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>utils-support-protocol-starter</artifactId>
+            <artifactId>utils-support-common-starter</artifactId>
             <version>${utils.version}</version>
         </dependency>
     </dependencies>
