@@ -1,7 +1,7 @@
 package com.chua.starter.email.support;
 
 import com.chua.common.support.annotations.Spi;
-import com.chua.common.support.lang.mail.*;
+import com.chua.advanced.support.lang.mail.*;
 import com.chua.common.support.log.Log;
 import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.common.support.utils.UrlUtils;

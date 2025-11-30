@@ -14,6 +14,10 @@ public enum AuthType {
     WECHAT_MINI_APP,
 
     /**
+     * 全部
+     */
+    ALL,
+    /**
      * app
      */
     APP,
