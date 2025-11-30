@@ -104,7 +104,7 @@
 
         <!-- 项目版本管理 -->
         <module.version>4.0.0.34</module.version>        <!-- 当前项目模块版本 -->
-        <utils.version>4.0.0.31</utils.version>          <!-- 工具类库版本 -->
+        <utils.version>4.0.0.33</utils.version>          <!-- 工具类库版本 -->
 
         <!-- 第三方依赖版本 -->
         <mybatis-plus.version>3.4.0</mybatis-plus.version>  <!-- MyBatis Plus版本 -->
