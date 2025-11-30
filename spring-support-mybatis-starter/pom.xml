@@ -105,6 +105,10 @@
             <version>2.16.1</version>
         </dependency>
 
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-mysql-starter</artifactId>
+        </dependency>
         <!-- Swagger API文档 - 可选依赖，用于API文档生成 -->
         <dependency>
             <groupId>com.chua</groupId>
