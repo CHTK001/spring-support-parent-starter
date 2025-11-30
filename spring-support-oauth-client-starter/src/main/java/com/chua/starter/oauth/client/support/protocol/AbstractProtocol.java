@@ -9,8 +9,9 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.robin.Node;
 import com.chua.common.support.lang.robin.Robin;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.task.cache.CacheProvider;
 import com.chua.common.support.task.cache.Cacheable;
-import com.chua.common.support.task.cache.GuavaCacheable;
+import com.chua.common.support.task.cache.GuavaCacheProvider;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.CookieUtil;
@@ -43,7 +44,7 @@ import static com.chua.starter.oauth.client.support.infomation.Information.*;
 @Slf4j
 public abstract class AbstractProtocol implements Protocol {
 
-    protected static Cacheable CACHEABLE;
+    protected static CacheProvider CACHEABLE;
     private final boolean enableEncryption;
     protected AuthClientProperties authClientProperties;
     private final String encryption;
@@ -53,7 +54,7 @@ public abstract class AbstractProtocol implements Protocol {
         this.encryption = authClientProperties.getEncryption();
         this.enableEncryption = authClientProperties.isEnableEncryption();
         if(null == CACHEABLE) {
-            CACHEABLE = new GuavaCacheable((int) authClientProperties.getCacheTimeout() / 3600);
+            CACHEABLE = new GuavaCacheProvider((int) authClientProperties.getCacheTimeout() / 3600);
             CACHEABLE.afterPropertiesSet();
             CACHEABLE = CACHEABLE.cacheHotColdBackup(authClientProperties.isCacheHotColdBackup());
         }
@@ -71,12 +72,12 @@ public abstract class AbstractProtocol implements Protocol {
     protected abstract AuthenticationInformation approve(Cookie cookies, String token, String subProtocol);
     /**
      * 根据用户编码获取认证信息
-     * 
+     *
      * @param appKeySecret 用户编码，用于唯一标识一个用户
      *                 示例: "USER_001" - 系统中唯一的用户编码
      * @return AuthenticationInformation 认证信息对象，包含用户的认证状态和用户信息
      *         示例: AuthenticationInformation{information=OK, returnResult=UserResume{userId='1', username='admin'}}
-     *         
+     *
      * @author CH
      * @since 2023-01-01
      */

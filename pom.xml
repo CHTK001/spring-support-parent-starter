@@ -251,7 +251,11 @@
                 <artifactId>utils-support-netty-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
-
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-deeplearning-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
             <!-- 数据源支持 -->
             <dependency>
                 <groupId>com.chua</groupId>
