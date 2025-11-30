@@ -1,12 +1,13 @@
 package com.chua.starter.common.support.debounce;
 
-import com.chua.common.support.lang.lock.Lock;
-import com.chua.common.support.lang.lock.ObjectLock;
+import com.chua.common.support.task.lock.LockProvider;
+import com.chua.common.support.task.lock.ObjectLockProvider;
 import com.chua.starter.common.support.lock.LockFactory;
 import kim.nzxy.spel.SpELMethod;
 
 import java.lang.annotation.*;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
 
 /**
  * 请求锁定（防抖）
@@ -68,7 +69,7 @@ public @interface Debounce {
      *
      * @return {@link Class}<{@link ?} {@link extends} {@link Lock}>
      */
-    Class<? extends Lock> lock() default ObjectLock.class;
+    Class<? extends LockProvider> lock() default ObjectLockProvider.class;
 
     /**
      * 默认异常

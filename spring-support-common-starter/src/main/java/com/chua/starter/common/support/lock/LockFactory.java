@@ -1,11 +1,8 @@
 package com.chua.starter.common.support.lock;
 
-import com.chua.common.support.lang.lock.FileSystemLock;
-import com.chua.common.support.lang.lock.Lock;
-import com.chua.common.support.lang.lock.ObjectLock;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.task.lock.LockProvider;
 
-import java.nio.channels.FileLock;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -16,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class LockFactory {
 
-    private final Map<String, Lock> lockMap = new ConcurrentHashMap<>();
+    private final Map<String, LockProvider> lockMap = new ConcurrentHashMap<>();
 
     public static final LockFactory INSTANCE = new LockFactory();
     private LockFactory() {}
@@ -27,7 +24,7 @@ public class LockFactory {
      * @param lockType 锁类型
      * @return Lock
      */
-    public Lock newLock(String key, LockType lockType) {
+    public LockProvider newLock(String key, LockType lockType) {
         return lockMap.computeIfAbsent(key, it -> createLock(key, lockType));
     }
 
@@ -39,8 +36,8 @@ public class LockFactory {
      * @param lockType 锁类型
      * @return Lock
      */
-    protected Lock createLock(String key, LockType lockType) {
-        return ServiceProvider.of(Lock.class).getNewExtension(lockType,  key);
+    protected LockProvider createLock(String key, LockType lockType) {
+        return ServiceProvider.of(LockProvider.class).getNewExtension(lockType,  key);
     }
     /**
      * 获取实例
