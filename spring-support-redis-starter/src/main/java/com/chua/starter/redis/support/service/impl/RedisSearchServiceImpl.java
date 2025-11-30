@@ -1,8 +1,9 @@
 package com.chua.starter.redis.support.service.impl;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.task.cache.CacheProvider;
 import com.chua.common.support.task.cache.Cacheable;
-import com.chua.common.support.task.cache.GuavaCacheable;
+import com.chua.common.support.task.cache.GuavaCacheProvider;
 import com.chua.common.support.utils.IdUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.redis.support.client.RedisClient;
@@ -25,7 +26,7 @@ public class RedisSearchServiceImpl implements RedisSearchService {
     private RedisClient redisClient;
     public static final String LANGUAGE = "english";
 
-    private static final Cacheable CACHEABLE = new GuavaCacheable();
+    private static final CacheProvider CACHEABLE = new GuavaCacheProvider();
 
     @Override
     public ReturnResult<Boolean> dropIndex(String index, long expireTime) {

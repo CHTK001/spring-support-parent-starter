@@ -1,11 +1,10 @@
 package com.chua.starter.redis.support.debounce;
 
 import com.chua.common.support.annotations.Spi;
-import com.chua.common.support.lang.lock.Lock;
 import com.chua.common.support.objects.annotation.AutoInject;
+import com.chua.common.support.task.lock.LockProvider;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.concurrent.TimeUnit;
 
@@ -17,7 +16,7 @@ import java.util.concurrent.TimeUnit;
  * @since 2024/03/10
  */
 @Spi(value = "redisson", order = 100)
-public class RedissonLock implements Lock {
+public class RedissonLockProvider implements LockProvider {
 
     @AutoInject
     private RedissonClient redissonClient;
@@ -25,7 +24,7 @@ public class RedissonLock implements Lock {
     boolean isLocked = false;
     private String key;
 
-    public RedissonLock(String key) {
+    public RedissonLockProvider(String key) {
         this.key = key;
     }
 
@@ -52,6 +51,16 @@ public class RedissonLock implements Lock {
         if (isLocked && lock.isHeldByCurrentThread()) {
             lock.unlock();
         }
+    }
+
+    @Override
+    public String getName() {
+        return "redisson";
+    }
+
+    @Override
+    public String getType() {
+        return "redisson";
     }
 
 }

@@ -1,7 +1,7 @@
 package com.chua.starter.redis.support.service.impl;
 
-import com.chua.common.support.indicator.DataIndicator;
-import com.chua.common.support.indicator.TimeIndicator;
+import com.chua.advanced.support.indicator.DataIndicator;
+import com.chua.advanced.support.indicator.TimeIndicator;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.redis.support.client.RedisClient;

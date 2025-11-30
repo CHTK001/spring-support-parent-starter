@@ -228,6 +228,18 @@
                 <version>${utils.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-log-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-advanced-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
             <!-- 网络通信框架 -->
             <dependency>
                 <groupId>com.chua</groupId>
