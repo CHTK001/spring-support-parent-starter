@@ -1,9 +1,9 @@
 package com.chua.starter.common.support.debounce;
 
-import com.chua.common.support.lang.lock.Lock;
-import com.chua.common.support.lang.lock.ObjectLock;
+import com.chua.common.support.orm.toolkit.WrapperClassUtils;
+import com.chua.common.support.task.lock.LockProvider;
+import com.chua.common.support.task.lock.ObjectLockProvider;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.common.support.wrapper.toolkit.WrapperClassUtils;
 import com.chua.starter.common.support.lock.LockFactory;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -15,6 +15,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
 import java.util.Map;
+import java.util.concurrent.locks.Lock;
 
 /**
  * DebounceAop类用于实现方法执行的防抖动逻辑。
@@ -50,11 +51,11 @@ public class DebounceAspect implements ApplicationContextAware {
             return pjp.proceed();
         }
         // 根据方法获取对应的锁，如果不存在则创建一个新的ReentrantLock
-        Lock lock = getDebounceLock(debounce, key);
+        LockProvider provider = getDebounceLock(debounce, key);
 
         try {
             // 尝试获取锁，如果在指定的时间内获取成功，则执行方法
-            if (lock.tryLock(debounce.value(), debounce.unit())) {
+            if (provider.tryLock(debounce.value(), debounce.unit())) {
                 // 执行被拦截的方法
                 return pjp.proceed();
             } else {
@@ -66,7 +67,7 @@ public class DebounceAspect implements ApplicationContextAware {
                 return debounceException.returnValue();
             }
         } finally {
-            lock.unlock(); // 释放锁
+            provider.unlock(); // 释放锁
         }
     }
 
@@ -91,19 +92,19 @@ public class DebounceAspect implements ApplicationContextAware {
      * @param key 生成锁的键。
      * @return 返回通过注解指定的类创建的DebounceLock实例。
      */
-    private Lock getDebounceLock(Debounce debounce, String key) {
+    private LockProvider getDebounceLock(Debounce debounce, String key) {
         LockFactory.LockType lockType = debounce.lockType();
         if(lockType != LockFactory.LockType.NONE) {
             return LockFactory.getInstance().newLock(key, lockType);
         }
-        Class<? extends Lock> aClass = debounce.lock();
-        Lock debounceLock = null;
+        Class<? extends LockProvider> aClass = debounce.lock();
+        LockProvider debounceLock = null;
         try {
             debounceLock = WrapperClassUtils.newInstance(aClass);
         } catch (Exception ignored) {
         }
         if(null == debounceLock) {
-            return new ObjectLock(key);
+            return new ObjectLockProvider(key);
         }
         autowireCapableBeanFactory.autowireBean(debounceLock);
         return debounceLock;
