@@ -50,12 +50,6 @@
             <version>2.8.0</version>
         </dependency>
 
-        <!-- Apache Commons Exec - 用于执行外部命令和进程管理 -->
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-exec</artifactId>
-            <version>1.4.0</version>
-        </dependency>
 
         <!-- SpEL表达式扩展 - 增强Spring表达式语言功能 -->
         <dependency>
@@ -68,7 +62,7 @@
         <!-- 通用工具类库 - 提供基础的工具类和常用功能 -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>utils-support-common-starter</artifactId>
+            <artifactId>utils-support-advanced-starter</artifactId>
         </dependency>
 
         <!-- Spring Boot参数验证 - 提供Bean Validation支持 -->
@@ -87,7 +81,7 @@
         <!-- Logback日志框架支持 - 提供日志记录功能 -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>utils-support-log-logback-starter</artifactId>
+            <artifactId>utils-support-log-starter</artifactId>
         </dependency>
 
         <!-- Java验证API - 提供标准的验证注解 -->
