@@ -36,21 +36,23 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
     @Override
     protected void writeInternal(Object o, Type type, HttpOutputMessage outputMessage) throws IOException, HttpMessageNotWritableException {
 
-        if(o instanceof ResponseEntity<?> entity) {
+        if (o instanceof ResponseEntity<?> entity) {
             registerResponseEntity(entity, outputMessage);
             return;
         }
 
-        if(o instanceof byte[] bytes) {
+        if (o instanceof byte[] bytes) {
             outputMessage.getBody().write(bytes);
             return;
         }
 
         HttpServletRequest request = RequestUtils.getRequest();
-
+        if (null == request) {
+            return;
+        }
         String string = request.getHeader("access-control-no-data");
         String accept = request.getHeader(HttpHeaders.ACCEPT);
-        if(accept != null) {
+        if (accept != null) {
             outputMessage.getHeaders().remove("access-control-no-data");
             registerAccept(outputMessage, o);
             return;
@@ -61,11 +63,11 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
         for (HttpMessageConverter<?> messageConverter : messageConverters) {
             Class<?> aClass = o.getClass();
             List<MediaType> supportedMediaTypes = messageConverter.getSupportedMediaTypes(aClass);
-            if(supportedMediaTypes.isEmpty()) {
+            if (supportedMediaTypes.isEmpty()) {
                 continue;
             }
             for (MediaType supportedMediaType : supportedMediaTypes) {
-                if(messageConverter.canWrite(aClass, supportedMediaType)) {
+                if (messageConverter.canWrite(aClass, supportedMediaType)) {
                     outputMessage.getHeaders().setContentType(supportedMediaType);
                     ((HttpMessageConverter) messageConverter).write(o, null, outputMessage);
                     return;
@@ -76,11 +78,11 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
 
     private void registerResponseEntity(ResponseEntity<?> entity, HttpOutputMessage outputMessage) throws IOException {
         Object body = entity.getBody();
-        if(body == null) {
+        if (body == null) {
             return;
         }
 
-        if(body instanceof byte[]) {
+        if (body instanceof byte[]) {
             outputMessage.getBody().write((byte[]) body);
             return;
         }
@@ -93,7 +95,7 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
 
     @Override
     public boolean canRead(Type type, Class<?> contextClass, MediaType mediaType) {
-        if(codecFactory.isPass()) {
+        if (codecFactory.isPass()) {
             return false;
         }
         return super.canRead(type, contextClass, mediaType);
@@ -101,7 +103,7 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
 
     @Override
     public boolean canWrite(Type type, Class<?> clazz, MediaType mediaType) {
-        if(codecFactory.isPass()) {
+        if (codecFactory.isPass()) {
             return false;
         }
         return super.canWrite(type, clazz, mediaType);
