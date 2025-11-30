@@ -1,9 +1,9 @@
 package com.chua.starter.email.support;
 
+import com.chua.advanced.support.lang.mail.Email;
+import com.chua.advanced.support.lang.mail.MailConfiguration;
+import com.chua.advanced.support.lang.mail.MailSender;
 import com.chua.common.support.annotations.Spi;
-import com.chua.common.support.lang.mail.Email;
-import com.chua.common.support.lang.mail.MailConfiguration;
-import com.chua.common.support.lang.mail.MailSender;
 import com.chua.common.support.log.Log;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;

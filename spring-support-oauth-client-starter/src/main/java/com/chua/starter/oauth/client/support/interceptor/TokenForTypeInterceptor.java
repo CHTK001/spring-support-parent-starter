@@ -19,6 +19,8 @@ import org.springframework.core.annotation.Order;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 
+import static com.chua.starter.oauth.client.support.enums.AuthType.ALL;
+
 /**
  * 令牌类型拦截器
  * @author CH
@@ -49,15 +51,12 @@ public class TokenForTypeInterceptor extends StaticMethodMatcherPointcutAdvisor 
                 }
 
                 AuthType[] authTypes = tokenForType.value();
-                if(null != authTypes && isMatch(authTypes, userResume)) {
+                if(null != authTypes && isAll(authTypes)) {
                     return invocation.proceed();
                 }
-                String annotationLoginType = tokenForType.value().toUpperCase();
-                if ("ALL".equals(annotationLoginType)) {
-                    return invocation.proceed();
-                }
+
                 String loginType = userResume.getLoginType().toUpperCase();
-                if (!annotationLoginType.equals(loginType)) {
+                if (!isEquals(authTypes, loginType)) {
                     return null;
                 }
                 return invocation.proceed();
@@ -67,12 +66,24 @@ public class TokenForTypeInterceptor extends StaticMethodMatcherPointcutAdvisor 
         });
     }
 
-    private boolean isMatch(AuthType[] authTypes, UserResume userResume) {
+    private boolean isEquals(AuthType[] authTypes, String loginType) {
+        if(null == authTypes) {
+            return true;
+        }
+        for (AuthType authType : authTypes) {
+            if (authType.name().equalsIgnoreCase(loginType)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isAll(AuthType[] authTypes) {
         if(EnumUtils.inArray(ALL, authTypes)) {
             return true;
         }
 
-
+        return false;
     }
 
 

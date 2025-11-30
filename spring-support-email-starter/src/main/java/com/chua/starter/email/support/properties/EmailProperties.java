@@ -1,6 +1,6 @@
 package com.chua.starter.email.support.properties;
 
-import com.chua.common.support.lang.mail.MailConfiguration;
+import com.chua.advanced.support.lang.mail.MailConfiguration;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.springframework.boot.context.properties.ConfigurationProperties;
