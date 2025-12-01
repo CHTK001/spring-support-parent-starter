@@ -4,8 +4,8 @@ import com.baomidou.mybatisplus.extension.plugins.handler.TenantLineHandler;
 import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
 import com.chua.common.support.datasource.dialect.Dialect;
 import com.chua.common.support.datasource.dialect.DialectFactory;
-import com.chua.common.support.datasource.meta.Column;
-import com.chua.common.support.datasource.meta.Table;
+import com.chua.common.support.datasource.meta.ColumnMetadata;
+import com.chua.common.support.datasource.meta.TableMetadata;
 import com.chua.common.support.datasource.type.JavaType;
 import com.chua.common.support.lang.engine.Engine;
 import com.chua.common.support.lang.engine.JdbcEngine;
@@ -129,10 +129,10 @@ public class TenantConfiguration implements EnvironmentAware, BeanClassLoaderAwa
 
     private void updateTable(Engine engine, String databaseName, String tableName) {
         if(engine instanceof EngineTable engineTable) {
-            Table table = new Table();
+            TableMetadata table = new TableMetadata();
             table.setTableName(tableName);
             table.setCatalog(databaseName);
-            Column column = new Column();
+            ColumnMetadata column = new ColumnMetadata();
             column.setColumnName(tenantProperties.getTenantId());
             column.setJavaType(new JavaType(Integer.class, null));
             column.setComment("租户ID");
