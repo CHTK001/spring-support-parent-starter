@@ -61,6 +61,7 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-freemarker</artifactId>
+            <scope>provided</scope>
         </dependency>
 
         <!-- MyBatis Plus代码生成器 - 根据数据库表自动生成代码 -->
