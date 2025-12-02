@@ -77,8 +77,15 @@ public class AuthFilter implements Filter {
         OAuthHttpServletRequestWrapper wrappedRequest = OAuthHttpServletRequestWrapper.authenticated(
             httpRequest, userResume, authType);
 
-        log.debug("创建OAuth增强请求包装器 - 用户: {}, 认证类型: {}",
-                 userResume != null ? userResume.getUsername() : "anonymous", authType);
+        // 设置 userId 到 request 属性，供拦截器和业务代码使用
+        if (userResume != null && userResume.getUserId() != null) {
+            wrappedRequest.setAttribute("userId", userResume.getUserId());
+        }
+
+        log.debug("创建OAuth增强请求包装器 - 用户: {}, 用户ID: {}, 认证类型: {}",
+                 userResume != null ? userResume.getUsername() : "anonymous",
+                 userResume != null ? userResume.getUserId() : null,
+                 authType);
 
         // 使用包装后的请求继续过滤链
         chain.doFilter(wrappedRequest, response);
