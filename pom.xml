@@ -82,6 +82,7 @@
 
         <!-- 容错和稳定性模块 -->
         <module>spring-support-circuit-breaker-starter</module> <!-- 熔断降级模块 -->
+        <module>spring-support-strategy-starter</module>        <!-- 策略管理模块（限流、熔断、降级等配置管理） -->
 
         <!-- 运维和管理模块 -->
         <module>spring-support-shell-starter</module>           <!-- SSH Shell管理模块 -->
