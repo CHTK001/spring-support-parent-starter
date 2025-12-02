@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.EncodedResource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.init.DataSourceInitializer;
 import org.springframework.jdbc.datasource.init.DatabasePopulator;
@@ -47,15 +48,29 @@ public class DataSourceScriptConfiguration {
     }
 
     /**
-     * 添加flyway风格脚本
+     * Flyway风格数据库脚本迁移器
+     * 
+     * 支持以下功能：
+     * 1. 自动创建版本记录表
+     * 2. 支持多路径脚本扫描（db/init, db/migration等）
+     * 3. 支持数据库特定脚本
+     * 4. 支持校验和验证
+     * 5. 支持基线版本
      *
      * @author CH
+     * @version 1.1.0
      * @since 2025/9/3 9:07
      */
     static class FlywayLikePopulator implements DatabasePopulator {
+        
         private final DataSource ds;
         private final JdbcTemplate jdbc;
         private final DataSourceScriptProperties dataSourceScriptProperties;
+        
+        /**
+         * 默认初始化脚本路径
+         */
+        private static final String DEFAULT_INIT_PATH = "classpath*:db/init/*.sql";
 
         /**
          * 构造函数
@@ -72,38 +87,13 @@ public class DataSourceScriptConfiguration {
         @Override
         public void populate(Connection connection) throws SQLException {
             try {
-                // 1. 建版本记录表
-                String createTableSql = String.format("""
-                            CREATE TABLE IF NOT EXISTS %s (
-                              version VARCHAR(32) PRIMARY KEY COMMENT '脚本版本号',
-                              description VARCHAR(100) COMMENT '脚本描述信息',
-                              checksum VARCHAR(64) COMMENT '脚本文件MD5校验和',
-                              executed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '脚本执行时间',
-                              success VARCHAR(8) COMMENT '执行状态：true-成功，false-失败'
-                            ) COMMENT '数据库脚本版本记录表'
-                        """, dataSourceScriptProperties.getVersionTable());
-                jdbc.execute(createTableSql);
-
+                // 1. 创建版本记录表（兼容多种数据库）
+                createVersionTable();
+                
                 // 2. 如果启用基线且表为空，插入基线记录
-                if (dataSourceScriptProperties.isBaselineOnMigrate()) {
-                    Integer count = jdbc.queryForObject(
-                            String.format("SELECT COUNT(*) FROM %s", dataSourceScriptProperties.getVersionTable()),
-                            Integer.class);
-                    if (count != null && count == 0) {
-                        jdbc.update(
-                                String.format("INSERT INTO %s(version,description,checksum,success) VALUES(?,?,?,?)",
-                                        dataSourceScriptProperties.getVersionTable()),
-                                dataSourceScriptProperties.getBaselineVersion(),
-                                dataSourceScriptProperties.getBaselineDescription(),
-                                "baseline",
-                                "true");
-                        if (dataSourceScriptProperties.isVerbose()) {
-                            log.info("创建基线版本: {}", dataSourceScriptProperties.getBaselineVersion());
-                        }
-                    }
-                }
+                insertBaselineIfNeeded();
 
-                // 3. 扫描脚本
+                // 3. 扫描脚本（包括db/init和配置的脚本路径）
                 PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
                 List<Resource> list = new ArrayList<>(Arrays.asList(resolver.getResources(dataSourceScriptProperties.getScriptPath())));
 
@@ -137,17 +127,20 @@ public class DataSourceScriptConfiguration {
                     String currentChecksum = checksum(res);
 
                     // 4. 检查是否已执行过
+                    String tableName = dataSourceScriptProperties.getVersionTable();
+                    String tablePrefix = extractTablePrefix(tableName);
+                    
                     Integer count = jdbc.queryForObject(
-                            String.format("SELECT COUNT(*) FROM %s WHERE version = ?",
-                                    dataSourceScriptProperties.getVersionTable()),
+                            String.format("SELECT COUNT(*) FROM %s WHERE %s_version = ?",
+                                    tableName, tablePrefix),
                             Integer.class, version);
 
                     if (count != null && count > 0) {
                         // 如果启用校验和验证，检查脚本是否被修改
                         if (dataSourceScriptProperties.isValidateChecksum()) {
                             String storedChecksum = jdbc.queryForObject(
-                                    String.format("SELECT checksum FROM %s WHERE version = ?",
-                                            dataSourceScriptProperties.getVersionTable()),
+                                    String.format("SELECT %s_checksum FROM %s WHERE %s_version = ?",
+                                            tablePrefix, tableName, tablePrefix),
                                     String.class, version);
                             if (!currentChecksum.equals(storedChecksum)) {
                                 String errorMsg = String.format("版本 %s 的校验和不匹配。期望值: %s, 实际值: %s",
@@ -195,9 +188,11 @@ public class DataSourceScriptConfiguration {
                         }
 
                         // 6. 记录执行结果
+                        String tableName = dataSourceScriptProperties.getVersionTable();
+                        String tablePrefix = extractTablePrefix(tableName);
                         jdbc.update(
-                                String.format("INSERT INTO %s(version,description,checksum,success) VALUES(?,?,?,?)",
-                                        dataSourceScriptProperties.getVersionTable()),
+                                String.format("INSERT INTO %s(%s_version,%s_description,%s_checksum,%s_success) VALUES(?,?,?,?)",
+                                        tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix),
                                 version, description, currentChecksum, success);
 
                         log.info("成功执行迁移脚本: {} (版本: {})", fileName, version);
@@ -207,9 +202,11 @@ public class DataSourceScriptConfiguration {
 
                         // 记录失败的执行
                         try {
+                            String tableName = dataSourceScriptProperties.getVersionTable();
+                            String tablePrefix = extractTablePrefix(tableName);
                             jdbc.update(
-                                    String.format("INSERT INTO %s(version,description,checksum,success) VALUES(?,?,?,?)",
-                                            dataSourceScriptProperties.getVersionTable()),
+                                    String.format("INSERT INTO %s(%s_version,%s_description,%s_checksum,%s_success) VALUES(?,?,?,?)",
+                                            tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix),
                                     version, description, currentChecksum, false);
                         } catch (Exception recordException) {
                             log.error("记录迁移失败信息失败", recordException);
@@ -226,6 +223,93 @@ public class DataSourceScriptConfiguration {
         }
 
         /* ---------- 工具方法 ---------- */
+
+        /**
+         * 创建版本记录表
+         * 兼容多种数据库类型，字段名使用表名前缀
+         */
+        private void createVersionTable() {
+            String tableName = dataSourceScriptProperties.getVersionTable();
+            // 提取表名作为字段前缀（去掉可能的schema前缀）
+            String tablePrefix = extractTablePrefix(tableName);
+            
+            String createTableSql = String.format("""
+                CREATE TABLE IF NOT EXISTS %s (
+                    %s_version VARCHAR(32) PRIMARY KEY COMMENT '脚本版本号',
+                    %s_description VARCHAR(100) COMMENT '脚本描述信息',
+                    %s_checksum VARCHAR(64) COMMENT '脚本文件MD5校验和',
+                    %s_executed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '脚本执行时间',
+                    %s_success VARCHAR(8) COMMENT '执行状态：true-成功，false-失败'
+                )
+            """, tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix);
+            
+            try {
+                jdbc.execute(createTableSql);
+                if (dataSourceScriptProperties.isVerbose()) {
+                    log.debug("版本记录表已创建或已存在: {}", tableName);
+                }
+            } catch (DataAccessException e) {
+                log.warn("创建版本记录表时发生异常（表可能已存在）: {}", e.getMessage());
+            }
+        }
+
+        /**
+         * 插入基线版本记录（如果需要）
+         */
+        private void insertBaselineIfNeeded() {
+            if (!dataSourceScriptProperties.isBaselineOnMigrate()) {
+                return;
+            }
+            
+            String tableName = dataSourceScriptProperties.getVersionTable();
+            String tablePrefix = extractTablePrefix(tableName);
+            
+            try {
+                Integer count = jdbc.queryForObject(
+                        String.format("SELECT COUNT(*) FROM %s", tableName),
+                        Integer.class);
+                        
+                if (count != null && count == 0) {
+                    jdbc.update(
+                            String.format("INSERT INTO %s(%s_version,%s_description,%s_checksum,%s_success) VALUES(?,?,?,?)",
+                                    tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix),
+                            dataSourceScriptProperties.getBaselineVersion(),
+                            dataSourceScriptProperties.getBaselineDescription(),
+                            "baseline",
+                            "true");
+                    if (dataSourceScriptProperties.isVerbose()) {
+                        log.info("创建基线版本: {}", dataSourceScriptProperties.getBaselineVersion());
+                    }
+                }
+            } catch (DataAccessException e) {
+                log.warn("插入基线版本记录失败: {}", e.getMessage());
+            }
+        }
+
+        /**
+         * 扫描多个路径下的脚本资源
+         *
+         * @param resolver 资源解析器
+         * @param paths    脚本路径列表
+         * @return 脚本资源列表
+         * @throws IOException IO异常
+         */
+        private List<Resource> scanScripts(PathMatchingResourcePatternResolver resolver, String... paths) 
+                throws IOException {
+            List<Resource> allResources = new ArrayList<>();
+            for (String path : paths) {
+                try {
+                    Resource[] resources = resolver.getResources(path);
+                    allResources.addAll(Arrays.asList(resources));
+                    if (dataSourceScriptProperties.isVerbose()) {
+                        log.debug("从路径 {} 扫描到 {} 个脚本", path, resources.length);
+                    }
+                } catch (IOException e) {
+                    log.debug("路径不存在或无法访问: {}", path);
+                }
+            }
+            return allResources;
+        }
 
         /**
          * 从文件名中提取版本号
@@ -288,6 +372,24 @@ public class DataSourceScriptConfiguration {
          */
         private String escapeRegex(String str) {
             return str.replaceAll("([\\[\\]\\(\\)\\{\\}\\*\\+\\?\\^\\$\\|\\\\])", "\\\\$1");
+        }
+
+        /**
+         * 提取表名前缀
+         * 例如：db_version_history -> db_version_history
+         *      schema.db_version -> db_version
+         *
+         * @param tableName 表名（可能包含schema）
+         * @return 表名前缀
+         */
+        private String extractTablePrefix(String tableName) {
+            // 如果包含schema前缀（如 schema.table），只取表名部分
+            if (tableName.contains(".")) {
+                tableName = tableName.substring(tableName.lastIndexOf('.') + 1);
+            }
+            // 移除可能的反引号或双引号
+            tableName = tableName.replace("`", "").replace("\"", "");
+            return tableName;
         }
 
         /**

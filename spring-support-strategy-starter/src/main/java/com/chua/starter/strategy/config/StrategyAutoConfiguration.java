@@ -21,7 +21,8 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @EnableAsync
 @ComponentScan(basePackages = {
         "com.chua.starter.strategy.controller",
-        "com.chua.starter.strategy.service"
+        "com.chua.starter.strategy.service",
+        "com.chua.starter.strategy.aspect"
 })
 @MapperScan("com.chua.starter.strategy.mapper")
 public class StrategyAutoConfiguration {
