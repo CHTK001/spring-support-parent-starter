@@ -14,12 +14,10 @@ import org.springframework.web.servlet.HandlerInterceptor;
 public class AddressHandlerInterceptor implements HandlerInterceptor {
 
     private final ApplicationContext applicationContext;
-    AddressLimiter addressLimiter;
     AddressRecorder addressRecorder;
 
     public AddressHandlerInterceptor(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
-        this.addressLimiter = SpringBeanUtils.getBean(applicationContext, AddressLimiter.class);
         this.addressRecorder = SpringBeanUtils.getBean(applicationContext, AddressRecorder.class, new AddressRecorder.DefaultAddressRecorder());
     }
 }

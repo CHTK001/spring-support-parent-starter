@@ -3,7 +3,6 @@ package com.chua.starter.common.support.configuration;
 import com.chua.common.support.objects.ConfigureObjectContext;
 import com.chua.common.support.objects.DefaultConfigureObjectContext;
 import com.chua.common.support.objects.ObjectContextSetting;
-import com.chua.starter.common.support.debounce.DebounceAspect;
 import com.chua.starter.common.support.logger.SysLoggerPointcutAdvisor;
 import com.chua.starter.common.support.logger.UserLoggerPointcutAdvisor;
 import com.chua.starter.common.support.oauth.AuthService;
@@ -76,22 +75,6 @@ public class CommonConfiguration {
         return new IptablesServiceImpl(ipProperties);
     }
 
-    /**
-     * 创建防抖切面实例。
-     * 当容器中没有提供DebounceAspect实例时，使用此实现。
-     *
-     * @return {@link DebounceAspect} 防抖切面实例
-     * @example <pre>
-     * // 使用示例
-     * &#64;Autowired
-     * private DebounceAspect debounceAspect;
-     * </pre>
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public DebounceAspect debounceAspect() {
-        return new DebounceAspect();
-    }
 
     /**
      * 创建对象上下文配置实例。
