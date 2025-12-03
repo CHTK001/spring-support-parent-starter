@@ -24,18 +24,11 @@
             <artifactId>spring-support-mybatis-starter</artifactId>
         </dependency>
 
-        <!-- WebFlux 用于同步协议服务端 -->
+        <!-- 通用工具模块，包含 SyncProtocol、Json 工具和 SPI 支持 -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webflux</artifactId>
-            <optional>true</optional>
-        </dependency>
-
-        <!-- Web 用于同步协议客户端 -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-            <optional>true</optional>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-common-starter</artifactId>
+            <version>4.0.0.33</version>
         </dependency>
     </dependencies>
 
