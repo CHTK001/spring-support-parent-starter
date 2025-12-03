@@ -44,8 +44,9 @@ import java.util.List;
  * @author CH
  * @since 2022/7/23 8:51
  */
-@EnableConfigurationProperties({AuthClientProperties.class})
-public class AuthClientConfiguration implements ApplicationContextAware, BeanDefinitionRegistryPostProcessor, WebMvcConfigurer {
+@EnableConfigurationProperties({ AuthClientProperties.class })
+public class AuthClientConfiguration
+        implements ApplicationContextAware, BeanDefinitionRegistryPostProcessor, WebMvcConfigurer {
 
     private AuthClientProperties authProperties;
 
@@ -77,13 +78,14 @@ public class AuthClientConfiguration implements ApplicationContextAware, BeanDef
     public PermissionInterceptor permissionProxyFactoryBean() {
         return new PermissionInterceptor();
     }
+
     /**
-     * 权限拦截器
+     * Token类型拦截器
      *
-     * 提供基于注解的权限控制功能，支持方法级别的权限验证。
-     * 集成OAuth用户信息进行权限检查。
+     * 提供基于Token类型的拦截功能，支持不同类型Token的处理。
+     * 根据@TokenForType注解自动处理Token类型转换和验证。
      *
-     * @return 权限拦截器实例
+     * @return Token类型拦截器实例
      */
     @Bean
     @ConditionalOnMissingBean
@@ -122,7 +124,8 @@ public class AuthClientConfiguration implements ApplicationContextAware, BeanDef
      */
     @Bean("authFilterFilterRegistrationBean")
     @ConditionalOnMissingClass("com.chua.starter.oauth.server.support.SsoServer")
-    public FilterRegistrationBean<AuthFilter> authFilterFilterRegistrationBean(RequestMappingHandlerMapping requestMappingHandlerMapping) {
+    public FilterRegistrationBean<AuthFilter> authFilterFilterRegistrationBean(
+            RequestMappingHandlerMapping requestMappingHandlerMapping) {
         FilterRegistrationBean<AuthFilter> authFilterFilterRegistrationBean = new FilterRegistrationBean<>();
         authFilterFilterRegistrationBean.setOrder(Ordered.LOWEST_PRECEDENCE);
         authFilterFilterRegistrationBean.setUrlPatterns(authProperties.getBlockAddress());
@@ -131,16 +134,17 @@ public class AuthClientConfiguration implements ApplicationContextAware, BeanDef
         SpringBeanUtils.setRequestMappingHandlerMapping(requestMappingHandlerMapping);
 
         // 创建增强的AuthFilter，支持Principal和HttpServletRequest增强
-        authFilterFilterRegistrationBean.setFilter(new AuthFilter(new WebRequest(authProperties), requestMappingHandlerMapping));
+        authFilterFilterRegistrationBean
+                .setFilter(new AuthFilter(new WebRequest(authProperties), requestMappingHandlerMapping));
 
         return authFilterFilterRegistrationBean;
     }
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        this.authProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(AuthClientProperties.PRE, AuthClientProperties.class);
+        this.authProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(AuthClientProperties.PRE,
+                AuthClientProperties.class);
     }
-
 
     @Override
     public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {

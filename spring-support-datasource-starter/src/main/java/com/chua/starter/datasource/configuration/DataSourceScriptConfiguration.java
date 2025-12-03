@@ -49,7 +49,7 @@ public class DataSourceScriptConfiguration {
 
     /**
      * Flyway风格数据库脚本迁移器
-     * 
+     *
      * 支持以下功能：
      * 1. 自动创建版本记录表
      * 2. 支持多路径脚本扫描（db/init, db/migration等）
@@ -62,11 +62,11 @@ public class DataSourceScriptConfiguration {
      * @since 2025/9/3 9:07
      */
     static class FlywayLikePopulator implements DatabasePopulator {
-        
+
         private final DataSource ds;
         private final JdbcTemplate jdbc;
         private final DataSourceScriptProperties dataSourceScriptProperties;
-        
+
         /**
          * 默认初始化脚本路径
          */
@@ -89,7 +89,7 @@ public class DataSourceScriptConfiguration {
             try {
                 // 1. 创建版本记录表（兼容多种数据库）
                 createVersionTable();
-                
+
                 // 2. 如果启用基线且表为空，插入基线记录
                 insertBaselineIfNeeded();
 
@@ -129,7 +129,7 @@ public class DataSourceScriptConfiguration {
                     // 4. 检查是否已执行过
                     String tableName = dataSourceScriptProperties.getVersionTable();
                     String tablePrefix = extractTablePrefix(tableName);
-                    
+
                     Integer count = jdbc.queryForObject(
                             String.format("SELECT COUNT(*) FROM %s WHERE %s_version = ?",
                                     tableName, tablePrefix),
@@ -188,8 +188,8 @@ public class DataSourceScriptConfiguration {
                         }
 
                         // 6. 记录执行结果
-                        String tableName = dataSourceScriptProperties.getVersionTable();
-                        String tablePrefix = extractTablePrefix(tableName);
+                         tableName = dataSourceScriptProperties.getVersionTable();
+                         tablePrefix = extractTablePrefix(tableName);
                         jdbc.update(
                                 String.format("INSERT INTO %s(%s_version,%s_description,%s_checksum,%s_success) VALUES(?,?,?,?)",
                                         tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix),
@@ -202,8 +202,8 @@ public class DataSourceScriptConfiguration {
 
                         // 记录失败的执行
                         try {
-                            String tableName = dataSourceScriptProperties.getVersionTable();
-                            String tablePrefix = extractTablePrefix(tableName);
+                             tableName = dataSourceScriptProperties.getVersionTable();
+                             tablePrefix = extractTablePrefix(tableName);
                             jdbc.update(
                                     String.format("INSERT INTO %s(%s_version,%s_description,%s_checksum,%s_success) VALUES(?,?,?,?)",
                                             tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix),
@@ -232,7 +232,7 @@ public class DataSourceScriptConfiguration {
             String tableName = dataSourceScriptProperties.getVersionTable();
             // 提取表名作为字段前缀（去掉可能的schema前缀）
             String tablePrefix = extractTablePrefix(tableName);
-            
+
             String createTableSql = String.format("""
                 CREATE TABLE IF NOT EXISTS %s (
                     %s_version VARCHAR(32) PRIMARY KEY COMMENT '脚本版本号',
@@ -242,7 +242,7 @@ public class DataSourceScriptConfiguration {
                     %s_success VARCHAR(8) COMMENT '执行状态：true-成功，false-失败'
                 )
             """, tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix);
-            
+
             try {
                 jdbc.execute(createTableSql);
                 if (dataSourceScriptProperties.isVerbose()) {
@@ -260,15 +260,15 @@ public class DataSourceScriptConfiguration {
             if (!dataSourceScriptProperties.isBaselineOnMigrate()) {
                 return;
             }
-            
+
             String tableName = dataSourceScriptProperties.getVersionTable();
             String tablePrefix = extractTablePrefix(tableName);
-            
+
             try {
                 Integer count = jdbc.queryForObject(
                         String.format("SELECT COUNT(*) FROM %s", tableName),
                         Integer.class);
-                        
+
                 if (count != null && count == 0) {
                     jdbc.update(
                             String.format("INSERT INTO %s(%s_version,%s_description,%s_checksum,%s_success) VALUES(?,?,?,?)",
@@ -294,7 +294,7 @@ public class DataSourceScriptConfiguration {
          * @return 脚本资源列表
          * @throws IOException IO异常
          */
-        private List<Resource> scanScripts(PathMatchingResourcePatternResolver resolver, String... paths) 
+        private List<Resource> scanScripts(PathMatchingResourcePatternResolver resolver, String... paths)
                 throws IOException {
             List<Resource> allResources = new ArrayList<>();
             for (String path : paths) {
