@@ -195,13 +195,13 @@ public class UserStatisticProvider {
      * @return {@link Result}<{@link UserMenuResult}>
      */
     @GetMapping("/menus/my/**")
-    public Result<UserMenuResult> myMenu(@UserValue("userId") String userId,
+    public ReturnResult<UserMenuResult> myMenu(@UserValue("userId") String userId,
                                          @UserValue("userDashboardGrid") String userGrid,
                                          @UserValue("userDashboard") String userDashboard,
                                          @UserValue("username") String username,
                                          @UserValue("roles") Set<String> roles) {
         if(roles.isEmpty() && !ADMIN.equalsIgnoreCase(username)) {
-            return Result.failed("联系管理员分配权限");
+            return ReturnResult.fail("联系管理员分配权限");
         }
         UserMenuResult userMenuResult = new UserMenuResult();
         userMenuResult.setPermissions(AuthClientExecute.getInstance().getUserResult().getPermission());
@@ -238,6 +238,6 @@ public class UserStatisticProvider {
         } catch (Exception ignored) {
         }
         userMenuResult.setDashboard(userDashboard);
-        return Result.success(userMenuResult);
+        return ReturnResult.success(userMenuResult);
     }
 }
