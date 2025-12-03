@@ -1,7 +1,9 @@
 package com.chua.starter.datasource.configuration;
 
+import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.starter.datasource.properties.DataSourceScriptProperties;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.EncodedResource;
@@ -39,7 +41,7 @@ public class DataSourceScriptConfiguration {
      * @return 数据源初始化器，用于在应用启动时执行数据库初始化脚本
      */
     @Bean
-    public DataSourceInitializer dataSourceInitializer(DataSource ds, DataSourceScriptProperties dataSourceScriptProperties) {
+    public DataSourceInitializer dataSourceInitializer(DataSource ds, @Autowired(required = false) DataSourceScriptProperties dataSourceScriptProperties) {
         DataSourceInitializer initializer = new DataSourceInitializer();
         initializer.setEnabled(dataSourceScriptProperties.isEnable());
         initializer.setDataSource(ds);
