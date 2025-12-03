@@ -3,6 +3,7 @@ package com.chua.tenant.support.sync.server;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.protocol.ProtocolSetting;
 import com.chua.common.support.protocol.sync.SyncConnectionListener;
+import com.chua.common.support.protocol.sync.SyncMessage;
 import com.chua.common.support.protocol.sync.SyncMessageListener;
 import com.chua.common.support.protocol.sync.SyncProtocol;
 import com.chua.common.support.protocol.sync.SyncProtocolServer;
@@ -145,12 +146,12 @@ public class TenantSyncServer implements InitializingBean, DisposableBean {
         
         @Override
         public void onConnect(SyncSession session) {
-            log.info("[租户同步] 客户端连接: sessionId={}", session.getId());
+            log.info("[租户同步] 客户端连接: sessionId={}", session.getSessionId());
         }
         
         @Override
         public void onDisconnect(SyncSession session) {
-            String sessionId = session.getId();
+            String sessionId = session.getSessionId();
             String tenantId = sessionTenantMap.remove(sessionId);
             log.info("[租户同步] 客户端断开: sessionId={}, tenantId={}", sessionId, tenantId);
         }
@@ -162,8 +163,10 @@ public class TenantSyncServer implements InitializingBean, DisposableBean {
     private class TenantMessageListener implements SyncMessageListener {
         
         @Override
-        public void onMessage(SyncSession session, String topic, Object data) {
-            log.debug("[租户同步] 收到消息: sessionId={}, topic={}", session.getId(), topic);
+        public void onMessage(SyncSession session, SyncMessage message) {
+            String topic = message.getTopic();
+            Object data = message.getData();
+            log.debug("[租户同步] 收到消息: sessionId={}, topic={}", session.getSessionId(), topic);
             
             switch (topic) {
                 case TOPIC_SYNC_REQUEST -> handleSyncRequest(session, data);
@@ -186,7 +189,7 @@ public class TenantSyncServer implements InitializingBean, DisposableBean {
             String tenantId = (String) request.get("tenantId");
             
             if (tenantId == null || tenantId.isEmpty()) {
-                protocolServer.send(session.getId(), TOPIC_SYNC_RESPONSE, Map.of(
+                protocolServer.send(session.getSessionId(), TOPIC_SYNC_RESPONSE, Map.of(
                         "code", 400,
                         "message", "租户ID不能为空"
                 ));
@@ -194,20 +197,20 @@ public class TenantSyncServer implements InitializingBean, DisposableBean {
             }
             
             // 记录会话与租户的映射
-            sessionTenantMap.put(session.getId(), tenantId);
+            sessionTenantMap.put(session.getSessionId(), tenantId);
             
             // 收集并发送元数据
             Map<String, Object> metadata = collectMetadata(tenantId);
-            protocolServer.send(session.getId(), TOPIC_SYNC_RESPONSE, Map.of(
+            protocolServer.send(session.getSessionId(), TOPIC_SYNC_RESPONSE, Map.of(
                     "code", 200,
                     "message", "success",
                     "data", metadata
             ));
             
-            log.debug("[租户同步] 已发送租户 {} 元数据到 session {}", tenantId, session.getId());
+            log.debug("[租户同步] 已发送租户 {} 元数据到 session {}", tenantId, session.getSessionId());
         } catch (Exception e) {
             log.error("[租户同步] 处理同步请求失败", e);
-            protocolServer.send(session.getId(), TOPIC_SYNC_RESPONSE, Map.of(
+            protocolServer.send(session.getSessionId(), TOPIC_SYNC_RESPONSE, Map.of(
                     "code", 500,
                     "message", e.getMessage()
             ));
@@ -220,7 +223,7 @@ public class TenantSyncServer implements InitializingBean, DisposableBean {
      * @param session 会话
      */
     private void handleHealthCheck(SyncSession session) {
-        protocolServer.send(session.getId(), TOPIC_HEALTH, Map.of(
+        protocolServer.send(session.getSessionId(), TOPIC_HEALTH, Map.of(
                 "status", "UP",
                 "service", "tenant-sync-server",
                 "connections", protocolServer.getConnectionCount(),

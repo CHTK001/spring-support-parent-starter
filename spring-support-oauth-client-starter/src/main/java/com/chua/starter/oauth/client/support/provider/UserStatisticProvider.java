@@ -67,18 +67,18 @@ public class UserStatisticProvider {
      */
     @PostMapping("/login")
     @Ignore
-    public Result<LoginResult> login(@Valid @RequestBody LoginData loginData,
+    public ReturnResult<LoginResult> login(@Valid @RequestBody LoginData loginData,
                                      HttpServletRequest request,
                                      HttpServletResponse response,
                                      BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return Result.failed(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().getFirst().getDefaultMessage());
+            return ReturnResult.failure(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
 
         String code = loginData.getVerifyCodeKey();
         String sessionKey = Optional.ofNullable(request.getSession().getAttribute(CAPTCHA_SESSION_KEY)).orElse("").toString();
         if (Strings.isNullOrEmpty(code) || !code.equalsIgnoreCase(sessionKey)) {
-            return Result.failed(REQUEST_PARAM_ERROR, "校验码错误");
+            return ReturnResult.failure(REQUEST_PARAM_ERROR, "校验码错误");
         }
 
         String address = getIpAddress(request);
@@ -87,11 +87,11 @@ public class UserStatisticProvider {
                 ImmutableBuilder.<String, Object>builderOfMap().put("address", address).build()
         );
         if (null == accessToken) {
-            return Result.failed(USERNAME_OR_PASSWORD_ERROR, "账号或者密码不正确");
+            return ReturnResult.failure(USERNAME_OR_PASSWORD_ERROR, "账号或者密码不正确");
         }
 
         if (accessToken.getCode() != 200) {
-            return Result.failed(REQUEST_PARAM_ERROR, accessToken.getMessage());
+            return ReturnResult.failure(REQUEST_PARAM_ERROR, accessToken.getMessage());
         }
 
         LoginResult loginResult = LoginResult.builder()
@@ -99,7 +99,7 @@ public class UserStatisticProvider {
                 .tokenType("Bearer")
                 .accessToken(accessToken.getToken())
                 .build();
-        return Result.success(loginResult);
+        return ReturnResult.success(loginResult);
     }
 
     /**
@@ -152,22 +152,22 @@ public class UserStatisticProvider {
      * @return {@link Result}
      */
     @DeleteMapping("/logout")
-    public Result logout(@UserValue("token") String uid, HttpServletRequest request, HttpServletResponse response) {
+    public ReturnResult logout(@UserValue("token") String uid, HttpServletRequest request, HttpServletResponse response) {
         if (StringUtils.isEmpty(uid)) {
-            return Result.success("注销成功");
+            return ReturnResult.success("注销成功");
         }
         AuthClientExecute clientExecute = AuthClientExecute.getInstance();
         LoginAuthResult accessToken = clientExecute.logout(uid, "WEB", LogoutType.LOGOUT);
         if (null == accessToken) {
-            return Result.failed("退出失败请稍后重试");
+            return ReturnResult.fail("退出失败请稍后重试");
         }
 
         if (accessToken.getCode() != 200) {
-            return Result.failed(accessToken.getMessage());
+            return ReturnResult.fail(accessToken.getMessage());
         }
 
         CookieUtil.remove(request, response, "x-oauth-cookie");
-        return Result.success("注销成功");
+        return ReturnResult.success("注销成功");
     }
     /**
      * 保存用户首页布局

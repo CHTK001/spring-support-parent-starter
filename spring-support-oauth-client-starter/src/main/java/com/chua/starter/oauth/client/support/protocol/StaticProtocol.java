@@ -4,6 +4,7 @@ import com.chua.common.support.annotations.Extension;
 import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.DigestUtils;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.entity.AppKeySecret;
 import com.chua.starter.oauth.client.support.enums.AuthType;
@@ -17,7 +18,6 @@ import com.chua.starter.oauth.client.support.user.LoginResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.google.common.collect.Sets;
-import io.micrometer.core.instrument.util.StringUtils;
 import jakarta.servlet.http.Cookie;
 
 import java.util.Collections;
