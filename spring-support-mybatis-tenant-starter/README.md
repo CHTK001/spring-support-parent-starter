@@ -90,22 +90,22 @@ public class UserService {
 
 ### 同步协议配置项
 
-| 配置项                                      | 类型    | 默认值               | 说明                                   |
-| ------------------------------------------- | ------- | -------------------- | -------------------------------------- |
-| `sync-protocol.enable`                      | Boolean | false                | 是否启用同步协议                       |
-| `sync-protocol.type`                        | String  | client               | 程序类型：server-服务端，client-客户端 |
-| `sync-protocol.protocol`                    | String  | websocket-sync       | 协议类型，支持 websocket-sync 等       |
-| `sync-protocol.server-host`                 | String  | 0.0.0.0              | 服务端主机地址（服务端模式）           |
-| `sync-protocol.server-port`                 | Integer | 19280                | 服务端端口                             |
-| `sync-protocol.server-address`              | String  | ws://localhost:19280 | 服务端地址（客户端模式）               |
-| `sync-protocol.heartbeat`                   | Boolean | true                 | 是否启用心跳                           |
-| `sync-protocol.heartbeat-interval`          | Integer | 30                   | 心跳间隔（秒）                         |
-| `sync-protocol.connect-timeout`             | Integer | 10000                | 连接超时时间（毫秒）                   |
-| `sync-protocol.reconnect-interval`          | Integer | 5                    | 重连间隔（秒）                         |
-| `sync-protocol.max-reconnect-attempts`      | Integer | -1                   | 最大重连次数，-1 表示无限重连          |
-| `sync-protocol.metadata-sync.enable`        | Boolean | false                | 是否启用元数据同步                     |
-| `sync-protocol.metadata-sync.interval`      | Integer | 300                  | 同步间隔（秒）                         |
-| `sync-protocol.metadata-sync.initial-delay` | Integer | 60                   | 初始延迟（秒）                         |
+| 配置项                                      | 类型    | 默认值               | 说明                                      |
+| ------------------------------------------- | ------- | -------------------- | ----------------------------------------- |
+| `sync-protocol.enable`                      | Boolean | false                | 是否启用同步协议                          |
+| `sync-protocol.type`                        | String  | client               | 程序类型：server-服务端，client-客户端    |
+| `sync-protocol.protocol`                    | String  | rsocket              | 协议类型，支持 rsocket、websocket-sync 等 |
+| `sync-protocol.server-host`                 | String  | 0.0.0.0              | 服务端主机地址（服务端模式）              |
+| `sync-protocol.server-port`                 | Integer | 19280                | 服务端端口                                |
+| `sync-protocol.server-address`              | String  | ws://localhost:19280 | 服务端地址（客户端模式）                  |
+| `sync-protocol.heartbeat`                   | Boolean | true                 | 是否启用心跳                              |
+| `sync-protocol.heartbeat-interval`          | Integer | 30                   | 心跳间隔（秒）                            |
+| `sync-protocol.connect-timeout`             | Integer | 10000                | 连接超时时间（毫秒）                      |
+| `sync-protocol.reconnect-interval`          | Integer | 5                    | 重连间隔（秒）                            |
+| `sync-protocol.max-reconnect-attempts`      | Integer | -1                   | 最大重连次数，-1 表示无限重连             |
+| `sync-protocol.metadata-sync.enable`        | Boolean | false                | 是否启用元数据同步                        |
+| `sync-protocol.metadata-sync.interval`      | Integer | 300                  | 同步间隔（秒）                            |
+| `sync-protocol.metadata-sync.initial-delay` | Integer | 60                   | 初始延迟（秒）                            |
 
 ### 自动添加租户字段
 

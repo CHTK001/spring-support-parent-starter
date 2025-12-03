@@ -66,10 +66,10 @@ public class TenantProperties {
         private String type = "client";
 
         /**
-         * 协议类型：websocket-sync（WebSocket长连接）
+         * 协议类型：rsocket（RSocket长连接，默认）、websocket-sync（WebSocket长连接）
          * 支持的协议类型取决于 utils-support-common-starter 中的 SPI 实现
          */
-        private String protocol = "websocket-sync";
+        private String protocol = "rsocket";
 
         /**
          * 服务端主机地址（当type=server时生效）
