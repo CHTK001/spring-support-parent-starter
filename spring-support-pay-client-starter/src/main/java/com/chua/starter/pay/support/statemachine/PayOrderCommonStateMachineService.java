@@ -86,7 +86,7 @@ public class PayOrderCommonStateMachineService {
         if (stateMachineProvider == null) {
             // 使用默认提供者
             stateMachineProvider = ServiceProvider.of(StateMachineProvider.class).getExtension();
-            log.warn("未找到状态机提供者: {}, 使用默认提供者: {}", providerName, 
+            log.warn("未找到状态机提供者: {}, 使用默认提供者: {}", providerName,
                     stateMachineProvider != null ? stateMachineProvider.name() : "null");
         }
 
@@ -244,7 +244,7 @@ public class PayOrderCommonStateMachineService {
         try {
             // 检查当前状态是否有对应事件的转换
             return stateMachine.getTransitions(currentStatus).stream()
-                    .anyMatch(transition -> transition.getEvent().equals(event));
+                    .anyMatch(transition -> transition.getEventType().equals(event));
         } catch (Exception e) {
             log.error("检查订单状态转换是否合法失败, 订单编号: {}, 事件: {}", orderCode, event, e);
             return false;
