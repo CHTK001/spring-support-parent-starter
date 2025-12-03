@@ -1,7 +1,10 @@
 package com.chua.tenant.support.sync.client;
 
 import com.chua.common.support.protocol.ProtocolSetting;
-import com.chua.common.support.protocol.client.ListenerManager;
+import com.chua.common.support.protocol.listener.ConnectionEvent;
+import com.chua.common.support.protocol.listener.ConnectionListener;
+import com.chua.common.support.protocol.listener.DataEvent;
+import com.chua.common.support.protocol.listener.TopicListener;
 import com.chua.common.support.protocol.sync.SyncProtocol;
 import com.chua.common.support.protocol.sync.SyncProtocolClient;
 import com.chua.common.support.spi.ServiceProvider;
@@ -130,10 +133,54 @@ public class TenantSyncClient implements InitializingBean, DisposableBean {
                     TenantSyncServer.TOPIC_HEALTH
             );
             
-            // 添加消息监听器
-            ListenerManager listenerManager = protocolClient.getListenerManager();
-            listenerManager.addMessageListener(this::onMessage);
-            listenerManager.addConnectionListener(this::onConnectionStateChanged);
+            // 添加主题监听器 - 监听元数据推送
+            protocolClient.getListenerManager().addTopicListener(new TopicListener() {
+                @Override
+                public String getTopic() {
+                    return TenantSyncServer.TOPIC_METADATA;
+                }
+
+                @Override
+                public void onEvent(DataEvent event) {
+                    TenantSyncClient.this.onMessage(event.getTopic(), event.getData());
+                }
+            });
+            
+            // 添加主题监听器 - 监听同步响应
+            protocolClient.getListenerManager().addTopicListener(new TopicListener() {
+                @Override
+                public String getTopic() {
+                    return TenantSyncServer.TOPIC_SYNC_RESPONSE;
+                }
+
+                @Override
+                public void onEvent(DataEvent event) {
+                    TenantSyncClient.this.onMessage(event.getTopic(), event.getData());
+                }
+            });
+            
+            // 添加主题监听器 - 监听健康检查
+            protocolClient.getListenerManager().addTopicListener(new TopicListener() {
+                @Override
+                public String getTopic() {
+                    return TenantSyncServer.TOPIC_HEALTH;
+                }
+
+                @Override
+                public void onEvent(DataEvent event) {
+                    TenantSyncClient.this.onMessage(event.getTopic(), event.getData());
+                }
+            });
+            
+            // 添加连接监听器
+            protocolClient.getListenerManager().addConnectionListener(new ConnectionListener() {
+                @Override
+                public void onEvent(ConnectionEvent event) {
+                    boolean isConnected = event.getEventType() == ConnectionEvent.Type.CONNECTED ||
+                                         event.getEventType() == ConnectionEvent.Type.RECONNECTED;
+                    onConnectionStateChanged(isConnected);
+                }
+            });
             
             // 连接服务端
             protocolClient.connect();

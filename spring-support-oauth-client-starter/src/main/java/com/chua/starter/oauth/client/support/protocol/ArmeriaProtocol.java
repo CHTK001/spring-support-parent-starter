@@ -21,7 +21,6 @@ import com.chua.starter.oauth.client.support.user.UserResult;
 import com.google.common.base.Strings;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.MediaType;
 import jakarta.servlet.http.Cookie;
@@ -199,7 +198,7 @@ public class ArmeriaProtocol extends AbstractProtocol {
                     .header("x-oauth-serial", createData(key, key1))
                     .header("x-oauth-sign", SignUtils.generateSignFromMap(jsonObject))
                     .header("x-oauth-upgrade-type", upgradeType != null ? upgradeType.name() : "")
-                    .content(HttpData.ofUtf8(requestBody))
+                    .content(MediaType.JSON_UTF_8, requestBody)
                     .execute()
                     .aggregate()
                     .join();
