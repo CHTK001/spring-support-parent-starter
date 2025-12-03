@@ -66,14 +66,51 @@ public class TenantProperties {
         private String type = "client";
 
         /**
+         * 协议类型：websocket-sync（WebSocket长连接）
+         * 支持的协议类型取决于 utils-support-common-starter 中的 SPI 实现
+         */
+        private String protocol = "websocket-sync";
+
+        /**
+         * 服务端主机地址（当type=server时生效）
+         */
+        private String serverHost = "0.0.0.0";
+
+        /**
          * 服务端端口（当type=server时生效）
          */
         private int serverPort = 19280;
 
         /**
          * 服务端地址（当type=client时生效）
+         * 格式：ws://host:port 或 wss://host:port
          */
-        private String serverAddress = "http://localhost:19280";
+        private String serverAddress = "ws://localhost:19280";
+
+        /**
+         * 心跳开关
+         */
+        private boolean heartbeat = true;
+
+        /**
+         * 心跳间隔（秒）
+         */
+        private int heartbeatInterval = 30;
+
+        /**
+         * 连接超时时间（毫秒）
+         */
+        private int connectTimeout = 10000;
+
+        /**
+         * 重连间隔（秒）
+         */
+        private int reconnectInterval = 5;
+
+        /**
+         * 最大重连次数，-1表示无限重连
+         */
+        private int maxReconnectAttempts = -1;
 
         /**
          * 元数据下发配置

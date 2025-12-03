@@ -40,6 +40,18 @@ public class PayProperties {
     private Integer orderTimeoutMinutes = 30;
 
     /**
+     * 状态机提供者
+     * <p>
+     * 通过 SPI 机制加载状态机实现，支持的提供者：
+     * <ul>
+     *   <li>spring: Spring StateMachine 实现（默认）</li>
+     *   <li>common: utils-common 模块的轻量级状态机实现</li>
+     * </ul>
+     * </p>
+     */
+    private String stateMachineProvider = "spring";
+
+    /**
      * 状态机持久化类型枚举
      */
     public enum StateMachinePersistType {
