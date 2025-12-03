@@ -79,7 +79,7 @@ public class UserService {
 
 ## ⚙️ 配置说明
 
-### 配置项详解
+### 基础配置项
 
 | 配置项                                       | 类型        | 默认值        | 说明                       |
 | -------------------------------------------- | ----------- | ------------- | -------------------------- |
@@ -87,6 +87,25 @@ public class UserService {
 | `plugin.mybatis-plus.tenant.auto-add-column` | Boolean     | false         | 是否自动添加租户字段到表中 |
 | `plugin.mybatis-plus.tenant.tenant-id`       | String      | sys_tenant_id | 租户 ID 字段名             |
 | `plugin.mybatis-plus.tenant.ignore-table`    | Set<String> | 空集合        | 忽略的表列表               |
+
+### 同步协议配置项
+
+| 配置项                                      | 类型    | 默认值               | 说明                                   |
+| ------------------------------------------- | ------- | -------------------- | -------------------------------------- |
+| `sync-protocol.enable`                      | Boolean | false                | 是否启用同步协议                       |
+| `sync-protocol.type`                        | String  | client               | 程序类型：server-服务端，client-客户端 |
+| `sync-protocol.protocol`                    | String  | websocket-sync       | 协议类型，支持 websocket-sync 等       |
+| `sync-protocol.server-host`                 | String  | 0.0.0.0              | 服务端主机地址（服务端模式）           |
+| `sync-protocol.server-port`                 | Integer | 19280                | 服务端端口                             |
+| `sync-protocol.server-address`              | String  | ws://localhost:19280 | 服务端地址（客户端模式）               |
+| `sync-protocol.heartbeat`                   | Boolean | true                 | 是否启用心跳                           |
+| `sync-protocol.heartbeat-interval`          | Integer | 30                   | 心跳间隔（秒）                         |
+| `sync-protocol.connect-timeout`             | Integer | 10000                | 连接超时时间（毫秒）                   |
+| `sync-protocol.reconnect-interval`          | Integer | 5                    | 重连间隔（秒）                         |
+| `sync-protocol.max-reconnect-attempts`      | Integer | -1                   | 最大重连次数，-1 表示无限重连          |
+| `sync-protocol.metadata-sync.enable`        | Boolean | false                | 是否启用元数据同步                     |
+| `sync-protocol.metadata-sync.interval`      | Integer | 300                  | 同步间隔（秒）                         |
+| `sync-protocol.metadata-sync.initial-delay` | Integer | 60                   | 初始延迟（秒）                         |
 
 ### 自动添加租户字段
 
@@ -102,6 +121,137 @@ public class UserService {
    - 可空：是
    - 索引：是
    - 注释：租户 ID
+
+## 🔌 租户同步协议
+
+租户同步协议基于 `SyncProtocol` 实现长连接通信，支持实时元数据推送。
+
+### 服务端配置
+
+```yaml
+plugin:
+  mybatis-plus:
+    tenant:
+      enable: true
+      sync-protocol:
+        enable: true
+        type: server
+        protocol: websocket-sync
+        server-host: 0.0.0.0
+        server-port: 19280
+        heartbeat: true
+        heartbeat-interval: 30
+        metadata-sync:
+          enable: true
+          interval: 300
+          initial-delay: 60
+```
+
+### 客户端配置
+
+```yaml
+plugin:
+  mybatis-plus:
+    tenant:
+      enable: true
+      sync-protocol:
+        enable: true
+        type: client
+        protocol: websocket-sync
+        server-address: ws://localhost:19280
+        heartbeat: true
+        heartbeat-interval: 30
+        reconnect-interval: 5
+        max-reconnect-attempts: -1
+        metadata-sync:
+          enable: true
+          interval: 300
+          initial-delay: 60
+```
+
+### 实现元数据提供者（服务端）
+
+```java
+import com.chua.common.support.annotations.Spi;
+import com.chua.tenant.support.sync.TenantMetadataProvider;
+
+/**
+ * 管理员账号元数据提供者
+ */
+@Spi("admin-account")
+public class AdminAccountMetadataProvider implements TenantMetadataProvider {
+
+    @Override
+    public String getName() {
+        return "admin-account";
+    }
+
+    @Override
+    public boolean supports(String tenantId) {
+        return true;
+    }
+
+    @Override
+    public Map<String, Object> getMetadata(String tenantId) {
+        Map<String, Object> metadata = new HashMap<>();
+        // 从数据库获取租户的管理员账号信息
+        metadata.put("adminAccount", getAdminAccount(tenantId));
+        metadata.put("services", getEnabledServices(tenantId));
+        return metadata;
+    }
+}
+```
+
+### 实现元数据消费者（客户端）
+
+```java
+import com.chua.common.support.annotations.Spi;
+import com.chua.tenant.support.sync.TenantMetadataConsumer;
+
+/**
+ * 管理员账号元数据消费者
+ */
+@Spi("admin-account")
+public class AdminAccountMetadataConsumer implements TenantMetadataConsumer {
+
+    @Override
+    public String getName() {
+        return "admin-account";
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public void consumeMetadata(String tenantId, Map<String, Object> metadata) {
+        // 更新本地管理员账号信息
+        Object adminAccount = metadata.get("adminAccount");
+        if (adminAccount != null) {
+            updateLocalAdminAccount(tenantId, (Map<String, Object>) adminAccount);
+        }
+
+        // 更新启用的服务列表
+        Object services = metadata.get("services");
+        if (services != null) {
+            updateEnabledServices(tenantId, (List<String>) services);
+        }
+    }
+}
+```
+
+### SPI 配置
+
+在 `META-INF/services/` 目录下创建配置文件：
+
+**服务端**：`com.chua.tenant.support.sync.TenantMetadataProvider`
+
+```
+com.example.AdminAccountMetadataProvider
+```
+
+**客户端**：`com.chua.tenant.support.sync.TenantMetadataConsumer`
+
+```
+com.example.AdminAccountMetadataConsumer
+```
 
 ## 🔧 高级用法
 
