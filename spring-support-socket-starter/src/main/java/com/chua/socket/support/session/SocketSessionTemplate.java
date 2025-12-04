@@ -60,6 +60,16 @@ public interface SocketSessionTemplate {
     default void send(String event, Object msg) {
         broadcastObject(event, msg);
     }
+
+    /**
+     * 向指定所有会话的客户端发送消息
+     *
+     * @param event     触发的事件名称
+     * @param msg       要发送的消息内容
+     */
+    default void sendObject(String event, Object msg) {
+        broadcastObject(event, msg);
+    }
     /**
      * 向指定会话ID的客户端发送对象消息
      *
