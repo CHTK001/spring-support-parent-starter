@@ -1,5 +1,6 @@
 package com.chua.starter.datasource.configuration;
 
+import com.chua.common.support.lang.version.Version;
 import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.starter.datasource.properties.DataSourceScriptProperties;
 import lombok.extern.slf4j.Slf4j;
@@ -52,15 +53,35 @@ public class DataSourceScriptConfiguration {
     /**
      * Flyway风格数据库脚本迁移器
      *
-     * 支持以下功能：
-     * 1. 自动创建版本记录表
-     * 2. 支持多路径脚本扫描（db/init, db/migration等）
-     * 3. 支持数据库特定脚本
-     * 4. 支持校验和验证
-     * 5. 支持基线版本
+     * <h3>支持以下功能：</h3>
+     * <ol>
+     *   <li>自动创建版本记录表</li>
+     *   <li>支持多路径脚本扫描（db/init, db/migration等）</li>
+     *   <li>支持数据库特定脚本</li>
+     *   <li>支持校验和验证</li>
+     *   <li>支持基线版本</li>
+     * </ol>
+     *
+     * <h3>脚本命名规范：</h3>
+     * <pre>
+     * 1. V版本号__init_任意.sql  - 初始化脚本（同名只执行最高版本）
+     *    示例：V1.0.0__init_user.sql, V2.0.0__init_user.sql → 只执行V2.0.0版本
+     *
+     * 2. V版本号__add_任意.sql   - 增量脚本（全部执行，按脚本名+版本判断）
+     *    示例：V1.0.0__add_index.sql, V1.0.1__add_index.sql → 两个都执行
+     *
+     * 3. V版本号__任意.sql       - 普通脚本（全部执行，按脚本名+版本判断）
+     *    示例：V1.0.0__update_data.sql → 执行一次
+     * </pre>
+     *
+     * <h3>执行顺序：</h3>
+     * <ol>
+     *   <li>先执行 INIT 脚本（按版本号排序，同名只执行最高版本）</li>
+     *   <li>再执行 ADD 和普通脚本（按文件名排序）</li>
+     * </ol>
      *
      * @author CH
-     * @version 1.1.0
+     * @version 1.2.0
      * @since 2025/9/3 9:07
      */
     static class FlywayLikePopulator implements DatabasePopulator {
@@ -68,11 +89,6 @@ public class DataSourceScriptConfiguration {
         private final DataSource ds;
         private final JdbcTemplate jdbc;
         private final DataSourceScriptProperties dataSourceScriptProperties;
-
-        /**
-         * 默认初始化脚本路径
-         */
-        private static final String DEFAULT_INIT_PATH = "classpath*:db/init/*.sql";
 
         /**
          * 构造函数
@@ -122,31 +138,99 @@ public class DataSourceScriptConfiguration {
                     log.info("找到 {} 个迁移脚本", list.size());
                 }
 
+                // 4. 分离脚本类型
+                // INIT 脚本：同名脚本只执行最高版本
+                // ADD/NORMAL 脚本：全部执行，按脚本名+版本判断是否已执行
+                // 不符合格式的脚本：跳过不执行
+                Map<String, Resource> initScriptsToExecute = new LinkedHashMap<>();
+                List<Resource> otherScriptsToExecute = new ArrayList<>();
+                int skippedCount = 0;
+
                 for (Resource res : list) {
+                    String fileName = Objects.requireNonNull(res.getFilename());
+                    String scriptType = getScriptType(fileName);
+                    
+                    // 跳过不符合格式的脚本
+                    if (scriptType == null) {
+                        if (dataSourceScriptProperties.isVerbose()) {
+                            log.warn("跳过不符合格式的脚本: {} (格式应为: V版本号__init_xxx.sql 或 V版本号__add_xxx.sql 或 V版本号__xxx.sql)", fileName);
+                        }
+                        skippedCount++;
+                        continue;
+                    }
+                    
+                    // 检查版本类型是否允许执行
+                    if (!isReleaseTypeAllowed(fileName)) {
+                        if (dataSourceScriptProperties.isVerbose()) {
+                            String versionStr = versionOf(fileName);
+                            Version ver = Version.of(versionStr);
+                            log.debug("跳过不允许的版本类型脚本: {} (版本: {}, 后缀: {})", fileName, versionStr, ver.getSuffix());
+                        }
+                        skippedCount++;
+                        continue;
+                    }
+                    
+                    String description = descriptionOf(fileName);
+
+                    if ("INIT".equals(scriptType)) {
+                        // INIT 脚本按描述分组，使用 Version 比较保留最高版本
+                        Resource existingRes = initScriptsToExecute.get(description);
+                        if (existingRes == null) {
+                            initScriptsToExecute.put(description, res);
+                        } else {
+                            // 比较版本号，保留更高版本
+                            String existingVersion = versionOf(existingRes.getFilename());
+                            String currentVersion = versionOf(fileName);
+                            Version existing = Version.of(existingVersion);
+                            Version current = Version.of(currentVersion);
+                            if (current.isHigherThan(existing)) {
+                                initScriptsToExecute.put(description, res);
+                                if (dataSourceScriptProperties.isVerbose()) {
+                                    log.debug("INIT脚本 [{}]: 版本 {} 替换 {}", description, currentVersion, existingVersion);
+                                }
+                            }
+                        }
+                    } else {
+                        // ADD 和 NORMAL 脚本全部加入执行列表
+                        otherScriptsToExecute.add(res);
+                    }
+                }
+                
+                if (skippedCount > 0) {
+                    log.info("跳过 {} 个不符合格式的脚本", skippedCount);
+                }
+
+                // 合并待执行脚本列表：先执行 INIT，再执行 ADD/NORMAL
+                List<Resource> scriptsToExecute = new ArrayList<>();
+                scriptsToExecute.addAll(initScriptsToExecute.values());
+                scriptsToExecute.addAll(otherScriptsToExecute);
+
+                String tableName = dataSourceScriptProperties.getVersionTable();
+                String tablePrefix = extractTablePrefix(tableName);
+
+                for (Resource res : scriptsToExecute) {
                     String fileName = Objects.requireNonNull(res.getFilename());
                     String version = versionOf(fileName);
                     String description = descriptionOf(fileName);
+                    String scriptType = getScriptType(fileName);
                     String currentChecksum = checksum(res);
 
-                    // 4. 检查是否已执行过
-                    String tableName = dataSourceScriptProperties.getVersionTable();
-                    String tablePrefix = extractTablePrefix(tableName);
-
+                    // 5. 检查是否已执行过（根据脚本名称+版本一起判断）
                     Integer count = jdbc.queryForObject(
-                            String.format("SELECT COUNT(*) FROM %s WHERE %s_version = ?",
-                                    tableName, tablePrefix),
-                            Integer.class, version);
+                            String.format("SELECT COUNT(*) FROM %s WHERE %s_script_name = ? AND %s_version = ?",
+                                    tableName, tablePrefix, tablePrefix),
+                            Integer.class, fileName, version);
 
                     if (count != null && count > 0) {
                         // 如果启用校验和验证，检查脚本是否被修改
                         if (dataSourceScriptProperties.isValidateChecksum()) {
                             String storedChecksum = jdbc.queryForObject(
-                                    String.format("SELECT %s_checksum FROM %s WHERE %s_version = ?",
-                                            tablePrefix, tableName, tablePrefix),
-                                    String.class, version);
+                                    String.format("SELECT %s_checksum FROM %s WHERE %s_script_name = ? AND %s_version = ?",
+                                            tablePrefix, tableName, tablePrefix, tablePrefix),
+                                    String.class, fileName, version);
                             if (!currentChecksum.equals(storedChecksum)) {
-                                String errorMsg = String.format("版本 %s 的校验和不匹配。期望值: %s, 实际值: %s",
-                                        version, storedChecksum, currentChecksum);
+                                String errorMsg = String.format("脚本 %s (版本: %s) 的校验和不匹配。期望值: %s, 实际值: %s",
+                                        fileName, version, storedChecksum, currentChecksum);
                                 log.error(errorMsg);
                                 if (!dataSourceScriptProperties.isContinueOnError()) {
                                     throw new SQLException(errorMsg);
@@ -155,7 +239,7 @@ public class DataSourceScriptConfiguration {
                         }
 
                         if (dataSourceScriptProperties.isVerbose()) {
-                            log.info("跳过已执行的脚本: {}", fileName);
+                            log.info("跳过已执行的脚本: {} (版本: {})", fileName, version);
                         }
                         continue;
                     }
@@ -190,12 +274,10 @@ public class DataSourceScriptConfiguration {
                         }
 
                         // 6. 记录执行结果
-                         tableName = dataSourceScriptProperties.getVersionTable();
-                         tablePrefix = extractTablePrefix(tableName);
                         jdbc.update(
-                                String.format("INSERT INTO %s(%s_version,%s_description,%s_checksum,%s_success) VALUES(?,?,?,?)",
-                                        tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix),
-                                version, description, currentChecksum, success);
+                                String.format("INSERT INTO %s(%s_version,%s_script_name,%s_script_type,%s_description,%s_checksum,%s_success) VALUES(?,?,?,?,?,?)",
+                                        tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix),
+                                version, fileName, scriptType, description, currentChecksum, success);
 
                         log.info("成功执行迁移脚本: {} (版本: {})", fileName, version);
 
@@ -204,12 +286,10 @@ public class DataSourceScriptConfiguration {
 
                         // 记录失败的执行
                         try {
-                             tableName = dataSourceScriptProperties.getVersionTable();
-                             tablePrefix = extractTablePrefix(tableName);
                             jdbc.update(
-                                    String.format("INSERT INTO %s(%s_version,%s_description,%s_checksum,%s_success) VALUES(?,?,?,?)",
-                                            tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix),
-                                    version, description, currentChecksum, false);
+                                    String.format("INSERT INTO %s(%s_version,%s_script_name,%s_script_type,%s_description,%s_checksum,%s_success) VALUES(?,?,?,?,?,?)",
+                                            tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix),
+                                    version, fileName, scriptType, description, currentChecksum, "false");
                         } catch (Exception recordException) {
                             log.error("记录迁移失败信息失败", recordException);
                         }
@@ -237,13 +317,17 @@ public class DataSourceScriptConfiguration {
 
             String createTableSql = String.format("""
                 CREATE TABLE IF NOT EXISTS %s (
-                    %s_version VARCHAR(32) PRIMARY KEY COMMENT '脚本版本号',
+                    %s_id INT AUTO_INCREMENT PRIMARY KEY COMMENT '主键ID',
+                    %s_version VARCHAR(32) COMMENT '脚本版本号',
+                    %s_script_name VARCHAR(200) NOT NULL COMMENT '脚本文件名',
+                    %s_script_type VARCHAR(16) COMMENT '脚本类型：INIT-初始化，ADD-增量',
                     %s_description VARCHAR(100) COMMENT '脚本描述信息',
                     %s_checksum VARCHAR(64) COMMENT '脚本文件MD5校验和',
                     %s_executed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '脚本执行时间',
-                    %s_success VARCHAR(8) COMMENT '执行状态：true-成功，false-失败'
+                    %s_success VARCHAR(8) COMMENT '执行状态：true-成功，false-失败',
+                    UNIQUE KEY uk_script_name_version (%s_script_name, %s_version)
                 )
-            """, tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix);
+            """, tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix);
 
             try {
                 jdbc.execute(createTableSql);
@@ -273,9 +357,10 @@ public class DataSourceScriptConfiguration {
 
                 if (count != null && count == 0) {
                     jdbc.update(
-                            String.format("INSERT INTO %s(%s_version,%s_description,%s_checksum,%s_success) VALUES(?,?,?,?)",
-                                    tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix),
+                            String.format("INSERT INTO %s(%s_version,%s_script_name,%s_description,%s_checksum,%s_success) VALUES(?,?,?,?,?)",
+                                    tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix),
                             dataSourceScriptProperties.getBaselineVersion(),
+                            "BASELINE",
                             dataSourceScriptProperties.getBaselineDescription(),
                             "baseline",
                             "true");
@@ -311,6 +396,76 @@ public class DataSourceScriptConfiguration {
                 }
             }
             return allResources;
+        }
+
+        /**
+         * 获取脚本类型
+         * 根据文件名格式判断：
+         * <ul>
+         *   <li>V版本号__init_任意.sql → INIT（初始化脚本）</li>
+         *   <li>V版本号__add_任意.sql  → ADD（增量脚本）</li>
+         *   <li>V版本号__任意.sql      → NORMAL（普通脚本）</li>
+         *   <li>其他格式              → null（不执行）</li>
+         * </ul>
+         *
+         * @param fileName 文件名
+         * @return 脚本类型：INIT、ADD、NORMAL 或 null（不符合格式）
+         */
+        private String getScriptType(String fileName) {
+            String separator = dataSourceScriptProperties.getVersionSeparator();
+            
+            // 查找分隔符位置
+            int separatorIndex = fileName.indexOf(separator);
+            if (separatorIndex == -1) {
+                // 不符合格式，跳过
+                return null;
+            }
+            
+            // 获取分隔符后的描述部分
+            String afterSeparator = fileName.substring(separatorIndex + separator.length());
+            
+            // 判断脚本类型
+            if (afterSeparator.startsWith("init_")) {
+                return "INIT";
+            } else if (afterSeparator.startsWith("add_")) {
+                return "ADD";
+            } else if (!afterSeparator.isEmpty() && !afterSeparator.startsWith("_")) {
+                // 普通脚本：V版本号__任意.sql（不以下划线开头）
+                return "NORMAL";
+            }
+            
+            // 不符合规范格式，不执行
+            return null;
+        }
+
+        /**
+         * 检查脚本的版本类型是否允许执行
+         * 根据配置的 releaseType 或 allowedReleaseTypes 判断
+         *
+         * @param fileName 文件名
+         * @return 是否允许执行
+         */
+        private boolean isReleaseTypeAllowed(String fileName) {
+            // 解析版本号
+            String versionStr = versionOf(fileName);
+            Version version = Version.of(versionStr);
+            String suffix = version.getSuffix();
+            
+            // 获取脚本的版本类型
+            DataSourceScriptProperties.ReleaseType scriptReleaseType = 
+                    DataSourceScriptProperties.ReleaseType.fromSuffix(suffix);
+            
+            // 如果配置了 allowedReleaseTypes，使用精确匹配
+            if (dataSourceScriptProperties.getAllowedReleaseTypes() != null 
+                    && !dataSourceScriptProperties.getAllowedReleaseTypes().isEmpty()) {
+                return dataSourceScriptProperties.getAllowedReleaseTypes().contains(scriptReleaseType)
+                        || dataSourceScriptProperties.getAllowedReleaseTypes()
+                                .contains(DataSourceScriptProperties.ReleaseType.ALL);
+            }
+            
+            // 否则使用 releaseType 的优先级判断
+            DataSourceScriptProperties.ReleaseType configuredType = dataSourceScriptProperties.getReleaseType();
+            return configuredType.isAllowed(scriptReleaseType);
         }
 
         /**
