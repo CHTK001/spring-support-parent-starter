@@ -4,6 +4,9 @@ import com.chua.socket.support.SocketProtocol;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static com.chua.socket.support.properties.SocketProperties.PRE;
 
 /**
@@ -24,6 +27,28 @@ public class SocketProperties {
      * 是否开启
      */
     private boolean enable;
+
+    /**
+     * 房间配置列表
+     * <p>
+     * 支持配置多个独立的 Socket 服务实例，每个实例可以有不同的端口和路径
+     * </p>
+     * 示例配置：
+     * <pre>
+     * plugin:
+     *   socket:
+     *     enable: true
+     *     room:
+     *       - client-id: default
+     *         port: 9000
+     *       - client-id: webrtc
+     *         context-path: /webrtc
+     *         port: 9001
+     *       - client-id: shell
+     *         port: 9002
+     * </pre>
+     */
+    private List<Room> room = new ArrayList<>();
 
     /**
      * 协议类型，默认 socketio
@@ -95,4 +120,73 @@ public class SocketProperties {
      * 是否使用 Linux 的 Native Epoll
      */
     private boolean useLinuxNativeEpoll;
+
+    /**
+     * 房间配置
+     */
+    @Data
+    public static class Room {
+
+        /**
+         * 客户端标识，用于区分不同的服务实例
+         */
+        private String clientId = "default";
+
+        /**
+         * 上下文路径，如 /webrtc、/shell 等
+         */
+        private String contextPath = "/";
+
+        /**
+         * 端口号
+         * <ul>
+         *   <li>正数：使用指定端口启动独立服务</li>
+         *   <li>-1：使用主配置的端口</li>
+         *   <li>-2, -3...：使用主配置端口 + 偏移量（如主端口9000，-2表示9001）</li>
+         * </ul>
+         */
+        private int port = -1;
+
+        /**
+         * 本地IP（可选，不设置则使用主配置）
+         */
+        private String host;
+
+        /**
+         * 认证工厂类名（可选，不设置则使用主配置）
+         */
+        private String authFactory;
+
+        /**
+         * 是否启用此房间
+         */
+        private boolean enable = true;
+
+        /**
+         * 获取实际端口
+         *
+         * @param mainPort 主配置端口
+         * @return 实际端口
+         */
+        public int getActualPort(int mainPort) {
+            if (port > 0) {
+                return port;
+            }
+            if (port == -1) {
+                return mainPort;
+            }
+            // port < -1 表示使用偏移量
+            return mainPort + Math.abs(port) - 1;
+        }
+
+        /**
+         * 获取实际主机地址
+         *
+         * @param mainHost 主配置主机地址
+         * @return 实际主机地址
+         */
+        public String getActualHost(String mainHost) {
+            return host != null && !host.isEmpty() ? host : mainHost;
+        }
+    }
 }
