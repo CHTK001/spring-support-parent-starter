@@ -12,16 +12,16 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * RSocket 会话模板实现
- * 基于 Spring WebSocket 实现
+ * 基于 Spring WebSocket 实现，支持多房间配置
  *
  * @author CH
  * @version 1.0.0
@@ -32,7 +32,17 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
 
     private final SocketProperties properties;
     private final List<SocketListener> listeners;
-    private final Map<String, RSocketSessionImpl> sessionCache = new ConcurrentHashMap<>();
+    
+    /**
+     * 会话缓存：clientId -> sessions
+     */
+    private final Map<String, List<RSocketSessionImpl>> sessionCache = new ConcurrentHashMap<>();
+    
+    /**
+     * 会话ID到clientId的映射
+     */
+    private final Map<String, String> sessionClientMap = new ConcurrentHashMap<>();
+    
     private volatile boolean running = false;
 
     public RSocketSessionTemplateImpl(SocketProperties properties, List<SocketListener> listeners) {
@@ -42,15 +52,54 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+        // 从 URI 中解析 clientId（如 /ws/webrtc -> webrtc）
+        String path = session.getUri() != null ? session.getUri().getPath() : "/";
+        String clientId = extractClientId(path);
+        
         RSocketSessionImpl rsocketSession = new RSocketSessionImpl(session);
-        sessionCache.put(session.getId(), rsocketSession);
-        log.debug("[RSocket] 客户端连接: {}", session.getId());
+        rsocketSession.setAttribute("clientId", clientId);
+        
+        sessionCache.computeIfAbsent(clientId, k -> new CopyOnWriteArrayList<>()).add(rsocketSession);
+        sessionClientMap.put(session.getId(), clientId);
+        
+        log.debug("[RSocket] 客户端连接: clientId={}, sessionId={}", clientId, session.getId());
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
-        sessionCache.remove(session.getId());
-        log.debug("[RSocket] 客户端断开: {}, 状态: {}", session.getId(), status);
+        String sessionId = session.getId();
+        String clientId = sessionClientMap.remove(sessionId);
+        
+        if (clientId != null) {
+            List<RSocketSessionImpl> sessions = sessionCache.get(clientId);
+            if (sessions != null) {
+                sessions.removeIf(s -> s.getId().equals(sessionId));
+            }
+        }
+        
+        log.debug("[RSocket] 客户端断开: clientId={}, sessionId={}, 状态: {}", clientId, sessionId, status);
+    }
+
+    /**
+     * 从路径中提取 clientId
+     * <p>
+     * 例如：/ws/webrtc -> webrtc, /ws -> default, / -> default
+     * </p>
+     */
+    private String extractClientId(String path) {
+        if (path == null || path.isEmpty() || "/".equals(path)) {
+            return "default";
+        }
+        
+        // 移除开头的 /ws 或 / 
+        String cleanPath = path.replaceFirst("^/ws/?", "").replaceFirst("^/", "");
+        if (cleanPath.isEmpty()) {
+            return "default";
+        }
+        
+        // 取第一段作为 clientId
+        int slashIndex = cleanPath.indexOf('/');
+        return slashIndex > 0 ? cleanPath.substring(0, slashIndex) : cleanPath;
     }
 
     @Override
@@ -74,24 +123,36 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     @Override
     public SocketSession save(String clientId, SocketSession session) {
         if (session instanceof RSocketSessionImpl impl) {
-            sessionCache.put(clientId, impl);
+            sessionCache.computeIfAbsent(clientId, k -> new CopyOnWriteArrayList<>()).add(impl);
+            sessionClientMap.put(impl.getId(), clientId);
         }
         return session;
     }
 
     @Override
     public void remove(String clientId, SocketSession session) {
-        sessionCache.remove(clientId);
+        List<RSocketSessionImpl> sessions = sessionCache.get(clientId);
+        if (sessions != null && session instanceof RSocketSessionImpl impl) {
+            sessions.remove(impl);
+            sessionClientMap.remove(impl.getId());
+        }
     }
 
     @Override
     public SocketSession getSession(String sessionId) {
-        return sessionCache.get(sessionId);
+        for (List<RSocketSessionImpl> sessions : sessionCache.values()) {
+            for (RSocketSessionImpl session : sessions) {
+                if (session.getId().equals(sessionId)) {
+                    return session;
+                }
+            }
+        }
+        return null;
     }
 
     @Override
     public void send(String sessionId, String event, String msg) {
-        RSocketSessionImpl session = sessionCache.get(sessionId);
+        SocketSession session = getSession(sessionId);
         if (session != null) {
             session.send(event, msg);
         }
@@ -100,39 +161,52 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     @Override
     public void broadcast(String event, String msg) {
         String message = createMessage(event, msg);
-        for (RSocketSessionImpl session : sessionCache.values()) {
-            try {
-                session.sendRaw(message);
-            } catch (Exception e) {
-                log.error("[RSocket] 广播消息失败: {}", session.getId(), e);
+        for (List<RSocketSessionImpl> sessions : sessionCache.values()) {
+            for (RSocketSessionImpl session : sessions) {
+                try {
+                    session.sendRaw(message);
+                } catch (Exception e) {
+                    log.error("[RSocket] 广播消息失败: {}", session.getId(), e);
+                }
             }
         }
     }
 
     @Override
     public void sendToUser(String userId, String event, String msg) {
-        for (RSocketSessionImpl session : sessionCache.values()) {
-            SocketUser user = session.getUser();
-            if (user != null && userId.equals(user.getUserId())) {
-                session.send(event, msg);
+        for (List<RSocketSessionImpl> sessions : sessionCache.values()) {
+            for (RSocketSessionImpl session : sessions) {
+                SocketUser user = session.getUser();
+                if (user != null && userId.equals(user.getUserId())) {
+                    session.send(event, msg);
+                }
             }
         }
     }
 
     @Override
     public List<SocketSession> getOnlineSessions() {
-        return new LinkedList<>(sessionCache.values());
+        List<SocketSession> result = new LinkedList<>();
+        for (List<RSocketSessionImpl> sessions : sessionCache.values()) {
+            result.addAll(sessions);
+        }
+        return result;
     }
 
     @Override
     public List<SocketSession> getOnlineSession(String type, String roomId) {
+        List<RSocketSessionImpl> sessions = sessionCache.get(type);
+        if (sessions == null) {
+            return Collections.emptyList();
+        }
+
         if (roomId == null || roomId.isEmpty()) {
-            return new LinkedList<>(sessionCache.values());
+            return new LinkedList<>(sessions);
         }
 
         // 根据 roomId 过滤会话
         List<SocketSession> result = new LinkedList<>();
-        for (RSocketSessionImpl session : sessionCache.values()) {
+        for (RSocketSessionImpl session : sessions) {
             Object sessionRoomId = session.getAttribute("roomId");
             if (roomId.equals(sessionRoomId)) {
                 result.add(session);
@@ -146,13 +220,16 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
         List<SocketUser> result = new LinkedList<>();
         List<String> userIds = new LinkedList<>();
         
-        for (RSocketSessionImpl session : sessionCache.values()) {
+        List<RSocketSessionImpl> sessions = sessionCache.get(type);
+        if (sessions == null) {
+            return Collections.emptyList();
+        }
+
+        for (RSocketSessionImpl session : sessions) {
             SocketUser user = session.getUser();
             if (user != null && !userIds.contains(user.getUserId())) {
-                if (type == null || type.equals(user.getType())) {
-                    result.add(user);
-                    userIds.add(user.getUserId());
-                }
+                result.add(user);
+                userIds.add(user.getUserId());
             }
         }
         return result;
@@ -160,7 +237,11 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
 
     @Override
     public int getOnlineCount() {
-        return sessionCache.size();
+        int count = 0;
+        for (List<RSocketSessionImpl> sessions : sessionCache.values()) {
+            count += sessions.size();
+        }
+        return count;
     }
 
     @Override
@@ -180,14 +261,17 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
         }
         
         // 关闭所有会话
-        for (RSocketSessionImpl session : sessionCache.values()) {
-            try {
-                session.disconnect();
-            } catch (Exception e) {
-                log.error("[RSocket] 关闭会话失败: {}", session.getId(), e);
+        for (List<RSocketSessionImpl> sessions : sessionCache.values()) {
+            for (RSocketSessionImpl session : sessions) {
+                try {
+                    session.disconnect();
+                } catch (Exception e) {
+                    log.error("[RSocket] 关闭会话失败: {}", session.getId(), e);
+                }
             }
         }
         sessionCache.clear();
+        sessionClientMap.clear();
         running = false;
         log.info("[RSocket] 服务已停止");
     }
