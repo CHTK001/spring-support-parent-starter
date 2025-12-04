@@ -23,9 +23,10 @@ public class MybatisPlusProperties {
     private boolean openXmlReload = true;
 
     /**
-     * 可访问的IP
+     * 是否开启只读模式
+     * 开启后所有更新、插入、删除操作都会抛出只读异常
      */
-    private List<String> webRestrictedAddress;
+    private boolean readOnly = false;
 
     /**
      * mapper加载源

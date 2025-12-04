@@ -196,9 +196,14 @@ public class MybatisPlusConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public ConfigurationCustomizer mybatisConfigurationCustomizer() {
+    public ConfigurationCustomizer mybatisConfigurationCustomizer(MybatisPlusProperties mybatisProperties) {
         return configuration -> {
-            // 确保拦截器是第一个被执行的
+            // 只读拦截器优先级最高，需要第一个添加
+            if (mybatisProperties.isReadOnly()) {
+                log.warn("数据库只读模式已开启，所有写操作将被拒绝");
+                configuration.addInterceptor(new ReadOnlyInterceptor(mybatisProperties));
+            }
+            // 添加追踪拦截器
             configuration.addInterceptor(new MapperTracingInterceptor());
         };
     }
