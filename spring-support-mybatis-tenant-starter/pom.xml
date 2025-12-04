@@ -24,11 +24,11 @@
             <artifactId>spring-support-mybatis-starter</artifactId>
         </dependency>
 
-        <!-- 通用工具模块，包含 SyncProtocol、Json 工具和 SPI 支持 -->
+        <!-- 同步协议模块 -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>utils-support-common-starter</artifactId>
-            <version>4.0.0.33</version>
+            <artifactId>spring-support-sync-starter</artifactId>
+            <optional>true</optional>
         </dependency>
     </dependencies>
 

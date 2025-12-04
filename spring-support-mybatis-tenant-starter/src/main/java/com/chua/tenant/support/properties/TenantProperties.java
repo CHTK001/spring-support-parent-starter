@@ -45,98 +45,34 @@ public class TenantProperties {
     private String tenantId = "sys_tenant_id";
 
     /**
-     * 同步协议配置
+     * 租户同步配置
+     * <p>
+     * 注意：同步协议的基础配置（如 host、port、protocol 等）请使用 plugin.sync.* 配置
+     * 此处仅保留租户特有的配置
+     * </p>
+     *
+     * @see com.chua.sync.support.properties.SyncProperties
      */
-    private SyncProtocol syncProtocol = new SyncProtocol();
+    private TenantSync tenantSync = new TenantSync();
 
     /**
-     * 同步协议配置类
+     * 租户同步配置类
      */
     @Data
-    public static class SyncProtocol {
+    public static class TenantSync {
 
         /**
-         * 是否启用同步协议
+         * 是否启用租户同步
+         * <p>
+         * 启用后会注册 TenantSyncMessageHandler 处理租户相关主题
+         * 同时需要启用 plugin.sync.enable=true
+         * </p>
          */
         private boolean enable = false;
 
         /**
-         * 程序类型：server-服务端，client-客户端
+         * 默认租户ID（客户端使用）
          */
-        private String type = "client";
-
-        /**
-         * 协议类型：rsocket（RSocket长连接，默认）、websocket-sync（WebSocket长连接）
-         * 支持的协议类型取决于 utils-support-common-starter 中的 SPI 实现
-         */
-        private String protocol = "rsocket";
-
-        /**
-         * 服务端主机地址（当type=server时生效）
-         */
-        private String serverHost = "0.0.0.0";
-
-        /**
-         * 服务端端口（当type=server时生效）
-         */
-        private int serverPort = 19280;
-
-        /**
-         * 服务端地址（当type=client时生效）
-         * 格式：ws://host:port 或 wss://host:port
-         */
-        private String serverAddress = "ws://localhost:19280";
-
-        /**
-         * 心跳开关
-         */
-        private boolean heartbeat = true;
-
-        /**
-         * 心跳间隔（秒）
-         */
-        private int heartbeatInterval = 30;
-
-        /**
-         * 连接超时时间（毫秒）
-         */
-        private int connectTimeout = 10000;
-
-        /**
-         * 重连间隔（秒）
-         */
-        private int reconnectInterval = 5;
-
-        /**
-         * 最大重连次数，-1表示无限重连
-         */
-        private int maxReconnectAttempts = -1;
-
-        /**
-         * 元数据下发配置
-         */
-        private MetadataSync metadataSync = new MetadataSync();
-
-        /**
-         * 元数据同步配置
-         */
-        @Data
-        public static class MetadataSync {
-
-            /**
-             * 是否启用元数据下发
-             */
-            private boolean enable = false;
-
-            /**
-             * 下发间隔时间（秒）
-             */
-            private int interval = 300;
-
-            /**
-             * 初始延迟时间（秒）
-             */
-            private int initialDelay = 60;
-        }
+        private String defaultTenantId;
     }
 }
