@@ -9,9 +9,12 @@ import java.util.Set;
 import static com.chua.socketio.support.properties.SocketIoProperties.PRE;
 
 /**
- * socket.io
+ * Socket.IO 配置属性类
+ * 用于配置Socket.IO服务器的各项参数
  *
  * @author CH
+ * @version 1.0.0
+ * @since 2024-12-04
  */
 @Data
 @ConfigurationProperties(prefix = PRE, ignoreInvalidFields = true)
@@ -24,6 +27,19 @@ public class SocketIoProperties {
      * 编解码器类型
      */
     private String codecType = "sm2";
+    
+    /**
+     * 是否开启数据加密（默认开启）
+     * 开启后，所有下发的数据将使用配置的编解码器进行加密
+     */
+    private boolean encryptEnabled = true;
+    
+    /**
+     * 加密密钥（可选）
+     * 如果不配置，将使用默认密钥
+     */
+    private String encryptKey;
+    
     /**
      * 是否开启
      */
