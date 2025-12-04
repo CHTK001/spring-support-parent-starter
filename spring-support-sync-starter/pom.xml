@@ -9,8 +9,8 @@
         <version>4.0.0.34</version>
     </parent>
 
-    <artifactId>spring-support-mybatis-tenant-starter</artifactId>
-    <description>mybatis-plus租户模块</description>
+    <artifactId>spring-support-sync-starter</artifactId>
+    <description>同步协议模块 - 基于 SyncProtocol 实现客户端/服务端通信</description>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
@@ -20,14 +20,26 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-mybatis-starter</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
         </dependency>
 
-        <!-- 同步协议模块 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- 通用工具模块，包含 SyncProtocol、Json 工具和 SPI 支持 -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-support-sync-starter</artifactId>
+            <artifactId>utils-support-common-starter</artifactId>
+            <version>4.0.0.33</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
     </dependencies>
