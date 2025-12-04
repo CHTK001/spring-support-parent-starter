@@ -2,7 +2,7 @@ package com.chua.starter.strategy.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.chua.starter.common.support.result.ReturnResult;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.strategy.entity.SysCircuitBreakerConfiguration;
 import com.chua.starter.strategy.service.SysCircuitBreakerConfigurationService;
 import io.swagger.v3.oas.annotations.Operation;

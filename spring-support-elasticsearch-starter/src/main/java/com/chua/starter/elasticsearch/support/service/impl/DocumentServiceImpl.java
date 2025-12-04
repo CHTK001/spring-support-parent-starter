@@ -4,6 +4,7 @@ import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.code.PageResult;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.common.support.result.Result;
 import com.chua.starter.elasticsearch.support.pojo.Mapping;
 import com.chua.starter.elasticsearch.support.service.DocumentService;
@@ -199,20 +200,20 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     @Override
-    public Result<String> deleteIndex(String indexName) {
+    public ReturnResult<String> deleteIndex(String indexName) {
         IndexCoordinates coordinates = IndexCoordinates.of(indexName.toLowerCase());
         IndexOperations indexOperations = elasticsearchRestTemplate.indexOps(coordinates);
         if (!indexOperations.exists()) {
-            return Result.failed("索引不存在");
+            return ReturnResult.failure("索引不存在");
         }
-        return indexOperations.delete() ? Result.success() : Result.failed("删除失败");
+        return indexOperations.delete() ? ReturnResult.success() : ReturnResult.failure("删除失败");
     }
 
     @Override
-    public Result<String> createMapping(Mapping mapping) {
+    public ReturnResult<String> createMapping(Mapping mapping) {
         if (!existIndex(mapping.getIndexName())) {
             if(!mapping.isOverIndex()) {
-                return Result.failed("索引不存在");
+                return ReturnResult.failure("索引不存在");
             }
             checkIndex(mapping.getIndexName());
         }
@@ -222,13 +223,13 @@ public class DocumentServiceImpl implements DocumentService {
             restHighLevelClient.indices().putMapping(request, RequestOptions.DEFAULT);
         } catch (Exception e) {
             log.error("", e);
-            return Result.failed("更新失败");
+            return ReturnResult.failure("更新失败");
         }
-        return Result.success("更新成功");
+        return ReturnResult.success("更新成功");
     }
 
     @Override
-    public Result<String> addMapping(Mapping mapping) {
+    public ReturnResult<String> addMapping(Mapping mapping) {
         return createMapping( mapping);
     }
 
