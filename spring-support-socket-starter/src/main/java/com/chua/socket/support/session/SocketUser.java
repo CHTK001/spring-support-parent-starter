@@ -20,6 +20,10 @@ public class SocketUser implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
+     * room
+     */
+    private String roomId;
+    /**
      * 用户ID
      */
     private String userId;
