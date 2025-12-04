@@ -384,4 +384,65 @@ public final class SocketTopics {
             }
         }
     }
+
+    /**
+     * 服务模块主题 (service)
+     * 用于通用服务相关功能
+     */
+    public static final class Service {
+
+        private Service() {
+        }
+
+        /**
+         * 消息相关主题
+         */
+        public static final class Message {
+            /**
+             * 消息推送
+             */
+            public static final String PUSH = "service:message:push";
+            /**
+             * 消息通知
+             */
+            public static final String NOTIFICATION = "service:message:notification";
+            /**
+             * 消息已读
+             */
+            public static final String READ = "service:message:read";
+            /**
+             * 消息删除
+             */
+            public static final String DELETE = "service:message:delete";
+
+            private Message() {
+            }
+        }
+
+        /**
+         * 短信相关主题
+         */
+        public static final class Sms {
+            /**
+             * 发送结果
+             */
+            public static final String RESULT = "service:sms:result";
+
+            private Sms() {
+            }
+        }
+
+        /**
+         * 邮件相关主题
+         */
+        public static final class Email {
+            /**
+             * 发送结果
+             */
+            public static final String RESULT = "service:email:result";
+
+            private Email() {
+            }
+        }
+    }
 }

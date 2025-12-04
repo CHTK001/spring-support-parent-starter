@@ -54,8 +54,9 @@
         <!-- 消息和通信模块 -->
         <module>spring-support-email-starter</module>           <!-- 邮件发送服务 -->
         <module>spring-support-mqtt-starter</module>            <!-- MQTT消息队列 -->
-        <module>spring-support-socketio-starter</module>        <!-- Socket.IO实时通信 -->
-        <module>spring-support-rsocket-starter</module>         <!-- RSocket响应式通信（依赖utils-support-rsocket-starter） -->
+        <module>spring-support-socket-starter</module>          <!-- Socket基础模块（SPI抽象） -->
+        <module>spring-support-socketio-starter</module>        <!-- Socket.IO实时通信（实现socket-starter接口） -->
+        <module>spring-support-rsocket-starter</module>         <!-- RSocket响应式通信（实现socket-starter接口） -->
         <module>spring-support-sse-starter</module>             <!-- Server-Sent Events -->
         <module>spring-support-rpc-starter</module>             <!-- RPC远程调用 -->
 

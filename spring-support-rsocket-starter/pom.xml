@@ -19,30 +19,17 @@
     </properties>
 
     <dependencies>
-        <!-- Utils Support RSocket Starter - 底层RSocket协议实现 -->
+        <!-- Socket 基础模块 -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>utils-support-rsocket-starter</artifactId>
-            <version>4.0.0.31</version>
+            <artifactId>spring-support-socket-starter</artifactId>
+            <version>${project.version}</version>
         </dependency>
 
-        <!-- Utils Support Common Starter - 通用工具 -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-common-starter</artifactId>
-        </dependency>
-
-        <!-- Spring Boot Starter - Spring Boot核心 -->
+        <!-- Spring Boot Starter WebSocket -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
-        </dependency>
-
-        <!-- Spring Boot Configuration Processor - 配置元数据处理器 -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-configuration-processor</artifactId>
-            <optional>true</optional>
+            <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
     </dependencies>
 
