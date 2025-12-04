@@ -1,2 +1,1 @@
-com.chua.starter.rsocket.support.configuration.RSocketConfiguration
-
+# RSocket 模块不再自行注册 Bean，由 spring-support-socket-starter 统一管理

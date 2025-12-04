@@ -1,14 +1,10 @@
 package com.chua.socketio.support.session;
 
-import com.chua.common.support.utils.ClassUtils;
 import com.chua.socket.support.SocketListener;
 import com.chua.socket.support.properties.SocketProperties;
 import com.chua.socket.support.session.SocketSession;
 import com.chua.socket.support.session.SocketSessionTemplate;
 import com.chua.socket.support.session.SocketUser;
-import com.chua.socketio.support.auth.SocketAuthFactory;
-import com.chua.socketio.support.resolver.DefaultSocketSessionResolver;
-import com.chua.socketio.support.resolver.SocketSessionResolver;
 import com.chua.socketio.support.server.DelegateSocketIOServer;
 import com.corundumstudio.socketio.*;
 import com.corundumstudio.socketio.protocol.JacksonJsonSupport;
@@ -36,7 +32,6 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     private final List<SocketListener> listeners;
     private final Map<String, List<SocketIOSession>> sessionCache = new ConcurrentHashMap<>();
     private DelegateSocketIOServer server;
-    private SocketSessionResolver resolver;
 
     public SocketIOSessionTemplate(SocketProperties properties, List<SocketListener> listeners) {
         this.properties = properties;
@@ -148,19 +143,11 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
         try {
             Configuration configuration = createConfiguration();
             server = new DelegateSocketIOServer(configuration);
-            resolver = new DefaultSocketSessionResolver(
-                    listeners.stream()
-                            .filter(l -> l instanceof com.chua.socketio.support.SocketIOListener)
-                            .map(l -> (com.chua.socketio.support.SocketIOListener) l)
-                            .toList(),
-                    null
-            );
 
             // 连接事件
             server.addConnectListener(client -> {
                 SocketIOSession session = new SocketIOSession(client, properties);
                 save("default", session);
-                resolver.doConnect(client);
                 log.debug("[SocketIO] 客户端连接: {}", client.getSessionId());
             });
 
@@ -171,12 +158,8 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
                 if (session != null) {
                     remove("default", session);
                 }
-                resolver.disConnect(client);
                 log.debug("[SocketIO] 客户端断开: {}", sessionId);
             });
-
-            // 注册事件处理器
-            resolver.registerEvent(server);
 
             server.start();
             log.info("[SocketIO] 服务启动成功，端口: {}", properties.getPort());
@@ -231,16 +214,6 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
         configuration.setJsonSupport(new JacksonJsonSupport());
         configuration.setAddVersionHeader(true);
         configuration.setUseLinuxNativeEpoll(properties.isUseLinuxNativeEpoll());
-
-        // 认证工厂
-        if (properties.getAuthFactory() != null) {
-            Object authFactoryObj = ClassUtils.forObject(properties.getAuthFactory());
-            if (authFactoryObj instanceof SocketAuthFactory authFactory) {
-                configuration.setAuthorizationListener(data ->
-                        new AuthorizationResult(authFactory.isAuthorized(data))
-                );
-            }
-        }
 
         return configuration;
     }
