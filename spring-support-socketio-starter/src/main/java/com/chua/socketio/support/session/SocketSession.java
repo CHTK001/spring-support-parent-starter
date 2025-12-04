@@ -70,19 +70,54 @@ public class SocketSession {
     /**
      * 下发命令
      *
-     * @param event 时间
-     * @param msg   消息
+     * @param event 事件名称
+     * @param msg   消息内容
      */
     public void send(String event, String msg) {
         send(event, ReturnResult.success(msg));
     }
+
     /**
      * 下发命令
+     * 根据配置决定是否对数据进行加密
      *
-     * @param event 时间
-     * @param returnResult   消息
+     * @param event        事件名称
+     * @param returnResult 返回结果对象
      */
     public void send(String event, ReturnResult returnResult) {
+        // 检查是否开启加密
+        if (!socketIoProperties.isEncryptEnabled()) {
+            // 不加密，直接发送明文数据
+            sendPlainText(event, returnResult);
+            return;
+        }
+        // 加密发送
+        sendEncrypted(event, returnResult);
+    }
+
+    /**
+     * 发送明文数据（不加密）
+     *
+     * @param event        事件名称
+     * @param returnResult 返回结果对象
+     */
+    private void sendPlainText(String event, ReturnResult returnResult) {
+        String jsonData = Json.toJSONString(returnResult);
+        client.sendEvent(event,
+                new JsonObject()
+                        .fluent("data", jsonData)
+                        .fluent("encrypted", false)
+                        .fluent("timestamp", String.valueOf(System.currentTimeMillis())).toJSONString()
+        );
+    }
+
+    /**
+     * 发送加密数据
+     *
+     * @param event        事件名称
+     * @param returnResult 返回结果对象
+     */
+    private void sendEncrypted(String event, ReturnResult returnResult) {
         Codec codec = Codec.build(socketIoProperties.getCodecType());
         CodecKeyPair codecKeyPair = (CodecKeyPair) codec;
         String publicKeyHex = codecKeyPair.getPublicKeyHex();
@@ -94,6 +129,7 @@ public class SocketSession {
                 new JsonObject()
                         .fluent("data", "02" + key + "200" + encode + "ffff")
                         .fluent("uuid", key)
+                        .fluent("encrypted", true)
                         .fluent("timestamp", keyLength).toJSONString()
         );
     }
