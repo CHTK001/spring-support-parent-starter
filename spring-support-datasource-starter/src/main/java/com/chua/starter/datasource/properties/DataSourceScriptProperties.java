@@ -1,7 +1,11 @@
 package com.chua.starter.datasource.properties;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.Getter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+
+import java.util.Set;
 
 /**
  * 数据源脚本配置属性类
@@ -30,6 +34,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *       timeout: 300                              # 执行超时时间(秒)
  *       verbose: true                             # 是否输出详细日志
  *       clean-disabled: true                      # 是否禁用清理
+ *       release-type: STABLE                       # 允许执行的版本类型(SNAPSHOT/ALPHA/BETA/RC/STABLE/ALL)
+ *       allowed-release-types: STABLE,RC           # 允许执行的版本类型集合(可选,覆盖release-type)
  * </pre>
  *
  * @author CH
@@ -172,8 +178,117 @@ public class DataSourceScriptProperties {
 
     /**
      * 是否输出详细日志
-     * 默认值: false
+     * 默认值: true
      * 示例: plugin.datasource.script.verbose=true
      */
-    private boolean verbose = false;
+    private boolean verbose = true;
+
+    /**
+     * 允许执行的版本类型
+     * 默认值: STABLE（只执行正式版本）
+     * 示例: plugin.datasource.script.release-type=STABLE
+     * 可选值: SNAPSHOT, ALPHA, BETA, RC, STABLE, ALL
+     */
+    private ReleaseType releaseType = ReleaseType.STABLE;
+
+    /**
+     * 允许执行的版本类型集合（用于更精细控制）
+     * 当设置此属性时，会覆盖 releaseType 的配置
+     * 示例: plugin.datasource.script.allowed-release-types=STABLE,RC
+     */
+    private Set<ReleaseType> allowedReleaseTypes;
+
+    /**
+     * 版本发布类型枚举
+     * 用于控制允许执行的脚本版本类型
+     *
+     * @author CH
+     * @since 2025/12/4
+     */
+    @AllArgsConstructor
+    @Getter
+    public enum ReleaseType {
+        
+        /**
+         * 快照版本
+         * 示例: V1.0.0-SNAPSHOT__init_user.sql
+         */
+        SNAPSHOT("snapshot", 0),
+        
+        /**
+         * Alpha 内部测试版本
+         * 示例: V1.0.0-alpha__init_user.sql
+         */
+        ALPHA("alpha", 1),
+        
+        /**
+         * Beta 公开测试版本
+         * 示例: V1.0.0-beta__init_user.sql
+         */
+        BETA("beta", 2),
+        
+        /**
+         * RC（Release Candidate）候选发布版本
+         * 示例: V1.0.0-rc1__init_user.sql
+         */
+        RC("rc", 3),
+        
+        /**
+         * 正式稳定版本
+         * 示例: V1.0.0__init_user.sql
+         */
+        STABLE("stable", 4),
+        
+        /**
+         * 允许所有版本类型
+         */
+        ALL("all", 99);
+
+        /**
+         * 版本类型后缀标识
+         */
+        private final String suffix;
+        
+        /**
+         * 版本类型优先级（数值越高优先级越高）
+         */
+        private final int priority;
+
+        /**
+         * 判断当前类型是否允许执行指定类型的脚本
+         *
+         * @param target 目标版本类型
+         * @return 是否允许执行
+         */
+        public boolean isAllowed(ReleaseType target) {
+            if (this == ALL) {
+                return true;
+            }
+            // 当前配置的类型及更高优先级的类型都允许执行
+            return target.priority >= this.priority;
+        }
+
+        /**
+         * 根据版本后缀解析版本类型
+         *
+         * @param versionSuffix 版本后缀（如 "-snapshot", "-beta", "-rc1"）
+         * @return 版本类型
+         */
+        public static ReleaseType fromSuffix(String versionSuffix) {
+            if (versionSuffix == null || versionSuffix.isEmpty()) {
+                return STABLE;
+            }
+            String lowerSuffix = versionSuffix.toLowerCase();
+            if (lowerSuffix.contains("snapshot")) {
+                return SNAPSHOT;
+            } else if (lowerSuffix.contains("alpha")) {
+                return ALPHA;
+            } else if (lowerSuffix.contains("beta")) {
+                return BETA;
+            } else if (lowerSuffix.contains("rc")) {
+                return RC;
+            }
+            return STABLE;
+        }
+    }
 }
