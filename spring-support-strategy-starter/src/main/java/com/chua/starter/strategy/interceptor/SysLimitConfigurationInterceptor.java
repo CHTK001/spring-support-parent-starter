@@ -23,7 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 限流配置拦截器
- * 
+ *
  * 处理数据库配置的限流策略，拦截HTTP请求
  *
  * @author CH
@@ -37,7 +37,7 @@ public class SysLimitConfigurationInterceptor implements HandlerInterceptor {
 
     private final SysLimitConfigurationService sysLimitConfigurationService;
     private final RateLimiterRegistry rateLimiterRegistry;
-    
+
     @Autowired(required = false)
     private SysLimitRecordService sysLimitRecordService;
 
@@ -48,24 +48,24 @@ public class SysLimitConfigurationInterceptor implements HandlerInterceptor {
     private final Map<String, RateLimiter> rateLimiterCache = new ConcurrentHashMap<>();
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) 
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
             throws Exception {
         String requestPath = request.getRequestURI();
-        
+
         // 从内存缓存中匹配限流配置
         SysLimitConfiguration config = sysLimitConfigurationService.getByPath(requestPath);
-        
+
         if (config == null) {
             // 没有匹配的配置，放行
             return true;
         }
-        
+
         // 生成限流器键
         String rateLimiterKey = generateRateLimiterKey(config, request);
-        
+
         // 获取或创建限流器
         RateLimiter rateLimiter = getRateLimiter(rateLimiterKey, config);
-        
+
         try {
             // 尝试获取许可
             rateLimiter.acquirePermission();
@@ -74,14 +74,14 @@ public class SysLimitConfigurationInterceptor implements HandlerInterceptor {
         } catch (RequestNotPermitted e) {
             // 限流触发，记录日志
             log.warn("限流触发: {} - {}", config.getSysLimitName(), rateLimiterKey);
-            
+
             // 异步保存限流记录
             saveRateLimitRecord(config, request);
-            
+
             // 返回限流错误
-            response.setStatus(HttpServletResponse.SC_TOO_MANY_REQUESTS);
+            response.setStatus(429);
             response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write(String.format("{\"code\":429,\"message\":\"%s\"}", 
+            response.getWriter().write(String.format("{\"code\":429,\"message\":\"%s\"}",
                     config.getSysLimitMessage()));
             return false;
         }
@@ -101,10 +101,10 @@ public class SysLimitConfigurationInterceptor implements HandlerInterceptor {
                     .limitRefreshPeriod(Duration.ofSeconds(config.getSysLimitRefreshPeriodSeconds()))
                     .timeoutDuration(Duration.ofMillis(config.getSysLimitTimeoutDurationMillis()))
                     .build();
-            
+
             RateLimiter rateLimiter = rateLimiterRegistry.rateLimiter(k, rateLimiterConfig);
-            log.debug("创建限流器: {} - 配置: {}/{} 秒", k, 
-                    config.getSysLimitForPeriod(), 
+            log.debug("创建限流器: {} - 配置: {}/{} 秒", k,
+                    config.getSysLimitForPeriod(),
                     config.getSysLimitRefreshPeriodSeconds());
             return rateLimiter;
         });
@@ -119,8 +119,8 @@ public class SysLimitConfigurationInterceptor implements HandlerInterceptor {
      */
     private String generateRateLimiterKey(SysLimitConfiguration config, HttpServletRequest request) {
         StringBuilder keyBuilder = new StringBuilder("ratelimit:");
-        keyBuilder.append(config.getSysLimitId()).append(":");
-        
+        keyBuilder.append(config.getSysLimitConfigurationId()).append(":");
+
         // 根据维度生成键
         String dimension = config.getSysLimitDimension();
         switch (dimension) {
@@ -129,7 +129,7 @@ public class SysLimitConfigurationInterceptor implements HandlerInterceptor {
             case "API" -> keyBuilder.append(config.getSysLimitPath());
             default -> keyBuilder.append("global");
         }
-        
+
         return keyBuilder.toString();
     }
 
@@ -143,19 +143,19 @@ public class SysLimitConfigurationInterceptor implements HandlerInterceptor {
         if (sysLimitRecordService == null) {
             return;
         }
-        
+
         try {
             SysLimitRecord record = new SysLimitRecord();
-            record.setSysLimitConfigurationId(config.getSysLimitId());
+            record.setSysLimitConfigurationId(config.getSysLimitConfigurationId());
             record.setSysLimitPath(request.getRequestURI());
             record.setClientIp(getClientIp(request));
             record.setRequestMethod(request.getMethod());
             record.setSysLimitTime(LocalDateTime.now());
-            
+
             // TODO: 获取用户信息
             // record.setSysUserId(...);
             // record.setSysUserName(...);
-            
+
             sysLimitRecordService.saveAsync(record);
         } catch (Exception e) {
             log.error("保存限流记录失败", e);
