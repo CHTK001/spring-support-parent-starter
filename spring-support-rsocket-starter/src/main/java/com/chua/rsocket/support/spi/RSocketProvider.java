@@ -1,6 +1,6 @@
 package com.chua.rsocket.support.spi;
 
-import com.chua.common.support.spi.Spi;
+import com.chua.common.support.annotations.Spi;
 import com.chua.rsocket.support.session.RSocketSessionTemplateImpl;
 import com.chua.socket.support.SocketListener;
 import com.chua.socket.support.SocketProtocol;
