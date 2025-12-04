@@ -15,8 +15,6 @@ import com.chua.common.support.lang.engine.ddl.EngineTable;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.tenant.support.properties.TenantProperties;
-import com.chua.tenant.support.sync.client.TenantSyncClient;
-import com.chua.tenant.support.sync.server.TenantSyncServer;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.LongValue;
@@ -262,33 +260,9 @@ public class TenantConfiguration implements EnvironmentAware, BeanClassLoaderAwa
         }
     }
 
-    /**
-     * 创建租户同步服务端
-     *
-     * @param tenantProperties 租户配置
-     * @return 租户同步服务端
-     */
-    @Bean
-    @ConditionalOnProperty(prefix = TenantProperties.PRE + ".sync-protocol", name = { "enable",
-            "type" }, havingValue = "true,server", matchIfMissing = false)
-    public TenantSyncServer tenantSyncServer(TenantProperties tenantProperties) {
-        log.info("[租户同步] 初始化服务端");
-        return new TenantSyncServer(tenantProperties);
-    }
-
-    /**
-     * 创建租户同步客户端
-     *
-     * @param tenantProperties 租户配置
-     * @return 租户同步客户端
-     */
-    @Bean
-    @ConditionalOnProperty(prefix = TenantProperties.PRE + ".sync-protocol", name = { "enable",
-            "type" }, havingValue = "true,client", matchIfMissing = false)
-    public TenantSyncClient tenantSyncClient(TenantProperties tenantProperties) {
-        log.info("[租户同步] 初始化客户端");
-        return new TenantSyncClient(tenantProperties);
-    }
+    // 租户同步功能已迁移到 spring-support-sync-starter
+    // 通过 SPI 机制加载 TenantSyncMessageHandler 处理租户相关主题
+    // 配置请参考: plugin.sync.* 和 plugin.mybatis-plus.tenant.tenant-sync.*
 
     @Override
     public void setBeanClassLoader(ClassLoader classLoader) {
