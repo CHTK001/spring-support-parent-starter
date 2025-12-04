@@ -59,6 +59,7 @@
         <module>spring-support-rsocket-starter</module>         <!-- RSocket响应式通信（实现socket-starter接口） -->
         <module>spring-support-sse-starter</module>             <!-- Server-Sent Events -->
         <module>spring-support-rpc-starter</module>             <!-- RPC远程调用 -->
+        <module>spring-support-sync-starter</module>            <!-- 同步协议模块（客户端/服务端通信） -->
 
         <!-- 搜索和数据处理模块 -->
         <module>spring-support-elasticsearch-starter</module>   <!-- Elasticsearch搜索引擎 -->
