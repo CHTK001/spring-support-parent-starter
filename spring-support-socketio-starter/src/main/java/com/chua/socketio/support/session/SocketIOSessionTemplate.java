@@ -19,7 +19,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Socket.IO 会话模板实现
- * 基于 netty-socketio 实现
+ * 基于 netty-socketio 实现，支持多房间配置
  *
  * @author CH
  * @version 1.0.0
@@ -31,7 +31,11 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     private final SocketProperties properties;
     private final List<SocketListener> listeners;
     private final Map<String, List<SocketIOSession>> sessionCache = new ConcurrentHashMap<>();
-    private DelegateSocketIOServer server;
+    
+    /**
+     * 多服务器实例：clientId -> server
+     */
+    private final Map<String, DelegateSocketIOServer> servers = new ConcurrentHashMap<>();
 
     public SocketIOSessionTemplate(SocketProperties properties, List<SocketListener> listeners) {
         this.properties = properties;
@@ -157,20 +161,55 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
 
     @Override
     public void start() {
-        if (server != null) {
+        if (!servers.isEmpty()) {
             log.warn("[SocketIO] 服务已启动");
             return;
         }
 
+        List<SocketProperties.Room> rooms = properties.getRoom();
+        
+        // 如果没有配置 room，使用默认配置启动单个服务
+        if (rooms == null || rooms.isEmpty()) {
+            startServer("default", properties.getHost(), properties.getPort(), "/");
+            return;
+        }
+
+        // 启动每个 room 配置的服务
+        for (SocketProperties.Room room : rooms) {
+            if (!room.isEnable()) {
+                log.info("[SocketIO] 房间 {} 未启用，跳过", room.getClientId());
+                continue;
+            }
+
+            String clientId = room.getClientId();
+            String host = room.getActualHost(properties.getHost());
+            int port = room.getActualPort(properties.getPort());
+            String contextPath = room.getContextPath();
+
+            startServer(clientId, host, port, contextPath);
+        }
+    }
+
+    /**
+     * 启动单个服务实例
+     *
+     * @param clientId    客户端标识
+     * @param host        主机地址
+     * @param port        端口
+     * @param contextPath 上下文路径
+     */
+    private void startServer(String clientId, String host, int port, String contextPath) {
         try {
-            Configuration configuration = createConfiguration();
-            server = new DelegateSocketIOServer(configuration);
+            Configuration configuration = createConfiguration(host, port, contextPath);
+            DelegateSocketIOServer server = new DelegateSocketIOServer(configuration);
 
             // 连接事件
             server.addConnectListener(client -> {
                 SocketIOSession session = new SocketIOSession(client, properties);
-                save("default", session);
-                log.debug("[SocketIO] 客户端连接: {}", client.getSessionId());
+                session.setAttribute("clientId", clientId);
+                session.setAttribute("contextPath", contextPath);
+                save(clientId, session);
+                log.debug("[SocketIO] 客户端连接: clientId={}, sessionId={}", clientId, client.getSessionId());
             });
 
             // 断开连接事件
@@ -178,38 +217,68 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
                 String sessionId = client.getSessionId().toString();
                 SocketSession session = getSession(sessionId);
                 if (session != null) {
-                    remove("default", session);
+                    remove(clientId, session);
                 }
-                log.debug("[SocketIO] 客户端断开: {}", sessionId);
+                log.debug("[SocketIO] 客户端断开: clientId={}, sessionId={}", clientId, sessionId);
             });
 
             server.start();
-            log.info("[SocketIO] 服务启动成功，端口: {}", properties.getPort());
+            servers.put(clientId, server);
+            log.info("[SocketIO] 服务启动成功: clientId={}, host={}, port={}, contextPath={}", 
+                    clientId, host, port, contextPath);
 
         } catch (Exception e) {
-            log.error("[SocketIO] 服务启动失败", e);
-            throw new RuntimeException("Socket.IO 服务启动失败", e);
+            log.error("[SocketIO] 服务启动失败: clientId={}", clientId, e);
+            throw new RuntimeException("Socket.IO 服务启动失败: " + clientId, e);
         }
     }
 
     @Override
     public void stop() {
-        if (server != null) {
+        if (servers.isEmpty()) {
+            return;
+        }
+
+        for (Map.Entry<String, DelegateSocketIOServer> entry : servers.entrySet()) {
             try {
-                server.stop();
-                log.info("[SocketIO] 服务已停止");
+                entry.getValue().stop();
+                log.info("[SocketIO] 服务已停止: clientId={}", entry.getKey());
             } catch (Exception e) {
-                log.error("[SocketIO] 服务停止失败", e);
-            } finally {
-                server = null;
+                log.error("[SocketIO] 服务停止失败: clientId={}", entry.getKey(), e);
             }
         }
+        servers.clear();
+        sessionCache.clear();
+    }
+
+    /**
+     * 获取指定 clientId 的服务器实例
+     *
+     * @param clientId 客户端标识
+     * @return 服务器实例，不存在返回 null
+     */
+    public DelegateSocketIOServer getServer(String clientId) {
+        return servers.get(clientId);
+    }
+
+    /**
+     * 获取所有服务器实例
+     *
+     * @return 服务器实例映射
+     */
+    public Map<String, DelegateSocketIOServer> getServers() {
+        return servers;
     }
 
     /**
      * 创建 Socket.IO 配置
+     *
+     * @param host        主机地址
+     * @param port        端口
+     * @param contextPath 上下文路径
+     * @return 配置对象
      */
-    private Configuration createConfiguration() {
+    private Configuration createConfiguration(String host, int port, String contextPath) {
         Configuration configuration = new Configuration();
 
         SocketConfig socketConfig = new SocketConfig();
@@ -218,8 +287,9 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
         socketConfig.setSoLinger(0);
         configuration.setSocketConfig(socketConfig);
 
-        configuration.setHostname(properties.getHost());
-        configuration.setPort(properties.getPort());
+        configuration.setHostname(host);
+        configuration.setPort(port);
+        configuration.setContext(contextPath);
         configuration.setTransports(Transport.POLLING, Transport.WEBSOCKET);
 
         configuration.setBossThreads(properties.getBossCount());
