@@ -437,6 +437,12 @@
                 <version>${module.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-sync-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
             <!-- RSocket响应式通信模块（依赖utils-support-rsocket-starter） -->
             <dependency>
                 <groupId>com.chua</groupId>
