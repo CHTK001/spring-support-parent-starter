@@ -105,6 +105,28 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
+    public List<SocketSession> getOnlineSession(String type, String roomId) {
+        List<SocketIOSession> sessions = sessionCache.get(type);
+        if (sessions == null) {
+            return Collections.emptyList();
+        }
+
+        if (roomId == null || roomId.isEmpty()) {
+            return new LinkedList<>(sessions);
+        }
+
+        // 根据 roomId 过滤会话
+        List<SocketSession> result = new LinkedList<>();
+        for (SocketIOSession session : sessions) {
+            Object sessionRoomId = session.getAttribute("roomId");
+            if (roomId.equals(sessionRoomId)) {
+                result.add(session);
+            }
+        }
+        return result;
+    }
+
+    @Override
     public List<SocketUser> getOnlineUsers(String type) {
         List<SocketUser> result = new LinkedList<>();
         List<String> userIds = new LinkedList<>();
