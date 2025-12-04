@@ -1,6 +1,7 @@
 package com.chua.starter.elasticsearch.support.service;
 
 import com.chua.common.support.lang.code.PageResult;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.common.support.result.Result;
 import com.chua.starter.elasticsearch.support.pojo.Mapping;
 
@@ -70,7 +71,7 @@ public interface DocumentService {
      * @param indexName 索引
      * @return 结果
      */
-    Result<String> createIndex(String indexName);
+    ReturnResult<String> createIndex(String indexName);
 
     /**
      * 检查索引(不存在则创建)
@@ -93,7 +94,7 @@ public interface DocumentService {
      * @param indexName 索引
      * @return 结果
      */
-    Result<String> deleteIndex(String indexName);
+    ReturnResult<String> deleteIndex(String indexName);
 
     /**
      * 创建映射
@@ -101,7 +102,7 @@ public interface DocumentService {
      * @param mapping   映射
      * @return 结果
      */
-    Result<String> createMapping(Mapping mapping);
+    ReturnResult<String> createMapping(Mapping mapping);
 
     /**
      * 添加映射
@@ -109,5 +110,5 @@ public interface DocumentService {
      * @param mapping   映射
      * @return 添加映射
      */
-    Result<String> addMapping(Mapping mapping);
+    ReturnResult<String> addMapping(Mapping mapping);
 }
