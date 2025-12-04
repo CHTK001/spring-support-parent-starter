@@ -155,6 +155,15 @@ public interface SocketSessionTemplate {
     List<SocketSession> getOnlineSessions();
 
     /**
+     * 获取指定类型和房间ID的在线会话列表
+     *
+     * @param type   类型（如 webrtc、chat 等）
+     * @param roomId 房间ID
+     * @return 在线会话列表
+     */
+    List<SocketSession> getOnlineSession(String type, String roomId);
+
+    /**
      * 获取指定用户类型的在线用户列表
      *
      * @param type 用户类型

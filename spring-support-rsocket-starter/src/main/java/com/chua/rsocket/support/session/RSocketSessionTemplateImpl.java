@@ -125,6 +125,23 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     }
 
     @Override
+    public List<SocketSession> getOnlineSession(String type, String roomId) {
+        if (roomId == null || roomId.isEmpty()) {
+            return new LinkedList<>(sessionCache.values());
+        }
+
+        // 根据 roomId 过滤会话
+        List<SocketSession> result = new LinkedList<>();
+        for (RSocketSessionImpl session : sessionCache.values()) {
+            Object sessionRoomId = session.getAttribute("roomId");
+            if (roomId.equals(sessionRoomId)) {
+                result.add(session);
+            }
+        }
+        return result;
+    }
+
+    @Override
     public List<SocketUser> getOnlineUsers(String type) {
         List<SocketUser> result = new LinkedList<>();
         List<String> userIds = new LinkedList<>();
