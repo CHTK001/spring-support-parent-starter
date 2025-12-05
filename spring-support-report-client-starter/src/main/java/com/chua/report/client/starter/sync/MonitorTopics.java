@@ -21,5 +21,4 @@ public interface MonitorTopics {
     // ==================== Device Report ====================
     String DEVICE_METRICS = "monitor/device/metrics";
     String DEVICE_INFO = "monitor/device/info";
-    String DEVICE_PING = "monitor/device/ping";
 }
