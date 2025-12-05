@@ -49,6 +49,31 @@ public class ClientInfo implements Serializable {
     private int port;
 
     /**
+     * 服务端口 (Spring server.port)
+     */
+    private int serverPort;
+
+    /**
+     * 激活的 profile
+     */
+    private String activeProfiles;
+
+    /**
+     * 上下文路径
+     */
+    private String contextPath;
+
+    /**
+     * 服务地址 (http://ip:port/contextPath)
+     */
+    private String serviceUrl;
+
+    /**
+     * 进程ID
+     */
+    private long pid;
+
+    /**
      * 操作系统
      */
     private String osName;
