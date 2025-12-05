@@ -21,4 +21,8 @@ public interface MonitorTopics {
     // ==================== Device Report ====================
     String DEVICE_METRICS = "monitor/device/metrics";
     String DEVICE_INFO = "monitor/device/info";
+
+    // ==================== App Report ====================
+    /** 应用信息上报（定时） */
+    String APP_REPORT = "monitor/app/report";
 }

@@ -149,31 +149,6 @@
             <artifactId>spring-boot-starter-undertow</artifactId>
         </dependency>
 
-        <!-- Spring AOP - 面向切面编程支持，用于实现横切关注点 -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-aop</artifactId>
-        </dependency>
-
-        <!-- 配置处理器 - 为自定义配置属性提供IDE支持和元数据生成 -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-configuration-processor</artifactId>
-            <optional>true</optional> <!-- 可选依赖，不会传递给依赖此项目的其他项目 -->
-        </dependency>
-
-        <!-- Spring Boot Actuator - 提供应用监控和管理功能 -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-actuator</artifactId>
-        </dependency>
-
-        <!-- Protocol 基础能力 -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-common-starter</artifactId>
-            <version>${utils.version}</version>
-        </dependency>
     </dependencies>
 
 
@@ -195,6 +170,7 @@
                 <artifactId>spring-support-report-client-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
+
 
             <dependency>
                 <groupId>com.chua</groupId>
