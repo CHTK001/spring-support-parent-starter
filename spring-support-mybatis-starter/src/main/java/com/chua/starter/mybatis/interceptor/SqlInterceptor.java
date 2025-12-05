@@ -3,8 +3,8 @@ package com.chua.starter.mybatis.interceptor;
 import com.chua.common.support.lang.formatter.DmlFormatter;
 import com.chua.common.support.lang.formatter.Formatter;
 import com.chua.common.support.lang.formatter.HighlightingFormatter;
-import com.chua.common.support.log.Log;
 import com.chua.common.support.utils.StringUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.cache.CacheKey;
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.executor.statement.StatementHandler;
@@ -41,9 +41,8 @@ import static com.chua.common.support.constant.NameConstant.NULL;
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class}),
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
 })
+@Slf4j
 public class SqlInterceptor implements Interceptor {
-
-    private static final Log log = Log.getLogger(Interceptor.class);
 
     private static final Map<String, Object> MAP = new ConcurrentHashMap<>(2);
 
