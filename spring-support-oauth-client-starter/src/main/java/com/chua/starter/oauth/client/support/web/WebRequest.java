@@ -53,6 +53,11 @@ public class WebRequest {
         this.request = request;
         this.requestMappingHandlerMapping = requestMappingHandlerMapping;
         this.contextPath = SpringBeanUtils.getEnvironment().resolvePlaceholders("${server.servlet.context-path:}");
+        
+        if (request != null) {
+            log.debug("【WebRequest】创建WebRequest - URI: {}, 协议: {}, 上下文路径: {}", 
+                     request.getRequestURI(), protocol, contextPath);
+        }
     }
 
     public WebRequest(AuthClientProperties authProperties) {
@@ -67,34 +72,41 @@ public class WebRequest {
      * @return 是否通过
      */
     public boolean isPass() {
+        String uri = request.getRequestURI();
+        log.debug("【WebRequest白名单】开始检查白名单 - URI: {}", uri);
+        
         if (!authProperties.isEnable()) {
+            log.debug("【WebRequest白名单】OAuth认证已禁用，直接放行 - URI: {}", uri);
             return true;
         }
         List<String> whitelist = authProperties.getWhitelist();
         if (null == whitelist) {
+            log.debug("【WebRequest白名单】白名单为空，需要认证 - URI: {}", uri);
             return false;
         }
 
-
-        String uri = request.getRequestURI();
         uri = StringUtils.isNotBlank(contextPath) ? StringUtils.removeStart(uri, contextPath) : uri;
         if(isResource(uri)) {
+            log.debug("【WebRequest白名单】静态资源放行 - URI: {}", uri);
             return true;
         }
 
         for (String s : whitelist) {
             if (PATH_MATCHER.match(s, uri)) {
+                log.debug("【WebRequest白名单】匹配白名单规则放行 - URI: {}, 规则: {}", uri, s);
                 return true;
             }
         }
 
         String authUrl = authProperties.getLoginPage();
         if (uri.equalsIgnoreCase(authUrl)) {
+            log.debug("【WebRequest白名单】登录页面放行 - URI: {}", uri);
             return true;
         }
 
         String authUrl1 = authProperties.getNoPermissionPage();
         if (uri.equalsIgnoreCase(authUrl1)) {
+            log.debug("【WebRequest白名单】无权限页面放行 - URI: {}", uri);
             return true;
         }
 
@@ -103,6 +115,7 @@ public class WebRequest {
             try {
                 handlerMethod = (HandlerMethod) requestMappingHandlerMapping.getHandler(request).getHandler();
             } catch (HttpRequestMethodNotSupportedException exception) {
+                log.warn("【WebRequest白名单】请求方法不支持 - URI: {}, 方法: {}", uri, request.getMethod());
                 try {
                     throw exception;
                 } catch (HttpRequestMethodNotSupportedException e) {
@@ -112,17 +125,20 @@ public class WebRequest {
             }
             if (null != handlerMethod) {
                 if (PASS.containsKey(handlerMethod)) {
+                    log.debug("【WebRequest白名单】缓存命中放行 - URI: {}, 方法: {}", uri, handlerMethod.getMethod().getName());
                     return true;
                 }
                 Method method = handlerMethod.getMethod();
                 boolean annotationPresent = method.isAnnotationPresent(TokenForIgnore.class);
                 if (annotationPresent) {
                     PASS.put(handlerMethod, handlerMethod);
+                    log.debug("【WebRequest白名单】@TokenForIgnore注解放行(方法) - URI: {}, 方法: {}", uri, method.getName());
                     return true;
                 }
                 boolean annotationPresent11 = method.isAnnotationPresent(Ignore.class);
                 if (annotationPresent11) {
                     PASS.put(handlerMethod, handlerMethod);
+                    log.debug("【WebRequest白名单】@Ignore注解放行(方法) - URI: {}, 方法: {}", uri, method.getName());
                     return true;
                 }
 
@@ -130,17 +146,20 @@ public class WebRequest {
                 boolean annotationPresent1 = beanType.isAnnotationPresent(TokenForIgnore.class);
                 if (annotationPresent1) {
                     PASS.put(handlerMethod, handlerMethod);
+                    log.debug("【WebRequest白名单】@TokenForIgnore注解放行(类) - URI: {}, 类: {}", uri, beanType.getSimpleName());
                     return true;
                 }
 
                 boolean annotationPresent12 = beanType.isAnnotationPresent(Ignore.class);
                 if (annotationPresent12) {
                     PASS.put(handlerMethod, handlerMethod);
+                    log.debug("【WebRequest白名单】@Ignore注解放行(类) - URI: {}, 类: {}", uri, beanType.getSimpleName());
                     return true;
                 }
             }
         }
 
+        log.debug("【WebRequest白名单】未匹配任何白名单规则，需要认证 - URI: {}", uri);
         return false;
     }
 
@@ -156,14 +175,34 @@ public class WebRequest {
      * @return 鉴权失败
      */
     public boolean isFailure() {
+        String uri = request != null ? request.getRequestURI() : "unknown";
+        log.debug("【WebRequest Token检查】开始检查Token - URI: {}", uri);
+        
         if (Strings.isNullOrEmpty(authProperties.getLoginAddress())) {
-            log.error("登录地址不存在");
+            log.error("【WebRequest Token检查】登录地址未配置 - URI: {}", uri);
             return true;
         }
+        
         //判断cookie
         Cookie[] tokenCookie = getCookie();
         String token = getToken();
-        return (null == tokenCookie || tokenCookie.length == 0) && Strings.isNullOrEmpty(token);
+        
+        boolean hasCookie = tokenCookie != null && tokenCookie.length > 0;
+        boolean hasToken = !Strings.isNullOrEmpty(token);
+        
+        log.debug("【WebRequest Token检查】Token状态 - URI: {}, Cookie数量: {}, Token存在: {}", 
+                 uri, 
+                 tokenCookie != null ? tokenCookie.length : 0, 
+                 hasToken);
+        
+        if (!hasCookie && !hasToken) {
+            log.debug("【WebRequest Token检查】未找到有效Token - URI: {}", uri);
+            return true;
+        }
+        
+        log.debug("【WebRequest Token检查】找到有效Token - URI: {}, 来源: {}", 
+                 uri, hasToken ? "Header/Parameter" : "Cookie");
+        return false;
     }
 
     /**
@@ -218,12 +257,56 @@ public class WebRequest {
      * @return 鉴权信息
      */
     public AuthenticationInformation authentication() {
+        String uri = request != null ? request.getRequestURI() : "unknown";
+        long startTime = System.currentTimeMillis();
+        
+        log.debug("【WebRequest鉴权】========== 开始鉴权 ==========");
+        log.debug("【WebRequest鉴权】请求URI: {}, 协议: {}", uri, protocol);
+        
         // 快速获取认证数据
         Cookie[] cookie = getCookie();
         String token = getToken();
+        
+        log.debug("【WebRequest鉴权】Token信息 - Cookie数量: {}, Token长度: {}", 
+                 cookie != null ? cookie.length : 0, 
+                 token != null ? token.length() : 0);
+        
         // 快速确定协议类型
-        log.debug("获取默认协议: {}", protocol);
-        return ServiceProvider.of(Protocol.class).getNewExtension(protocol, authProperties).approve(cookie, token, request.getHeader("x-oauth-protocol"));
+        log.debug("【WebRequest鉴权】使用协议: {}", protocol);
+        
+        String oauthProtocol = request.getHeader("x-oauth-protocol");
+        if (oauthProtocol != null) {
+            log.debug("【WebRequest鉴权】请求头指定协议: {}", oauthProtocol);
+        }
+        
+        AuthenticationInformation result = ServiceProvider.of(Protocol.class)
+                .getNewExtension(protocol, authProperties)
+                .approve(cookie, token, oauthProtocol);
+        
+        long costTime = System.currentTimeMillis() - startTime;
+        
+        if (result != null && result.getInformation() != null) {
+            if (result.getInformation().getCode() == 200) {
+                log.info("【WebRequest鉴权】鉴权成功 - URI: {}, 用户: {}, 耗时: {}ms", 
+                        uri, 
+                        result.getReturnResult() != null ? result.getReturnResult().getUsername() : "unknown",
+                        costTime);
+                log.debug("【WebRequest鉴权】用户详情 - 用户ID: {}, 是否管理员: {}", 
+                         result.getReturnResult() != null ? result.getReturnResult().getUserId() : null,
+                         result.getReturnResult() != null && result.getReturnResult().isAdmin());
+            } else {
+                log.warn("【WebRequest鉴权】鉴权失败 - URI: {}, 状态码: {}, 消息: {}, 耗时: {}ms", 
+                        uri, 
+                        result.getInformation().getCode(),
+                        result.getInformation().getMessage(),
+                        costTime);
+            }
+        } else {
+            log.error("【WebRequest鉴权】鉴权结果为空 - URI: {}, 耗时: {}ms", uri, costTime);
+        }
+        
+        log.debug("【WebRequest鉴权】========== 鉴权完成 ==========");
+        return result;
     }
 
     /**
