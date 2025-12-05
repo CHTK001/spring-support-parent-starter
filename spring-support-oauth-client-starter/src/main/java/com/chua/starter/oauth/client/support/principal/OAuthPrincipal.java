@@ -2,9 +2,10 @@ package com.chua.starter.oauth.client.support.principal;
 
 import com.chua.starter.oauth.client.support.user.UserResume;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.security.Principal;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -18,8 +19,8 @@ import java.util.Set;
  * @author CH
  * @since 2024/12/20
  */
+@Slf4j
 @Getter
-@RequiredArgsConstructor
 public class OAuthPrincipal implements Principal {
 
     /**
@@ -38,6 +39,24 @@ public class OAuthPrincipal implements Principal {
     private final boolean authenticated;
 
     /**
+     * 构造函数
+     *
+     * @param userResume    用户信息
+     * @param authType      认证类型
+     * @param authenticated 是否已认证
+     */
+    public OAuthPrincipal(UserResume userResume, String authType, boolean authenticated) {
+        this.userResume = userResume;
+        this.authType = authType;
+        this.authenticated = authenticated;
+        
+        log.debug("【Principal构造】创建OAuthPrincipal实例 - 用户: {}, 认证类型: {}, 已认证: {}", 
+                 userResume != null ? userResume.getUsername() : "null", 
+                 authType, 
+                 authenticated);
+    }
+
+    /**
      * 创建OAuth Principal实例
      * 
      * @param userResume 用户信息
@@ -46,6 +65,17 @@ public class OAuthPrincipal implements Principal {
      * @return OAuthPrincipal实例
      */
     public static OAuthPrincipal create(UserResume userResume, String authType, boolean authenticated) {
+        log.info("【Principal创建】创建OAuth Principal - 用户: {}, 认证类型: {}, 认证状态: {}", 
+                userResume != null ? userResume.getUsername() : "anonymous",
+                authType,
+                authenticated ? "已认证" : "未认证");
+        
+        log.debug("【Principal创建】用户详细信息 - 用户ID: {}, 真实姓名: {}, 租户ID: {}, 部门ID: {}", 
+                 userResume != null ? userResume.getUserId() : "null",
+                 userResume != null ? userResume.getName() : "null",
+                 userResume != null ? userResume.getTenantId() : "null",
+                 userResume != null ? userResume.getDeptId() : "null");
+        
         return new OAuthPrincipal(userResume, authType, authenticated);
     }
 
@@ -57,6 +87,37 @@ public class OAuthPrincipal implements Principal {
      * @return 已认证的OAuthPrincipal实例
      */
     public static OAuthPrincipal authenticated(UserResume userResume, String authType) {
+        log.info("【Principal认证】创建已认证的OAuth Principal - 用户: {}, 认证类型: {}", 
+                userResume != null ? userResume.getUsername() : "anonymous",
+                authType);
+        
+        if (userResume != null) {
+            log.debug("【Principal认证】用户完整信息 - 用户ID: {}, 用户名: {}, 真实姓名: {}, 手机: {}, 是否管理员: {}", 
+                     userResume.getUserId(),
+                     userResume.getUsername(),
+                     userResume.getName(),
+                     userResume.getPhone(),
+                     userResume.isAdmin());
+            
+            log.debug("【Principal认证】用户组织信息 - 租户ID: {}, 部门ID: {}, 最后登录IP: {}", 
+                     userResume.getTenantId(),
+                     userResume.getDeptId(),
+                     userResume.getLastIp());
+            
+            log.debug("【Principal认证】用户权限信息 - 角色数量: {}, 权限数量: {}, 扩展属性数量: {}", 
+                     userResume.getRoles() != null ? userResume.getRoles().size() : 0,
+                     userResume.getPermission() != null ? userResume.getPermission().size() : 0,
+                     userResume.getExt() != null ? userResume.getExt().size() : 0);
+            
+            if (userResume.getRoles() != null && !userResume.getRoles().isEmpty()) {
+                log.debug("【Principal认证】用户角色列表: {}", userResume.getRoles());
+            }
+            
+            if (userResume.getPermission() != null && !userResume.getPermission().isEmpty()) {
+                log.debug("【Principal认证】用户权限列表: {}", userResume.getPermission());
+            }
+        }
+        
         return new OAuthPrincipal(userResume, authType, true);
     }
 
@@ -66,12 +127,16 @@ public class OAuthPrincipal implements Principal {
      * @return 未认证的OAuthPrincipal实例
      */
     public static OAuthPrincipal unauthenticated() {
+        log.info("【Principal未认证】创建未认证的OAuth Principal (匿名用户)");
+        log.debug("【Principal未认证】用户信息为空, 认证类型为空, 认证状态: 未认证");
         return new OAuthPrincipal(null, null, false);
     }
 
     @Override
     public String getName() {
-        return userResume != null ? userResume.getUsername() : "anonymous";
+        String name = userResume != null ? userResume.getUsername() : "anonymous";
+        log.debug("【Principal获取】获取用户名: {}", name);
+        return name;
     }
 
     /**
@@ -80,7 +145,9 @@ public class OAuthPrincipal implements Principal {
      * @return 用户ID
      */
     public String getUserId() {
-        return userResume != null ? userResume.getUserId() : null;
+        String userId = userResume != null ? userResume.getUserId() : null;
+        log.debug("【Principal获取】获取用户ID: {}", userId);
+        return userId;
     }
 
     /**
@@ -89,7 +156,9 @@ public class OAuthPrincipal implements Principal {
      * @return 用户真实姓名
      */
     public String getRealName() {
-        return userResume != null ? userResume.getName() : null;
+        String realName = userResume != null ? userResume.getName() : null;
+        log.debug("【Principal获取】获取真实姓名: {}", realName);
+        return realName;
     }
 
     /**
@@ -98,7 +167,9 @@ public class OAuthPrincipal implements Principal {
      * @return 租户ID
      */
     public String getTenantId() {
-        return userResume != null ? userResume.getTenantId() : null;
+        String tenantId = userResume != null ? userResume.getTenantId() : null;
+        log.debug("【Principal获取】获取租户ID: {}", tenantId);
+        return tenantId;
     }
 
     /**
@@ -107,7 +178,9 @@ public class OAuthPrincipal implements Principal {
      * @return 部门ID
      */
     public String getDeptId() {
-        return userResume != null ? userResume.getDeptId() : null;
+        String deptId = userResume != null ? userResume.getDeptId() : null;
+        log.debug("【Principal获取】获取部门ID: {}", deptId);
+        return deptId;
     }
 
     /**
@@ -116,8 +189,11 @@ public class OAuthPrincipal implements Principal {
      * @return 用户角色集合
      */
     public Set<String> getRoles() {
-        return userResume != null && userResume.getRoles() != null ? 
+        Set<String> roles = userResume != null && userResume.getRoles() != null ? 
                userResume.getRoles() : Collections.emptySet();
+        log.debug("【Principal获取】获取用户角色 - 用户: {}, 角色数量: {}, 角色列表: {}", 
+                 getName(), roles.size(), roles);
+        return roles;
     }
 
     /**
@@ -126,8 +202,13 @@ public class OAuthPrincipal implements Principal {
      * @return 用户权限集合
      */
     public Set<String> getPermissions() {
-        return userResume != null && userResume.getPermission() != null ? 
+        Set<String> permissions = userResume != null && userResume.getPermission() != null ? 
                userResume.getPermission() : Collections.emptySet();
+        log.debug("【Principal获取】获取用户权限 - 用户: {}, 权限数量: {}", getName(), permissions.size());
+        if (log.isTraceEnabled() && !permissions.isEmpty()) {
+            log.trace("【Principal获取】用户权限详情: {}", permissions);
+        }
+        return permissions;
     }
 
     /**
@@ -136,8 +217,11 @@ public class OAuthPrincipal implements Principal {
      * @return 扩展属性Map
      */
     public Map<String, Object> getExtensions() {
-        return userResume != null && userResume.getExt() != null ? 
+        Map<String, Object> extensions = userResume != null && userResume.getExt() != null ? 
                userResume.getExt() : Collections.emptyMap();
+        log.debug("【Principal获取】获取扩展属性 - 用户: {}, 属性数量: {}, 属性键: {}", 
+                 getName(), extensions.size(), extensions.keySet());
+        return extensions;
     }
 
     /**
@@ -147,7 +231,18 @@ public class OAuthPrincipal implements Principal {
      * @return 是否具有该角色
      */
     public boolean hasRole(String role) {
-        return userResume != null && userResume.hasRole(role);
+        boolean result = userResume != null && userResume.hasRole(role);
+        
+        if (result) {
+            log.info("【权限验证通过】用户 [{}] 具有角色 [{}]", getName(), role);
+        } else {
+            log.info("【权限验证失败】用户 [{}] 不具有角色 [{}]", getName(), role);
+        }
+        
+        log.debug("【权限验证详情】hasRole检查 - 用户: {}, 检查角色: {}, 用户拥有角色: {}, 验证结果: {}", 
+                 getName(), role, getRoles(), result ? "通过" : "拒绝");
+        
+        return result;
     }
 
     /**
@@ -157,7 +252,19 @@ public class OAuthPrincipal implements Principal {
      * @return 是否具有任意一个角色
      */
     public boolean hasAnyRole(String... roles) {
-        return userResume != null && userResume.hasRole(roles);
+        boolean result = userResume != null && userResume.hasRole(roles);
+        String rolesStr = Arrays.toString(roles);
+        
+        if (result) {
+            log.info("【权限验证通过】用户 [{}] 具有角色列表 {} 中的至少一个", getName(), rolesStr);
+        } else {
+            log.info("【权限验证失败】用户 [{}] 不具有角色列表 {} 中的任何一个", getName(), rolesStr);
+        }
+        
+        log.debug("【权限验证详情】hasAnyRole检查 - 用户: {}, 检查角色列表: {}, 用户拥有角色: {}, 验证结果: {}", 
+                 getName(), rolesStr, getRoles(), result ? "通过" : "拒绝");
+        
+        return result;
     }
 
     /**
@@ -167,7 +274,18 @@ public class OAuthPrincipal implements Principal {
      * @return 是否具有该权限
      */
     public boolean hasPermission(String permission) {
-        return userResume != null && userResume.hasPermission(permission);
+        boolean result = userResume != null && userResume.hasPermission(permission);
+        
+        if (result) {
+            log.info("【权限验证通过】用户 [{}] 具有权限 [{}]", getName(), permission);
+        } else {
+            log.info("【权限验证失败】用户 [{}] 不具有权限 [{}]", getName(), permission);
+        }
+        
+        log.debug("【权限验证详情】hasPermission检查 - 用户: {}, 用户ID: {}, 检查权限: {}, 验证结果: {}", 
+                 getName(), getUserId(), permission, result ? "通过" : "拒绝");
+        
+        return result;
     }
 
     /**
@@ -177,7 +295,19 @@ public class OAuthPrincipal implements Principal {
      * @return 是否具有任意一个权限
      */
     public boolean hasAnyPermission(String... permissions) {
-        return userResume != null && userResume.hasPermission(permissions);
+        boolean result = userResume != null && userResume.hasPermission(permissions);
+        String permissionsStr = Arrays.toString(permissions);
+        
+        if (result) {
+            log.info("【权限验证通过】用户 [{}] 具有权限列表 {} 中的至少一个", getName(), permissionsStr);
+        } else {
+            log.info("【权限验证失败】用户 [{}] 不具有权限列表 {} 中的任何一个", getName(), permissionsStr);
+        }
+        
+        log.debug("【权限验证详情】hasAnyPermission检查 - 用户: {}, 用户ID: {}, 检查权限列表: {}, 验证结果: {}", 
+                 getName(), getUserId(), permissionsStr, result ? "通过" : "拒绝");
+        
+        return result;
     }
 
     /**
@@ -186,7 +316,15 @@ public class OAuthPrincipal implements Principal {
      * @return 是否为管理员
      */
     public boolean isAdmin() {
-        return userResume != null && userResume.isAdmin();
+        boolean result = userResume != null && userResume.isAdmin();
+        
+        log.debug("【管理员检查】用户: {}, 用户ID: {}, 是否管理员: {}", getName(), getUserId(), result ? "是" : "否");
+        
+        if (result) {
+            log.info("【管理员验证】用户 [{}] 是管理员", getName());
+        }
+        
+        return result;
     }
 
     /**
@@ -195,7 +333,9 @@ public class OAuthPrincipal implements Principal {
      * @return 手机号
      */
     public String getPhone() {
-        return userResume != null ? userResume.getPhone() : null;
+        String phone = userResume != null ? userResume.getPhone() : null;
+        log.debug("【Principal获取】获取手机号: {}", phone != null ? maskPhone(phone) : "null");
+        return phone;
     }
 
     /**
@@ -204,7 +344,9 @@ public class OAuthPrincipal implements Principal {
      * @return 身份证号
      */
     public String getCard() {
-        return userResume != null ? userResume.getCard() : null;
+        String card = userResume != null ? userResume.getCard() : null;
+        log.debug("【Principal获取】获取身份证号: {}", card != null ? maskCard(card) : "null");
+        return card;
     }
 
     /**
@@ -213,7 +355,9 @@ public class OAuthPrincipal implements Principal {
      * @return 性别
      */
     public String getSex() {
-        return userResume != null ? userResume.getSex() : null;
+        String sex = userResume != null ? userResume.getSex() : null;
+        log.debug("【Principal获取】获取性别: {}", sex);
+        return sex;
     }
 
     /**
@@ -222,7 +366,29 @@ public class OAuthPrincipal implements Principal {
      * @return 最后登录IP
      */
     public String getLastIp() {
-        return userResume != null ? userResume.getLastIp() : null;
+        String lastIp = userResume != null ? userResume.getLastIp() : null;
+        log.debug("【Principal获取】获取最后登录IP: {}", lastIp);
+        return lastIp;
+    }
+    
+    /**
+     * 脱敏手机号
+     */
+    private String maskPhone(String phone) {
+        if (phone == null || phone.length() < 7) {
+            return phone;
+        }
+        return phone.substring(0, 3) + "****" + phone.substring(phone.length() - 4);
+    }
+    
+    /**
+     * 脱敏身份证号
+     */
+    private String maskCard(String card) {
+        if (card == null || card.length() < 10) {
+            return card;
+        }
+        return card.substring(0, 6) + "********" + card.substring(card.length() - 4);
     }
 
     @Override
