@@ -1,16 +1,12 @@
 package com.chua.report.client.starter.report;
 
+import com.chua.oshi.support.*;
 import com.chua.report.client.starter.sync.MonitorTopics;
 import com.chua.sync.support.client.SyncClient;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.File;
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryMXBean;
-import java.lang.management.OperatingSystemMXBean;
-import java.lang.management.RuntimeMXBean;
-import java.net.InetAddress;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -78,7 +74,7 @@ public class DeviceMetricsReporter {
         });
 
         // 启动时上报一次设备信息
-        scheduler.schedule(this::reportDeviceInfo, 1, TimeUnit.SECONDS);
+        scheduler.schedule(this::reportDeviceInfo, 20, TimeUnit.SECONDS);
 
         // 定时上报指标
         scheduler.scheduleAtFixedRate(this::reportMetrics, 5, intervalSeconds, TimeUnit.SECONDS);
@@ -135,24 +131,11 @@ public class DeviceMetricsReporter {
     private Map<String, Object> collectDeviceInfo() {
         Map<String, Object> info = new HashMap<>();
         try {
-            InetAddress localHost = InetAddress.getLocalHost();
-            info.put("deviceId", localHost.getHostName() + "_" + appName);
-            info.put("deviceName", appName);
-            info.put("ipAddress", localHost.getHostAddress());
-            info.put("hostname", localHost.getHostName());
-            info.put("appName", appName);
-
-            OperatingSystemMXBean osBean = ManagementFactory.getOperatingSystemMXBean();
-            info.put("osName", osBean.getName());
-            info.put("osVersion", osBean.getVersion());
-            info.put("osArch", osBean.getArch());
-            info.put("cpuCores", osBean.getAvailableProcessors());
-
-            Runtime runtime = Runtime.getRuntime();
-            info.put("maxMemory", runtime.maxMemory());
-
-            info.put("online", true);
-            info.put("startTime", System.currentTimeMillis());
+            Sys sys = Oshi.newSys();
+            info.put("ipAddress", sys.getComputerIp());
+            info.put("osName", sys.getOsName());
+            info.put("osVersion", System.getProperty("os.version"));
+            info.put("osArch", sys.getOsArch());
         } catch (Exception e) {
             log.error("[DeviceReporter] 采集设备信息失败", e);
         }
@@ -166,91 +149,40 @@ public class DeviceMetricsReporter {
         Map<String, Object> metrics = new HashMap<>();
 
         try {
-            // 基本信息
-            InetAddress localHost = InetAddress.getLocalHost();
-            metrics.put("deviceId", localHost.getHostName() + "_" + appName);
-            metrics.put("deviceName", appName);
-            metrics.put("ipAddress", localHost.getHostAddress());
-            metrics.put("hostname", localHost.getHostName());
-            metrics.put("appName", appName);
-
-            // 操作系统信息
-            OperatingSystemMXBean osBean = ManagementFactory.getOperatingSystemMXBean();
-            metrics.put("osName", osBean.getName());
-            metrics.put("osVersion", osBean.getVersion());
-            metrics.put("osArch", osBean.getArch());
-            metrics.put("cpuCores", osBean.getAvailableProcessors());
+            // IP 地址（用于匹配服务器）
+            Sys sys = Oshi.newSys();
+            metrics.put("ipAddress", sys.getComputerIp());
 
             // CPU 使用率
-            double cpuLoad = osBean.getSystemLoadAverage();
-            if (cpuLoad >= 0) {
-                metrics.put("cpuUsage", Math.round(cpuLoad / osBean.getAvailableProcessors() * 100 * 100.0) / 100.0);
-                metrics.put("loadAverage", String.format("%.2f", cpuLoad));
-            } else {
-                // Windows 不支持 getSystemLoadAverage，尝试其他方式
-                if (osBean instanceof com.sun.management.OperatingSystemMXBean) {
-                    com.sun.management.OperatingSystemMXBean sunOsBean = (com.sun.management.OperatingSystemMXBean) osBean;
-                    double cpuUsage = sunOsBean.getCpuLoad() * 100;
-                    metrics.put("cpuUsage", Math.round(cpuUsage * 100.0) / 100.0);
-                }
-            }
+            Cpu cpu = Oshi.newCpu(500);
+            metrics.put("cpuUsage", 100 - cpu.getFree());
 
-            // 内存信息
-            MemoryMXBean memoryBean = ManagementFactory.getMemoryMXBean();
-            long heapUsed = memoryBean.getHeapMemoryUsage().getUsed();
-            long heapMax = memoryBean.getHeapMemoryUsage().getMax();
-            long nonHeapUsed = memoryBean.getNonHeapMemoryUsage().getUsed();
+            // 内存使用率
+            Mem mem = Oshi.newMem();
+            metrics.put("memoryUsage", mem.getUsage());
 
-            // 系统内存
-            if (osBean instanceof com.sun.management.OperatingSystemMXBean) {
-                com.sun.management.OperatingSystemMXBean sunOsBean = (com.sun.management.OperatingSystemMXBean) osBean;
-                long totalMemory = sunOsBean.getTotalMemorySize();
-                long freeMemory = sunOsBean.getFreeMemorySize();
-                long usedMemory = totalMemory - freeMemory;
-
-                metrics.put("totalMemory", totalMemory);
-                metrics.put("usedMemory", usedMemory);
-                metrics.put("availableMemory", freeMemory);
-                metrics.put("memoryUsage", Math.round((double) usedMemory / totalMemory * 100 * 100.0) / 100.0);
-            } else {
-                // 回退到 JVM 内存
-                Runtime runtime = Runtime.getRuntime();
-                metrics.put("totalMemory", runtime.maxMemory());
-                metrics.put("usedMemory", runtime.totalMemory() - runtime.freeMemory());
-                metrics.put("availableMemory", runtime.freeMemory());
-            }
-
-            // 磁盘信息
-            File[] roots = File.listRoots();
+            // 磁盘使用率
+            List<SysFile> sysFiles = Oshi.newSysFile();
             long totalDisk = 0;
-            long freeDisk = 0;
-            for (File root : roots) {
-                totalDisk += root.getTotalSpace();
-                freeDisk += root.getFreeSpace();
+            long usedDisk = 0;
+            for (SysFile sf : sysFiles) {
+                totalDisk += sf.getTotal();
+                usedDisk += sf.getUsed();
             }
-            long usedDisk = totalDisk - freeDisk;
-            metrics.put("totalDisk", totalDisk);
-            metrics.put("usedDisk", usedDisk);
-            metrics.put("availableDisk", freeDisk);
             if (totalDisk > 0) {
                 metrics.put("diskUsage", Math.round((double) usedDisk / totalDisk * 100 * 100.0) / 100.0);
             }
 
-            // 运行时间
-            RuntimeMXBean runtimeBean = ManagementFactory.getRuntimeMXBean();
-            metrics.put("uptime", runtimeBean.getUptime() / 1000);
-
-            // 线程数
-            metrics.put("threadCount", Thread.activeCount());
-
-            // 进程数（JVM 不直接支持，设为 -1）
-            metrics.put("processCount", -1);
-
-            // 在线状态
-            metrics.put("online", true);
-
-            // 收集时间
-            metrics.put("collectTime", System.currentTimeMillis());
+            // 网络流量
+            List<Network> networks = Oshi.newNetwork();
+            long networkIn = 0;
+            long networkOut = 0;
+            for (Network net : networks) {
+                networkIn += net.getReceiveBytes();
+                networkOut += net.getTransmitBytes();
+            }
+            metrics.put("networkInBytes", networkIn);
+            metrics.put("networkOutBytes", networkOut);
 
         } catch (Exception e) {
             log.error("[DeviceReporter] 采集指标失败", e);
