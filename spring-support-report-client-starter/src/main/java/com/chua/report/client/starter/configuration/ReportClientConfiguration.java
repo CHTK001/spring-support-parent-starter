@@ -1,17 +1,19 @@
 package com.chua.report.client.starter.configuration;
 
 import com.chua.report.client.starter.job.JobReporter;
+import com.chua.report.client.starter.properties.ReportProperties;
 import com.chua.report.client.starter.report.AppRegisterReporter;
 import com.chua.report.client.starter.report.DeviceMetricsReporter;
 import com.chua.report.client.starter.sync.MonitorTopics;
 import com.chua.report.client.starter.sync.handler.FileHandler;
 import com.chua.report.client.starter.sync.handler.JobDispatchHandler;
 import com.chua.sync.support.client.SyncClient;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 
@@ -29,15 +31,15 @@ import javax.annotation.PreDestroy;
  */
 @Slf4j
 @Configuration
+@RequiredArgsConstructor
 @ConditionalOnClass(SyncClient.class)
 @ConditionalOnBean(SyncClient.class)
+@EnableConfigurationProperties(ReportProperties.class)
 public class ReportClientConfiguration {
 
-    @Autowired
-    private SyncClient syncClient;
-
-    @Autowired
-    private Environment environment;
+    private final SyncClient syncClient;
+    private final Environment environment;
+    private final ReportProperties reportProperties;
 
     @Value("${spring.application.name:unknown}")
     private String appName;
@@ -47,18 +49,6 @@ public class ReportClientConfiguration {
 
     @Value("${server.servlet.context-path:}")
     private String contextPath;
-
-    @Value("${plugin.report.client.metrics.interval:30}")
-    private long metricsInterval;
-
-    @Value("${plugin.report.client.metrics.enabled:true}")
-    private boolean metricsEnabled;
-
-    @Value("${plugin.report.client.register.enabled:true}")
-    private boolean registerEnabled;
-
-    @Value("${plugin.report.client.register.heartbeat-interval:30}")
-    private long heartbeatInterval;
 
     @PostConstruct
     public void init() {
@@ -84,24 +74,24 @@ public class ReportClientConfiguration {
         FileHandler fileHandler = new FileHandler();
         syncClient.registerHandler(MonitorTopics.FILE_REQUEST, fileHandler);
 
-        // 启动应用注册上报
-        if (registerEnabled) {
+        // 启动应用信息上报
+        if (reportProperties.getAppReport().isEnabled()) {
             AppRegisterReporter appReporter = AppRegisterReporter.getInstance();
             appReporter.setSyncClient(syncClient);
             appReporter.setApplicationName(appName);
             appReporter.setActiveProfiles(environment.getActiveProfiles());
             appReporter.setServerPort(serverPort);
             appReporter.setContextPath(contextPath);
-            appReporter.setHeartbeatInterval(heartbeatInterval);
+            appReporter.setReportInterval(reportProperties.getAppReport().getInterval());
             appReporter.start();
         }
 
         // 启动设备指标上报
-        if (metricsEnabled) {
+        if (reportProperties.getMetrics().isEnabled()) {
             DeviceMetricsReporter reporter = DeviceMetricsReporter.getInstance();
             reporter.setSyncClient(syncClient);
             reporter.setAppName(appName);
-            reporter.setIntervalSeconds(metricsInterval);
+            reporter.setIntervalSeconds(reportProperties.getMetrics().getInterval());
             reporter.start();
         }
 

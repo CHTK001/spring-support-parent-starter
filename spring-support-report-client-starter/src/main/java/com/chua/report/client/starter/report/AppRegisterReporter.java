@@ -9,15 +9,14 @@ import java.lang.management.RuntimeMXBean;
 import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 应用注册上报器
+ * 应用信息上报器
  * <p>
- * 客户端连接成功后上报Spring应用基本信息，用于在线节点展示
+ * 定时上报Spring应用基本信息，服务端覆盖更新
  * </p>
  *
  * @author CH
@@ -33,9 +32,6 @@ public class AppRegisterReporter {
     private ScheduledExecutorService scheduler;
     private volatile boolean running = false;
 
-    // 实例唯一标识
-    private final String instanceId = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
-
     // Spring 应用信息
     private String applicationName;
     private String[] activeProfiles;
@@ -44,8 +40,8 @@ public class AppRegisterReporter {
     private String ipAddress;
     private String hostname;
 
-    // 心跳间隔（秒）
-    private long heartbeatInterval = 30;
+    // 上报间隔（秒）
+    private long reportInterval = 30;
 
     // 启动时间
     private long startTime;
@@ -77,12 +73,12 @@ public class AppRegisterReporter {
         this.serverPort = serverPort;
     }
 
-    public void setHeartbeatInterval(long heartbeatInterval) {
-        this.heartbeatInterval = heartbeatInterval;
+    public void setReportInterval(long reportInterval) {
+        this.reportInterval = reportInterval;
     }
 
     /**
-     * 启动注册和心跳
+     * 启动定时上报
      */
     public synchronized void start() {
         if (running) {
@@ -90,7 +86,7 @@ public class AppRegisterReporter {
         }
 
         if (syncClient == null) {
-            log.warn("[AppRegister] SyncClient 未设置，无法启动注册");
+            log.warn("[AppReport] SyncClient 未设置，无法启动上报");
             return;
         }
 
@@ -99,38 +95,32 @@ public class AppRegisterReporter {
         this.startTime = System.currentTimeMillis();
 
         scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread t = new Thread(r, "app-register");
+            Thread t = new Thread(r, "app-reporter");
             t.setDaemon(true);
             return t;
         });
 
-        // 延迟3秒后发送注册信息（等待连接稳定）
-        scheduler.schedule(this::register, 3, TimeUnit.SECONDS);
-
-        // 定时发送心跳
-        scheduler.scheduleAtFixedRate(this::heartbeat, 10, heartbeatInterval, TimeUnit.SECONDS);
+        // 定时上报应用信息
+        scheduler.scheduleAtFixedRate(this::report, 3, reportInterval, TimeUnit.SECONDS);
 
         running = true;
-        log.info("[AppRegister] 启动应用注册，心跳间隔: {}秒", heartbeatInterval);
+        log.info("[AppReport] 启动应用信息上报，间隔: {}秒", reportInterval);
     }
 
     /**
-     * 停止并注销
+     * 停止上报
      */
     public synchronized void stop() {
         if (!running) {
             return;
         }
 
-        // 发送下线通知
-        unregister();
-
         if (scheduler != null) {
             scheduler.shutdown();
             scheduler = null;
         }
         running = false;
-        log.info("[AppRegister] 停止应用注册");
+        log.info("[AppReport] 停止应用信息上报");
     }
 
     /**
@@ -142,66 +132,30 @@ public class AppRegisterReporter {
             this.ipAddress = localHost.getHostAddress();
             this.hostname = localHost.getHostName();
         } catch (Exception e) {
-            log.warn("[AppRegister] 获取网络信息失败", e);
+            log.warn("[AppReport] 获取网络信息失败", e);
             this.ipAddress = "127.0.0.1";
             this.hostname = "localhost";
         }
     }
 
     /**
-     * 发送注册信息
+     * 上报应用信息
      */
-    private void register() {
+    private void report() {
         try {
-            Map<String, Object> registerInfo = collectRegisterInfo();
-            registerInfo.put("eventType", "REGISTER");
-            syncClient.publish(MonitorTopics.APP_REGISTER, registerInfo);
-            log.info("[AppRegister] 应用注册成功: {}:{} ({})", ipAddress, serverPort, applicationName);
+            Map<String, Object> info = collectAppInfo();
+            syncClient.publish(MonitorTopics.APP_REPORT, info);
+            log.debug("[AppReport] 上报应用信息: {}:{} ({})", ipAddress, serverPort, applicationName);
         } catch (Exception e) {
-            log.error("[AppRegister] 应用注册失败", e);
+            log.error("[AppReport] 上报应用信息失败", e);
         }
     }
 
     /**
-     * 发送心跳
+     * 采集应用信息
      */
-    private void heartbeat() {
-        try {
-            Map<String, Object> heartbeatInfo = collectHeartbeatInfo();
-            syncClient.publish(MonitorTopics.APP_HEARTBEAT, heartbeatInfo);
-            log.debug("[AppRegister] 心跳发送: {}:{}", ipAddress, serverPort);
-        } catch (Exception e) {
-            log.error("[AppRegister] 心跳发送失败", e);
-        }
-    }
-
-    /**
-     * 发送下线通知
-     */
-    private void unregister() {
-        try {
-            Map<String, Object> unregisterInfo = new HashMap<>();
-            unregisterInfo.put("instanceId", instanceId);
-            unregisterInfo.put("applicationName", applicationName);
-            unregisterInfo.put("ipAddress", ipAddress);
-            unregisterInfo.put("serverPort", serverPort);
-            unregisterInfo.put("eventType", "UNREGISTER");
-            unregisterInfo.put("timestamp", System.currentTimeMillis());
-            syncClient.publish(MonitorTopics.APP_UNREGISTER, unregisterInfo);
-            log.info("[AppRegister] 应用下线通知: {}:{}", ipAddress, serverPort);
-        } catch (Exception e) {
-            log.error("[AppRegister] 下线通知发送失败", e);
-        }
-    }
-
-    /**
-     * 采集注册信息
-     */
-    private Map<String, Object> collectRegisterInfo() {
+    private Map<String, Object> collectAppInfo() {
         Map<String, Object> info = new HashMap<>();
-
-        // 实例标识
-        info.put("instanceId", instanceId);
 
         // 应用基本信息
         info.put("applicationName", applicationName);
@@ -227,44 +181,20 @@ public class AppRegisterReporter {
 
         // 运行时信息
         info.put("startTime", startTime);
-        info.put("registerTime", System.currentTimeMillis());
-        info.put("online", true);
+        info.put("uptime", System.currentTimeMillis() - startTime);
+        info.put("timestamp", System.currentTimeMillis());
 
         // 操作系统信息
         info.put("osName", System.getProperty("os.name"));
         info.put("osVersion", System.getProperty("os.version"));
         info.put("osArch", System.getProperty("os.arch"));
 
-        return info;
-    }
-
-    /**
-     * 采集心跳信息（精简版）
-     */
-    private Map<String, Object> collectHeartbeatInfo() {
-        Map<String, Object> info = new HashMap<>();
-
-        // 核心标识
-        info.put("instanceId", instanceId);
-        info.put("applicationName", applicationName);
-        info.put("ipAddress", ipAddress);
-        info.put("serverPort", serverPort);
-
-        // 运行状态
-        info.put("online", true);
-        info.put("uptime", System.currentTimeMillis() - startTime);
-        info.put("timestamp", System.currentTimeMillis());
-
-        // JVM 内存使用
+        // JVM 内存
         Runtime runtime = Runtime.getRuntime();
         info.put("heapUsed", runtime.totalMemory() - runtime.freeMemory());
         info.put("heapMax", runtime.maxMemory());
         info.put("threadCount", Thread.activeCount());
 
         return info;
-    }
-
-    public String getInstanceId() {
-        return instanceId;
     }
 }
