@@ -4,9 +4,9 @@ import com.chua.advanced.support.lang.mail.Email;
 import com.chua.advanced.support.lang.mail.MailConfiguration;
 import com.chua.advanced.support.lang.mail.MailSender;
 import com.chua.common.support.annotations.Spi;
-import com.chua.common.support.log.Log;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
 
@@ -14,10 +14,10 @@ import org.springframework.mail.javamail.MimeMessageHelper;
  * spring
  * @author CH
  */
+@Slf4j
 @Spi(value = "html", order = 1)
 public class SpringHtmlMailSender extends SpringTextMailSender {
 
-    private static final Log log = Log.getLogger(MailSender.class);
     private final JavaMailSenderImpl javaMailSender;
     public SpringHtmlMailSender(MailConfiguration configuration) {
         super(configuration);
