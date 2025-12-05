@@ -1,15 +1,11 @@
 package com.chua.report.client.starter.job.thread;
 
-import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.report.client.starter.endpoint.ModuleType;
-import com.chua.report.client.starter.entity.JobResult;
+import com.chua.report.client.starter.job.JobReporter;
 import com.chua.report.client.starter.job.TriggerParam;
 import com.chua.report.client.starter.job.handler.JobHandler;
 import com.chua.report.client.starter.job.log.DefaultJobLog;
 import com.chua.report.client.starter.job.log.JobFileAppender;
-import com.chua.report.client.starter.job.log.JobLog;
-import com.chua.report.client.starter.setting.SettingFactory;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.PrintWriter;
@@ -227,11 +223,7 @@ public class JobThread extends Thread{
         log.info(">>>>>>>>>>> job JobThread stoped, hashCode:{}", Thread.currentThread());
     }
 
-    private void reportJob(TriggerParam triggerParam, String failure, String errorMsg) {
-        JobResult jobResult = new JobResult();
-        jobResult.setId(String.valueOf(triggerParam.getJobId()));
-        jobResult.setCode(failure);
-        jobResult.setMessage(errorMsg);
-        SettingFactory.getInstance().sendReportRequest(ModuleType.JOB, Json.toJson(jobResult));
+    private void reportJob(TriggerParam triggerParam, String status, String message) {
+        JobReporter.getInstance().report(triggerParam.getJobId(), triggerParam.getLogId(), status, message);
     }
 }
