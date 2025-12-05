@@ -100,5 +100,12 @@
             <version>1.27.1</version>
             <scope>compile</scope>
         </dependency>
+
+        <!-- SyncProtocol 支持 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-sync-starter</artifactId>
+            <optional>true</optional>
+        </dependency>
     </dependencies>
 </project>

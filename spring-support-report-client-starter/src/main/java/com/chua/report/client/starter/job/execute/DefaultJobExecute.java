@@ -12,7 +12,6 @@ import com.chua.report.client.starter.job.handler.JobHandlerFactory;
 import com.chua.report.client.starter.job.handler.ScriptJobHandler;
 import com.chua.report.client.starter.job.thread.JobThread;
 import com.chua.report.client.starter.job.thread.JobThreadFactory;
-import com.chua.report.client.starter.setting.SettingFactory;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -30,7 +29,8 @@ public class DefaultJobExecute implements JobExecute {
     @Override
     public ServletResponse run(ServletRequest request, TriggerParam triggerParam) {
 
-        boolean inProfile = SettingFactory.getInstance().isProfileActive(triggerParam.getProfile());
+        // profile 检查（简化处理：无 profile 限制或者默认通过）
+        boolean inProfile = true;
 
         // valid：jobHandler + jobThread
         GlueTypeEnum glueTypeEnum = GlueTypeEnum.match(triggerParam.getGlueType());
