@@ -5,6 +5,7 @@ import com.chua.socket.support.SocketListener;
 import com.chua.socket.support.SocketProtocol;
 import com.chua.socket.support.properties.SocketProperties;
 import com.chua.socket.support.session.SocketSessionTemplate;
+import org.springframework.boot.autoconfigure.web.ServerProperties;
 
 import java.util.List;
 
@@ -30,11 +31,13 @@ public interface SocketProvider {
      * 创建会话模板
      *
      * @param properties 配置属性
+     * @param serverProperties  服务器配置
      * @param listeners  监听器列表
      * @return 会话模板实例
      */
     SocketSessionTemplate createSessionTemplate(
             SocketProperties properties,
+            ServerProperties serverProperties,
             List<SocketListener> listeners
     );
 
