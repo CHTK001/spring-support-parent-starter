@@ -61,10 +61,6 @@ public class SocketProperties {
      */
     private String host = "0.0.0.0";
 
-    /**
-     * 端口
-     */
-    private int port = 9000;
 
     /**
      * 编解码器类型
@@ -169,14 +165,7 @@ public class SocketProperties {
          * @return 实际端口
          */
         public int getActualPort(int mainPort) {
-            if (port > 0) {
-                return port;
-            }
-            if (port == -1) {
-                return mainPort;
-            }
-            // port < -1 表示使用偏移量
-            return mainPort + Math.abs(port) - 1;
+            return mainPort + port;
         }
 
         /**
