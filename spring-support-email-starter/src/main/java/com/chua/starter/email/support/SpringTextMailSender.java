@@ -2,11 +2,11 @@ package com.chua.starter.email.support;
 
 import com.chua.common.support.annotations.Spi;
 import com.chua.advanced.support.lang.mail.*;
-import com.chua.common.support.log.Log;
 import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.common.support.utils.UrlUtils;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 
@@ -18,10 +18,10 @@ import java.util.List;
  * spring
  * @author CH
  */
+@Slf4j
 @Spi(value = "text", order = 1)
 public class SpringTextMailSender extends AbstractMailSender {
 
-    private static final Log log = Log.getLogger(MailSender.class);
     @AutoInject
     private JavaMailSender javaMailSender;
 

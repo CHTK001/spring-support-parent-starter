@@ -2,6 +2,7 @@ package com.chua.report.client.starter.job.handler;
 
 import com.chua.report.client.starter.job.GlueTypeEnum;
 import com.chua.report.client.starter.job.ScriptUtil;
+import com.chua.report.client.starter.job.log.DefaultJobLog;
 import com.chua.report.client.starter.job.log.JobFileAppender;
 import com.chua.report.client.starter.job.log.JobLog;
 
@@ -42,7 +43,7 @@ public class ScriptJobHandler implements JobHandler {
     public void execute() throws Exception {
 
         if (!glueType.isScript()) {
-            JobLog.getDefault().error("glueType[" + glueType + "] invalid.");
+            DefaultJobLog.log("glueType[" + glueType + "] invalid.");
             return;
         }
 
@@ -68,12 +69,12 @@ public class ScriptJobHandler implements JobHandler {
         String[] scriptParams = new String[3];
 
         // invoke
-        JobLog.getDefault().info("----------- script file:" + scriptFileName + " -----------");
+        DefaultJobLog.log("----------- script file:" + scriptFileName + " -----------");
         int exitValue = ScriptUtil.execToFile(cmd, scriptFileName, logFileName, scriptParams);
 
         if (exitValue == 0) {
         } else {
-            JobLog.getDefault().error("script exit value(" + exitValue + ") is failed");
+            DefaultJobLog.log("script exit value(" + exitValue + ") is failed");
         }
 
     }

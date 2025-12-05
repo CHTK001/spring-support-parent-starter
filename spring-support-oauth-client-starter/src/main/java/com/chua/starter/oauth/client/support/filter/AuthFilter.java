@@ -1,7 +1,6 @@
 package com.chua.starter.oauth.client.support.filter;
 
 
-import com.chua.common.support.log.Log;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.infomation.Information;
@@ -13,6 +12,7 @@ import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import java.io.IOException;
@@ -24,9 +24,8 @@ import java.util.Objects;
  *
  * @author CH
  */
+@Slf4j
 public class AuthFilter implements Filter {
-
-    private static final Log log = Log.getLogger(AuthFilter.class);
 
     private final WebRequest webRequest;
     private final RequestMappingHandlerMapping requestMappingHandlerMapping;
