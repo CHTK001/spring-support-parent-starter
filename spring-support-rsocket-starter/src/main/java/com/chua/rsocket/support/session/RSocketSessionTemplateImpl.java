@@ -7,6 +7,7 @@ import com.chua.socket.support.session.SocketSession;
 import com.chua.socket.support.session.SocketSessionTemplate;
 import com.chua.socket.support.session.SocketUser;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -31,6 +32,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements SocketSessionTemplate {
 
     private final SocketProperties properties;
+    private final ServerProperties serverProperties;
     private final List<SocketListener> listeners;
     
     /**
@@ -45,8 +47,9 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     
     private volatile boolean running = false;
 
-    public RSocketSessionTemplateImpl(SocketProperties properties, List<SocketListener> listeners) {
+    public RSocketSessionTemplateImpl(SocketProperties properties, ServerProperties serverProperties, List<SocketListener> listeners) {
         this.properties = properties;
+        this.serverProperties = serverProperties;
         this.listeners = listeners;
     }
 
@@ -251,7 +254,7 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
             return;
         }
         running = true;
-        log.info("[RSocket] 服务启动成功，端口: {}", properties.getPort());
+        log.info("[RSocket] 服务启动成功，端口: {}", serverProperties.getPort());
     }
 
     @Override

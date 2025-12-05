@@ -10,6 +10,7 @@ import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
@@ -40,6 +41,7 @@ public class SocketConfiguration {
     @ConditionalOnProperty(prefix = SocketProperties.PRE, name = "enable", havingValue = "true")
     public SocketSessionTemplate socketSessionTemplate(
             SocketProperties properties,
+            ServerProperties  serverProperties,
             List<SocketListener> listeners) {
 
         String protocolName = properties.getProtocol().getValue();
@@ -58,7 +60,7 @@ public class SocketConfiguration {
 
         log.info("[Socket] 加载 SPI 实现: {}", provider.getClass().getName());
 
-        return provider.createSessionTemplate(properties, listeners);
+        return provider.createSessionTemplate(properties, serverProperties, listeners);
     }
 
     /**
@@ -72,8 +74,9 @@ public class SocketConfiguration {
     @ConditionalOnProperty(prefix = SocketProperties.PRE, name = "enable", havingValue = "true")
     public SocketLifecycle socketLifecycle(
             SocketSessionTemplate template,
+            ServerProperties  serverProperties,
             SocketProperties properties) {
-        return new SocketLifecycle(template, properties);
+        return new SocketLifecycle(template, serverProperties, properties);
     }
 
     /**
@@ -82,18 +85,20 @@ public class SocketConfiguration {
     public static class SocketLifecycle implements InitializingBean, DisposableBean {
 
         private final SocketSessionTemplate template;
+        private final ServerProperties serverProperties;
         private final SocketProperties properties;
 
-        public SocketLifecycle(SocketSessionTemplate template, SocketProperties properties) {
+        public SocketLifecycle(SocketSessionTemplate template, ServerProperties serverProperties, SocketProperties properties) {
             this.template = template;
+            this.serverProperties = serverProperties;
             this.properties = properties;
         }
 
         @Override
         public void afterPropertiesSet() throws Exception {
-            log.info("[Socket] 启动 {} 服务，端口: {}",
+            log.info("[Socket] 启动 {} 服务，预设端口: {}",
                     properties.getProtocol().getValue(),
-                    properties.getPort());
+                    serverProperties.getPort());
             template.start();
         }
 
