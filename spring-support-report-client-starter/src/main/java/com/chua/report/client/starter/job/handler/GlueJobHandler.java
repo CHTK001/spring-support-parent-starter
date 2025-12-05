@@ -1,5 +1,6 @@
 package com.chua.report.client.starter.job.handler;
 
+import com.chua.report.client.starter.job.log.DefaultJobLog;
 import com.chua.report.client.starter.job.log.JobLog;
 
 /**
@@ -23,7 +24,7 @@ public class GlueJobHandler implements JobHandler{
 
     @Override
     public void execute() throws Exception {
-        JobLog.getDefault().info("----------- glue.version:"+ glueUpdatetime +" -----------");
+        DefaultJobLog.log("----------- glue.version:"+ glueUpdatetime +" -----------");
         jobHandler.execute();
     }
 

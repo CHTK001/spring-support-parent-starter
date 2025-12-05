@@ -1,9 +1,9 @@
 package com.chua.starter.redis.support.server;
 
-import com.chua.common.support.log.Log;
 import com.chua.common.support.net.NetUtils;
 import com.chua.starter.redis.support.properties.RedisServerProperties;
 import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.DisposableBean;
 import redis.embedded.RedisServer;
 
@@ -12,9 +12,9 @@ import redis.embedded.RedisServer;
  *
  * @author CH
  */
+@Slf4j
 public class RedisEmbeddedServer implements DisposableBean {
 
-    private static final Log log = Log.getLogger(RedisServer.class);
     private final RedisServerProperties redisServerProperties;
     private RedisServer redisServer;
 

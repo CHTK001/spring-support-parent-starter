@@ -1,5 +1,6 @@
 package com.chua.report.client.starter.job;
 
+import com.chua.report.client.starter.job.log.DefaultJobLog;
 import com.chua.report.client.starter.job.log.JobLog;
 
 import java.io.FileOutputStream;
@@ -81,14 +82,14 @@ public class ScriptUtil {
                 try {
                     copy(process.getInputStream(), finalFileOutputStream, new byte[1024]);
                 } catch (IOException e) {
-                    JobLog.getDefault().error(e);
+                    DefaultJobLog.log(e.getMessage());
                 }
             });
             errThread = new Thread(() -> {
                 try {
                     copy(process.getErrorStream(), finalFileOutputStream, new byte[1024]);
                 } catch (IOException e) {
-                    JobLog.getDefault().error(e);
+                    DefaultJobLog.log(e.getMessage());
                 }
             });
             inputThread.start();
@@ -103,14 +104,14 @@ public class ScriptUtil {
 
             return exitValue;
         } catch (Exception e) {
-            JobLog.getDefault().error(e);
+            DefaultJobLog.log(e.getMessage());
             return -1;
         } finally {
             if (fileOutputStream != null) {
                 try {
                     fileOutputStream.close();
                 } catch (IOException e) {
-                    JobLog.getDefault().error(e);
+                    DefaultJobLog.log(e.getMessage());
                 }
 
             }
