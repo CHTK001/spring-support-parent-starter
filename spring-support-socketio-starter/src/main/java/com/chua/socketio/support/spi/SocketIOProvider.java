@@ -8,6 +8,7 @@ import com.chua.socket.support.session.SocketSessionTemplate;
 import com.chua.socket.support.spi.SocketProvider;
 import com.chua.socketio.support.session.SocketIOSessionTemplate;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.web.ServerProperties;
 
 import java.util.List;
 
@@ -31,9 +32,10 @@ public class SocketIOProvider implements SocketProvider {
     @Override
     public SocketSessionTemplate createSessionTemplate(
             SocketProperties properties,
+            ServerProperties serverProperties,
             List<SocketListener> listeners) {
         log.info("[SocketIO] 创建 Socket.IO 会话模板");
-        return new SocketIOSessionTemplate(properties, listeners);
+        return new SocketIOSessionTemplate(properties, serverProperties, listeners);
     }
 
     @Override

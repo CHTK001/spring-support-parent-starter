@@ -8,6 +8,7 @@ import com.chua.socket.support.properties.SocketProperties;
 import com.chua.socket.support.session.SocketSessionTemplate;
 import com.chua.socket.support.spi.SocketProvider;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.web.ServerProperties;
 
 import java.util.List;
 
@@ -31,9 +32,10 @@ public class RSocketProvider implements SocketProvider {
     @Override
     public SocketSessionTemplate createSessionTemplate(
             SocketProperties properties,
+            ServerProperties serverProperties,
             List<SocketListener> listeners) {
         log.info("[RSocket] 创建 RSocket 会话模板");
-        return new RSocketSessionTemplateImpl(properties, listeners);
+        return new RSocketSessionTemplateImpl(properties, serverProperties, listeners);
     }
 
     @Override

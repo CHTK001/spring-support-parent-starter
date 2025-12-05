@@ -1,5 +1,6 @@
 package com.chua.socketio.support.session;
 
+import com.chua.common.support.printer.TablePrinter;
 import com.chua.socket.support.SocketListener;
 import com.chua.socket.support.properties.SocketProperties;
 import com.chua.socket.support.session.SocketSession;
@@ -9,6 +10,7 @@ import com.chua.socketio.support.server.DelegateSocketIOServer;
 import com.corundumstudio.socketio.*;
 import com.corundumstudio.socketio.protocol.JacksonJsonSupport;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.web.ServerProperties;
 
 import java.util.Collections;
 import java.util.LinkedList;
@@ -29,6 +31,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class SocketIOSessionTemplate implements SocketSessionTemplate {
 
     private final SocketProperties properties;
+    private final ServerProperties serverProperties;
     private final List<SocketListener> listeners;
     private final Map<String, List<SocketIOSession>> sessionCache = new ConcurrentHashMap<>();
     
@@ -37,8 +40,9 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
      */
     private final Map<String, DelegateSocketIOServer> servers = new ConcurrentHashMap<>();
 
-    public SocketIOSessionTemplate(SocketProperties properties, List<SocketListener> listeners) {
+    public SocketIOSessionTemplate(SocketProperties properties, ServerProperties serverProperties, List<SocketListener> listeners) {
         this.properties = properties;
+        this.serverProperties = serverProperties;
         this.listeners = listeners;
     }
 
@@ -170,10 +174,12 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
         
         // 如果没有配置 room，使用默认配置启动单个服务
         if (rooms == null || rooms.isEmpty()) {
-            startServer("default", properties.getHost(), properties.getPort(), "/");
+            startServer("default", properties.getHost(), serverProperties.getPort(), "/");
             return;
         }
 
+        TablePrinter printer = new TablePrinter();
+        printer.addRow("客户端ID","地址", "端口", "上下文");
         // 启动每个 room 配置的服务
         for (SocketProperties.Room room : rooms) {
             if (!room.isEnable()) {
@@ -183,11 +189,12 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
 
             String clientId = room.getClientId();
             String host = room.getActualHost(properties.getHost());
-            int port = room.getActualPort(properties.getPort());
+            int port = room.getActualPort(serverProperties.getPort());
             String contextPath = room.getContextPath();
-
+            printer.addRow(clientId,host, port, contextPath);
             startServer(clientId, host, port, contextPath);
         }
+        log.info("\n{}", printer.draw());
     }
 
     /**
