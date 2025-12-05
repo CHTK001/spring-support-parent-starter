@@ -1,7 +1,6 @@
 package com.chua.starter.common.support.filter;
 
 import com.chua.common.support.constant.NumberConstant;
-import com.chua.common.support.log.Log;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;
@@ -10,6 +9,7 @@ import com.chua.starter.common.support.properties.LogProperties;
 import com.chua.starter.common.support.utils.RequestUtils;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.util.ContentCachingRequestWrapper;
 
@@ -31,9 +31,9 @@ import static com.chua.common.support.http.HttpConstant.HTTP_HEADER_CONTENT_TYPE
  * @author CH
  * @since 2023/09/08
  */
+@Slf4j
 public class ParameterLogFilter implements Filter {
 
-    private static final Log log = Log.getLogger(Filter.class);
     private final LogProperties loggerProperties;
     private final ApplicationContext applicationContext;
     private final ExecutorService interfaceServiceLog = Executors.newVirtualThreadPerTaskExecutor();

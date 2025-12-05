@@ -6,6 +6,7 @@ import com.chua.report.client.starter.endpoint.ModuleType;
 import com.chua.report.client.starter.entity.JobResult;
 import com.chua.report.client.starter.job.TriggerParam;
 import com.chua.report.client.starter.job.handler.JobHandler;
+import com.chua.report.client.starter.job.log.DefaultJobLog;
 import com.chua.report.client.starter.job.log.JobFileAppender;
 import com.chua.report.client.starter.job.log.JobLog;
 import com.chua.report.client.starter.setting.SettingFactory;
@@ -27,6 +28,7 @@ import java.util.concurrent.*;
  * @since 2024/03/11
  */
 @Slf4j
+@SuppressWarnings("ALL")
 public class JobThread extends Thread{
 
     private final int jobId;
@@ -132,7 +134,7 @@ public class JobThread extends Thread{
                     JobContext.setJobContext(xxlJobContext);
 
                     // execute
-                    JobLog.getDefault().info("<br>----------- job job execute start -----------<br>----------- Param:" + xxlJobContext.getJobParam());
+                    DefaultJobLog.log("<br>----------- job job execute start -----------<br>----------- Param:" + xxlJobContext.getJobParam());
 
                     if (triggerParam.getExecutorTimeout() > 0) {
                         // limit timeout
@@ -157,11 +159,11 @@ public class JobThread extends Thread{
 
                         } catch (TimeoutException e) {
 
-                            JobLog.getDefault().info("<br>----------- job job execute timeout");
-                            JobLog.getDefault().info("{}", e);
+                            DefaultJobLog.log("<br>----------- job job execute timeout");
+                            DefaultJobLog.log(e.getMessage());
 
                             // handle result
-                            JobLog.getDefault().error("job execute timeout ");
+                            DefaultJobLog.log("job execute timeout ");
 
                             reportJob(triggerParam, "FAILURE", "job execute timeout ");
 
@@ -175,7 +177,7 @@ public class JobThread extends Thread{
 
                     // valid execute handle data
                     if (JobContext.getXxlJobContext().getHandleCode() <= 0) {
-                        JobLog.getDefault().error("job handle result lost.");
+                        DefaultJobLog.log("job handle result lost.");
                     } else {
                         String tempHandleMsg = JobContext.getXxlJobContext().getHandleMsg();
                         tempHandleMsg = (tempHandleMsg!=null&&tempHandleMsg.length()>50000)
@@ -183,7 +185,7 @@ public class JobThread extends Thread{
                                 :tempHandleMsg;
                         JobContext.getXxlJobContext().setHandleMsg(tempHandleMsg);
                     }
-                    JobLog.getDefault().info("<br>----------- job job execute end(finish) -----------<br>----------- Result: handleCode="
+                    DefaultJobLog.log("<br>----------- job job execute end(finish) -----------<br>----------- Result: handleCode="
                             + JobContext.getXxlJobContext().getHandleCode()
                             + ", handleMsg = "
                             + JobContext.getXxlJobContext().getHandleMsg()
@@ -198,7 +200,7 @@ public class JobThread extends Thread{
                 }
             } catch (Throwable e) {
                 if (toStop) {
-                    JobLog.getDefault().info("<br>----------- JobThread toStop, stopReason:" + stopReason);
+                    DefaultJobLog.log("<br>----------- JobThread toStop, stopReason:" + stopReason);
                 }
 
                 // handle result
@@ -208,9 +210,9 @@ public class JobThread extends Thread{
 
                 reportJob(triggerParam, "FAILURE", errorMsg);
 
-                JobLog.getDefault().error(errorMsg);
+                DefaultJobLog.log(errorMsg);
 
-                JobLog.getDefault().info("<br>----------- JobThread Exception:" + errorMsg + "<br>----------- job job execute end(error) -----------");
+                DefaultJobLog.log("<br>----------- JobThread Exception:" + errorMsg + "<br>----------- job job execute end(error) -----------");
             }
         }
 
