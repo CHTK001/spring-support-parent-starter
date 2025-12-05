@@ -1,122 +1,86 @@
 package com.chua.report.client.starter.configuration;
 
-import com.chua.common.support.objects.ConfigureObjectContext;
-import com.chua.common.support.protocol.filter.MappingServletFilter;
-import com.chua.common.support.protocol.server.ProtocolServer;
-import com.chua.report.client.starter.function.NodeManagementConfiguration;
-import com.chua.report.client.starter.function.ReportXxlJobConfiguration;
-import com.chua.report.client.starter.properties.ReportClientProperties;
-import com.chua.report.client.starter.setting.SettingFactory;
-import lombok.Data;
-import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.DisposableBean;
-import org.springframework.beans.factory.FactoryBean;
-import org.springframework.beans.factory.support.BeanDefinitionBuilder;
-import org.springframework.beans.factory.support.BeanDefinitionRegistry;
-import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
-import org.springframework.context.EnvironmentAware;
-import org.springframework.core.env.Environment;
+import com.chua.report.client.starter.job.JobReporter;
+import com.chua.report.client.starter.report.DeviceMetricsReporter;
+import com.chua.report.client.starter.sync.MonitorTopics;
+import com.chua.report.client.starter.sync.handler.FileHandler;
+import com.chua.report.client.starter.sync.handler.JobDispatchHandler;
+import com.chua.sync.support.client.SyncClient;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.context.annotation.Configuration;
+
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 
 /**
- * 上报设置
- * 
+ * 上报客户端配置
+ * <p>
+ * 依赖 spring-support-sync-starter 提供的 SyncClient
+ * </p>
+ *
  * @author CH
- * @since 2024/9/11
+ * @since 2024/12/05
  */
-@Data
-@EnableConfigurationProperties({ ReportClientProperties.class })
-public class ReportClientConfiguration
-        implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware, EnvironmentAware, DisposableBean {
+@Slf4j
+@Configuration
+@ConditionalOnClass(SyncClient.class)
+@ConditionalOnBean(SyncClient.class)
+public class ReportClientConfiguration {
 
-    private SettingFactory settingFactory;
+    @Autowired
+    private SyncClient syncClient;
 
-    @Override
-    public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
-        // 注册协议
-        registerProtocol(registry);
-        // 注册服务
-        registerService(registry);
+    @Value("${spring.application.name:unknown}")
+    private String appName;
+
+    @Value("${plugin.report.client.metrics.interval:30}")
+    private long metricsInterval;
+
+    @Value("${plugin.report.client.metrics.enabled:true}")
+    private boolean metricsEnabled;
+
+    @PostConstruct
+    public void init() {
+        log.info("[ReportClient] 初始化");
+
+        // 注入到 JobReporter
+        JobReporter.getInstance().setSyncClient(syncClient);
+
+        // 订阅主题
+        syncClient.subscribe(
+                MonitorTopics.JOB_DISPATCH,
+                MonitorTopics.JOB_CANCEL,
+                MonitorTopics.FILE_REQUEST
+        );
+
+        // 注册 Job 处理器
+        JobDispatchHandler jobHandler = new JobDispatchHandler();
+        jobHandler.setSyncClient(syncClient);
+        syncClient.registerHandler(MonitorTopics.JOB_DISPATCH, jobHandler);
+        syncClient.registerHandler(MonitorTopics.JOB_CANCEL, jobHandler);
+
+        // 注册 File 处理器
+        FileHandler fileHandler = new FileHandler();
+        syncClient.registerHandler(MonitorTopics.FILE_REQUEST, fileHandler);
+
+        // 启动设备指标上报
+        if (metricsEnabled) {
+            DeviceMetricsReporter reporter = DeviceMetricsReporter.getInstance();
+            reporter.setSyncClient(syncClient);
+            reporter.setAppName(appName);
+            reporter.setIntervalSeconds(metricsInterval);
+            reporter.start();
+        }
+
+        log.info("[ReportClient] 初始化完成 (Job, File, DeviceMetrics)");
     }
 
-    @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-
-    }
-
-    @Override
-    public void setEnvironment(Environment environment) {
-        SettingFactory.getInstance().register(environment);
-    }
-
-    private void registerService(BeanDefinitionRegistry registry) {
-        registry.registerBeanDefinition("reportXxlJobConfiguration",
-                BeanDefinitionBuilder.rootBeanDefinition(ReportXxlJobConfiguration.class).getBeanDefinition());
-    }
-
-    /**
-     * 注册协议
-     *
-     * @param registry 注册
-     */
-    private void registerProtocol(BeanDefinitionRegistry registry) {
-        settingFactory = SettingFactory.getInstance();
-        if (!settingFactory.isEnable()) {
-            return;
-        }
-
-        if (settingFactory.isServer()) {
-            return;
-        }
-
-        ProtocolServer protocolServer = settingFactory.getProtocolServer();
-        registry.registerBeanDefinition("reportClientEndpointConfiguration",
-                BeanDefinitionBuilder.rootBeanDefinition(ProtocolServerFactoryBean.class).setDestroyMethodName("close")
-                        .setInitMethodName("start").addConstructorArgValue(protocolServer).getBeanDefinition());
-        try {
-            settingFactory.afterPropertiesSet();
-        } catch (Exception ignored) {
-        }
-    }
-
-    @Override
-    public void destroy() throws Exception {
-        SettingFactory.getInstance().close();
-    }
-
-    static class ProtocolServerFactoryBean implements FactoryBean<ProtocolServer>, AutoCloseable {
-        private final ProtocolServer endpointServer;
-
-        public ProtocolServerFactoryBean(ProtocolServer protocolServer) {
-            this.endpointServer = protocolServer;
-            ConfigureObjectContext objectContext = endpointServer.getObjectContext();
-            // 添加任务执行配置
-            objectContext.registerMapping(new ReportXxlJobConfiguration());
-            // 添加节点管理配置
-            objectContext.registerMapping(new NodeManagementConfiguration());
-            // 添加映射
-            endpointServer.addFilter(new MappingServletFilter(objectContext));
-        }
-
-        @Override
-        public void close() throws Exception {
-            endpointServer.close();
-        }
-
-        public void start() throws Exception {
-            endpointServer.start();
-        }
-
-        @Override
-        public ProtocolServer getObject() throws Exception {
-            return endpointServer;
-        }
-
-        @Override
-        public Class<?> getObjectType() {
-            return ProtocolServer.class;
-        }
+    @PreDestroy
+    public void destroy() {
+        DeviceMetricsReporter.getInstance().stop();
     }
 }
