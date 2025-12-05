@@ -1,5 +1,6 @@
 package com.chua.socketio.support.session;
 
+import com.chua.common.support.printer.TablePrinter;
 import com.chua.socket.support.SocketListener;
 import com.chua.socket.support.properties.SocketProperties;
 import com.chua.socket.support.session.SocketSession;
@@ -177,6 +178,8 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
             return;
         }
 
+        TablePrinter printer = new TablePrinter();
+        printer.addRow("客户端ID","地址", "端口", "上下文");
         // 启动每个 room 配置的服务
         for (SocketProperties.Room room : rooms) {
             if (!room.isEnable()) {
@@ -188,9 +191,10 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
             String host = room.getActualHost(properties.getHost());
             int port = room.getActualPort(serverProperties.getPort());
             String contextPath = room.getContextPath();
-
+            printer.addRow(clientId,host, port, contextPath);
             startServer(clientId, host, port, contextPath);
         }
+        log.info("\n{}", printer.draw());
     }
 
     /**
