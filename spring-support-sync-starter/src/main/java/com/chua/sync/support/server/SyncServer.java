@@ -1,8 +1,7 @@
 package com.chua.sync.support.server;
 
-import com.chua.common.support.protocol.ProtocolSetting;
-import com.chua.common.support.protocol.sync.*;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.sync.support.pojo.ClientInfo;
 import com.chua.sync.support.properties.SyncProperties;
 import com.chua.sync.support.spi.SyncMessageHandler;
 import lombok.Getter;
@@ -10,22 +9,21 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.Comparator;
+import java.util.concurrent.*;
+import java.util.function.BiConsumer;
 
 /**
- * 同步协议服务端
+ * 同步协议服务端管理器
  * <p>
- * 基于 SyncProtocol 实现长连接通信，支持：
- * <ul>
- *   <li>订阅配置的所有主题</li>
- *   <li>通过 SPI 加载处理器处理消息</li>
- *   <li>客户端连接管理</li>
- *   <li>心跳保活</li>
- * </ul>
+ * 支持多实例服务端，管理多个 SyncServerInstance
+ * </p>
  *
  * @author CH
  * @version 1.0.0
@@ -35,35 +33,47 @@ import java.util.concurrent.TimeUnit;
 public class SyncServer implements InitializingBean, DisposableBean {
 
     /**
-     * 系统主题
+     * 系统主题 (兼容旧版本)
      */
-    public static final String TOPIC_HEALTH = "sync/health";
-    public static final String TOPIC_RESPONSE = "sync/response";
-    public static final String TOPIC_CONNECT = "sync/connect";
-    public static final String TOPIC_DISCONNECT = "sync/disconnect";
+    public static final String TOPIC_HEALTH = SyncServerInstance.TOPIC_HEALTH;
+    public static final String TOPIC_RESPONSE = SyncServerInstance.TOPIC_RESPONSE;
+    public static final String TOPIC_CONNECT = SyncServerInstance.TOPIC_CONNECT;
+    public static final String TOPIC_DISCONNECT = SyncServerInstance.TOPIC_DISCONNECT;
 
+    @Getter
     private final SyncProperties syncProperties;
 
     /**
-     * 同步协议服务端
+     * 服务实例映射: name -> instance
      */
     @Getter
-    private SyncProtocolServer protocolServer;
+    private final Map<String, SyncServerInstance> instances = new ConcurrentHashMap<>();
 
     /**
-     * 定时同步调度器
+     * 所有客户端信息 (汇总所有实例)
+     */
+    @Getter
+    private final Map<String, ClientInfo> allClients = new ConcurrentHashMap<>();
+
+    /**
+     * 调度器
      */
     private ScheduledExecutorService scheduler;
 
     /**
-     * 消息处理器映射：topic -> handlers
+     * 消息处理器
      */
-    private final Map<String, List<SyncMessageHandler>> handlerMap = new ConcurrentHashMap<>();
+    private final List<SyncMessageHandler> handlers = new CopyOnWriteArrayList<>();
 
     /**
-     * 客户端会话映射
+     * 连接监听器
      */
-    private final Map<String, SyncSession> sessionMap = new ConcurrentHashMap<>();
+    private final List<BiConsumer<String, ClientInfo>> connectListeners = new CopyOnWriteArrayList<>();
+
+    /**
+     * 断开监听器
+     */
+    private final List<BiConsumer<String, ClientInfo>> disconnectListeners = new CopyOnWriteArrayList<>();
 
     public SyncServer(SyncProperties syncProperties) {
         this.syncProperties = syncProperties;
@@ -71,292 +81,312 @@ public class SyncServer implements InitializingBean, DisposableBean {
     }
 
     /**
-     * 加载所有消息处理器
+     * 加载消息处理器
      */
     private void loadHandlers() {
         ServiceProvider<SyncMessageHandler> serviceProvider = ServiceProvider.of(SyncMessageHandler.class);
-        List<SyncMessageHandler> allHandlers = new ArrayList<>(serviceProvider.collect());
-        allHandlers.sort(Comparator.comparingInt(SyncMessageHandler::getOrder));
-
-        // 按配置的 topics 映射处理器
-        Map<String, String> topics = syncProperties.getTopics();
-        for (Map.Entry<String, String> entry : topics.entrySet()) {
-            String topic = entry.getKey();
-            String handlerName = entry.getValue();
-
-            List<SyncMessageHandler> handlers = allHandlers.stream()
-                    .filter(h -> handlerName.equals(h.getName()) || h.supports(topic))
-                    .toList();
-
-            if (!handlers.isEmpty()) {
-                handlerMap.put(topic, handlers);
-                log.info("[Sync服务端] 主题 {} 加载了 {} 个处理器", topic, handlers.size());
-            }
-        }
-
-        log.info("[Sync服务端] 共加载 {} 个主题的处理器", handlerMap.size());
+        handlers.addAll(serviceProvider.collect());
+        handlers.sort(Comparator.comparingInt(SyncMessageHandler::getOrder));
+        log.info("[SyncServer] 加载了 {} 个消息处理器", handlers.size());
     }
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        if (!syncProperties.isEnable() || !"server".equalsIgnoreCase(syncProperties.getType())) {
-            log.info("[Sync服务端] 未启用");
+        if (!syncProperties.isServerEnabled()) {
+            log.info("[SyncServer] 服务端未启用");
             return;
         }
 
-        startServer();
+        startAllInstances();
         startScheduler();
     }
 
     /**
-     * 启动同步协议服务器
+     * 启动所有服务实例
      */
-    private void startServer() {
-        try {
-            // 构建协议配置
-            ProtocolSetting protocolSetting = ProtocolSetting.builder()
-                    .protocol(syncProperties.getProtocol())
-                    .host(syncProperties.getServerHost())
-                    .port(syncProperties.getServerPort())
-                    .heartbeat(syncProperties.isHeartbeat())
-                    .heartbeatInterval(syncProperties.getHeartbeatInterval())
-                    .connectTimeoutMillis(syncProperties.getConnectTimeout())
-                    .build();
+    private void startAllInstances() {
+        List<SyncProperties.ServerInstance> instanceConfigs = syncProperties.getServer().getEffectiveInstances();
 
-            // 创建同步协议实例
-            SyncProtocol protocol = SyncProtocol.create(syncProperties.getProtocol(), protocolSetting);
+        for (SyncProperties.ServerInstance config : instanceConfigs) {
+            if (!config.isEnable()) {
+                log.info("[SyncServer] 实例 {} 未启用，跳过", config.getName());
+                continue;
+            }
 
-            // 创建服务端
-            protocolServer = protocol.createServer(protocolSetting);
+            SyncServerInstance instance = new SyncServerInstance(config, syncProperties);
 
-            // 添加连接监听器
-            protocolServer.addConnectionListener(new ServerConnectionListener());
+            // 注册消息处理器
+            registerHandlersToInstance(instance, config);
 
-            // 添加消息监听器
-            protocolServer.addMessageListener(new ServerMessageListener());
+            // 添加客户端监听器
+            instance.addConnectListener((sessionId, clientInfo) -> {
+                allClients.put(sessionId, clientInfo);
+                notifyConnectListeners(sessionId, clientInfo);
+            });
+            instance.addDisconnectListener((sessionId, clientInfo) -> {
+                allClients.remove(sessionId);
+                notifyDisconnectListeners(sessionId, clientInfo);
+            });
 
-            // 启动服务器
-            protocolServer.start();
-
-            log.info("[Sync服务端] 启动成功，协议: {}，地址: {}:{}",
-                    syncProperties.getProtocol(), syncProperties.getServerHost(), syncProperties.getServerPort());
-        } catch (Exception e) {
-            log.error("[Sync服务端] 启动失败", e);
+            // 启动实例
+            instance.start();
+            instances.put(config.getName(), instance);
         }
+
+        log.info("[SyncServer] 启动了 {} 个服务实例", instances.size());
     }
 
     /**
-     * 连接监听器
+     * 注册处理器到实例
      */
-    private class ServerConnectionListener implements SyncConnectionListener {
+    private void registerHandlersToInstance(SyncServerInstance instance, SyncProperties.ServerInstance config) {
+        // 合并全局配置和实例配置的 topics
+        Map<String, String> topics = new HashMap<>(syncProperties.getTopics());
+        topics.putAll(config.getTopics());
 
-        @Override
-        public void onConnect(SyncSession session) {
-            sessionMap.put(session.getSessionId(), session);
-            log.info("[Sync服务端] 客户端连接: sessionId={}", session.getSessionId());
+        for (Map.Entry<String, String> entry : topics.entrySet()) {
+            String topic = entry.getKey();
+            String handlerName = entry.getValue();
 
-            // 广播连接事件给其他在线客户端
-            broadcastToOthers(session.getSessionId(), TOPIC_CONNECT, Map.of(
-                    "sessionId", session.getSessionId(),
-                    "event", "connect",
-                    "onlineCount", sessionMap.size(),
-                    "timestamp", System.currentTimeMillis()
-            ));
-        }
-
-        @Override
-        public void onDisconnect(SyncSession session) {
-            sessionMap.remove(session.getSessionId());
-            log.info("[Sync服务端] 客户端断开: sessionId={}", session.getSessionId());
-
-            // 广播断开事件给其他在线客户端
-            broadcastToOthers(session.getSessionId(), TOPIC_DISCONNECT, Map.of(
-                    "sessionId", session.getSessionId(),
-                    "event", "disconnect",
-                    "onlineCount", sessionMap.size(),
-                    "timestamp", System.currentTimeMillis()
-            ));
-        }
-    }
-
-    /**
-     * 消息监听器
-     */
-    private class ServerMessageListener implements SyncMessageListener {
-
-        @Override
-        @SuppressWarnings("unchecked")
-        public void onMessage(SyncSession session, SyncMessage message) {
-            String topic = message.getTopic();
-            Object data = message.getData();
-            log.debug("[Sync服务端] 收到消息: sessionId={}, topic={}", session.getSessionId(), topic);
-
-            // 处理系统主题
-            if (TOPIC_HEALTH.equals(topic)) {
-                handleHealthCheck(session);
-                return;
-            }
-
-            // 获取主题对应的处理器
-            List<SyncMessageHandler> handlers = handlerMap.get(topic);
-            if (handlers == null || handlers.isEmpty()) {
-                log.warn("[Sync服务端] 未找到主题 {} 的处理器", topic);
-                return;
-            }
-
-            // 循环执行所有处理器
-            Map<String, Object> dataMap = data instanceof Map ? (Map<String, Object>) data : Map.of("data", data);
             for (SyncMessageHandler handler : handlers) {
-                try {
-                    Object result = handler.handle(topic, session.getSessionId(), dataMap);
-                    if (result != null) {
-                        // 发送响应
-                        protocolServer.send(session.getSessionId(), TOPIC_RESPONSE, Map.of(
-                                "topic", topic,
-                                "handler", handler.getName(),
-                                "code", 200,
-                                "data", result
-                        ));
-                    }
-                    log.debug("[Sync服务端] 处理器 {} 处理主题 {} 完成", handler.getName(), topic);
-                } catch (Exception e) {
-                    log.error("[Sync服务端] 处理器 {} 处理主题 {} 失败", handler.getName(), topic, e);
-                    protocolServer.send(session.getSessionId(), TOPIC_RESPONSE, Map.of(
-                            "topic", topic,
-                            "handler", handler.getName(),
-                            "code", 500,
-                            "message", e.getMessage()
-                    ));
+                if (handlerName.equals(handler.getName()) || handler.supports(topic)) {
+                    instance.registerHandler(topic, handler);
                 }
             }
         }
     }
 
     /**
-     * 处理健康检查
+     * 动态注册消息处理器到所有实例
      */
-    private void handleHealthCheck(SyncSession session) {
-        protocolServer.send(session.getSessionId(), TOPIC_HEALTH, Map.of(
-                "status", "UP",
-                "service", "sync-server",
-                "connections", protocolServer.getConnectionCount(),
-                "timestamp", System.currentTimeMillis()
-        ));
+    public void registerHandler(String topic, SyncMessageHandler handler) {
+        handlers.add(handler);
+        for (SyncServerInstance instance : instances.values()) {
+            instance.registerHandler(topic, handler);
+        }
     }
 
     /**
-     * 向指定会话发送消息
-     *
-     * @param sessionId 会话ID
-     * @param topic     主题
-     * @param data      数据
+     * 添加连接监听器
+     */
+    public void addConnectListener(BiConsumer<String, ClientInfo> listener) {
+        connectListeners.add(listener);
+    }
+
+    /**
+     * 添加断开监听器
+     */
+    public void addDisconnectListener(BiConsumer<String, ClientInfo> listener) {
+        disconnectListeners.add(listener);
+    }
+
+    private void notifyConnectListeners(String sessionId, ClientInfo clientInfo) {
+        for (BiConsumer<String, ClientInfo> listener : connectListeners) {
+            try {
+                listener.accept(sessionId, clientInfo);
+            } catch (Exception e) {
+                log.error("[SyncServer] 连接监听器执行失败", e);
+            }
+        }
+    }
+
+    private void notifyDisconnectListeners(String sessionId, ClientInfo clientInfo) {
+        for (BiConsumer<String, ClientInfo> listener : disconnectListeners) {
+            try {
+                listener.accept(sessionId, clientInfo);
+            } catch (Exception e) {
+                log.error("[SyncServer] 断开监听器执行失败", e);
+            }
+        }
+    }
+
+    /**
+     * 向指定会话发送消息 (自动查找所属实例)
      */
     public void send(String sessionId, String topic, Object data) {
-        if (protocolServer == null) {
-            log.warn("[Sync服务端] 未启动，无法发送消息");
-            return;
+        for (SyncServerInstance instance : instances.values()) {
+            if (instance.getSession(sessionId) != null) {
+                instance.send(sessionId, topic, data);
+                return;
+            }
         }
-        protocolServer.send(sessionId, topic, data);
+        log.warn("[SyncServer] 未找到会话: {}", sessionId);
     }
 
     /**
-     * 广播消息到所有客户端
-     *
-     * @param topic 主题
-     * @param data  数据
+     * 广播消息到所有实例的所有客户端
      */
     public void broadcast(String topic, Object data) {
-        if (protocolServer == null) {
-            log.warn("[Sync服务端] 未启动，无法广播消息");
-            return;
+        for (SyncServerInstance instance : instances.values()) {
+            instance.broadcast(topic, data);
         }
-        protocolServer.broadcast(topic, Map.of(
-                "data", data,
-                "timestamp", System.currentTimeMillis()
-        ));
-        log.info("[Sync服务端] 已广播消息到 {} 个客户端", protocolServer.getConnectionCount());
     }
 
     /**
-     * 广播消息到除指定会话外的其他客户端
-     *
-     * @param excludeSessionId 排除的会话ID
-     * @param topic            主题
-     * @param data             数据
+     * 广播消息到指定实例
      */
-    public void broadcastToOthers(String excludeSessionId, String topic, Object data) {
-        if (protocolServer == null) {
-            log.warn("[Sync服务端] 未启动，无法广播消息");
-            return;
+    public void broadcast(String instanceName, String topic, Object data) {
+        SyncServerInstance instance = instances.get(instanceName);
+        if (instance != null) {
+            instance.broadcast(topic, data);
         }
-        
-        sessionMap.forEach((sessionId, session) -> {
-            if (!sessionId.equals(excludeSessionId)) {
-                protocolServer.send(sessionId, topic, data);
-            }
-        });
-        log.debug("[Sync服务端] 已广播 {} 消息到其他 {} 个客户端", topic, sessionMap.size() - 1);
     }
 
     /**
-     * 启动定时同步调度器
+     * 获取指定实例
+     */
+    public SyncServerInstance getInstance(String name) {
+        return instances.get(name);
+    }
+
+    /**
+     * 获取默认实例
+     */
+    public SyncServerInstance getDefaultInstance() {
+        return instances.get("default");
+    }
+
+    /**
+     * 获取总连接数
+     */
+    public int getConnectionCount() {
+        return instances.values().stream().mapToInt(SyncServerInstance::getConnectionCount).sum();
+    }
+
+    /**
+     * 根据地址或应用名查找客户端ID
+     *
+     * @param host    IP地址 (可为null)
+     * @param port    端口 (<=0 忽略)
+     * @param appName 应用名 (可为null)
+     * @return 客户端ID，未找到返回 null
+     */
+    public String findClientId(String host, int port, String appName) {
+        for (Map.Entry<String, ClientInfo> entry : allClients.entrySet()) {
+            ClientInfo clientInfo = entry.getValue();
+            
+            // 通过 IP 和端口匹配
+            if (host != null && host.equals(clientInfo.getIpAddress())) {
+                if (port <= 0 || port == clientInfo.getPort()) {
+                    return entry.getKey();
+                }
+            }
+            
+            // 通过应用名匹配
+            if (appName != null && appName.equals(clientInfo.getAppName())) {
+                return entry.getKey();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 根据应用名查找所有客户端ID
+     *
+     * @param appName 应用名
+     * @return 客户端ID列表
+     */
+    public List<String> findClientIdsByAppName(String appName) {
+        List<String> result = new ArrayList<>();
+        for (Map.Entry<String, ClientInfo> entry : allClients.entrySet()) {
+            if (appName.equals(entry.getValue().getAppName())) {
+                result.add(entry.getKey());
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 根据 IP 查找所有客户端ID
+     *
+     * @param host IP地址
+     * @return 客户端ID列表
+     */
+    public List<String> findClientIdsByHost(String host) {
+        List<String> result = new ArrayList<>();
+        for (Map.Entry<String, ClientInfo> entry : allClients.entrySet()) {
+            if (host.equals(entry.getValue().getIpAddress())) {
+                result.add(entry.getKey());
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 获取所有会话ID
+     */
+    public Set<String> getConnectedSessions() {
+        Set<String> all = new HashSet<>();
+        for (SyncServerInstance instance : instances.values()) {
+            all.addAll(instance.getSessionIds());
+        }
+        return all;
+    }
+
+    /**
+     * 启动调度器
      */
     private void startScheduler() {
-        SyncProperties.ScheduleSync scheduleSync = syncProperties.getScheduleSync();
-        if (!scheduleSync.isEnable()) {
-            log.info("[Sync服务端] 定时同步未启用");
+        SyncProperties.ScheduleConfig schedule = syncProperties.getServer().getSchedule();
+        if (!schedule.isEnable()) {
             return;
         }
 
         scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread thread = new Thread(r, "sync-server-scheduler");
-            thread.setDaemon(true);
-            return thread;
+            Thread t = new Thread(r, "sync-server-scheduler");
+            t.setDaemon(true);
+            return t;
         });
 
         scheduler.scheduleAtFixedRate(
-                this::scheduledSync,
-                scheduleSync.getInitialDelay(),
-                scheduleSync.getInterval(),
+                this::scheduledTask,
+                schedule.getInitialDelay(),
+                schedule.getInterval(),
                 TimeUnit.SECONDS);
 
-        log.info("[Sync服务端] 定时同步调度器启动成功，间隔: {}秒", scheduleSync.getInterval());
+        log.info("[SyncServer] 调度器启动，间隔: {}秒", schedule.getInterval());
     }
 
     /**
-     * 定时同步任务
+     * 定时任务
      */
-    private void scheduledSync() {
-        // 子类可重写此方法实现定时同步逻辑
-        log.debug("[Sync服务端] 执行定时同步任务");
-    }
-
-    /**
-     * 获取当前连接数
-     */
-    public int getConnectionCount() {
-        return protocolServer != null ? protocolServer.getConnectionCount() : 0;
-    }
-
-    /**
-     * 获取所有已连接的会话ID
-     */
-    public Set<String> getConnectedSessions() {
-        return new HashSet<>(sessionMap.keySet());
+    protected void scheduledTask() {
+        log.debug("[SyncServer] 执行定时任务, 当前连接数: {}", getConnectionCount());
     }
 
     @Override
     public void destroy() throws Exception {
         if (scheduler != null) {
             scheduler.shutdown();
-            log.info("[Sync服务端] 定时同步调度器已关闭");
         }
 
-        if (protocolServer != null) {
-            protocolServer.stop();
-            log.info("[Sync服务端] 已关闭");
+        for (SyncServerInstance instance : instances.values()) {
+            instance.stop();
         }
+        instances.clear();
+        allClients.clear();
 
-        sessionMap.clear();
+        log.info("[SyncServer] 已停止所有服务实例");
+    }
+
+    // ==================== 兼容旧版本方法 ====================
+
+    /**
+     * @deprecated 使用 getDefaultInstance().getProtocolServer()
+     */
+    @Deprecated
+    public Object getProtocolServer() {
+        SyncServerInstance defaultInstance = getDefaultInstance();
+        return defaultInstance != null ? defaultInstance.getProtocolServer() : null;
+    }
+
+    /**
+     * @deprecated 使用 broadcast(excludeSessionId, topic, data) 并排除
+     */
+    @Deprecated
+    public void broadcastToOthers(String excludeSessionId, String topic, Object data) {
+        for (SyncServerInstance instance : instances.values()) {
+            instance.broadcastToOthers(excludeSessionId, topic, data);
+        }
     }
 }
