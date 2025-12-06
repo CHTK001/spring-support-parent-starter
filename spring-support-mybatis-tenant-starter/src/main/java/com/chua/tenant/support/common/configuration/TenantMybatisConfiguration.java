@@ -22,26 +22,43 @@ import org.springframework.context.annotation.Configuration;
 @Slf4j
 @Configuration
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = TenantProperties.PRE, name = "enable", havingValue = "true")
 public class TenantMybatisConfiguration {
 
     private final TenantProperties tenantProperties;
 
     /**
-     * 配置 MyBatis-Plus 租户拦截器
+     * 配置 MyBatis-Plus 租户拦截器（客户端模式）
      *
      * @return MybatisPlusInterceptor
      */
     @Bean
-    public MybatisPlusInterceptor tenantMybatisPlusInterceptor() {
+    @ConditionalOnProperty(prefix = TenantProperties.PRE + ".client", name = "enable", havingValue = "true")
+    public MybatisPlusInterceptor tenantClientMybatisPlusInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
 
-        // 添加租户拦截器
         TenantLineInnerInterceptor tenantInterceptor = new TenantLineInnerInterceptor();
-        tenantInterceptor.setTenantLineHandler(new TenantLineHandlerImpl(tenantProperties));
+        tenantInterceptor.setTenantLineHandler(new TenantLineHandlerImpl(tenantProperties, true));
         interceptor.addInnerInterceptor(tenantInterceptor);
 
-        log.info("[租户配置] 租户拦截器已启用，租户字段: {}", tenantProperties.getTenantIdColumn());
+        log.info("[租户配置] 客户端租户拦截器已启用，租户字段: {}", tenantProperties.getClient().getTenantIdColumn());
+        return interceptor;
+    }
+
+    /**
+     * 配置 MyBatis-Plus 租户拦截器（服务端模式）
+     *
+     * @return MybatisPlusInterceptor
+     */
+    @Bean
+    @ConditionalOnProperty(prefix = TenantProperties.PRE + ".server", name = "enable", havingValue = "true")
+    public MybatisPlusInterceptor tenantServerMybatisPlusInterceptor() {
+        MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
+
+        TenantLineInnerInterceptor tenantInterceptor = new TenantLineInnerInterceptor();
+        tenantInterceptor.setTenantLineHandler(new TenantLineHandlerImpl(tenantProperties, false));
+        interceptor.addInnerInterceptor(tenantInterceptor);
+
+        log.info("[租户配置] 服务端租户拦截器已启用，租户字段: {}", tenantProperties.getServer().getTenantIdColumn());
         return interceptor;
     }
 }

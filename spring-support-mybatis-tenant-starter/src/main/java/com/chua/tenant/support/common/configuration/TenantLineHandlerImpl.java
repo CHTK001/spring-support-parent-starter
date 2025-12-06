@@ -15,14 +15,26 @@ import net.sf.jsqlparser.expression.LongValue;
 public class TenantLineHandlerImpl implements TenantLineHandler {
 
     private final TenantProperties tenantProperties;
+    
+    /**
+     * 是否为客户端模式
+     */
+    private final boolean clientMode;
 
     /**
      * 当前租户ID（线程本地变量）
      */
     private static final ThreadLocal<Long> CURRENT_TENANT_ID = new ThreadLocal<>();
 
-    public TenantLineHandlerImpl(TenantProperties tenantProperties) {
+    /**
+     * 构造函数
+     *
+     * @param tenantProperties 租户配置
+     * @param clientMode       是否为客户端模式
+     */
+    public TenantLineHandlerImpl(TenantProperties tenantProperties, boolean clientMode) {
         this.tenantProperties = tenantProperties;
+        this.clientMode = clientMode;
     }
 
     /**
@@ -53,8 +65,8 @@ public class TenantLineHandlerImpl implements TenantLineHandler {
     @Override
     public Expression getTenantId() {
         Long tenantId = CURRENT_TENANT_ID.get();
-        if (tenantId == null) {
-            // 尝试从配置获取默认租户ID（客户端配置）
+        if (tenantId == null && clientMode) {
+            // 客户端模式从配置获取默认租户ID
             String defaultTenantId = tenantProperties.getClient().getTenantId();
             if (defaultTenantId != null && !defaultTenantId.isEmpty()) {
                 tenantId = Long.parseLong(defaultTenantId);
@@ -65,11 +77,15 @@ public class TenantLineHandlerImpl implements TenantLineHandler {
 
     @Override
     public String getTenantIdColumn() {
-        return tenantProperties.getTenantIdColumn();
+        return clientMode 
+                ? tenantProperties.getClient().getTenantIdColumn()
+                : tenantProperties.getServer().getTenantIdColumn();
     }
 
     @Override
     public boolean ignoreTable(String tableName) {
-        return tenantProperties.getIgnoreTable().contains(tableName);
+        return clientMode 
+                ? tenantProperties.getClient().getIgnoreTable().contains(tableName)
+                : tenantProperties.getServer().getIgnoreTable().contains(tableName);
     }
 }
