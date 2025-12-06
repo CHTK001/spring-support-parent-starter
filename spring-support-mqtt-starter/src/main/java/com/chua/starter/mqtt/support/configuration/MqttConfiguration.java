@@ -1,7 +1,7 @@
 package com.chua.starter.mqtt.support.configuration;
 
-import com.chua.common.support.log.Log;
 import com.chua.common.support.utils.StringUtils;
+import lombok.extern.slf4j.Slf4j;
 import com.chua.starter.mqtt.support.annotation.Mqtt;
 import com.chua.starter.mqtt.support.properties.MqttProperties;
 import com.chua.starter.mqtt.support.template.MqttTemplate;
@@ -24,13 +24,12 @@ import org.springframework.util.ReflectionUtils;
  *
  * @author CH
  */
+@Slf4j
 @EnableConfigurationProperties(MqttProperties.class)
 public class MqttConfiguration implements ApplicationContextAware, SmartInstantiationAwareBeanPostProcessor {
 
     @Autowired
     private MqttProperties mqttProperties;
-
-    private static final Log log = Log.getLogger(MqttConfiguration.class);
 
     private MqttTemplate mqttTemplate;
 

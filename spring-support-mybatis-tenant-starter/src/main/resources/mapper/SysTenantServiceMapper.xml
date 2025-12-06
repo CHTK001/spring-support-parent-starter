@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.tenant.support.server.mapper.SysTenantServiceMapper">
+
+    <!--
+        根据租户ID获取菜单ID列表
+        @author CH
+        @since 2024/12/06
+    -->
+    <select id="getMenuByTenantId" resultType="java.lang.Integer">
+        SELECT sm.sys_menu_id 
+        FROM sys_tenant_service sts 
+        JOIN sys_service_menu ssm ON sts.sys_service_id = ssm.sys_service_id 
+        JOIN sys_menu sm ON ssm.sys_menu_id = sm.sys_menu_id 
+        WHERE sts.sys_tenant_id = #{tenantId}
+    </select>
+
+</mapper>
