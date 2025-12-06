@@ -22,26 +22,6 @@ public class TenantProperties {
     public static final String PRE = "plugin.mybatis-plus.tenant";
 
     /**
-     * 是否启用租户功能
-     */
-    private boolean enable = false;
-
-    /**
-     * 运行模式: server-服务端, client-客户端
-     */
-    private String mode = "client";
-
-    /**
-     * 租户ID字段名
-     */
-    private String tenantIdColumn = "sys_tenant_id";
-
-    /**
-     * 忽略的表（不添加租户条件）
-     */
-    private Set<String> ignoreTable = new HashSet<>();
-
-    /**
      * 服务端配置
      */
     private ServerConfig server = new ServerConfig();
@@ -54,19 +34,19 @@ public class TenantProperties {
     /**
      * 判断是否为服务端模式
      *
-     * @return 是否为服务端模式
+     * @return 服务端启用时返回 true
      */
     public boolean isServerMode() {
-        return "server".equalsIgnoreCase(mode);
+        return server.isEnable();
     }
 
     /**
      * 判断是否为客户端模式
      *
-     * @return 是否为客户端模式
+     * @return 客户端启用时返回 true
      */
     public boolean isClientMode() {
-        return "client".equalsIgnoreCase(mode);
+        return client.isEnable();
     }
 
     /**
@@ -76,9 +56,24 @@ public class TenantProperties {
     public static class ServerConfig {
 
         /**
+         * 是否启用服务端模式
+         */
+        private boolean enable = false;
+
+        /**
          * 是否启用同步下发
          */
         private boolean syncEnable = false;
+
+        /**
+         * 租户ID字段名
+         */
+        private String tenantIdColumn = "sys_tenant_id";
+
+        /**
+         * 忽略的表（不添加租户条件）
+         */
+        private Set<String> ignoreTable = new HashSet<>();
 
         /**
          * 通信协议: rsocket, websocket
@@ -103,6 +98,11 @@ public class TenantProperties {
     public static class ClientConfig {
 
         /**
+         * 是否启用客户端模式
+         */
+        private boolean enable = false;
+
+        /**
          * 是否启用同步接收
          */
         private boolean syncEnable = false;
@@ -111,6 +111,16 @@ public class TenantProperties {
          * 当前租户ID
          */
         private String tenantId;
+
+        /**
+         * 租户ID字段名
+         */
+        private String tenantIdColumn = "sys_tenant_id";
+
+        /**
+         * 忽略的表（不添加租户条件）
+         */
+        private Set<String> ignoreTable = new HashSet<>();
 
         /**
          * 是否自动添加租户字段到数据库表
