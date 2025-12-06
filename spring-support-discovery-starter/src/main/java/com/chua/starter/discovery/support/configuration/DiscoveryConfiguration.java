@@ -168,7 +168,7 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
         }
 
 
-        public void start() throws IOException {
+        public void start() throws Exception {
             serviceDiscovery.start();
             for (Discovery discovery : discoveryList) {
                 serviceDiscovery.registerService(discovery.getUriSpec(), discovery);

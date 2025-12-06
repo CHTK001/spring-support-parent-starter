@@ -24,6 +24,13 @@
             <artifactId>spring-support-mybatis-starter</artifactId>
         </dependency>
 
+        <!-- Swagger API文档 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-swagger-starter</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- 同步协议模块 -->
         <dependency>
             <groupId>com.chua</groupId>

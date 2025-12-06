@@ -51,7 +51,7 @@ public class TenantLineHandlerImpl implements TenantLineHandler {
      *
      * @return 租户ID
      */
-    public static Long getTenantId() {
+    public static Long getCurrentTenantIdValue() {
         return CURRENT_TENANT_ID.get();
     }
 
