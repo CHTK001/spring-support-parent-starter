@@ -1,11 +1,12 @@
 package com.chua.starter.datasource.support;
 
+import com.chua.common.support.objects.aop.JoinPoint;
 import com.chua.starter.common.support.annotations.DS;
 import com.chua.starter.datasource.datasource.MultiDataSource;
 import com.chua.starter.datasource.properties.MultiDataSourceSettingProperties;
 import lombok.Setter;
 import org.aopalliance.intercept.MethodInvocation;
-import org.aspectj.lang.JoinPoint;
+
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.annotation.MergedAnnotations;

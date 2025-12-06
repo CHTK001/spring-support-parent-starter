@@ -3,7 +3,6 @@ package com.chua.report.client.arthas.starter.configuration;
 import com.chua.common.support.protocol.server.ProtocolServer;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.report.client.arthas.starter.properties.ArthasClientProperties;
-import com.chua.report.client.starter.setting.SettingFactory;
 import com.chua.starter.common.support.project.SpringProjects;
 import com.chua.starter.common.support.utils.EnvironmentUtils;
 import com.taobao.arthas.agent.attach.ArthasAgent;
@@ -34,9 +33,6 @@ public class ArthasConfigReporter implements InitializingBean {
     @Override
     public void afterPropertiesSet() {
         if (!arthasClientProperties.isEnable()) {
-            return;
-        }
-        if (!SettingFactory.getInstance().isEnable()) {
             return;
         }
         String tunnelAddress = arthasClientProperties.getTunnelAddress();

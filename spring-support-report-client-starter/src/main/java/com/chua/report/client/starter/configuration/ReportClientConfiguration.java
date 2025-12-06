@@ -66,7 +66,6 @@ public class ReportClientConfiguration {
 
         // 注册 Job 处理器
         JobDispatchHandler jobHandler = new JobDispatchHandler();
-        jobHandler.setSyncClient(syncClient);
         syncClient.registerHandler(MonitorTopics.JOB_DISPATCH, jobHandler);
         syncClient.registerHandler(MonitorTopics.JOB_CANCEL, jobHandler);
 

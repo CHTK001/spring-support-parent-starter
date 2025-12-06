@@ -1,6 +1,6 @@
 package com.chua.report.client.starter.sync.handler;
 
-import com.chua.common.support.spi.Spi;
+import com.chua.common.support.annotations.Spi;
 import com.chua.report.client.starter.sync.MonitorTopics;
 import com.chua.sync.support.spi.SyncMessageHandler;
 import lombok.extern.slf4j.Slf4j;
