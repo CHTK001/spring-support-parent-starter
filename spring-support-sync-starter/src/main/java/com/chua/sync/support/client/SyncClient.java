@@ -593,6 +593,51 @@ public class SyncClient implements InitializingBean, DisposableBean {
     }
 
     /**
+     * 处理响应消息
+     * <p>
+     * 用于同步请求的响应处理，根据 requestId 匹配等待中的请求
+     * </p>
+     *
+     * @param data 响应数据
+     */
+    @SuppressWarnings("unchecked")
+    private void handleResponse(Object data) {
+        try {
+            if (!(data instanceof Map)) {
+                log.warn("[Sync客户端] 响应数据格式错误: {}", data);
+                return;
+            }
+
+            Map<String, Object> responseData = (Map<String, Object>) data;
+            String requestId = (String) responseData.get("requestId");
+            if (requestId == null) {
+                log.debug("[Sync客户端] 响应无 requestId，忽略");
+                return;
+            }
+
+            CompletableFuture<SyncResponse> future = pendingRequests.get(requestId);
+            if (future == null) {
+                log.debug("[Sync客户端] 未找到等待的请求: requestId={}", requestId);
+                return;
+            }
+
+            // 构建响应对象
+            boolean success = Boolean.TRUE.equals(responseData.get("success"));
+            String message = (String) responseData.get("message");
+            Object result = responseData.get("data");
+
+            SyncResponse response = success
+                    ? SyncResponse.success(requestId, getClientId(), result)
+                    : SyncResponse.error(requestId, getClientId(), message);
+
+            future.complete(response);
+            log.debug("[Sync客户端] 响应已处理: requestId={}, success={}", requestId, success);
+        } catch (Exception e) {
+            log.error("[Sync客户端] 处理响应失败", e);
+        }
+    }
+
+    /**
      * 处理连接/断开事件
      * <p>
      * 会查找配置中 topics 映射的 "sync/connect" 或 "sync/disconnect" 处理器执行

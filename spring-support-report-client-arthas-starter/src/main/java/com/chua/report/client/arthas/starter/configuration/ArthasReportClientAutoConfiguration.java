@@ -3,7 +3,6 @@ package com.chua.report.client.arthas.starter.configuration;
 import com.chua.common.support.protocol.server.ProtocolServer;
 import com.chua.report.client.arthas.starter.environment.ArthasReportDiscoveryEnvironment;
 import com.chua.report.client.arthas.starter.properties.ArthasClientProperties;
-import com.chua.report.client.starter.setting.SettingFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -19,7 +18,6 @@ import org.springframework.core.env.Environment;
  */
 @Configuration
 @EnableConfigurationProperties({ArthasClientProperties.class})
-@ConditionalOnClass(SettingFactory.class)
 @ConditionalOnProperty(prefix = ArthasClientProperties.PREFIX, name = "enable", havingValue = "true", matchIfMissing = true)
 public class ArthasReportClientAutoConfiguration {
 
