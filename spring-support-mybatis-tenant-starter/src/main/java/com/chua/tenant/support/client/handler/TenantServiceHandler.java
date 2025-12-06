@@ -3,7 +3,7 @@ package com.chua.tenant.support.client.handler;
 import java.util.List;
 
 /**
- * 租户服务处理器接�?
+ * 租户服务处理器接口
  * <p>
  * 客户端实现此接口以处理从服务端同步的服务/菜单数据
  * </p>
@@ -15,7 +15,7 @@ import java.util.List;
 public interface TenantServiceHandler {
 
     /**
-     * 保存或更新租户服�?
+     * 保存或更新租户服务
      *
      * @param sysTenantId 租户ID
      * @param menuIds     菜单ID列表

@@ -17,7 +17,7 @@ import lombok.Data;
 import java.time.LocalDate;
 
 /**
- * 租户 - 服务关联�?
+ * 租户 - 服务关联表
  *
  * @author CH
  * @version 1.0.0
