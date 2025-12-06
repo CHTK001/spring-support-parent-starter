@@ -1,3 +1,0 @@
-com.chua.starter.circuitbreaker.support.configuration.CircuitBreakerConfiguration
-com.chua.starter.circuitbreaker.support.configuration.CircuitBreakerMetricsConfiguration
-com.chua.starter.circuitbreaker.support.configuration.CircuitBreakerHealthConfiguration
