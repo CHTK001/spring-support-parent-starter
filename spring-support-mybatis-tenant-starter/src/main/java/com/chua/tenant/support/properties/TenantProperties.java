@@ -29,7 +29,7 @@ public class TenantProperties {
 
     /**
      * 是否自动添加租户字段
-     * 警告：此功能会自动修改数据库表结构，生产环境请谨慎使用
+     * 警告：此功能会自动修改数据库表结构，生产环境请谨慎使�?
      */
     private boolean autoAddColumn = false;
 
@@ -40,14 +40,14 @@ public class TenantProperties {
     private Set<String> ignoreTable = new HashSet<>();
 
     /**
-     * 租户ID字段名
+     * 租户ID字段�?
      */
     private String tenantId = "sys_tenant_id";
 
     /**
      * 租户同步配置
      * <p>
-     * 注意：同步协议的基础配置（如 host、port、protocol 等）请使用 plugin.sync.* 配置
+     * 注意：同步协议的基础配置（如 host、port、protocol 等）请使�?plugin.sync.* 配置
      * 此处仅保留租户特有的配置
      * </p>
      *
@@ -56,7 +56,7 @@ public class TenantProperties {
     private TenantSync tenantSync = new TenantSync();
 
     /**
-     * 租户同步配置类
+     * 租户同步配置�?
      */
     @Data
     public static class TenantSync {
@@ -65,13 +65,13 @@ public class TenantProperties {
          * 是否启用租户同步
          * <p>
          * 启用后会注册 TenantSyncMessageHandler 处理租户相关主题
-         * 同时需要启用 plugin.sync.enable=true
+         * 同时需要启�?plugin.sync.enable=true
          * </p>
          */
         private boolean enable = false;
 
         /**
-         * 默认租户ID（客户端使用）
+         * 默认租户ID（客户端使用�?
          */
         private String defaultTenantId;
     }

@@ -10,7 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.*;
 
 /**
- * 租户同步消息处理器
+ * 租户同步消息处理�?
  * <p>
  * 实现 SyncMessageHandler 接口，处理租户相关的同步消息
  * </p>
@@ -41,7 +41,7 @@ public class TenantSyncMessageHandler implements SyncMessageHandler {
     private List<TenantMetadataConsumer> consumers;
 
     /**
-     * 响应回调（由外部设置）
+     * 响应回调（由外部设置�?
      */
     private ResponseCallback responseCallback;
 
@@ -51,23 +51,23 @@ public class TenantSyncMessageHandler implements SyncMessageHandler {
     }
 
     /**
-     * 加载所有元数据提供者
+     * 加载所有元数据提供�?
      */
     private void loadProviders() {
         ServiceProvider<TenantMetadataProvider> serviceProvider = ServiceProvider.of(TenantMetadataProvider.class);
         providers = new ArrayList<>(serviceProvider.collect());
         providers.sort(Comparator.comparingInt(TenantMetadataProvider::getOrder));
-        log.info("[租户同步] 加载了 {} 个元数据提供者", providers.size());
+        log.info("[租户同步] 加载�?{} 个元数据提供�?, providers.size());
     }
 
     /**
-     * 加载所有元数据消费者
+     * 加载所有元数据消费�?
      */
     private void loadConsumers() {
         ServiceProvider<TenantMetadataConsumer> serviceProvider = ServiceProvider.of(TenantMetadataConsumer.class);
         consumers = new ArrayList<>(serviceProvider.collect());
         consumers.sort(Comparator.comparingInt(TenantMetadataConsumer::getOrder));
-        log.info("[租户同步] 加载了 {} 个元数据消费者", consumers.size());
+        log.info("[租户同步] 加载�?{} 个元数据消费�?, consumers.size());
     }
 
     @Override
@@ -102,7 +102,7 @@ public class TenantSyncMessageHandler implements SyncMessageHandler {
     }
 
     /**
-     * 处理同步请求（服务端）
+     * 处理同步请求（服务端�?
      */
     @SuppressWarnings("unchecked")
     private Object handleSyncRequest(String sessionId, Map<String, Object> data) {
@@ -116,7 +116,7 @@ public class TenantSyncMessageHandler implements SyncMessageHandler {
         }
 
         try {
-            // 收集元数据
+            // 收集元数�?
             Map<String, Object> metadata = collectMetadata(tenantId);
             return Map.of(
                     "code", 200,
@@ -134,7 +134,7 @@ public class TenantSyncMessageHandler implements SyncMessageHandler {
     }
 
     /**
-     * 处理同步响应（客户端）
+     * 处理同步响应（客户端�?
      */
     @SuppressWarnings("unchecked")
     private Object handleSyncResponse(Map<String, Object> data) {
@@ -146,7 +146,7 @@ public class TenantSyncMessageHandler implements SyncMessageHandler {
 
             if (tenantId != null && metadata != null && !metadata.isEmpty()) {
                 processMetadata(tenantId, metadata);
-                log.info("[租户同步] 租户 {} 元数据同步成功，共 {} 项", tenantId, metadata.size());
+                log.info("[租户同步] 租户 {} 元数据同步成功，�?{} �?, tenantId, metadata.size());
             }
         } else {
             log.warn("[租户同步] 同步失败: {}", data.get("message"));
@@ -164,7 +164,7 @@ public class TenantSyncMessageHandler implements SyncMessageHandler {
 
         if (tenantId != null && metadata != null && !metadata.isEmpty()) {
             processMetadata(tenantId, metadata);
-            log.info("[租户同步] 收到租户 {} 元数据推送，共 {} 项", tenantId, metadata.size());
+            log.info("[租户同步] 收到租户 {} 元数据推送，�?{} �?, tenantId, metadata.size());
         }
         return null;
     }
@@ -184,11 +184,11 @@ public class TenantSyncMessageHandler implements SyncMessageHandler {
                 Map<String, Object> metadata = provider.getMetadata(tenantId);
                 if (metadata != null && !metadata.isEmpty()) {
                     allMetadata.putAll(metadata);
-                    log.debug("[租户同步] 提供者 {} 为租户 {} 提供了 {} 项元数据",
+                    log.debug("[租户同步] 提供�?{} 为租�?{} 提供�?{} 项元数据",
                             provider.getName(), tenantId, metadata.size());
                 }
             } catch (Exception e) {
-                log.error("[租户同步] 提供者 {} 获取租户 {} 元数据失败",
+                log.error("[租户同步] 提供�?{} 获取租户 {} 元数据失�?,
                         provider.getName(), tenantId, e);
             }
         }
@@ -203,10 +203,10 @@ public class TenantSyncMessageHandler implements SyncMessageHandler {
         for (TenantMetadataConsumer consumer : consumers) {
             try {
                 consumer.consumeMetadata(tenantId, metadata);
-                log.debug("[租户同步] 消费者 {} 处理租户 {} 元数据完成",
+                log.debug("[租户同步] 消费�?{} 处理租户 {} 元数据完�?,
                         consumer.getName(), tenantId);
             } catch (Exception e) {
-                log.error("[租户同步] 消费者 {} 处理租户 {} 元数据失败",
+                log.error("[租户同步] 消费�?{} 处理租户 {} 元数据失�?,
                         consumer.getName(), tenantId, e);
             }
         }
