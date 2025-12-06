@@ -1,15 +1,13 @@
 package com.chua.report.client.starter.sync.handler;
 
-import com.chua.common.support.protocol.request.BadServletRequest;
+import com.chua.common.support.annotations.Spi;
+import com.chua.common.support.protocol.request.HttpServletRequest;
 import com.chua.common.support.protocol.request.ServletResponse;
-import com.chua.common.support.spi.Spi;
 import com.chua.report.client.starter.job.TriggerParam;
 import com.chua.report.client.starter.job.execute.DefaultJobExecute;
 import com.chua.report.client.starter.job.execute.JobExecute;
 import com.chua.report.client.starter.sync.MonitorTopics;
-import com.chua.sync.support.client.SyncClient;
 import com.chua.sync.support.spi.SyncMessageHandler;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
@@ -29,9 +27,6 @@ import java.util.Map;
 public class JobDispatchHandler implements SyncMessageHandler {
 
     private final JobExecute jobExecute = new DefaultJobExecute();
-
-    @Setter
-    private SyncClient syncClient;
 
     @Override
     public String getName() {
@@ -62,15 +57,16 @@ public class JobDispatchHandler implements SyncMessageHandler {
         try {
             TriggerParam param = buildTriggerParam(data);
             
-            // 调用 XXL-Job 原有执行逻辑
-            ServletResponse response = jobExecute.run(new BadServletRequest(), param);
+            // 调用作业执行逻辑
+            ServletResponse response = jobExecute.run(HttpServletRequest.builder().build(), param);
             
-            if (response.isOk()) {
+            if (response.isSuccess()) {
                 log.info("[JobHandler] 任务接收成功: jobId={}", param.getJobId());
                 return Map.of("code", 200, "message", "SUCCESS", "jobId", param.getJobId());
             } else {
-                log.warn("[JobHandler] 任务接收失败: jobId={}, msg={}", param.getJobId(), response.getMessage());
-                return Map.of("code", 500, "message", response.getMessage(), "jobId", param.getJobId());
+                String errorMsg = response.getErrorMessage() != null ? response.getErrorMessage() : response.getStatusMessage();
+                log.warn("[JobHandler] 任务接收失败: jobId={}, msg={}", param.getJobId(), errorMsg);
+                return Map.of("code", 500, "message", errorMsg != null ? errorMsg : "任务执行失败", "jobId", param.getJobId());
             }
         } catch (Exception e) {
             log.error("[JobHandler] 处理任务下发异常", e);
