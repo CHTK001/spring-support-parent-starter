@@ -1,8 +1,8 @@
 package com.chua.starter.minio.support.template;
 
 import com.chua.common.support.lang.date.DateTime;
-import com.chua.common.support.log.Log;
 import com.chua.common.support.utils.StringUtils;
+import lombok.extern.slf4j.Slf4j;
 import com.chua.starter.minio.support.properties.MinioProperties;
 import io.minio.*;
 import io.minio.http.Method;
@@ -25,9 +25,9 @@ import static com.chua.common.support.constant.CommonConstant.SYMBOL_LEFT_SLASH;
  *
  * @author CH
  */
+@Slf4j
 public class MinioTemplate implements InitializingBean {
 
-    private static final Log log = Log.getLogger(MinioClient.class);
     private final MinioProperties minioProperties;
     private MinioClient minioClient;
 
