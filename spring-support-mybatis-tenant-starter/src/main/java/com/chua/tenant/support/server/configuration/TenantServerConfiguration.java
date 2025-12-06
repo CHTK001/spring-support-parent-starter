@@ -23,7 +23,7 @@ import jakarta.annotation.PostConstruct;
 @Configuration
 @RequiredArgsConstructor
 @MapperScan("com.chua.tenant.support.server.mapper")
-@ConditionalOnProperty(prefix = TenantProperties.PRE, name = {"enable", "mode"}, havingValue = "server", matchIfMissing = false)
+@ConditionalOnProperty(prefix = TenantProperties.PRE + ".server", name = "enable", havingValue = "true")
 public class TenantServerConfiguration {
 
     private final TenantProperties tenantProperties;
@@ -31,6 +31,6 @@ public class TenantServerConfiguration {
     @PostConstruct
     public void init() {
         log.info("[租户服务端] 服务端模式已启用");
-        log.info("[租户服务端] 租户同步: {}", tenantProperties.getSync().isEnable() ? "已启用" : "已禁用");
+        log.info("[租户服务端] 租户同步: {}", tenantProperties.getServer().isSyncEnable() ? "已启用" : "已禁用");
     }
 }

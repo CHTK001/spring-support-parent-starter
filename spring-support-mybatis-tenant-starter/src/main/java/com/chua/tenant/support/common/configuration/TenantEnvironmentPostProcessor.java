@@ -26,41 +26,36 @@ public class TenantEnvironmentPostProcessor implements EnvironmentPostProcessor 
 
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
-        // 检查租户功能是否启用
-        String tenantEnable = environment.getProperty(TENANT_PREFIX + "enable", "false");
-        if (!"true".equalsIgnoreCase(tenantEnable)) {
-            return;
-        }
+        // 检查服务端同步是否启用
+        boolean serverEnabled = "true".equalsIgnoreCase(environment.getProperty(TENANT_PREFIX + "server.enable", "false"));
+        boolean serverSyncEnabled = "true".equalsIgnoreCase(environment.getProperty(TENANT_PREFIX + "server.sync-enable", "false"));
 
-        // 获取租户模式
-        String tenantMode = environment.getProperty(TENANT_PREFIX + "mode", "client");
-
-        // 检查对应模式的同步是否启用
-        boolean syncEnabled = "server".equalsIgnoreCase(tenantMode)
-                ? "true".equalsIgnoreCase(environment.getProperty(TENANT_PREFIX + "server.sync-enable", "false"))
-                : "true".equalsIgnoreCase(environment.getProperty(TENANT_PREFIX + "client.sync-enable", "false"));
-
-        if (!syncEnabled) {
-            return;
-        }
+        // 检查客户端同步是否启用
+        boolean clientEnabled = "true".equalsIgnoreCase(environment.getProperty(TENANT_PREFIX + "client.enable", "false"));
+        boolean clientSyncEnabled = "true".equalsIgnoreCase(environment.getProperty(TENANT_PREFIX + "client.sync-enable", "false"));
 
         // 准备要设置的 sync 配置
         Map<String, Object> syncProperties = new HashMap<>();
 
-        // 自动启用 sync
-        if (environment.getProperty(SYNC_PREFIX + "enable") == null) {
-            syncProperties.put(SYNC_PREFIX + "enable", "true");
-        }
-
-        // 根据租户模式设置 sync 类型
-        if (environment.getProperty(SYNC_PREFIX + "type") == null) {
-            syncProperties.put(SYNC_PREFIX + "type", tenantMode);
-        }
-
-        // 串联配置
-        if ("server".equalsIgnoreCase(tenantMode)) {
+        // 服务端模式
+        if (serverEnabled && serverSyncEnabled) {
+            if (environment.getProperty(SYNC_PREFIX + "enable") == null) {
+                syncProperties.put(SYNC_PREFIX + "enable", "true");
+            }
+            if (environment.getProperty(SYNC_PREFIX + "type") == null) {
+                syncProperties.put(SYNC_PREFIX + "type", "server");
+            }
             linkServerConfig(environment, syncProperties);
-        } else {
+        }
+
+        // 客户端模式
+        if (clientEnabled && clientSyncEnabled) {
+            if (environment.getProperty(SYNC_PREFIX + "enable") == null) {
+                syncProperties.put(SYNC_PREFIX + "enable", "true");
+            }
+            if (environment.getProperty(SYNC_PREFIX + "type") == null) {
+                syncProperties.put(SYNC_PREFIX + "type", "client");
+            }
             linkClientConfig(environment, syncProperties);
         }
 
