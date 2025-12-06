@@ -3,3 +3,6 @@ org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
   com.chua.report.client.starter.configuration.CustomEndpointConfiguration,\
   com.chua.report.client.starter.configuration.ReportCommonConfiguration,\
   com.chua.report.client.starter.configuration.FileManagementConfiguration
+
+org.springframework.boot.env.EnvironmentPostProcessor=\
+  com.chua.report.client.starter.configuration.ReportEnvironmentPostProcessor
