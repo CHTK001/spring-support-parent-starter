@@ -75,21 +75,17 @@
         <module>spring-support-report-client-starter</module>   <!-- 设备数据上报客户端 -->
         <module>spring-support-report-client-arthas-starter</module>   <!-- 上报客户端 Arthas 集成 -->
         <module>spring-support-prometheus-starter</module>      <!-- Prometheus监控 -->
-        <module>spring-support-loki-starter</module>            <!-- Loki日志收集 -->
 
         <!-- 第三方服务集成模块 -->
         <module>spring-support-tencent-starter</module>         <!-- 腾讯云服务集成 -->
         <module>spring-support-pay-client-starter</module>      <!-- 支付客户端 -->
 
         <!-- 容错和稳定性模块 -->
-        <module>spring-support-circuit-breaker-starter</module> <!-- 熔断降级模块 -->
         <module>spring-support-strategy-starter</module>        <!-- 策略管理模块（限流、熔断、降级等配置管理） -->
 
         <!-- 运维和管理模块 -->
         <module>spring-support-shell-starter</module>           <!-- SSH Shell管理模块 -->
         <module>spring-support-ssh-starter</module>
-        <module>spring-support-plugin-starter</module>
-        <module>spring-support-dolphinscheduler-starter</module>
         <module>spring-support-oauth-client-aksk-starter</module>             <!-- SSH服务端模块 -->
     </modules>
 

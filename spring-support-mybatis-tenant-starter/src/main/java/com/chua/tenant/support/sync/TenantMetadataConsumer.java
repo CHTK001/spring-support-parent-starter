@@ -3,7 +3,7 @@ package com.chua.tenant.support.sync;
 import java.util.Map;
 
 /**
- * 租户元数据消费者接口
+ * 租户元数据消费者接�?
  * 通过 SPI 机制实现，用于客户端接收和处理租户元数据
  *
  * @author CH
@@ -13,9 +13,9 @@ import java.util.Map;
 public interface TenantMetadataConsumer {
 
     /**
-     * 获取消费者名称
+     * 获取消费者名�?
      *
-     * @return 消费者名称
+     * @return 消费者名�?
      */
     String getName();
 
@@ -23,14 +23,14 @@ public interface TenantMetadataConsumer {
      * 获取消费者优先级
      * 数值越小优先级越高
      *
-     * @return 优先级
+     * @return 优先�?
      */
     default int getOrder() {
         return 100;
     }
 
     /**
-     * 处理接收到的元数据
+     * 处理接收到的元数�?
      *
      * @param tenantId 租户ID
      * @param metadata 元数据Map
@@ -40,7 +40,7 @@ public interface TenantMetadataConsumer {
     /**
      * 判断是否支持该元数据类型
      *
-     * @param metadataType 元数据类型
+     * @param metadataType 元数据类�?
      * @return 是否支持
      */
     default boolean supports(String metadataType) {
