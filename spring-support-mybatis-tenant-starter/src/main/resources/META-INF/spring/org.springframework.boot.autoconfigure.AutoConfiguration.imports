@@ -1,1 +1,1 @@
-com.chua.tenant.support.configuration.TenantConfiguration
+com.chua.tenant.support.common.configuration.TenantAutoConfiguration

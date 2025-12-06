@@ -1,1 +1,1 @@
-com.chua.tenant.support.sync.handler.TenantSyncMessageHandler
+com.chua.tenant.support.common.sync.TenantSyncMessageHandler

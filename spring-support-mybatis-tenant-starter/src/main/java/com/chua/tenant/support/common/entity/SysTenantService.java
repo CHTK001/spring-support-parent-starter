@@ -1,4 +1,4 @@
-package com.chua.tenant.support.entity;
+package com.chua.tenant.support.common.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;

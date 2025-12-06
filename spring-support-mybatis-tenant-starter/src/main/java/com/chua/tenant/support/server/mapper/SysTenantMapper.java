@@ -1,7 +1,7 @@
 package com.chua.tenant.support.server.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.chua.tenant.support.entity.SysTenant;
+import com.chua.tenant.support.common.entity.SysTenant;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
