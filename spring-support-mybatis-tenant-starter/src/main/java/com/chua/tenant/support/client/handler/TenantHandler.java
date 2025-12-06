@@ -3,7 +3,7 @@ package com.chua.tenant.support.client.handler;
 import com.chua.tenant.support.entity.SysTenant;
 
 /**
- * 租户处理器接�?
+ * 租户处理器接口
  *
  * @author CH
  * @version 1.0.0
@@ -12,7 +12,7 @@ import com.chua.tenant.support.entity.SysTenant;
 public interface TenantHandler {
 
     /**
-     * 保存或更新租�?
+     * 保存或更新租户
      *
      * @param tenant 租户信息
      */

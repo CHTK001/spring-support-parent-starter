@@ -11,15 +11,15 @@ import lombok.EqualsAndHashCode;
 import java.util.List;
 
 /**
- * 租户�?
+ * 租户表
  *
  * @author CH
  * @version 1.0.0
  * @since 2024/12/06
  */
 @EqualsAndHashCode(callSuper = true)
-@ApiModel(description = "租户�?)
-@Schema(description = "租户�?)
+@ApiModel(description = "租户表")
+@Schema(description = "租户表")
 @Data
 @TableName(value = "sys_tenant")
 public class SysTenant extends SysBase {
@@ -90,19 +90,19 @@ public class SysTenant extends SysBase {
     private Integer sysTenantStatus;
 
     /**
-     * 联系�?
+     * 联系人
      */
     @TableField(value = "sys_tenant_contact")
-    @ApiModelProperty(value = "联系�?)
-    @Schema(description = "联系�?)
+    @ApiModelProperty(value = "联系人")
+    @Schema(description = "联系人")
     private String sysTenantContact;
 
     /**
-     * 手机�?
+     * 手机号
      */
     @TableField(value = "sys_tenant_phone")
-    @ApiModelProperty(value = "手机�?)
-    @Schema(description = "手机�?)
+    @ApiModelProperty(value = "手机号")
+    @Schema(description = "手机号")
     private String sysTenantPhone;
 
     /**
