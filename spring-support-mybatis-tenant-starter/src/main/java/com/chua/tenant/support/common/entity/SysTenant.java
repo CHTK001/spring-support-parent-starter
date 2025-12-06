@@ -1,4 +1,4 @@
-package com.chua.tenant.support.entity;
+package com.chua.tenant.support.common.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
 import com.chua.starter.mybatis.pojo.SysBase;
@@ -162,10 +162,10 @@ public class SysTenant extends SysBase {
     private List<Integer> serviceIds;
 
     /**
-     * 租户 - 服务
+     * 租户 - 服务列表
      */
     @TableField(exist = false)
-    @ApiModelProperty(value = "租户 - 服务")
-    @Schema(description = "租户 - 服务")
+    @ApiModelProperty(value = "租户 - 服务列表")
+    @Schema(description = "租户 - 服务列表")
     private List<SysTenantService> sysTenantService;
 }
