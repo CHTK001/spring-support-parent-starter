@@ -14,6 +14,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
 
+import static com.chua.common.support.utils.ArrayUtils.EMPTY_STRING_ARRAY;
+
 /**
  * 同步服务端实例
  * <p>
@@ -384,7 +386,7 @@ public class SyncServerInstance {
                         .lastHeartbeatTime(System.currentTimeMillis())
                         .online(true)
                         .metadata((Map<String, Object>) map.get("metadata"))
-                        .capabilities((String[]) map.get("capabilities"))
+                        .capabilities((String[]) ((List) map.get("capabilities")).toArray(EMPTY_STRING_ARRAY))
                         .build();
 
                 clientInfoMap.put(sessionId, clientInfo);
