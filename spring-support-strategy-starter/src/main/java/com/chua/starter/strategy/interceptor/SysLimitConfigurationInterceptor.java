@@ -111,29 +111,6 @@ public class SysLimitConfigurationInterceptor implements HandlerInterceptor {
     }
 
     /**
-     * 生成限流器键
-     *
-     * @param config  限流配置
-     * @param request HTTP请求
-     * @return 限流器键
-     */
-    private String generateRateLimiterKey(SysLimitConfiguration config, HttpServletRequest request) {
-        StringBuilder keyBuilder = new StringBuilder("ratelimit:");
-        keyBuilder.append(config.getSysLimitConfigurationId()).append(":");
-
-        // 根据维度生成键
-        String dimension = config.getSysLimitDimension();
-        switch (dimension) {
-            case "IP" -> keyBuilder.append(getClientIp(request));
-            case "USER" -> keyBuilder.append(getUserId(request));
-            case "API" -> keyBuilder.append(config.getSysLimitPath());
-            default -> keyBuilder.append("global");
-        }
-
-        return keyBuilder.toString();
-    }
-
-    /**
      * 异步保存限流记录
      *
      * @param config  限流配置
@@ -160,6 +137,29 @@ public class SysLimitConfigurationInterceptor implements HandlerInterceptor {
         } catch (Exception e) {
             log.error("保存限流记录失败", e);
         }
+    }
+
+    /**
+     * 生成限流器键
+     *
+     * @param config  限流配置
+     * @param request HTTP请求
+     * @return 限流器键
+     */
+    private String generateRateLimiterKey(SysLimitConfiguration config, HttpServletRequest request) {
+        StringBuilder keyBuilder = new StringBuilder("ratelimit:");
+        keyBuilder.append(config.getSysLimitConfigurationId()).append(":");
+
+        // 根据维度生成键
+        String dimension = config.getSysLimitDimension();
+        switch (dimension) {
+            case "IP" -> keyBuilder.append(getClientIp(request));
+            case "USER" -> keyBuilder.append(getUserId(request));
+            case "API" -> keyBuilder.append(config.getSysLimitPath());
+            default -> keyBuilder.append("global");
+        }
+
+        return keyBuilder.toString();
     }
 
     /**
