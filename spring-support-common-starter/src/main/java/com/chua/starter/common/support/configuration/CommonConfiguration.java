@@ -29,7 +29,6 @@ import org.springframework.web.client.RestTemplate;
 
         ActuatorProperties.class,
         SpiProperties.class,
-        JacksonProperties.class,
 })
 @ComponentScan("com.chua.starter.common.support.service")
 public class CommonConfiguration {

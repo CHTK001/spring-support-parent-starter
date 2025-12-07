@@ -20,9 +20,14 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 /**
- * 动态环�?
+ * 动态环境配置后置处理器
+ * <p>
+ * 用于根据当前激活的Profile动态加载对应目录下的配置文件。
+ * </p>
+ *
  * @author CH
  * @since 2024/12/4
+ * @version 1.0.0
  */
 public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
     private static final String ATTACHED_PROPERTY_SOURCE_NAME = "configurationProperties";

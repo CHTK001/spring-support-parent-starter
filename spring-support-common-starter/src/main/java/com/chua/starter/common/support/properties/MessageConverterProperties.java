@@ -9,7 +9,7 @@ import org.springframework.http.MediaType;
 import java.util.List;
 
 /**
- * 消息转换器属�?
+ * 消息转换器属性
  *
  * @author CH
  */
@@ -26,7 +26,7 @@ public class MessageConverterProperties {
 
 
     /**
-     * 开启脱�?
+     * 开启脱敏
      */
     private boolean openDesensitize = true;
 

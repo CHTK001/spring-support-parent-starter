@@ -12,13 +12,21 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
 /**
- * 自定义httpservlet请求包装�?
+ * 自定义HttpServletRequest请求包装器
+ * <p>
+ * 用于包装原始的HttpServletRequest，支持多次读取请求体内容。
+ * 解决了Servlet规范中请求体只能读取一次的限制问题。
+ * </p>
  *
  * @author CH
  * @since 2023/09/08
+ * @version 1.0.0
  */
 public class CustomHttpServletRequestWrapper extends HttpServletRequestWrapper {
 
+    /**
+     * 缓存的请求体字节数组
+     */
     private final byte[] body;
 
     public CustomHttpServletRequestWrapper(HttpServletRequest request) throws IOException {

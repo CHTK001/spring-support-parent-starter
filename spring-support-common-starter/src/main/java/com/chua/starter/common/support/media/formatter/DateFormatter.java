@@ -7,9 +7,15 @@ import org.springframework.format.annotation.DateTimeFormat;
 import java.lang.reflect.Field;
 
 /**
- * 格式�?
+ * 日期格式化器
+ * <p>
+ * 用于将日期类型的值按照指定格式进行格式化输出。
+ * 支持 Date、LocalDate、LocalDateTime、LocalTime 等类型。
+ * </p>
  *
  * @author CH
+ * @version 1.0.0
+ * @see Formatter
  */
 @Spi({"date", "localdate", "LocalDateTime", "LocalTime"})
 public class DateFormatter implements Formatter {

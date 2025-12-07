@@ -96,7 +96,7 @@ public class AsyncThreadPoolConfiguration implements AsyncConfigurer {
         // 线程名称前缀
         executor.setThreadNamePrefix(asyncProperties.getThreadNamePrefix());
         executor.setTaskDecorator(new MdcTaskDecorator());
-        // 初始化线�?
+        // 初始化线程池
         executor.initialize();
         return executor;
     }

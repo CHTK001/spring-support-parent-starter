@@ -39,10 +39,10 @@
 //        });
 //    }
 //    /**
-//     * 收到领域�?
+//     * 收到字段值
 //     *
 //     * @param aClass        一个班
-//     * @param fieldValue    领域�?
+//     * @param fieldValue    字段值
 //     * @param enumConstants 枚举常量
 //     * @return {@link Object}
 //     */

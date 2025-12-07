@@ -12,14 +12,17 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 
 /**
- * 校验码配�?
+ * 校验码配置类
+ * <p>
+ * 用于配置验证码和SPI选项相关的Bean。
+ * </p>
  *
  * @author CH
+ * @version 1.0.0
  */
 @Slf4j
 @EnableConfigurationProperties({CaptchaProperties.class, OptionalProperties.class})
 public class CaptchaConfiguration {
-
 
     @Bean
     @ConditionalOnMissingBean

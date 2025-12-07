@@ -30,7 +30,7 @@ import java.lang.annotation.Target;
  *     private String encryptKey;
  *
  *     // 使用动态密钥加密
- *     &#64;ApiFieldCrypto(key = "")  // key为空时使�?@ApiFieldCryptoKey 标记的字段
+ *     &#64;ApiFieldCrypto(key = "")  // key为空时使用 @ApiFieldCryptoKey 标记的字段
  *     private String sensitiveData;
  * }
  * </pre>

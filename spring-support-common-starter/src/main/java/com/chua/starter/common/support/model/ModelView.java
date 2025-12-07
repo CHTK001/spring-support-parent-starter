@@ -22,14 +22,13 @@ public class ModelView<T> {
     private MediaType mediaType;
 
     /**
-     * 初始�?
+     * 创建ModelView实例
      *
-     * @param data 数据
-     * @param <T>  类型
-     * @return 结果
+     * @param data 数据内容
+     * @param <T>  数据类型
+     * @return ModelView实例，默认使用JSON媒体类型
      */
     public static <T> ModelView<T> create(T data) {
         return new ModelView<>(data, MediaType.APPLICATION_JSON);
     }
 }
-
