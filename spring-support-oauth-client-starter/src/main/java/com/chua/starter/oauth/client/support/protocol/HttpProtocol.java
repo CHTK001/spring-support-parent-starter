@@ -182,13 +182,24 @@ public class HttpProtocol extends AbstractProtocol {
                             .fluentPut("data", createData(jsonObject, key)).toJSONString())
                     .asString();
 
-        } catch (UnirestException ignored) {
-            // 请求异常处理
-            log.error("Unirest请求异常：{}", ignored.getMessage());
+        } catch (UnirestException e) {
+            // 完整记录请求异常信息
+            log.error("【OAuth客户端】认证请求异常 - URL: {}, 路径: {}, 异常类型: {}, 异常信息: {}", 
+                    selectedUrl, path, e.getClass().getSimpleName(), e.getMessage());
+            if (log.isDebugEnabled()) {
+                log.debug("【OAuth客户端】认证请求异常堆栈", e);
+            }
+            return AuthenticationInformation.authServerError();
+        } catch (Exception e) {
+            // 捕获其他未预期异常
+            log.error("【OAuth客户端】认证请求未知异常 - URL: {}, 路径: {}, 异常: {}", 
+                    selectedUrl, path, e.getMessage(), e);
+            return AuthenticationInformation.authServerError();
         }
 
         // 检查响应是否为空
         if (null == httpResponse) {
+            log.warn("【OAuth客户端】认证服务器响应为空 - URL: {}, 路径: {}", selectedUrl, path);
             return AuthenticationInformation.authServerError();
         }
 
@@ -197,18 +208,29 @@ public class HttpProtocol extends AbstractProtocol {
         String body = httpResponse.getBody();
 
         // 判断响应是否为服务器错误或空数据
-        if (status > 400 && status < 600 || Strings.isNullOrEmpty(body)) {
+        if (status >= 400 && status < 600) {
+            log.warn("【OAuth客户端】认证服务器返回错误状态 - URL: {}, 路径: {}, 状态码: {}, 响应: {}", 
+                    selectedUrl, path, status, body);
+            return AuthenticationInformation.authServerNotFound();
+        }
+
+        if (Strings.isNullOrEmpty(body)) {
+            log.warn("【OAuth客户端】认证服务器返回空响应 - URL: {}, 路径: {}, 状态码: {}", 
+                    selectedUrl, path, status);
             return AuthenticationInformation.authServerNotFound();
         }
 
         // 成功响应时解析返回结果
         if (status == 200) {
+            log.debug("【OAuth客户端】认证请求成功 - URL: {}, 路径: {}", selectedUrl, path);
             return createAuthenticationInformation(Json.fromJson(body, ReturnResult.class),
                     httpResponse.getHeaders().getFirst("x-oauth-response-serial"),
                     path);
         }
 
-        // 默认返回服务器错误
+        // 其他状态码
+        log.warn("【OAuth客户端】认证服务器返回未知状态 - URL: {}, 路径: {}, 状态码: {}", 
+                selectedUrl, path, status);
         return AuthenticationInformation.authServerError();
     }
 

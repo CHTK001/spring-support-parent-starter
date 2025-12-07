@@ -44,7 +44,12 @@ import static com.chua.starter.oauth.client.support.infomation.Information.*;
 @Slf4j
 public abstract class AbstractProtocol implements Protocol {
 
-    protected static CacheProvider CACHEABLE;
+    /**
+     * 认证信息缓存（线程安全的单例初始化）
+     */
+    protected static volatile CacheProvider CACHEABLE;
+    private static final Object CACHE_LOCK = new Object();
+    
     private final boolean enableEncryption;
     protected AuthClientProperties authClientProperties;
     private final String encryption;
@@ -53,10 +58,41 @@ public abstract class AbstractProtocol implements Protocol {
         this.authClientProperties = authClientProperties;
         this.encryption = authClientProperties.getEncryption();
         this.enableEncryption = authClientProperties.isEnableEncryption();
-        if(null == CACHEABLE) {
-            CACHEABLE = new GuavaCacheProvider((int) authClientProperties.getCacheTimeout() / 3600);
-            CACHEABLE.afterPropertiesSet();
-            CACHEABLE = CACHEABLE.cacheHotColdBackup(authClientProperties.isCacheHotColdBackup());
+        // 双重检查锁定，确保线程安全初始化
+        if (CACHEABLE == null) {
+            synchronized (CACHE_LOCK) {
+                if (CACHEABLE == null) {
+                    CacheProvider provider = new GuavaCacheProvider((int) authClientProperties.getCacheTimeout() / 3600);
+                    provider.afterPropertiesSet();
+                    CACHEABLE = provider.cacheHotColdBackup(authClientProperties.isCacheHotColdBackup());
+                    log.info("【OAuth客户端】缓存初始化完成 - 超时时间: {}秒, 冷热备份: {}", 
+                            authClientProperties.getCacheTimeout(), 
+                            authClientProperties.isCacheHotColdBackup());
+                }
+            }
+        }
+    }
+    
+    /**
+     * 清除指定用户的缓存（用于用户权限变更时调用）
+     *
+     * @param token 用户Token
+     */
+    public static void invalidateCache(String token) {
+        if (CACHEABLE != null && token != null) {
+            CACHEABLE.remove(token);
+            log.info("【OAuth客户端】已清除用户缓存 - Token: {}***", 
+                    token.length() > 8 ? token.substring(0, 8) : token);
+        }
+    }
+    
+    /**
+     * 清除所有缓存
+     */
+    public static void invalidateAllCache() {
+        if (CACHEABLE != null) {
+            CACHEABLE.invalidateAll();
+            log.info("【OAuth客户端】已清除所有缓存");
         }
     }
 
