@@ -84,11 +84,11 @@ public class UserLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdviso
     }
 
     /**
-     * 执行�?
+     * 执行值
      *
      * @param invocation 调用
      * @return {@link Object}
-     * @throws Throwable 可丢�?
+     * @throws Throwable 可抛出
      */
     private Object invokeValue(MethodInvocation invocation) throws Throwable {
         Object proceed = null;

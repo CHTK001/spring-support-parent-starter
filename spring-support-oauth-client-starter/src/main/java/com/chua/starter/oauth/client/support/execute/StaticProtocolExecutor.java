@@ -78,7 +78,7 @@ public class StaticProtocolExecutor implements ProtocolExecutor {
                     loginAuthResult.setCode(200);
                     UserResume userResult = new UserResume();
                     userResult.setUserId("1");
-                    userResult.setLoginType(AuthType.STATIC.name());
+                    userResult.setLoginType("STATIC");
                     userResult.setUsername(username);
                     if ("admin".equals(username)) {
                         userResult.setRoles(Sets.newHashSet("admin"));

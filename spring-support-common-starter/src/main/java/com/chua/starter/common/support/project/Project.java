@@ -51,7 +51,7 @@ public class Project {
      */
     private String applicationActiveInclude;
     /**
-     * 上下文路�?
+     * 上下文路径
      */
     private String contextPath;
     /**
@@ -74,7 +74,7 @@ public class Project {
      */
     private String dataSourceDriver;
     /**
-     * 用户�?
+     * 用户名
      */
     private String dataSourceUsername;
     /**

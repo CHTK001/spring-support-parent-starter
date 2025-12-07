@@ -33,18 +33,18 @@ public class ArrayToJsonStringJsonDeserializer extends JsonDeserializer<Object> 
     }
 
     /**
-     * 树节点到�?
+     * 树节点到值
      *
-     * @param treeNode 树节�?
+     * @param treeNode 树节点
      * @return {@link Object}
      */
     private Object treeNodeToValue(TreeNode treeNode) {
         return treeNodeToValueValue(treeNode);
     }
     /**
-     * 树节点到�?
+     * 树节点到值
      *
-     * @param treeNode 树节�?
+     * @param treeNode 树节点
      * @return {@link Object}
      */
     private Object treeNodeToValueValue(TreeNode treeNode) {

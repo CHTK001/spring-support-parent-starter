@@ -36,8 +36,8 @@ public class CommonConfiguration {
 
 
     /**
-     * 创建默认的认证服务实例�?
-     * 当容器中没有提供AuthService实例时，使用此默认实现�?
+     * 创建默认的认证服务实例。
+     * 当容器中没有提供AuthService实例时，使用此默认实现。
      *
      * @return {@link AuthService} 默认认证服务实例
      * @example <pre>
@@ -53,8 +53,8 @@ public class CommonConfiguration {
     }
 
     /**
-     * 创建IP服务实例�?
-     * 当容器中没有提供IptablesService实例时，使用此实现�?
+     * 创建IP服务实例。
+     * 当容器中没有提供IptablesService实例时，使用此实现。
      *
      * @param ipProperties IP属性配置对象，包含IP相关配置信息
      * @return {@link IptablesService} IP服务实例
@@ -72,10 +72,10 @@ public class CommonConfiguration {
 
 
     /**
-     * 创建对象上下文配置实例�?
-     * 当容器中没有提供ConfigureObjectContext实例时，使用此实现�?
+     * 创建对象上下文配置实例。
+     * 当容器中没有提供ConfigureObjectContext实例时，使用此实现。
      *
-     * @return {@link ConfigureObjectContext} 对象上下文配置实�?
+     * @return {@link ConfigureObjectContext} 对象上下文配置实例
      * @example <pre>
      * // 使用示例
      * &#64;Autowired
@@ -90,8 +90,8 @@ public class CommonConfiguration {
 
 
     /**
-     * 创建RestTemplate实例�?
-     * 当容器中没有提供RestTemplate实例时，使用此实现�?
+     * 创建RestTemplate实例。
+     * 当容器中没有提供RestTemplate实例时，使用此实现。
      *
      * @return {@link RestTemplate} RestTemplate实例
      * @example
@@ -109,10 +109,10 @@ public class CommonConfiguration {
     }
 
     /**
-     * 创建用户日志切入点顾问实例�?
-     * 当容器中没有提供UserLoggerPointcutAdvisor实例时，使用此实现�?
+     * 创建用户日志切入点顾问实例。
+     * 当容器中没有提供UserLoggerPointcutAdvisor实例时，使用此实现。
      *
-     * @return {@link UserLoggerPointcutAdvisor} 用户日志切入点顾问实�?
+     * @return {@link UserLoggerPointcutAdvisor} 用户日志切入点顾问实例
      * @example
      * <pre>
      * // 使用示例
@@ -128,10 +128,10 @@ public class CommonConfiguration {
     }
 
     /**
-     * 创建系统日志切入点顾问实例�?
-     * 当容器中没有提供SysLoggerPointcutAdvisor实例时，使用此实现�?
+     * 创建系统日志切入点顾问实例。
+     * 当容器中没有提供SysLoggerPointcutAdvisor实例时，使用此实现。
      *
-     * @return {@link SysLoggerPointcutAdvisor} 系统日志切入点顾问实�?
+     * @return {@link SysLoggerPointcutAdvisor} 系统日志切入点顾问实例
      * @example
      * <pre>
      * // 使用示例
@@ -147,10 +147,10 @@ public class CommonConfiguration {
     }
 
     /**
-     * 创建监控切入点顾问实例�?
-     * 当容器中没有提供WatchPointcutAdvisor实例时，使用此实现�?
+     * 创建监控切入点顾问实例。
+     * 当容器中没有提供WatchPointcutAdvisor实例时，使用此实现。
      *
-     * @return {@link WatchPointcutAdvisor} 监控切入点顾问实�?
+     * @return {@link WatchPointcutAdvisor} 监控切入点顾问实例
      * @example
      * <pre>
      * // 使用示例

@@ -18,21 +18,21 @@ import org.springframework.context.ApplicationEvent;
 public class ApiResponseEncodeConfiguration extends ApplicationEvent implements Upgrade<ApiResponseEncodeConfiguration> {
 
     /**
-     * 是否开启响应加�?
+     * 是否开启响应加密
      */
     private boolean codecResponseOpen = true;
 
     /**
-     * 无参构造方�?
+     * 无参构造方法
      */
     public ApiResponseEncodeConfiguration() {
         this(true);
     }
 
     /**
-     * 带参构造方�?
+     * 带参构造方法
      *
-     * @param source 事件源对�?
+     * @param source 事件源对象
      */
     public ApiResponseEncodeConfiguration(Object source) {
         super(source);

@@ -66,5 +66,52 @@ public interface Protocol {
      */
     LoginAuthResult logout(String uid, LogoutType logoutType, UserResult userResult);
 
+    /**
+     * 查询用户在线状态
+     * <p>通过调用服务器端接口获取用户的在线状态信息</p>
+     *
+     * @param uid 用户唯一标识
+     * @return 在线状态信息
+     */
+    default OnlineStatus getOnlineStatus(String uid) {
+        return new OnlineStatus();
+    }
+
+    /**
+     * 在线状态信息
+     */
+    @lombok.Data
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
+    class OnlineStatus {
+        /**
+         * 当前在线数量
+         */
+        private int onlineCount = 0;
+
+        /**
+         * 最大允许在线数量（-1表示不限制）
+         */
+        private int maxOnlineCount = -1;
+
+        /**
+         * 在线模式（SINGLE/MULTIPLE/LIMIT）
+         */
+        private String onlineMode = "MULTIPLE";
+
+        /**
+         * 是否已达上限
+         */
+        public boolean isReachedLimit() {
+            return maxOnlineCount > 0 && onlineCount >= maxOnlineCount;
+        }
+
+        /**
+         * 剩余可登录数量（-1表示不限制）
+         */
+        public int getRemainingSlots() {
+            return maxOnlineCount > 0 ? Math.max(0, maxOnlineCount - onlineCount) : -1;
+        }
+    }
 
 }

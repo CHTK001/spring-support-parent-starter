@@ -34,7 +34,7 @@ public class PrivacySerializer extends JsonSerializer<String> implements Context
      */
     private Integer suffixNoMaskLen;
     /**
-     * 用什么打�?
+     * 用什么打码
      */
     private String symbol;
 

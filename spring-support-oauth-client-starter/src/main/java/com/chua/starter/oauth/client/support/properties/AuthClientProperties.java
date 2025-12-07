@@ -184,7 +184,7 @@ public class AuthClientProperties {
     public static class TempUser {
 
         /**
-         *
+         * 菜单文件
          */
         private String menuPath;
         /**

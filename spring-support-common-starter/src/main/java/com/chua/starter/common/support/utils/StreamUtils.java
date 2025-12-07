@@ -9,7 +9,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * utils�?
+ * utils工具类
  *
  * @author CH
  * @version 1.0.0
@@ -17,10 +17,10 @@ import java.util.stream.Collectors;
  */
 public class StreamUtils {
     /**
-     * 获取第一�?
+     * 获取第一个
      *
      * @param data         数据
-     * @param idFunction   流名�?
+     * @param idFunction   流名称
      * @return {@link T}
      */
     public static <R, T> Map<R, T> toMap(Collection<T> data, Function<T, R> idFunction) {
@@ -45,10 +45,10 @@ public class StreamUtils {
         return rs;
     }
     /**
-     * 获取第一�?
+     * 获取第一个
      *
      * @param data         数据
-     * @param idFunction   流名�?
+     * @param idFunction   流名称
      * @return {@link T}
      */
     public static <R, T> Map<R, List<T>> tpMultiMap(Collection<T> data, Function<T, R> idFunction) {
@@ -69,12 +69,12 @@ public class StreamUtils {
         return rs;
     }
     /**
-     * 获取第一�?
+     * 获取第一个
      *
      * @param data         数据
-     * @param streamName   流名�?
-     * @param operatorType 运算符类�?
-     * @param value        价�?
+     * @param streamName   流名称
+     * @param operatorType 运算符类型
+     * @param value        值
      * @return {@link T}
      */
     public static <T>T getFirst(Collection<T> data, Function<T, String> streamName, OperatorType operatorType, String value) {
@@ -85,9 +85,9 @@ public class StreamUtils {
      * 获取
      *
      * @param data         数据
-     * @param streamName   流名�?
-     * @param operatorType 运算符类�?
-     * @param value        价�?
+     * @param streamName   流名称
+     * @param operatorType 运算符类型
+     * @param value        值
      * @return {@link T}
      */
     public static <T>List<T> get(Collection<T> data, Function<T, String> streamName, OperatorType operatorType, String value) {

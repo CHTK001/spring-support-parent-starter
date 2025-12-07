@@ -36,9 +36,9 @@ public class NewTrackManager {
     }
 
     /**
-     * 获取�?
+     * 获取栈
      *
-     * @return �?
+     * @return 栈
      */
     public static Stack<Span> currentSpans() {
         return TRACK_CACHE.get();

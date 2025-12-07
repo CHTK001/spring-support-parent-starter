@@ -24,9 +24,9 @@ import org.springframework.expression.spel.standard.SpelExpressionParser;
 import java.lang.reflect.Method;
 
 /**
- * 自定义租户缓存键生成�?
+ * 自定义租户缓存键生成器
  * <p>
- * 支持同时使用 key �?keyGenerator，自动添加租户前缀�?
+ * 支持同时使用 key �?keyGenerator，自动添加租户前缀。
  * </p>
  *
  * <h3>缓存键格式：</h3>
@@ -34,7 +34,7 @@ import java.lang.reflect.Method;
  * cache:{applicationName}:{platform}:{tenantId}:{key表达式的值}
  * </pre>
  *
- * <h3>使用示例�?/h3>
+ * <h3>使用示例：</h3>
  * <pre>
  * &#64;Cacheable(
  *     cacheManager = CacheConstant.REDIS_CACHE_ALWAYS,
@@ -66,10 +66,10 @@ public class CacheCustomTenantedKeyGenerator implements KeyGenerator {
     /**
      * 删除缓存
      *
-     * @param cacheManagerName 缓存管理器名�?
+     * @param cacheManagerName 缓存管理器名称
      * @param cacheName        缓存名称
      * @param sysTenantId      租户ID
-     * @param key              缓存�?
+     * @param key              缓存键
      */
     public void evict(String cacheManagerName, String cacheName, String sysTenantId, String key) {
         try {
@@ -84,9 +84,9 @@ public class CacheCustomTenantedKeyGenerator implements KeyGenerator {
     /**
      * 删除当前租户缓存
      *
-     * @param cacheManagerName 缓存管理器名�?
+     * @param cacheManagerName 缓存管理器名称
      * @param cacheName        缓存名称
-     * @param key              缓存�?
+     * @param key              缓存键
      */
     public void evict(String cacheManagerName, String cacheName, String key) {
         evict(cacheManagerName, cacheName, RequestUtils.getTenantId(), key);
@@ -95,10 +95,10 @@ public class CacheCustomTenantedKeyGenerator implements KeyGenerator {
     /**
      * 删除带前缀的缓�?
      *
-     * @param cacheManagerName 缓存管理器名�?
+     * @param cacheManagerName 缓存管理器名称
      * @param cacheName        缓存名称
      * @param prefix           前缀
-     * @param key              缓存�?
+     * @param key              缓存键
      */
     public void evictWithPrefix(String cacheManagerName, String cacheName, String prefix, String key) {
         evict(cacheManagerName, cacheName, RequestUtils.getTenantId(), prefix + key);

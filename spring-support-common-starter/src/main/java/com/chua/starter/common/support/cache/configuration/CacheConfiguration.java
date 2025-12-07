@@ -14,15 +14,15 @@ import org.springframework.context.annotation.Bean;
 /**
  * Cache缓存配置
  * <p>
- * 提供默认缓存管理器和系统级缓存管理器的配置�?
+ * 提供默认缓存管理器和系统级缓存管理器的配置。
  * </p>
  *
- * <h3>配置要求�?/h3>
+ * <h3>配置要求：</h3>
  * <pre>
- * # 使用默认缓存管理�?
+ * # 使用默认缓存管理器
  * &#64;Cacheable(cacheManager = "default")
  *
- * # 使用系统缓存管理�?
+ * # 使用系统缓存管理器
  * &#64;Cacheable(cacheManager = CacheConstant.CACHE_MANAGER_FOR_SYSTEM)
  * </pre>
  *
@@ -46,7 +46,7 @@ public class CacheConfiguration extends CachingConfigurerSupport implements Cons
     }
 
     /**
-     * 默认缓存管理�?
+     * 默认缓存管理器
      *
      * @return CacheManager
      */
@@ -74,7 +74,7 @@ public class CacheConfiguration extends CachingConfigurerSupport implements Cons
     }
 
     /**
-     * 缓存错误处理�?
+     * 缓存错误处理器
      */
     /* non-public */ static class LoggingCacheErrorHandler extends SimpleCacheErrorHandler {
         @Override

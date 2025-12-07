@@ -194,9 +194,9 @@ public class CurrentUser {
     }
 
     /**
-     * 是否管理�?
+     * 是否管理员
      *
-     * @return 是否管理�?
+     * @return 是否管理员
      */
     public boolean isAdmin() {
         return null != this.roles && this.roles.contains("ADMIN");

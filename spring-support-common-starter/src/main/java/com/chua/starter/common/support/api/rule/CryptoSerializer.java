@@ -31,7 +31,7 @@ public class CryptoSerializer extends JsonSerializer<String> implements Contextu
     private CryptoType cryptoType;
 
     /**
-     * 加解密模�?
+     * 加解密模式
      */
     private CryptoModule cryptoModule;
     /**

@@ -18,7 +18,7 @@ import org.springframework.context.ApplicationEvent;
 public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade<ApiRequestDecodeSetting> {
 
     /**
-     * 是否开启请求解�?
+     * 是否开启请求解密
      */
     private boolean enable = true;
 
@@ -28,16 +28,16 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
     private String codecRequestKey = null;
 
     /**
-     * 无参构造方�?
+     * 无参构造方法
      */
     public ApiRequestDecodeSetting() {
         this(true);
     }
 
     /**
-     * 带参构造方�?
+     * 带参构造方法
      *
-     * @param source 事件源对�?
+     * @param source 事件源对象
      */
     public ApiRequestDecodeSetting(Object source) {
         super(source);

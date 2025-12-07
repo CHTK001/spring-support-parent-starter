@@ -13,19 +13,19 @@ import java.lang.annotation.Target;
 /**
  * 字段加密注解
  * <p>
- * 用于对敏感字段进行加密处理，在序列化时自动加密输出�?
- * 支持多种加密算法，包括AES、SM2、SM4等�?
+ * 用于对敏感字段进行加密处理，在序列化时自动加密输出。
+ * 支持多种加密算法，包括AES、SM2、SM4等。
  * </p>
  *
- * <h3>使用场景�?/h3>
+ * <h3>使用场景</h3>
  * <ul>
- *   <li>用户密码等敏感信息加密存�?/li>
+ *   <li>用户密码等敏感信息加密存储</li>
  *   <li>传输过程中的数据加密保护</li>
- *   <li>符合安全合规要求的数据加�?/li>
- *   <li>国密算法加密需�?/li>
+ *   <li>符合安全合规要求的数据加密</li>
+ *   <li>国密算法加密需求</li>
  * </ul>
  *
- * <h3>使用示例�?/h3>
+ * <h3>使用示例</h3>
  * <pre>
  * public class UserVO {
  *     // 使用AES加密（默认）
@@ -36,16 +36,16 @@ import java.lang.annotation.Target;
  *     &#64;ApiFieldCrypto(cryptoType = ApiCryptoType.SM4, key = "1234567890abcdef")
  *     private String mobile;
  *
- *     // 使用SM2非对称加�?
+ *     // 使用SM2非对称加密
  *     &#64;ApiFieldCrypto(cryptoType = ApiCryptoType.SM2, key = "公钥")
  *     private String idCard;
  * }
  * </pre>
  *
- * <h3>加密算法说明�?/h3>
+ * <h3>加密算法说明</h3>
  * <ul>
- *   <li><b>AES</b>: 对称加密，密钥长�?6/24/32字节，速度�?/li>
- *   <li><b>SM4</b>: 国密对称加密，密钥长�?6字节，符合国家标�?/li>
+ *   <li><b>AES</b>: 对称加密，密钥长度16/24/32字节，速度快</li>
+ *   <li><b>SM4</b>: 国密对称加密，密钥长度16字节，符合国家标准</li>
  *   <li><b>SM2</b>: 国密非对称加密，需要公私钥对，安全性高</li>
  * </ul>
  *
@@ -64,7 +64,7 @@ public @interface ApiFieldCrypto {
     /**
      * 加密类型
      * <p>
-     * 指定字段加密使用的算法类型�?
+     * 指定字段加密使用的算法类型。
      * </p>
      *
      * @return 加密类型枚举值，默认AES
@@ -74,11 +74,11 @@ public @interface ApiFieldCrypto {
     /**
      * 加密密钥
      * <p>
-     * 加密时使用的密钥，不能为空�?
-     * 密钥长度需要符合对应加密算法的要求�?
+     * 加密时使用的密钥，不能为空。
+     * 密钥长度需要符合对应加密算法的要求。
      * </p>
      *
-     * @return 加密密钥字符�?
+     * @return 加密密钥字符串
      */
     String key();
 
@@ -89,19 +89,19 @@ public @interface ApiFieldCrypto {
     enum ApiCryptoType {
         /**
          * AES对称加密算法
-         * <p>高级加密标准(Advanced Encryption Standard)，密钥长�?6/24/32字节</p>
+         * <p>高级加密标准(Advanced Encryption Standard)，密钥长度16/24/32字节</p>
          */
         AES,
 
         /**
-         * SM2非对称加密算�?
+         * SM2非对称加密算法
          * <p>国家商用密码标准中的公钥密码算法</p>
          */
         SM2,
 
         /**
          * SM4对称加密算法
-         * <p>国家商用密码标准中的分组密码算法，密钥长�?6字节</p>
+         * <p>国家商用密码标准中的分组密码算法，密钥长度16字节</p>
          */
         SM4
     }

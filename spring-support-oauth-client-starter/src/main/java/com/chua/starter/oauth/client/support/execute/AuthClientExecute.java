@@ -37,8 +37,6 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static com.chua.starter.common.support.utils.RequestUtils.*;
-import static com.chua.starter.oauth.client.support.enums.AuthType.AUTO;
-import static com.chua.starter.oauth.client.support.enums.AuthType.STATIC;
 
 /**
  * 鉴权客户端操作
@@ -161,19 +159,147 @@ public class AuthClientExecute {
      *
      * @param uid        用户唯一标识，例如："123456"
      * @param loginType  登录类型，例如："mobile"、"email"
-     * @param logoutType 登出类型，例如：LogoutType.NORMAL
+     * @param logoutType 登出类型，例如：LogoutType.LOGOUT
      * @return 登录认证结果
      */
     public LoginAuthResult logout(String uid, String loginType, LogoutType logoutType) {
-        AuthType authType = null;
-        if (STATIC.name().equalsIgnoreCase(authClientProperties.getProtocol())) {
-            authType = STATIC;
-        } else {
-            authType = AUTO;
+        String protocol = authClientProperties.getProtocol();
+        ProtocolExecutor protocolExecutor = ServiceProvider.of(ProtocolExecutor.class).getExtension(protocol);
+        if (protocolExecutor == null) {
+            protocolExecutor = ServiceProvider.of(ProtocolExecutor.class).getExtension("default");
         }
-
-        ProtocolExecutor protocolExecutor = ServiceProvider.of(ProtocolExecutor.class).getExtension(authType);
         return protocolExecutor.logout(uid, logoutType, getUserResult());
+    }
+
+    // ==================== 登出便捷方法 ====================
+
+    /**
+     * 清除本地缓存（Session 和内存缓存）
+     * <p>登出时调用，清除 AuthFilter 存储的用户信息</p>
+     */
+    private void clearLocalCache() {
+        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
+        if (requestAttributes == null) {
+            return;
+        }
+        
+        ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
+        HttpServletRequest request = attributes.getRequest();
+        
+        try {
+            // 清除 Session 中的用户信息
+            request.getSession().removeAttribute(SESSION_USER_INFO);
+            request.getSession().removeAttribute("username");
+            request.getSession().removeAttribute("userId");
+            request.getSession().removeAttribute("userResume");
+            request.getSession().removeAttribute("principal");
+            
+            // 清除内存缓存
+            String token = getTokenFromRequest(request);
+            if (StringUtils.isNotBlank(token)) {
+                CACHE.invalidate(token);
+            }
+        } catch (Exception ignored) {
+            // 忽略清除缓存时的异常
+        }
+    }
+
+    /**
+     * 从请求中获取 Token
+     */
+    private String getTokenFromRequest(HttpServletRequest request) {
+        // 从 Header 获取
+        String token = request.getHeader(authClientProperties.getTokenName());
+        if (StringUtils.isNotBlank(token)) {
+            return token;
+        }
+        
+        // 从 Cookie 获取
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if (authClientProperties.getCookieName().equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+        
+        // 从参数获取
+        return request.getParameter(authClientProperties.getTokenName());
+    }
+
+    /**
+     * 登出当前设备
+     * <p>根据当前请求中的 Token 登出，删除 Token 和 RefreshToken，并清除本地缓存</p>
+     *
+     * @return 登出结果
+     */
+    public LoginAuthResult logoutCurrent() {
+        UserResult userResult = getUserResult();
+        if (userResult == null || StringUtils.isBlank(userResult.getToken())) {
+            return new LoginAuthResult(400, "未登录");
+        }
+        // 清除本地缓存
+        clearLocalCache();
+        // 使用 token 作为 uid 参数，LogoutType.LOGOUT 表示单设备登出
+        return logout(userResult.getToken(), userResult.getLoginType(), LogoutType.LOGOUT);
+    }
+
+    /**
+     * 登出当前用户的所有设备
+     * <p>删除该用户的所有 Token 和 RefreshToken，并清除本地缓存</p>
+     *
+     * @return 登出结果
+     */
+    public LoginAuthResult logoutAll() {
+        UserResult userResult = getUserResult();
+        if (userResult == null || StringUtils.isBlank(userResult.getUid())) {
+            return new LoginAuthResult(400, "未登录");
+        }
+        // 清除本地缓存
+        clearLocalCache();
+        return logout(userResult.getUid(), userResult.getLoginType(), LogoutType.LOGOUT_ALL);
+    }
+
+    /**
+     * 登出指定用户的所有设备
+     * <p>删除该用户的所有 Token 和 RefreshToken</p>
+     *
+     * @param uid 用户唯一标识
+     * @return 登出结果
+     */
+    public LoginAuthResult logoutAll(String uid) {
+        if (StringUtils.isBlank(uid)) {
+            return new LoginAuthResult(400, "用户ID不能为空");
+        }
+        return logout(uid, null, LogoutType.LOGOUT_ALL);
+    }
+
+    /**
+     * 根据 Token 登出指定设备
+     *
+     * @param token 访问令牌
+     * @return 登出结果
+     */
+    public LoginAuthResult logoutByToken(String token) {
+        if (StringUtils.isBlank(token)) {
+            return new LoginAuthResult(400, "Token不能为空");
+        }
+        return logout(token, null, LogoutType.LOGOUT);
+    }
+
+    /**
+     * 注销账号（永久）
+     * <p>删除该用户的所有 Token 和 RefreshToken，通常用于账号注销场景</p>
+     *
+     * @param uid 用户唯一标识
+     * @return 登出结果
+     */
+    public LoginAuthResult unregister(String uid) {
+        if (StringUtils.isBlank(uid)) {
+            return new LoginAuthResult(400, "用户ID不能为空");
+        }
+        return logout(uid, null, LogoutType.UN_REGISTER);
     }
 
     /**
@@ -187,11 +313,11 @@ public class AuthClientExecute {
      */
     @Watch
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
-        if (STATIC.name().equalsIgnoreCase(authClientProperties.getProtocol())) {
-            authType = STATIC;
+        String protocol = authClientProperties.getProtocol();
+        ProtocolExecutor protocolExecutor = ServiceProvider.of(ProtocolExecutor.class).getExtension(protocol);
+        if (protocolExecutor == null) {
+            protocolExecutor = ServiceProvider.of(ProtocolExecutor.class).getExtension("default");
         }
-
-        ProtocolExecutor protocolExecutor = ServiceProvider.of(ProtocolExecutor.class).getExtension(authType);
         return protocolExecutor.getAccessToken(username, password, authType, ext);
     }
 
@@ -208,6 +334,89 @@ public class AuthClientExecute {
         userResult.setLoginType(authType);
 
         return DigestUtils.md5Hex(username + userResult.getLoginType());
+    }
+
+    // ==================== 在线状态查询（调用服务器） ====================
+
+    /**
+     * 查询当前用户的在线状态
+     * <p>通过调用服务器端接口获取在线状态信息</p>
+     *
+     * @return 在线状态信息，未登录返回 null
+     */
+    public Protocol.OnlineStatus getOnlineStatus() {
+        UserResult userResult = getUserResult();
+        if (userResult == null || StringUtils.isBlank(userResult.getUid())) {
+            return null;
+        }
+        return getOnlineStatus(userResult.getUid());
+    }
+
+    /**
+     * 查询指定用户的在线状态
+     * <p>通过调用服务器端接口获取在线状态信息</p>
+     *
+     * @param uid 用户唯一标识
+     * @return 在线状态信息
+     */
+    public Protocol.OnlineStatus getOnlineStatus(String uid) {
+        if (StringUtils.isBlank(uid)) {
+            return null;
+        }
+        try {
+            Protocol protocol = ServiceProvider.of(Protocol.class)
+                    .getNewExtension(authClientProperties.getProtocol(), authClientProperties);
+            if (protocol == null) {
+                return null;
+            }
+            return protocol.getOnlineStatus(uid);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * 检查当前用户是否可以登录（未达到在线上限）
+     * <p>通过调用服务器端接口判断</p>
+     *
+     * @return true-可以登录，false-已达上限
+     */
+    public boolean canLogin() {
+        Protocol.OnlineStatus status = getOnlineStatus();
+        return status == null || !status.isReachedLimit();
+    }
+
+    /**
+     * 检查指定用户是否可以登录（未达到在线上限）
+     * <p>通过调用服务器端接口判断</p>
+     *
+     * @param uid 用户唯一标识
+     * @return true-可以登录，false-已达上限
+     */
+    public boolean canLogin(String uid) {
+        Protocol.OnlineStatus status = getOnlineStatus(uid);
+        return status == null || !status.isReachedLimit();
+    }
+
+    /**
+     * 获取当前用户的在线数量
+     *
+     * @return 在线数量，未登录返回 0
+     */
+    public int getOnlineCount() {
+        Protocol.OnlineStatus status = getOnlineStatus();
+        return status != null ? status.getOnlineCount() : 0;
+    }
+
+    /**
+     * 获取指定用户的在线数量
+     *
+     * @param uid 用户唯一标识
+     * @return 在线数量
+     */
+    public int getOnlineCount(String uid) {
+        Protocol.OnlineStatus status = getOnlineStatus(uid);
+        return status != null ? status.getOnlineCount() : 0;
     }
 
     /**

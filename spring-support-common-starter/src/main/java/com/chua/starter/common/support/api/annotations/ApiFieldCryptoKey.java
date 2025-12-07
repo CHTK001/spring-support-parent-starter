@@ -12,25 +12,25 @@ import java.lang.annotation.Target;
 /**
  * 字段加密密钥标记注解
  * <p>
- * 用于标记实体中存储加密密钥的字段，与 @ApiFieldCrypto 配合使用�?
- * 序列化时该字段会被特殊处理�?
+ * 用于标记实体中存储加密密钥的字段，与 @ApiFieldCrypto 配合使用。
+ * 序列化时该字段会被特殊处理。
  * </p>
  *
- * <h3>使用场景�?/h3>
+ * <h3>使用场景</h3>
  * <ul>
- *   <li>动态密钥加密：不同记录使用不同的加密密�?/li>
+ *   <li>动态密钥加密：不同记录使用不同的加密密钥</li>
  *   <li>密钥字段标识：标记实体中哪个字段存储密钥</li>
  * </ul>
  *
- * <h3>使用示例�?/h3>
+ * <h3>使用示例</h3>
  * <pre>
  * public class SecureData {
  *     // 标记此字段为加密密钥
  *     &#64;ApiFieldCryptoKey
  *     private String encryptKey;
  *
- *     // 使用动态密钥加�?
- *     &#64;ApiFieldCrypto(key = "")  // key为空时使�?@ApiFieldCryptoKey 标记的字�?
+ *     // 使用动态密钥加密
+ *     &#64;ApiFieldCrypto(key = "")  // key为空时使�?@ApiFieldCryptoKey 标记的字段
  *     private String sensitiveData;
  * }
  * </pre>

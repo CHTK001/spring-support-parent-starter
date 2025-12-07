@@ -3,7 +3,7 @@ package com.chua.starter.common.support.annotations;
 import java.lang.annotation.*;
 
 /**
- * 数据源切�?
+ * 数据源切换
  *
  * @author ch
  */
@@ -12,9 +12,9 @@ import java.lang.annotation.*;
 @Documented
 public @interface DS {
     /**
-     * 数据源名�?
+     * 数据源名称
      *
-     * @return 数据源名�?
+     * @return 数据源名称
      */
     String value();
 }

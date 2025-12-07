@@ -21,9 +21,9 @@ import java.io.InputStream;
 import java.lang.reflect.Type;
 
 /**
- * 请求解码处理�?
+ * 请求解码处理器
  * <p>
- * 处理加密请求的解密操作�?
+ * 处理加密请求的解密操作。
  * </p>
  *
  * @author CH
@@ -48,7 +48,7 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice {
 
     @Override
     public HttpInputMessage beforeBodyRead(HttpInputMessage inputMessage, MethodParameter parameter, Type targetType, Class<? extends HttpMessageConverter<?>> converterType) throws IOException {
-        // 检查是否启用请求解�?
+        // 检查是否启用请求解密
         if (!decodeRegister.requestDecodeOpen()) {
             log.debug("[RequestDecode] 请求解密未启用，跳过处理");
             return inputMessage;
@@ -56,47 +56,48 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice {
 
         HttpHeaders headers = inputMessage.getHeaders();
 
-        // === 安全验证：检查User-Agent，防止爬虫攻�?===
+        // === 安全验证：检查User-Agent，防止爬虫攻击 ===
         String userAgent = headers.getFirst("user-agent");
         if (UserAgent.isCrawler(userAgent)) {
-            log.warn("[RequestDecode] 检测到爬虫请求，拒绝处�? {}", userAgent);
+            log.warn("[RequestDecode] 检测到爬虫请求，拒绝处理： {}", userAgent);
             return EmptyHttpInputMessage.getInstance();
         }
 
-        // === 获取关键请求�?===
+        // === 获取关键请求头 ===
+        // === 获取关键请求头 ===
         String keyHeader = headers.getFirst(decodeRegister.getKeyHeader());
         String timestamp = headers.getFirst("access-control-timestamp-user");
         String nonce = headers.getFirst("access-control-nonce");
         String otkId = headers.getFirst("access-control-otk-id");
 
-        log.debug("[RequestDecode] 请求头信�?- keyHeader: {}, timestamp: {}, nonce: {}, otkId: {}",
+        log.debug("[RequestDecode] 请求头信息 - keyHeader: {}, timestamp: {}, nonce: {}, otkId: {}",
                 StringUtils.isNotEmpty(keyHeader) ? "存在" : "缺失",
                 timestamp, nonce, otkId);
 
-        // === 基础验证：检查必要的请求�?===
+        // === 基础验证：检查必要的请求头 ===
         if (StringUtils.isEmpty(keyHeader)) {
             log.debug("[RequestDecode] 缺少密钥头，跳过解密处理");
             return inputMessage;
         }
 
-        // === 反重放攻击验�?===
+        // === 反重放攻击证 ===
         if (StringUtils.isNotEmpty(timestamp) && StringUtils.isNotEmpty(nonce)) {
             if (!decodeRegister.validateAntiReplay(timestamp, nonce)) {
-                log.error("[RequestDecode] 反重放攻击验证失�?- timestamp: {}, nonce: {}", timestamp, nonce);
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "请求验证失败：重放攻击检�?);
+                log.error("[RequestDecode] 反重放攻击验证失败 - timestamp: {}, nonce: {}", timestamp, nonce);
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "请求验证失败：重放攻击检测");
             }
             log.debug("[RequestDecode] 反重放攻击验证通过");
         } else {
             log.warn("[RequestDecode] 缺少反重放攻击保护参数，存在安全风险");
         }
 
-        // === 读取请求�?===
+        // === 读取请求头 ===
         byte[] originByteArray;
         try {
             originByteArray = IoUtils.toByteArray(inputMessage.getBody());
         } catch (IOException e) {
-            log.error("[RequestDecode] 读取请求体失�?, e);
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "请求体读取失�?);
+            log.error("[RequestDecode] 读取请求体失败", e);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "请求体读取失败");
         }
 
         if (originByteArray.length == 0) {
@@ -105,7 +106,7 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice {
         }
 
         String encodeBody = StringUtils.utf8Str(originByteArray);
-        log.debug("[RequestDecode] 请求体长�? {} bytes", originByteArray.length);
+        log.debug("[RequestDecode] 请求体长度: {} bytes", originByteArray.length);
 
         // === 提取加密数据 ===
         String encryptedData = null;
@@ -115,7 +116,7 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice {
             if (encodeBody.startsWith("[")) {
                 JsonArray jsonArray = Json.getJsonArray(encodeBody);
                 if (jsonArray.isEmpty()) {
-                    log.debug("[RequestDecode] JSON数组为空，返回原始数�?);
+                    log.debug("[RequestDecode] JSON数组为空，返回原始数据");
                     return new ByteInputMessage(originByteArray, headers);
                 }
                 encryptedData = jsonArray.getJsonObject(0).getString("data");
@@ -125,7 +126,7 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice {
                 isArrayFormat = false;
             }
         } catch (Exception e) {
-            log.warn("[RequestDecode] JSON解析失败，返回原始数�? {}", e.getMessage());
+            log.warn("[RequestDecode] JSON解析失败，返回原始数据: {}", e.getMessage());
             return new ByteInputMessage(originByteArray, headers);
         }
 
@@ -144,21 +145,21 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice {
             decryptedByteArray = decodeRegister.decodeRequest(encryptedData);
 
             if (decryptedByteArray == null || decryptedByteArray.length == 0) {
-                log.warn("[RequestDecode] 解密结果为空，返回原始数�?);
+                log.warn("[RequestDecode] 解密结果为空，返回原始数据");
                 return new ByteInputMessage(originByteArray, headers);
             }
 
-            log.info("[RequestDecode] 请求解密成功 - 原始长度: {} bytes, 解密后长�? {} bytes, 格式: {}, OTK: {}",
+            log.info("[RequestDecode] 请求解密成功 - 原始长度: {} bytes, 解密后长度: {} bytes, 格式: {}, OTK: {}",
                     originByteArray.length, decryptedByteArray.length,
                     isArrayFormat ? "数组" : "对象",
-                    StringUtils.isNotEmpty(otkId) ? "已验�? : "未使�?);
+                    StringUtils.isNotEmpty(otkId) ? "已验证" : "未使用");
 
             return new ByteInputMessage(decryptedByteArray, headers);
 
         } catch (Exception e) {
             log.error("[RequestDecode] 请求解密失败 - 加密数据长度: {} chars, 错误: {}",
                     encryptedData.length(), e.getMessage(), e);
-            log.warn("[RequestDecode] 解密失败，返回原始数据以保证业务连续�?);
+            log.warn("[RequestDecode] 解密失败，返回原始数据以保证业务连续性");
             return new ByteInputMessage(originByteArray, headers);
         }
     }

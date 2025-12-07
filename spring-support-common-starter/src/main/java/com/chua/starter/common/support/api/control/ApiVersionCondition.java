@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
 /**
  * API 版本条件
  * <p>
- * 用于匹配请求中的版本号与 API 定义的版本号�?
+ * 用于匹配请求中的版本号与 API 定义的版本号。
  * </p>
  *
  * @author CH
@@ -38,9 +38,9 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
     }
 
     /**
-     * 合并条件（method 优先�?class�?
+     * 合并条件（method 优先于 class）
      *
-     * @param other 另一个条�?
+     * @param other 另一个条件
      * @return 合并后的条件
      */
     @Override
@@ -51,9 +51,9 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
     /**
      * 判断是否匹配
      * <p>
-     * 支持两种版本指定方式�?
-     * 1. 查询参数�?version=1 �??version=v1
-     * 2. 路径前缀�?api/v1/xxx
+     * 支持两种版本指定方式：
+     * 1. 查询参数：?version=1 �??version=v1
+     * 2. 路径前缀：/api/v1/xxx
      * </p>
      *
      * @param httpServletRequest HTTP 请求
@@ -73,7 +73,7 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
             }
         }
         
-        // 没有指定版本，匹配所�?
+        // 没有指定版本，匹配所有
         if (null == versionStr) {
             return this;
         }
@@ -92,7 +92,7 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
         double requestVersion = parseVersion(versionStr);
         double apiVersionValue = currentApiVersion.value();
         
-        // 请求版本 >= API版本 则匹�?
+        // 请求版本 >= API版本 则匹配
         if (requestVersion >= apiVersionValue) {
             return this;
         }
@@ -104,13 +104,13 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
      * 解析版本号字符串
      *
      * @param versionStr 版本号字符串
-     * @return 版本号数�?
+     * @return 版本号数值
      */
     private double parseVersion(String versionStr) {
         try {
             return Double.parseDouble(versionStr);
         } catch (NumberFormatException e) {
-            log.warn("无法解析版本�? {}", versionStr);
+            log.warn("无法解析版本号:  {}", versionStr);
             return 0.0;
         }
     }
@@ -118,7 +118,7 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
     /**
      * 比较优先级（版本号大的优先）
      *
-     * @param other              另一个条�?
+     * @param other              另一个条件
      * @param httpServletRequest HTTP 请求
      * @return 比较结果
      */
@@ -126,7 +126,7 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
     public int compareTo(ApiVersionCondition other, HttpServletRequest httpServletRequest) {
         double thisVersion = getApiVersion() != null ? getApiVersion().value() : 0.0;
         double otherVersion = other.getApiVersion() != null ? other.getApiVersion().value() : 0.0;
-        // 版本号大的优先匹�?
+        // 版本号大的优先匹配
         return Double.compare(otherVersion, thisVersion);
     }
 }

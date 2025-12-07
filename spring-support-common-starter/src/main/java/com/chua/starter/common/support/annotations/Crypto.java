@@ -28,7 +28,7 @@ public @interface Crypto {
     CryptoType cryptoType() default CryptoType.AES;
 
     /**
-     * 加解密模�?
+     * 加解密模式
      */
     CryptoModule cryptoModule();
 
@@ -44,7 +44,7 @@ public @interface Crypto {
 
     public static enum KeyType {
         /**
-         * 不使�?
+         * 不使用
          */
         NONE,
 

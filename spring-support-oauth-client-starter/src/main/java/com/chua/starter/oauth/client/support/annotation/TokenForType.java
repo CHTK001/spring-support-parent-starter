@@ -19,12 +19,12 @@ public @interface TokenForType {
 
     /**
      * 认证类型数组
-     * 默认值为自动识别认证类型
-     * 示例: @TokenForType(value = {AuthType.JWT, AuthType.OAUTH2})
+     * 默认值为空，表示匹配所有认证类型
+     * 示例: @TokenForType(value = {AuthType.WEB, AuthType.TOKEN})
      *
      * @return 认证类型数组
      */
-    AuthType[] value() default {AuthType.AUTO};
+    AuthType[] value() default {};
     
     /**
      * 分组信息数组
