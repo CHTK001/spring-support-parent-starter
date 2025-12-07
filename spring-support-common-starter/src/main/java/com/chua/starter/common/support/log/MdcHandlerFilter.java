@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.log;
 
+import com.chua.starter.common.support.constant.MdcConstant;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.MDC;
@@ -19,19 +20,16 @@ import java.util.UUID;
  */
 public class MdcHandlerFilter implements Filter {
 
-    private static final String TRACE_ID = "traceId";
-    private static final String X_TRACE_ID = "X-Trace-Id";
-
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
         try {
             HttpServletRequest httpRequest = (HttpServletRequest) request;
-            String traceId = httpRequest.getHeader(X_TRACE_ID);
+            String traceId = httpRequest.getHeader(MdcConstant.X_TRACE_ID);
             if (traceId == null || traceId.isEmpty()) {
                 traceId = UUID.randomUUID().toString().replace("-", "");
             }
-            MDC.put(TRACE_ID, traceId);
+            MDC.put(MdcConstant.TRACE_ID, traceId);
             chain.doFilter(request, response);
         } finally {
             MDC.clear();

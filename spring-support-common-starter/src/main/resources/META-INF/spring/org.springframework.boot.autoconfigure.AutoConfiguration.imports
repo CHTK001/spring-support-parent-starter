@@ -9,7 +9,10 @@ com.chua.starter.common.support.configuration.ProjectConfiguration
 com.chua.starter.common.support.configuration.AutoCreateTableConfiguration
 com.chua.starter.common.support.configuration.CommonConfiguration
 com.chua.starter.common.support.api.configuration.ApiConfiguration
-com.chua.starter.common.support.configuration.FilterConfiguration
+com.chua.starter.common.support.api.configuration.ApiFilterConfiguration
+com.chua.starter.common.support.log.LogConfiguration
+com.chua.starter.common.support.actuator.ActuatorConfiguration
+com.chua.starter.common.support.auth.AuthConfiguration
 com.chua.starter.common.support.cache.configuration.CacheProxyCachingConfiguration
 com.chua.starter.common.support.cache.configuration.CacheCustomTenantedKeyGenerator
 com.chua.starter.common.support.configuration.AutoControllerRegistrar

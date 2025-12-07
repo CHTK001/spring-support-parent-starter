@@ -1,5 +1,6 @@
 package com.chua.starter.mybatis.interceptor;
 
+import com.chua.common.support.http.HttpConstant;
 import com.chua.common.support.lang.formatter.DmlFormatter;
 import com.chua.common.support.lang.formatter.Formatter;
 import com.chua.common.support.lang.formatter.HighlightingFormatter;
@@ -17,6 +18,7 @@ import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
 import org.apache.ibatis.type.TypeHandlerRegistry;
+import org.slf4j.MDC;
 import org.springframework.util.CollectionUtils;
 
 import java.lang.reflect.Method;
@@ -116,10 +118,14 @@ public class SqlInterceptor implements Interceptor {
      */
     public static String getSql(Configuration configuration, BoundSql boundSql, String sqlId, long time, Object result, String name) {
         showSql(configuration, boundSql);
+        String traceId = MDC.get(HttpConstant.TRACE_ID);
         String message = "[SqlInterceptor] 执行 [" + name + "] 时间 [" + formatter.format(System.currentTimeMillis()) + "] sql耗时 [" + (double) time / 1000 + "] s";
         StringBuilder str = new StringBuilder();
         List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
         str.append("\n").append("----------------------------begin【SQL Execute Message】--------------------------------\n");
+        if (StringUtils.isNotBlank(traceId)) {
+            str.append("【TraceId】").append(traceId).append("\n");
+        }
         str.append("【方法】").append(sqlId).append("\n");
         str.append("【sql】\r\n").append(HIGHLIGHTING_FORMATTER.format(FORMATTER.format(MAP.get("sql").toString())));
         str.append("\n");

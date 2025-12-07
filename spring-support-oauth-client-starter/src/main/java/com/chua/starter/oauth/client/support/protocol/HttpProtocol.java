@@ -29,6 +29,7 @@ import kong.unirest.UnirestException;
 import kong.unirest.UnirestInstance;
 import lombok.extern.slf4j.Slf4j;
 import me.zhyd.oauth.exception.AuthException;
+import org.slf4j.MDC;
 
 import java.util.Map;
 
@@ -220,6 +221,12 @@ public class HttpProtocol extends AbstractProtocol {
                     .header("x-oauth-encode", String.valueOf(isEncode()))
                     .header("x-oauth-serial", createData(key, key1))
                     .header("x-oauth-sign", SignUtils.generateSignFromMap(jsonObject));
+            
+            // 传递 traceId 用于链路追踪
+            String traceId = MDC.get("traceId");
+            if (StringUtils.isNotBlank(traceId)) {
+                requestWithBody = requestWithBody.header("x-trace-id", traceId);
+            }
 
             // 如果有升级类型，则添加相应请求头
             if (null != upgradeType) {
