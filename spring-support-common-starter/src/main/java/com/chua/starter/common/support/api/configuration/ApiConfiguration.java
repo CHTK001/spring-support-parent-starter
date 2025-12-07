@@ -57,11 +57,32 @@ public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware {
     @ConditionalOnMissingBean
     public RequestMappingHandlerMapping requestMappingInfoHandlerMapping() {
         if (apiProperties.isControlEnabled()) {
-            log.info(">>>>>>> 开启版本控制功能");
-            log.info(">>>>>>> @ApiProfile 环境控制");
-            log.info(">>>>>>> @ApiVersion 版本控制");
+            log.info("╔══════════════════════════════════════════════════════════════════════════════");
+            log.info("║ 【API控制】正在注册...");
+            log.info("╠══════════════════════════════════════════════════════════════════════════════");
+            
+            // 版本控制
+            ApiProperties.Version version = apiProperties.getVersion();
+            if (version != null && version.isEnable()) {
+                log.info("║ @ApiVersion 版本控制: 开启");
+            } else {
+                log.info("║ @ApiVersion 版本控制: 关闭");
+            }
+            
+            // 平台控制
+            ApiProperties.Platform platform = apiProperties.getPlatform();
+            if (platform != null && platform.isEnable()) {
+                log.info("║ @ApiPlatform 平台控制: 开启");
+                log.info("║   - 平台名称: {}", platform.getPlatformName());
+            } else {
+                log.info("║ @ApiPlatform 平台控制: 关闭");
+            }
+            
+            log.info("║ @ApiProfile 环境控制: 开启");
+            log.info("╚══════════════════════════════════════════════════════════════════════════════");
             return new ApiVersionRequestMappingHandlerMapping(apiProperties, environment);
         }
+        log.debug("[API控制] 未开启版本/平台控制，使用默认 RequestMappingHandlerMapping");
         return new RequestMappingHandlerMapping();
     }
 

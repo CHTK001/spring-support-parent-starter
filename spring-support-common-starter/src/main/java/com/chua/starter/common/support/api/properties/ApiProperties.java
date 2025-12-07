@@ -77,7 +77,7 @@ public class ApiProperties {
         /**
          * 是否开启版本控制
          */
-        private boolean enable = false;
+        private boolean enable = true;
     }
 
     /**
