@@ -4,12 +4,12 @@
 //import com.chua.common.support.utils.PrivacyUtils;
 //import com.chua.common.support.utils.StringUtils;
 //import com.chua.starter.common.support.annotations.PrivacyEncrypt;
-//import com.chua.starter.common.support.rule.PrivacyTypeEnum;
+//import com.chua.starter.common.support.api.rule.PrivacyTypeEnum;
 //
 //import java.lang.reflect.Field;
 //
 ///**
-// * 敏感信息过滤器
+// * 敏感信息过滤�?
 // *
 // * @author CH
 // */
@@ -62,3 +62,4 @@
 //        return value;
 //    }
 //}
+

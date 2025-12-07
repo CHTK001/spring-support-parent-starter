@@ -20,7 +20,7 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 /**
- * 动态环境
+ * 动态环�?
  * @author CH
  * @since 2024/12/4
  */
@@ -64,3 +64,4 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
         return ConfigDataEnvironmentPostProcessor.ORDER + 20;
     }
 }
+

@@ -5,7 +5,7 @@ import com.chua.starter.common.support.constant.DataFilterTypeEnum;
 import java.lang.annotation.*;
 
 /**
- * 权限(只支持注入 xxxMapper)
+ * 权限(只支持注�?xxxMapper)
  *
  * @author CH
  * @since 2022/7/29 8:23
@@ -22,3 +22,4 @@ public @interface DataScope {
      */
     DataFilterTypeEnum value() default DataFilterTypeEnum.ALL;
 }
+

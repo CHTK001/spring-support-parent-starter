@@ -16,3 +16,4 @@ public class UserLoggerInfo extends SysLoggerInfo {
         super(source);
     }
 }
+

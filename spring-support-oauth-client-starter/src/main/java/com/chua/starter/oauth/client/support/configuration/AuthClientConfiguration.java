@@ -64,9 +64,8 @@ public class AuthClientConfiguration
      *
      * @return OAuth认证服务实例
      */
-    @Bean
+    @Bean(name = "authService")
     @Primary
-    @ConditionalOnMissingBean
     public AuthService authService() {
         return new OauthAuthService();
     }

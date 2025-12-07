@@ -2,7 +2,7 @@ package com.chua.starter.strategy.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.chua.starter.common.support.result.Result;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.strategy.entity.SysLimitRecord;
 import com.chua.starter.strategy.service.SysLimitRecordService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,8 +33,8 @@ public class SysLimitRecordController {
      */
     @Operation(summary = "分页查询限流记录")
     @GetMapping("/page")
-    public Result<IPage<SysLimitRecord>> pageForLimitRecord(Page<SysLimitRecord> page) {
-        return Result.success(sysLimitRecordService.page(page));
+    public ReturnResult<IPage<SysLimitRecord>> pageForLimitRecord(Page<SysLimitRecord> page) {
+        return ReturnResult.success(sysLimitRecordService.page(page));
     }
 
     /**
@@ -45,8 +45,8 @@ public class SysLimitRecordController {
      */
     @Operation(summary = "根据ID查询限流记录")
     @GetMapping("/{id}")
-    public Result<SysLimitRecord> getByIdForLimitRecord(@PathVariable Long id) {
-        return Result.success(sysLimitRecordService.getById(id));
+    public ReturnResult<SysLimitRecord> getByIdForLimitRecord(@PathVariable Long id) {
+        return ReturnResult.success(sysLimitRecordService.getById(id));
     }
 
     /**
@@ -57,8 +57,8 @@ public class SysLimitRecordController {
      */
     @Operation(summary = "删除限流记录")
     @DeleteMapping("/delete")
-    public Result<Boolean> deleteForLimitRecord(@RequestParam Long id) {
-        return Result.success(sysLimitRecordService.removeById(id));
+    public ReturnResult<Boolean> deleteForLimitRecord(@RequestParam Long id) {
+        return ReturnResult.success(sysLimitRecordService.removeById(id));
     }
 
     /**
@@ -69,7 +69,7 @@ public class SysLimitRecordController {
      */
     @Operation(summary = "清理指定天数之前的限流记录")
     @DeleteMapping("/clean")
-    public Result<Integer> cleanOldRecordsForLimit(@RequestParam(defaultValue = "30") int days) {
-        return Result.success(sysLimitRecordService.cleanOldRecords(days));
+    public ReturnResult<Integer> cleanOldRecordsForLimit(@RequestParam(defaultValue = "30") int days) {
+        return ReturnResult.success(sysLimitRecordService.cleanOldRecords(days));
     }
 }

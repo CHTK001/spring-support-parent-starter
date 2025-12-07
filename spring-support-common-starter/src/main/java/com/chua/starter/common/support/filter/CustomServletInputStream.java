@@ -6,7 +6,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
 /**
- * 自定义servlet输入流
+ * 自定义servlet输入�?
  *
  * @author CH
  * @since 2023/09/08
@@ -39,3 +39,4 @@ public class CustomServletInputStream extends ServletInputStream {
         return inputStream.read();
     }
 }
+

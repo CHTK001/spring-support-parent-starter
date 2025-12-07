@@ -26,3 +26,4 @@ public class JsonArrayConverter implements Converter<Object[], String> {
         return typeFactory.constructType(String.class);
     }
 }
+

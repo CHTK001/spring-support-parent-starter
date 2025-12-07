@@ -31,7 +31,7 @@ import java.util.*;
 import static com.chua.common.support.constant.NameConstant.*;
 
 /**
- * 操作日志切入点顾问
+ * 操作日志切入点顾�?
  *
  * @author CH
  */
@@ -65,11 +65,11 @@ public class SysLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor
     }
 
     /**
-     * 执行值
+     * 执行�?
      *
      * @param invocation 调用
      * @return {@link Object}
-     * @throws Throwable 可丢弃
+     * @throws Throwable 可丢�?
      */
     private Object invokeValue(MethodInvocation invocation) throws Throwable {
         Object proceed = null;
@@ -198,3 +198,4 @@ public class SysLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor
         return null;
     }
 }
+

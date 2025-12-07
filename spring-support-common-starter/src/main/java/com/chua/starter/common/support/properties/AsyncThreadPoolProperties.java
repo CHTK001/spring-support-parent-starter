@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import static com.chua.starter.common.support.properties.AsyncThreadPoolProperties.PRE;
 
 /**
- * 线程池配置
+ * 线程池配�?
  * @author CH
  */
 @Data
@@ -27,15 +27,15 @@ public class AsyncThreadPoolProperties {
      */
     private int queueCapacity = 100000;
     /**
-     * 线程池关闭：等待所有任务都完成再关闭
+     * 线程池关闭：等待所有任务都完成再关�?
      */
     private boolean waitForTasksToCompleteOnShutdown;
     /**
-     * 等待时间：等待5秒后强制停止
+     * 等待时间：等�?秒后强制停止
      */
     private int awaitTerminationSeconds = Integer.MAX_VALUE;
     /**
-     * 允许空闲时间：超过核心线程之外的线程到达x秒后会被销毁
+     * 允许空闲时间：超过核心线程之外的线程到达x秒后会被销�?
      */
     private int keepAliveSeconds = 10;
     /**
@@ -43,3 +43,4 @@ public class AsyncThreadPoolProperties {
      */
     private String threadNamePrefix = "async-thread-pool-%d";
 }
+

@@ -5,7 +5,7 @@ import com.chua.common.support.annotations.SpiDefault;
 import java.lang.reflect.Field;
 
 /**
- * 格式化
+ * 格式�?
  *
  * @author CH
  */
@@ -16,3 +16,4 @@ public class NoneFormatter implements Formatter {
         return value;
     }
 }
+

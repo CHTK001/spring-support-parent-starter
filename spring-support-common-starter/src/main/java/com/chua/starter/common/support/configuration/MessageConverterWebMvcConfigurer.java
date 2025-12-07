@@ -1,17 +1,17 @@
 package com.chua.starter.common.support.configuration;
 
 import com.chua.common.support.utils.ClassUtils;
-import com.chua.starter.common.support.codec.CodecFactory;
+import com.chua.starter.common.support.api.encode.ApiResponseEncodeRegister;
 import com.chua.starter.common.support.configuration.resolver.RequestParamsMapMethodArgumentResolver;
 import com.chua.starter.common.support.converter.BinaryHttpMessageConverter;
 import com.chua.starter.common.support.jackson.configuration.JacksonConfiguration;
-import com.chua.starter.common.support.mdc.MdcHandlerFilter;
-import com.chua.starter.common.support.mdc.RestTemplateTraceIdInterceptor;
+import com.chua.starter.common.support.log.MdcHandlerFilter;
+import com.chua.starter.common.support.log.RestTemplateTraceIdInterceptor;
 import com.chua.starter.common.support.processor.ResponseModelViewMethodProcessor;
 import com.chua.starter.common.support.properties.JacksonProperties;
-import com.chua.starter.common.support.properties.MdcProperties;
+import com.chua.starter.common.support.log.MdcProperties;
 import com.chua.starter.common.support.properties.MessageConverterProperties;
-import com.chua.starter.common.support.strategies.CustomContentNegotiationStrategy;
+import com.chua.starter.common.support.api.encode.ApiContentNegotiationStrategy;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -58,7 +58,7 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     final MdcProperties mdcProperties;
     private List<HttpMessageConverter<?>> messageConverters;
     private ApplicationContext applicationContext;
-    private CodecFactory codecFactory;
+    private ApiResponseEncodeRegister apiResponseEncodeRegister;
 
     @Override
     public void addReturnValueHandlers(List<HandlerMethodReturnValueHandler> handlers) {
@@ -71,7 +71,7 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     }
     @Override
     public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
-        converters.addFirst(new BinaryHttpMessageConverter(codecFactory, messageConverters));
+        converters.addFirst(new BinaryHttpMessageConverter(apiResponseEncodeRegister, messageConverters));
     }
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
@@ -81,7 +81,7 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
 
     @Override
     public void configureContentNegotiation(ContentNegotiationConfigurer configurer) {
-        configurer.strategies(List.of(new CustomContentNegotiationStrategy(codecFactory)));
+        configurer.strategies(List.of(new ApiContentNegotiationStrategy(apiResponseEncodeRegister)));
     }
 
 
@@ -117,7 +117,7 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
 
 
 //    private void registerFastjson(List<HttpMessageConverter<?>> converters) {
-//        log.info(">>>>>>> 开启 FastJson2 数据转化");
+//        log.info(">>>>>>> 开�?FastJson2 数据转化");
 //        FastJsonHttpMessageConverter fastJsonHttpMessageConverter = new FastJsonHttpMessageConverter();
 //        FastJsonConfig fastJsonConfig = new FastJsonConfig();
 //        fastJsonConfig.setDateFormat(messageConverterProperties.getDataFormat());
@@ -185,7 +185,7 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
         this.messageConverters = new LinkedList<>();
-        this.codecFactory = applicationContext.getBean(CodecFactory.class);
+        this.apiResponseEncodeRegister = applicationContext.getBean(ApiResponseEncodeRegister.class);
         messageConverters.add(new MappingJackson2HttpMessageConverter(applicationContext.getBean(ObjectMapper.class)));
 //        messageConverters.add(new FastJsonHttpMessageConverter());
         messageConverters.add(new StringHttpMessageConverter());
@@ -212,3 +212,4 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
         }
     }
 }
+

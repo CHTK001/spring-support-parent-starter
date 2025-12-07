@@ -4,7 +4,7 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * 校验码
+ * 校验�?
  *
  * @author CH
  */
@@ -24,3 +24,4 @@ public class OptionalProperties {
 
 
 }
+

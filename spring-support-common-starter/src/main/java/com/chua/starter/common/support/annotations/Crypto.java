@@ -2,7 +2,7 @@ package com.chua.starter.common.support.annotations;
 
 import com.chua.common.support.crypto.CryptoModule;
 import com.chua.common.support.crypto.CryptoType;
-import com.chua.starter.common.support.rule.CryptoSerializer;
+import com.chua.starter.common.support.api.rule.CryptoSerializer;
 import com.fasterxml.jackson.annotation.JacksonAnnotationsInside;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
@@ -28,7 +28,7 @@ public @interface Crypto {
     CryptoType cryptoType() default CryptoType.AES;
 
     /**
-     * 加解密模式
+     * 加解密模�?
      */
     CryptoModule cryptoModule();
 
@@ -44,7 +44,7 @@ public @interface Crypto {
 
     public static enum KeyType {
         /**
-         * 不使用
+         * 不使�?
          */
         NONE,
 
@@ -54,3 +54,4 @@ public @interface Crypto {
         SPEL
     }
 }
+

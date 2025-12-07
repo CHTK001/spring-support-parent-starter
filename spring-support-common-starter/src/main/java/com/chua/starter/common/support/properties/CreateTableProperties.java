@@ -16,7 +16,7 @@ public class CreateTableProperties {
     public static final String PRE = "plugin.table";
 
     /**
-     * 是否开启
+     * 是否开�?
      */
     private boolean enable;
 
@@ -35,3 +35,4 @@ public class CreateTableProperties {
      */
     private ActionType type = ActionType.UPDATE;
 }
+

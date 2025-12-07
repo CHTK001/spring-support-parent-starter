@@ -2,7 +2,7 @@ package com.chua.starter.strategy.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.chua.starter.common.support.result.Result;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.strategy.entity.SysDebounceConfiguration;
 import com.chua.starter.strategy.service.SysDebounceConfigurationService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,10 +36,10 @@ public class SysDebounceConfigurationController {
      */
     @Operation(summary = "分页查询防抖配置")
     @GetMapping("/page")
-    public Result<IPage<SysDebounceConfiguration>> pageForDebounce(
+    public ReturnResult<IPage<SysDebounceConfiguration>> pageForDebounce(
             Page<SysDebounceConfiguration> page,
             SysDebounceConfiguration sysDebounceConfiguration) {
-        return Result.success(sysDebounceConfigurationService.pageForDebounce(page, sysDebounceConfiguration));
+        return ReturnResult.success(sysDebounceConfigurationService.pageForDebounce(page, sysDebounceConfiguration));
     }
 
     /**
@@ -49,8 +49,8 @@ public class SysDebounceConfigurationController {
      */
     @Operation(summary = "查询所有防抖配置")
     @GetMapping("/list")
-    public Result<List<SysDebounceConfiguration>> listForDebounce() {
-        return Result.success(sysDebounceConfigurationService.list());
+    public ReturnResult<List<SysDebounceConfiguration>> listForDebounce() {
+        return ReturnResult.success(sysDebounceConfigurationService.list());
     }
 
     /**
@@ -60,8 +60,8 @@ public class SysDebounceConfigurationController {
      */
     @Operation(summary = "查询所有启用的防抖配置")
     @GetMapping("/enabled")
-    public Result<List<SysDebounceConfiguration>> listEnabledForDebounce() {
-        return Result.success(sysDebounceConfigurationService.listEnabledForDebounce());
+    public ReturnResult<List<SysDebounceConfiguration>> listEnabledForDebounce() {
+        return ReturnResult.success(sysDebounceConfigurationService.listEnabledForDebounce());
     }
 
     /**
@@ -72,8 +72,8 @@ public class SysDebounceConfigurationController {
      */
     @Operation(summary = "根据ID查询防抖配置")
     @GetMapping("/{id}")
-    public Result<SysDebounceConfiguration> getByIdForDebounce(@PathVariable Long id) {
-        return Result.success(sysDebounceConfigurationService.getById(id));
+    public ReturnResult<SysDebounceConfiguration> getByIdForDebounce(@PathVariable Long id) {
+        return ReturnResult.success(sysDebounceConfigurationService.getById(id));
     }
 
     /**
@@ -84,8 +84,8 @@ public class SysDebounceConfigurationController {
      */
     @Operation(summary = "保存防抖配置")
     @PostMapping("/save")
-    public Result<Boolean> saveForDebounce(@RequestBody SysDebounceConfiguration sysDebounceConfiguration) {
-        return Result.success(sysDebounceConfigurationService.save(sysDebounceConfiguration));
+    public ReturnResult<Boolean> saveForDebounce(@RequestBody SysDebounceConfiguration sysDebounceConfiguration) {
+        return ReturnResult.success(sysDebounceConfigurationService.save(sysDebounceConfiguration));
     }
 
     /**
@@ -96,8 +96,8 @@ public class SysDebounceConfigurationController {
      */
     @Operation(summary = "更新防抖配置")
     @PutMapping("/update")
-    public Result<Boolean> updateForDebounce(@RequestBody SysDebounceConfiguration sysDebounceConfiguration) {
-        return Result.success(sysDebounceConfigurationService.updateById(sysDebounceConfiguration));
+    public ReturnResult<Boolean> updateForDebounce(@RequestBody SysDebounceConfiguration sysDebounceConfiguration) {
+        return ReturnResult.success(sysDebounceConfigurationService.updateById(sysDebounceConfiguration));
     }
 
     /**
@@ -108,8 +108,8 @@ public class SysDebounceConfigurationController {
      */
     @Operation(summary = "删除防抖配置")
     @DeleteMapping("/delete")
-    public Result<Boolean> deleteForDebounce(@RequestParam Long id) {
-        return Result.success(sysDebounceConfigurationService.removeById(id));
+    public ReturnResult<Boolean> deleteForDebounce(@RequestParam Long id) {
+        return ReturnResult.success(sysDebounceConfigurationService.removeById(id));
     }
 
     /**
@@ -119,7 +119,7 @@ public class SysDebounceConfigurationController {
      */
     @Operation(summary = "刷新防抖配置到内存")
     @PostMapping("/refresh")
-    public Result<Integer> refreshForDebounce() {
-        return Result.success(sysDebounceConfigurationService.refreshDebounceConfigurations());
+    public ReturnResult<Integer> refreshForDebounce() {
+        return ReturnResult.success(sysDebounceConfigurationService.refreshDebounceConfigurations());
     }
 }

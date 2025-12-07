@@ -1,12 +1,11 @@
 package com.chua.starter.common.support.configuration;
 
 import com.chua.starter.common.support.configuration.resolver.VersionArgumentResolver;
-import com.chua.starter.common.support.filter.ActuatorAuthenticationFilter;
-import com.chua.starter.common.support.filter.ParameterLogFilter;
-import com.chua.starter.common.support.listener.SysInterfaceLogListener;
-import com.chua.starter.common.support.properties.ActuatorProperties;
-import com.chua.starter.common.support.properties.CorsProperties;
-import com.chua.starter.common.support.properties.LogProperties;
+import com.chua.starter.common.support.actuator.ActuatorAuthenticationFilter;
+import com.chua.starter.common.support.log.ParameterLogFilter;
+import com.chua.starter.common.support.actuator.ActuatorProperties;
+import com.chua.starter.common.support.api.cors.CorsProperties;
+import com.chua.starter.common.support.log.LogProperties;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -30,7 +29,9 @@ import java.util.List;
 /**
  * FilterConfiguration 类用于管理过滤器的配置。
  * 该类作为一个配置容器，不包含具体的业务逻辑，而是作为配置过滤器规则的入口。
+ *
  * @author CH
+ * @version 1.0.0
  * @since 2024/6/21
  */
 @EnableConfigurationProperties({
@@ -53,9 +54,9 @@ public class FilterConfiguration {
         //1. 添加 CORS配置信息
         org.springframework.web.cors.CorsConfiguration config = new org.springframework.web.cors.CorsConfiguration();
         List<String> exposedHeaders = Arrays.asList(X_HEADER_VERSION, "x-oauth-token", "content-type", "X-Requested-With", "XMLHttpRequest");
-        //放行哪些原始域
+        // 放行所有原始域
         config.addAllowedOriginPattern("*");
-        //是否发送 Cookie
+        // 是否发送Cookie
         config.setAllowCredentials(true);
         //放行哪些请求方式
         config.addAllowedMethod("*");
@@ -93,19 +94,6 @@ public class FilterConfiguration {
     @ConditionalOnProperty(name = "plugin.log.enable", havingValue = "true", matchIfMissing = true)
     public ParameterLogFilter paramLogFilter(LogProperties loggerProperties, ApplicationContext applicationContext) {
         return new ParameterLogFilter(loggerProperties, applicationContext);
-    }
-
-
-    /**
-     * 系统日志
-     *
-     * @return SysInterfaceLogListener
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    @ConditionalOnProperty(name = "plugin.log.enable", havingValue = "true", matchIfMissing = true)
-    public SysInterfaceLogListener sysInterfaceLogListener() {
-        return new SysInterfaceLogListener();
     }
     /**
      * 认证过滤器
@@ -153,3 +141,4 @@ public class FilterConfiguration {
         }
     }
 }
+

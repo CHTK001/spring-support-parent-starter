@@ -42,3 +42,4 @@ public class CommonLocalTimeDeserializer extends LocalTimeDeserializer {
         return this;
     }
 }
+

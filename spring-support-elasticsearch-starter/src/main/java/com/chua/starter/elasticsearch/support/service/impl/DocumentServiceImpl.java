@@ -5,7 +5,6 @@ import com.chua.common.support.json.Json;
 import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.code.PageResult;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.starter.common.support.result.Result;
 import com.chua.starter.elasticsearch.support.pojo.Mapping;
 import com.chua.starter.elasticsearch.support.service.DocumentService;
 import com.google.common.base.Strings;
@@ -181,13 +180,13 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     @Override
-    public Result<String> createIndex(String indexName) {
+    public ReturnResult<String> createIndex(String indexName) {
         IndexCoordinates coordinates = IndexCoordinates.of(indexName.toLowerCase());
         IndexOperations indexOperations = elasticsearchRestTemplate.indexOps(coordinates);
         if (indexOperations.exists()) {
-            return Result.failed("索引已存在");
+            return ReturnResult.failure("索引已存在");
         }
-        return indexOperations.create() ? Result.success() : Result.failed("创建失败");
+        return indexOperations.create() ? ReturnResult.success() : ReturnResult.failure("创建失败");
     }
 
     public boolean existIndex(IndexCoordinates coordinates) {

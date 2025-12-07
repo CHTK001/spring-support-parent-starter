@@ -12,7 +12,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 
 /**
- * 校验码配置
+ * 校验码配�?
  *
  * @author CH
  */
@@ -36,3 +36,4 @@ public class CaptchaConfiguration {
         return new OptionalProvider(spiProperties);
     }
 }
+

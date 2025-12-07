@@ -13,3 +13,4 @@ public class JsonMediaTypeHandler implements MediaTypeHandler {
         return Json.toJSONBytes(o);
     }
 }
+

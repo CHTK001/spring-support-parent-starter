@@ -31,7 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * 注解注入器
+ * 注解注入�?
  *
  * @author CH
  * @since 2022/7/30 11:36
@@ -380,3 +380,4 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
         }
     }
 }
+

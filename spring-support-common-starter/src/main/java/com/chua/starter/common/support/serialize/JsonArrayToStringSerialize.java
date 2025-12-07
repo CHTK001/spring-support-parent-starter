@@ -16,3 +16,4 @@ public class JsonArrayToStringSerialize extends JsonSerializer<Object[]> {
         gen.writeString(Json.toJson(value));
     }
 }
+

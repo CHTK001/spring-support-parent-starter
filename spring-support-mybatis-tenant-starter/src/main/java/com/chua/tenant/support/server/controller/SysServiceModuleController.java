@@ -5,7 +5,6 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.common.support.validator.group.UpdateGroup;
 import com.chua.starter.common.support.annotations.Permission;
-import com.chua.starter.common.support.result.Result;
 import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.mybatis.utils.ReturnPageResultUtils;
 import com.chua.tenant.support.common.entity.SysServiceModule;
@@ -82,7 +81,7 @@ public class SysServiceModuleController {
             @RequestBody @Validated(AddGroup.class) SysServiceModule sysServiceModule,
             BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return Result.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
+            return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
         return sysServiceModuleService.saveForSysServiceModule(sysServiceModule);
     }
@@ -101,7 +100,7 @@ public class SysServiceModuleController {
             @RequestBody @Validated(UpdateGroup.class) SysServiceModule sysServiceModule,
             BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return Result.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
+            return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
         return sysServiceModuleService.updateForSysServiceModule(sysServiceModule);
     }

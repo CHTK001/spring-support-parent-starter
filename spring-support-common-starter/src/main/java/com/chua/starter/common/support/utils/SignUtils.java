@@ -11,7 +11,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * 签名计算工具类
+ * 签名计算工具�?
  * <p>提供基于Map参数的签名计算功能，支持多种签名算法</p>
  *
  * @author CH
@@ -40,7 +40,7 @@ public class SignUtils {
      * <p>按照key的字典序排序，拼接成字符串后计算MD5</p>
      *
      * @param params 参数Map
-     * @return MD5签名字符串
+     * @return MD5签名字符�?
      */
     public static String calculateMd5Sign(Map<String, Object> params) {
         return calculateMd5Sign(params, null);
@@ -52,7 +52,7 @@ public class SignUtils {
      *
      * @param params    参数Map
      * @param secretKey 密钥（可选，会追加到参数字符串末尾）
-     * @return MD5签名字符串
+     * @return MD5签名字符�?
      */
     public static String calculateMd5Sign(Map<String, Object> params, String secretKey) {
         String paramString = buildSortedParamString(params);
@@ -66,7 +66,7 @@ public class SignUtils {
      * 根据Map参数计算SHA256签名
      *
      * @param params 参数Map
-     * @return SHA256签名字符串
+     * @return SHA256签名字符�?
      */
     public static String calculateSha256Sign(Map<String, Object> params) {
         return calculateSha256Sign(params, null);
@@ -77,7 +77,7 @@ public class SignUtils {
      *
      * @param params    参数Map
      * @param secretKey 密钥（可选，会追加到参数字符串末尾）
-     * @return SHA256签名字符串
+     * @return SHA256签名字符�?
      */
     public static String calculateSha256Sign(Map<String, Object> params, String secretKey) {
         String paramString = buildSortedParamString(params);
@@ -91,7 +91,7 @@ public class SignUtils {
      * 验证MD5签名
      *
      * @param params       参数Map
-     * @param expectedSign 期望的签名值
+     * @param expectedSign 期望的签名�?
      * @return 验证结果
      */
     public static boolean verifyMd5Sign(Map<String, Object> params, String expectedSign) {
@@ -102,7 +102,7 @@ public class SignUtils {
      * 验证MD5签名
      *
      * @param params       参数Map
-     * @param expectedSign 期望的签名值
+     * @param expectedSign 期望的签名�?
      * @param secretKey    密钥
      * @return 验证结果
      */
@@ -118,7 +118,7 @@ public class SignUtils {
      * 验证SHA256签名
      *
      * @param params       参数Map
-     * @param expectedSign 期望的签名值
+     * @param expectedSign 期望的签名�?
      * @return 验证结果
      */
     public static boolean verifySha256Sign(Map<String, Object> params, String expectedSign) {
@@ -129,7 +129,7 @@ public class SignUtils {
      * 验证SHA256签名
      *
      * @param params       参数Map
-     * @param expectedSign 期望的签名值
+     * @param expectedSign 期望的签名�?
      * @param secretKey    密钥
      * @return 验证结果
      */
@@ -142,35 +142,35 @@ public class SignUtils {
     }
 
     /**
-     * 构建排序后的参数字符串
+     * 构建排序后的参数字符�?
      * <p>按照key的字典序排序，格式：key1=value1&key2=value2</p>
      *
      * @param params 参数Map
-     * @return 排序后的参数字符串
+     * @return 排序后的参数字符�?
      */
     public static String buildSortedParamString(Map<String, Object> params) {
         return buildSortedParamString(params, DEFAULT_EXCLUDE_KEYS);
     }
 
     /**
-     * 构建排序后的参数字符串
+     * 构建排序后的参数字符�?
      *
      * @param params      参数Map
      * @param excludeKeys 需要排除的key集合
-     * @return 排序后的参数字符串
+     * @return 排序后的参数字符�?
      */
     public static String buildSortedParamString(Map<String, Object> params, Set<String> excludeKeys) {
         return buildSortedParamString(params, excludeKeys, DEFAULT_SEPARATOR, DEFAULT_KEY_VALUE_SEPARATOR);
     }
 
     /**
-     * 构建排序后的参数字符串
+     * 构建排序后的参数字符�?
      *
      * @param params            参数Map
      * @param excludeKeys       需要排除的key集合
-     * @param separator         参数间的分隔符
+     * @param separator         参数间的分隔�?
      * @param keyValueSeparator 键值对的分隔符
-     * @return 排序后的参数字符串
+     * @return 排序后的参数字符�?
      */
     public static String buildSortedParamString(Map<String, Object> params,
                                                 Set<String> excludeKeys,
@@ -223,7 +223,7 @@ public class SignUtils {
     }
 
     /**
-     * 构建签名参数Map（使用SHA256算法）
+     * 构建签名参数Map（使用SHA256算法�?
      *
      * @param params    原始参数Map
      * @param secretKey 密钥
@@ -257,7 +257,7 @@ public class SignUtils {
      */
     public static boolean extractAndVerifySign(Map<String, Object> params, String secretKey, String signKey) {
         if (params == null || !params.containsKey(signKey)) {
-            log.warn("签名参数不存在: {}", signKey);
+            log.warn("签名参数不存�? {}", signKey);
             return false;
         }
 
@@ -267,7 +267,7 @@ public class SignUtils {
 
         boolean result = verifyMd5Sign(paramsWithoutSign, expectedSign, secretKey);
         if (!result) {
-            log.warn("签名验证失败，期望: {}, 实际: {}", expectedSign, calculateMd5Sign(paramsWithoutSign, secretKey));
+            log.warn("签名验证失败，期�? {}, 实际: {}", expectedSign, calculateMd5Sign(paramsWithoutSign, secretKey));
         }
         return result;
     }
@@ -286,8 +286,9 @@ public class SignUtils {
         log.debug("=== 签名调试信息 ===");
         log.debug("原始参数: {}", params);
         log.debug("排序后参数字符串: {}", paramString);
-        log.debug("完整签名字符串: {}", fullString);
+        log.debug("完整签名字符�? {}", fullString);
         log.debug("MD5签名: {}", sign);
         log.debug("==================");
     }
 }
+

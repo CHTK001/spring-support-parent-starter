@@ -35,3 +35,4 @@ public interface Constant extends CacheConstant{
     String MAPPING = "MAPPING";
     String BEAN = "BEAN";
 }
+

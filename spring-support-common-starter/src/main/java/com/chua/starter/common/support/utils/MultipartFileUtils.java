@@ -8,7 +8,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
 /**
- * 处理多部分文件（MultipartFile）工具类，提供文件上传和转换功能。
+ * 处理多部分文件（MultipartFile）工具类，提供文件上传和转换功能�?
  */
 /**
  *
@@ -16,12 +16,12 @@ import java.io.*;
  */
 public class MultipartFileUtils {
     /**
-     * 将上传的多部分文件转移到指定的父目录下，并根据是否清除目录进行处理。
+     * 将上传的多部分文件转移到指定的父目录下，并根据是否清除目录进行处理�?
      *
      * @param multipartFile 上传的多部分文件
-     * @param parent 父目录文件对象
+     * @param parent 父目录文件对�?
      * @param folder 子目录名
-     * @param clearFolder 是否清除子目录
+     * @param clearFolder 是否清除子目�?
      * @return 文件保存路径
      */
     public static ReturnResult<String> transferTo(MultipartFile multipartFile, File parent, String folder, boolean clearFolder) {
@@ -33,10 +33,10 @@ public class MultipartFileUtils {
     }
 
     /**
-     * 将上传的多部分文件转移到指定的父目录下。
+     * 将上传的多部分文件转移到指定的父目录下�?
      *
      * @param multipartFile 上传的多部分文件
-     * @param parent 父目录文件对象
+     * @param parent 父目录文件对�?
      * @param clearFolder 是否清除目录
      * @return 文件保存路径
      */
@@ -49,13 +49,13 @@ public class MultipartFileUtils {
     }
 
     /**
-     * 将字节数组形式的文件转移到指定的父目录下，并根据是否清除目录进行处理。
+     * 将字节数组形式的文件转移到指定的父目录下，并根据是否清除目录进行处理�?
      *
      * @param bytes 文件字节数组
-     * @param name 文件名
-     * @param parent 父目录文件对象
+     * @param name 文件�?
+     * @param parent 父目录文件对�?
      * @param folder 子目录名
-     * @param clearFolder 是否清除子目录
+     * @param clearFolder 是否清除子目�?
      * @return 文件保存路径
      */
     public static ReturnResult<String> transferTo(byte[] bytes,  String name, File parent, String folder, boolean clearFolder) {
@@ -63,13 +63,13 @@ public class MultipartFileUtils {
     }
 
     /**
-     * 从输入流中读取文件内容，并保存到指定的父目录下，根据是否清除目录进行处理。
+     * 从输入流中读取文件内容，并保存到指定的父目录下，根据是否清除目录进行处理�?
      *
-     * @param inputStream 文件输入流
-     * @param name 文件名
-     * @param parent 父目录文件对象
+     * @param inputStream 文件输入�?
+     * @param name 文件�?
+     * @param parent 父目录文件对�?
      * @param folder 子目录名
-     * @param clearFolder 是否清除子目录
+     * @param clearFolder 是否清除子目�?
      * @return 文件保存路径
      */
     public static ReturnResult<String> transferTo(InputStream inputStream, String name, File parent, String folder, boolean clearFolder) {
@@ -96,11 +96,11 @@ public class MultipartFileUtils {
     }
 
     /**
-     * 将输入流中的文件内容保存到指定的父目录下，根据是否清除目录进行处理。
+     * 将输入流中的文件内容保存到指定的父目录下，根据是否清除目录进行处理�?
      *
-     * @param inputStream 文件输入流
-     * @param name 文件名
-     * @param parent 父目录文件对象
+     * @param inputStream 文件输入�?
+     * @param name 文件�?
+     * @param parent 父目录文件对�?
      * @param clearFolder 是否清除目录
      * @return 文件保存路径
      */
@@ -129,11 +129,11 @@ public class MultipartFileUtils {
     }
 
     /**
-     * 将多部分文件转换为File对象。
+     * 将多部分文件转换为File对象�?
      *
-     * @param file 多部分文件
+     * @param file 多部分文�?
      * @return 转换后的File对象，如果文件为null，则返回null
-     * @throws Exception 如果转换过程中出现错误
+     * @throws Exception 如果转换过程中出现错�?
      */
     public static File toFile(MultipartFile file) throws Exception{
         if(null == file) {
@@ -146,9 +146,9 @@ public class MultipartFileUtils {
         return file1;
     }
     /**
-     * 将多部分文件内容转移到指定的文件中。
+     * 将多部分文件内容转移到指定的文件中�?
      *
-     * @param multipartFile 多部分文件
+     * @param multipartFile 多部分文�?
      * @param patchFile 目标文件
      * @throws IOException 如果转移过程中出现I/O错误
      */
@@ -160,3 +160,4 @@ public class MultipartFileUtils {
         }
     }
 }
+
