@@ -48,7 +48,13 @@ import java.util.List;
 public class AuthClientConfiguration
         implements ApplicationContextAware, BeanDefinitionRegistryPostProcessor, WebMvcConfigurer {
 
+    /**
+     * Spring 管理的 AuthClientProperties Bean
+     * 确保与 WhitelistFileWatcher 使用同一个实例
+     */
     private AuthClientProperties authProperties;
+    
+    private ApplicationContext applicationContext;
 
     /**
      * OAuth认证服务
@@ -125,31 +131,50 @@ public class AuthClientConfiguration
     @Bean("authFilterFilterRegistrationBean")
     @ConditionalOnMissingClass("com.chua.starter.oauth.server.support.SsoServer")
     public FilterRegistrationBean<AuthFilter> authFilterFilterRegistrationBean(
-            RequestMappingHandlerMapping requestMappingHandlerMapping) {
+            RequestMappingHandlerMapping requestMappingHandlerMapping,
+            AuthClientProperties authClientProperties) {
+        // 使用注入的 AuthClientProperties Bean，确保与 WhitelistFileWatcher 同一实例
         FilterRegistrationBean<AuthFilter> authFilterFilterRegistrationBean = new FilterRegistrationBean<>();
         authFilterFilterRegistrationBean.setOrder(Ordered.LOWEST_PRECEDENCE);
-        authFilterFilterRegistrationBean.setUrlPatterns(authProperties.getBlockAddress());
+        authFilterFilterRegistrationBean.setUrlPatterns(authClientProperties.getBlockAddress());
         authFilterFilterRegistrationBean.setName("authFilterFilterRegistrationBean");
         authFilterFilterRegistrationBean.setAsyncSupported(true);
         SpringBeanUtils.setRequestMappingHandlerMapping(requestMappingHandlerMapping);
 
         // 创建增强的AuthFilter，支持Principal和HttpServletRequest增强
+        // 使用 Spring Bean 确保白名单更新能被感知
         authFilterFilterRegistrationBean
-                .setFilter(new AuthFilter(new WebRequest(authProperties), requestMappingHandlerMapping));
+                .setFilter(new AuthFilter(new WebRequest(authClientProperties), requestMappingHandlerMapping));
 
         return authFilterFilterRegistrationBean;
     }
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.applicationContext = applicationContext;
+        // 使用 Binder 创建初始配置，后续会被 Spring Bean 替换
         this.authProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(AuthClientProperties.PRE,
                 AuthClientProperties.class);
+    }
+    
+    /**
+     * 获取 Spring 管理的 AuthClientProperties Bean
+     * 确保与 WhitelistFileWatcher 使用同一个实例
+     */
+    private AuthClientProperties getSpringBean() {
+        try {
+            return applicationContext.getBean(AuthClientProperties.class);
+        } catch (Exception e) {
+            return authProperties;
+        }
     }
 
     @Override
     public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
-        resolvers.add(new UserRequestHandlerMethodArgumentResolver(new WebRequest(authProperties)));
-        resolvers.add(new TokenRequestHandlerMethodArgumentResolver(new WebRequest(authProperties)));
+        // 使用 Spring Bean 确保白名单更新能被感知
+        AuthClientProperties props = getSpringBean();
+        resolvers.add(new UserRequestHandlerMethodArgumentResolver(new WebRequest(props)));
+        resolvers.add(new TokenRequestHandlerMethodArgumentResolver(new WebRequest(props)));
     }
 
     @Override
