@@ -8,7 +8,6 @@ import com.chua.starter.common.support.jackson.*;
 import com.chua.starter.common.support.jackson.handler.JacksonProblemHandler;
 import com.chua.starter.common.support.jackson.handler.JsonArray2StringJacksonProblemHandler;
 import com.chua.starter.common.support.jackson.handler.JsonObject2ArrayListJacksonProblemHandler;
-import com.chua.starter.common.support.properties.JacksonProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.core.JsonParser;
@@ -28,6 +27,8 @@ import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.jackson.JsonMixinModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
@@ -50,6 +51,7 @@ import java.util.TimeZone;
  * @since 2024/7/19
  */
 @Slf4j
+@EnableConfigurationProperties(JacksonProperties.class)
 public class JacksonConfiguration {
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");

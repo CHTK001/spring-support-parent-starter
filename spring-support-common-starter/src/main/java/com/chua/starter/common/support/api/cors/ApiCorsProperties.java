@@ -7,17 +7,17 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * API跨域配置属�?
+ * API跨域配置属性
  * <p>
- * 用于配置跨域请求的相关参数�?
+ * 用于配置跨域请求的相关参数。
  * </p>
  *
- * <h3>配置示例�?/h3>
+ * <h3>配置示例</h3>
  * <pre>
  * plugin:
  *   api:
  *     cors:
- *       enable: true           # 是否开启跨�?
+ *       enable: true           # 是否开启跨域
  *       pattern:               # 跨域路径匹配规则
  *         - /api/**
  *         - /v2/**
@@ -32,14 +32,14 @@ import java.util.Set;
 public class ApiCorsProperties {
 
     /**
-     * 开启跨�?
+     * 开启跨域
      */
     private boolean enable = true;
 
     /**
-     * 跨域路径白名�?
+     * 跨域路径白名单
      * <p>
-     * 如果为空，默认匹配所有路�?/**
+     * 如果为空，默认匹配所有路径 /**
      * </p>
      */
     private Set<String> pattern = new HashSet<>();

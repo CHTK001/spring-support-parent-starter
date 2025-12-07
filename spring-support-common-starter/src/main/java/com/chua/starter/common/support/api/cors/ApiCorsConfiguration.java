@@ -18,22 +18,22 @@ import java.util.List;
 /**
  * API跨域配置
  * <p>
- * 用于配置跨域请求过滤器，支持自定义跨域路径匹配规则�?
+ * 用于配置跨域请求过滤器，支持自定义跨域路径匹配规则。
  * </p>
  *
- * <h3>使用场景�?/h3>
+ * <h3>使用场景</h3>
  * <ul>
  *   <li>前后端分离项目的跨域请求处理</li>
- *   <li>微服务间的跨域访�?/li>
+ *   <li>微服务间的跨域访问</li>
  *   <li>开发环境的跨域调试</li>
  * </ul>
  *
- * <h3>配置示例�?/h3>
+ * <h3>配置示例</h3>
  * <pre>
  * plugin:
  *   api:
  *     cors:
- *       enable: true           # 开启跨�?
+ *       enable: true           # 开启跨域
  *       pattern:               # 跨域路径
  *         - /api/**
  * </pre>
@@ -54,9 +54,9 @@ public class ApiCorsConfiguration {
     private final ApiCorsProperties corsProperties;
 
     /**
-     * 跨域过滤�?
+     * 跨域过滤器
      *
-     * @return CorsFilter 过滤器注�?Bean
+     * @return CorsFilter 过滤器注册Bean
      */
     @Bean("apiCorsFilterRegistrationBean")
     public FilterRegistrationBean<CorsFilter> corsFilterFilterRegistrationBean() {
@@ -71,14 +71,14 @@ public class ApiCorsConfiguration {
         );
         // 放行所有原始域
         config.addAllowedOriginPattern("*");
-        // 是否发�?Cookie
+        // 是否发送Cookie
         config.setAllowCredentials(true);
-        // 放行所有请求方�?
+        // 放行所有请求方式
         config.addAllowedMethod("*");
         config.setExposedHeaders(exposedHeaders);
-        // 放行所有请求头部信�?
+        // 放行所有请求头部信息
         config.addAllowedHeader("*");
-        // 暴露所有头部信�?
+        // 暴露所有头部信息
         config.addExposedHeader("*");
 
         // 2. 添加映射路径
@@ -92,7 +92,7 @@ public class ApiCorsConfiguration {
         }
 
         // 3. 返回新的 CorsFilter
-        log.info("[ApiCors] 开启跨域处�?);
+        log.info("[ApiCors] 开启跨域处理");
         CorsFilter corsFilter = new CorsFilter(corsConfigurationSource);
         FilterRegistrationBean<CorsFilter> filterRegistrationBean = new FilterRegistrationBean<>(corsFilter);
         filterRegistrationBean.setOrder(Ordered.HIGHEST_PRECEDENCE);
