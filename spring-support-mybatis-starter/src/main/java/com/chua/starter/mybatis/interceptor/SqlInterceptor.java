@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 
 import static com.chua.common.support.constant.NameConstant.NULL;
+import static com.chua.starter.common.support.constant.MdcConstant.TRACE_ID;
 
 /**
  * SQLInterceptor
@@ -118,7 +119,7 @@ public class SqlInterceptor implements Interceptor {
      */
     public static String getSql(Configuration configuration, BoundSql boundSql, String sqlId, long time, Object result, String name) {
         showSql(configuration, boundSql);
-        String traceId = MDC.get(HttpConstant.TRACE_ID);
+        String traceId = MDC.get(TRACE_ID);
         String message = "[SqlInterceptor] 执行 [" + name + "] 时间 [" + formatter.format(System.currentTimeMillis()) + "] sql耗时 [" + (double) time / 1000 + "] s";
         StringBuilder str = new StringBuilder();
         List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
