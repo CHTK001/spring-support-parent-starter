@@ -22,7 +22,7 @@ public class ModelView<T> {
     private MediaType mediaType;
 
     /**
-     * 初始化
+     * 初始�?
      *
      * @param data 数据
      * @param <T>  类型
@@ -32,3 +32,4 @@ public class ModelView<T> {
         return new ModelView<>(data, MediaType.APPLICATION_JSON);
     }
 }
+

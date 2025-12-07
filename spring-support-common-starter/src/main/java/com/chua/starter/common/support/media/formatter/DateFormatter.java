@@ -7,7 +7,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import java.lang.reflect.Field;
 
 /**
- * 格式化
+ * 格式�?
  *
  * @author CH
  */
@@ -26,3 +26,4 @@ public class DateFormatter implements Formatter {
         return value;
     }
 }
+

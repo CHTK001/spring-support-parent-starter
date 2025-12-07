@@ -117,3 +117,4 @@ public class XmlMediaTypeHandler implements MediaTypeHandler {
         return buffer;
     }
 }
+

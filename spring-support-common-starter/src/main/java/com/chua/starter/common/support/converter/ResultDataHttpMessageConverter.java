@@ -41,3 +41,4 @@ public class ResultDataHttpMessageConverter
         super.writeInternal(object, type, outputMessage);
     }
 }
+

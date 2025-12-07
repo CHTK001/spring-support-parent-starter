@@ -1,7 +1,7 @@
 package com.chua.starter.common.support.constant;
 
 /**
- * EasyCaptcha 验证码类型枚举
+ * EasyCaptcha 验证码类型枚�?
  *
  * @author haoxr
  * @since 2023/03/24
@@ -30,3 +30,4 @@ public enum CaptchaTypeEnum {
     GIF,
     SPEC
 }
+

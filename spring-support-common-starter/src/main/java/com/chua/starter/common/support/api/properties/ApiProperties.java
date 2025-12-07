@@ -1,0 +1,222 @@
+package com.chua.starter.common.support.api.properties;
+
+import lombok.Data;
+import lombok.Getter;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
+import java.util.Collections;
+import java.util.List;
+
+/**
+ * API 统一配置属�?
+ * <p>
+ * 整合版本控制、平台标识、编解码�?API 相关配置�?
+ * </p>
+ *
+ * @author CH
+ * @since 2025/6/3
+ * @version 2.0.0
+ */
+@Data
+@ConfigurationProperties(prefix = ApiProperties.PRE, ignoreInvalidFields = true)
+public class ApiProperties {
+
+    public static final String PRE = "plugin.api";
+
+    /**
+     * 忽略返回格式（针对返回格式不进行统计处理�?
+     */
+    private String[] ignoreFormatPackages;
+
+    /**
+     * 版本控制配置
+     */
+    private Version version = new Version();
+
+    /**
+     * 平台配置
+     */
+    private Platform platform = new Platform();
+
+    /**
+     * 自动统一返回结构
+     */
+    private boolean uniform = true;
+    /**
+     * 响应编码配置
+     */
+    private ResponseEncodeProperties encode = new ResponseEncodeProperties();
+
+    /**
+     * 请求解码配置
+     */
+    private RequestDecodeProperties decode = new RequestDecodeProperties();
+
+    /**
+     * 是否启用 API 控制功能（版本或平台�?
+     *
+     * @return 是否启用
+     */
+    public boolean isControlEnabled() {
+        return (version != null && version.isEnable())
+                || (platform != null && platform.isEnable());
+    }
+
+    /**
+     * 版本控制配置
+     */
+    @Data
+    public static class Version {
+
+        /**
+         * 是否开启版本控�?
+         */
+        private boolean enable = false;
+
+        /**
+         * 版本�?
+         */
+        private String name;
+    }
+
+    /**
+     * 平台类型枚举
+     */
+    @Getter
+    public enum PlatformType {
+        /**
+         * 系统平台
+         */
+        SYSTEM("system"),
+        /**
+         * 租户平台
+         */
+        TENANT("tenant"),
+        /**
+         * 监控平台
+         */
+        MONITOR("monitor"),
+        /**
+         * 调度平台
+         */
+        SCHEDULER("scheduler"),
+        /**
+         * OAuth平台
+         */
+        OAUTH("oauth");
+
+        private final String value;
+
+        PlatformType(String value) {
+            this.value = value;
+        }
+
+    }
+
+    /**
+     * 平台配置
+     */
+    @Data
+    public static class Platform {
+
+        /**
+         * 是否开启平台标�?
+         */
+        private boolean enable = true;
+
+        /**
+         * 平台类型（枚举，优先级高�?aliasName�?
+         */
+        private PlatformType name = PlatformType.SYSTEM;
+
+        /**
+         * 平台别名（当 name 无法满足需求时使用自定义名称）
+         */
+        private String aliasName;
+
+        /**
+         * 获取实际平台名称
+         * <p>
+         * 优先级：name > aliasName
+         * </p>
+         *
+         * @return 平台名称
+         */
+        public String getPlatformName() {
+            if (name != null) {
+                return name.getValue();
+            }
+            return aliasName;
+        }
+    }
+
+    /**
+     * 编解码配�?
+     */
+    @Data
+    public static class ResponseEncodeProperties {
+
+        /**
+         * 是否开启加密功�?
+         */
+        private boolean enable = false;
+
+        /**
+         * 是否开启响应加�?
+         */
+        private boolean responseEnable = false;
+
+        /**
+         * 是否开启请求解�?
+         */
+        private boolean requestEnable = false;
+
+        /**
+         * 请求加密密钥（为空则自动生成�?
+         */
+        private String codecRequestKey;
+
+        /**
+         * 是否由其它对象注入参�?
+         */
+        private boolean extInject = false;
+
+        /**
+         * 编解码器类型（sm2/aes/rsa等）
+         */
+        private String codecType = "sm2";
+
+        /**
+         * 白名单（不需要加密的接口路径�?
+         */
+        private List<String> whiteList = Collections.emptyList();
+    }
+
+    /**
+     * 请求解码配置
+     */
+    @Data
+    public static class RequestDecodeProperties {
+
+        /**
+         * 是否开启请求解�?
+         */
+        private boolean enable = false;
+
+        /**
+         * 请求解密密钥
+         */
+        private String codecRequestKey;
+
+        /**
+         * 是否由其它对象注入参�?
+         */
+        private boolean extInject = false;
+
+        /**
+         * 解码器类型（sm4/aes等）
+         */
+        private String codecType = "sm4";
+    }
+}
+

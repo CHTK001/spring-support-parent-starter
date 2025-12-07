@@ -11,7 +11,6 @@ import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
-import com.chua.starter.common.support.result.Result;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.oauth.client.support.annotation.UserValue;
 import com.chua.starter.oauth.client.support.enums.AuthType;

@@ -19,3 +19,4 @@ public class JacksonProperties {
      */
     private boolean includeNull = false;
 }
+

@@ -13,7 +13,7 @@ public class BeanDefinitionRegistryUtils {
     /**
      * 注册定义
      *
-     * @param registry 注册器
+     * @param registry 注册�?
      * @param type     类型
      */
     public static void registerBeanDefinition(BeanDefinitionRegistry registry, Class<?> type) {
@@ -23,7 +23,7 @@ public class BeanDefinitionRegistryUtils {
     /**
      * 注册定义
      *
-     * @param registry 注册器
+     * @param registry 注册�?
      * @param type     类型
      */
     public static <T> void registerBeanDefinition(BeanDefinitionRegistry registry, Class<T> type, T bean) {
@@ -34,7 +34,7 @@ public class BeanDefinitionRegistryUtils {
     /**
      * 注册定义
      *
-     * @param registry 注册器
+     * @param registry 注册�?
      * @param name     beanName
      * @param type     类型
      */
@@ -45,7 +45,7 @@ public class BeanDefinitionRegistryUtils {
     /**
      * 注册定义
      *
-     * @param registry       注册器
+     * @param registry       注册�?
      * @param name           beanName
      * @param beanDefinition 类型
      */
@@ -53,3 +53,4 @@ public class BeanDefinitionRegistryUtils {
         registry.registerBeanDefinition(name, beanDefinition);
     }
 }
+

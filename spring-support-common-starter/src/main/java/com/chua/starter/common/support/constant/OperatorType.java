@@ -4,7 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /**
- * 运算符类型
+ * 运算符类�?
  *
  * @author CH
  * @version 1.0.0
@@ -30,3 +30,4 @@ public enum OperatorType {
 
 
 }
+

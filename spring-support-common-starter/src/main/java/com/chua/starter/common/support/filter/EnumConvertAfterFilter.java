@@ -39,10 +39,10 @@
 //        });
 //    }
 //    /**
-//     * 收到领域值
+//     * 收到领域�?
 //     *
 //     * @param aClass        一个班
-//     * @param fieldValue    领域值
+//     * @param fieldValue    领域�?
 //     * @param enumConstants 枚举常量
 //     * @return {@link Object}
 //     */
@@ -72,3 +72,4 @@
 //        return ClassUtils.primitiveInt(fieldValue);
 //    }
 //}
+
