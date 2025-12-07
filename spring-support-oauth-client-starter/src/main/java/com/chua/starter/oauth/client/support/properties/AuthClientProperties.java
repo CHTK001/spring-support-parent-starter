@@ -152,8 +152,12 @@ public class AuthClientProperties {
 
         private String menuPath;
         /**
-         * 临时账号(只用于账号类型为Embed)
+         * 临时账号配置(只用于账号类型为Embed)
+         * <p>
+         * 【安全警告】生产环境禁止启用临时账号功能！
+         * 格式: username:password;username2:password2
+         * </p>
          */
-        private String user = "guest:guest;ops:opsAdmin2023;admin:admin@123!456";
+        private String user;
     }
 }
