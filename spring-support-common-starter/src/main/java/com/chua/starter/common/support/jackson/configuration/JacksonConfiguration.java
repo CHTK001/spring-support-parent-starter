@@ -68,7 +68,7 @@ public class JacksonConfiguration {
                 .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
                 // 不存在的字段时，不会抛出异常
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-                // 当找不解析类型（含子类），不会抛异常，继续尝试反序列�?
+                // 当找不解析类型（含子类），不会抛异常，继续尝试反序列化
                 .configure(DeserializationFeature.FAIL_ON_INVALID_SUBTYPE, false)
                 // 忽略序列化和反序列化的大小写
                 .configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true)
@@ -122,7 +122,7 @@ public class JacksonConfiguration {
     public Jackson2ObjectMapperBuilder objectMapperBuilder(ObjectMapper objectMapper) {
         Jackson2ObjectMapperBuilder builder = new Jackson2ObjectMapperBuilder();
         builder.configure(objectMapper);
-        // 在这里配置你�?ObjectMapper
+        // 在这里配置你的ObjectMapper
         return builder;
     }
 

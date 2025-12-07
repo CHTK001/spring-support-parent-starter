@@ -23,7 +23,7 @@ public class SpiProperties {
 
 
     /**
-     * 是否开启虚拟映�?
+     * 是否开启虚拟映射
      */
     private boolean enable = true;
 

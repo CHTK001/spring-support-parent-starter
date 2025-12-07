@@ -93,7 +93,7 @@ public class ApiResponseEncodeResponseBodyAdvice implements ResponseBodyAdvice<O
         headers.setContentLength(responseBytes.length);
 
         // 返回二进制数据而不是JSON
-        log.debug("[CodecResponse] 响应加密完成，数据长�? {}", responseBytes.length);
+        log.debug("[CodecResponse] 响应加密完成，数据长度: {}", responseBytes.length);
         return ResponseEntity.<byte[]>ok()
                 .headers(headers)
                 .body(responseBytes);

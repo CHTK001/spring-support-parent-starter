@@ -19,7 +19,7 @@ public @interface RequestParamMapping {
 
     /**
      * 参数名称别名
-     * <p>例如: @RequestParamMapping("id") �?@RequestParamMapping(value = "id")</p>
+     * <p>例如: @RequestParamMapping("id") 或 @RequestParamMapping(value = "id")</p>
      *
      * @return 参数名称数组
      */
