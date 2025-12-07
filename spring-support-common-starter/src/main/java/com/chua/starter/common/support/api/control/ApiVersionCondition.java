@@ -52,7 +52,7 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
      * 判断是否匹配
      * <p>
      * 支持两种版本指定方式：
-     * 1. 查询参数：?version=1 �??version=v1
+     * 1. 查询参数：?version=1 或 ?version=v1
      * 2. 路径前缀：/api/v1/xxx
      * </p>
      *
@@ -61,7 +61,7 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
      */
     @Override
     public ApiVersionCondition getMatchingCondition(HttpServletRequest httpServletRequest) {
-        // 1. 从查询参数获取版本号 ?version=1 �??version=v1
+        // 1. 从查询参数获取版本号 ?version=1 或 ?version=v1
         Map<String, String> queryParams = MapUtils.asMap(httpServletRequest.getQueryString(), "&", "=");
         String versionStr = MapUtils.getString(queryParams, "version");
         

@@ -38,7 +38,7 @@ import static com.chua.common.support.utils.ClassUtils.isAssignableFrom;
 /**
  * 统一返回值处理
  * <p>
- * 自动将返回值包装为统一�?Result 格式。
+ * 自动将返回值包装为统一的 Result 格式。
  * </p>
  *
  * @author CH
