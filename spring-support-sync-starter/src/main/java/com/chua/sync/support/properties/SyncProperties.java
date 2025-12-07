@@ -28,19 +28,9 @@ public class SyncProperties {
     public static final String PRE = "plugin.sync";
 
     /**
-     * 是否启用同步协议
-     */
-    private boolean enable = false;
-
-    /**
      * 程序类型：server-服务端，client-客户端，both-同时启用
      */
     private String type = "client";
-
-    /**
-     * 默认协议类型：rsocket、websocket-sync 等
-     */
-    private String protocol = "rsocket-sync";
 
     /**
      * 主题与处理器映射 (全局)
@@ -319,7 +309,7 @@ public class SyncProperties {
      * 是否启用服务端
      */
     public boolean isServerEnabled() {
-        return enable && ("server".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type))
+        return ("server".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type))
                 && server.isEnable();
     }
 
@@ -327,7 +317,7 @@ public class SyncProperties {
      * 是否启用客户端
      */
     public boolean isClientEnabled() {
-        return enable && ("client".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type))
+        return ("client".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type))
                 && client.isEnable();
     }
 
