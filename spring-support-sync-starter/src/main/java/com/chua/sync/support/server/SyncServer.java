@@ -12,12 +12,14 @@ import org.springframework.beans.factory.InitializingBean;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Comparator;
 import java.util.concurrent.*;
 import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
 
 /**
  * 同步协议服务端管理器
@@ -51,9 +53,9 @@ public class SyncServer implements InitializingBean, DisposableBean {
 
     /**
      * 所有客户端信息 (汇总所有实例)
+     * 内部存储，使用 sessionId 作为 key
      */
-    @Getter
-    private final Map<String, ClientInfo> allClients = new ConcurrentHashMap<>();
+    private final Map<String, ClientInfo> allClientsInternal = new ConcurrentHashMap<>();
 
     /**
      * 调度器
@@ -120,11 +122,11 @@ public class SyncServer implements InitializingBean, DisposableBean {
 
             // 添加客户端监听器
             instance.addConnectListener((sessionId, clientInfo) -> {
-                allClients.put(sessionId, clientInfo);
+                allClientsInternal.put(sessionId, clientInfo);
                 notifyConnectListeners(sessionId, clientInfo);
             });
             instance.addDisconnectListener((sessionId, clientInfo) -> {
-                allClients.remove(sessionId);
+                allClientsInternal.remove(sessionId);
                 notifyDisconnectListeners(sessionId, clientInfo);
             });
 
@@ -262,7 +264,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
      * @return 客户端ID，未找到返回 null
      */
     public String findClientId(String host, int port, String appName) {
-        for (Map.Entry<String, ClientInfo> entry : allClients.entrySet()) {
+        for (Map.Entry<String, ClientInfo> entry : allClientsInternal.entrySet()) {
             ClientInfo clientInfo = entry.getValue();
             
             // 通过 IP 和端口匹配
@@ -288,7 +290,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
      */
     public List<String> findClientIdsByAppName(String appName) {
         List<String> result = new ArrayList<>();
-        for (Map.Entry<String, ClientInfo> entry : allClients.entrySet()) {
+        for (Map.Entry<String, ClientInfo> entry : allClientsInternal.entrySet()) {
             if (appName.equals(entry.getValue().getAppName())) {
                 result.add(entry.getKey());
             }
@@ -304,7 +306,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
      */
     public List<String> findClientIdsByHost(String host) {
         List<String> result = new ArrayList<>();
-        for (Map.Entry<String, ClientInfo> entry : allClients.entrySet()) {
+        for (Map.Entry<String, ClientInfo> entry : allClientsInternal.entrySet()) {
             if (host.equals(entry.getValue().getIpAddress())) {
                 result.add(entry.getKey());
             }
@@ -321,6 +323,47 @@ public class SyncServer implements InitializingBean, DisposableBean {
             all.addAll(instance.getSessionIds());
         }
         return all;
+    }
+
+    /**
+     * 获取所有客户端信息（根据 IP + 端口去重）
+     * <p>
+     * 如果存在相同 IP + 端口的多个客户端，保留最新心跳时间的客户端
+     * </p>
+     *
+     * @return 去重后的客户端信息 Map，key 为 "ip:port"
+     */
+    public Map<String, ClientInfo> getAllClients() {
+        if (allClientsInternal.isEmpty()) {
+            return new HashMap<>();
+        }
+        
+        // 根据 IP + 端口去重，保留最新心跳时间的客户端
+        return allClientsInternal.values().stream()
+                .collect(Collectors.collectingAndThen(
+                        Collectors.toMap(
+                                // 使用 IP:端口 作为去重 key
+                                client -> client.getIpAddress() + ":" + client.getPort(),
+                                client -> client,
+                                // 如果有重复，保留最新心跳时间的客户端
+                                (existing, replacement) -> {
+                                    long existingTime = existing.getLastHeartbeatTime();
+                                    long replacementTime = replacement.getLastHeartbeatTime();
+                                    return replacementTime > existingTime ? replacement : existing;
+                                },
+                                LinkedHashMap::new
+                        ),
+                        result -> result
+                ));
+    }
+
+    /**
+     * 获取所有客户端信息（原始数据，不去重）
+     *
+     * @return 原始客户端信息 Map，key 为 sessionId
+     */
+    public Map<String, ClientInfo> getAllClientsRaw() {
+        return new HashMap<>(allClientsInternal);
     }
 
     /**
@@ -364,7 +407,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
             instance.stop();
         }
         instances.clear();
-        allClients.clear();
+        allClientsInternal.clear();
 
         log.info("[SyncServer] 已停止所有服务实例");
     }
