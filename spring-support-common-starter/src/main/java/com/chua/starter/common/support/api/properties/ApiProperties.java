@@ -78,11 +78,6 @@ public class ApiProperties {
          * 是否开启版本控制
          */
         private boolean enable = false;
-
-        /**
-         * 版本号
-         */
-        private String name;
     }
 
     /**

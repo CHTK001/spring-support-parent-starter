@@ -16,11 +16,6 @@ public class ReportProperties {
     public static final String PRE = "plugin.report.client";
 
     /**
-     * 是否启用上报客户端
-     */
-    private boolean enable = true;
-
-    /**
      * 应用信息上报配置
      */
     private AppReport appReport = new AppReport();
@@ -29,12 +24,25 @@ public class ReportProperties {
      * 设备指标上报配置
      */
     private Metrics metrics = new Metrics();
+    /**
+     * 是否启用同步
+     */
+    private boolean enable = false;
 
     /**
-     * 同步配置（配置后自动串联到 sync 模块）
+     * 通信协议: rsocket, websocket
      */
-    private SyncConfig sync = new SyncConfig();
+    private String protocol = "rsocket-sync";
 
+    /**
+     * 服务端地址
+     */
+    private String host = "localhost";
+
+    /**
+     * 服务端端口
+     */
+    private int port = 29170;
     /**
      * 应用信息上报配置
      */
@@ -69,30 +77,4 @@ public class ReportProperties {
         private long interval = 30;
     }
 
-    /**
-     * 同步配置
-     */
-    @Data
-    public static class SyncConfig {
-
-        /**
-         * 是否启用同步
-         */
-        private boolean enable = false;
-
-        /**
-         * 通信协议: rsocket, websocket
-         */
-        private String protocol = "rsocket-sync";
-
-        /**
-         * 服务端地址
-         */
-        private String host = "localhost";
-
-        /**
-         * 服务端端口
-         */
-        private int port = 29170;
-    }
 }

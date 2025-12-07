@@ -2,6 +2,9 @@ package com.chua.report.client.starter.report;
 
 import com.chua.report.client.starter.sync.MonitorTopics;
 import com.chua.sync.support.client.SyncClient;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.management.ManagementFactory;
@@ -24,57 +27,39 @@ import java.util.concurrent.TimeUnit;
  * @since 2024/12/05
  */
 @Slf4j
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class AppRegisterReporter {
 
     private static final AppRegisterReporter INSTANCE = new AppRegisterReporter();
 
+    @Setter
     private SyncClient syncClient;
+
     private ScheduledExecutorService scheduler;
     private volatile boolean running = false;
 
     // Spring 应用信息
+    @Setter
     private String applicationName;
+    @Setter
     private String[] activeProfiles;
+    @Setter
     private String contextPath;
+    @Setter
     private Integer serverPort;
+
     private String ipAddress;
     private String hostname;
 
     // 上报间隔（秒）
+    @Setter
     private long reportInterval = 30;
 
     // 启动时间
     private long startTime;
 
-    private AppRegisterReporter() {
-    }
-
     public static AppRegisterReporter getInstance() {
         return INSTANCE;
-    }
-
-    public void setSyncClient(SyncClient syncClient) {
-        this.syncClient = syncClient;
-    }
-
-    public void setApplicationName(String applicationName) {
-        this.applicationName = applicationName;
-    }
-
-    public void setActiveProfiles(String[] activeProfiles) {
-        this.activeProfiles = activeProfiles;
-    }
-
-    public void setContextPath(String contextPath) {
-        this.contextPath = contextPath;
-    }
-
-    public void setServerPort(Integer serverPort) {
-        this.serverPort = serverPort;
-    }
-
-    public void setReportInterval(long reportInterval) {
-        this.reportInterval = reportInterval;
     }
 
     /**
