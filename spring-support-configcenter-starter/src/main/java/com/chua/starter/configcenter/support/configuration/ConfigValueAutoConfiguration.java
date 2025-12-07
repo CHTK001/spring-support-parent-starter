@@ -1,23 +1,22 @@
 package com.chua.starter.configcenter.support.configuration;
 
 import com.chua.common.support.config.ConfigCenter;
-import com.chua.common.support.config.setting.ConfigCenterSetting;
-import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.configcenter.support.holder.ConfigCenterHolder;
 import com.chua.starter.configcenter.support.processor.ConfigValueBeanPostProcessor;
 import com.chua.starter.configcenter.support.properties.ConfigCenterProperties;
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.Environment;
 
 /**
  * ConfigValue自动配置
  * <p>
  * 配置@ConfigValue注解的自动处理和热更新功能。
+ * 复用 EnvironmentPostProcessor 阶段创建的 ConfigCenter 实例，
+ * 避免重复创建和资源浪费。
  * </p>
  *
  * @author CH
@@ -30,48 +29,49 @@ import org.springframework.core.env.Environment;
 @ConditionalOnProperty(prefix = ConfigCenterProperties.PRE, name = "enable", havingValue = "true")
 public class ConfigValueAutoConfiguration {
 
-    @Autowired
-    private Environment environment;
-
     /**
-     * 创建配置中心
+     * 获取配置中心 Bean
+     * <p>
+     * 复用 ConfigCenterConfigurationEnvironmentPostProcessor 创建的实例，
+     * 避免重复创建 ConfigCenter。
+     * </p>
      *
-     * @param properties 配置属性
      * @return 配置中心实例
      */
     @Bean
-    public ConfigCenter configCenter(ConfigCenterProperties properties) {
-        String active = environment.getProperty("spring.profiles.active");
-        ConfigCenter configCenter = ServiceProvider.of(ConfigCenter.class)
-                .getNewExtension(properties.getProtocol(), ConfigCenterSetting.builder()
-                        .address(properties.getAddress())
-                        .username(properties.getUsername())
-                        .password(properties.getPassword())
-                        .connectionTimeout(properties.getConnectTimeout())
-                        .readTimeout(properties.getReadTimeout())
-                        .profile(StringUtils.defaultString(properties.getNamespaceId(), active))
-                        .build());
-
+    public ConfigCenter configCenter() {
+        ConfigCenter configCenter = ConfigCenterHolder.getInstance();
         if (configCenter != null) {
-            configCenter.start();
-            log.info("配置中心启动成功: protocol={}, address={}",
-                    properties.getProtocol(), properties.getAddress());
+            log.info("【配置中心】复用已创建的 ConfigCenter 实例，支持监听: {}", 
+                    configCenter.isSupportListener());
+        } else {
+            log.warn("【配置中心】ConfigCenter 实例未初始化，@ConfigValue 热更新功能将不可用");
         }
-
         return configCenter;
     }
 
     /**
-     * 创建ConfigValue Bean后置处理器
+     * 创建 ConfigValue Bean 后置处理器
+     * <p>
+     * 负责扫描 @ConfigValue 注解并注册热更新监听。
+     * </p>
      *
      * @param configCenter 配置中心
      * @return Bean后置处理器
      */
     @Bean
-    public ConfigValueBeanPostProcessor configValueBeanPostProcessor(
-            @Autowired(required = false) ConfigCenter configCenter) {
-        log.info("注册ConfigValue后置处理器，热更新功能{}",
-                configCenter != null && configCenter.isSupportListener() ? "已启用" : "未启用");
+    public ConfigValueBeanPostProcessor configValueBeanPostProcessor(ConfigCenter configCenter) {
+        boolean supportListener = configCenter != null && configCenter.isSupportListener();
+        log.info("【配置中心】注册 ConfigValue 后置处理器，热更新功能: {}", 
+                supportListener ? "已启用" : "未启用");
         return new ConfigValueBeanPostProcessor(configCenter);
+    }
+
+    /**
+     * 应用关闭时清理资源
+     */
+    @PreDestroy
+    public void destroy() {
+        ConfigCenterHolder.shutdown();
     }
 }
