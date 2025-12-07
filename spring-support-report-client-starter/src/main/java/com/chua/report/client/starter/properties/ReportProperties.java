@@ -77,4 +77,27 @@ public class ReportProperties {
         private long interval = 30;
     }
 
+    /**
+     * 客户端信息配置
+     * <p>
+     * 用于多网卡场景下指定客户端信息
+     * </p>
+     */
+    private ClientInfo clientInfo = new ClientInfo();
+
+    /**
+     * 客户端信息配置
+     */
+    @Data
+    public static class ClientInfo {
+
+        /**
+         * 客户端 IP 地址
+         * <p>
+         * 多网卡场景下指定使用的 IP 地址，为空则自动获取
+         * </p>
+         */
+        private String host;
+    }
+
 }

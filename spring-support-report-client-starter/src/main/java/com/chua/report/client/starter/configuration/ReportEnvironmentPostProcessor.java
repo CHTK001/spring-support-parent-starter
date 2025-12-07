@@ -71,11 +71,11 @@ public class ReportEnvironmentPostProcessor implements EnvironmentPostProcessor 
      * 串联客户端配置
      */
     private void linkClientConfig(ConfigurableEnvironment environment, Map<String, Object> syncProperties) {
+        // 服务端连接配置
         String serverHost = environment.getProperty(REPORT_PREFIX + "host", "localhost");
         String serverPort = environment.getProperty(REPORT_PREFIX + "port", "29170");
         String protocol = environment.getProperty(REPORT_PREFIX + "protocol", "rsocket-sync");
 
-        // 注意：SyncProperties.ClientConfig 的字段是 serverHost 和 serverPort
         if (environment.getProperty(SYNC_PREFIX + "client.server-host") == null) {
             syncProperties.put(SYNC_PREFIX + "client.server-host", serverHost);
         }
@@ -84,6 +84,27 @@ public class ReportEnvironmentPostProcessor implements EnvironmentPostProcessor 
         }
         if (environment.getProperty(SYNC_PREFIX + "client.protocol") == null) {
             syncProperties.put(SYNC_PREFIX + "client.protocol", protocol);
+        }
+
+        // 客户端应用信息（用于 SyncClient#initClientInfo）
+        String appName = environment.getProperty("spring.application.name", "unknown");
+        String appPort = environment.getProperty("server.port", "8080");
+        String contextPath = environment.getProperty("server.servlet.context-path", "");
+
+        if (environment.getProperty(SYNC_PREFIX + "client.app-name") == null) {
+            syncProperties.put(SYNC_PREFIX + "client.app-name", appName);
+        }
+        if (environment.getProperty(SYNC_PREFIX + "client.port") == null) {
+            syncProperties.put(SYNC_PREFIX + "client.port", appPort);
+        }
+        if (environment.getProperty(SYNC_PREFIX + "client.context-path") == null) {
+            syncProperties.put(SYNC_PREFIX + "client.context-path", contextPath);
+        }
+
+        // 多网卡场景指定 IP
+        String clientHost = environment.getProperty(REPORT_PREFIX + "client-info.host");
+        if (clientHost != null && !clientHost.isEmpty()) {
+            syncProperties.put(SYNC_PREFIX + "client.ip-address", clientHost);
         }
     }
 }
