@@ -4,18 +4,16 @@ org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
   com.chua.starter.common.support.configuration.AsyncThreadPoolConfiguration,\
   com.chua.starter.common.support.configuration.TypeConverterRegisterConfiguration,\
   com.chua.starter.common.support.jackson.configuration.JacksonConfiguration,\
-  com.chua.starter.common.support.configuration.CacheConfiguration,\
+  com.chua.starter.common.support.cache.configuration.CacheConfiguration,\
   com.chua.starter.common.support.configuration.CaptchaConfiguration,\
   com.chua.starter.common.support.configuration.AutoCreateTableConfiguration,\
   com.chua.starter.common.support.configuration.CommonConfiguration,\
   com.chua.starter.common.support.configuration.ProjectConfiguration,\
-  com.chua.starter.common.support.configuration.CodecConfiguration,\
-  com.chua.starter.common.support.configuration.InterceptorWebMvcConfigurer,\
+  com.chua.starter.common.support.api.configuration.ApiConfiguration,\
   com.chua.starter.common.support.configuration.FilterConfiguration,\
-  com.chua.starter.common.support.configuration.CacheProxyCachingConfiguration,\
-  com.chua.starter.common.support.configuration.CacheCustomTenantedKeyGenerator,\
-  com.chua.starter.common.support.configuration.AutoControllerRegistrar,\
-  com.chua.starter.common.support.configuration.UndertowServletWebServerFactoryConfigurer
+  com.chua.starter.common.support.cache.configuration.CacheProxyCachingConfiguration,\
+  com.chua.starter.common.support.cache.configuration.CacheCustomTenantedKeyGenerator,\
+  com.chua.starter.common.support.configuration.AutoControllerRegistrar
 
 org.springframework.boot.env.EnvironmentPostProcessor=\
   com.chua.starter.common.support.configuration.environment.FreemarkerEnvironmentPostProcessor,\

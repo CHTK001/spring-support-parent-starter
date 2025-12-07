@@ -71,3 +71,4 @@ public class TypeResolverBuilder  extends ObjectMapper.DefaultTypeResolverBuilde
         return type;
     }
 }
+

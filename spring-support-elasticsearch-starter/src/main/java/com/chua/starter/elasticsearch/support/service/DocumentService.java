@@ -2,7 +2,6 @@ package com.chua.starter.elasticsearch.support.service;
 
 import com.chua.common.support.lang.code.PageResult;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.starter.common.support.result.Result;
 import com.chua.starter.elasticsearch.support.pojo.Mapping;
 
 /**

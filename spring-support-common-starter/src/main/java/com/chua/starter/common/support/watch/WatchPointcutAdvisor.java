@@ -231,7 +231,7 @@ public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor imp
         String className = method.getDeclaringClass().getName();
         String methodName = method.getName();
         lastSpan.setFrom(className + "." + methodName);
-        lastSpan.setMessage("链路追踪(MQ)：" + lastSpan.getLinkId() + " " + className + "." + methodName + " 耗时：" + lastSpan.getCostTime() + "ms");
+        lastSpan.setMessage("链路追踪(MQ)�? + lastSpan.getLinkId() + " " + className + "." + methodName + " 耗时�? + lastSpan.getCostTime() + "ms");
         lastSpan.setStack(Thread.currentThread().getStackTrace());
         lastSpan.setTypeMethod(className + "." + methodName);
         lastSpan.setMethod(method.getDeclaringClass().getSimpleName() + "." + methodName);
@@ -239,3 +239,4 @@ public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor imp
     }
 
 }
+

@@ -5,7 +5,6 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.validator.group.AddGroup;
 import com.chua.common.support.validator.group.UpdateGroup;
 import com.chua.starter.common.support.annotations.Permission;
-import com.chua.starter.common.support.result.Result;
 import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.mybatis.utils.ReturnPageResultUtils;
 import com.chua.tenant.support.common.entity.SysService;
@@ -82,7 +81,7 @@ public class SysServiceController {
     public ReturnResult<SysService> saveForSysService(@RequestBody @Validated(AddGroup.class) SysService sysService,
                                                       BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return Result.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
+            return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
         return sysServiceService.saveForSysService(sysService);
     }
@@ -100,7 +99,7 @@ public class SysServiceController {
     public ReturnResult<Boolean> updateForSysService(@RequestBody @Validated(UpdateGroup.class) SysService sysService,
                                                      BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return Result.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
+            return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
         return sysServiceService.updateForSysService(sysService);
     }

@@ -2,18 +2,28 @@ package com.chua.starter.common.support.log;
 
 import ch.qos.logback.classic.pattern.ClassicConverter;
 import ch.qos.logback.classic.spi.ILoggingEvent;
-import com.chua.common.support.constant.Projects;
+
+import java.lang.management.ManagementFactory;
 
 /**
- * PidConverter类继承自ClassicConverter，旨在实现特定的转换功能。
- * 该类的具体作用是通过重写父类方法来实现进程ID（PID）的转换逻辑。
+ * 进程ID转换器
+ * <p>
+ * 用于在日志中输出当前进程ID。
+ * </p>
  *
  * @author CH
- * @since 2024/6/21
+ * @version 1.0.0
+ * @since 2024/01/01
  */
 public class PidConverter extends ClassicConverter {
 
-    static final String PID = Projects.getPid();
+    private static final String PID = getPid();
+
+    private static String getPid() {
+        String name = ManagementFactory.getRuntimeMXBean().getName();
+        return name.split("@")[0];
+    }
+
     @Override
     public String convert(ILoggingEvent event) {
         return PID;

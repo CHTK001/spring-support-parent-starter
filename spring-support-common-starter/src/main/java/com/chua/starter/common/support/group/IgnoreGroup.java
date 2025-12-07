@@ -7,3 +7,4 @@ package com.chua.starter.common.support.group;
  */
 public interface IgnoreGroup {
 }
+

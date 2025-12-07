@@ -2,7 +2,7 @@ package com.chua.starter.mybatis.pojo;
 
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
-import com.chua.starter.common.support.annotations.ApiFieldIgnore;
+import com.chua.starter.common.support.api.annotations.ApiFieldIgnore;
 import com.chua.starter.common.support.group.IgnoreGroup;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;

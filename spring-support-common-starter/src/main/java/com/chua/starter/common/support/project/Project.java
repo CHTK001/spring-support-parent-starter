@@ -51,7 +51,7 @@ public class Project {
      */
     private String applicationActiveInclude;
     /**
-     * 上下文路径
+     * 上下文路�?
      */
     private String contextPath;
     /**
@@ -74,7 +74,7 @@ public class Project {
      */
     private String dataSourceDriver;
     /**
-     * 用户名
+     * 用户�?
      */
     private String dataSourceUsername;
     /**
@@ -169,3 +169,4 @@ public class Project {
                 .put("endpointsUrl", endpointsUrl).asSynchronizedMap();
     }
 }
+

@@ -4,7 +4,7 @@ import com.chua.common.support.lang.code.ResultCode;
 import lombok.Getter;
 
 /**
- * 自定义业务异常
+ * 自定义业务异�?
  *
  * @author CH
  * @since 2022/7/31
@@ -33,3 +33,4 @@ public class BusinessException extends RuntimeException {
 
 
 }
+

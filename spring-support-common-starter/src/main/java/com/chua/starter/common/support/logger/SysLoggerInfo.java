@@ -34,7 +34,7 @@ public class SysLoggerInfo extends ApplicationEvent {
     private String logName;
 
     /**
-     * 浏览器指纹
+     * 浏览器指�?
      * <p>示例: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"</p>
      */
     private String fingerprint;
@@ -58,7 +58,7 @@ public class SysLoggerInfo extends ApplicationEvent {
     private String ua;
 
     /**
-     * 浏览器信息
+     * 浏览器信�?
      * <p>示例: "Chrome 91.0.4472.124", "Firefox 89.0"</p>
      */
     private String browser;
@@ -82,7 +82,7 @@ public class SysLoggerInfo extends ApplicationEvent {
     private String logParam;
 
     /**
-     * 操作人姓名
+     * 操作人姓�?
      * <p>示例: "张三", "admin"</p>
      */
     private String createName;
@@ -101,18 +101,18 @@ public class SysLoggerInfo extends ApplicationEvent {
 
     /**
      * 日志内容
-     * <p>示例: "用户张三查询了ID为123的用户信息"</p>
+     * <p>示例: "用户张三查询了ID�?23的用户信�?</p>
      */
     private String logContent;
 
     /**
-     * 日志观察点
+     * 日志观察�?
      * <p>示例: "CONTROLLER_ENTER", "SERVICE_EXIT", "DAO_EXCEPTION"</p>
      */
     private String logWatch;
 
     /**
-     * 操作耗时(秒)
+     * 操作耗时(�?
      * <p>示例: 1L, 5L</p>
      */
     private Long logCost;
@@ -136,13 +136,13 @@ public class SysLoggerInfo extends ApplicationEvent {
     private String logModule;
 
     /**
-     * 日志状态;0-失败,1-成功
+     * 日志状�?0-失败,1-成功
      * <p>示例: 1, 0</p>
      */
     private Integer logStatus;
 
     /**
-     * 构造函数
+     * 构造函�?
      *
      * @param source 事件源对象，通常为触发该日志事件的组件或服务
      *               <p>示例: this, userService, request</p>
@@ -151,3 +151,4 @@ public class SysLoggerInfo extends ApplicationEvent {
         super(source);
     }
 }
+

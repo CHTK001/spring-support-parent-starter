@@ -92,3 +92,4 @@ public class ResponseModelViewMethodProcessor extends RequestResponseBodyMethodP
         return (PatternMatchUtils.simpleMatch(this.redirectPatterns, viewName) || viewName.startsWith("redirect:"));
     }
 }
+

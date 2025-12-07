@@ -14,12 +14,12 @@ public class IpProperties {
 
     public static final String PRE = "plugin.ip";
     /**
-     * 是否开启控制
+     * 是否开启控�?
      */
     private boolean enable;
 
     /**
-     * 数据库文件路径
+     * 数据库文件路�?
      */
     private String databaseFile = "classpath:qqwry.dat";
 
@@ -28,3 +28,4 @@ public class IpProperties {
      */
     private String ipType = "qqwry";
 }
+

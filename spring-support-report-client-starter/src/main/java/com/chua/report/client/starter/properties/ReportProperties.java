@@ -83,16 +83,16 @@ public class ReportProperties {
         /**
          * 通信协议: rsocket, websocket
          */
-        private String protocol = "rsocket";
+        private String protocol = "rsocket-sync";
 
         /**
          * 服务端地址
          */
-        private String serverHost = "localhost";
+        private String host = "localhost";
 
         /**
          * 服务端端口
          */
-        private int serverPort = 19380;
+        private int port = 29170;
     }
 }

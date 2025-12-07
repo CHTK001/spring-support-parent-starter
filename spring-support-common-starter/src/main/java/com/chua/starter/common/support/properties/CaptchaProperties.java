@@ -7,7 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.awt.*;
 
 /**
- * 校验码
+ * 校验�?
  *
  * @author CH
  */
@@ -22,7 +22,7 @@ public class CaptchaProperties {
 
 
     /**
-     * 验证码类型
+     * 验证码类�?
      */
     private CaptchaTypeEnum type = CaptchaTypeEnum.SPEC;
 
@@ -32,25 +32,25 @@ public class CaptchaProperties {
     private boolean enable;
 
     /**
-     * 验证码缓存过期时间(单位:秒)
+     * 验证码缓存过期时�?单位:�?
      */
     private long ttl = 120L;
 
     /**
-     * 验证码内容长度
+     * 验证码内容长�?
      */
     private int length = 4;
     /**
-     * 验证码宽度
+     * 验证码宽�?
      */
     private int width = 120;
     /**
-     * 验证码高度
+     * 验证码高�?
      */
     private int height = 36;
 
     /**
-     * 验证码字体
+     * 验证码字�?
      */
     private String fontName = "Verdana";
 
@@ -66,3 +66,4 @@ public class CaptchaProperties {
 
 
 }
+

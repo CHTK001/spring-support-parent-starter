@@ -29,7 +29,7 @@ public class ResourceWebMvcConfigurer implements WebMvcConfigurer {
                 .setCachePeriod(3600)
                 .resourceChain(true);
 
-        // 直接配置资源处理器
+        // 直接配置资源处理�?
         registry.addResourceHandler("/**")
                 .addResourceLocations(
                         "classpath:/META-INF/resources/",
@@ -41,7 +41,7 @@ public class ResourceWebMvcConfigurer implements WebMvcConfigurer {
                 .addResolver(new PathResourceResolver() {
                     @Override
                     protected Resource getResource(String resourcePath, Resource location) throws IOException {
-                        // 在这里处理资源路径编码问题
+                        // 在这里处理资源路径编码问�?
                         String decodedPath = URLDecoder.decode(resourcePath, StandardCharsets.UTF_8);
                         return super.getResource(decodedPath, location);
                     }
@@ -49,3 +49,4 @@ public class ResourceWebMvcConfigurer implements WebMvcConfigurer {
     }
 
 }
+
