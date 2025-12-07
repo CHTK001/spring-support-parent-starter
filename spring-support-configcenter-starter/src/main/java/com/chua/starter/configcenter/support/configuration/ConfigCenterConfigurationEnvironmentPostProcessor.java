@@ -32,13 +32,13 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
 
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
-        log.info("开始处理nacos配置中心");
+        log.info("开始处理配置中心");
         ConfigCenterProperties configCenterProperties = Binder.get(environment).bindOrCreate(ConfigCenterProperties.PRE, ConfigCenterProperties.class);
         if (!configCenterProperties.isEnable()) {
-            log.warn("nacos配置中心未启用");
+            log.warn("配置中心未启用");
             return;
         }
-        log.info("开始加载nacos配置中心");
+        log.info("开始加载配置中心: {}", configCenterProperties.getProtocol());
         String active = environment.getProperty("spring.profiles.active");
         log.info("当前环境: {}", active);
         ConfigCenter configCenter = ServiceProvider.of(ConfigCenter.class)
