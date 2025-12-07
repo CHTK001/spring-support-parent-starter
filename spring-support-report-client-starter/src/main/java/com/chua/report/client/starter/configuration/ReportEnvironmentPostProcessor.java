@@ -32,12 +32,6 @@ public class ReportEnvironmentPostProcessor implements EnvironmentPostProcessor 
             return;
         }
 
-        // 检查同步是否启用
-        String syncEnabled = environment.getProperty(REPORT_PREFIX + "sync.enable", "false");
-        if (!"true".equalsIgnoreCase(syncEnabled)) {
-            return;
-        }
-
         // 准备要设置的 sync 配置
         Map<String, Object> syncProperties = new HashMap<>();
 
@@ -65,15 +59,15 @@ public class ReportEnvironmentPostProcessor implements EnvironmentPostProcessor 
      * 串联客户端配置
      */
     private void linkClientConfig(ConfigurableEnvironment environment, Map<String, Object> syncProperties) {
-        String serverHost = environment.getProperty(REPORT_PREFIX + "sync.server-host", "localhost");
-        String serverPort = environment.getProperty(REPORT_PREFIX + "sync.server-port", "19380");
-        String protocol = environment.getProperty(REPORT_PREFIX + "sync.protocol", "rsocket");
+        String serverHost = environment.getProperty(REPORT_PREFIX + "host", "localhost");
+        String serverPort = environment.getProperty(REPORT_PREFIX + "port", "29170");
+        String protocol = environment.getProperty(REPORT_PREFIX + "protocol", "rsocket-sync");
 
-        if (environment.getProperty(SYNC_PREFIX + "client.server-host") == null) {
-            syncProperties.put(SYNC_PREFIX + "client.server-host", serverHost);
+        if (environment.getProperty(SYNC_PREFIX + "client.host") == null) {
+            syncProperties.put(SYNC_PREFIX + "client.host", serverHost);
         }
-        if (environment.getProperty(SYNC_PREFIX + "client.server-port") == null) {
-            syncProperties.put(SYNC_PREFIX + "client.server-port", serverPort);
+        if (environment.getProperty(SYNC_PREFIX + "client.port") == null) {
+            syncProperties.put(SYNC_PREFIX + "client.port", serverPort);
         }
         if (environment.getProperty(SYNC_PREFIX + "client.protocol") == null) {
             syncProperties.put(SYNC_PREFIX + "client.protocol", protocol);
