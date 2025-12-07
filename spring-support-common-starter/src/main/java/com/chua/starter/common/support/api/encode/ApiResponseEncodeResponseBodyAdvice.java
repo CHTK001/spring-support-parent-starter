@@ -70,23 +70,23 @@ public class ApiResponseEncodeResponseBodyAdvice implements ResponseBodyAdvice<O
 
         HttpHeaders headers = serverHttpResponse.getHeaders();
 
-        // 使用主密钥加密（去除OTK�?
+        // 使用主密钥加密（去除OTK）
         ApiResponseEncodeRegister.CodecResult codecResult = apiResponseEncodeRegister.encode(Json.toJson(o));
 
-        // 设置响应�?
+        // 设置响应头
         headers.set("access-control-timestamp-user", codecResult.getTimestamp());
         headers.set("access-control-no-data", String.valueOf(true));
 
         // 设置Content-Type为application/octet-stream
         headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
 
-        // 添加X-Content-Type-Options: nosniff响应�?
+        // 添加X-Content-Type-Options: nosniff响应头
         headers.set("X-Content-Type-Options", "nosniff");
 
-        // 构建响应数据（key直接拼接�?2后面�?
+        // 构建响应数据（key直接拼接�?02后面）
         String responseData = "02" + codecResult.getKey() + "200" + codecResult.getData() + "ffff";
 
-        // 将响应数据转换为字节数组（使用更真实的二进制转换方法�?
+        // 将响应数据转换为字节数组（使用更真实的二进制转换方法）
         byte[] responseBytes = convertToBinary(responseData);
 
         // 设置Content-Length头，值为加密后数据的实际长度
@@ -102,7 +102,7 @@ public class ApiResponseEncodeResponseBodyAdvice implements ResponseBodyAdvice<O
 
     /**
      * 将字符串转换为字节数组（使用更真实的二进制转换方法）
-     * @param str 字符�?
+     * @param str 字符串
      * @return 字节数组
      */
     private byte[] convertToBinary(String str) {
@@ -114,7 +114,7 @@ public class ApiResponseEncodeResponseBodyAdvice implements ResponseBodyAdvice<O
         CharBuffer charBuffer = CharBuffer.wrap(str);
         ByteBuffer byteBuffer = StandardCharsets.UTF_8.encode(charBuffer);
         
-        // 创建结果数组并复制数�?
+        // 创建结果数组并复制数据
         byte[] result = new byte[byteBuffer.remaining()];
         byteBuffer.get(result);
         

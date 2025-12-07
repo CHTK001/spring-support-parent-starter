@@ -28,14 +28,14 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 /**
- * 校验�?
+ * 校验码
  *
  * @author CH
  */
 @RestController
 @Slf4j
-@Api(tags = "校验�?)
-@Tag(name = "校验�?)
+@Api(tags = "校验码")
+@Tag(name = "校验码")
 @Ignore
 @RequestMapping("${plugin.captcha.context-path:/v1/}")
 @ConditionalOnProperty(prefix = CaptchaProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = true)
@@ -112,13 +112,13 @@ public class CaptchaProvider {
         return producer(captchaTypeEnum, randomInt);
     }
     /**
-     * 校验�?
+     * 校验码
      *
      * @param request  请求
      * @param response 响应
      */
-    @ApiOperation("获取验证�?)
-    @Operation(summary = "获取验证�?)
+    @ApiOperation("获取验证码")
+    @Operation(summary = "获取验证码")
     @GetMapping("captcha.jpg")
     public void captcha(HttpServletRequest request, HttpServletResponse response) {
         Captcha captcha = createCaptcha();
@@ -145,17 +145,17 @@ public class CaptchaProvider {
     }
 
     /**
-     * 校验�?
+     * 校验码
      *
      * @param request 请求
      */
-    @ApiOperation("获取验证�?)
-    @Operation(summary = "获取验证�?)
+    @ApiOperation("获取验证码")
+    @Operation(summary = "获取验证码")
     @GetMapping("captcha")
     public CaptchaResult captchaBase64(HttpServletRequest request, HttpServletResponse response) {
         Captcha captcha = createCaptcha();
         String captchaText = captcha.text();
-        log.info("当前校验�? {}", captchaText);
+        log.info("当前校验码 {}", captchaText);
         String captchaBase64 = captcha.toBase64();
         try {
             HttpSession session = request.getSession();
@@ -172,7 +172,7 @@ public class CaptchaProvider {
 
 
     /**
-     * 验证码响应对�?
+     * 验证码响应对象
      *
      * @author haoxr
      * @since 2023/03/24

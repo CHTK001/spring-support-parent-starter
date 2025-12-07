@@ -5,17 +5,17 @@ import java.lang.annotation.*;
 /**
  * API环境配置注解
  * <p>
- * 用于控制API接口在不同Spring Profile环境下的可用性�?
+ * 用于控制API接口在不同Spring Profile环境下的可用性。
  * </p>
  *
- * <h3>使用场景�?/h3>
+ * <h3>使用场景</h3>
  * <ul>
- *   <li>某些调试接口仅在开发环境可�?/li>
+ *   <li>某些调试接口仅在开发环境可用</li>
  *   <li>测试专用接口仅在测试环境暴露</li>
  *   <li>生产环境禁用某些敏感接口</li>
  * </ul>
  *
- * <h3>配置要求�?/h3>
+ * <h3>配置要求</h3>
  * <pre>
  * # application.yml
  * spring:
@@ -25,12 +25,12 @@ import java.lang.annotation.*;
  * plugin:
  *   api:
  *     platform:
- *       enable: true  # 需要开启平台控�?
+ *       enable: true  # 需要开启平台控制
  * </pre>
  *
- * <h3>使用示例�?/h3>
+ * <h3>使用示例</h3>
  * <pre>
- * // 仅在开发环境可�?
+ * // 仅在开发环境可用
  * &#64;GetMapping("/debug")
  * &#64;ApiProfile("dev")
  * public Debug getDebugInfo() { ... }
@@ -40,7 +40,7 @@ import java.lang.annotation.*;
  * &#64;ApiProfile({"dev", "test"})
  * public TestData getTestData() { ... }
  *
- * // 类级别：整个控制器仅在指定环境可�?
+ * // 类级别：整个控制器仅在指定环境可用
  * &#64;RestController
  * &#64;ApiProfile("dev")
  * public class DevToolsController { ... }
@@ -58,8 +58,8 @@ public @interface ApiProfile {
     /**
      * 环境名称列表
      * <p>
-     * 支持配置多个环境名称，如 dev、test、prod 等�?
-     * 接口将在指定的所有环境中可用�?
+     * 支持配置多个环境名称，如 dev、test、prod 等。
+     * 接口将在指定的所有环境中可用。
      * </p>
      *
      * @return 环境名称数组

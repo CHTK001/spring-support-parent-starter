@@ -21,7 +21,7 @@ import java.util.Set;
 /**
  * 自定义缓存注解解析器
  * <p>
- * 解除了原�?Spring Cache �?key �?keyGenerator 不能同时使用的限制�?
+ * 解除了原有Spring Cache �?key �?keyGenerator 不能同时使用的限制。
  * </p>
  *
  * @author CH
@@ -169,11 +169,11 @@ public class CacheCustomCacheAnnotationParser implements CacheAnnotationParser, 
     /**
      * 验证缓存操作
      * <p>
-     * 注意：已移除 key �?keyGenerator 不能同时使用的限�?
+     * 注意：已移除 key �?keyGenerator 不能同时使用的限制
      * </p>
      */
     private void validateCacheOperation(AnnotatedElement ae, CacheOperation operation) {
-        // 不再验证 key �?keyGenerator 互斥，允许同时使�?
+        // 不再验证 key �?keyGenerator 互斥，允许同时使用
     }
 
     /**

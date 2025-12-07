@@ -15,14 +15,14 @@ public enum DataFilterTypeEnum {
     ALL(1, "全部可见"),
     /**本人可见*/
     SELF(2, "本人可见"),
-    /**所在部门可�?/
-    DEPT(3, "所在部门可�?),
+    /**所在部门可见*/
+    DEPT(3, "所在部门可见"),
     /**所在部门及子级可见*/
     DEPT_AND_SUB(4, "所在部门及子级可见"),
-    /**选择的部门可�?/
-    DEPT_SETS(5, "选择的部门可�?),
-    /**自定�?/
-    CUSTOM(6, "自定�?);
+    /**选择的部门可见*/
+    DEPT_SETS(5, "选择的部门可见"),
+    /**自定义*/
+    CUSTOM(6, "自定义");
 
 
     private final Integer code;

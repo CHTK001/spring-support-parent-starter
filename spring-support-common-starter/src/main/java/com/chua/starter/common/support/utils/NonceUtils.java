@@ -9,7 +9,7 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 /**
- * Nonce解析工具�?
+ * Nonce解析工具类
  *
  * @author CH
  * @since 2025/01/15
@@ -22,7 +22,7 @@ public class NonceUtils {
     /**
      * 解析并验证Nonce
      *
-     * @param nonceStr 前端传递的nonce字符�?
+     * @param nonceStr 前端传递的nonce字符串
      * @param sign     前端传递的签名
      * @param maxAge   最大有效时间（毫秒），默认5分钟
      * @return 验证结果
@@ -33,7 +33,7 @@ public class NonceUtils {
         }
 
         try {
-            // 验证nonce格式（简单验证长度和基本字符�?
+            // 验证nonce格式（简单验证长度和基本字符串
             if (nonceStr.length() < 32) {
                 log.warn("Nonce长度不足: {}", nonceStr);
                 return new NonceValidationResult(false, 0, sign, nonceStr);
@@ -41,36 +41,37 @@ public class NonceUtils {
 
             // 验证签名格式
             if (!isValidSignFormat(sign)) {
-                log.warn("签名格式不正�? {}", sign);
+                log.warn("签名格式不正确:  {}", sign);
                 return new NonceValidationResult(false, 0, sign, nonceStr);
             }
 
-            // 提取时间戳（这里简化处理，实际应该有更复杂的解析逻辑�?
+            // 提取时间戳（这里简化处理，实际应该有更复杂的解析逻辑）
             long timestamp = extractTimestamp(nonceStr);
             if (timestamp <= 0) {
-                log.warn("无法提取有效时间�? {}", nonceStr);
+                log.warn("无法提取有效时间戳 {}", nonceStr);
                 return new NonceValidationResult(false, 0, sign, nonceStr);
             }
 
-            // 验证时间戳有效�?
+            // 验证时间戳有效性
             long currentTime = System.currentTimeMillis();
             if (Math.abs(currentTime - timestamp) > maxAge) {
-                log.warn("Nonce已过�? 当前时间={}, nonce时间={}, 差�?{}ms", currentTime, timestamp,
+                log.warn("Nonce已过期 当前时间={}, nonce时间={}, 差距{}ms", currentTime, timestamp,
                         Math.abs(currentTime - timestamp));
                 return new NonceValidationResult(false, timestamp, sign, nonceStr);
             }
 
             return new NonceValidationResult(true, timestamp, sign, nonceStr);
         } catch (Exception e) {
-            log.error("解析Nonce时发生异�? nonce={}, sign={}", nonceStr, sign, e);
+            log.error("解析Nonce时发生异常:  nonce={}, sign={}", nonceStr, sign, e);
             return new NonceValidationResult(false, 0, sign, nonceStr);
         }
     }
 
     /**
+     * 解析并验证Nonce（使用默认5分钟有效期）
      * 解析并验证Nonce（使用默�?分钟有效期）
      *
-     * @param nonceStr 前端传递的nonce字符�?
+     * @param nonceStr 前端传递的nonce字符串
      * @param sign     前端传递的签名
      * @return 验证结果
      */
@@ -85,20 +86,20 @@ public class NonceUtils {
      * @return 是否有效格式
      */
     private static boolean isValidSignFormat(String sign) {
-        // 简单验证签名格式（32位十六进制字符串�?
+        // 简单验证签名格式（32位十六进制字符串）
         return Pattern.matches("^[a-fA-F0-9]{32}$", sign);
     }
 
     /**
      * 从nonce中提取时间戳（简化实现）
      *
-     * @param nonceStr nonce字符�?
-     * @return 时间�?
+     * @param nonceStr nonce字符串
+     * @return 时间戳
      */
     private static long extractTimestamp(String nonceStr) {
         try {
-            // 简化实现：假设时间戳在nonce的前13位是时间�?
-            // 实际实现应该根据前端nonce生成规则来解�?
+            // 简化实现：假设时间戳在nonce的前13位是时间戳
+            // 实际实现应该根据前端nonce生成规则来解析
             if (nonceStr.length() >= 13) {
                 String potentialTimestamp = nonceStr.substring(0, 13);
                 // 检查是否为数字
@@ -110,7 +111,7 @@ public class NonceUtils {
             // 如果无法从字符串中提取，返回当前时间戳（简化处理）
             return System.currentTimeMillis();
         } catch (Exception e) {
-            log.warn("提取时间戳失�? {}", nonceStr, e);
+            log.warn("提取时间戳失败:  {}", nonceStr, e);
             return System.currentTimeMillis();
         }
     }
@@ -134,11 +135,11 @@ public class NonceUtils {
 
             long timestamp = Long.parseLong(timestampStr);
 
-            // 生成期望的签�?
+            // 生成期望的签名
             String expectedSign = generateSign(request, timestamp);
             return expectedSign.equalsIgnoreCase(sign);
         } catch (Exception e) {
-            log.error("验证签名时发生异�?, e);
+            log.error("验证签名时发生异常", e);
             return false;
         }
     }
@@ -147,8 +148,8 @@ public class NonceUtils {
      * 生成签名（基于请求参数）
      *
      * @param request   HttpServletRequest对象
-     * @param timestamp 时间�?
-     * @return 生成的签�?
+     * @param timestamp 时间戳
+     * @return 生成的签名
      */
     public static String generateSign(HttpServletRequest request, long timestamp) {
         try {
@@ -165,11 +166,11 @@ public class NonceUtils {
                 }
             }
 
-            // 收集请求体数据（对于JSON请求�?
+            // 收集请求体数据（对于JSON请求）
             String contentType = request.getContentType();
             if (contentType != null && contentType.contains("application/json")) {
                 // 注意：这里简化处理，实际项目中可能需要从请求体缓存中读取
-                // 因为HttpServletRequest的输入流只能读取一�?
+                // 因为HttpServletRequest的输入流只能读取一次
             }
 
             // 添加nonce和timestamp
@@ -185,7 +186,7 @@ public class NonceUtils {
                 }
             }
 
-            // 移除末尾�?符号
+            // 移除末尾&符号
             if (paramString.length() > 0 && paramString.charAt(paramString.length() - 1) == '&') {
                 paramString.setLength(paramString.length() - 1);
             }
@@ -197,7 +198,7 @@ public class NonceUtils {
             // 生成MD5签名
             return md5Hash(dataToSign);
         } catch (Exception e) {
-            log.error("生成签名时发生异�?, e);
+            log.error("生成签名时发生异常", e);
             return "";
         }
     }
@@ -205,9 +206,9 @@ public class NonceUtils {
     /**
      * 生成签名（示例实现）
      *
-     * @param nonceStr  nonce字符�?
-     * @param timestamp 时间�?
-     * @return 生成的签�?
+     * @param nonceStr  nonce字符串
+     * @param timestamp 时间戳
+     * @return 生成的签名
      */
     public static String generateSign(String nonceStr, long timestamp) {
         // 使用更安全的签名生成逻辑
@@ -216,31 +217,31 @@ public class NonceUtils {
     }
 
     /**
-     * 生成复杂的Nonce（与前端对应�?
+     * 生成复杂的Nonce（与前端对应）
      *
      * @return 生成的nonce
      */
     public static String generateNonce() {
         long timestamp = System.currentTimeMillis();
 
-        // 生成多个随机�?
+        // 生成多个随机数
         String random1 = generateRandomString(5);
         String random2 = generateRandomString(7);
         String random3 = generateRandomString(6);
 
-        // 生成基于时间戳的哈希-like�?
+        // 生成基于时间戳的哈希-like值
         long timeHash = (timestamp * 9301 + 49297) % 233280;
 
-        // 生成序列�?
+        // 生成序列值
         long sequence = (timestamp & 0xFFFF) ^ (timestamp >>> 16);
 
-        // 生成基于随机数的混合�?
+        // 生成基于随机数的混合值
         long mixed = ((random1.length() * random2.length() * random3.length()) + timestamp) % 999999;
 
         // 添加UUID的部分作为额外的随机因子
         String uuidPart = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
 
-        // 添加安全随机�?
+        // 添加安全随机数
         long secureRandom = SECURE_RANDOM.nextLong();
 
         // 生成最终的复杂nonce
@@ -259,7 +260,7 @@ public class NonceUtils {
             nonce = nonce + padding;
         }
 
-        // 如果太长则截�?
+        // 如果太长则截断
         if (nonce.length() > 128) {
             nonce = nonce.substring(0, 128);
         }
@@ -271,7 +272,7 @@ public class NonceUtils {
      * 生成指定长度的随机字符串
      *
      * @param length 长度
-     * @return 随机字符�?
+     * @return 随机字符串
      */
     private static String generateRandomString(int length) {
         byte[] randomBytes = new byte[length];
@@ -294,8 +295,8 @@ public class NonceUtils {
     /**
      * MD5哈希函数
      *
-     * @param input 输入字符�?
-     * @return MD5哈希�?
+     * @param input 输入字符串
+     * @return MD5哈希值
      */
     private static String md5Hash(String input) {
         try {
@@ -311,7 +312,7 @@ public class NonceUtils {
             }
             return hexString.toString();
         } catch (Exception e) {
-            // 出错时返回简单哈�?
+            // 出错时返回简单哈希
             return Integer.toString(input.hashCode(), 16);
         }
     }

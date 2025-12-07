@@ -18,14 +18,14 @@ public @interface SysLog {
     /**
      * 操作模块(e.g.修改, 删除, 更新)
      * <p>
-     * 为空时，会尝试读�?{swagger name()} 属�?
+     * 为空时，会尝试读取 {swagger name()} 属性
      */
     String module() default "";
 
     /**
-     * 操作�?xxx查询�?
+     * 操作描述（xxx查询）
      * <p>
-     * 为空时，会尝试读�?{swagger  summary()} 属�?
+     * 为空时，会尝试读取 {swagger  summary()} 属性
      */
     String name() default "";
 
@@ -34,11 +34,11 @@ public @interface SysLog {
      * {username} 当前用户
      * {$arg1...n} 入参
      * {$method} 方法
-     * {$result} 返回�?
+     * {$result} 返回值
      */
     String content() default "";
 
-    // ========== 开关字�?==========
+    // ========== 开关字段 ==========
 
     /**
      * 是否记录操作日志
@@ -51,7 +51,7 @@ public @interface SysLog {
     boolean logArgs() default true;
 
     /**
-     * 是否记录方法结果的数�?
+     * 是否记录方法结果的数据
      */
     boolean logResultData() default true;
 

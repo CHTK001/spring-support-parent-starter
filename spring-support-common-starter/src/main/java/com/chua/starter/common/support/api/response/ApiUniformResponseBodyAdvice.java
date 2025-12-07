@@ -36,9 +36,9 @@ import java.util.function.Supplier;
 import static com.chua.common.support.utils.ClassUtils.isAssignableFrom;
 
 /**
- * 统一返回值处�?
+ * 统一返回值处理
  * <p>
- * 自动将返回值包装为统一�?Result 格式�?
+ * 自动将返回值包装为统一�?Result 格式。
  * </p>
  *
  * @author CH
@@ -111,7 +111,7 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
     /**
      * 是否忽略返回格式
      *
-     * @param parameterDeclaringClass 参数声明�?
+     * @param parameterDeclaringClass 参数声明类
      * @return 是否忽略
      */
     private boolean isIgnorePackages(Class<?> parameterDeclaringClass) {
@@ -134,9 +134,9 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
     }
 
     /**
-     * 预处�?
+     * 预处理
      *
-     * @param preconditioning    预处理对�?
+     * @param preconditioning    预处理对象
      * @param serverHttpResponse 响应对象
      * @return 处理结果
      */

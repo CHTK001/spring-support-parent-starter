@@ -16,10 +16,10 @@ public interface IptablesService {
 
 
     /**
-     * 将IP地址转换为地理位置信�?
+     * 将IP地址转换为地理位置信息
      *
      * @param address IP地址字符串，例如: "114.114.114.114" �?"8.8.8.8"
-     * @return 返回包含地理位置信息的封装结果，如果转换失败则返回错误信�?
+     * @return 返回包含地理位置信息的封装结果，如果转换失败则返回错误信息
      * 示例成功返回: {@code ReturnResult.ok(GeoCity)} 包含城市、省份、国家等信息
      * 示例失败返回: {@code ReturnResult.failed("无法解析IP地址")} 包含错误原因
      */

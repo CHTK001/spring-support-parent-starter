@@ -16,18 +16,18 @@ public enum Position {
 
 
     /**
-     * 绝对�?
+     * 绝对值
      */
     ABSOLUTE(0),
 
     /**
-     * 相对�?
+     * 相对值
      */
     RELATIVE(1),
     ;
 
     /**
-     * 私有的整数�?
+     * 私有的整数值
      */
     private final int value;
 

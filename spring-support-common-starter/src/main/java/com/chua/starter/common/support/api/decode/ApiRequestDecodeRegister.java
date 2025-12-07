@@ -15,9 +15,9 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * 请求解码注册�?
+ * 请求解码注册器
  * <p>
- * 处理请求解密和防重放攻击验证�?
+ * 处理请求解密和防重放攻击验证。
  * </p>
  *
  * @author CH
@@ -33,12 +33,12 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     private static final long REQUEST_TIMESTAMP_TTL_MS = 10 * 60 * 1000L;
 
     /**
-     * 请求时间戳最大存储数�?
+     * 请求时间戳最大存储数量
      */
     private static final int REQUEST_TIMESTAMP_MAX_SIZE = 50000;
 
     /**
-     * 请求时间戳存�?- 用于防止重放攻击
+     * 请求时间戳存储 - 用于防止重放攻击
      */
     private final ConcurrentHashMap<String, Long> requestTimestampStore = new ConcurrentHashMap<>();
 
@@ -50,7 +50,7 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     private String requestCodecKey;
 
     /**
-     * 构造函�?
+     * 构造函数
      *
      * @param decodeConfig 解码配置
      */
@@ -64,9 +64,9 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     }
 
     /**
-     * 请求解密是否开�?
+     * 请求解密是否开启
      *
-     * @return 是否开�?
+     * @return 是否开启
      */
     public boolean requestDecodeOpen() {
         check();
@@ -81,9 +81,9 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     }
 
     /**
-     * 获取密钥�?
+     * 获取密钥头
      *
-     * @return 密钥头名�?
+     * @return 密钥头名称
      */
     public String getKeyHeader() {
         return "access-control-origin-key";
@@ -108,7 +108,7 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     public byte[] decodeRequest(String data) {
         try {
             if (requestCodec == null) {
-                throw new RuntimeException("解密器未初始�?");
+                throw new RuntimeException("解密器未初始化");
             }
             return requestCodec.decode(Hex.decodeHex(data));
         } catch (Exception e) {
@@ -117,10 +117,10 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     }
 
     /**
-     * 验证请求防重放攻�?
+     * 验证请求防重放攻击
      *
-     * @param timestamp 请求时间�?
-     * @param nonce     随机�?
+     * @param timestamp 请求时间戳
+     * @param nonce     随机数
      * @return 是否通过验证
      */
     public boolean validateAntiReplay(String timestamp, String nonce) {
@@ -134,7 +134,7 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
             long currentTime = System.currentTimeMillis();
 
             if (Math.abs(currentTime - requestTime) > REQUEST_TIMESTAMP_TTL_MS) {
-                log.warn("[AntiReplay] 请求时间戳超出有效范�? {}, 当前时间: {}", requestTime, currentTime);
+                log.warn("[AntiReplay] 请求时间戳超出有效范围： {}, 当前时间: {}", requestTime, currentTime);
                 return false;
             }
 
@@ -152,10 +152,10 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
             return true;
 
         } catch (NumberFormatException e) {
-            log.warn("[AntiReplay] 时间戳格式错�? {}", timestamp);
+            log.warn("[AntiReplay] 时间戳格式错误： {}", timestamp);
             return false;
         } catch (Exception e) {
-            log.error("[AntiReplay] 验证请求时发生错�?, e);
+            log.error("[AntiReplay] 验证请求时发生错误", e);
             return false;
         }
     }
@@ -181,7 +181,7 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     }
 
     /**
-     * 清理过期的请求记�?
+     * 清理过期的请求记录
      */
     private void cleanupExpiredRequests() {
         try {
@@ -209,11 +209,11 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
             }
 
             if (removedCount > 0) {
-                log.debug("[AntiReplay-Cleanup] 清理�?{} 个过�?多余的请求记录，当前存储: {}",
+                log.debug("[AntiReplay-Cleanup] 清理了{} 个过期/多余的请求记录，当前存储: {}",
                         removedCount, requestTimestampStore.size());
             }
         } catch (Exception e) {
-            log.error("[AntiReplay-Cleanup] 清理请求记录时发生错�?, e);
+            log.error("[AntiReplay-Cleanup] 清理请求记录时发生错误", e);
         }
     }
 }
