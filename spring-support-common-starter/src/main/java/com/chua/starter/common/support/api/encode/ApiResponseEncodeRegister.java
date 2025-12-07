@@ -13,9 +13,9 @@ import org.springframework.context.ApplicationListener;
 import java.util.List;
 
 /**
- * 响应编码注册�?
+ * 响应编码注册器
  * <p>
- * 提供响应数据加密功能�?
+ * 提供响应数据加密功能。
  * </p>
  *
  * @author CH
@@ -38,9 +38,9 @@ public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfi
     private ApiResponseEncodeConfiguration apiResponseEncodeConfiguration;
 
     /**
-     * 构造函�?
+     * 构造函数
      *
-     * @param responseEncodePropertiesConfig 编解码配�?
+     * @param responseEncodePropertiesConfig 编解码配置
      */
     public ApiResponseEncodeRegister(ApiProperties.ResponseEncodeProperties responseEncodePropertiesConfig) {
         boolean extInject = responseEncodePropertiesConfig.isExtInject();
@@ -79,7 +79,7 @@ public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfi
             String transportKey = codecKeyPair.getPrivateKeyHex();
             String keyLength = String.valueOf(transportKey.length());
             
-            log.debug("[CodecFactory] 数据加密完成，数据长�?{}", data.length());
+            log.debug("[CodecFactory] 数据加密完成，数据长度: {}", data.length());
             return new CodecResult(transportKey, encryptedData, keyLength);
         } catch (Exception e) {
             log.error("[CodecFactory] 数据加密失败", e);

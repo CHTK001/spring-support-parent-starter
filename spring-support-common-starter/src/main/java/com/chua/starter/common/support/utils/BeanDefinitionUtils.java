@@ -25,7 +25,7 @@ public class BeanDefinitionUtils {
         // 获取类加载器
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
 
-        // 从Resource对象中获取文件路�?
+        // 从Resource对象中获取文件路径
         String filePath = resource.getFile().getAbsolutePath();
 
         // 根据文件路径创建Class对象
@@ -33,7 +33,7 @@ public class BeanDefinitionUtils {
     }
 
     /**
-     * 从文件路径获取类�?
+     * 从文件路径获取类名
      *
      * @param filePath 文件路径
      * @return {@link String}
@@ -49,7 +49,7 @@ public class BeanDefinitionUtils {
     /**
      * 注册bean
      *
-     * @param registry 注册�?
+     * @param registry 注册器
      * @param aClass   定义
      * @param beanMap  参数
      */
@@ -65,7 +65,7 @@ public class BeanDefinitionUtils {
      * 注册bean
      *
      * @param pre      bean name pre
-     * @param registry 注册�?
+     * @param registry 注册器
      * @param aClass   定义
      * @param beanMap  参数
      */

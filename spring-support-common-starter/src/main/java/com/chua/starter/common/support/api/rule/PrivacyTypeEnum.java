@@ -10,7 +10,7 @@ import lombok.Getter;
 @Getter
 public enum PrivacyTypeEnum {
     /**
-     * �?
+     * 无
      */
     NONE,
 
@@ -30,7 +30,7 @@ public enum PrivacyTypeEnum {
     ID_CARD,
 
     /**
-     * 手机�?
+     * 手机号
      */
     PHONE,
     /**
@@ -38,7 +38,7 @@ public enum PrivacyTypeEnum {
      */
     ADDRESS,
     /**
-     * 银行�?
+     * 银行卡
      */
     BANK_CARD,
     /**
@@ -46,7 +46,7 @@ public enum PrivacyTypeEnum {
      */
     PASSWORD,
     /**
-     * 车牌�?
+     * 车牌号
      */
     CAR_NUMBER,
     /**

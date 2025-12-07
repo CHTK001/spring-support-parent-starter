@@ -59,12 +59,12 @@ public class GlobalSettingFactory {
     }
 
     /**
-     * 根据设置名称和类类型获取全局设置对象如果对象不存在则创建并返�?
+     * 根据设置名称和类类型获取全局设置对象如果对象不存在则创建并返回
      *
      * @param group 设置名称
      * @param clazz 对象的类类型
      * @param <T>   泛型标记
-     * @return 对应的设置对�?
+     * @return 对应的设置对象
      */
     @SuppressWarnings("unchecked")
     public <T> T get(String group, Class<T> clazz) {
@@ -122,13 +122,13 @@ public class GlobalSettingFactory {
     }
 
     /**
-     * 为指定组(Group)和名�?Name)的配置项设置新值，如果配置项自上次检查以来未发生改变
-     * 此方法设计用于确保只有在相关配置项未被外部更改的情况下，才更新其�?该设计有助于避免并发修改带来的问�?
+     * 为指定组(Group)和名称(Name)的配置项设置新值，如果配置项自上次检查以来未发生改变
+     * 此方法设计用于确保只有在相关配置项未被外部更改的情况下，才更新其�?该设计有助于避免并发修改带来的问题。
      *
-     * @param group 配置项所属的组，用于定位特定的配置项 必须是有效的组名�?
-     * @param name  配置项的名称，用于精确识别特定的配置�?必须是有效的配置项名�?
+     * @param group 配置项所属的组，用于定位特定的配置项 必须是有效的组名称。
+     * @param name  配置项的名称，用于精确识别特定的配置项。必须是有效的配置项名�?
      * @param value 要设置的新值，可以是任何类型的对象 如果配置项自上次检查后未改变，将设置此�?
-     * @param <T>   值的类型，泛型使用以支持各种类型的配置项�?
+     * @param <T>   值的类型，泛型使用以支持各种类型的配置项值。
      */
     public synchronized <T> void setIfNoChange(String group, String name, Object value) {
         if (CONFIG.containsKey(PREFIX + group + name)) {
@@ -143,7 +143,7 @@ public class GlobalSettingFactory {
      * 设置全局设置对象的属性�?
      *
      * @param group  设置名称
-     * @param params 属�?
+     * @param params 属性
      * @param <T>    泛型标记
      */
     public synchronized <T> void set(String group, Map<String, Object> params) {

@@ -1,6 +1,5 @@
 package com.chua.starter.oauth.client.support.interceptor;
 
-import com.chua.common.support.utils.EnumUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.annotation.TokenForType;
 import com.chua.starter.oauth.client.support.enums.AuthType;
@@ -19,7 +18,6 @@ import org.springframework.core.annotation.Order;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 
-import static com.chua.starter.oauth.client.support.enums.AuthType.ALL;
 
 /**
  * 令牌类型拦截器
@@ -78,12 +76,15 @@ public class TokenForTypeInterceptor extends StaticMethodMatcherPointcutAdvisor 
         return false;
     }
 
+    /**
+     * 判断是否匹配所有认证类型
+     * <p>空数组表示匹配所有认证类型</p>
+     *
+     * @param authTypes 认证类型数组
+     * @return 是否匹配所有
+     */
     private boolean isAll(AuthType[] authTypes) {
-        if(EnumUtils.inArray(ALL, authTypes)) {
-            return true;
-        }
-
-        return false;
+        return authTypes == null || authTypes.length == 0;
     }
 
 

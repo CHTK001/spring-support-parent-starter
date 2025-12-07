@@ -55,11 +55,11 @@ public class Span implements Serializable {
      */
     private String method;
     /**
-     * 方法的类�?
+     * 方法的类型
      */
     private String typeMethod;
     /**
-     * Span的类�?
+     * Span的类型
      */
     private String type;
 
@@ -80,7 +80,7 @@ public class Span implements Serializable {
      */
     private String error;
     /**
-     * 数据库信�?
+     * 数据库信息
      */
     private String db;
     /**
@@ -114,7 +114,7 @@ public class Span implements Serializable {
     }
 
     /**
-     * 带链路ID的构造方�?
+     * 带链路ID的构造方法
      * @param linkId 分布式追踪中的链路ID
      * 初始化链路ID、进入时间、堆栈信息和线程名称
      */
@@ -128,14 +128,14 @@ public class Span implements Serializable {
     /**
      * 设置堆栈信息
      * @param stackTrace 堆栈追踪信息数组
-     * 过滤掉不需要的堆栈信息，保存关键的类名和方法信�?
+     * 过滤掉不需要的堆栈信息，保存关键的类名和方法信息
      */
     public void setStack(StackTraceElement[] stackTrace) {
         List<String> rs = new LinkedList<>();
         for (int i = 0, stackTraceLength = stackTrace.length; i < stackTraceLength; i++) {
             StackTraceElement element = stackTrace[i];
             String className = element.getClassName();
-            // 跳过特定的类�?
+            // 跳过特定的类型
             if (className.startsWith("com.chua.agent.support")) {
                 continue;
             }
