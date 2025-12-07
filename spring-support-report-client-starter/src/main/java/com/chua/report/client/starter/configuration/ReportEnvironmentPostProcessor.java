@@ -48,10 +48,10 @@ public class ReportEnvironmentPostProcessor implements EnvironmentPostProcessor 
         // 串联客户端配置
         linkClientConfig(environment, syncProperties);
 
-        // 添加配置源
+        // 添加配置源（使用 addFirst 确保优先级高于默认配置）
         if (!syncProperties.isEmpty()) {
             MutablePropertySources propertySources = environment.getPropertySources();
-            propertySources.addLast(new MapPropertySource("reportSyncProperties", syncProperties));
+            propertySources.addFirst(new MapPropertySource("reportSyncProperties", syncProperties));
         }
     }
 
@@ -63,11 +63,12 @@ public class ReportEnvironmentPostProcessor implements EnvironmentPostProcessor 
         String serverPort = environment.getProperty(REPORT_PREFIX + "port", "29170");
         String protocol = environment.getProperty(REPORT_PREFIX + "protocol", "rsocket-sync");
 
-        if (environment.getProperty(SYNC_PREFIX + "client.host") == null) {
-            syncProperties.put(SYNC_PREFIX + "client.host", serverHost);
+        // 注意：SyncProperties.ClientConfig 的字段是 serverHost 和 serverPort
+        if (environment.getProperty(SYNC_PREFIX + "client.server-host") == null) {
+            syncProperties.put(SYNC_PREFIX + "client.server-host", serverHost);
         }
-        if (environment.getProperty(SYNC_PREFIX + "client.port") == null) {
-            syncProperties.put(SYNC_PREFIX + "client.port", serverPort);
+        if (environment.getProperty(SYNC_PREFIX + "client.server-port") == null) {
+            syncProperties.put(SYNC_PREFIX + "client.server-port", serverPort);
         }
         if (environment.getProperty(SYNC_PREFIX + "client.protocol") == null) {
             syncProperties.put(SYNC_PREFIX + "client.protocol", protocol);
