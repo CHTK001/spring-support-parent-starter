@@ -85,8 +85,13 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
         // 加载配置
         loadConfigurations(environment, configCenter, active);
         
-        // 注册配置变更监听
-        registerConfigListener(configCenter);
+        // 注册配置变更监听（根据配置决定是否启用）
+        if (configCenterProperties.getHotReload().isEnabled()) {
+            registerConfigListener(configCenter, configCenterProperties);
+            log.info("【配置中心】热更新已启用");
+        } else {
+            log.info("【配置中心】热更新已禁用");
+        }
         
         log.info("【配置中心】配置中心初始化完成，支持监听: {}", configCenter.isSupportListener());
     }
@@ -135,16 +140,22 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
 
     /**
      * 注册配置变更监听器
+     *
+     * @param configCenter 配置中心
+     * @param properties   配置属性
      */
-    private void registerConfigListener(ConfigCenter configCenter) {
+    private void registerConfigListener(ConfigCenter configCenter, ConfigCenterProperties properties) {
         if (!configCenter.isSupportListener()) {
             log.warn("【配置中心】当前配置中心不支持监听功能");
             return;
         }
 
+        long refreshDelayMs = properties.getHotReload().getRefreshDelayMs();
+        boolean logOnChange = properties.getHotReload().isLogOnChange();
+
         // 为每个已加载的配置文件注册监听
         for (String configName : LOADED_CONFIG_NAMES) {
-            configCenter.addListener(configName, new EnvironmentConfigListener(configName));
+            configCenter.addListener(configName, new EnvironmentConfigListener(configName, refreshDelayMs, logOnChange));
             log.info("【配置中心】注册配置监听: {}", configName);
         }
     }
@@ -158,15 +169,22 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
     private static class EnvironmentConfigListener implements ConfigListener {
         
         private final String configName;
+        private final long refreshDelayMs;
+        private final boolean logOnChange;
+        private volatile long lastRefreshTime = 0;
 
-        EnvironmentConfigListener(String configName) {
+        EnvironmentConfigListener(String configName, long refreshDelayMs, boolean logOnChange) {
             this.configName = configName;
+            this.refreshDelayMs = refreshDelayMs;
+            this.logOnChange = logOnChange;
         }
 
         @Override
         public void onChange(String key, String oldValue, String newValue) {
-            log.info("【配置中心】配置变更: configName={}, key={}, oldValue={}, newValue={}", 
-                    configName, key, oldValue, newValue);
+            if (logOnChange) {
+                log.info("【配置中心】配置变更: configName={}, key={}, oldValue={}, newValue={}", 
+                        configName, key, oldValue, newValue);
+            }
         }
 
         @Override
@@ -175,7 +193,17 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
                 return;
             }
             
-            log.info("【配置中心】配置更新: configName={}, key={}", configName, key);
+            // 防抖处理：避免配置频繁变更导致抖动
+            long now = System.currentTimeMillis();
+            if (now - lastRefreshTime < refreshDelayMs) {
+                log.debug("【配置中心】配置更新过于频繁，跳过本次更新: configName={}", configName);
+                return;
+            }
+            lastRefreshTime = now;
+            
+            if (logOnChange) {
+                log.info("【配置中心】配置更新: configName={}, key={}", configName, key);
+            }
             
             // 重新加载配置
             ConfigCenter configCenter = ConfigCenterHolder.getInstance();
@@ -196,12 +224,16 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
                 propertySources.addLast(new OriginTrackedMapPropertySource(configName, newConfig));
             }
             
-            log.info("【配置中心】已更新环境配置: {}", configName);
+            if (logOnChange) {
+                log.info("【配置中心】已更新环境配置: {}", configName);
+            }
         }
 
         @Override
         public void onDelete(String key, String oldValue) {
-            log.info("【配置中心】配置删除: configName={}, key={}", configName, key);
+            if (logOnChange) {
+                log.info("【配置中心】配置删除: configName={}, key={}", configName, key);
+            }
         }
     }
 

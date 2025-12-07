@@ -57,14 +57,21 @@ public class ConfigValueAutoConfiguration {
      * </p>
      *
      * @param configCenter 配置中心
+     * @param properties   配置属性
      * @return Bean后置处理器
      */
     @Bean
-    public ConfigValueBeanPostProcessor configValueBeanPostProcessor(ConfigCenter configCenter) {
+    public ConfigValueBeanPostProcessor configValueBeanPostProcessor(
+            ConfigCenter configCenter, 
+            ConfigCenterProperties properties) {
+        boolean hotReloadEnabled = properties.getHotReload().isEnabled() 
+                && properties.getHotReload().isConfigValueAnnotationEnabled();
         boolean supportListener = configCenter != null && configCenter.isSupportListener();
+        
         log.info("【配置中心】注册 ConfigValue 后置处理器，热更新功能: {}", 
-                supportListener ? "已启用" : "未启用");
-        return new ConfigValueBeanPostProcessor(configCenter);
+                (hotReloadEnabled && supportListener) ? "已启用" : "未启用");
+        
+        return new ConfigValueBeanPostProcessor(configCenter, hotReloadEnabled);
     }
 
     /**
