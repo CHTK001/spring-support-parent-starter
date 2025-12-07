@@ -26,7 +26,7 @@ import java.lang.reflect.Method;
 /**
  * 自定义租户缓存键生成器
  * <p>
- * 支持同时使用 key �?keyGenerator，自动添加租户前缀。
+ * 支持同时使用 key 和 keyGenerator，自动添加租户前缀。
  * </p>
  *
  * <h3>缓存键格式：</h3>
@@ -93,7 +93,7 @@ public class CacheCustomTenantedKeyGenerator implements KeyGenerator {
     }
 
     /**
-     * 删除带前缀的缓�?
+     * 删除带前缀的缓存
      *
      * @param cacheManagerName 缓存管理器名称
      * @param cacheName        缓存名称

@@ -11,7 +11,7 @@ import java.util.List;
  * API响应内容协商策略
  * <p>
  * 根据响应编码开关决定返回的媒体类型。
- * 当响应编码开启时，返�?application/encrypted-data 类型。
+ * 当响应编码开启时，返回 application/encrypted-data 类型。
  * </p>
  *
  * @author CH

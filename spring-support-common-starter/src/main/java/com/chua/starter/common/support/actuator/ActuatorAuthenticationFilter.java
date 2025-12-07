@@ -4,6 +4,7 @@ import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.matcher.PathMatcher;
 import com.chua.common.support.net.NetUtils;
 import com.chua.common.support.utils.ArrayUtils;
+import com.chua.starter.common.support.utils.RequestUtils;
 import jakarta.servlet.*;
 import jakarta.servlet.annotation.WebFilter;
 import jakarta.servlet.http.HttpServletRequest;
@@ -58,7 +59,7 @@ public class ActuatorAuthenticationFilter implements Filter {
         }
 
         // IP白名单检查
-        String clientIp = NetUtils.getIpAddress(httpRequest);
+        String clientIp = RequestUtils.getIpAddress(httpRequest);
         if (isIpWhitelisted(clientIp)) {
             chain.doFilter(request, response);
             return;

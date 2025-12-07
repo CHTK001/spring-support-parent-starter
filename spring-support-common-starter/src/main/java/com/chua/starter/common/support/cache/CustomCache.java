@@ -122,7 +122,7 @@ public class CustomCache implements Cache {
             return t;
         }
 
-        // 从当前层级开始，向上逐层缓存值�?
+        // 从当前层级开始，向上逐层缓存值
         for (int i = index; i > -1; i--) {
             caches.get(i).put(key, value);
         }

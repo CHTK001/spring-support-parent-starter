@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Primary;
 /**
  * 缓存代理配置
  * <p>
- * 使用自定义的缓存注解解析器，支持 key �?keyGenerator 同时使用�?
+ * 使用自定义的缓存注解解析器，支持 key 和 keyGenerator 同时使用。
  * </p>
  *
  * @author CH
