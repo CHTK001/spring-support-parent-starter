@@ -8,4 +8,5 @@ target/
 *.iml
 *.html
 *.log
+*bak
 logs/!/patch/

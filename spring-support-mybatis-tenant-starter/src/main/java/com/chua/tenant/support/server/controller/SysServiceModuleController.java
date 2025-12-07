@@ -22,8 +22,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-import static com.chua.starter.oauth.client.support.contants.AuthConstant.ADMIN;
-import static com.chua.starter.oauth.client.support.contants.AuthConstant.SUPER_ADMIN;
 
 /**
  * 服务模块接口
@@ -79,7 +77,7 @@ public class SysServiceModuleController {
      */
     @PostMapping("save")
     @Operation(summary = "保存服务模块")
-    @Permission(role = {ADMIN, SUPER_ADMIN})
+    @Permission("sys:service:module:save")
     public ReturnResult<SysServiceModule> saveForSysServiceModule(
             @RequestBody @Validated(AddGroup.class) SysServiceModule sysServiceModule,
             BindingResult bindingResult) {
@@ -98,7 +96,7 @@ public class SysServiceModuleController {
      */
     @PutMapping("update")
     @Operation(summary = "更新服务模块")
-    @Permission(role = {ADMIN, SUPER_ADMIN})
+    @Permission("sys:service:module:update")
     public ReturnResult<Boolean> updateForSysServiceModule(
             @RequestBody @Validated(UpdateGroup.class) SysServiceModule sysServiceModule,
             BindingResult bindingResult) {
@@ -116,7 +114,7 @@ public class SysServiceModuleController {
      */
     @DeleteMapping("delete")
     @Operation(summary = "删除服务模块")
-    @Permission(role = {ADMIN, SUPER_ADMIN})
+    @Permission("sys:service:module:delete")
     public ReturnResult<Boolean> deleteForSysServiceModule(Long sysServiceModuleId) {
         return sysServiceModuleService.deleteForSysServiceModule(sysServiceModuleId);
     }
