@@ -185,10 +185,10 @@ public class SyncClient implements InitializingBean, DisposableBean {
      */
     private void connect() {
         try {
+
             SyncProperties.ClientConfig clientConfig = syncProperties.getClient();
-            
             // 解析服务端地址
-            String serverAddress = clientConfig.getEffectiveServerAddress();
+
             String host = clientConfig.getServerHost();
             int port = clientConfig.getServerPort();
             
