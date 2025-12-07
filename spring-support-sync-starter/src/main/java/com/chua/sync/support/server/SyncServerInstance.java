@@ -2,6 +2,7 @@ package com.chua.sync.support.server;
 
 import com.chua.common.support.protocol.ProtocolSetting;
 import com.chua.common.support.protocol.sync.*;
+import com.chua.common.support.utils.MapUtils;
 import com.chua.sync.support.pojo.ClientInfo;
 import com.chua.sync.support.properties.SyncProperties;
 import com.chua.sync.support.spi.SyncMessageHandler;
@@ -355,17 +356,30 @@ public class SyncServerInstance {
                 Map<String, Object> map = data instanceof Map ? (Map<String, Object>) data : Map.of();
                 ClientInfo clientInfo = ClientInfo.builder()
                         .clientId(sessionId)
-                        .appName((String) map.get("appName"))
-                        .instanceId((String) map.get("instanceId"))
-                        .ipAddress((String) map.get("ipAddress"))
-                        .port(map.containsKey("port") ? ((Number) map.get("port")).intValue() : 0)
-                        .hostname((String) map.get("hostname"))
-                        .osName((String) map.get("osName"))
-                        .osVersion((String) map.get("osVersion"))
-                        .javaVersion((String) map.get("javaVersion"))
-                        .cpuCores(map.containsKey("cpuCores") ? ((Number) map.get("cpuCores")).intValue() : 0)
-                        .totalMemory(map.containsKey("totalMemory") ? ((Number) map.get("totalMemory")).longValue() : 0)
-                        .startTime(map.containsKey("startTime") ? ((Number) map.get("startTime")).longValue() : 0)
+                        // 兼容 appName 和 applicationName
+                        .appName(MapUtils.getString(map, "appName", MapUtils.getString(map, "applicationName")))
+                        .instanceId(MapUtils.getString(map, "instanceId"))
+                        .ipAddress(MapUtils.getString(map, "ipAddress"))
+                        // 兼容 port 和 serverPort
+                        .port(MapUtils.getIntValue(map, "port", MapUtils.getIntValue(map, "serverPort", 0)))
+                        .hostname(MapUtils.getString(map, "hostname"))
+                        .osName(MapUtils.getString(map, "osName"))
+                        .osVersion(MapUtils.getString(map, "osVersion"))
+                        .osArch(MapUtils.getString(map, "osArch"))
+                        .javaVersion(MapUtils.getString(map, "javaVersion"))
+                        .jvmName(MapUtils.getString(map, "jvmName"))
+                        .jvmVersion(MapUtils.getString(map, "jvmVersion"))
+                        .pid(MapUtils.getLongValue(map, "pid", 0))
+                        .cpuCores(MapUtils.getIntValue(map, "cpuCores", 0))
+                        .totalMemory(MapUtils.getLongValue(map, "totalMemory", 0))
+                        .heapUsed(MapUtils.getLongValue(map, "heapUsed", 0))
+                        .heapMax(MapUtils.getLongValue(map, "heapMax", 0))
+                        .threadCount(MapUtils.getIntValue(map, "threadCount", 0))
+                        .startTime(MapUtils.getLongValue(map, "startTime", 0))
+                        .uptime(MapUtils.getLongValue(map, "uptime", 0))
+                        .contextPath(MapUtils.getString(map, "contextPath"))
+                        .serviceUrl(MapUtils.getString(map, "serviceUrl"))
+                        .activeProfiles(MapUtils.getString(map, "activeProfiles"))
                         .registerTime(System.currentTimeMillis())
                         .lastHeartbeatTime(System.currentTimeMillis())
                         .online(true)
