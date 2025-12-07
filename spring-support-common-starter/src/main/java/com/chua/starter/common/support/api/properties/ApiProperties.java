@@ -6,11 +6,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * API 统一配置属性
  * <p>
- * 整合版本控制、平台标识、编解码等 API 相关配置。
+ * 整合版本控制、平台标识、编解码、SPI 等 API 相关配置。
  * </p>
  *
  * @author CH
@@ -51,6 +52,11 @@ public class ApiProperties {
      * 请求解码配置
      */
     private RequestDecodeProperties decode = new RequestDecodeProperties();
+
+    /**
+     * SPI 配置
+     */
+    private SpiConfig spi = new SpiConfig();
 
     /**
      * 是否启用 API 控制功能（版本或平台）
@@ -167,16 +173,6 @@ public class ApiProperties {
         private boolean responseEnable = false;
 
         /**
-         * 是否开启请求解密
-         */
-        private boolean requestEnable = false;
-
-        /**
-         * 请求加密密钥（为空则自动生成）
-         */
-        private String codecRequestKey;
-
-        /**
          * 是否由其它对象注入参数
          */
         private boolean extInject = false;
@@ -217,6 +213,27 @@ public class ApiProperties {
          * 解码器类型（sm4/aes等）
          */
         private String codecType = "sm4";
+    }
+
+    /**
+     * SPI 配置
+     */
+    @Data
+    public static class SpiConfig {
+
+        /**
+         * 是否开启虚拟映射
+         */
+        private boolean enable = true;
+
+        /**
+         * 虚拟映射
+         * <p>
+         * 用于将简短的类型名称映射到完整的类名。
+         * 例如：{"captcha": "com.chua.common.support.captcha.Captcha"}
+         * </p>
+         */
+        private Map<String, String> mapping;
     }
 }
 

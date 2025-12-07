@@ -47,7 +47,9 @@ public class ApiFilterConfiguration {
     public FilterRegistrationBean<ApiVersionFilter> apiVersionFilterRegistration(
             @Autowired(required = false) VersionArgumentResolver versionArgumentResolver) {
         
-        log.info(">>>>>>> 注册 API 版本过滤器");
+        log.info("╔══════════════════════════════════════════════════════════════════════════════");
+        log.info("║ 【API版本过滤器】正在注册...");
+        log.info("╠══════════════════════════════════════════════════════════════════════════════");
         
         FilterRegistrationBean<ApiVersionFilter> registration = new FilterRegistrationBean<>();
         registration.setFilter(new ApiVersionFilter(versionArgumentResolver));
@@ -56,11 +58,18 @@ public class ApiFilterConfiguration {
         registration.setOrder(Integer.MIN_VALUE);
         registration.setAsyncSupported(true);
         
+        log.info("║ 过滤器名称: apiVersionFilter");
+        log.info("║ URL匹配模式: /*");
+        log.info("║ 响应头字段: {}", X_HEADER_VERSION);
+        
         if (versionArgumentResolver != null) {
-            log.debug("API 版本过滤器已配置版本解析器: {}", versionArgumentResolver.getClass().getSimpleName());
+            String version = versionArgumentResolver.version();
+            log.info("║ 当前版本: {}", version != null ? version : "未配置");
         } else {
-            log.debug("API 版本过滤器未配置版本解析器，将不添加版本响应头");
+            log.warn("║ 版本解析器: 未配置（将不添加版本响应头）");
         }
+        
+        log.info("╚══════════════════════════════════════════════════════════════════════════════");
         
         return registration;
     }
