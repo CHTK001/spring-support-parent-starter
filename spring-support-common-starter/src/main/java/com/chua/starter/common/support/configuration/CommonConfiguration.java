@@ -26,9 +26,8 @@ import org.springframework.web.client.RestTemplate;
  * @since 2023-07-01
  */
 @EnableConfigurationProperties({
-
         ActuatorProperties.class,
-        SpiProperties.class,
+        IpProperties.class,
 })
 @ComponentScan("com.chua.starter.common.support.service")
 public class CommonConfiguration {

@@ -10,8 +10,8 @@ import com.chua.common.support.utils.ArrayUtils;
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.api.properties.ApiProperties;
 import com.chua.starter.common.support.properties.OptionalProperties;
-import com.chua.starter.common.support.properties.SpiProperties;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -41,7 +41,7 @@ import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE
 @Tag(name = "选项")
 public class OptionalProvider {
 
-    private final SpiProperties spiProperties;
+    private final ApiProperties apiProperties;
     /**
      * 获取选项
      *
@@ -80,12 +80,13 @@ public class OptionalProvider {
      * @return 获取选项
      */
     private String[] getTypes(String type) {
-        if(spiProperties.isEnable()) {
-            return MapUtils.getStringArray(spiProperties.getMapping(), type);
+        ApiProperties.SpiConfig spi = apiProperties.getSpi();
+        if (spi != null && spi.isEnable() && spi.getMapping() != null) {
+            return MapUtils.getStringArray(spi.getMapping(), type);
         }
-
         return new String[]{type};
     }
+
     /**
      * 获取选项
      *
@@ -93,10 +94,10 @@ public class OptionalProvider {
      * @return 获取选项
      */
     private String getType(String type) {
-        if(spiProperties.isEnable()) {
-            return MapUtils.getString(spiProperties.getMapping(), type);
+        ApiProperties.SpiConfig spi = apiProperties.getSpi();
+        if (spi != null && spi.isEnable() && spi.getMapping() != null) {
+            return MapUtils.getString(spi.getMapping(), type);
         }
-
         return type;
     }
 
