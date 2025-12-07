@@ -34,11 +34,11 @@ public class SyncAutoConfiguration {
     }
 
     /**
-     * 创建同步客户端 (client 模式，默认)
+     * 创建同步客户端 (client 模式)
      */
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = SyncProperties.PRE, name = "type", havingValue = "client", matchIfMissing = true)
+    @ConditionalOnProperty(prefix = SyncProperties.PRE, name = "type", havingValue = "client")
     public SyncClient syncClientOnly(SyncProperties syncProperties) {
         return new SyncClient(syncProperties);
     }
