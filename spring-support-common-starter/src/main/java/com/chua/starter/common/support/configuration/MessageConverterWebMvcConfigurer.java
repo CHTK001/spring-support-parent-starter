@@ -9,7 +9,6 @@ import com.chua.starter.common.support.log.MdcHandlerFilter;
 import com.chua.starter.common.support.log.RestTemplateTraceIdInterceptor;
 import com.chua.starter.common.support.processor.ResponseModelViewMethodProcessor;
 import com.chua.starter.common.support.jackson.configuration.JacksonProperties;
-import com.chua.starter.common.support.log.MdcProperties;
 import com.chua.starter.common.support.properties.MessageConverterProperties;
 import com.chua.starter.common.support.api.encode.ApiContentNegotiationStrategy;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -51,11 +50,10 @@ import java.util.List;
  */
 @Slf4j
 @RequiredArgsConstructor
-@EnableConfigurationProperties({MessageConverterProperties.class, MdcProperties.class})
+@EnableConfigurationProperties({MessageConverterProperties.class})
 public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, ApplicationContextAware, WebMvcRegistrations {
 
     final MessageConverterProperties messageConverterProperties;
-    final MdcProperties mdcProperties;
     private List<HttpMessageConverter<?>> messageConverters;
     private ApplicationContext applicationContext;
     private ApiResponseEncodeRegister apiResponseEncodeRegister;
