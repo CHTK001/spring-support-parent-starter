@@ -25,11 +25,6 @@
 
 
     <dependencies>
-        <dependency>
-            <groupId>cn.hutool</groupId>
-            <artifactId>hutool-all</artifactId>
-            <version>${hutool.version}</version>
-        </dependency>
 
         <dependency>
             <groupId>com.chua</groupId>
@@ -45,13 +40,6 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-oauth-client-starter</artifactId>
-        </dependency>
-
-
-        <dependency>
-            <groupId>cn.keepbx.jpom</groupId>
-            <artifactId>jpom-core-common</artifactId>
-            <version>1.0.9</version>
         </dependency>
 
         <dependency>
@@ -94,6 +82,7 @@
             <groupId>com.chua</groupId>
             <artifactId>spring-support-discovery-starter</artifactId>
         </dependency>
+
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-compress</artifactId>
@@ -105,7 +94,6 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-sync-starter</artifactId>
-            <optional>true</optional>
         </dependency>
     </dependencies>
 </project>

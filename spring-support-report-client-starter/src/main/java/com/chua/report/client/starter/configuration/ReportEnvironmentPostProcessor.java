@@ -2,6 +2,7 @@ package com.chua.report.client.starter.configuration;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.env.EnvironmentPostProcessor;
+import org.springframework.boot.logging.DeferredLog;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.MutablePropertySources;
@@ -21,14 +22,20 @@ import java.util.Map;
  */
 public class ReportEnvironmentPostProcessor implements EnvironmentPostProcessor {
 
+    private static final DeferredLog log = new DeferredLog();
     private static final String REPORT_PREFIX = "plugin.report.client.";
     private static final String SYNC_PREFIX = "plugin.sync.";
 
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
+        log.info("[ReportEnvPostProcessor] 开始处理环境配置");
+        
         // 检查上报客户端是否启用
         String enabled = environment.getProperty(REPORT_PREFIX + "enable", "true");
+        log.info("[ReportEnvPostProcessor] plugin.report.client.enable = " + enabled);
+        
         if (!"true".equalsIgnoreCase(enabled)) {
+            log.info("[ReportEnvPostProcessor] 上报客户端未启用，跳过");
             return;
         }
 
@@ -38,11 +45,15 @@ public class ReportEnvironmentPostProcessor implements EnvironmentPostProcessor 
         // 自动启用 sync
         if (environment.getProperty(SYNC_PREFIX + "enable") == null) {
             syncProperties.put(SYNC_PREFIX + "enable", "true");
+            log.info("[ReportEnvPostProcessor] 设置 plugin.sync.enable = true");
         }
 
         // 设置为客户端模式
         if (environment.getProperty(SYNC_PREFIX + "type") == null) {
             syncProperties.put(SYNC_PREFIX + "type", "client");
+            log.info("[ReportEnvPostProcessor] 设置 plugin.sync.type = client");
+        } else {
+            log.info("[ReportEnvPostProcessor] plugin.sync.type 已存在: " + environment.getProperty(SYNC_PREFIX + "type"));
         }
 
         // 串联客户端配置
@@ -52,6 +63,7 @@ public class ReportEnvironmentPostProcessor implements EnvironmentPostProcessor 
         if (!syncProperties.isEmpty()) {
             MutablePropertySources propertySources = environment.getPropertySources();
             propertySources.addFirst(new MapPropertySource("reportSyncProperties", syncProperties));
+            log.info("[ReportEnvPostProcessor] 已添加配置源，共 " + syncProperties.size() + " 项配置");
         }
     }
 

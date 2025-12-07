@@ -119,4 +119,16 @@ public class ActuatorAuthenticationFilter implements Filter {
         }
         return false;
     }
+
+    /**
+     * 生成Basic认证头
+     *
+     * @param username 用户名
+     * @param password 密码
+     * @return Basic认证头字符串
+     */
+    public static String getKey(String username, String password) {
+        String credentials = username + CommonConstant.SYMBOL_COLON + password;
+        return BASIC + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
+    }
 }
