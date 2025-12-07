@@ -62,6 +62,8 @@ public class ReportClientConfiguration {
         // 注入到 JobReporter
         JobReporter.getInstance().setSyncClient(syncClient);
 
+        log.info("[ReportClient] 已向服务端注册");
+
         // 订阅主题
         syncClient.subscribe(
                 MonitorTopics.JOB_DISPATCH,

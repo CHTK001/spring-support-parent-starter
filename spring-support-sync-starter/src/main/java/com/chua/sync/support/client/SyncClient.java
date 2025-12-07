@@ -18,6 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
 import java.net.InetAddress;
 import java.net.URI;
 import java.util.*;
@@ -149,31 +151,60 @@ public class SyncClient implements InitializingBean, DisposableBean {
             SyncProperties.ClientConfig clientConfig = syncProperties.getClient();
             InetAddress localHost = InetAddress.getLocalHost();
             Runtime runtime = Runtime.getRuntime();
+            RuntimeMXBean runtimeBean = ManagementFactory.getRuntimeMXBean();
 
             String instanceId = clientConfig.getInstanceId();
             if (instanceId == null || instanceId.isEmpty()) {
                 instanceId = UUID.randomUUID().toString().substring(0, 8);
             }
 
+            // 多网卡场景：优先使用配置的 IP 地址
+            String ipAddress = clientConfig.getIpAddress();
+            if (ipAddress == null || ipAddress.isEmpty()) {
+                ipAddress = localHost.getHostAddress();
+            }
+            int port = clientConfig.getPort();
+            String contextPath = clientConfig.getContextPath();
+            
+            // 构建服务地址
+            String serviceUrl = String.format("http://%s:%d%s", ipAddress, port,
+                    contextPath != null && !contextPath.isEmpty() ? contextPath : "");
+
             clientInfo = ClientInfo.builder()
+                    // 应用基本信息
                     .appName(clientConfig.getAppName())
                     .instanceId(instanceId)
-                    .ipAddress(localHost.getHostAddress())
-                    .port(clientConfig.getPort())
+                    .contextPath(contextPath)
+                    .serviceUrl(serviceUrl)
+                    // 网络信息
+                    .ipAddress(ipAddress)
+                    .port(port)
                     .hostname(localHost.getHostName())
+                    // 操作系统信息
                     .osName(System.getProperty("os.name"))
                     .osVersion(System.getProperty("os.version"))
+                    .osArch(System.getProperty("os.arch"))
+                    // JVM 信息
                     .javaVersion(System.getProperty("java.version"))
+                    .jvmName(runtimeBean.getVmName())
+                    .jvmVersion(runtimeBean.getVmVersion())
+                    .pid(runtimeBean.getPid())
+                    // 系统资源
                     .cpuCores(runtime.availableProcessors())
                     .totalMemory(runtime.maxMemory())
+                    .heapUsed(runtime.totalMemory() - runtime.freeMemory())
+                    .heapMax(runtime.maxMemory())
+                    .threadCount(Thread.activeCount())
+                    // 时间信息
                     .startTime(System.currentTimeMillis())
                     .online(true)
+                    // 扩展信息
                     .metadata(clientConfig.getMetadata())
                     .capabilities(clientConfig.getCapabilities())
                     .build();
 
-            log.info("[Sync客户端] 客户端信息初始化: app={}, ip={}, port={}",
-                    clientInfo.getAppName(), clientInfo.getIpAddress(), clientInfo.getPort());
+            log.info("[Sync客户端] 客户端信息初始化: app={}, ip={}, port={}, serviceUrl={}",
+                    clientInfo.getAppName(), clientInfo.getIpAddress(), clientInfo.getPort(), serviceUrl);
         } catch (Exception e) {
             log.error("[Sync客户端] 初始化客户端信息失败", e);
             clientInfo = ClientInfo.builder().startTime(System.currentTimeMillis()).online(true).build();

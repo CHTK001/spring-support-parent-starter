@@ -188,6 +188,19 @@ public class SyncProperties {
         private int port = 8080;
 
         /**
+         * 上下文路径
+         */
+        private String contextPath = "";
+
+        /**
+         * 客户端 IP 地址
+         * <p>
+         * 多网卡场景下指定使用的 IP 地址，为空则自动获取
+         * </p>
+         */
+        private String ipAddress;
+
+        /**
          * 协议类型
          */
         private String protocol = "rsocket";
