@@ -74,27 +74,4 @@ public class LogConfiguration {
         return registration;
     }
 
-    /**
-     * MDC 过滤器
-     * <p>
-     * 用于链路追踪，在每个请求中注入 traceId。
-     * MDC 链路追踪永久开启，无需配置。
-     * </p>
-     *
-     * @return FilterRegistrationBean MDC 过滤器注册 Bean
-     */
-    @Bean
-    @ConditionalOnMissingBean(name = "mdcHandlerFilterRegistration")
-    public FilterRegistrationBean<MdcHandlerFilter> mdcHandlerFilterRegistration() {
-        log.info(">>>>>>> 注册 MDC 链路追踪过滤器 [永久开启]");
-        
-        FilterRegistrationBean<MdcHandlerFilter> registration = new FilterRegistrationBean<>();
-        registration.setFilter(new MdcHandlerFilter());
-        registration.setOrder(Integer.MIN_VALUE);
-        registration.addUrlPatterns("/*");
-        registration.setName("mdcHandlerFilter");
-        registration.setAsyncSupported(true);
-        
-        return registration;
-    }
 }
