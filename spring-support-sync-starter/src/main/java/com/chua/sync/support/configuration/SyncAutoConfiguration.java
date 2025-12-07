@@ -21,7 +21,6 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 @EnableConfigurationProperties(SyncProperties.class)
-@ConditionalOnProperty(prefix = SyncProperties.PRE, name = "enable", havingValue = "true")
 public class SyncAutoConfiguration {
 
     /**
