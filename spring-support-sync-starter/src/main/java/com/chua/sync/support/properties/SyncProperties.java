@@ -40,7 +40,7 @@ public class SyncProperties {
     /**
      * 默认协议类型：rsocket、websocket-sync 等
      */
-    private String protocol = "rsocket";
+    private String protocol = "rsocket-sync";
 
     /**
      * 主题与处理器映射 (全局)
@@ -88,7 +88,7 @@ public class SyncProperties {
         /**
          * 默认协议
          */
-        private String protocol = "rsocket";
+        private String protocol = "rsocket-sync";
 
         /**
          * 心跳开关
@@ -151,7 +151,7 @@ public class SyncProperties {
         /**
          * 协议类型
          */
-        private String protocol = "rsocket";
+        private String protocol = "rsocket-sync";
 
         /**
          * 是否启用
