@@ -8,7 +8,7 @@ import com.chua.starter.common.support.jackson.configuration.JacksonConfiguratio
 import com.chua.starter.common.support.log.MdcHandlerFilter;
 import com.chua.starter.common.support.log.RestTemplateTraceIdInterceptor;
 import com.chua.starter.common.support.processor.ResponseModelViewMethodProcessor;
-import com.chua.starter.common.support.properties.JacksonProperties;
+import com.chua.starter.common.support.jackson.configuration.JacksonProperties;
 import com.chua.starter.common.support.log.MdcProperties;
 import com.chua.starter.common.support.properties.MessageConverterProperties;
 import com.chua.starter.common.support.api.encode.ApiContentNegotiationStrategy;
@@ -75,8 +75,6 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     }
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-//        if(!mdcProperties.isEnable()) {
-//        }
     }
 
     @Override

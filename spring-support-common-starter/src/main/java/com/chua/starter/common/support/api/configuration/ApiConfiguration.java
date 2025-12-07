@@ -29,7 +29,7 @@ import java.util.concurrent.Executors;
 /**
  * API 统一配置
  * <p>
- * 整合版本控制、平台标识、编解码�?API 相关配置�?
+ * 整合版本控制、平台标识、编解码等 API 相关配置。
  * </p>
  *
  * @author CH
@@ -56,7 +56,7 @@ public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware {
     @ConditionalOnMissingBean
     public RequestMappingHandlerMapping requestMappingInfoHandlerMapping() {
         if (apiProperties.isControlEnabled()) {
-            log.info(">>>>>>> 开启版本控制功�?);
+            log.info(">>>>>>> 开启版本控制功能");
             log.info(">>>>>>> @ApiProfile 环境控制");
             log.info(">>>>>>> @ApiVersion 版本控制");
             return new ApiVersionRequestMappingHandlerMapping(apiProperties, environment);
@@ -69,8 +69,8 @@ public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware {
     /**
      * 响应编码处理
      *
-     * @param apiResponseEncodeRegister 编码注册�?
-     * @return 响应编码处理�?
+     * @param apiResponseEncodeRegister 编码注册器
+     * @return 响应编码处理器
      */
     @Bean("apiResponseEncodeResponseBodyAdvice")
     @ConditionalOnMissingBean
@@ -80,9 +80,9 @@ public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware {
     }
 
     /**
-     * 响应编码注册�?
+     * 响应编码注册器
      *
-     * @return 编码注册�?
+     * @return 编码注册器
      */
     @Bean("apiResponseEncodeRegister")
     @ConditionalOnMissingBean
@@ -96,8 +96,8 @@ public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware {
     /**
      * 请求解码处理
      *
-     * @param apiRequestDecodeRegister 解码注册�?
-     * @return 请求解码处理�?
+     * @param apiRequestDecodeRegister 解码注册器
+     * @return 请求解码处理器
      */
     @Bean("apiRequestDecodeBodyAdvice")
     @ConditionalOnMissingBean
@@ -107,9 +107,9 @@ public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware {
     }
 
     /**
-     * 请求解码注册�?
+     * 请求解码注册器
      *
-     * @return 解码注册�?
+     * @return 解码注册器
      */
     @Bean("apiRequestDecodeRegister")
     @ConditionalOnMissingBean
@@ -120,10 +120,10 @@ public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware {
 
 
     /**
-     * 创建统一响应体建议实例�?
-     * 当容器中没有提供UniformResponseBodyAdvice实例且plugin.parameter.enable为true时，使用此实现�?
+     * 创建统一响应体建议实例。
+     * 当容器中没有提供UniformResponseBodyAdvice实例且plugin.parameter.enable为true时，使用此实现。
      *
-     * @return {@link ApiUniformResponseBodyAdvice} 统一响应体建议实�?
+     * @return {@link ApiUniformResponseBodyAdvice} 统一响应体建议实例
      * @example
      * <pre>
      * // 使用示例
@@ -138,10 +138,10 @@ public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware {
         return new ApiUniformResponseBodyAdvice();
     }
     /**
-     * 创建执行器服务实例�?
-     * 用于处理异步任务的线程池�?
+     * 创建执行器服务实例。
+     * 用于处理异步任务的线程池。
      *
-     * @return {@link ExecutorService} 执行器服务实�?
+     * @return {@link ExecutorService} 执行器服务实例
      * @example
      * <pre>
      * // 使用示例
@@ -160,7 +160,7 @@ public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware {
     /**
      * 统一异常处理
      *
-     * @return 异常处理�?
+     * @return 异常处理器
      */
     @Bean
     @ConditionalOnMissingBean

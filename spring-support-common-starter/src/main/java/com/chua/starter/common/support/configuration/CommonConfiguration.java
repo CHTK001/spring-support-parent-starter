@@ -3,6 +3,8 @@ package com.chua.starter.common.support.configuration;
 import com.chua.common.support.objects.ConfigureObjectContext;
 import com.chua.common.support.objects.DefaultConfigureObjectContext;
 import com.chua.common.support.objects.ObjectContextSetting;
+import com.chua.starter.common.support.actuator.ActuatorProperties;
+import com.chua.starter.common.support.jackson.configuration.JacksonProperties;
 import com.chua.starter.common.support.logger.SysLoggerPointcutAdvisor;
 import com.chua.starter.common.support.logger.UserLoggerPointcutAdvisor;
 import com.chua.starter.common.support.oauth.AuthService;
@@ -25,11 +27,9 @@ import org.springframework.web.client.RestTemplate;
  */
 @EnableConfigurationProperties({
 
-        LogProperties.class,
         ActuatorProperties.class,
         SpiProperties.class,
         JacksonProperties.class,
-        CacheProperties.class
 })
 @ComponentScan("com.chua.starter.common.support.service")
 public class CommonConfiguration {

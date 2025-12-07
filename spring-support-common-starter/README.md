@@ -30,6 +30,12 @@ Spring Support Common Starter 是 Spring Support 框架的核心通用模块，�
 - Session管理
 - Base64编码支持
 
+### 📝 用户操作日志
+- 自动记录用户操作日志
+- 支持SpEL表达式自定义日志内容
+- 自动识别操作类型（增删改查等）
+- 格式化日志输出：[时间] 用户名 执行了 操作
+
 ### 🛠️ 工具类集成
 - 防抖动处理
 - 异步任务执行
@@ -218,7 +224,135 @@ public class UserService {
 - `systemCacheManager` - 1小时过期  
 - `systemCacheManagerAlways` - 永不过期
 
-### 5. 防抖动处理
+### 5. 用户操作日志
+
+#### 基本使用
+
+使用 `@UserLogger` 注解标记需要记录日志的方法：
+
+```java
+@RestController
+@RequestMapping("/users")
+public class UserController {
+    
+    @PostMapping
+    @UserLogger(name = "新增用户", module = "用户管理")
+    public User createUser(@RequestBody User user) {
+        return userService.save(user);
+    }
+    
+    @PutMapping("/{id}")
+    @UserLogger(name = "更新用户信息", module = "用户管理")
+    public User updateUser(@PathVariable Long id, @RequestBody User user) {
+        return userService.update(id, user);
+    }
+    
+    @DeleteMapping("/{id}")
+    @UserLogger(name = "删除用户", module = "用户管理")
+    public void deleteUser(@PathVariable Long id) {
+        userService.delete(id);
+    }
+}
+```
+
+#### 日志输出格式
+
+```
+[2024-01-01 12:00:00] 张三 执行了 用户管理-新增用户 (耗时: 50ms, 状态: 成功)
+[2024-01-01 12:01:00] 李四 执行了 用户管理-删除用户 (耗时: 30ms, 状态: 失败) 异常: 用户不存在
+```
+
+#### 自动识别操作类型
+
+如果不指定 `module`，框架会根据方法名自动识别操作类型：
+
+| 方法名关键词 | 操作类型 |
+|------------|---------|
+| save, insert, add, create | 添加 |
+| update, modify, edit, change | 修改 |
+| delete, drop, remove, del | 删除 |
+| reset | 重置 |
+| import | 导入 |
+| export | 导出 |
+| upload | 上传 |
+| download | 下载 |
+| login, signin | 登录 |
+| logout, signout | 登出 |
+| approve, audit | 审批 |
+| 其他 | 查询 |
+
+#### 使用SpEL表达式自定义日志内容
+
+```java
+@UserLogger(
+    name = "更新用户状态", 
+    module = "用户管理",
+    content = "将用户 #{#arg0.username} 的状态修改为 #{#arg0.status}"
+)
+public User updateUserStatus(User user) {
+    return userService.updateStatus(user);
+}
+```
+
+**SpEL可用变量：**
+- `#arg0...n` - 方法参数（按顺序）
+- `#args` - 所有参数数组
+- `#method` - 方法对象
+- `#result` - 返回值
+- `#now` - 当前时间
+
+#### @UserLogger注解参数说明
+
+| 参数 | 类型 | 默认值 | 说明 |
+|-----|------|-------|------|
+| name | String | "" | 操作名称，为空时尝试读取Swagger注解 |
+| module | String | "" | 操作模块，为空时根据方法名自动识别 |
+| content | String | "" | 日志内容，支持SpEL表达式 |
+| action | Action | NONE | 操作类型枚举 |
+| loginType | String | "" | 登录类型 |
+| enable | boolean | true | 是否启用日志记录 |
+| logArgs | boolean | true | 是否记录方法参数 |
+| logResultData | boolean | true | 是否记录返回结果 |
+
+#### 忽略日志记录
+
+```java
+@UserLogger(name = "批量查询")
+@LoggerIgnore  // 使用此注解忽略日志记录
+public List<User> batchQuery(List<Long> ids) {
+    return userService.findByIds(ids);
+}
+```
+
+#### 监听日志事件
+
+可以通过监听 `UserLoggerInfo` 事件来实现自定义日志处理（如存储到数据库）：
+
+```java
+@Component
+public class UserLoggerEventListener {
+    
+    @EventListener
+    public void onUserLogger(UserLoggerInfo event) {
+        // 将日志保存到数据库
+        logService.save(LogRecord.builder()
+            .username(event.getCreateName())
+            .module(event.getLogModule())
+            .operation(event.getLogName())
+            .content(event.getLogContent())
+            .params(event.getLogParam())
+            .ip(event.getClientIp())
+            .browser(event.getBrowser())
+            .os(event.getSystem())
+            .status(event.getLogStatus())
+            .costTime(event.getLogCost())
+            .createTime(event.getCreateTime())
+            .build());
+    }
+}
+```
+
+### 6. 防抖动处理
 
 ```java
 @Service
@@ -231,7 +365,7 @@ public class OrderService {
 }
 ```
 
-### 6. SPI选项提供
+### 7. SPI选项提供
 
 #### 获取可用选项
 

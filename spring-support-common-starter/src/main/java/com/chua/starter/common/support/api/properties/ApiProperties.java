@@ -8,9 +8,9 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * API 统一配置属�?
+ * API 统一配置属性
  * <p>
- * 整合版本控制、平台标识、编解码�?API 相关配置�?
+ * 整合版本控制、平台标识、编解码等 API 相关配置。
  * </p>
  *
  * @author CH
@@ -24,7 +24,7 @@ public class ApiProperties {
     public static final String PRE = "plugin.api";
 
     /**
-     * 忽略返回格式（针对返回格式不进行统计处理�?
+     * 忽略返回格式（针对返回格式不进行统计处理）
      */
     private String[] ignoreFormatPackages;
 
@@ -53,7 +53,7 @@ public class ApiProperties {
     private RequestDecodeProperties decode = new RequestDecodeProperties();
 
     /**
-     * 是否启用 API 控制功能（版本或平台�?
+     * 是否启用 API 控制功能（版本或平台）
      *
      * @return 是否启用
      */
@@ -69,12 +69,12 @@ public class ApiProperties {
     public static class Version {
 
         /**
-         * 是否开启版本控�?
+         * 是否开启版本控制
          */
         private boolean enable = false;
 
         /**
-         * 版本�?
+         * 版本号
          */
         private String name;
     }
@@ -120,12 +120,12 @@ public class ApiProperties {
     public static class Platform {
 
         /**
-         * 是否开启平台标�?
+         * 是否开启平台标识
          */
         private boolean enable = true;
 
         /**
-         * 平台类型（枚举，优先级高�?aliasName�?
+         * 平台类型（枚举，优先级高于 aliasName）
          */
         private PlatformType name = PlatformType.SYSTEM;
 
@@ -151,33 +151,33 @@ public class ApiProperties {
     }
 
     /**
-     * 编解码配�?
+     * 编解码配置
      */
     @Data
     public static class ResponseEncodeProperties {
 
         /**
-         * 是否开启加密功�?
+         * 是否开启加密功能
          */
         private boolean enable = false;
 
         /**
-         * 是否开启响应加�?
+         * 是否开启响应加密
          */
         private boolean responseEnable = false;
 
         /**
-         * 是否开启请求解�?
+         * 是否开启请求解密
          */
         private boolean requestEnable = false;
 
         /**
-         * 请求加密密钥（为空则自动生成�?
+         * 请求加密密钥（为空则自动生成）
          */
         private String codecRequestKey;
 
         /**
-         * 是否由其它对象注入参�?
+         * 是否由其它对象注入参数
          */
         private boolean extInject = false;
 
@@ -187,7 +187,7 @@ public class ApiProperties {
         private String codecType = "sm2";
 
         /**
-         * 白名单（不需要加密的接口路径�?
+         * 白名单（不需要加密的接口路径）
          */
         private List<String> whiteList = Collections.emptyList();
     }
@@ -199,7 +199,7 @@ public class ApiProperties {
     public static class RequestDecodeProperties {
 
         /**
-         * 是否开启请求解�?
+         * 是否开启请求解密
          */
         private boolean enable = false;
 
@@ -209,7 +209,7 @@ public class ApiProperties {
         private String codecRequestKey;
 
         /**
-         * 是否由其它对象注入参�?
+         * 是否由其它对象注入参数
          */
         private boolean extInject = false;
 
