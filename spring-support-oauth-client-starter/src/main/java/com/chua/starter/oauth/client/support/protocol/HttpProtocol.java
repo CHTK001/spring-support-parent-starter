@@ -17,6 +17,7 @@ import com.chua.starter.oauth.client.support.enums.UpgradeType;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.infomation.Information;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
+import com.chua.starter.oauth.client.support.resilience.OAuthClientResilience;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import com.google.common.base.Strings;
@@ -25,6 +26,7 @@ import kong.unirest.HttpRequestWithBody;
 import kong.unirest.HttpResponse;
 import kong.unirest.Unirest;
 import kong.unirest.UnirestException;
+import kong.unirest.UnirestInstance;
 import lombok.extern.slf4j.Slf4j;
 import me.zhyd.oauth.exception.AuthException;
 
@@ -42,9 +44,42 @@ import static com.chua.common.support.http.HttpClientUtils.APPLICATION_JSON;
 @Slf4j
 public class HttpProtocol extends AbstractProtocol {
 
+    /**
+     * 弹性处理器（熔断+重试）
+     */
+    private final OAuthClientResilience resilience;
+
+    /**
+     * HTTP客户端实例（配置超时）
+     */
+    private static volatile UnirestInstance httpClient;
+    private static final Object HTTP_CLIENT_LOCK = new Object();
 
     public HttpProtocol(AuthClientProperties authClientProperties) {
         super(authClientProperties);
+        this.resilience = new OAuthClientResilience(authClientProperties);
+        initHttpClient(authClientProperties);
+    }
+
+    /**
+     * 初始化HTTP客户端（配置超时）
+     */
+    private void initHttpClient(AuthClientProperties config) {
+        if (httpClient == null) {
+            synchronized (HTTP_CLIENT_LOCK) {
+                if (httpClient == null) {
+                    httpClient = Unirest.spawnInstance();
+                    httpClient.config()
+                            .connectTimeout((int) config.getConnectTimeout())
+                            .socketTimeout((int) config.getReadTimeout())
+                            .concurrency(200, 20)
+                            .automaticRetries(false)  // 使用自定义重试机制
+                            .verifySsl(true);
+                    log.info("【OAuth客户端】HTTP客户端初始化完成 - 连接超时: {}ms, 读取超时: {}ms",
+                            config.getConnectTimeout(), config.getReadTimeout());
+                }
+            }
+        }
     }
 
     @Override
@@ -143,6 +178,18 @@ public class HttpProtocol extends AbstractProtocol {
      * @return AuthenticationInformation 返回认证结果，包含认证状态和用户信息
      */
     protected AuthenticationInformation createAuthenticationInformation(JsonObject jsonObject, UpgradeType upgradeType, String path) {
+        // 使用弹性处理器执行请求（含熔断和重试）
+        return resilience.executeWithResilience(
+                () -> doRequest(jsonObject, upgradeType, path),
+                () -> OAuthClientResilience.createFallbackResponse(
+                        authClientProperties.getCircuitBreaker().getFallbackMessage())
+        );
+    }
+
+    /**
+     * 执行实际的HTTP请求
+     */
+    private AuthenticationInformation doRequest(JsonObject jsonObject, UpgradeType upgradeType, String path) {
         // 获取认证服务器地址
         String selectedUrl = selectUrl();
         if (null == selectedUrl) {
@@ -150,7 +197,7 @@ public class HttpProtocol extends AbstractProtocol {
         }
 
         // 生成随机密钥和请求头参数
-        String key =  IdUtils.simpleUuid();
+        String key = IdUtils.simpleUuid();
         jsonObject.put("x-ext-timestamp", System.currentTimeMillis());
 
         String timestamp = System.nanoTime() + "";
@@ -158,8 +205,11 @@ public class HttpProtocol extends AbstractProtocol {
 
         HttpResponse<String> httpResponse = null;
         try {
+            // 使用配置好超时的HTTP客户端
+            UnirestInstance client = httpClient != null ? httpClient : Unirest.primaryInstance();
+            
             // 构建POST请求
-            HttpRequestWithBody withBody = Unirest.post(
+            HttpRequestWithBody withBody = client.post(
                     StringUtils.endWithAppend(StringUtils.startWithAppend(selectedUrl, "http://"), "/") +
                             StringUtils.startWithMove(path, "/"));
 
