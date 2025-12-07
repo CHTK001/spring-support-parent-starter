@@ -9,19 +9,20 @@ import com.chua.report.client.starter.sync.MonitorTopics;
 import com.chua.report.client.starter.sync.handler.FileHandler;
 import com.chua.report.client.starter.sync.handler.JobDispatchHandler;
 import com.chua.sync.support.client.SyncClient;
+import com.chua.sync.support.configuration.SyncAutoConfiguration;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
-
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
 
 /**
  * 上报客户端配置
@@ -33,7 +34,8 @@ import jakarta.annotation.PreDestroy;
  * @since 2024/12/05
  */
 @Slf4j
-@Configuration
+@AutoConfiguration
+@AutoConfigureAfter(SyncAutoConfiguration.class)
 @RequiredArgsConstructor
 @ConditionalOnClass(SyncClient.class)
 @ConditionalOnBean(SyncClient.class)
