@@ -84,6 +84,11 @@ public class ClientInfo implements Serializable {
     private String osVersion;
 
     /**
+     * 操作系统架构
+     */
+    private String osArch;
+
+    /**
      * 主机名
      */
     private String hostname;
@@ -92,6 +97,16 @@ public class ClientInfo implements Serializable {
      * Java版本
      */
     private String javaVersion;
+
+    /**
+     * JVM名称
+     */
+    private String jvmName;
+
+    /**
+     * JVM版本
+     */
+    private String jvmVersion;
 
     /**
      * CPU核心数
@@ -104,9 +119,29 @@ public class ClientInfo implements Serializable {
     private long totalMemory;
 
     /**
+     * 已使用堆内存
+     */
+    private long heapUsed;
+
+    /**
+     * 最大堆内存
+     */
+    private long heapMax;
+
+    /**
+     * 线程数
+     */
+    private int threadCount;
+
+    /**
      * 启动时间
      */
     private long startTime;
+
+    /**
+     * 运行时长（毫秒）
+     */
+    private long uptime;
 
     /**
      * 注册时间
