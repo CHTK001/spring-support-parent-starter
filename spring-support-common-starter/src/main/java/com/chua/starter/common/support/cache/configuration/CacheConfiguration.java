@@ -1,8 +1,10 @@
 package com.chua.starter.common.support.cache.configuration;
 
+import com.chua.starter.common.support.cache.CacheProperties;
 import com.chua.starter.common.support.cache.CustomCacheManager;
 import com.chua.starter.common.support.constant.Constant;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CachingConfigurerSupport;
@@ -31,6 +33,7 @@ import org.springframework.context.annotation.Bean;
  * @since 2024/01/01
  */
 @Slf4j
+@EnableConfigurationProperties(CacheProperties.class)
 public class CacheConfiguration extends CachingConfigurerSupport implements Constant {
 
     public static final String DEFAULT_CACHE_MANAGER = "default";

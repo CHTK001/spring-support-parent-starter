@@ -131,6 +131,10 @@ public class AuthClientProperties {
      */
     private String tokenName = "x-oauth-token";
     /**
+     * cookie-name
+     */
+    private String cookieName = "x-oauth-cookie";
+    /**
      * token 别名
      */
     private String alias = "Boren-Token";
@@ -164,6 +168,7 @@ public class AuthClientProperties {
      * 临时用户
      */
     private TempUser temp = new TempUser();
+
 
     /**
      * 密钥

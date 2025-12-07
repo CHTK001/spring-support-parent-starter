@@ -41,7 +41,7 @@ public class NonceUtils {
 
             // 验证签名格式
             if (!isValidSignFormat(sign)) {
-                log.warn("签名格式不正确:  {}", sign);
+                log.warn("签名格式不正确: {}", sign);
                 return new NonceValidationResult(false, 0, sign, nonceStr);
             }
 
@@ -69,7 +69,6 @@ public class NonceUtils {
 
     /**
      * 解析并验证Nonce（使用默认5分钟有效期）
-     * 解析并验证Nonce（使用默�?分钟有效期）
      *
      * @param nonceStr 前端传递的nonce字符串
      * @param sign     前端传递的签名
