@@ -45,9 +45,29 @@ public class AuthClientProperties {
         whitelist.add("/**/node/receive_push");
     }
     /**
-     * 链接超时
+     * 连接超时时间（毫秒）
      */
     private long connectTimeout = 5000;
+
+    /**
+     * 读取超时时间（毫秒）
+     */
+    private long readTimeout = 10000;
+
+    /**
+     * 请求超时时间（毫秒）
+     */
+    private long requestTimeout = 15000;
+
+    /**
+     * 重试配置
+     */
+    private RetryConfig retry = new RetryConfig();
+
+    /**
+     * 熔断配置
+     */
+    private CircuitBreakerConfig circuitBreaker = new CircuitBreakerConfig();
 
     /**
      * 客户端缓存鉴权信息(用于提高访问效率)(s)
@@ -86,9 +106,26 @@ public class AuthClientProperties {
     private List<String> whitelist = new LinkedList<>();
 
     /**
-     * 协议, http, http-lite, static
+     * 外部白名单文件路径
+     * <p>
+     * 支持动态加载和热更新，文件变更后自动重新加载。
+     * 文件格式：每行一个URL Pattern，支持 # 注释
+     * </p>
      */
-    private String protocol = "http";
+    private String whitelistFile = "config/oauth.whitelist";
+
+    /**
+     * 协议类型
+     * <p>
+     * 可选值：
+     * <ul>
+     * <li><strong>armeria</strong> - Armeria协议，基于Netty高性能异步框架，【推荐】</li>
+     * <li><strong>http</strong> - HTTP协议，基于Unirest，兼容性好</li>
+     * <li><strong>static</strong> - 静态协议，用于测试</li>
+     * </ul>
+     * </p>
+     */
+    private String protocol = "armeria";
     /**
      * token-name
      */
@@ -151,8 +188,89 @@ public class AuthClientProperties {
          */
         private String menuPath;
         /**
-         * 临时账号(只用于账号类型为Embed)
+         * 临时账号配置(只用于账号类型为Embed)
+         * <p>
+         * 【安全警告】生产环境禁止启用临时账号功能！
+         * 格式: username:password;username2:password2
+         * </p>
          */
-        private String user = "guest:guest;ops:opsAdmin2023;admin:admin@123!456";
+        private String user;
+    }
+
+    /**
+     * 重试配置
+     */
+    @Data
+    public static class RetryConfig {
+        /**
+         * 是否启用重试
+         */
+        private boolean enabled = true;
+
+        /**
+         * 最大重试次数
+         */
+        private int maxAttempts = 3;
+
+        /**
+         * 重试间隔（毫秒）
+         */
+        private long delay = 1000;
+
+        /**
+         * 重试间隔倍数（指数退避）
+         */
+        private double multiplier = 1.5;
+
+        /**
+         * 最大重试间隔（毫秒）
+         */
+        private long maxDelay = 5000;
+    }
+
+    /**
+     * 熔断配置
+     */
+    @Data
+    public static class CircuitBreakerConfig {
+        /**
+         * 是否启用熔断
+         */
+        private boolean enabled = true;
+
+        /**
+         * 失败率阈值（百分比），超过则触发熔断
+         */
+        private int failureRateThreshold = 50;
+
+        /**
+         * 慢调用率阈值（百分比）
+         */
+        private int slowCallRateThreshold = 80;
+
+        /**
+         * 慢调用时间阈值（毫秒）
+         */
+        private long slowCallDurationThreshold = 3000;
+
+        /**
+         * 滑动窗口大小
+         */
+        private int slidingWindowSize = 10;
+
+        /**
+         * 熔断器打开后等待时间（秒）
+         */
+        private int waitDurationInOpenState = 30;
+
+        /**
+         * 半开状态允许的请求数
+         */
+        private int permittedCallsInHalfOpenState = 5;
+
+        /**
+         * 降级响应消息
+         */
+        private String fallbackMessage = "认证服务暂时不可用，请稍后重试";
     }
 }
