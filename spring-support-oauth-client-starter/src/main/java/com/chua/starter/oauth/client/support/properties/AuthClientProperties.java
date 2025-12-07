@@ -145,11 +145,10 @@ public class AuthClientProperties {
 
     @Data
     public static class TempUser {
-        /**
-         * 是否启用临时用户
-         */
-        private boolean open;
 
+        /**
+         *
+         */
         private String menuPath;
         /**
          * 临时账号(只用于账号类型为Embed)
