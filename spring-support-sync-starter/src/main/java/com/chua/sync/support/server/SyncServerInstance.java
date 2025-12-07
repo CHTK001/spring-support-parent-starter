@@ -364,6 +364,7 @@ public class SyncServerInstance {
                         .ipAddress(MapUtils.getString(map, "ipAddress"))
                         // 兼容 port 和 serverPort
                         .port(MapUtils.getIntValue(map, "port", MapUtils.getIntValue(map, "serverPort", 0)))
+                        .serverPort(MapUtils.getIntValue(map, "serverPort", MapUtils.getIntValue(map, "port", 0)))
                         .hostname(MapUtils.getString(map, "hostname"))
                         .osName(MapUtils.getString(map, "osName"))
                         .osVersion(MapUtils.getString(map, "osVersion"))
