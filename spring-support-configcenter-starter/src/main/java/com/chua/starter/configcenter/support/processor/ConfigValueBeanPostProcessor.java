@@ -55,6 +55,11 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
     private final ConfigCenter configCenter;
 
     /**
+     * 是否启用热更新
+     */
+    private final boolean hotReloadEnabled;
+
+    /**
      * 绑定信息映射
      * key: 配置键
      * value: 绑定信息列表
@@ -72,7 +77,18 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
      * @param configCenter 配置中心
      */
     public ConfigValueBeanPostProcessor(ConfigCenter configCenter) {
+        this(configCenter, true);
+    }
+
+    /**
+     * 构造函数
+     *
+     * @param configCenter     配置中心
+     * @param hotReloadEnabled 是否启用热更新
+     */
+    public ConfigValueBeanPostProcessor(ConfigCenter configCenter, boolean hotReloadEnabled) {
         this.configCenter = configCenter;
+        this.hotReloadEnabled = hotReloadEnabled;
     }
 
     @Override
@@ -184,11 +200,12 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
         bindingsByKey.computeIfAbsent(configKey, k -> Collections.synchronizedList(new ArrayList<>()))
                 .add(binding);
 
-        // 注册配置中心监听
-        if (configCenter != null && configCenter.isSupportListener() && !registeredListeners.contains(configKey)) {
+        // 注册配置中心监听（只有启用热更新时才注册）
+        if (hotReloadEnabled && configCenter != null && configCenter.isSupportListener() 
+                && !registeredListeners.contains(configKey)) {
             configCenter.addListener(configKey, new ConfigValueListener(configKey));
             registeredListeners.add(configKey);
-            log.info("注册配置监听: key={}", configKey);
+            log.info("【配置中心】注册配置监听: key={}", configKey);
         }
     }
 
