@@ -44,7 +44,7 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
      */
     private String queryParams;
     /**
-     * 请求�?
+     * 请求体
      */
     private byte[] body = new byte[0];
 

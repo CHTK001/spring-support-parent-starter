@@ -115,7 +115,7 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
 
 
 //    private void registerFastjson(List<HttpMessageConverter<?>> converters) {
-//        log.info(">>>>>>> 开�?FastJson2 数据转化");
+//        log.info(">>>>>>> 开启 FastJson2 数据转化");
 //        FastJsonHttpMessageConverter fastJsonHttpMessageConverter = new FastJsonHttpMessageConverter();
 //        FastJsonConfig fastJsonConfig = new FastJsonConfig();
 //        fastJsonConfig.setDateFormat(messageConverterProperties.getDataFormat());

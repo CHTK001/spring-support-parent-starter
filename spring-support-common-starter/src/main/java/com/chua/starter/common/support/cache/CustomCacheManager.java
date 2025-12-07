@@ -1,7 +1,6 @@
 package com.chua.starter.common.support.cache;
 
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
-import com.chua.starter.common.support.properties.CacheProperties;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.cache.Cache;

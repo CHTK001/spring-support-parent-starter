@@ -22,7 +22,7 @@ public class NoticeProperties {
     public static class Email {
 
         /**
-         * 发送�?
+         * 发送者
          */
         private String from;
         /**
@@ -34,7 +34,7 @@ public class NoticeProperties {
          */
         private String sslSmtpPort = "465";
         /**
-         * 授权�?
+         * 授权码
          */
         private String password;
 

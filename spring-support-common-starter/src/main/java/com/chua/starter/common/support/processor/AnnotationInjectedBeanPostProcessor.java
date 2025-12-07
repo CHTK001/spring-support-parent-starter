@@ -31,10 +31,16 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * 注解注入�?
+ * 注解注入Bean后置处理器
+ * <p>
+ * 用于处理自定义注解的依赖注入，支持字段注入和方法注入。
+ * 子类需要实现 {@link #doGetInjectedBean} 方法来提供注入对象。
+ * </p>
  *
+ * @param <A> 注解类型
  * @author CH
  * @since 2022/7/30 11:36
+ * @version 1.0.0
  */
 @SuppressWarnings("ALL")
 public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> implements MergedBeanDefinitionPostProcessor, PriorityOrdered, BeanFactoryAware, BeanClassLoaderAware, EnvironmentAware, DisposableBean, SmartInstantiationAwareBeanPostProcessor {

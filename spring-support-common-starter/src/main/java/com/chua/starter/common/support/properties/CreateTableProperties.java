@@ -5,9 +5,13 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * 自定建表
+ * 自动建表配置属性
+ * <p>
+ * 用于配置自动建表功能，支持根据实体类自动创建或更新数据库表结构。
+ * </p>
  *
  * @author CH
+ * @version 1.0.0
  */
 @Data
 @ConfigurationProperties(prefix = CreateTableProperties.PRE, ignoreInvalidFields = true)
@@ -16,7 +20,7 @@ public class CreateTableProperties {
     public static final String PRE = "plugin.table";
 
     /**
-     * 是否开�?
+     * 是否开启自动建表
      */
     private boolean enable;
 

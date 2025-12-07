@@ -6,14 +6,23 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
 /**
- * 自定义servlet输入�?
+ * 自定义Servlet输入流
+ * <p>
+ * 基于字节数组实现的ServletInputStream，支持从缓存的请求体数据中读取内容。
+ * 配合 {@link CustomHttpServletRequestWrapper} 使用，实现请求体的多次读取。
+ * </p>
  *
  * @author CH
  * @since 2023/09/08
+ * @version 1.0.0
+ * @see CustomHttpServletRequestWrapper
  */
 public class CustomServletInputStream extends ServletInputStream {
 
-    private ByteArrayInputStream inputStream;
+    /**
+     * 底层字节数组输入流
+     */
+    private final ByteArrayInputStream inputStream;
 
     public CustomServletInputStream(byte[] body) {
         this.inputStream = new ByteArrayInputStream(body);
