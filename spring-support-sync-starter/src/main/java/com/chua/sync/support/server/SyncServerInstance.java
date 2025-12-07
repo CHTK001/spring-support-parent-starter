@@ -122,8 +122,7 @@ public class SyncServerInstance {
         }
 
         try {
-            String protocol = instanceConfig.getProtocol() != null ?
-                    instanceConfig.getProtocol() : syncProperties.getProtocol();
+            String protocol = instanceConfig.getProtocol();
 
             ProtocolSetting protocolSetting = ProtocolSetting.builder()
                     .protocol(protocol)
