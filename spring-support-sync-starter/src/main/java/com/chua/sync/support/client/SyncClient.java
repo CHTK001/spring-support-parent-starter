@@ -206,8 +206,7 @@ public class SyncClient implements InitializingBean, DisposableBean {
                 }
             }
 
-            String protocol = clientConfig.getProtocol() != null ? 
-                    clientConfig.getProtocol() : syncProperties.getProtocol();
+            String protocol = clientConfig.getProtocol();
 
             // 构建协议配置
             ProtocolSetting protocolSetting = ProtocolSetting.builder()
@@ -272,7 +271,7 @@ public class SyncClient implements InitializingBean, DisposableBean {
             notifyConnectionListeners(true);
 
             log.info("[Sync客户端] 连接成功，协议: {}，服务器: {}:{}, clientId={}",
-                    syncProperties.getProtocol(), host, port, protocolClient.getClientId());
+                    syncProperties.getClient().getProtocol(), host, port, protocolClient.getClientId());
         } catch (Exception e) {
             log.error("[Sync客户端] 连接失败，底层将自动重连", e);
             connected.set(false);
