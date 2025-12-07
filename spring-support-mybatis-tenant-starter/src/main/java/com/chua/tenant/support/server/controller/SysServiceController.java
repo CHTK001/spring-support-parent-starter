@@ -23,8 +23,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-import static com.chua.starter.oauth.client.support.contants.AuthConstant.ADMIN;
-import static com.chua.starter.oauth.client.support.contants.AuthConstant.SUPER_ADMIN;
 
 /**
  * 服务接口
@@ -80,7 +78,7 @@ public class SysServiceController {
      */
     @PostMapping("save")
     @Operation(summary = "保存服务")
-    @Permission(role = {ADMIN, SUPER_ADMIN})
+    @Permission("sys:service:save")
     public ReturnResult<SysService> saveForSysService(@RequestBody @Validated(AddGroup.class) SysService sysService,
                                                       BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
@@ -98,7 +96,7 @@ public class SysServiceController {
      */
     @PutMapping("update")
     @Operation(summary = "更新服务")
-    @Permission(role = {ADMIN, SUPER_ADMIN})
+    @Permission("sys:service:update")
     public ReturnResult<Boolean> updateForSysService(@RequestBody @Validated(UpdateGroup.class) SysService sysService,
                                                      BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
@@ -115,7 +113,7 @@ public class SysServiceController {
      */
     @DeleteMapping("delete")
     @Operation(summary = "删除服务")
-    @Permission(role = {ADMIN, SUPER_ADMIN})
+    @Permission("sys:service:delete")
     public ReturnResult<Boolean> deleteForSysService(Long sysServiceId) {
         return sysServiceService.deleteForSysService(sysServiceId);
     }
@@ -128,7 +126,7 @@ public class SysServiceController {
      */
     @PutMapping("bind")
     @Operation(summary = "绑定服务模块")
-    @Permission(role = {ADMIN, SUPER_ADMIN})
+    @Permission("sys:service:bind")
     public ReturnResult<Boolean> bindForSysService(@RequestBody SysServiceBindV1Request request) {
         return sysServiceService.bindForSysService(request);
     }
