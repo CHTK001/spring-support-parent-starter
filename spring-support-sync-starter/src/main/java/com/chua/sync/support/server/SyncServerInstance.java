@@ -1,11 +1,13 @@
 package com.chua.sync.support.server;
 
+import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.protocol.ProtocolSetting;
 import com.chua.common.support.protocol.sync.*;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.sync.support.pojo.ClientInfo;
 import com.chua.sync.support.properties.SyncProperties;
 import com.chua.sync.support.spi.SyncMessageHandler;
+import com.fasterxml.jackson.databind.util.BeanUtil;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -355,36 +357,8 @@ public class SyncServerInstance {
         @SuppressWarnings("unchecked")
         private void handleClientRegister(String sessionId, Object data) {
             try {
-                Map<String, Object> map = data instanceof Map ? (Map<String, Object>) data : Map.of();
-                long now = System.currentTimeMillis();
-                long startTime = MapUtils.getLongValue(map, "startTime", now);
-                
-                ClientInfo clientInfo = ClientInfo.builder()
-                        .clientId(sessionId)
-                        // 应用基本信息
-                        .clientApplicationName(MapUtils.getString(map, "appName", MapUtils.getString(map, "applicationName")))
-                        .clientInstanceId(MapUtils.getString(map, "instanceId"))
-                        .clientContextPath(MapUtils.getString(map, "contextPath"))
-                        .clientUrl(MapUtils.getString(map, "serviceUrl"))
-                        // 网络信息
-                        .clientIpAddress(MapUtils.getString(map, "ipAddress"))
-                        .clientPort(MapUtils.getIntValue(map, "port", 0))
-                        .clientHostname(MapUtils.getString(map, "hostname"))
-                        // 系统信息（核心）
-                        .clientOsName(MapUtils.getString(map, "osName"))
-                        .clientJavaVersion(MapUtils.getString(map, "javaVersion"))
-                        .clientPid(MapUtils.getLongValue(map, "pid", 0))
-                        // 时间信息
-                        .clientStartTime(startTime)
-                        .clientUptime(now - startTime)
-                        .clientRegisterTime(now)
-                        .clientLastHeartbeatTime(now)
-                        .clientOnline(true)
-                        // 扩展信息
-                        .clientMetadata((Map<String, Object>) map.get("metadata"))
-                        .clientCapabilities(MapUtils.getStringArray(map, "capabilities"))
-                        .build();
-
+                ClientInfo clientInfo = ClientInfo.builder().build();
+                BeanUtils.copyProperties(data, clientInfo);
                 clientInfoMap.put(sessionId, clientInfo);
                 log.info("[SyncServer:{}] 客户端注册: sessionId={}, app={}, ip={}:{}",
                         instanceConfig.getName(), sessionId, clientInfo.getClientApplicationName(),
