@@ -185,13 +185,9 @@ public class SyncClient implements InitializingBean, DisposableBean {
                 ipAddress = localHost.getHostAddress();
             }
             
-            // 从 Spring Environment 获取端口，优先使用 ClientConfig 配置
-            int port = clientConfig.getPort();
-            if (port == 8080) {
-                // 如果是默认值，尝试从 Spring 获取实际端口
-                String serverPort = environment.getProperty("server.port", "8080");
-                port = Integer.parseInt(serverPort);
-            }
+            // 从 Spring Environment 获取端口
+            String serverPort = environment.getProperty("server.port", "8080");
+            int port = Integer.parseInt(serverPort);
             
             // 从 Spring Environment 获取 contextPath
             String contextPath = environment.getProperty("server.servlet.context-path", "");
@@ -579,10 +575,11 @@ public class SyncClient implements InitializingBean, DisposableBean {
 
     /**
      * 启动定时同步调度器
+     *
+     * @author CH
+     * @since 1.0.0
      */
     private void startScheduler() {
-        SyncProperties.ScheduleConfig schedule = syncProperties.getClient().getSchedule();
-
         scheduler = Executors.newScheduledThreadPool(2, r -> {
             Thread thread = new Thread(r, "sync-client-scheduler");
             thread.setDaemon(true);
@@ -606,17 +603,7 @@ public class SyncClient implements InitializingBean, DisposableBean {
                 10,
                 TimeUnit.SECONDS);
 
-        // 定时同步任务
-        if (schedule.isEnable()) {
-            scheduler.scheduleAtFixedRate(
-                    this::scheduledSync,
-                    schedule.getInitialDelay(),
-                    schedule.getInterval(),
-                    TimeUnit.SECONDS);
-            log.info("[Sync客户端] 调度器启动，心跳间隔: {}秒，同步间隔: {}秒", heartbeatInterval, schedule.getInterval());
-        } else {
-            log.info("[Sync客户端] 调度器启动，心跳间隔: {}秒", heartbeatInterval);
-        }
+        log.info("[Sync客户端] 调度器启动，心跳间隔: {}秒", heartbeatInterval);
     }
 
     /**
@@ -652,14 +639,6 @@ public class SyncClient implements InitializingBean, DisposableBean {
         } catch (Exception e) {
             log.debug("[Sync客户端] 连接状态检测异常: {}", e.getMessage());
         }
-    }
-
-    /**
-     * 定时同步任务
-     */
-    private void scheduledSync() {
-        // 子类可重写此方法实现定时同步逻辑
-        log.debug("[Sync客户端] 执行定时同步任务");
     }
 
     /**
