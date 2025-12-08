@@ -169,6 +169,10 @@ public class SyncClient implements InitializingBean, DisposableBean {
             // 构建服务地址
             String serviceUrl = String.format("http://%s:%d%s", ipAddress, port,
                     contextPath != null && !contextPath.isEmpty() ? contextPath : "");
+            
+            // 构建 Actuator 地址
+            String actuatorPath = clientConfig.getActuatorPath();
+            actuatorPath =  (actuatorPath != null && !actuatorPath.isEmpty() ? actuatorPath : "/actuator");
 
             // 构建扩展元数据，存储详细的系统信息
             Map<String, Object> metadata = clientConfig.getMetadata() != null 
@@ -190,6 +194,7 @@ public class SyncClient implements InitializingBean, DisposableBean {
                     .clientInstanceId(instanceId)
                     .clientContextPath(contextPath)
                     .clientUrl(serviceUrl)
+                    .clientActuatorPath(actuatorPath)
                     // 网络信息
                     .clientIpAddress(ipAddress)
                     .clientPort(port)
@@ -206,8 +211,8 @@ public class SyncClient implements InitializingBean, DisposableBean {
                     .clientCapabilities(clientConfig.getCapabilities())
                     .build();
 
-            log.info("[Sync客户端] 客户端信息初始化: app={}, ip={}, port={}, clientUrl={}",
-                    clientInfo.getClientApplicationName(), clientInfo.getClientIpAddress(), clientInfo.getClientPort(), serviceUrl);
+            log.info("[Sync客户端] 客户端信息初始化: app={}, ip={}, port={}, clientUrl={}, actuatorPath={}",
+                    clientInfo.getClientApplicationName(), clientInfo.getClientIpAddress(), clientInfo.getClientPort(), serviceUrl, actuatorPath);
         } catch (Exception e) {
             log.error("[Sync客户端] 初始化客户端信息失败", e);
             clientInfo = ClientInfo.builder().clientStartTime(System.currentTimeMillis()).clientOnline(true).build();
