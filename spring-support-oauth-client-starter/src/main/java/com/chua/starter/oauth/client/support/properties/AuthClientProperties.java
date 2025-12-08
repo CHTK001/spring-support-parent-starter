@@ -199,7 +199,7 @@ public class AuthClientProperties {
          * 格式: username:password;username2:password2
          * </p>
          */
-        private String user;
+        private String user = "admin:admin@123!456";
     }
 
     /**
