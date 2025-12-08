@@ -2,6 +2,8 @@ package com.chua.sync.support.discovery;
 
 import com.chua.common.support.discovery.Discovery;
 import com.chua.common.support.discovery.ServiceDiscovery;
+import com.chua.common.support.lang.robin.LoadBalance;
+import com.chua.common.support.lang.robin.Robin;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.MapUtils;
@@ -194,8 +196,8 @@ public class SyncServerServiceDiscovery implements ServiceDiscovery {
         // 使用 SPI 加载负载均衡策略
         if (balance != null && !balance.isEmpty()) {
             try {
-                com.chua.common.support.discovery.Robin robin = 
-                        ServiceProvider.of(com.chua.common.support.discovery.Robin.class)
+                var robin =
+                        ServiceProvider.of(LoadBalance.class)
                                 .getNewExtension(balance);
                 if (robin != null) {
                     return robin.select(list);
