@@ -84,8 +84,56 @@ plugin:
       connect-timeout: 10000
 ```
 
+## 服务发现
+
+### SyncServerServiceDiscovery
+
+基于 SyncServer 的服务发现实现，使用长连接客户端作为服务节点。
+
+#### 功能特性
+
+- 自动发现已连接到 SyncServer 的所有节点
+- 通过应用名称（clientApplicationName）进行服务分组
+- 支持多种负载均衡策略（weight/round/random 等）
+- 实时感知节点上下线
+
+#### 使用方式
+
+```java
+@Autowired
+private SyncServer syncServer;
+
+// 创建服务发现实例
+SyncServerServiceDiscovery discovery = new SyncServerServiceDiscovery(syncServer);
+discovery.start();
+
+// 获取指定应用的服务实例
+Discovery service = discovery.getService("user-service");
+
+// 获取所有服务实例
+Set<Discovery> allServices = discovery.getServiceAll("user-service");
+
+// 获取在线客户端列表
+List<ClientInfo> onlineClients = discovery.getOnlineClients();
+
+// 获取所有应用名称
+Set<String> appNames = discovery.getApplicationNames();
+```
+
+#### API 说明
+
+| 方法 | 说明 |
+|------|------|
+| `getService(path)` | 获取单个服务实例（默认 weight 负载均衡） |
+| `getService(path, balance)` | 获取单个服务实例（指定负载均衡策略） |
+| `getServiceAll(path)` | 获取所有匹配的服务实例 |
+| `getOnlineClients()` | 获取所有在线客户端 |
+| `getOnlineClientsByAppName(appName)` | 获取指定应用的在线客户端 |
+| `getApplicationNames()` | 获取所有应用名称 |
+
 ## 版本信息
 
 - 作者: CH
 - 版本: 1.0.0
 - 创建时间: 2024/12/04
+- 更新时间: 2024/12/08 - 添加 SyncServerServiceDiscovery 服务发现实现

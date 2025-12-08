@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added
+- **SyncServerServiceDiscovery**：新增基于 SyncServer 的服务发现实现
+  - 使用长连接客户端作为服务节点
+  - 通过应用名称（clientApplicationName）进行服务分组
+  - 支持多种负载均衡策略（weight/round/random 等）
+  - 实时感知节点上下线
+  - 主要方法：`getService(path)`、`getServiceAll(path)`、`getOnlineClients()`、`getApplicationNames()`
+
 ### Changed
 - **配置大幅简化**：删除多个冗余字段，这些值现在直接从 Spring Environment 获取
   - `spring.application.name` -> appName
