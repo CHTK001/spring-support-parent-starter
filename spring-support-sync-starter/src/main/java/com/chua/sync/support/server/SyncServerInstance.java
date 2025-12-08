@@ -356,35 +356,31 @@ public class SyncServerInstance {
         private void handleClientRegister(String sessionId, Object data) {
             try {
                 Map<String, Object> map = data instanceof Map ? (Map<String, Object>) data : Map.of();
+                long now = System.currentTimeMillis();
+                long startTime = MapUtils.getLongValue(map, "startTime", now);
+                
                 ClientInfo clientInfo = ClientInfo.builder()
                         .clientId(sessionId)
-                        // 兼容 appName 和 applicationName
+                        // 应用基本信息
                         .clientApplicationName(MapUtils.getString(map, "appName", MapUtils.getString(map, "applicationName")))
                         .clientInstanceId(MapUtils.getString(map, "instanceId"))
-                        .clientIpAddress(MapUtils.getString(map, "ipAddress"))
-                        // 兼容 port 和 serverPort
-                        .clientPort(MapUtils.getIntValue(map, "port", MapUtils.getIntValue(map, "serverPort", 0)))
-                        .clientHostname(MapUtils.getString(map, "hostname"))
-                        .clientOsName(MapUtils.getString(map, "osName"))
-                        .clientOsVersion(MapUtils.getString(map, "osVersion"))
-                        .clientOsArch(MapUtils.getString(map, "osArch"))
-                        .clientJavaVersion(MapUtils.getString(map, "javaVersion"))
-                        .clientJvmName(MapUtils.getString(map, "jvmName"))
-                        .clientJvmVersion(MapUtils.getString(map, "jvmVersion"))
-                        .clientPid(MapUtils.getLongValue(map, "pid", 0))
-                        .clientCpuCores(MapUtils.getIntValue(map, "cpuCores", 0))
-                        .clientTotalMemory(MapUtils.getLongValue(map, "totalMemory", 0))
-                        .clientHeapUsed(MapUtils.getLongValue(map, "heapUsed", 0))
-                        .clientHeapMax(MapUtils.getLongValue(map, "heapMax", 0))
-                        .clientThreadCount(MapUtils.getIntValue(map, "threadCount", 0))
-                        .clientStartTime(MapUtils.getLongValue(map, "startTime", 0))
-                        .clientUptime(MapUtils.getLongValue(map, "uptime", 0))
                         .clientContextPath(MapUtils.getString(map, "contextPath"))
                         .clientUrl(MapUtils.getString(map, "serviceUrl"))
-                        .clientActiveProfiles(MapUtils.getString(map, "activeProfiles"))
-                        .clientRegisterTime(System.currentTimeMillis())
-                        .clientLastHeartbeatTime(System.currentTimeMillis())
+                        // 网络信息
+                        .clientIpAddress(MapUtils.getString(map, "ipAddress"))
+                        .clientPort(MapUtils.getIntValue(map, "port", 0))
+                        .clientHostname(MapUtils.getString(map, "hostname"))
+                        // 系统信息（核心）
+                        .clientOsName(MapUtils.getString(map, "osName"))
+                        .clientJavaVersion(MapUtils.getString(map, "javaVersion"))
+                        .clientPid(MapUtils.getLongValue(map, "pid", 0))
+                        // 时间信息
+                        .clientStartTime(startTime)
+                        .clientUptime(now - startTime)
+                        .clientRegisterTime(now)
+                        .clientLastHeartbeatTime(now)
                         .clientOnline(true)
+                        // 扩展信息
                         .clientMetadata((Map<String, Object>) map.get("metadata"))
                         .clientCapabilities(MapUtils.getStringArray(map, "capabilities"))
                         .build();
