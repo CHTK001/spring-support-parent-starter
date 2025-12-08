@@ -180,7 +180,7 @@ public class ApiProperties {
         /**
          * 是否开启加密功能
          */
-        private boolean enable = false;
+        private boolean enable = true;
 
         /**
          * 是否开启响应加密
@@ -212,7 +212,7 @@ public class ApiProperties {
         /**
          * 是否开启请求解密
          */
-        private boolean enable = false;
+        private boolean enable = true;
 
         /**
          * 请求解密密钥
