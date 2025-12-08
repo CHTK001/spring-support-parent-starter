@@ -17,6 +17,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.core.env.Environment;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
@@ -49,6 +50,11 @@ public class SyncClient implements InitializingBean, DisposableBean {
 
     @Getter
     private final SyncProperties syncProperties;
+
+    /**
+     * Spring 环境配置
+     */
+    private final Environment environment;
 
     /**
      * 同步协议客户端
@@ -92,8 +98,17 @@ public class SyncClient implements InitializingBean, DisposableBean {
      */
     private final Set<String> dynamicTopics = ConcurrentHashMap.newKeySet();
 
-    public SyncClient(SyncProperties syncProperties) {
+    /**
+     * 构造方法
+     *
+     * @param syncProperties 同步配置属性
+     * @param environment    Spring 环境配置
+     * @author CH
+     * @since 1.0.0
+     */
+    public SyncClient(SyncProperties syncProperties, Environment environment) {
         this.syncProperties = syncProperties;
+        this.environment = environment;
         loadHandlers();
     }
 
@@ -145,6 +160,12 @@ public class SyncClient implements InitializingBean, DisposableBean {
 
     /**
      * 初始化客户端信息
+     * <p>
+     * 从 Spring Environment 获取 appName、contextPath、actuatorPath
+     * </p>
+     *
+     * @author CH
+     * @since 1.0.0
      */
     private void initClientInfo() {
         try {
@@ -163,16 +184,27 @@ public class SyncClient implements InitializingBean, DisposableBean {
             if (ipAddress == null || ipAddress.isEmpty()) {
                 ipAddress = localHost.getHostAddress();
             }
+            
+            // 从 Spring Environment 获取端口，优先使用 ClientConfig 配置
             int port = clientConfig.getPort();
-            String contextPath = clientConfig.getContextPath();
+            if (port == 8080) {
+                // 如果是默认值，尝试从 Spring 获取实际端口
+                String serverPort = environment.getProperty("server.port", "8080");
+                port = Integer.parseInt(serverPort);
+            }
+            
+            // 从 Spring Environment 获取 contextPath
+            String contextPath = environment.getProperty("server.servlet.context-path", "");
+            
+            // 从 Spring Environment 获取应用名称
+            String appName = environment.getProperty("spring.application.name", "");
+            
+            // 从 Spring Environment 获取 actuatorPath
+            String actuatorPath = environment.getProperty("management.endpoints.web.base-path", "/actuator");
             
             // 构建服务地址
             String serviceUrl = String.format("http://%s:%d%s", ipAddress, port,
                     contextPath != null && !contextPath.isEmpty() ? contextPath : "");
-            
-            // 构建 Actuator 地址
-            String actuatorPath = clientConfig.getActuatorPath();
-            actuatorPath =  (actuatorPath != null && !actuatorPath.isEmpty() ? actuatorPath : "/actuator");
 
             // 构建扩展元数据，存储详细的系统信息
             Map<String, Object> metadata = clientConfig.getMetadata() != null 
@@ -189,8 +221,8 @@ public class SyncClient implements InitializingBean, DisposableBean {
             metadata.put("threadCount", Thread.activeCount());
             
             clientInfo = ClientInfo.builder()
-                    // 应用基本信息
-                    .clientApplicationName(clientConfig.getAppName())
+                    // 应用基本信息（从 Spring 获取）
+                    .clientApplicationName(appName)
                     .clientInstanceId(instanceId)
                     .clientContextPath(contextPath)
                     .clientUrl(serviceUrl)

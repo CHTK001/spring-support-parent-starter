@@ -173,11 +173,6 @@ public class SyncProperties {
         private boolean enable = true;
 
         /**
-         * 应用名称
-         */
-        private String appName;
-
-        /**
          * 实例ID (默认自动生成)
          */
         private String instanceId;
@@ -186,17 +181,6 @@ public class SyncProperties {
          * 应用端口
          */
         private int port = 8080;
-
-        /**
-         * 上下文路径
-         */
-        private String contextPath = "";
-
-        /**
-         * Actuator 端点路径
-         * <p>默认为 /actuator</p>
-         */
-        private String actuatorPath = "/actuator";
 
         /**
          * 客户端 IP 地址

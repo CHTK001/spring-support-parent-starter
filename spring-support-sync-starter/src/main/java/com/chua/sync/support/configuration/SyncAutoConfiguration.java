@@ -49,12 +49,17 @@ public class SyncAutoConfiguration {
 
     /**
      * 创建同步客户端 (client 模式)
+     *
+     * @param syncProperties 同步配置属性
+     * @return 同步客户端实例
+     * @author CH
+     * @since 1.0.0
      */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = SyncProperties.PRE, name = "type", havingValue = "client")
     public SyncClient syncClientOnly(SyncProperties syncProperties) {
-        return new SyncClient(syncProperties);
+        return new SyncClient(syncProperties, environment);
     }
 
     /**
@@ -68,10 +73,15 @@ public class SyncAutoConfiguration {
 
     /**
      * both 模式 - 客户端
+     *
+     * @param syncProperties 同步配置属性
+     * @return 同步客户端实例
+     * @author CH
+     * @since 1.0.0
      */
     @Bean("syncClient")
     @ConditionalOnProperty(prefix = SyncProperties.PRE, name = "type", havingValue = "both")
     public SyncClient syncClientBoth(SyncProperties syncProperties) {
-        return new SyncClient(syncProperties);
+        return new SyncClient(syncProperties, environment);
     }
 }

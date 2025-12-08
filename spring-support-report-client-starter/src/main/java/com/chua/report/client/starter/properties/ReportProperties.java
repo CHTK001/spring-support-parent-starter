@@ -83,7 +83,7 @@ public class ReportProperties {
      * 用于多网卡场景下指定客户端信息
      * </p>
      */
-    private ClientInfo clientInfo = new ClientInfo();
+    private ClientInfo info = new ClientInfo();
 
     /**
      * 客户端信息配置

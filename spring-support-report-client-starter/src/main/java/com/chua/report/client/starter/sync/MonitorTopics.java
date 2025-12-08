@@ -29,4 +29,8 @@ public interface MonitorTopics {
     // ==================== API Control ====================
     /** API 功能开关控制 */
     String API_FEATURE_CONTROL = "monitor/control/api-feature";
+
+    // ==================== Logging Config ====================
+    /** 日志级别配置 */
+    String LOGGING_CONFIG = "monitor/logging/config";
 }

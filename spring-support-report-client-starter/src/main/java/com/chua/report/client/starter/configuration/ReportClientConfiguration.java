@@ -9,6 +9,7 @@ import com.chua.report.client.starter.sync.MonitorTopics;
 import com.chua.report.client.starter.sync.handler.ApiFeatureHandler;
 import com.chua.report.client.starter.sync.handler.FileHandler;
 import com.chua.report.client.starter.sync.handler.JobDispatchHandler;
+import com.chua.report.client.starter.sync.handler.LoggingConfigHandler;
 import com.chua.starter.common.support.api.feature.ApiFeatureManager;
 import com.chua.sync.support.client.SyncClient;
 import com.chua.sync.support.configuration.SyncAutoConfiguration;
@@ -80,7 +81,8 @@ public class ReportClientConfiguration {
         syncClient.subscribe(
                 MonitorTopics.JOB_DISPATCH,
                 MonitorTopics.JOB_CANCEL,
-                MonitorTopics.FILE_REQUEST
+                MonitorTopics.FILE_REQUEST,
+                MonitorTopics.LOGGING_CONFIG
         );
 
         // 注册 Job 处理器
@@ -91,6 +93,11 @@ public class ReportClientConfiguration {
         // 注册 File 处理器
         FileHandler fileHandler = new FileHandler();
         syncClient.registerHandler(MonitorTopics.FILE_REQUEST, fileHandler);
+
+        // 注册 Logging 处理器
+        LoggingConfigHandler loggingHandler = new LoggingConfigHandler();
+        syncClient.registerHandler(MonitorTopics.LOGGING_CONFIG, loggingHandler);
+        log.info("[ReportClient] 已注册日志配置处理器");
 
         // 注册 API Feature 处理器（如果可用）
         ApiFeatureManager featureManager = featureManagerProvider.getIfAvailable();
