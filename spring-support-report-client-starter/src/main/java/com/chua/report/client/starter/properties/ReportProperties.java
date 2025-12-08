@@ -1,7 +1,12 @@
 package com.chua.report.client.starter.properties;
 
+import com.chua.report.client.starter.report.MetricType;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * 上报客户端配置
@@ -75,6 +80,29 @@ public class ReportProperties {
          * 上报间隔（秒）
          */
         private long interval = 30;
+
+        /**
+         * 要上报的指标类型列表
+         * <p>
+         * 可选值: CPU, MEMORY, DISK, NETWORK, LOAD, PROCESS, TEMPERATURE
+         * 默认为空表示全部上报
+         * </p>
+         */
+        private Set<MetricType> types = new HashSet<>();
+
+        /**
+         * 获取要上报的指标类型
+         *
+         * @return 指标类型集合，为空返回全部
+         * @author CH
+         * @since 1.0.0
+         */
+        public Set<MetricType> getEffectiveTypes() {
+            if (types == null || types.isEmpty()) {
+                return new HashSet<>(Arrays.asList(MetricType.values()));
+            }
+            return types;
+        }
     }
 
     /**
