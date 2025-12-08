@@ -6,6 +6,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
@@ -43,6 +44,8 @@ public class AppRegisterReporter {
     private String applicationName;
     @Setter
     private String[] activeProfiles;
+    @Setter
+    private String host;
     @Setter
     private String contextPath;
     @Setter
@@ -114,7 +117,7 @@ public class AppRegisterReporter {
     private void initNetworkInfo() {
         try {
             InetAddress localHost = InetAddress.getLocalHost();
-            this.ipAddress = localHost.getHostAddress();
+            this.ipAddress = StringUtils.defaultIfBlank(host, localHost.getHostAddress());
             this.hostname = localHost.getHostName();
         } catch (Exception e) {
             log.warn("[AppReport] 获取网络信息失败", e);
@@ -182,4 +185,6 @@ public class AppRegisterReporter {
 
         return info;
     }
+
+
 }
