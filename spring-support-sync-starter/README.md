@@ -33,8 +33,6 @@ plugin:
       enable: true
       # 实例ID (默认自动生成)
       instance-id: 
-      # 应用端口（默认从 server.port 获取）
-      port: 8080
       # 客户端 IP 地址（多网卡场景下指定，为空则自动获取）
       ip-address: 
       # 协议类型
@@ -47,10 +45,10 @@ plugin:
       # 心跳配置
       heartbeat: true
       heartbeat-interval: 30
-      # 连接配置
+      # 连接超时（毫秒）
       connect-timeout: 10000
-      reconnect-interval: 5
-      max-reconnect-attempts: -1
+      # 自动注册
+      auto-register: true
       # 支持的功能
       capabilities:
         - job
@@ -67,8 +65,8 @@ plugin:
 |------------|------|
 | `spring.application.name` | 应用名称 |
 | `server.servlet.context-path` | 上下文路径 |
+| `server.port` | 应用端口 |
 | `management.endpoints.web.base-path` | Actuator 路径（默认 `/actuator`） |
-| `server.port` | 应用端口（当 client.port 为默认值 8080 时） |
 
 ### 服务端配置
 

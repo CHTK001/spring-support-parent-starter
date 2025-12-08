@@ -113,6 +113,7 @@ public class ReportClientConfiguration {
             AppRegisterReporter appReporter = AppRegisterReporter.getInstance();
             appReporter.setSyncClient(syncClient);
             appReporter.setApplicationName(appName);
+            appReporter.setHost(reportProperties.getInfo().getHost());
             appReporter.setActiveProfiles(environment.getActiveProfiles());
             appReporter.setServerPort(serverPort);
             appReporter.setContextPath(contextPath);
