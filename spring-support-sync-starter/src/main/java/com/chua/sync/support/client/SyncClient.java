@@ -172,7 +172,7 @@ public class SyncClient implements InitializingBean, DisposableBean {
 
             clientInfo = ClientInfo.builder()
                     // 应用基本信息
-                    .clientAppName(clientConfig.getAppName())
+                    .clientApplicationName(clientConfig.getAppName())
                     .clientInstanceId(instanceId)
                     .clientContextPath(contextPath)
                     .clientUrl(serviceUrl)
@@ -204,7 +204,7 @@ public class SyncClient implements InitializingBean, DisposableBean {
                     .build();
 
             log.info("[Sync客户端] 客户端信息初始化: app={}, ip={}, port={}, clientUrl={}",
-                    clientInfo.getClientAppName(), clientInfo.getClientIpAddress(), clientInfo.getClientPort(), serviceUrl);
+                    clientInfo.getClientApplicationName(), clientInfo.getClientIpAddress(), clientInfo.getClientPort(), serviceUrl);
         } catch (Exception e) {
             log.error("[Sync客户端] 初始化客户端信息失败", e);
             clientInfo = ClientInfo.builder().clientStartTime(System.currentTimeMillis()).clientOnline(true).build();

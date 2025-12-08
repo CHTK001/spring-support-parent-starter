@@ -32,7 +32,7 @@ public class ClientInfo implements Serializable {
     /**
      * 客户端应用名称
      */
-    private String clientAppName;
+    private String clientApplicationName;
 
     /**
      * 客户端实例ID
