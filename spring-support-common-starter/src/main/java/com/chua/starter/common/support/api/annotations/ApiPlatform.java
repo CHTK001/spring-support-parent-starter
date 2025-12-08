@@ -3,9 +3,15 @@ package com.chua.starter.common.support.api.annotations;
 import java.lang.annotation.*;
 
 /**
- * API平台控制注解
+ * API 平台控制注解
  * <p>
- * 用于控制API接口在不同平台下的可用性，实现平台级别的接口隔离。
+ * 用于控制 API 接口在不同平台下的可用性，实现平台级别的接口隔离。
+ * </p>
+ *
+ * <h3>处理优先级：6</h3>
+ * <p>
+ * 在映射注册阶段处理，启动时根据平台类型决定接口是否注册。
+ * 处理阶段：映射注册阶段（应用启动时）。
  * </p>
  *
  * <h3>使用场景</h3>

@@ -6,8 +6,10 @@ import com.chua.report.client.starter.properties.ReportProperties;
 import com.chua.report.client.starter.report.AppRegisterReporter;
 import com.chua.report.client.starter.report.DeviceMetricsReporter;
 import com.chua.report.client.starter.sync.MonitorTopics;
+import com.chua.report.client.starter.sync.handler.ApiFeatureHandler;
 import com.chua.report.client.starter.sync.handler.FileHandler;
 import com.chua.report.client.starter.sync.handler.JobDispatchHandler;
+import com.chua.starter.common.support.api.feature.ApiFeatureManager;
 import com.chua.sync.support.client.SyncClient;
 import com.chua.sync.support.configuration.SyncAutoConfiguration;
 import jakarta.annotation.PostConstruct;
@@ -17,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -36,7 +39,6 @@ import org.springframework.core.env.Environment;
 @Slf4j
 @AutoConfiguration
 @AutoConfigureAfter(SyncAutoConfiguration.class)
-@RequiredArgsConstructor
 @ConditionalOnClass(SyncClient.class)
 @ConditionalOnBean(SyncClient.class)
 @EnableConfigurationProperties(ReportProperties.class)
@@ -45,6 +47,16 @@ public class ReportClientConfiguration {
     private final SyncClient syncClient;
     private final Environment environment;
     private final ReportProperties reportProperties;
+    private final ObjectProvider<ApiFeatureManager> featureManagerProvider;
+
+    public ReportClientConfiguration(SyncClient syncClient, Environment environment,
+                                      ReportProperties reportProperties,
+                                      ObjectProvider<ApiFeatureManager> featureManagerProvider) {
+        this.syncClient = syncClient;
+        this.environment = environment;
+        this.reportProperties = reportProperties;
+        this.featureManagerProvider = featureManagerProvider;
+    }
 
     @Value("${spring.application.name:unknown}")
     private String appName;
@@ -79,6 +91,15 @@ public class ReportClientConfiguration {
         // 注册 File 处理器
         FileHandler fileHandler = new FileHandler();
         syncClient.registerHandler(MonitorTopics.FILE_REQUEST, fileHandler);
+
+        // 注册 API Feature 处理器（如果可用）
+        ApiFeatureManager featureManager = featureManagerProvider.getIfAvailable();
+        if (featureManager != null) {
+            syncClient.subscribe(MonitorTopics.API_FEATURE_CONTROL);
+            ApiFeatureHandler apiFeatureHandler = new ApiFeatureHandler(featureManager);
+            syncClient.registerHandler(MonitorTopics.API_FEATURE_CONTROL, apiFeatureHandler);
+            log.info("[ReportClient] 已注册 API 功能开关处理器");
+        }
 
         // 启动应用信息上报
         if (reportProperties.getAppReport().isEnabled()) {

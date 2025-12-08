@@ -235,6 +235,68 @@ public class SyncServer implements InitializingBean, DisposableBean {
     }
 
     /**
+     * 向指定节点发送消息（通过 IP 和端口定位）
+     *
+     * @param host  目标 IP 地址
+     * @param port  目标端口
+     * @param topic 消息主题
+     * @param data  消息数据
+     * @return 是否发送成功
+     */
+    public boolean publish(String host, int port, String topic, Object data) {
+        String clientId = findClientId(host, port, null);
+        if (clientId != null) {
+            send(clientId, topic, data);
+            log.debug("[SyncServer] 向节点 {}:{} 发送消息, topic={}", host, port, topic);
+            return true;
+        }
+        log.warn("[SyncServer] 未找到节点: {}:{}", host, port);
+        return false;
+    }
+
+    /**
+     * 向指定节点发送消息（通过应用名定位）
+     *
+     * @param appName 应用名称
+     * @param topic   消息主题
+     * @param data    消息数据
+     * @return 发送成功的客户端数量
+     */
+    public int publishByAppName(String appName, String topic, Object data) {
+        List<String> clientIds = findClientIdsByAppName(appName);
+        if (clientIds.isEmpty()) {
+            log.warn("[SyncServer] 未找到应用: {}", appName);
+            return 0;
+        }
+        for (String clientId : clientIds) {
+            send(clientId, topic, data);
+        }
+        log.debug("[SyncServer] 向应用 {} 的 {} 个节点发送消息, topic={}", appName, clientIds.size(), topic);
+        return clientIds.size();
+    }
+
+    /**
+     * 向指定节点发送消息（通过 IP、端口和应用名定位）
+     *
+     * @param host    目标 IP 地址
+     * @param port    目标端口（<=0 时忽略）
+     * @param appName 应用名称（null 时忽略）
+     * @param topic   消息主题
+     * @param data    消息数据
+     * @return 是否发送成功
+     */
+    public boolean publish(String host, int port, String appName, String topic, Object data) {
+        String clientId = findClientId(host, port, appName);
+        if (clientId != null) {
+            send(clientId, topic, data);
+            log.debug("[SyncServer] 向节点 {}:{}({}) 发送消息, topic={}", host, port, appName, topic);
+            return true;
+        }
+        log.warn("[SyncServer] 未找到节点: {}:{}({})", host, port, appName);
+        return false;
+    }
+
+    /**
      * 获取指定实例
      */
     public SyncServerInstance getInstance(String name) {
