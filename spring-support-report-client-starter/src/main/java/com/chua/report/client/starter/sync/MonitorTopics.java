@@ -25,4 +25,8 @@ public interface MonitorTopics {
     // ==================== App Report ====================
     /** 应用信息上报（定时） */
     String APP_REPORT = "monitor/app/report";
+
+    // ==================== API Control ====================
+    /** API 功能开关控制 */
+    String API_FEATURE_CONTROL = "monitor/control/api-feature";
 }

@@ -3,9 +3,15 @@ package com.chua.starter.common.support.api.annotations;
 import java.lang.annotation.*;
 
 /**
- * API版本控制注解
+ * API 版本控制注解
  * <p>
- * 用于实现API接口的版本管理，支持多版本API并行运行。
+ * 用于实现 API 接口的版本管理，支持多版本 API 并行运行。
+ * </p>
+ *
+ * <h3>处理优先级：7（最低）</h3>
+ * <p>
+ * 在映射注册阶段处理，启动时为接口添加版本号路径前缀。
+ * 处理阶段：映射注册阶段（应用启动时）。
  * </p>
  *
  * <h3>使用场景</h3>
