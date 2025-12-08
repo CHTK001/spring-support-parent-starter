@@ -172,42 +172,42 @@ public class SyncClient implements InitializingBean, DisposableBean {
 
             clientInfo = ClientInfo.builder()
                     // 应用基本信息
-                    .appName(clientConfig.getAppName())
-                    .instanceId(instanceId)
-                    .contextPath(contextPath)
-                    .serviceUrl(serviceUrl)
+                    .clientAppName(clientConfig.getAppName())
+                    .clientInstanceId(instanceId)
+                    .clientContextPath(contextPath)
+                    .clientUrl(serviceUrl)
                     // 网络信息
-                    .ipAddress(ipAddress)
-                    .port(port)
-                    .hostname(localHost.getHostName())
+                    .clientIpAddress(ipAddress)
+                    .clientPort(port)
+                    .clientHostname(localHost.getHostName())
                     // 操作系统信息
-                    .osName(System.getProperty("os.name"))
-                    .osVersion(System.getProperty("os.version"))
-                    .osArch(System.getProperty("os.arch"))
+                    .clientOsName(System.getProperty("os.name"))
+                    .clientOsVersion(System.getProperty("os.version"))
+                    .clientOsArch(System.getProperty("os.arch"))
                     // JVM 信息
-                    .javaVersion(System.getProperty("java.version"))
-                    .jvmName(runtimeBean.getVmName())
-                    .jvmVersion(runtimeBean.getVmVersion())
-                    .pid(runtimeBean.getPid())
+                    .clientJavaVersion(System.getProperty("java.version"))
+                    .clientJvmName(runtimeBean.getVmName())
+                    .clientJvmVersion(runtimeBean.getVmVersion())
+                    .clientPid(runtimeBean.getPid())
                     // 系统资源
-                    .cpuCores(runtime.availableProcessors())
-                    .totalMemory(runtime.maxMemory())
-                    .heapUsed(runtime.totalMemory() - runtime.freeMemory())
-                    .heapMax(runtime.maxMemory())
-                    .threadCount(Thread.activeCount())
+                    .clientCpuCores(runtime.availableProcessors())
+                    .clientTotalMemory(runtime.maxMemory())
+                    .clientHeapUsed(runtime.totalMemory() - runtime.freeMemory())
+                    .clientHeapMax(runtime.maxMemory())
+                    .clientThreadCount(Thread.activeCount())
                     // 时间信息
-                    .startTime(System.currentTimeMillis())
-                    .online(true)
+                    .clientStartTime(System.currentTimeMillis())
+                    .clientOnline(true)
                     // 扩展信息
-                    .metadata(clientConfig.getMetadata())
-                    .capabilities(clientConfig.getCapabilities())
+                    .clientMetadata(clientConfig.getMetadata())
+                    .clientCapabilities(clientConfig.getCapabilities())
                     .build();
 
-            log.info("[Sync客户端] 客户端信息初始化: app={}, ip={}, port={}, serviceUrl={}",
-                    clientInfo.getAppName(), clientInfo.getIpAddress(), clientInfo.getPort(), serviceUrl);
+            log.info("[Sync客户端] 客户端信息初始化: app={}, ip={}, port={}, clientUrl={}",
+                    clientInfo.getClientAppName(), clientInfo.getClientIpAddress(), clientInfo.getClientPort(), serviceUrl);
         } catch (Exception e) {
             log.error("[Sync客户端] 初始化客户端信息失败", e);
-            clientInfo = ClientInfo.builder().startTime(System.currentTimeMillis()).online(true).build();
+            clientInfo = ClientInfo.builder().clientStartTime(System.currentTimeMillis()).clientOnline(true).build();
         }
     }
 
@@ -314,7 +314,7 @@ public class SyncClient implements InitializingBean, DisposableBean {
      */
     public void register() {
         if (!connected.get()) return;
-        clientInfo.setRegisterTime(System.currentTimeMillis());
+        clientInfo.setClientRegisterTime(System.currentTimeMillis());
         publish(syncProperties.getClient().getRegisterTopic(), clientInfo);
         log.info("[Sync客户端] 发送注册消息: clientId={}", clientInfo.getClientId());
     }
@@ -329,7 +329,7 @@ public class SyncClient implements InitializingBean, DisposableBean {
         heartbeat.put("timestamp", System.currentTimeMillis());
         heartbeat.put("online", true);
         publish(syncProperties.getClient().getHeartbeatTopic(), heartbeat);
-        clientInfo.setLastHeartbeatTime(System.currentTimeMillis());
+        clientInfo.setClientLastHeartbeatTime(System.currentTimeMillis());
     }
 
     /**

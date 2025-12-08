@@ -359,41 +359,40 @@ public class SyncServerInstance {
                 ClientInfo clientInfo = ClientInfo.builder()
                         .clientId(sessionId)
                         // 兼容 appName 和 applicationName
-                        .appName(MapUtils.getString(map, "appName", MapUtils.getString(map, "applicationName")))
-                        .instanceId(MapUtils.getString(map, "instanceId"))
-                        .ipAddress(MapUtils.getString(map, "ipAddress"))
+                        .clientAppName(MapUtils.getString(map, "appName", MapUtils.getString(map, "applicationName")))
+                        .clientInstanceId(MapUtils.getString(map, "instanceId"))
+                        .clientIpAddress(MapUtils.getString(map, "ipAddress"))
                         // 兼容 port 和 serverPort
-                        .port(MapUtils.getIntValue(map, "port", MapUtils.getIntValue(map, "serverPort", 0)))
-                        .serverPort(MapUtils.getIntValue(map, "serverPort", MapUtils.getIntValue(map, "port", 0)))
-                        .hostname(MapUtils.getString(map, "hostname"))
-                        .osName(MapUtils.getString(map, "osName"))
-                        .osVersion(MapUtils.getString(map, "osVersion"))
-                        .osArch(MapUtils.getString(map, "osArch"))
-                        .javaVersion(MapUtils.getString(map, "javaVersion"))
-                        .jvmName(MapUtils.getString(map, "jvmName"))
-                        .jvmVersion(MapUtils.getString(map, "jvmVersion"))
-                        .pid(MapUtils.getLongValue(map, "pid", 0))
-                        .cpuCores(MapUtils.getIntValue(map, "cpuCores", 0))
-                        .totalMemory(MapUtils.getLongValue(map, "totalMemory", 0))
-                        .heapUsed(MapUtils.getLongValue(map, "heapUsed", 0))
-                        .heapMax(MapUtils.getLongValue(map, "heapMax", 0))
-                        .threadCount(MapUtils.getIntValue(map, "threadCount", 0))
-                        .startTime(MapUtils.getLongValue(map, "startTime", 0))
-                        .uptime(MapUtils.getLongValue(map, "uptime", 0))
-                        .contextPath(MapUtils.getString(map, "contextPath"))
-                        .serviceUrl(MapUtils.getString(map, "serviceUrl"))
-                        .activeProfiles(MapUtils.getString(map, "activeProfiles"))
-                        .registerTime(System.currentTimeMillis())
-                        .lastHeartbeatTime(System.currentTimeMillis())
-                        .online(true)
-                        .metadata((Map<String, Object>) map.get("metadata"))
-                        .capabilities((String[]) ((List) map.get("capabilities")).toArray(EMPTY_STRING_ARRAY))
+                        .clientPort(MapUtils.getIntValue(map, "port", MapUtils.getIntValue(map, "serverPort", 0)))
+                        .clientHostname(MapUtils.getString(map, "hostname"))
+                        .clientOsName(MapUtils.getString(map, "osName"))
+                        .clientOsVersion(MapUtils.getString(map, "osVersion"))
+                        .clientOsArch(MapUtils.getString(map, "osArch"))
+                        .clientJavaVersion(MapUtils.getString(map, "javaVersion"))
+                        .clientJvmName(MapUtils.getString(map, "jvmName"))
+                        .clientJvmVersion(MapUtils.getString(map, "jvmVersion"))
+                        .clientPid(MapUtils.getLongValue(map, "pid", 0))
+                        .clientCpuCores(MapUtils.getIntValue(map, "cpuCores", 0))
+                        .clientTotalMemory(MapUtils.getLongValue(map, "totalMemory", 0))
+                        .clientHeapUsed(MapUtils.getLongValue(map, "heapUsed", 0))
+                        .clientHeapMax(MapUtils.getLongValue(map, "heapMax", 0))
+                        .clientThreadCount(MapUtils.getIntValue(map, "threadCount", 0))
+                        .clientStartTime(MapUtils.getLongValue(map, "startTime", 0))
+                        .clientUptime(MapUtils.getLongValue(map, "uptime", 0))
+                        .clientContextPath(MapUtils.getString(map, "contextPath"))
+                        .clientUrl(MapUtils.getString(map, "serviceUrl"))
+                        .clientActiveProfiles(MapUtils.getString(map, "activeProfiles"))
+                        .clientRegisterTime(System.currentTimeMillis())
+                        .clientLastHeartbeatTime(System.currentTimeMillis())
+                        .clientOnline(true)
+                        .clientMetadata((Map<String, Object>) map.get("metadata"))
+                        .clientCapabilities((String[]) ((List) map.get("capabilities")).toArray(EMPTY_STRING_ARRAY))
                         .build();
 
                 clientInfoMap.put(sessionId, clientInfo);
                 log.info("[SyncServer:{}] 客户端注册: sessionId={}, app={}, ip={}:{}",
-                        instanceConfig.getName(), sessionId, clientInfo.getAppName(),
-                        clientInfo.getIpAddress(), clientInfo.getPort());
+                        instanceConfig.getName(), sessionId, clientInfo.getClientAppName(),
+                        clientInfo.getClientIpAddress(), clientInfo.getClientPort());
 
                 // 通知监听器
                 for (BiConsumer<String, ClientInfo> listener : connectListeners) {
@@ -412,15 +411,15 @@ public class SyncServerInstance {
         private void handleClientHeartbeat(String sessionId, Object data) {
             ClientInfo clientInfo = clientInfoMap.get(sessionId);
             if (clientInfo != null) {
-                clientInfo.setLastHeartbeatTime(System.currentTimeMillis());
-                clientInfo.setOnline(true);
+                clientInfo.setClientLastHeartbeatTime(System.currentTimeMillis());
+                clientInfo.setClientOnline(true);
             }
         }
 
         private void handleClientOffline(String sessionId, Object data) {
             ClientInfo clientInfo = clientInfoMap.get(sessionId);
             if (clientInfo != null) {
-                clientInfo.setOnline(false);
+                clientInfo.setClientOnline(false);
             }
         }
     }
