@@ -3,7 +3,9 @@ package com.chua.report.client.starter.report;
 import com.chua.oshi.support.*;
 import com.chua.report.client.starter.sync.MonitorTopics;
 import com.chua.sync.support.client.SyncClient;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.HashMap;
 import java.util.List;
@@ -27,12 +29,17 @@ public class DeviceMetricsReporter {
 
     private static final DeviceMetricsReporter INSTANCE = new DeviceMetricsReporter();
 
+    @Setter
     private SyncClient syncClient;
+    @Setter
     private String appName;
+    @Setter
+    private String host;
     private ScheduledExecutorService scheduler;
     private volatile boolean running = false;
 
     // 上报间隔（秒）
+    @Setter
     private long intervalSeconds = 30;
 
     private DeviceMetricsReporter() {
@@ -40,18 +47,6 @@ public class DeviceMetricsReporter {
 
     public static DeviceMetricsReporter getInstance() {
         return INSTANCE;
-    }
-
-    public void setSyncClient(SyncClient syncClient) {
-        this.syncClient = syncClient;
-    }
-
-    public void setAppName(String appName) {
-        this.appName = appName;
-    }
-
-    public void setIntervalSeconds(long intervalSeconds) {
-        this.intervalSeconds = intervalSeconds;
     }
 
     /**
@@ -132,7 +127,7 @@ public class DeviceMetricsReporter {
         Map<String, Object> info = new HashMap<>();
         try {
             Sys sys = Oshi.newSys();
-            info.put("ipAddress", sys.getComputerIp());
+            info.put("ipAddress", StringUtils.defaultIfBlank(host, sys.getComputerIp()));
             info.put("osName", sys.getOsName());
             info.put("osVersion", System.getProperty("os.version"));
             info.put("osArch", sys.getOsArch());
