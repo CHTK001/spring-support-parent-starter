@@ -58,11 +58,6 @@ public class SyncServer implements InitializingBean, DisposableBean {
     private final Map<String, ClientInfo> allClientsInternal = new ConcurrentHashMap<>();
 
     /**
-     * 调度器
-     */
-    private ScheduledExecutorService scheduler;
-
-    /**
      * 消息处理器
      */
     private final List<SyncMessageHandler> handlers = new CopyOnWriteArrayList<>();
@@ -428,43 +423,8 @@ public class SyncServer implements InitializingBean, DisposableBean {
         return new HashMap<>(allClientsInternal);
     }
 
-    /**
-     * 启动调度器
-     */
-    private void startScheduler() {
-        SyncProperties.ScheduleConfig schedule = syncProperties.getServer().getSchedule();
-        if (!schedule.isEnable()) {
-            return;
-        }
-
-        scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread t = new Thread(r, "sync-server-scheduler");
-            t.setDaemon(true);
-            return t;
-        });
-
-        scheduler.scheduleAtFixedRate(
-                this::scheduledTask,
-                schedule.getInitialDelay(),
-                schedule.getInterval(),
-                TimeUnit.SECONDS);
-
-        log.info("[SyncServer] 调度器启动，间隔: {}秒", schedule.getInterval());
-    }
-
-    /**
-     * 定时任务
-     */
-    protected void scheduledTask() {
-        log.debug("[SyncServer] 执行定时任务, 当前连接数: {}", getConnectionCount());
-    }
-
     @Override
     public void destroy() throws Exception {
-        if (scheduler != null) {
-            scheduler.shutdown();
-        }
-
         for (SyncServerInstance instance : instances.values()) {
             instance.stop();
         }
@@ -472,26 +432,5 @@ public class SyncServer implements InitializingBean, DisposableBean {
         allClientsInternal.clear();
 
         log.info("[SyncServer] 已停止所有服务实例");
-    }
-
-    // ==================== 兼容旧版本方法 ====================
-
-    /**
-     * @deprecated 使用 getDefaultInstance().getProtocolServer()
-     */
-    @Deprecated
-    public Object getProtocolServer() {
-        SyncServerInstance defaultInstance = getDefaultInstance();
-        return defaultInstance != null ? defaultInstance.getProtocolServer() : null;
-    }
-
-    /**
-     * @deprecated 使用 broadcast(excludeSessionId, topic, data) 并排除
-     */
-    @Deprecated
-    public void broadcastToOthers(String excludeSessionId, String topic, Object data) {
-        for (SyncServerInstance instance : instances.values()) {
-            instance.broadcastToOthers(excludeSessionId, topic, data);
-        }
     }
 }
