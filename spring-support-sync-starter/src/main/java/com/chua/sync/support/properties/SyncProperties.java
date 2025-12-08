@@ -96,11 +96,6 @@ public class SyncProperties {
         private int connectTimeout = 10000;
 
         /**
-         * 定时任务配置
-         */
-        private ScheduleConfig schedule = new ScheduleConfig();
-
-        /**
          * 获取所有服务实例配置
          * 如果没有配置 instances，则返回默认配置
          */
@@ -178,11 +173,6 @@ public class SyncProperties {
         private String instanceId;
 
         /**
-         * 应用端口
-         */
-        private int port = 8080;
-
-        /**
          * 客户端 IP 地址
          * <p>
          * 多网卡场景下指定使用的 IP 地址，为空则自动获取
@@ -227,16 +217,6 @@ public class SyncProperties {
         private int connectTimeout = 10000;
 
         /**
-         * 重连间隔（秒）
-         */
-        private int reconnectInterval = 5;
-
-        /**
-         * 最大重连次数，-1表示无限重连
-         */
-        private int maxReconnectAttempts = -1;
-
-        /**
          * 支持的功能列表
          */
         private String[] capabilities = new String[]{"job", "actuator", "file", "log"};
@@ -267,11 +247,6 @@ public class SyncProperties {
         private String offlineTopic = "sync/client/offline";
 
         /**
-         * 定时任务配置
-         */
-        private ScheduleConfig schedule = new ScheduleConfig();
-
-        /**
          * 获取有效的服务端地址
          */
         public String getEffectiveServerAddress() {
@@ -282,34 +257,14 @@ public class SyncProperties {
         }
     }
 
-    // ==================== 通用配置 ====================
-
-    /**
-     * 定时任务配置
-     */
-    @Data
-    public static class ScheduleConfig {
-
-        /**
-         * 是否启用
-         */
-        private boolean enable = false;
-
-        /**
-         * 间隔时间（秒）
-         */
-        private int interval = 300;
-
-        /**
-         * 初始延迟时间（秒）
-         */
-        private int initialDelay = 60;
-    }
-
     // ==================== 便捷方法 ====================
 
     /**
      * 是否启用服务端
+     *
+     * @return 是否启用
+     * @author CH
+     * @since 1.0.0
      */
     public boolean isServerEnabled() {
         return ("server".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type))
@@ -318,83 +273,13 @@ public class SyncProperties {
 
     /**
      * 是否启用客户端
+     *
+     * @return 是否启用
+     * @author CH
+     * @since 1.0.0
      */
     public boolean isClientEnabled() {
         return ("client".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type))
                 && client.isEnable();
-    }
-
-    // ==================== 兼容旧配置 ====================
-
-    /**
-     * @deprecated 使用 server.host
-     */
-    @Deprecated
-    public String getServerHost() {
-        return server.getHost();
-    }
-
-    /**
-     * @deprecated 使用 server.port
-     */
-    @Deprecated
-    public int getServerPort() {
-        return server.getPort();
-    }
-
-    /**
-     * @deprecated 使用 client.serverAddress
-     */
-    @Deprecated
-    public String getServerAddress() {
-        return client.getEffectiveServerAddress();
-    }
-
-    /**
-     * @deprecated 使用 client.heartbeat
-     */
-    @Deprecated
-    public boolean isHeartbeat() {
-        return client.isHeartbeat();
-    }
-
-    /**
-     * @deprecated 使用 client.heartbeatInterval
-     */
-    @Deprecated
-    public int getHeartbeatInterval() {
-        return client.getHeartbeatInterval();
-    }
-
-    /**
-     * @deprecated 使用 client.connectTimeout
-     */
-    @Deprecated
-    public int getConnectTimeout() {
-        return client.getConnectTimeout();
-    }
-
-    /**
-     * @deprecated 使用 client.reconnectInterval
-     */
-    @Deprecated
-    public int getReconnectInterval() {
-        return client.getReconnectInterval();
-    }
-
-    /**
-     * @deprecated 使用 client.maxReconnectAttempts
-     */
-    @Deprecated
-    public int getMaxReconnectAttempts() {
-        return client.getMaxReconnectAttempts();
-    }
-
-    /**
-     * @deprecated 使用 client.schedule
-     */
-    @Deprecated
-    public ScheduleConfig getScheduleSync() {
-        return client.getSchedule();
     }
 }
