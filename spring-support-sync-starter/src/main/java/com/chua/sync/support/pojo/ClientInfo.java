@@ -14,6 +14,7 @@ import java.util.Map;
  * @author CH
  * @version 1.0.0
  * @since 2024/12/05
+ * @since 2025/12/08 重构字段命名，所有字段统一以 client 前缀命名
  */
 @Data
 @Builder
@@ -29,142 +30,137 @@ public class ClientInfo implements Serializable {
     private String clientId;
 
     /**
-     * 应用名称
+     * 客户端应用名称
      */
-    private String appName;
+    private String clientAppName;
 
     /**
-     * 实例ID
+     * 客户端实例ID
      */
-    private String instanceId;
+    private String clientInstanceId;
 
     /**
-     * IP地址
+     * 客户端IP地址
      */
-    private String ipAddress;
+    private String clientIpAddress;
 
     /**
-     * 端口
+     * 客户端端口
      */
-    private int port;
+    private int clientPort;
 
     /**
-     * 服务端口 (Spring server.port)
+     * 客户端激活的 profile
      */
-    private int serverPort;
+    private String clientActiveProfiles;
 
     /**
-     * 激活的 profile
+     * 客户端上下文路径
      */
-    private String activeProfiles;
+    private String clientContextPath;
 
     /**
-     * 上下文路径
+     * 客户端服务地址 (http://ip:port/contextPath)
      */
-    private String contextPath;
+    private String clientUrl;
 
     /**
-     * 服务地址 (http://ip:port/contextPath)
+     * 客户端进程ID
      */
-    private String serviceUrl;
+    private long clientPid;
 
     /**
-     * 进程ID
+     * 客户端操作系统
      */
-    private long pid;
+    private String clientOsName;
 
     /**
-     * 操作系统
+     * 客户端操作系统版本
      */
-    private String osName;
+    private String clientOsVersion;
 
     /**
-     * 操作系统版本
+     * 客户端操作系统架构
      */
-    private String osVersion;
+    private String clientOsArch;
 
     /**
-     * 操作系统架构
+     * 客户端主机名
      */
-    private String osArch;
+    private String clientHostname;
 
     /**
-     * 主机名
+     * 客户端Java版本
      */
-    private String hostname;
+    private String clientJavaVersion;
 
     /**
-     * Java版本
+     * 客户端JVM名称
      */
-    private String javaVersion;
+    private String clientJvmName;
 
     /**
-     * JVM名称
+     * 客户端JVM版本
      */
-    private String jvmName;
+    private String clientJvmVersion;
 
     /**
-     * JVM版本
+     * 客户端CPU核心数
      */
-    private String jvmVersion;
+    private int clientCpuCores;
 
     /**
-     * CPU核心数
+     * 客户端总内存
      */
-    private int cpuCores;
+    private long clientTotalMemory;
 
     /**
-     * 总内存
+     * 客户端已使用堆内存
      */
-    private long totalMemory;
+    private long clientHeapUsed;
 
     /**
-     * 已使用堆内存
+     * 客户端最大堆内存
      */
-    private long heapUsed;
+    private long clientHeapMax;
 
     /**
-     * 最大堆内存
+     * 客户端线程数
      */
-    private long heapMax;
+    private int clientThreadCount;
 
     /**
-     * 线程数
+     * 客户端启动时间
      */
-    private int threadCount;
+    private long clientStartTime;
 
     /**
-     * 启动时间
+     * 客户端运行时长（毫秒）
      */
-    private long startTime;
+    private long clientUptime;
 
     /**
-     * 运行时长（毫秒）
+     * 客户端注册时间
      */
-    private long uptime;
+    private long clientRegisterTime;
 
     /**
-     * 注册时间
+     * 客户端最后心跳时间
      */
-    private long registerTime;
+    private long clientLastHeartbeatTime;
 
     /**
-     * 最后心跳时间
+     * 客户端是否在线
      */
-    private long lastHeartbeatTime;
+    private boolean clientOnline;
 
     /**
-     * 是否在线
+     * 客户端扩展元数据
      */
-    private boolean online;
+    private Map<String, Object> clientMetadata;
 
     /**
-     * 扩展元数据
+     * 客户端支持的功能
      */
-    private Map<String, Object> metadata;
-
-    /**
-     * 支持的功能
-     */
-    private String[] capabilities;
+    private String[] clientCapabilities;
 }

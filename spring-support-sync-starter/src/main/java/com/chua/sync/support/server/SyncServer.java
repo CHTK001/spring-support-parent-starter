@@ -330,14 +330,14 @@ public class SyncServer implements InitializingBean, DisposableBean {
             ClientInfo clientInfo = entry.getValue();
             
             // 通过 IP 和端口匹配
-            if (host != null && host.equals(clientInfo.getIpAddress())) {
-                if (port <= 0 || port == clientInfo.getPort()) {
+            if (host != null && host.equals(clientInfo.getClientIpAddress())) {
+                if (port <= 0 || port == clientInfo.getClientPort()) {
                     return entry.getKey();
                 }
             }
             
             // 通过应用名匹配
-            if (appName != null && appName.equals(clientInfo.getAppName())) {
+            if (appName != null && appName.equals(clientInfo.getClientAppName())) {
                 return entry.getKey();
             }
         }
@@ -353,7 +353,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
     public List<String> findClientIdsByAppName(String appName) {
         List<String> result = new ArrayList<>();
         for (Map.Entry<String, ClientInfo> entry : allClientsInternal.entrySet()) {
-            if (appName.equals(entry.getValue().getAppName())) {
+            if (appName.equals(entry.getValue().getClientAppName())) {
                 result.add(entry.getKey());
             }
         }
@@ -369,7 +369,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
     public List<String> findClientIdsByHost(String host) {
         List<String> result = new ArrayList<>();
         for (Map.Entry<String, ClientInfo> entry : allClientsInternal.entrySet()) {
-            if (host.equals(entry.getValue().getIpAddress())) {
+            if (host.equals(entry.getValue().getClientIpAddress())) {
                 result.add(entry.getKey());
             }
         }
@@ -400,18 +400,17 @@ public class SyncServer implements InitializingBean, DisposableBean {
             return new HashMap<>();
         }
         
-        // 根据 IP + 服务端口去重，保留最新心跳时间的客户端
+        // 根据 IP + 端口去重，保留最新心跳时间的客户端
         return allClientsInternal.values().stream()
                 .collect(Collectors.collectingAndThen(
                         Collectors.toMap(
-                                // 使用 IP:服务端口 作为去重 key（优先使用 serverPort，其次使用 port）
-                                client -> client.getIpAddress() + ":" + 
-                                        (client.getServerPort() > 0 ? client.getServerPort() : client.getPort()),
+                                // 使用 IP:端口 作为去重 key
+                                client -> client.getClientIpAddress() + ":" + client.getClientPort(),
                                 client -> client,
                                 // 如果有重复，保留最新心跳时间的客户端
                                 (existing, replacement) -> {
-                                    long existingTime = existing.getLastHeartbeatTime();
-                                    long replacementTime = replacement.getLastHeartbeatTime();
+                                    long existingTime = existing.getClientLastHeartbeatTime();
+                                    long replacementTime = replacement.getClientLastHeartbeatTime();
                                     return replacementTime > existingTime ? replacement : existing;
                                 },
                                 LinkedHashMap::new
