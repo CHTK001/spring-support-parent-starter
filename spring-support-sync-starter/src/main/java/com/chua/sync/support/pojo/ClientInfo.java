@@ -10,11 +10,12 @@ import java.util.Map;
 
 /**
  * 客户端信息
+ * <p>核心字段直接存储，详细的 JVM/OS 信息可通过 clientMetadata 扩展</p>
  *
  * @author CH
  * @version 1.0.0
  * @since 2024/12/05
- * @since 2025/12/08 重构字段命名，所有字段统一以 client 前缀命名
+ * @since 2025/12/08 重构字段命名，所有字段统一以 client 前缀命名；精简字段，详细信息放入 metadata
  */
 @Data
 @Builder
@@ -40,21 +41,6 @@ public class ClientInfo implements Serializable {
     private String clientInstanceId;
 
     /**
-     * 客户端IP地址
-     */
-    private String clientIpAddress;
-
-    /**
-     * 客户端端口
-     */
-    private int clientPort;
-
-    /**
-     * 客户端激活的 profile
-     */
-    private String clientActiveProfiles;
-
-    /**
      * 客户端上下文路径
      */
     private String clientContextPath;
@@ -65,24 +51,14 @@ public class ClientInfo implements Serializable {
     private String clientUrl;
 
     /**
-     * 客户端进程ID
+     * 客户端IP地址
      */
-    private long clientPid;
+    private String clientIpAddress;
 
     /**
-     * 客户端操作系统
+     * 客户端端口
      */
-    private String clientOsName;
-
-    /**
-     * 客户端操作系统版本
-     */
-    private String clientOsVersion;
-
-    /**
-     * 客户端操作系统架构
-     */
-    private String clientOsArch;
+    private int clientPort;
 
     /**
      * 客户端主机名
@@ -90,47 +66,22 @@ public class ClientInfo implements Serializable {
     private String clientHostname;
 
     /**
+     * 客户端操作系统
+     */
+    private String clientOsName;
+
+    /**
      * 客户端Java版本
      */
     private String clientJavaVersion;
 
     /**
-     * 客户端JVM名称
+     * 客户端进程ID
      */
-    private String clientJvmName;
+    private long clientPid;
 
     /**
-     * 客户端JVM版本
-     */
-    private String clientJvmVersion;
-
-    /**
-     * 客户端CPU核心数
-     */
-    private int clientCpuCores;
-
-    /**
-     * 客户端总内存
-     */
-    private long clientTotalMemory;
-
-    /**
-     * 客户端已使用堆内存
-     */
-    private long clientHeapUsed;
-
-    /**
-     * 客户端最大堆内存
-     */
-    private long clientHeapMax;
-
-    /**
-     * 客户端线程数
-     */
-    private int clientThreadCount;
-
-    /**
-     * 客户端启动时间
+     * 客户端启动时间（毫秒时间戳）
      */
     private long clientStartTime;
 
@@ -140,12 +91,12 @@ public class ClientInfo implements Serializable {
     private long clientUptime;
 
     /**
-     * 客户端注册时间
+     * 客户端注册时间（毫秒时间戳）
      */
     private long clientRegisterTime;
 
     /**
-     * 客户端最后心跳时间
+     * 客户端最后心跳时间（毫秒时间戳）
      */
     private long clientLastHeartbeatTime;
 
@@ -156,6 +107,7 @@ public class ClientInfo implements Serializable {
 
     /**
      * 客户端扩展元数据
+     * <p>可存储详细的系统信息，如: osVersion, osArch, jvmName, cpuCores, totalMemory 等</p>
      */
     private Map<String, Object> clientMetadata;
 

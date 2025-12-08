@@ -170,6 +170,20 @@ public class SyncClient implements InitializingBean, DisposableBean {
             String serviceUrl = String.format("http://%s:%d%s", ipAddress, port,
                     contextPath != null && !contextPath.isEmpty() ? contextPath : "");
 
+            // 构建扩展元数据，存储详细的系统信息
+            Map<String, Object> metadata = clientConfig.getMetadata() != null 
+                    ? new java.util.HashMap<>(clientConfig.getMetadata()) 
+                    : new java.util.HashMap<>();
+            metadata.put("osVersion", System.getProperty("os.version"));
+            metadata.put("osArch", System.getProperty("os.arch"));
+            metadata.put("jvmName", runtimeBean.getVmName());
+            metadata.put("jvmVersion", runtimeBean.getVmVersion());
+            metadata.put("cpuCores", runtime.availableProcessors());
+            metadata.put("totalMemory", runtime.maxMemory());
+            metadata.put("heapUsed", runtime.totalMemory() - runtime.freeMemory());
+            metadata.put("heapMax", runtime.maxMemory());
+            metadata.put("threadCount", Thread.activeCount());
+            
             clientInfo = ClientInfo.builder()
                     // 应用基本信息
                     .clientApplicationName(clientConfig.getAppName())
@@ -180,26 +194,15 @@ public class SyncClient implements InitializingBean, DisposableBean {
                     .clientIpAddress(ipAddress)
                     .clientPort(port)
                     .clientHostname(localHost.getHostName())
-                    // 操作系统信息
+                    // 系统信息（核心）
                     .clientOsName(System.getProperty("os.name"))
-                    .clientOsVersion(System.getProperty("os.version"))
-                    .clientOsArch(System.getProperty("os.arch"))
-                    // JVM 信息
                     .clientJavaVersion(System.getProperty("java.version"))
-                    .clientJvmName(runtimeBean.getVmName())
-                    .clientJvmVersion(runtimeBean.getVmVersion())
                     .clientPid(runtimeBean.getPid())
-                    // 系统资源
-                    .clientCpuCores(runtime.availableProcessors())
-                    .clientTotalMemory(runtime.maxMemory())
-                    .clientHeapUsed(runtime.totalMemory() - runtime.freeMemory())
-                    .clientHeapMax(runtime.maxMemory())
-                    .clientThreadCount(Thread.activeCount())
                     // 时间信息
                     .clientStartTime(System.currentTimeMillis())
                     .clientOnline(true)
                     // 扩展信息
-                    .clientMetadata(clientConfig.getMetadata())
+                    .clientMetadata(metadata)
                     .clientCapabilities(clientConfig.getCapabilities())
                     .build();
 
