@@ -3,9 +3,15 @@ package com.chua.starter.common.support.api.annotations;
 import java.lang.annotation.*;
 
 /**
- * API环境配置注解
+ * API 环境配置注解
  * <p>
- * 用于控制API接口在不同Spring Profile环境下的可用性。
+ * 用于控制 API 接口在不同 Spring Profile 环境下的可用性。
+ * </p>
+ *
+ * <h3>处理优先级：5</h3>
+ * <p>
+ * 在映射注册阶段处理，启动时决定接口是否注册到路由表。
+ * 处理阶段：映射注册阶段（应用启动时）。
  * </p>
  *
  * <h3>使用场景</h3>

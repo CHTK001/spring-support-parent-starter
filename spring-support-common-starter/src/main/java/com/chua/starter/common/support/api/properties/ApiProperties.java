@@ -59,6 +59,21 @@ public class ApiProperties {
     private SpiConfig spi = new SpiConfig();
 
     /**
+     * Mock 配置
+     */
+    private MockConfig mock = new MockConfig();
+
+    /**
+     * 功能开关配置
+     */
+    private FeatureConfig feature = new FeatureConfig();
+
+    /**
+     * 内部接口配置
+     */
+    private InternalConfig internal = new InternalConfig();
+
+    /**
      * 是否启用 API 控制功能（版本或平台）
      *
      * @return 是否启用
@@ -229,6 +244,62 @@ public class ApiProperties {
          * </p>
          */
         private Map<String, String> mapping;
+    }
+
+    /**
+     * Mock 配置
+     */
+    @Data
+    public static class MockConfig {
+
+        /**
+         * 是否开启 Mock 功能
+         */
+        private boolean enable = true;
+
+        /**
+         * Mock 生效的环境（逗号分隔）
+         */
+        private String profiles = "dev,test";
+    }
+
+    /**
+     * 功能开关配置
+     */
+    @Data
+    public static class FeatureConfig {
+
+        /**
+         * 是否开启功能开关
+         */
+        private boolean enable = true;
+
+        /**
+         * 功能开关管理接口路径
+         */
+        private String path = "/api/features";
+    }
+
+    /**
+     * 内部接口配置
+     */
+    @Data
+    public static class InternalConfig {
+
+        /**
+         * 是否开启内部接口控制
+         */
+        private boolean enable = true;
+
+        /**
+         * 全局IP白名单（适用于所有内部接口）
+         */
+        private List<String> globalAllowedIps = Collections.emptyList();
+
+        /**
+         * 全局服务白名单（适用于所有内部接口）
+         */
+        private List<String> globalAllowedServices = Collections.emptyList();
     }
 }
 
