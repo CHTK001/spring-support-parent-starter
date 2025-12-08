@@ -193,6 +193,12 @@ public class SyncProperties {
         private String contextPath = "";
 
         /**
+         * Actuator 端点路径
+         * <p>默认为 /actuator</p>
+         */
+        private String actuatorPath = "/actuator";
+
+        /**
          * 客户端 IP 地址
          * <p>
          * 多网卡场景下指定使用的 IP 地址，为空则自动获取

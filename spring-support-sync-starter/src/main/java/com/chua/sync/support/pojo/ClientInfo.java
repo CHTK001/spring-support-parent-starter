@@ -51,6 +51,11 @@ public class ClientInfo implements Serializable {
     private String clientUrl;
 
     /**
+     * 客户端Actuator地址 (/actuator)
+     */
+    private String clientActuatorPath;
+
+    /**
      * 客户端IP地址
      */
     private String clientIpAddress;
