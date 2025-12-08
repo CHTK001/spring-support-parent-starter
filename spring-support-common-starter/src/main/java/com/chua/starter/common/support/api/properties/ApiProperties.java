@@ -69,6 +69,11 @@ public class ApiProperties {
     private FeatureConfig feature = new FeatureConfig();
 
     /**
+     * 废弃接口配置
+     */
+    private DeprecatedConfig deprecated = new DeprecatedConfig();
+
+    /**
      * 内部接口配置
      */
     private InternalConfig internal = new InternalConfig();
@@ -300,6 +305,23 @@ public class ApiProperties {
          * 全局服务白名单（适用于所有内部接口）
          */
         private List<String> globalAllowedServices = Collections.emptyList();
+    }
+
+    /**
+     * 废弃接口配置
+     */
+    @Data
+    public static class DeprecatedConfig {
+
+        /**
+         * 是否开启废弃接口提示
+         */
+        private boolean enable = true;
+
+        /**
+         * 是否在响应头中添加废弃警告
+         */
+        private boolean addWarningHeader = true;
     }
 }
 
