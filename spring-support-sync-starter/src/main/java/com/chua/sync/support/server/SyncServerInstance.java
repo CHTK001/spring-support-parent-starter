@@ -386,7 +386,7 @@ public class SyncServerInstance {
                         .clientLastHeartbeatTime(System.currentTimeMillis())
                         .clientOnline(true)
                         .clientMetadata((Map<String, Object>) map.get("metadata"))
-                        .clientCapabilities((String[]) ((List) map.get("capabilities")).toArray(EMPTY_STRING_ARRAY))
+                        .clientCapabilities(MapUtils.getStringArray(map, "capabilities"))
                         .build();
 
                 clientInfoMap.put(sessionId, clientInfo);
