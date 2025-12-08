@@ -359,7 +359,7 @@ public class SyncServerInstance {
                 ClientInfo clientInfo = ClientInfo.builder()
                         .clientId(sessionId)
                         // 兼容 appName 和 applicationName
-                        .clientAppName(MapUtils.getString(map, "appName", MapUtils.getString(map, "applicationName")))
+                        .clientApplicationName(MapUtils.getString(map, "appName", MapUtils.getString(map, "applicationName")))
                         .clientInstanceId(MapUtils.getString(map, "instanceId"))
                         .clientIpAddress(MapUtils.getString(map, "ipAddress"))
                         // 兼容 port 和 serverPort
@@ -391,7 +391,7 @@ public class SyncServerInstance {
 
                 clientInfoMap.put(sessionId, clientInfo);
                 log.info("[SyncServer:{}] 客户端注册: sessionId={}, app={}, ip={}:{}",
-                        instanceConfig.getName(), sessionId, clientInfo.getClientAppName(),
+                        instanceConfig.getName(), sessionId, clientInfo.getClientApplicationName(),
                         clientInfo.getClientIpAddress(), clientInfo.getClientPort());
 
                 // 通知监听器
