@@ -337,7 +337,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
             }
             
             // 通过应用名匹配
-            if (appName != null && appName.equals(clientInfo.getClientAppName())) {
+            if (appName != null && appName.equals(clientInfo.getClientApplicationName())) {
                 return entry.getKey();
             }
         }
@@ -353,7 +353,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
     public List<String> findClientIdsByAppName(String appName) {
         List<String> result = new ArrayList<>();
         for (Map.Entry<String, ClientInfo> entry : allClientsInternal.entrySet()) {
-            if (appName.equals(entry.getValue().getClientAppName())) {
+            if (appName.equals(entry.getValue().getClientApplicationName())) {
                 result.add(entry.getKey());
             }
         }
