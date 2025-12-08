@@ -95,7 +95,6 @@ public class SyncServer implements InitializingBean, DisposableBean {
         }
 
         startAllInstances();
-        startScheduler();
     }
 
     /**
