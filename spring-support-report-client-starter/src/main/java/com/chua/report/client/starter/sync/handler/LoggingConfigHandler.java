@@ -42,17 +42,13 @@ public class LoggingConfigHandler implements SyncMessageHandler {
     @Override
     public Object handle(String topic, String sessionId, Map<String, Object> data) {
         String action = getString(data, "action");
-        
-        switch (action) {
-            case "setLevel":
-                return handleSetLevel(data);
-            case "getLoggers":
-                return handleGetLoggers(data);
-            case "getLevel":
-                return handleGetLevel(data);
-            default:
-                return Map.of("code", 400, "message", "Unknown action: " + action);
-        }
+
+        return switch (action) {
+            case "setLevel" -> handleSetLevel(data);
+            case "getLoggers" -> handleGetLoggers(data);
+            case "getLevel" -> handleGetLevel(data);
+            default -> Map.of("code", 400, "message", "Unknown action: " + action);
+        };
     }
 
     /**
