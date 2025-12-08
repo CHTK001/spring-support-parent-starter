@@ -126,6 +126,7 @@ public class ReportClientConfiguration {
             DeviceMetricsReporter reporter = DeviceMetricsReporter.getInstance();
             reporter.setSyncClient(syncClient);
             reporter.setAppName(appName);
+            reporter.setHost(reportProperties.getInfo().getHost());
             reporter.setIntervalSeconds(reportProperties.getMetrics().getInterval());
             reporter.start();
         }
