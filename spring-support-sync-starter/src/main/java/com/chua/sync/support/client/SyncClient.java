@@ -195,6 +195,9 @@ public class SyncClient implements InitializingBean, DisposableBean {
             // 从 Spring Environment 获取应用名称
             String appName = environment.getProperty("spring.application.name", "");
             
+            // 从 Spring Environment 获取激活的环境（profiles）
+            String applicationActive = environment.getProperty("spring.profiles.active", "default");
+            
             // 从 Spring Environment 获取 actuatorPath
             String actuatorPath = environment.getProperty("management.endpoints.web.base-path", "/actuator");
             
@@ -219,6 +222,7 @@ public class SyncClient implements InitializingBean, DisposableBean {
             clientInfo = ClientInfo.builder()
                     // 应用基本信息（从 Spring 获取）
                     .clientApplicationName(appName)
+                    .clientApplicationActive(applicationActive)
                     .clientInstanceId(instanceId)
                     .clientContextPath(contextPath)
                     .clientUrl(serviceUrl)
@@ -239,8 +243,9 @@ public class SyncClient implements InitializingBean, DisposableBean {
                     .clientCapabilities(clientConfig.getCapabilities())
                     .build();
 
-            log.info("[Sync客户端] 客户端信息初始化: app={}, ip={}, port={}, clientUrl={}, actuatorPath={}",
-                    clientInfo.getClientApplicationName(), clientInfo.getClientIpAddress(), clientInfo.getClientPort(), serviceUrl, actuatorPath);
+            log.info("[Sync客户端] 客户端信息初始化: app={}, active={}, ip={}, port={}, clientUrl={}, actuatorPath={}",
+                    clientInfo.getClientApplicationName(), clientInfo.getClientApplicationActive(), 
+                    clientInfo.getClientIpAddress(), clientInfo.getClientPort(), serviceUrl, actuatorPath);
         } catch (Exception e) {
             log.error("[Sync客户端] 初始化客户端信息失败", e);
             clientInfo = ClientInfo.builder().clientStartTime(System.currentTimeMillis()).clientOnline(true).build();
