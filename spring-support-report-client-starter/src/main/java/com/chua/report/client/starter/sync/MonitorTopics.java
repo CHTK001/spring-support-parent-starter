@@ -32,5 +32,5 @@ public interface MonitorTopics {
 
     // ==================== Logging Config ====================
     /** 日志级别配置 */
-    String LOGGING_CONFIG = "monitor/logging/config";
+    String LOGGING_CONFIG = "monitor/control/log-level";
 }
