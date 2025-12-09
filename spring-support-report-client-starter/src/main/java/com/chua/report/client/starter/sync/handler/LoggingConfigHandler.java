@@ -44,7 +44,7 @@ public class LoggingConfigHandler implements SyncMessageHandler {
         String action = getString(data, "action");
 
         return switch (action) {
-            case "setLevel" -> handleSetLevel(data);
+            case "SET_LOG_LEVEL" -> handleSetLevel(data);
             case "getLoggers" -> handleGetLoggers(data);
             case "getLevel" -> handleGetLevel(data);
             default -> Map.of("code", 400, "message", "Unknown action: " + action);
