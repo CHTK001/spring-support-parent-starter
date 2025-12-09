@@ -36,6 +36,11 @@ public class ClientInfo implements Serializable {
     private String clientApplicationName;
 
     /**
+     * 客户端应用环境（如：dev, test, prod）
+     */
+    private String clientApplicationActive;
+
+    /**
      * 客户端实例ID
      */
     private String clientInstanceId;
