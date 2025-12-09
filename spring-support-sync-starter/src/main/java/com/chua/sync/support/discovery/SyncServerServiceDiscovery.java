@@ -128,15 +128,12 @@ public class SyncServerServiceDiscovery implements ServiceDiscovery {
             return false;
         }
 
-        String appName = clientInfo.getClientApplicationName();
-        if (appName == null) {
+        String clientContextPath = clientInfo.getClientContextPath();
+        if (clientContextPath == null) {
             return false;
         }
 
-        // 精确匹配或路径前缀匹配
-        return appName.equalsIgnoreCase(path) 
-                || appName.equalsIgnoreCase("/" + path)
-                || path.equalsIgnoreCase("/" + appName);
+        return path.startsWith(clientContextPath);
     }
 
     /**
