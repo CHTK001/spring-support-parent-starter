@@ -3,11 +3,7 @@ package com.chua.sync.support.properties;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static com.chua.sync.support.properties.SyncProperties.PRE;
 
@@ -121,7 +117,7 @@ public class SyncProperties {
         /**
          * 实例名称 (用于标识)
          */
-        private String name = "default";
+        private String name = UUID.randomUUID().toString();
 
         /**
          * 绑定地址
