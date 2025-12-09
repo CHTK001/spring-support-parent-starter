@@ -339,7 +339,7 @@ public class SyncServerInstance {
                     return true;
                 }
                 case TOPIC_CLIENT_REGISTER -> {
-                    handleClientRegister(sessionId, data);
+                    handleClientRegister(session, sessionId, data);
                     return true;
                 }
                 case TOPIC_CLIENT_HEARTBEAT -> {
@@ -354,12 +354,29 @@ public class SyncServerInstance {
             return false;
         }
 
+        /**
+         * 处理客户端注册
+         * <p>
+         * 将客户端信息存储到 clientInfoMap，并确保 sessionMap 中有对应的会话
+         * </p>
+         *
+         * @param session   会话对象
+         * @param sessionId 会话ID
+         * @param data      注册数据
+         */
         @SuppressWarnings("unchecked")
-        private void handleClientRegister(String sessionId, Object data) {
+        private void handleClientRegister(SyncSession session, String sessionId, Object data) {
             try {
                 ClientInfo clientInfo = ClientInfo.builder().build();
                 BeanUtils.copyProperties(data, clientInfo);
                 clientInfoMap.put(sessionId, clientInfo);
+                
+                // 确保 sessionMap 中有该会话（防止 onConnect 未正确触发的情况）
+                if (!sessionMap.containsKey(sessionId) && session != null) {
+                    sessionMap.put(sessionId, session);
+                    log.debug("[SyncServer:{}] 补充 sessionMap: sessionId={}", instanceConfig.getName(), sessionId);
+                }
+                
                 log.info("[SyncServer:{}] 客户端注册: sessionId={}, app={}, ip={}:{}",
                         instanceConfig.getName(), sessionId, clientInfo.getClientApplicationName(),
                         clientInfo.getClientIpAddress(), clientInfo.getClientPort());
