@@ -18,6 +18,7 @@ import com.chua.starter.mybatis.reloader.MapperReload;
 import com.chua.starter.mybatis.reloader.Reload;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
