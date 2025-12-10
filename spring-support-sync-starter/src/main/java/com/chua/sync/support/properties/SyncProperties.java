@@ -54,7 +54,7 @@ public class SyncProperties {
         /**
          * 是否启用服务端
          */
-        private boolean enable = true;
+        private boolean enable = false;
 
         /**
          * 服务实例列表 (支持多端口)
@@ -137,7 +137,7 @@ public class SyncProperties {
         /**
          * 是否启用
          */
-        private boolean enable = true;
+        private boolean enable = false;
 
         /**
          * 描述
@@ -161,7 +161,7 @@ public class SyncProperties {
         /**
          * 是否启用客户端
          */
-        private boolean enable = true;
+        private boolean enable = false;
 
         /**
          * 实例ID (默认自动生成)

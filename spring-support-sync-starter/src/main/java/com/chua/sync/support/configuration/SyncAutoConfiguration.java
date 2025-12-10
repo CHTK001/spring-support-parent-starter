@@ -8,15 +8,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.core.env.Environment;
 
 /**
  * 同步协议自动配置
  * <p>
- * 支持 server、client、both 三种模式
+ * 支持 server、client、both 三种模式，同时判断对应的 enable 属性
  * </p>
  *
  * @author CH
@@ -34,54 +34,55 @@ public class SyncAutoConfiguration {
     @PostConstruct
     public void init() {
         String type = environment.getProperty("plugin.sync.type");
-        log.info("[SyncAutoConfiguration] plugin.sync.type = {}", type);
+        Boolean serverEnable = environment.getProperty("plugin.sync.server.enable", Boolean.class, false);
+        Boolean clientEnable = environment.getProperty("plugin.sync.client.enable", Boolean.class, true);
+        log.info("[SyncAutoConfiguration] plugin.sync.type = {}, server.enable = {}, client.enable = {}", 
+                type, serverEnable, clientEnable);
     }
 
     /**
-     * 创建同步服务端 (server 或 both 模式)
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = SyncProperties.PRE, name = "type", havingValue = "server")
-    public SyncServer syncServerOnly(SyncProperties syncProperties) {
-        return new SyncServer(syncProperties);
-    }
-
-    /**
-     * 创建同步客户端 (client 模式)
+     * 创建同步服务端
+     * <p>
+     * 条件：type 为 server 或 both，且 server.enable = true
+     * </p>
      *
      * @param syncProperties 同步配置属性
-     * @return 同步客户端实例
+     * @return 同步服务端实例，如果未启用则返回 null
      * @author CH
      * @since 1.0.0
      */
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = SyncProperties.PRE, name = "type", havingValue = "client")
-    public SyncClient syncClientOnly(SyncProperties syncProperties) {
-        return new SyncClient(syncProperties, environment);
-    }
-
-    /**
-     * both 模式 - 服务端
-     */
-    @Bean("syncServer")
-    @ConditionalOnProperty(prefix = SyncProperties.PRE, name = "type", havingValue = "both")
-    public SyncServer syncServerBoth(SyncProperties syncProperties) {
+    @Conditional(SyncServerCondition.class)
+    public SyncServer syncServer(SyncProperties syncProperties) {
+        if (!syncProperties.isServerEnabled()) {
+            log.info("[SyncAutoConfiguration] 服务端未启用，跳过创建 SyncServer");
+            return null;
+        }
+        log.info("[SyncAutoConfiguration] 创建同步服务端 SyncServer");
         return new SyncServer(syncProperties);
     }
 
     /**
-     * both 模式 - 客户端
+     * 创建同步客户端
+     * <p>
+     * 条件：type 为 client 或 both，且 client.enable = true
+     * </p>
      *
      * @param syncProperties 同步配置属性
-     * @return 同步客户端实例
+     * @return 同步客户端实例，如果未启用则返回 null
      * @author CH
      * @since 1.0.0
      */
-    @Bean("syncClient")
-    @ConditionalOnProperty(prefix = SyncProperties.PRE, name = "type", havingValue = "both")
-    public SyncClient syncClientBoth(SyncProperties syncProperties) {
+    @Bean
+    @ConditionalOnMissingBean
+    @Conditional(SyncClientCondition.class)
+    public SyncClient syncClient(SyncProperties syncProperties) {
+        if (!syncProperties.isClientEnabled()) {
+            log.info("[SyncAutoConfiguration] 客户端未启用，跳过创建 SyncClient");
+            return null;
+        }
+        log.info("[SyncAutoConfiguration] 创建同步客户端 SyncClient");
         return new SyncClient(syncProperties, environment);
     }
 }
