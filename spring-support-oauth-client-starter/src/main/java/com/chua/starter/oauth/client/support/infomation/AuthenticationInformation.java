@@ -48,6 +48,15 @@ public class AuthenticationInformation {
      *
      * @return 信息
      */
+    public static AuthenticationInformation passAuthenticationInformation() {
+        return new AuthenticationInformation(OK, null);
+    }
+
+    /**
+     * 认证服务器异常
+     *
+     * @return 信息
+     */
     public static AuthenticationInformation authServerError() {
         return new AuthenticationInformation(AUTHENTICATION_SERVER_EXCEPTION, null);
     }

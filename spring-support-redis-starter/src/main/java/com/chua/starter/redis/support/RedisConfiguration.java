@@ -158,30 +158,50 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     @Bean
     @SuppressWarnings("all")
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
-        //由于源码autoConfig中是<Object, Object>，开发中一般直接使用<String,Object>
+        // 由于源码autoConfig中是<Object, Object>，开发中一般直接使用<String,Object>
         RedisTemplate<String, Object> template = new RedisTemplate();
         template.setConnectionFactory(factory);
 
-        //Json序列化配置
-        Jackson2JsonRedisSerializer jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer(Object.class);
-        ObjectMapper om = new ObjectMapper();
-        om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
-        om.enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL);
-        jackson2JsonRedisSerializer.setObjectMapper(om);
+        // 使用 GenericJackson2JsonRedisSerializer，它能更好地处理复杂类型
+        GenericJackson2JsonRedisSerializer genericSerializer = new GenericJackson2JsonRedisSerializer(createRedisObjectMapper());
 
-        //String的序列化
+        // String的序列化
         StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
 
-        //key采用string的序列化
+        // key采用string的序列化
         template.setKeySerializer(stringRedisSerializer);
-        //hash的key采用string的序列化
+        // hash的key采用string的序列化
         template.setHashKeySerializer(stringRedisSerializer);
-        //value序列化采用jackson
-        template.setValueSerializer(jackson2JsonRedisSerializer);
-        //hash的value序列化方式采用jackson
-        template.setHashValueSerializer(jackson2JsonRedisSerializer);
+        // value序列化采用GenericJackson2JsonRedisSerializer
+        template.setValueSerializer(genericSerializer);
+        // hash的value序列化方式采用GenericJackson2JsonRedisSerializer
+        template.setHashValueSerializer(genericSerializer);
         template.afterPropertiesSet();
         return template;
+    }
+
+    /**
+     * 创建 Redis 专用的 ObjectMapper
+     * <p>
+     * 配置支持 Java 8 时间类型，并使用安全的类型处理
+     * </p>
+     *
+     * @return ObjectMapper
+     * @author CH
+     * @since 1.0.0
+     */
+    private static ObjectMapper createRedisObjectMapper() {
+        ObjectMapper om = new ObjectMapper();
+        om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
+        // 注册 JavaTimeModule 支持 LocalDateTime 等 Java 8 时间类型
+        om.registerModule(new JavaTimeModule());
+        // 忽略未知字段
+        om.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        // 禁用将日期写为时间戳
+        om.configure(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+        // 设置日期格式
+        om.setDateFormat(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"));
+        return om;
     }
 
     @Bean("stringRedisTemplate")

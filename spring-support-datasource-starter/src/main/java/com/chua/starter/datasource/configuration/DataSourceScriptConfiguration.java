@@ -5,6 +5,8 @@ import com.chua.common.support.lang.process.ProgressBarBuilder;
 import com.chua.common.support.lang.process.ProgressBarStyle;
 import com.chua.common.support.lang.version.Version;
 import com.chua.common.support.objects.annotation.AutoInject;
+import com.chua.common.support.utils.ObjectUtils;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.datasource.properties.DataSourceScriptProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +23,7 @@ import org.springframework.util.DigestUtils;
 
 import javax.sql.DataSource;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.*;
@@ -401,8 +404,8 @@ public class DataSourceScriptConfiguration {
             
             try {
                 // 读取脚本内容
-                String script = new String(resource.getResource().getInputStream().readAllBytes(), 
-                        resource.getCharset());
+                String script = new String(resource.getResource().getInputStream().readAllBytes(),
+                        ObjectUtils.defaultIfNull(resource.getCharset(), StandardCharsets.UTF_8));
                 
                 // 分割SQL语句
                 String separator = dataSourceScriptProperties.getSeparator();

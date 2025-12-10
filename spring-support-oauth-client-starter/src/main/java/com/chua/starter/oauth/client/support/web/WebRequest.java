@@ -278,6 +278,11 @@ public class WebRequest {
         if (oauthProtocol != null) {
             log.debug("【WebRequest鉴权】请求头指定协议: {}", oauthProtocol);
         }
+
+
+        if(isPass()) {
+            return AuthenticationInformation.passAuthenticationInformation();
+        }
         
         AuthenticationInformation result = ServiceProvider.of(Protocol.class)
                 .getNewExtension(protocol, authProperties)
