@@ -17,6 +17,7 @@ import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import lombok.extern.slf4j.Slf4j;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
@@ -47,6 +48,7 @@ import java.util.List;
  *
  * @author CH
  */
+@Slf4j
 @EnableConfigurationProperties(RedisServerProperties.class)
 public class RedisConfiguration implements ApplicationContextAware, Ordered {
 
@@ -56,6 +58,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     @Bean(destroyMethod = "shutdown")
     @ConditionalOnMissingBean
     public RedissonClient redissonClient(RedisProperties redisProperties) {
+        log.info(">>>>> 开始创建Redisson客户端: => {}:{}", redisProperties.getHost(), redisProperties.getPort());
         Config config = new Config();
         config.useSingleServer()
                 .setDatabase(redisProperties.getDatabase())
@@ -72,6 +75,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     @Bean(destroyMethod = "close", name = "redisClient")
     @ConditionalOnMissingBean
     public RedisClient redisClient(RedisProperties redisProperties) {
+        log.info(">>>>> 开始创建RedisClient客户端: => {}:{}", redisProperties.getHost(), redisProperties.getPort());
         RedisClient redisClient = new RedisClient(
                 ClientSetting.builder()
                         .database(String.valueOf(redisProperties.getDatabase()))

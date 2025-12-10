@@ -32,21 +32,25 @@ plugin:
     client:
       enable: true
       # 实例ID (默认自动生成)
-      instance-id: 
+      instance-id:
       # 客户端 IP 地址（多网卡场景下指定，为空则自动获取）
-      ip-address: 
+      ip-address:
       # 协议类型
       protocol: rsocket
       # 服务端地址
       server-host: localhost
       server-port: 19380
       # 或使用完整地址（优先级更高）
-      server-address: 
+      server-address:
       # 心跳配置
       heartbeat: true
       heartbeat-interval: 30
       # 连接超时（毫秒）
       connect-timeout: 10000
+      # 重连配置
+      auto-reconnect: true
+      max-reconnect-attempts: -1
+      reconnect-interval: 5000
       # 自动注册
       auto-register: true
       # 支持的功能
@@ -61,12 +65,32 @@ plugin:
 
 以下配置会自动从 Spring Environment 获取，无需手动配置：
 
-| Spring 配置 | 用途 |
-|------------|------|
-| `spring.application.name` | 应用名称 |
-| `server.servlet.context-path` | 上下文路径 |
-| `server.port` | 应用端口 |
+| Spring 配置                          | 用途                              |
+| ------------------------------------ | --------------------------------- |
+| `spring.application.name`            | 应用名称                          |
+| `server.servlet.context-path`        | 上下文路径                        |
+| `server.port`                        | 应用端口                          |
 | `management.endpoints.web.base-path` | Actuator 路径（默认 `/actuator`） |
+
+### 客户端配置项说明
+
+| 配置项                   | 说明                         | 默认值                       |
+| ------------------------ | ---------------------------- | ---------------------------- |
+| `enable`                 | 是否启用客户端               | `true`                       |
+| `instance-id`            | 实例 ID                      | 自动生成                     |
+| `ip-address`             | 客户端 IP 地址（多网卡场景） | 自动获取                     |
+| `protocol`               | 协议类型                     | `rsocket`                    |
+| `server-host`            | 服务端地址                   | `localhost`                  |
+| `server-port`            | 服务端端口                   | `19380`                      |
+| `server-address`         | 完整服务端地址（优先级高）   | -                            |
+| `heartbeat`              | 是否启用心跳                 | `true`                       |
+| `heartbeat-interval`     | 心跳间隔（秒）               | `30`                         |
+| `connect-timeout`        | 连接超时（毫秒）             | `10000`                      |
+| `auto-reconnect`         | 是否启用自动重连             | `true`                       |
+| `max-reconnect-attempts` | 最大重连次数（-1 表示无限）  | `-1`                         |
+| `reconnect-interval`     | 重连间隔（毫秒）             | `5000`                       |
+| `auto-register`          | 是否自动注册                 | `true`                       |
+| `capabilities`           | 支持的功能列表               | `[job, actuator, file, log]` |
 
 ### 服务端配置
 
@@ -122,14 +146,14 @@ Set<String> appNames = discovery.getApplicationNames();
 
 #### API 说明
 
-| 方法 | 说明 |
-|------|------|
-| `getService(path)` | 获取单个服务实例（默认 weight 负载均衡） |
-| `getService(path, balance)` | 获取单个服务实例（指定负载均衡策略） |
-| `getServiceAll(path)` | 获取所有匹配的服务实例 |
-| `getOnlineClients()` | 获取所有在线客户端 |
-| `getOnlineClientsByAppName(appName)` | 获取指定应用的在线客户端 |
-| `getApplicationNames()` | 获取所有应用名称 |
+| 方法                                 | 说明                                     |
+| ------------------------------------ | ---------------------------------------- |
+| `getService(path)`                   | 获取单个服务实例（默认 weight 负载均衡） |
+| `getService(path, balance)`          | 获取单个服务实例（指定负载均衡策略）     |
+| `getServiceAll(path)`                | 获取所有匹配的服务实例                   |
+| `getOnlineClients()`                 | 获取所有在线客户端                       |
+| `getOnlineClientsByAppName(appName)` | 获取指定应用的在线客户端                 |
+| `getApplicationNames()`              | 获取所有应用名称                         |
 
 ## 版本信息
 

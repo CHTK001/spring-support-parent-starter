@@ -1,5 +1,6 @@
 package com.chua.sync.support.client;
 
+import com.chua.common.support.protocol.ClientSetting;
 import com.chua.common.support.protocol.ProtocolSetting;
 import com.chua.common.support.protocol.listener.ConnectionEvent;
 import com.chua.common.support.protocol.listener.ConnectionListener;
@@ -280,7 +281,7 @@ public class SyncClient implements InitializingBean, DisposableBean {
 
             String protocol = clientConfig.getProtocol();
 
-            // 构建协议配置
+            // 构建协议配置（包含重连参数）
             ProtocolSetting protocolSetting = ProtocolSetting.builder()
                     .protocol(protocol)
                     .host(host)
@@ -288,7 +289,10 @@ public class SyncClient implements InitializingBean, DisposableBean {
                     .heartbeat(clientConfig.isHeartbeat())
                     .heartbeatInterval(clientConfig.getHeartbeatInterval())
                     .connectTimeoutMillis(clientConfig.getConnectTimeout())
-                    .build();
+                    .build()
+                    .withOption("autoReconnect", clientConfig.isAutoReconnect())
+                    .withOption("maxReconnectAttempts", clientConfig.getMaxReconnectAttempts())
+                    .withOption("reconnectInterval", clientConfig.getReconnectInterval());
 
             // 创建同步协议实例
             SyncProtocol syncProtocol = SyncProtocol.create(protocol, protocolSetting);
