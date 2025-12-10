@@ -213,6 +213,21 @@ public class SyncProperties {
         private int connectTimeout = 10000;
 
         /**
+         * 是否启用自动重连
+         */
+        private boolean autoReconnect = true;
+
+        /**
+         * 最大重连次数，-1表示无限重连
+         */
+        private int maxReconnectAttempts = -1;
+
+        /**
+         * 重连间隔时间（毫秒）
+         */
+        private long reconnectInterval = 5000;
+
+        /**
          * 支持的功能列表
          */
         private String[] capabilities = new String[]{"job", "actuator", "file", "log"};
