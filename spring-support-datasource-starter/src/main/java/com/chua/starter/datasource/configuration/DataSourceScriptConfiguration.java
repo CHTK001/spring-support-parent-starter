@@ -246,31 +246,54 @@ public class DataSourceScriptConfiguration {
 
                     // 5. 执行脚本
                     String success = "false";
+                    long startTime = System.currentTimeMillis();
                     try {
                         if (dataSourceScriptProperties.isVerbose()) {
-                            log.info("执行迁移脚本: {} (版本: {})", fileName, version);
+                            log.info("[{}/{}] 开始执行迁移脚本: {} (版本: {})", 
+                                    scriptsToExecute.indexOf(res) + 1, 
+                                    scriptsToExecute.size(), 
+                                    fileName, 
+                                    version);
+                        } else {
+                            log.info("[{}/{}] 执行脚本: {}", 
+                                    scriptsToExecute.indexOf(res) + 1, 
+                                    scriptsToExecute.size(), 
+                                    fileName);
                         }
 
-                        Connection scriptConnection = ds.getConnection();
-                        try {
-                            // 创建编码资源
-                            EncodedResource encodedResource = new EncodedResource(res, dataSourceScriptProperties.getSqlScriptEncoding());
+                        try (Connection scriptConnection = ds.getConnection()) {
+                            // 禁用自动提交以提高性能
+                            boolean originalAutoCommit = scriptConnection.getAutoCommit();
+                            scriptConnection.setAutoCommit(false);
+                            
+                            try {
+                                // 创建编码资源
+                                EncodedResource encodedResource = new EncodedResource(res, dataSourceScriptProperties.getSqlScriptEncoding());
 
-                            // 执行脚本
-                            ScriptUtils.executeSqlScript(
-                                    scriptConnection,
-                                    encodedResource,
-                                    dataSourceScriptProperties.isContinueOnError(),
-                                    dataSourceScriptProperties.isIgnoreFailedDrops(),
-                                    ScriptUtils.DEFAULT_COMMENT_PREFIX,
-                                    dataSourceScriptProperties.getSeparator(),
-                                    ScriptUtils.DEFAULT_BLOCK_COMMENT_START_DELIMITER,
-                                    ScriptUtils.DEFAULT_BLOCK_COMMENT_END_DELIMITER);
+                                // 执行脚本（使用优化的批量执行）
+                                executeScriptWithProgress(
+                                        scriptConnection,
+                                        encodedResource,
+                                        fileName,
+                                        scriptsToExecute.indexOf(res) + 1,
+                                        scriptsToExecute.size());
 
-                            success = "true";
-
-                        } finally {
-                            scriptConnection.close();
+                                // 提交事务
+                                scriptConnection.commit();
+                                success = "true";
+                                
+                            } catch (Exception e) {
+                                // 回滚事务
+                                try {
+                                    scriptConnection.rollback();
+                                } catch (SQLException rollbackEx) {
+                                    log.error("回滚事务失败", rollbackEx);
+                                }
+                                throw e;
+                            } finally {
+                                // 恢复自动提交设置
+                                scriptConnection.setAutoCommit(originalAutoCommit);
+                            }
                         }
 
                         // 6. 记录执行结果
@@ -279,7 +302,14 @@ public class DataSourceScriptConfiguration {
                                         tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix),
                                 version, fileName, scriptType, description, currentChecksum, success);
 
-                        log.info("成功执行迁移脚本: {} (版本: {})", fileName, version);
+                        long endTime = System.currentTimeMillis();
+                        long duration = endTime - startTime;
+                        log.info("[{}/{}] 成功执行迁移脚本: {} (版本: {}) - 耗时: {}ms", 
+                                scriptsToExecute.indexOf(res) + 1,
+                                scriptsToExecute.size(),
+                                fileName, 
+                                version,
+                                duration);
 
                     } catch (Exception e) {
                         log.error("执行迁移脚本失败: {} (版本: {})", fileName, version, e);
@@ -301,6 +331,79 @@ public class DataSourceScriptConfiguration {
                 }
             } catch (IOException e) {
                 throw new RuntimeException("读取脚本资源失败", e);
+            }
+        }
+
+        /**
+         * 执行SQL脚本并显示进度
+         * 优化版本：使用批量执行提高性能
+         *
+         * @param connection 数据库连接
+         * @param resource 脚本资源
+         * @param fileName 文件名（用于日志）
+         * @param currentIndex 当前脚本索引
+         * @param totalScripts 总脚本数
+         * @throws SQLException SQL执行异常
+         */
+        private void executeScriptWithProgress(
+                Connection connection,
+                EncodedResource resource,
+                String fileName,
+                int currentIndex,
+                int totalScripts) throws SQLException {
+            
+            try {
+                // 读取脚本内容
+                String script = new String(resource.getResource().getInputStream().readAllBytes(), 
+                        resource.getCharset());
+                
+                // 分割SQL语句
+                String separator = dataSourceScriptProperties.getSeparator();
+                String[] statements = script.split(separator);
+                
+                int totalStatements = statements.length;
+                int executedStatements = 0;
+                int batchSize = 50; // 批量执行大小
+                
+                try (var stmt = connection.createStatement()) {
+                    for (int i = 0; i < statements.length; i++) {
+                        String sql = statements[i].trim();
+                        
+                        // 跳过空语句和注释
+                        if (sql.isEmpty() || sql.startsWith("--") || sql.startsWith("/*")) {
+                            continue;
+                        }
+                        
+                        // 添加到批处理
+                        stmt.addBatch(sql);
+                        executedStatements++;
+                        
+                        // 每50条执行一次批处理，或者到达最后一条
+                        if (executedStatements % batchSize == 0 || i == statements.length - 1) {
+                            stmt.executeBatch();
+                            stmt.clearBatch();
+                            
+                            // 显示进度
+                            if (dataSourceScriptProperties.isVerbose() && totalStatements > 100) {
+                                int progress = (executedStatements * 100) / totalStatements;
+                                log.debug("  └─ 脚本 {} 执行进度: {}% ({}/{})", 
+                                        fileName, progress, executedStatements, totalStatements);
+                            }
+                        }
+                    }
+                }
+                
+                if (dataSourceScriptProperties.isVerbose()) {
+                    log.debug("  └─ 脚本 {} 共执行 {} 条SQL语句", fileName, executedStatements);
+                }
+                
+            } catch (IOException e) {
+                throw new SQLException("读取脚本文件失败: " + fileName, e);
+            } catch (SQLException e) {
+                log.error("执行脚本失败: {}", fileName, e);
+                if (!dataSourceScriptProperties.isContinueOnError()) {
+                    throw e;
+                }
             }
         }
 
