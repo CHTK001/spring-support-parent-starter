@@ -52,6 +52,7 @@ public class UserResume implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    private static final UserResume EMPTY = new UserResume();
     /**
      * 构造函数（用于创建错误消息）
      *
@@ -305,6 +306,10 @@ public class UserResume implements Serializable {
      */
     @Schema(description = "是否强制使用用户配置")
     private Boolean forceOnline;
+
+    public static UserResume empty() {
+        return EMPTY;
+    }
 
     /**
      * 是否具备某个权限
