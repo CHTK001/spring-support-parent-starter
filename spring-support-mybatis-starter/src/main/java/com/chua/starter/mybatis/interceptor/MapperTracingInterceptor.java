@@ -30,7 +30,7 @@ public class MapperTracingInterceptor implements Interceptor {
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
         Object arg = invocation.getArgs()[0];
-        if(arg instanceof MappedStatement ms) {
+        if (arg instanceof MappedStatement ms) {
             String mapperMethod = ms.getId();
             try (MDC.MDCCloseable closeable = MDC.putCloseable("mapper", mapperMethod)) {
                 return invocation.proceed();
@@ -39,6 +39,4 @@ public class MapperTracingInterceptor implements Interceptor {
 
         return invocation.proceed();
     }
-
-
 }
