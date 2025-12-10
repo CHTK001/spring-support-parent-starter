@@ -4,6 +4,7 @@ import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.utils.StringUtils;
 import com.p6spy.engine.spy.appender.MessageFormattingStrategy;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 
 /**
  * appender
@@ -29,14 +30,13 @@ public class SimpleAppender implements MessageFormattingStrategy {
         if(StringUtils.isEmpty(sql)) {
             return "";
         }
-//        log.info("数据库链接ID: {}", connectionId);
-        log.info("查询耗时{} ms", elapsed);
-        if(log.isDebugEnabled()) {
-            log.debug("查询时间: {}", DateTime.of(now).toStandard());
-            log.debug("数据库连接地址: {}", url);
+        if (StringUtils.isNotBlank(sql)) {
+            String mapperMethod = MDC.get("mapper");
+            if (null != mapperMethod) {
+                return " 耗时: " + elapsed + " ms " + now + "\n 执行的方法 ：" + mapperMethod + " \n 执行的SQL ：" + sql.replaceAll("[\\s]+", " ") + "\n";
+            }
+            return " 耗时: " + elapsed + " ms " + now + "\n 执行的SQL：" + sql.replaceAll("[\\s]+", " ") + "\n";
         }
-//        log.info("查询SQL \r\n {}", HighlightingFormatter.INSTANCE.format(SqlFormatter.format(db)));
-        log.info("查询SQL \r\n {}", sql);
         return "";
     }
 }
