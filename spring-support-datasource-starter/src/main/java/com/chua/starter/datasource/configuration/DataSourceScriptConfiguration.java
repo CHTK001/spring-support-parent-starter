@@ -1,5 +1,8 @@
 package com.chua.starter.datasource.configuration;
 
+import com.chua.common.support.lang.process.ProgressBar;
+import com.chua.common.support.lang.process.ProgressBarBuilder;
+import com.chua.common.support.lang.process.ProgressBarStyle;
 import com.chua.common.support.lang.version.Version;
 import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.starter.datasource.properties.DataSourceScriptProperties;
@@ -208,7 +211,36 @@ public class DataSourceScriptConfiguration {
                 String tableName = dataSourceScriptProperties.getVersionTable();
                 String tablePrefix = extractTablePrefix(tableName);
 
+                // 第一遍遍历：统计需要实际执行的脚本数量（排除已执行的）
+                int actualScriptsToExecute = 0;
                 for (Resource res : scriptsToExecute) {
+                    String fileName = Objects.requireNonNull(res.getFilename());
+                    String version = versionOf(fileName);
+                    
+                    Integer count = jdbc.queryForObject(
+                            String.format("SELECT COUNT(*) FROM %s WHERE %s_script_name = ? AND %s_version = ?",
+                                    tableName, tablePrefix, tablePrefix),
+                            Integer.class, fileName, version);
+                    
+                    if (count == null || count == 0) {
+                        actualScriptsToExecute++;
+                    }
+                }
+
+                // 创建总体进度条（只针对实际需要执行的脚本）
+                ProgressBar overallProgressBar = null;
+                if (dataSourceScriptProperties.isVerbose() && actualScriptsToExecute > 0) {
+                    overallProgressBar = new ProgressBarBuilder()
+                            .setTaskName("执行数据库脚本")
+                            .setInitialMax(actualScriptsToExecute)
+                            .setStyle(ProgressBarStyle.COLORFUL_UNICODE_BLOCK)
+                            .build();
+                    log.info("共找到 {} 个脚本，其中 {} 个需要执行", scriptsToExecute.size(), actualScriptsToExecute);
+                }
+
+                try {
+                    int executedCount = 0;
+                    for (Resource res : scriptsToExecute) {
                     String fileName = Objects.requireNonNull(res.getFilename());
                     String version = versionOf(fileName);
                     String description = descriptionOf(fileName);
@@ -221,66 +253,66 @@ public class DataSourceScriptConfiguration {
                                     tableName, tablePrefix, tablePrefix),
                             Integer.class, fileName, version);
 
-                    if (count != null && count > 0) {
-                        // 如果启用校验和验证，检查脚本是否被修改
-                        if (dataSourceScriptProperties.isValidateChecksum()) {
-                            String storedChecksum = jdbc.queryForObject(
-                                    String.format("SELECT %s_checksum FROM %s WHERE %s_script_name = ? AND %s_version = ?",
-                                            tablePrefix, tableName, tablePrefix, tablePrefix),
-                                    String.class, fileName, version);
-                            if (!currentChecksum.equals(storedChecksum)) {
-                                String errorMsg = String.format("脚本 %s (版本: %s) 的校验和不匹配。期望值: %s, 实际值: %s",
-                                        fileName, version, storedChecksum, currentChecksum);
-                                log.error(errorMsg);
-                                if (!dataSourceScriptProperties.isContinueOnError()) {
-                                    throw new SQLException(errorMsg);
+                        if (count != null && count > 0) {
+                            // 如果启用校验和验证，检查脚本是否被修改
+                            if (dataSourceScriptProperties.isValidateChecksum()) {
+                                String storedChecksum = jdbc.queryForObject(
+                                        String.format("SELECT %s_checksum FROM %s WHERE %s_script_name = ? AND %s_version = ?",
+                                                tablePrefix, tableName, tablePrefix, tablePrefix),
+                                        String.class, fileName, version);
+                                if (!currentChecksum.equals(storedChecksum)) {
+                                    String errorMsg = String.format("脚本 %s (版本: %s) 的校验和不匹配。期望值: %s, 实际值: %s",
+                                            fileName, version, storedChecksum, currentChecksum);
+                                    log.error(errorMsg);
+                                    if (!dataSourceScriptProperties.isContinueOnError()) {
+                                        throw new SQLException(errorMsg);
+                                    }
                                 }
                             }
-                        }
 
-                        if (dataSourceScriptProperties.isVerbose()) {
-                            log.info("跳过已执行的脚本: {} (版本: {})", fileName, version);
+                            if (dataSourceScriptProperties.isVerbose()) {
+                                log.info("跳过已执行的脚本: {} (版本: {})", fileName, version);
+                            }
+                            continue;
                         }
-                        continue;
-                    }
+                        
+                        executedCount++;
 
-                    // 5. 执行脚本
-                    String success = "false";
-                    long startTime = System.currentTimeMillis();
-                    try {
-                        if (dataSourceScriptProperties.isVerbose()) {
-                            log.info("[{}/{}] 开始执行迁移脚本: {} (版本: {})", 
-                                    scriptsToExecute.indexOf(res) + 1, 
-                                    scriptsToExecute.size(), 
-                                    fileName, 
-                                    version);
-                        } else {
-                            log.info("[{}/{}] 执行脚本: {}", 
-                                    scriptsToExecute.indexOf(res) + 1, 
-                                    scriptsToExecute.size(), 
-                                    fileName);
-                        }
-
-                        try (Connection scriptConnection = ds.getConnection()) {
-                            // 禁用自动提交以提高性能
-                            boolean originalAutoCommit = scriptConnection.getAutoCommit();
-                            scriptConnection.setAutoCommit(false);
+                        // 5. 执行脚本
+                        String success = "false";
+                        long startTime = System.currentTimeMillis();
+                        try {
+                            // 更新总体进度条信息
+                            if (overallProgressBar != null) {
+                                overallProgressBar.setExtraMessage(String.format("[%d/%d] %s (版本: %s)", 
+                                        executedCount, actualScriptsToExecute, fileName, version));
+                            }
                             
-                            try {
-                                // 创建编码资源
-                                EncodedResource encodedResource = new EncodedResource(res, dataSourceScriptProperties.getSqlScriptEncoding());
+                            if (!dataSourceScriptProperties.isVerbose()) {
+                                log.info("[{}/{}] 执行脚本: {}", 
+                                        executedCount, 
+                                        actualScriptsToExecute, 
+                                        fileName);
+                            }
 
-                                // 执行脚本（使用优化的批量执行）
-                                executeScriptWithProgress(
-                                        scriptConnection,
-                                        encodedResource,
-                                        fileName,
-                                        scriptsToExecute.indexOf(res) + 1,
-                                        scriptsToExecute.size());
+                            try (Connection scriptConnection = ds.getConnection()) {
+                                // 禁用自动提交以提高性能
+                                boolean originalAutoCommit = scriptConnection.getAutoCommit();
+                                scriptConnection.setAutoCommit(false);
+                                
+                                try {
+                                    // 创建编码资源
+                                    EncodedResource encodedResource = new EncodedResource(res, dataSourceScriptProperties.getSqlScriptEncoding());
 
-                                // 提交事务
-                                scriptConnection.commit();
-                                success = "true";
+                                    // 执行脚本（使用优化的批量执行）
+                                    executeScriptWithProgress(
+                                            scriptConnection,
+                                            encodedResource,
+                                            fileName);
+
+                                    // 提交事务
+                                    scriptConnection.commit();
+                                    success = "true";
                                 
                             } catch (Exception e) {
                                 // 回滚事务
@@ -302,31 +334,50 @@ public class DataSourceScriptConfiguration {
                                         tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix),
                                 version, fileName, scriptType, description, currentChecksum, success);
 
-                        long endTime = System.currentTimeMillis();
-                        long duration = endTime - startTime;
-                        log.info("[{}/{}] 成功执行迁移脚本: {} (版本: {}) - 耗时: {}ms", 
-                                scriptsToExecute.indexOf(res) + 1,
-                                scriptsToExecute.size(),
-                                fileName, 
-                                version,
-                                duration);
+                            long endTime = System.currentTimeMillis();
+                            long duration = endTime - startTime;
+                            
+                            // 更新总体进度条
+                            if (overallProgressBar != null) {
+                                overallProgressBar.step();
+                            }
+                            
+                            if (!dataSourceScriptProperties.isVerbose()) {
+                                log.info("[{}/{}] 成功执行迁移脚本: {} (版本: {}) - 耗时: {}ms", 
+                                        executedCount,
+                                        actualScriptsToExecute,
+                                        fileName, 
+                                        version,
+                                        duration);
+                            }
 
-                    } catch (Exception e) {
-                        log.error("执行迁移脚本失败: {} (版本: {})", fileName, version, e);
+                        } catch (Exception e) {
+                            log.error("执行迁移脚本失败: {} (版本: {})", fileName, version, e);
 
-                        // 记录失败的执行
-                        try {
-                            jdbc.update(
-                                    String.format("INSERT INTO %s(%s_version,%s_script_name,%s_script_type,%s_description,%s_checksum,%s_success) VALUES(?,?,?,?,?,?)",
-                                            tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix),
-                                    version, fileName, scriptType, description, currentChecksum, "false");
-                        } catch (Exception recordException) {
-                            log.error("记录迁移失败信息失败", recordException);
+                            // 记录失败的执行
+                            try {
+                                jdbc.update(
+                                        String.format("INSERT INTO %s(%s_version,%s_script_name,%s_script_type,%s_description,%s_checksum,%s_success) VALUES(?,?,?,?,?,?)",
+                                                tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix),
+                                        version, fileName, scriptType, description, currentChecksum, "false");
+                            } catch (Exception recordException) {
+                                log.error("记录迁移失败信息失败", recordException);
+                            }
+
+                            // 更新总体进度条（即使失败也要更新）
+                            if (overallProgressBar != null) {
+                                overallProgressBar.step();
+                            }
+
+                            if (!dataSourceScriptProperties.isContinueOnError()) {
+                                throw new SQLException("脚本迁移失败: " + fileName, e);
+                            }
                         }
-
-                        if (!dataSourceScriptProperties.isContinueOnError()) {
-                            throw new SQLException("脚本迁移失败: " + fileName, e);
-                        }
+                    }
+                } finally {
+                    // 关闭总体进度条
+                    if (overallProgressBar != null) {
+                        overallProgressBar.close();
                     }
                 }
             } catch (IOException e) {
@@ -336,21 +387,17 @@ public class DataSourceScriptConfiguration {
 
         /**
          * 执行SQL脚本并显示进度
-         * 优化版本：使用批量执行提高性能
+         * 优化版本：使用批量执行提高性能，使用ProgressBar显示详细进度
          *
          * @param connection 数据库连接
          * @param resource 脚本资源
          * @param fileName 文件名（用于日志）
-         * @param currentIndex 当前脚本索引
-         * @param totalScripts 总脚本数
          * @throws SQLException SQL执行异常
          */
         private void executeScriptWithProgress(
                 Connection connection,
                 EncodedResource resource,
-                String fileName,
-                int currentIndex,
-                int totalScripts) throws SQLException {
+                String fileName) throws SQLException {
             
             try {
                 // 读取脚本内容
@@ -361,40 +408,53 @@ public class DataSourceScriptConfiguration {
                 String separator = dataSourceScriptProperties.getSeparator();
                 String[] statements = script.split(separator);
                 
-                int totalStatements = statements.length;
-                int executedStatements = 0;
-                int batchSize = 50; // 批量执行大小
-                
-                try (var stmt = connection.createStatement()) {
-                    for (int i = 0; i < statements.length; i++) {
-                        String sql = statements[i].trim();
-                        
-                        // 跳过空语句和注释
-                        if (sql.isEmpty() || sql.startsWith("--") || sql.startsWith("/*")) {
-                            continue;
-                        }
-                        
-                        // 添加到批处理
-                        stmt.addBatch(sql);
-                        executedStatements++;
-                        
-                        // 每50条执行一次批处理，或者到达最后一条
-                        if (executedStatements % batchSize == 0 || i == statements.length - 1) {
-                            stmt.executeBatch();
-                            stmt.clearBatch();
-                            
-                            // 显示进度
-                            if (dataSourceScriptProperties.isVerbose() && totalStatements > 100) {
-                                int progress = (executedStatements * 100) / totalStatements;
-                                log.debug("  └─ 脚本 {} 执行进度: {}% ({}/{})", 
-                                        fileName, progress, executedStatements, totalStatements);
-                            }
-                        }
+                // 过滤有效的SQL语句
+                List<String> validStatements = new ArrayList<>();
+                for (String sql : statements) {
+                    String trimmed = sql.trim();
+                    if (!trimmed.isEmpty() && !trimmed.startsWith("--") && !trimmed.startsWith("/*")) {
+                        validStatements.add(trimmed);
                     }
                 }
                 
-                if (dataSourceScriptProperties.isVerbose()) {
-                    log.debug("  └─ 脚本 {} 共执行 {} 条SQL语句", fileName, executedStatements);
+                int totalStatements = validStatements.size();
+                int batchSize = 50; // 批量执行大小
+                
+                // 创建脚本级进度条（仅当语句数量较多且开启详细模式时）
+                ProgressBar scriptProgressBar = null;
+                if (dataSourceScriptProperties.isVerbose() && totalStatements > 100) {
+                    scriptProgressBar = new ProgressBarBuilder()
+                            .setTaskName(String.format("  执行 %s", fileName))
+                            .setInitialMax(totalStatements)
+                            .setStyle(ProgressBarStyle.COLORFUL_UNICODE_BAR)
+                            .setUnit("条SQL", 1)
+                            .build();
+                }
+                
+                try (var stmt = connection.createStatement()) {
+                    for (int i = 0; i < validStatements.size(); i++) {
+                        String sql = validStatements.get(i);
+                        
+                        // 添加到批处理
+                        stmt.addBatch(sql);
+                        
+                        // 每50条执行一次批处理，或者到达最后一条
+                        if ((i + 1) % batchSize == 0 || i == validStatements.size() - 1) {
+                            stmt.executeBatch();
+                            stmt.clearBatch();
+                            
+                            // 更新进度条
+                            if (scriptProgressBar != null) {
+                                int executed = Math.min(i + 1, totalStatements);
+                                scriptProgressBar.stepTo(executed);
+                            }
+                        }
+                    }
+                } finally {
+                    // 关闭脚本级进度条
+                    if (scriptProgressBar != null) {
+                        scriptProgressBar.close();
+                    }
                 }
                 
             } catch (IOException e) {
