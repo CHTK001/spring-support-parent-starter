@@ -173,7 +173,10 @@ public class ArmeriaProtocol extends AbstractProtocol {
         loginAuthResult.setCode(information.getInformation().getCode());
         loginAuthResult.setMessage(information.getInformation().getMessage());
         loginAuthResult.setUserResume(information.getReturnResult());
-        loginAuthResult.setToken(information.getToken());
+        String token = information.getToken();
+        if(null != token) {
+            loginAuthResult.setToken(token);
+        }
         loginAuthResult.setRefreshToken(information.getRefreshToken());
         return loginAuthResult;
     }

@@ -68,6 +68,36 @@ public class AuthClientExecute {
         this.encryption = authClientProperties.getEncryption();
     }
 
+
+    /**
+     * 获取用户结果信息
+     *
+     * @return 用户结果信息
+     */
+    public UserResult getCacheUserResult() {
+        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
+        if (requestAttributes == null) {
+            return null;
+        }
+
+        ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
+
+        HttpServletRequest request = attributes.getRequest();
+        Object attribute = request.getSession().getAttribute(SESSION_USER_INFO);
+        if (null != attribute) {
+            if (attribute instanceof UserResult) {
+                return (UserResult) attribute;
+            }
+
+            if (attribute instanceof UserResume) {
+                UserResult userResult = new UserResult();
+                com.chua.common.support.bean.BeanUtils.copyProperties(attribute, userResult);
+                request.getSession().setAttribute(SESSION_USER_INFO, userResult);
+                return userResult;
+            }
+        }
+        return null;
+    }
     /**
      * 获取用户结果信息
      *
@@ -649,4 +679,18 @@ public class AuthClientExecute {
                 .getValue();
     }
 
+    /**
+     * 是否明白
+     * @return 是否明白
+     */
+    public boolean whiteList() {
+        HttpServletRequest request = getRequest();
+        if (null == request) {
+            return true;
+        }
+        WebRequest webRequest1 = new WebRequest(
+                authClientProperties,
+                request, null);
+        return webRequest1.isPass();
+    }
 }
