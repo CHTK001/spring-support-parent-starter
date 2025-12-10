@@ -194,5 +194,12 @@ public class TimeSeriesServiceImpl implements TimeSeriesService {
         }
     }
 
+    @Override
+    public boolean expire(String key, long seconds) {
+        JedisPool jedis = redisClient.getJedisPool();
+        try (Jedis resource = jedis.getResource()) {
+            return resource.expire(key, seconds) == 1;
+        }
+    }
 }
 

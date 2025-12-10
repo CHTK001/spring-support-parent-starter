@@ -180,5 +180,14 @@ public interface TimeSeriesService {
      * @param key       键字符串，表示指标下的具体项
      */
     void decrement(String indicator, String key);
+
+    /**
+     * 设置指定键的过期时间
+     *
+     * @param key     Redis键
+     * @param seconds 过期时间（秒）
+     * @return 设置是否成功
+     */
+    boolean expire(String key, long seconds);
 }
 
