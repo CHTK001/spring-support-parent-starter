@@ -182,8 +182,8 @@ public class AuthFilter implements Filter {
                  userResume.getRoles() != null ? userResume.getRoles().size() : 0,
                  userResume.getPermission() != null ? userResume.getPermission().size() : 0);
         
-        log.debug("【AuthFilter渲染】用户详细信息 - 真实姓名: {}, 租户ID: {}, 部门ID: {}, 是否管理员: {}",
-                 userResume.getName(),
+        log.debug("【AuthFilter渲染】用户详细信息 - 昵称: {}, 租户ID: {}, 部门ID: {}, 是否管理员: {}",
+                 userResume.getNickName(),
                  userResume.getTenantId(),
                  userResume.getDeptId(),
                  userResume.isAdmin());
