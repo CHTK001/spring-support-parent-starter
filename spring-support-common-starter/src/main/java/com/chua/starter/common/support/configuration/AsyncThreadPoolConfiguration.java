@@ -13,6 +13,8 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
+import org.springframework.boot.au@ConditionalOnProperty(prefix = "plugin.async", name = "enable", havingValue = "true", matchIfMissing = false)
+toconfigure.condition.ConditionalOnProperty;
 
 /**
  * 异步任务

@@ -6,6 +6,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.boot.@ConditionalOnProperty(prefix = "plugin.minio", name = "enable", havingValue = "true", matchIfMissing = false)
+autoconfigure.condition.ConditionalOnProperty;
 
 /**
  * minio

@@ -12,6 +12,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @Data
 @ConfigurationProperties(prefix = TransactionProperties.PREFIX, ignoreInvalidFields = true)
 public class TransactionProperties {
+    /**
+     * 是否启用
+     */
+    private boolean enable = false;
+
 
     public static final String PREFIX = "plugin.transaction";
     /**

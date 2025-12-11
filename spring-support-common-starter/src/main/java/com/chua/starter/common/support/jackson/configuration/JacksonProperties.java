@@ -13,6 +13,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @Data
 @ConfigurationProperties(prefix = JacksonProperties.PRE, ignoreInvalidFields = true)
 public class JacksonProperties {
+    /**
+     * 是否启用
+     */
+    private boolean enable = false;
+
 
     public static final String PRE = "plugin.jackson";
 

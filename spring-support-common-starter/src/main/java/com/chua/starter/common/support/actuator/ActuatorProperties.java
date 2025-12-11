@@ -16,6 +16,11 @@ import java.util.Set;
 @Data
 @ConfigurationProperties(prefix = "plugin.actuator", ignoreInvalidFields = true)
 public class ActuatorProperties {
+    /**
+     * 是否启用
+     */
+    private boolean enable = false;
+
 
     /**
      * 是否开启认证

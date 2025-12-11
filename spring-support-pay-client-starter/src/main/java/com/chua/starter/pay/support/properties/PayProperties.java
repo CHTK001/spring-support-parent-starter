@@ -13,6 +13,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @Data
 @ConfigurationProperties(prefix = "plugin.pay")
 public class PayProperties {
+    /**
+     * 是否启用
+     */
+    private boolean enable = false;
+
 
     /**
      * 状态机持久化类型

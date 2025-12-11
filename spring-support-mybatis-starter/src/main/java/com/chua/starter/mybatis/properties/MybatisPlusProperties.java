@@ -13,6 +13,11 @@ import static com.chua.starter.mybatis.properties.MybatisPlusProperties.PRE;
 @Data
 @ConfigurationProperties(prefix = PRE)
 public class MybatisPlusProperties {
+    /**
+     * 是否启用
+     */
+    private boolean enable = false;
+
 
 
     public static final String PRE = "plugin.mybatis";

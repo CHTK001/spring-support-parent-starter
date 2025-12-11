@@ -14,6 +14,11 @@ import java.util.List;
 @Data
 @ConfigurationProperties(prefix = "plugin.shell")
 public class ShellProperties {
+    /**
+     * 是否启用
+     */
+    private boolean enable = false;
+
 
     /**
      * 登录配置

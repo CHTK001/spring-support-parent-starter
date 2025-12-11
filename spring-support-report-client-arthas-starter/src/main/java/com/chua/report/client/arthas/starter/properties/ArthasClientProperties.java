@@ -15,7 +15,7 @@ public class ArthasClientProperties {
     /**
      * 是否开启（默认开启）
      */
-    private boolean enable = true;
+    private boolean enable = false;
     /**
      * agentId
      */

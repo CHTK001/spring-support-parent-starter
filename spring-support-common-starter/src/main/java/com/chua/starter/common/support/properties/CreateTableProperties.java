@@ -16,6 +16,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @Data
 @ConfigurationProperties(prefix = CreateTableProperties.PRE, ignoreInvalidFields = true)
 public class CreateTableProperties {
+    /**
+     * 是否启用
+     */
+    private boolean enable = false;
+
 
     public static final String PRE = "plugin.table";
 
