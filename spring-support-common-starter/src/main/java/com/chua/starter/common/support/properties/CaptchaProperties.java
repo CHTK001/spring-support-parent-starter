@@ -31,10 +31,6 @@ public class CaptchaProperties {
      */
     private CaptchaTypeEnum type = CaptchaTypeEnum.SPEC;
 
-    /**
-     *  是否打开
-     */
-    private boolean enable;
 
     /**
      * 验证码缓存过期时间单位:秒
