@@ -38,10 +38,6 @@ public class RpcProperties {
      */
     private Set<String> scan;
     /**
-     * 是否开启权限校验
-     */
-    private boolean enable;
-    /**
      * ak
      */
     private String accessKey = "331000";

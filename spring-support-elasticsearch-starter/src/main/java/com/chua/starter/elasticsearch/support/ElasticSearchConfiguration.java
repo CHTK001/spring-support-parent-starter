@@ -14,8 +14,6 @@ import org.springframework.context.annotation.Import;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.springframework.boot.@ConditionalOnProperty(prefix = "plugin.elasticsearch", name = "enable", havingValue = "true", matchIfMissing = false)
-autoconfigure.condition.ConditionalOnProperty;
 
 /**
  * es
