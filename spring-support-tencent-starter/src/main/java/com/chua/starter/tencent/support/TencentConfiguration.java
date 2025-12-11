@@ -13,6 +13,7 @@ import org.springframework.context.annotation.Bean;
  * tencent配置
  * @author CH
  * @since 2024/12/2
+@ConditionalOnProperty(prefix = "plugin.tencent.mini-app", name = "enable", havingValue = "true", matchIfMissing = false)
  */
 @Slf4j
 @EnableConfigurationProperties(TencentMiniAppProperties.class)

@@ -22,6 +22,7 @@ import org.springframework.context.annotation.Configuration;
  * @author CH
  * @since 2024-12-05
  * @version 1.0.0
+@ConditionalOnProperty(prefix = "plugin.config-center", name = "enable", havingValue = "true", matchIfMissing = false)
  */
 @Slf4j
 @Configuration

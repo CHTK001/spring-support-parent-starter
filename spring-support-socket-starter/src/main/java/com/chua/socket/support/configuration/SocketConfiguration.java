@@ -23,6 +23,7 @@ import java.util.List;
  * @author CH
  * @version 1.0.0
  * @since 2024-12-04
+@ConditionalOnProperty(prefix = "plugin.socket", name = "enable", havingValue = "true", matchIfMissing = false)
  */
 @Slf4j
 @EnableConfigurationProperties(SocketProperties.class)

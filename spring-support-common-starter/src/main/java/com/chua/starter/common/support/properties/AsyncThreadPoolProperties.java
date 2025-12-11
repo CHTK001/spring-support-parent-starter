@@ -12,6 +12,11 @@ import static com.chua.starter.common.support.properties.AsyncThreadPoolProperti
 @Data
 @ConfigurationProperties(prefix = PRE, ignoreInvalidFields = true)
 public class AsyncThreadPoolProperties {
+    /**
+     * 是否启用
+     */
+    private boolean enable = false;
+
 
     public static final String PRE = "plugin.thread";
     /**

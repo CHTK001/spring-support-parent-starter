@@ -32,10 +32,12 @@ import org.springframework.util.StringUtils;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 /**
  * Knife4j配置
  * @author CH
+@ConditionalOnProperty(prefix = "plugin.knife4j", name = "enable", havingValue = "true", matchIfMissing = false)
  */
 @Slf4j
 @EnableKnife4j

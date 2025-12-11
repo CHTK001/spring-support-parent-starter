@@ -97,7 +97,7 @@ public class ApiProperties {
         /**
          * 是否开启版本控制
          */
-        private boolean enable = true;
+        private boolean enable = false;
     }
 
     /**
@@ -143,7 +143,7 @@ public class ApiProperties {
         /**
          * 是否开启平台标识
          */
-        private boolean enable = true;
+        private boolean enable = false;
 
         /**
          * 平台类型（枚举，优先级高于 aliasName）
@@ -180,7 +180,7 @@ public class ApiProperties {
         /**
          * 是否开启加密功能
          */
-        private boolean enable = true;
+        private boolean enable = false;
 
         /**
          * 是否开启响应加密
@@ -212,7 +212,7 @@ public class ApiProperties {
         /**
          * 是否开启请求解密
          */
-        private boolean enable = true;
+        private boolean enable = false;
 
         /**
          * 请求解密密钥
@@ -239,7 +239,7 @@ public class ApiProperties {
         /**
          * 是否开启虚拟映射
          */
-        private boolean enable = true;
+        private boolean enable = false;
 
         /**
          * 虚拟映射
@@ -260,7 +260,7 @@ public class ApiProperties {
         /**
          * 是否开启 Mock 功能
          */
-        private boolean enable = true;
+        private boolean enable = false;
 
         /**
          * Mock 生效的环境（逗号分隔）
@@ -277,7 +277,7 @@ public class ApiProperties {
         /**
          * 是否开启功能开关
          */
-        private boolean enable = true;
+        private boolean enable = false;
 
         /**
          * 功能开关管理接口路径
@@ -294,7 +294,7 @@ public class ApiProperties {
         /**
          * 是否开启内部接口控制
          */
-        private boolean enable = true;
+        private boolean enable = false;
 
         /**
          * 全局IP白名单（适用于所有内部接口）
@@ -316,7 +316,7 @@ public class ApiProperties {
         /**
          * 是否开启废弃接口提示
          */
-        private boolean enable = true;
+        private boolean enable = false;
 
         /**
          * 是否在响应头中添加废弃警告

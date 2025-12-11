@@ -45,6 +45,8 @@ import static com.chua.starter.common.support.configuration.SpringBeanUtils.reso
 import static org.springframework.context.annotation.AnnotationConfigUtils.CONFIGURATION_BEAN_NAME_GENERATOR;
 import static org.springframework.core.annotation.AnnotationUtils.findAnnotation;
 import static org.springframework.util.ClassUtils.resolveClassName;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;@ConditionalOnProperty(prefix = "plugin.rpc", name = "enable", havingValue = "true", matchIfMissing = false)
+
 
 /**
  * rpc资源注释配置

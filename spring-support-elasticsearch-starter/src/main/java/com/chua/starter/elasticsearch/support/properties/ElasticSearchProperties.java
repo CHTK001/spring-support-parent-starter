@@ -11,6 +11,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @Data
 @ConfigurationProperties(prefix = ElasticSearchProperties.PRE)
 public class ElasticSearchProperties {
+    /**
+     * 是否启用
+     */
+    private boolean enable = false;
+
 
 
     public static final String PRE = "plugin.elasticsearch";
