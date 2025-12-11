@@ -67,6 +67,18 @@ public interface Protocol {
     LoginAuthResult logout(String uid, LogoutType logoutType, UserResult userResult);
 
     /**
+     * 创建临时令牌
+     * <p>基于源令牌创建一个短期有效的临时令牌</p>
+     *
+     * @param sourceToken 源令牌
+     * @param ext         扩展参数（包含 expireTime、allowedUrls 等）
+     * @return 临时令牌结果
+     */
+    default LoginAuthResult createTemporaryToken(String sourceToken, Map<String, Object> ext) {
+        return new LoginAuthResult(501, "当前协议不支持临时令牌功能");
+    }
+
+    /**
      * 查询用户在线状态
      * <p>通过调用服务器端接口获取用户的在线状态信息</p>
      *
