@@ -16,6 +16,11 @@ import java.util.List;
 @Data
 @ConfigurationProperties(prefix = MessageConverterProperties.PRE, ignoreInvalidFields = true)
 public class MessageConverterProperties {
+    /**
+     * 是否启用
+     */
+    private boolean enable = false;
+
 
     public static final String PRE = "plugin.message";
 

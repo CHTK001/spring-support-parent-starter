@@ -34,7 +34,7 @@ public class ApiCorsProperties {
     /**
      * 开启跨域
      */
-    private boolean enable = true;
+    private boolean enable = false;
 
     /**
      * 跨域路径白名单

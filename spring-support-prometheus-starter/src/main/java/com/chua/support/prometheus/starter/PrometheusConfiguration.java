@@ -9,6 +9,8 @@ import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
+import org.springframework.boot.autoconfigure.condition.Conditional@ConditionalOnProperty(prefix = "plugin.prometheus", name = "enable", havingValue = "true", matchIfMissing = false)
+OnProperty;
 
 /**
  * prometheus配置

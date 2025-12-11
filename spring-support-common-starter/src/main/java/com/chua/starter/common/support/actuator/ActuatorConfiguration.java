@@ -35,6 +35,7 @@ import org.springframework.context.annotation.Bean;
  * @author CH
  * @version 1.0.0
  * @since 2024/06/21
+@ConditionalOnProperty(prefix = "plugin.actuator", name = "enable", havingValue = "true", matchIfMissing = false)
  */
 @Slf4j
 @RequiredArgsConstructor

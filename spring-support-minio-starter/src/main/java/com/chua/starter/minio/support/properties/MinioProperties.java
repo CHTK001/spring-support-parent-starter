@@ -11,6 +11,11 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 @Data
 @ConfigurationProperties(prefix = MinioProperties.PRE)
 public class MinioProperties {
+    /**
+     * 是否启用
+     */
+    private boolean enable = false;
+
 
     public static final String PRE = "plugin.spring.minio";
     /**

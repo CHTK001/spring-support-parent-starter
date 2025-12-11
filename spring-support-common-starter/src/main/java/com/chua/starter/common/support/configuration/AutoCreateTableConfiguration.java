@@ -23,6 +23,7 @@ import java.util.Map;
  * 自动建表
  *
  * @author CH
+@ConditionalOnProperty(prefix = "plugin.create-table", name = "enable", havingValue = "true", matchIfMissing = false)
  */
 @Slf4j
 @ConditionalOnProperty(prefix = CreateTableProperties.PRE, name = "enable", havingValue = "true")

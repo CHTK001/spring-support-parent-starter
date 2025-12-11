@@ -24,7 +24,7 @@ public class OptionalProperties {
     /**
      *  是否打开
      */
-    private boolean enable = true;
+    private boolean enable = false;
 
 
 }

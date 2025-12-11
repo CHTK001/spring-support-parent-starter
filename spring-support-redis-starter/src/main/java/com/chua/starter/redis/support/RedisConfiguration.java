@@ -50,6 +50,7 @@ import java.util.List;
  */
 @Slf4j
 @EnableConfigurationProperties(RedisServerProperties.class)
+@ConditionalOnProperty(prefix = "plugin.redis.server", name = "enable", havingValue = "true", matchIfMissing = false)
 public class RedisConfiguration implements ApplicationContextAware, Ordered {
 
     RedisServerProperties redisServerProperties;

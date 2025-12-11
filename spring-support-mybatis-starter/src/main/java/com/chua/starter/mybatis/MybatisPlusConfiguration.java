@@ -41,6 +41,7 @@ import java.util.List;
 @Slf4j
 @AutoConfigureAfter(SqlSessionFactory.class)
 @EnableConfigurationProperties({MybatisPlusProperties.class, MybatisPlusDataScopeProperties.class})
+@ConditionalOnProperty(prefix = "plugin.mybatis", name = "enable", havingValue = "true", matchIfMissing = false)
 //@AutoConfigureOrder(Ordered.LOWEST_PRECEDENCE + 10)
 @RequiredArgsConstructor
 public class MybatisPlusConfiguration {

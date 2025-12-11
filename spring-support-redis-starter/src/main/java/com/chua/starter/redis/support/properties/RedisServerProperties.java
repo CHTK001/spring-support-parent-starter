@@ -12,6 +12,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "plugin.redis.server")
 public class RedisServerProperties {
     /**
+     * 是否启用
+     */
+    private boolean enable = false;
+
+    /**
      * 嵌入式服务
      */
     private boolean openEmbedded = false;

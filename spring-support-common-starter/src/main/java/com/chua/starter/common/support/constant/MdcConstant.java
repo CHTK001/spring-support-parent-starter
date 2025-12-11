@@ -25,4 +25,14 @@ public interface MdcConstant extends HttpConstant {
      * trace-id
      */
     String TRACE_ID = "traceId";
+
+    /**
+     * 用户ID
+     */
+    String USER_ID = "userId";
+
+    /**
+     * 请求IP
+     */
+    String REQUEST_IP = "requestIp";
 }

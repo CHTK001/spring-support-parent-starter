@@ -16,6 +16,7 @@ import org.springframework.core.env.Environment;
  *
  * 自我注入：仅在 report 客户端已启用时生效，通过读取配置决定是否启用。
  */
+@ConditionalOnProperty(prefix = "plugin.arthas", name = "enable", havingValue = "true", matchIfMissing = false)
 @Configuration
 @EnableConfigurationProperties({ArthasClientProperties.class})
 @ConditionalOnProperty(prefix = ArthasClientProperties.PREFIX, name = "enable", havingValue = "true", matchIfMissing = true)

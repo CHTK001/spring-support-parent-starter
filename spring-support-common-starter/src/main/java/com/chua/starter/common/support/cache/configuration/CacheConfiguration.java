@@ -12,6 +12,7 @@ import org.springframework.cache.caffeine.CaffeineCacheManager;
 import org.springframework.cache.interceptor.CacheErrorHandler;
 import org.springframework.cache.interceptor.SimpleCacheErrorHandler;
 import org.springframework.context.annotation.Bean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 /**
  * Cache缓存配置
@@ -25,7 +26,8 @@ import org.springframework.context.annotation.Bean;
  * &#64;Cacheable(cacheManager = "default")
  *
  * # 使用系统缓存管理器
- * &#64;Cacheable(cacheManager = CacheConstant.CACHE_MANAGER_FOR_SYSTEM)
+ * &#64;Cacheable(cacheManager = CacheConstant.CACHE_MANAGER_FOR@ConditionalOnProperty(prefix = "plugin.cache", name = "enable", havingValue = "true", matchIfMissing = false)
+_SYSTEM)
  * </pre>
  *
  * @author CH

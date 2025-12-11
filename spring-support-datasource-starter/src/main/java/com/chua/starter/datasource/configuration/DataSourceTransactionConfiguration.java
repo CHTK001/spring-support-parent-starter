@@ -26,6 +26,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import org.springframework.boot.autoconfigure.conditi@ConditionalOnProperty(prefix = "plugin.transaction", name = "enable", havingValue = "true", matchIfMissing = false)
+on.ConditionalOnProperty;
 
 /**
  * 事务

@@ -15,6 +15,11 @@ import java.util.List;
 @Data
 @ConfigurationProperties(prefix = "plugin.ssh.server")
 public class SshServerProperties {
+    /**
+     * 是否启用
+     */
+    private boolean enable = false;
+
 
     /**
      * 是否启用SSH服务端

@@ -11,6 +11,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @Data
 @ConfigurationProperties(prefix  = TencentMiniAppProperties.PREFIX, ignoreInvalidFields = true)
 public class TencentMiniAppProperties {
+    /**
+     * 是否启用
+     */
+    private boolean enable = false;
+
 
     public static final String PREFIX = "plugin.tencent.mini-app";
 

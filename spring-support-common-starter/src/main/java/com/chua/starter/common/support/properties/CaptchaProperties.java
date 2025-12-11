@@ -14,6 +14,11 @@ import java.awt.*;
 @Data
 @ConfigurationProperties(prefix = CaptchaProperties.PRE, ignoreInvalidFields = true)
 public class CaptchaProperties {
+    /**
+     * 是否启用
+     */
+    private boolean enable = false;
+
 
     /**
      * 配置前缀

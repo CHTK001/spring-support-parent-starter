@@ -13,6 +13,7 @@ import com.chua.starter.common.support.utils.ResponseUtils;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
+import com.chua.starter.oauth.client.support.provider.UserInfoVO;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.client.support.user.UserResume;
@@ -89,7 +90,11 @@ public class StaticProtocolExecutor implements ProtocolExecutor {
                     } catch (Exception ignored) {
                     }
 
+                    Map<String, Object> map = Map.of(
+                            "sysUserUsername", userResult.getUsername()
+                    );
                     userResult.setUid(DigestUtils.md5Hex(userResult.getUserId()));
+                    userResult.setExt(map);
                     userResult.setOpenId(userResult.getOpenId());
                     userResult.setUnionId(userResult.getUnionId());
                     return loginAuthResult;

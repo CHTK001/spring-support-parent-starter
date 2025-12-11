@@ -20,7 +20,7 @@ public class Knife4jProperties {
     /**
      * 是否开启
      */
-    private boolean enable = true;
+    private boolean enable = false;
 
     /**
      * knife4j

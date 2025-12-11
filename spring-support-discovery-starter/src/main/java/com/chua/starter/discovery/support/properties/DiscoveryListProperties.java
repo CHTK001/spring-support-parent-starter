@@ -14,6 +14,11 @@ import java.util.List;
 @Data
 @ConfigurationProperties(prefix = DiscoveryListProperties.PRE, ignoreInvalidFields = true)
 public class DiscoveryListProperties {
+    /**
+     * 是否启用
+     */
+    private boolean enable = false;
+
 
     public static final String PRE = "plugin.discovery";
 

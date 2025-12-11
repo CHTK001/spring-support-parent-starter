@@ -19,6 +19,7 @@ import org.springframework.context.annotation.Bean;
  *
  * @author CH
  * @version 1.0.0
+@ConditionalOnProperty(prefix = "plugin.captcha", name = "enable", havingValue = "true", matchIfMissing = false)
  */
 @Slf4j
 @EnableConfigurationProperties({CaptchaProperties.class, OptionalProperties.class})

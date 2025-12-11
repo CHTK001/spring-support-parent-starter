@@ -26,6 +26,8 @@ import org.springframework.core.env.Environment;
 
 import java.io.IOException;
 import java.util.*;
+import org.springframework.boot.autoconfigure.cond@ConditionalOnProperty(prefix = "plugin.discovery", name = "enable", havingValue = "true", matchIfMissing = false)
+ition.ConditionalOnProperty;
 
 /**
  * 发现服务

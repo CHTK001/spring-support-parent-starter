@@ -156,7 +156,7 @@ public class SocketProperties {
         /**
          * 是否启用此房间
          */
-        private boolean enable = true;
+        private boolean enable = false;
 
         /**
          * 获取实际端口

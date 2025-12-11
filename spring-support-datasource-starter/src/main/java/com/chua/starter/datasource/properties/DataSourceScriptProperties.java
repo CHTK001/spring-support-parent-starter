@@ -55,7 +55,7 @@ public class DataSourceScriptProperties {
      * 默认值: true
      * 示例: plugin.datasource.script.enable=true
      */
-    private boolean enable = true;
+    private boolean enable = false;
 
     /**
      * 是否继续执行脚本，如果某个脚本执行失败，是否继续执行下一个脚本

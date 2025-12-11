@@ -23,6 +23,7 @@ import org.springframework.util.ReflectionUtils;
  * mqtt
  *
  * @author CH
+@ConditionalOnProperty(prefix = "plugin.mqtt", name = "enable", havingValue = "true", matchIfMissing = false)
  */
 @Slf4j
 @EnableConfigurationProperties(MqttProperties.class)
