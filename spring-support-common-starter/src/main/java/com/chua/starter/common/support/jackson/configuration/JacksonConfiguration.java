@@ -43,8 +43,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.TimeZone;
-import org.springframework.boot.autoconfigure.condition.Con@ConditionalOnProperty(prefix = "plugin.jackson", name = "enable", havingValue = "true", matchIfMissing = false)
-ditionalOnProperty;
 
 /**
  * Jackson配置
