@@ -138,7 +138,7 @@ public class StaticProtocol extends AbstractProtocol {
 
         // 根据用户名设置角色信息
         if (ADMIN.equalsIgnoreCase(userResume.getUsername())) {
-            userResume.setRoles(Sets.newHashSet(SUPER_ADMIN));
+            userResume.setRoles(Sets.newHashSet(SUPER_ADMIN, ADMIN));
         } else {
             userResume.setRoles(Sets.newHashSet(OPS));
         }

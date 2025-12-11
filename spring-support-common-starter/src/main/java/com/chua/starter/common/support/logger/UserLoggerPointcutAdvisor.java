@@ -179,14 +179,6 @@ public class UserLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdviso
         userLoggerInfo.setLogCode(IdUtils.createUlid());
         userLoggerInfo.setLogContent(getContent(content, invocation, proceed));
 
-        // 记录详细的debug日志
-        log.debug("用户操作日志详情 - 日志编码: {}, IP: {}, 浏览器: {}, 系统: {}, 请求地址: {}",
-                userLoggerInfo.getLogCode(),
-                userLoggerInfo.getClientIp(),
-                userLoggerInfo.getBrowser(),
-                userLoggerInfo.getSystem(),
-                userLoggerInfo.getLogMapping());
-
         // 发布日志事件
         applicationContext.publishEvent(userLoggerInfo);
     }
