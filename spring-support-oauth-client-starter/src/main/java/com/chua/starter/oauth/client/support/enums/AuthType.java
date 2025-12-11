@@ -36,6 +36,12 @@ public enum AuthType {
     TENANT("tenant", "租户认证"),
 
     /**
+     * Gitee认证
+     * <p>Gitee第三方OAuth2.0登录</p>
+     */
+    GITEE("gitee", "Gitee认证"),
+
+    /**
      * 无认证类型
      * <p>用于默认值或未指定认证类型的场景</p>
      */
