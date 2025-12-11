@@ -49,9 +49,7 @@ public class AuthClientExecute {
     private final AuthClientProperties authClientProperties;
 
     public static final AuthClientExecute INSTANCE = new AuthClientExecute();
-    
-    private final String encryption;
-    
+
     public static final String DEFAULT_KEY = "1234567980123456";
 
     public static AuthClientExecute getInstance() {
@@ -65,121 +63,96 @@ public class AuthClientExecute {
 
     public AuthClientExecute() {
         this.authClientProperties = SpringBeanUtils.getBinderBean(AuthClientProperties.PRE, AuthClientProperties.class);
-        this.encryption = authClientProperties.getEncryption();
     }
 
 
     /**
-     * 获取用户结果信息
+     * 获取缓存的用户结果信息（仅从 Session 获取，不请求服务器）
      *
-     * @return 用户结果信息
+     * @return 用户结果信息，未登录返回 null
      */
     public UserResult getCacheUserResult() {
-        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
-        if (requestAttributes == null) {
-            return null;
-        }
-
-        ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
-
-        HttpServletRequest request = attributes.getRequest();
-        Object attribute = request.getSession().getAttribute(SESSION_USER_INFO);
-        if (null != attribute) {
-            if (attribute instanceof UserResult) {
-                return (UserResult) attribute;
-            }
-
-            if (attribute instanceof UserResume) {
-                UserResult userResult = new UserResult();
-                com.chua.common.support.bean.BeanUtils.copyProperties(attribute, userResult);
-                request.getSession().setAttribute(SESSION_USER_INFO, userResult);
-                return userResult;
-            }
-        }
-        return null;
+        return getSessionUserResult();
     }
+
     /**
-     * 获取用户结果信息
+     * 获取用户结果信息（优先从 Session 获取，否则请求服务器验证）
      *
      * @return 用户结果信息
+     * @throws AuthenticationException 如果未登录或令牌无效
      */
     public UserResult getUserResult() {
-        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
-        if (requestAttributes == null) {
-            return null;
-        }
-
-        ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
-
-        HttpServletRequest request = attributes.getRequest();
-        Object attribute = request.getSession().getAttribute(SESSION_USER_INFO);
-        if (null != attribute) {
-            if (attribute instanceof UserResult) {
-                return (UserResult) attribute;
-            }
-
-            if (attribute instanceof UserResume) {
-                UserResult userResult = new UserResult();
-                com.chua.common.support.bean.BeanUtils.copyProperties(attribute, userResult);
-                request.getSession().setAttribute(SESSION_USER_INFO, userResult);
-                return userResult;
-            }
-        }
-
-        WebRequest webRequest1 = new WebRequest(
-                authClientProperties,
-                request, null);
-
-        UserResult userResult = new UserResult();
-        AuthenticationInformation authentication = webRequest1.authentication();
-        UserResume returnResult = authentication.getReturnResult();
-        if (null == returnResult) {
-            throw new AuthenticationException("请重新登录");
-        }
-        com.chua.common.support.bean.BeanUtils.copyProperties(returnResult, userResult);
-        request.getSession().setAttribute(SESSION_USER_INFO, userResult);
-        return userResult;
+        return getUserResultInternal(true);
     }
 
     /**
      * 安全获取用户结果信息，不抛出异常
      *
-     * @return 用户结果信息，如果未登录则返回null
+     * @return 用户结果信息，如果未登录则返回 null
      */
     public UserResult getSafeUserResult() {
-        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
-        if (requestAttributes == null) {
+        return getUserResultInternal(false);
+    }
+
+    /**
+     * 从 Session 获取用户结果（不请求服务器）
+     */
+    private UserResult getSessionUserResult() {
+        HttpServletRequest request = AuthSessionUtils.getRequest();
+        if (request == null) {
             return null;
         }
 
-        ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
-
-        HttpServletRequest request = attributes.getRequest();
         Object attribute = request.getSession().getAttribute(SESSION_USER_INFO);
-        if (null != attribute) {
-            if (attribute instanceof UserResult) {
-                return (UserResult) attribute;
-            }
-
-            if (attribute instanceof UserResume) {
-                UserResult userResult = new UserResult();
-                com.chua.common.support.bean.BeanUtils.copyProperties(attribute, userResult);
-                request.getSession().setAttribute(SESSION_USER_INFO, userResult);
-                return userResult;
-            }
+        if (attribute == null) {
+            return null;
         }
 
-        WebRequest webRequest1 = new WebRequest(
-                authClientProperties,
-                request, null);
+        if (attribute instanceof UserResult userResult) {
+            return userResult;
+        }
+
+        if (attribute instanceof UserResume userResume) {
+            UserResult userResult = new UserResult();
+            BeanUtils.copyProperties(userResume, userResult);
+            request.getSession().setAttribute(SESSION_USER_INFO, userResult);
+            return userResult;
+        }
+        return null;
+    }
+
+    /**
+     * 获取用户结果信息的内部实现
+     *
+     * @param throwOnFailure 失败时是否抛出异常
+     * @return 用户结果信息
+     */
+    private UserResult getUserResultInternal(boolean throwOnFailure) {
+        HttpServletRequest request = AuthSessionUtils.getRequest();
+        if (request == null) {
+            return null;
+        }
+
+        // 先从 Session 获取
+        UserResult cached = getSessionUserResult();
+        if (cached != null) {
+            return cached;
+        }
+
+        // 请求服务器验证
+        WebRequest webRequest = new WebRequest(authClientProperties, request, null);
+        AuthenticationInformation authentication = webRequest.authentication();
+        UserResume returnResult = authentication.getReturnResult();
+
+        if (returnResult == null) {
+            if (throwOnFailure) {
+                throw new AuthenticationException("请重新登录");
+            }
+            return null;
+        }
 
         UserResult userResult = new UserResult();
-        AuthenticationInformation authentication = webRequest1.authentication();
-        UserResume returnResult = authentication.getReturnResult();
-        if (null == returnResult) {
-            return null;
-        }
-        com.chua.common.support.bean.BeanUtils.copyProperties(returnResult, userResult);
+        BeanUtils.copyProperties(returnResult, userResult);
         request.getSession().setAttribute(SESSION_USER_INFO, userResult);
         return userResult;
     }
@@ -208,21 +181,14 @@ public class AuthClientExecute {
      * <p>登出时调用，清除 AuthFilter 存储的用户信息</p>
      */
     private void clearLocalCache() {
-        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
-        if (requestAttributes == null) {
+        HttpServletRequest request = AuthSessionUtils.getRequest();
+        if (request == null) {
             return;
         }
         
-        ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
-        HttpServletRequest request = attributes.getRequest();
-        
         try {
             // 清除 Session 中的用户信息
-            request.getSession().removeAttribute(SESSION_USER_INFO);
-            request.getSession().removeAttribute("username");
-            request.getSession().removeAttribute("userId");
-            request.getSession().removeAttribute("userResume");
-            request.getSession().removeAttribute("principal");
+            AuthSessionUtils.clearSession();
             
             // 清除内存缓存
             String token = getTokenFromRequest(request);
@@ -513,144 +479,81 @@ public class AuthClientExecute {
     /**
      * 获取租户ID
      *
-     * @return {@link String} 租户ID，例如："tenant_001"
+     * @return 租户ID，例如："tenant_001"
+     * @see AuthSessionUtils#getTenantId()
      */
     public static String getTenantId() {
-        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
-        if (requestAttributes == null) {
-            return null;
-        }
-
-        ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
-
-        HttpServletRequest request = attributes.getRequest();
-        Object attribute = request.getSession().getAttribute(SESSION_TENANT_ID);
-        return null == attribute ? null : attribute.toString();
+        return AuthSessionUtils.getTenantId();
     }
 
     /**
      * 获取用户ID
      *
-     * @return {@link String} 用户ID，例如："user_001"
+     * @return 用户ID，例如："user_001"
+     * @see AuthSessionUtils#getUserId()
      */
     public static String getUserId() {
-        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
-        if (requestAttributes == null) {
-            return null;
-        }
-
-        ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
-
-        HttpServletRequest request = attributes.getRequest();
-        Object attribute = request.getSession().getAttribute(SESSION_USERID);
-        return null == attribute ? null : attribute.toString();
+        return AuthSessionUtils.getUserId();
     }
 
     /**
      * 获取用户名
      *
-     * @return {@link String} 用户名，例如："zhangsan"
+     * @return 用户名，例如："zhangsan"
+     * @see AuthSessionUtils#getUsername()
      */
     public static String getUsername() {
-        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
-        if (requestAttributes == null) {
-            return null;
-        }
-
-        ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
-
-        HttpServletRequest request = attributes.getRequest();
-        Object attribute = request.getSession().getAttribute(SESSION_USERNAME);
-        return null == attribute ? null : attribute.toString();
+        return AuthSessionUtils.getUsername();
     }
 
     /**
      * 设置用户名
      *
      * @param username 用户名，例如："zhangsan"
+     * @see AuthSessionUtils#setUsername(String)
      */
     public static void setUsername(String username) {
-        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
-        if (requestAttributes == null) {
-            return;
-        }
-
-        ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
-
-        HttpServletRequest request = attributes.getRequest();
-        request.getSession().setAttribute(SESSION_USERNAME, username);
+        AuthSessionUtils.setUsername(username);
     }
 
     /**
      * 设置用户信息
      *
-     * @param userInfo 用户信息对象，例如：new UserResult()
+     * @param userInfo 用户信息对象
+     * @see AuthSessionUtils#setUserInfo(Object)
      */
     public static void setUserInfo(Object userInfo) {
-        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
-        if (requestAttributes == null) {
-            return;
-        }
-
-        ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
-
-        HttpServletRequest request = attributes.getRequest();
-        request.getSession().setAttribute(SESSION_USER_INFO, userInfo);
+        AuthSessionUtils.setUserInfo(userInfo);
     }
 
     /**
      * 获取用户信息
-     * 
+     *
      * @param target 目标类型，例如：UserResult.class
-     * @param <T> 泛型类型
+     * @param <T>    泛型类型
      * @return 用户信息对象
+     * @see AuthSessionUtils#getUserInfo(Class)
      */
-    @SuppressWarnings("ALL")
     public static <T> T getUserInfo(Class<T> target) {
-        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
-        if (requestAttributes == null) {
-            return null;
-        }
-
-        ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
-
-        HttpServletRequest request = attributes.getRequest();
-        Object attribute = request.getSession().getAttribute(SESSION_USER_INFO);
-        if (null != attribute && target.isAssignableFrom(attribute.getClass())) {
-            return (T) attribute;
-        }
-
-        return BeanUtils.copyProperties(attribute, target);
+        return AuthSessionUtils.getUserInfo(target);
     }
 
     /**
      * 删除用户名
+     *
+     * @see AuthSessionUtils#removeUsername()
      */
     public static void removeUsername() {
-        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
-        if (requestAttributes == null) {
-            return;
-        }
-
-        ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
-
-        HttpServletRequest request = attributes.getRequest();
-        request.getSession().removeAttribute(SESSION_USER_INFO);
+        AuthSessionUtils.removeUsername();
     }
 
     /**
      * 删除用户信息
+     *
+     * @see AuthSessionUtils#removeUserInfo()
      */
     public static void removeUserInfo() {
-        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
-        if (requestAttributes == null) {
-            return;
-        }
-
-        ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
-
-        HttpServletRequest request = attributes.getRequest();
-        request.getSession().removeAttribute(SESSION_USER_INFO);
+        AuthSessionUtils.removeUserInfo();
     }
 
     /**
