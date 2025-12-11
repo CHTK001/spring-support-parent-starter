@@ -169,6 +169,27 @@ public class HttpProtocol extends AbstractProtocol {
         throw new AuthException(information.getInformation().getMessage());
     }
 
+    @Override
+    public LoginAuthResult createTemporaryToken(String sourceToken, Map<String, Object> ext) {
+        JsonObject jsonObject = new JsonObject();
+        // 构建请求数据
+        jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
+        jsonObject.put("x-oauth-secret-key", authClientProperties.getKey().getSecretKey());
+        jsonObject.put("x-oauth-source-token", sourceToken);
+        jsonObject.put("x-oauth-ext", ext);
+
+        AuthenticationInformation information = createAuthenticationInformation(
+                jsonObject, null, authClientProperties.getTemporaryTokenPage());
+
+        LoginAuthResult result = new LoginAuthResult();
+        result.setCode(information.getInformation().getCode());
+        result.setMessage(information.getInformation().getMessage());
+        if (information.getInformation() == Information.OK) {
+            result.setToken(information.getToken());
+            result.setUserResume(information.getReturnResult());
+        }
+        return result;
+    }
 
     /**
      * 创建认证信息

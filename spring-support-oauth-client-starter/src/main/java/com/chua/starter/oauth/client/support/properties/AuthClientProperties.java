@@ -147,6 +147,10 @@ public class AuthClientProperties {
      */
     private String logoutPage = "/logout";
     /**
+     * 临时令牌页
+     */
+    private String temporaryTokenPage = "/temporary-token";
+    /**
      * 鉴权地址
      */
     private String oauthUrl = "/oauth";
