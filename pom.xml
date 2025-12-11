@@ -86,7 +86,6 @@
         <!-- 运维和管理模块 -->
         <module>spring-support-shell-starter</module>           <!-- SSH Shell管理模块 -->
         <module>spring-support-ssh-starter</module>
-        <module>spring-support-oauth-client-aksk-starter</module>             <!-- SSH服务端模块 -->
     </modules>
 
     <!-- 项目属性配置 -->
