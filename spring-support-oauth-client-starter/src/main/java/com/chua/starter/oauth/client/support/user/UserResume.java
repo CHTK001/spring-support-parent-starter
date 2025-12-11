@@ -126,54 +126,24 @@ public class UserResume implements Serializable {
     private String loginType;
 
     /**
-     * 登录次数
-     */
-    @Schema(description = "累计登录次数")
-    private int loginCnt;
-
-    /**
      * 客户端IP地址
      */
     @Schema(description = "客户端IP地址")
     private String address;
 
-    /**
-     * 最后一次登录IP
-     */
-    @Schema(description = "最后一次登录IP")
-    private String lastIp;
-
     // ==================== 用户基本信息 ====================
 
     /**
-     * 用户昵称
+     * 用户昵称/显示名称
      */
     @Schema(description = "用户昵称")
     private String nickName;
-
-    /**
-     * 真实姓名
-     */
-    @Schema(description = "真实姓名")
-    private String realName;
-
-    /**
-     * 姓名（显示名称）
-     */
-    @Schema(description = "姓名")
-    private String name;
 
     /**
      * 手机号码
      */
     @Schema(description = "手机号码")
     private String phone;
-
-    /**
-     * 身份证号
-     */
-    @Schema(description = "身份证号")
-    private String card;
 
     /**
      * 性别
@@ -259,53 +229,6 @@ public class UserResume implements Serializable {
     @Schema(description = "错误/提示消息")
     private String message;
 
-    // ==================== 在线控制配置（用户级，优先级高于全局） ====================
-
-    /**
-     * 在线模式（用户级配置）
-     * <p>优先级：用户配置 > 全局配置（plugin.oauth.server.online）</p>
-     * <ul>
-     *   <li><b>SINGLE</b> - 单设备在线，新登录踢掉所有旧设备</li>
-     *   <li><b>MULTIPLE</b> - 多设备不限制数量</li>
-     *   <li><b>LIMIT</b> - 限制最大在线数量，超出踢掉最早登录的设备</li>
-     * </ul>
-     * <p>为null时使用全局配置</p>
-     */
-    @Schema(description = "在线模式（SINGLE/MULTIPLE/LIMIT）")
-    private String onlineMode;
-
-    /**
-     * 最大在线设备数量（用户级配置）
-     * <p>仅当 onlineMode = LIMIT 时生效</p>
-     * <p>优先级：用户配置 > 全局配置（plugin.oauth.server.max-online-count）</p>
-     * <p>为null时使用全局配置，默认3</p>
-     */
-    @Schema(description = "最大在线设备数量")
-    private Integer maxOnlineCount;
-
-    /**
-     * Token过期时间（秒）（用户级配置）
-     * <p>优先级：用户配置 > 全局配置（plugin.oauth.server.expire）</p>
-     * <p>为null时使用全局配置</p>
-     * <p>可用于VIP用户设置更长的过期时间</p>
-     */
-    @Schema(description = "Token过期时间（秒）")
-    private Long tokenExpire;
-
-    /**
-     * RefreshToken过期时间（秒）（用户级配置）
-     * <p>优先级：用户配置 > 全局配置（plugin.oauth.server.refresh-expire）</p>
-     * <p>为null时使用全局配置</p>
-     */
-    @Schema(description = "RefreshToken过期时间（秒）")
-    private Long refreshTokenExpire;
-
-    /**
-     * 是否强制使用用户配置
-     * <p>true时忽略全局配置，强制使用用户配置</p>
-     */
-    @Schema(description = "是否强制使用用户配置")
-    private Boolean forceOnline;
 
     public static UserResume empty() {
         return EMPTY;

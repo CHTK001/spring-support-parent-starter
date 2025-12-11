@@ -63,9 +63,9 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
                  request.getMethod(), request.getRemoteAddr());
         
         if (userResume != null) {
-            log.debug("【请求包装】用户信息 - 用户ID: {}, 真实姓名: {}, 租户ID: {}, 部门ID: {}, 是否管理员: {}",
+            log.debug("【请求包装】用户信息 - 用户ID: {}, 昵称: {}, 租户ID: {}, 部门ID: {}, 是否管理员: {}",
                      userResume.getUserId(),
-                     userResume.getName(),
+                     userResume.getNickName(),
                      userResume.getTenantId(),
                      userResume.getDeptId(),
                      userResume.isAdmin());

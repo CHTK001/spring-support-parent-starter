@@ -72,7 +72,7 @@ public class OAuthPrincipal implements Principal {
         
         log.debug("【Principal创建】用户详细信息 - 用户ID: {}, 真实姓名: {}, 租户ID: {}, 部门ID: {}", 
                  userResume != null ? userResume.getUserId() : "null",
-                 userResume != null ? userResume.getName() : "null",
+                 userResume != null ? userResume.getNickName() : "null",
                  userResume != null ? userResume.getTenantId() : "null",
                  userResume != null ? userResume.getDeptId() : "null");
         
@@ -92,17 +92,17 @@ public class OAuthPrincipal implements Principal {
                 authType);
         
         if (userResume != null) {
-            log.debug("【Principal认证】用户完整信息 - 用户ID: {}, 用户名: {}, 真实姓名: {}, 手机: {}, 是否管理员: {}", 
+            log.debug("【Principal认证】用户完整信息 - 用户ID: {}, 用户名: {}, 昵称: {}, 手机: {}, 是否管理员: {}", 
                      userResume.getUserId(),
                      userResume.getUsername(),
-                     userResume.getName(),
+                     userResume.getNickName(),
                      userResume.getPhone(),
                      userResume.isAdmin());
             
             log.debug("【Principal认证】用户组织信息 - 租户ID: {}, 部门ID: {}, 最后登录IP: {}", 
                      userResume.getTenantId(),
                      userResume.getDeptId(),
-                     userResume.getLastIp());
+                     userResume.getAddress());
             
             log.debug("【Principal认证】用户权限信息 - 角色数量: {}, 权限数量: {}, 扩展属性数量: {}", 
                      userResume.getRoles() != null ? userResume.getRoles().size() : 0,
@@ -156,7 +156,7 @@ public class OAuthPrincipal implements Principal {
      * @return 用户真实姓名
      */
     public String getRealName() {
-        String realName = userResume != null ? userResume.getName() : null;
+        String realName = userResume != null ? userResume.getNickName() : null;
         log.debug("【Principal获取】获取真实姓名: {}", realName);
         return realName;
     }
@@ -344,7 +344,7 @@ public class OAuthPrincipal implements Principal {
      * @return 身份证号
      */
     public String getCard() {
-        String card = userResume != null ? userResume.getCard() : null;
+        String card = userResume != null ? null : null;
         log.debug("【Principal获取】获取身份证号: {}", card != null ? maskCard(card) : "null");
         return card;
     }
@@ -366,7 +366,7 @@ public class OAuthPrincipal implements Principal {
      * @return 最后登录IP
      */
     public String getLastIp() {
-        String lastIp = userResume != null ? userResume.getLastIp() : null;
+        String lastIp = userResume != null ? userResume.getAddress() : null;
         log.debug("【Principal获取】获取最后登录IP: {}", lastIp);
         return lastIp;
     }
