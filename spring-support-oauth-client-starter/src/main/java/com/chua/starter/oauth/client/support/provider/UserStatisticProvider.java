@@ -82,8 +82,17 @@ public class UserStatisticProvider {
 
         String address = getIpAddress(request);
         AuthClientExecute clientExecute = AuthClientExecute.getInstance();
-        LoginAuthResult accessToken = clientExecute.getAccessToken(loginData.getUsername(), loginData.getPassword(), AuthType.WEB,
-                ImmutableBuilder.<String, Object>builderOfMap().put("address", address).build()
+        // 构建扩展参数，包含地址和租户ID
+        var extBuilder = ImmutableBuilder.<String, Object>builderOfMap()
+                .put("address", address);
+        if (StringUtils.isNotBlank(loginData.getTenantId())) {
+            extBuilder.put("tenantId", loginData.getTenantId());
+        }
+        LoginAuthResult accessToken = clientExecute.getAccessToken(
+                loginData.getUsername(),
+                loginData.getPassword(),
+                AuthType.WEB,
+                extBuilder.build()
         );
         if (null == accessToken) {
             return ReturnResult.failure(USERNAME_OR_PASSWORD_ERROR, "账号或者密码不正确");

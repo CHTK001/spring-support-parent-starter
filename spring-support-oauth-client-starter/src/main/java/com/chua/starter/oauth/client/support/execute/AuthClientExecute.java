@@ -33,6 +33,8 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -413,6 +415,89 @@ public class AuthClientExecute {
     public int getOnlineCount(String uid) {
         Protocol.OnlineStatus status = getOnlineStatus(uid);
         return status != null ? status.getOnlineCount() : 0;
+    }
+
+    // ==================== 临时令牌功能 ====================
+
+    /**
+     * 默认临时令牌过期时间（秒）
+     */
+    private static final int DEFAULT_TEMPORARY_TOKEN_EXPIRE = 10;
+
+    /**
+     * 最大临时令牌过期时间（秒）
+     */
+    private static final int MAX_TEMPORARY_TOKEN_EXPIRE = 3600;
+
+    /**
+     * 创建临时令牌（使用当前登录用户，默认10秒过期）
+     * <p>基于当前登录用户的令牌创建一个短期有效的临时令牌</p>
+     *
+     * @return 临时令牌结果，包含临时token和过期时间
+     */
+    public LoginAuthResult createTemporaryToken() {
+        return createTemporaryToken(DEFAULT_TEMPORARY_TOKEN_EXPIRE, null);
+    }
+
+    /**
+     * 创建临时令牌（使用当前登录用户，指定过期时间）
+     *
+     * @param expireSeconds 过期时间（秒），范围：1-3600
+     * @return 临时令牌结果
+     */
+    public LoginAuthResult createTemporaryToken(int expireSeconds) {
+        return createTemporaryToken(expireSeconds, null);
+    }
+
+    /**
+     * 创建临时令牌（使用当前登录用户，指定过期时间和允许的URL）
+     *
+     * @param expireSeconds 过期时间（秒），范围：1-3600
+     * @param allowedUrls   允许访问的URL列表，null或空表示允许所有URL
+     * @return 临时令牌结果
+     */
+    public LoginAuthResult createTemporaryToken(int expireSeconds, List<String> allowedUrls) {
+        UserResult userResult = getSafeUserResult();
+        if (userResult == null || StringUtils.isBlank(userResult.getToken())) {
+            return new LoginAuthResult(401, "未登录或令牌无效");
+        }
+        return createTemporaryTokenByToken(userResult.getToken(), expireSeconds, allowedUrls);
+    }
+
+    /**
+     * 根据指定令牌创建临时令牌
+     *
+     * @param sourceToken   源令牌
+     * @param expireSeconds 过期时间（秒），范围：1-3600
+     * @param allowedUrls   允许访问的URL列表，null或空表示允许所有URL
+     * @return 临时令牌结果
+     */
+    public LoginAuthResult createTemporaryTokenByToken(String sourceToken, int expireSeconds, List<String> allowedUrls) {
+        if (StringUtils.isBlank(sourceToken)) {
+            return new LoginAuthResult(400, "源令牌不能为空");
+        }
+
+        // 限制过期时间范围
+        int actualExpire = Math.max(1, Math.min(expireSeconds, MAX_TEMPORARY_TOKEN_EXPIRE));
+
+        try {
+            Protocol protocol = ServiceProvider.of(Protocol.class)
+                    .getNewExtension(authClientProperties.getProtocol(), authClientProperties);
+            if (protocol == null) {
+                return new LoginAuthResult(500, "协议服务不可用");
+            }
+
+            // 构建扩展参数
+            Map<String, Object> ext = new HashMap<>();
+            ext.put("expireTime", actualExpire);
+            if (allowedUrls != null && !allowedUrls.isEmpty()) {
+                ext.put("allowedUrls", String.join(",", allowedUrls));
+            }
+
+            return protocol.createTemporaryToken(sourceToken, ext);
+        } catch (Exception e) {
+            return new LoginAuthResult(500, "创建临时令牌失败: " + e.getMessage());
+        }
     }
 
     /**
