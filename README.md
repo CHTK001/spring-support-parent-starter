@@ -99,14 +99,41 @@ implementation 'com.chua:spring-support-circuit-breaker-starter:4.0.0.32'
 
 ### 基本配置
 
+#### 🔧 配置开关说明
+
+**重要**：从 v4.0.0.32 版本开始，所有功能模块都添加了 `enable` 配置开关，默认值为 `false`。
+
+**使用原则**：
+
+- ✅ 所有功能默认不启用，避免不必要的资源占用
+- ✅ 需要使用某个功能时，显式设置 `enable: true`
+- ✅ 统一的配置前缀：`plugin.{模块名}.enable`
+
+**配置示例**：
+
 在 `application.yml` 中添加基本配置：
 
-```
+```yaml
 # 通用功能配置
 plugin:
-  parameter:
-    enable: true  # 启用统一响应格式
-  
+  # API 统一响应格式
+  api:
+    enable: true # 默认: false，需要显式启用
+
+  # Redis 缓存
+  redis:
+    server:
+      enable: true # 默认: false
+
+  # MyBatis 数据库
+  mybatis:
+    enable: true # 默认: false
+
+  # OAuth 客户端
+  oauth:
+    client:
+      enable: true # 默认: false
+
   # 熔断降级和限流配置
   circuit-breaker:
     enable: true
@@ -118,6 +145,58 @@ plugin:
       limit-refresh-period: 1s
       enable-management: true
 ```
+
+#### 📋 所有模块配置开关列表
+
+| 模块              | 配置前缀                          | 默认值 | 说明               |
+| ----------------- | --------------------------------- | ------ | ------------------ |
+| **基础功能**      |
+| Actuator          | `plugin.actuator.enable`          | false  | 监控端点           |
+| API               | `plugin.api.enable`               | false  | API 统一配置       |
+| API CORS          | `plugin.api.cors.enable`          | false  | 跨域配置           |
+| Cache             | `plugin.cache.enable`             | false  | 缓存管理           |
+| Jackson           | `plugin.jackson.enable`           | false  | JSON 序列化        |
+| Log               | `plugin.log.enable`               | false  | 日志配置           |
+| Async             | `plugin.async.enable`             | false  | 异步线程池         |
+| Captcha           | `plugin.captcha.enable`           | false  | 验证码             |
+| Create Table      | `plugin.create-table.enable`      | false  | 自动建表           |
+| IP                | `plugin.ip.enable`                | false  | IP 解析            |
+| Message Converter | `plugin.message-converter.enable` | false  | 消息转换           |
+| Notice            | `plugin.notice.enable`            | false  | 通知               |
+| Optional          | `plugin.optional.enable`          | false  | 可选配置           |
+| **数据库**        |
+| MyBatis           | `plugin.mybatis.enable`           | false  | MyBatis Plus       |
+| MyBatis Tenant    | `plugin.tenant.enable`            | false  | 多租户             |
+| DataSource Script | `plugin.datasource.script.enable` | false  | 数据源脚本         |
+| Multi DataSource  | `plugin.datasource.multi.enable`  | false  | 多数据源           |
+| Transaction       | `plugin.transaction.enable`       | false  | 事务管理           |
+| **缓存存储**      |
+| Redis             | `plugin.redis.server.enable`      | false  | Redis 服务         |
+| Minio             | `plugin.minio.enable`             | false  | 对象存储           |
+| Elasticsearch     | `plugin.elasticsearch.enable`     | false  | 搜索引擎           |
+| **认证授权**      |
+| OAuth Client      | `plugin.oauth.client.enable`      | false  | OAuth 客户端       |
+| **消息通信**      |
+| Email             | `plugin.email.enable`             | false  | 邮件发送           |
+| MQTT              | `plugin.mqtt.enable`              | false  | MQTT 消息          |
+| Socket.IO         | `plugin.socketio.enable`          | false  | Socket.IO          |
+| SSE               | `plugin.sse.enable`               | false  | Server-Sent Events |
+| Socket            | `plugin.socket.enable`            | false  | TCP/UDP Socket     |
+| RPC               | `plugin.rpc.enable`               | false  | RPC 远程调用       |
+| **服务治理**      |
+| Discovery         | `plugin.discovery.enable`         | false  | 服务发现           |
+| Config Center     | `plugin.config-center.enable`     | false  | 配置中心           |
+| Sync              | `plugin.sync.enable`              | false  | 同步服务           |
+| **监控运维**      |
+| Prometheus        | `plugin.prometheus.enable`        | false  | Prometheus 监控    |
+| Report Client     | `plugin.report.enable`            | false  | 上报客户端         |
+| Arthas Client     | `plugin.arthas.enable`            | false  | Arthas 诊断        |
+| **其他服务**      |
+| Pay Client        | `plugin.pay.enable`               | false  | 支付客户端         |
+| Swagger           | `plugin.knife4j.enable`           | false  | API 文档           |
+| Shell             | `plugin.shell.enable`             | false  | Shell 服务         |
+| SSH               | `plugin.ssh.enable`               | false  | SSH 服务           |
+| Tencent           | `plugin.tencent.mini-app.enable`  | false  | 腾讯云服务         |
 
 ### 简单示例
 
@@ -165,9 +244,11 @@ public class UserController {
 ### 🔧 基础功能模块
 
 #### spring-support-common-starter
+
 **通用功能和工具类模块**
 
 提供企业级应用开发中常用的基础功能：
+
 - 统一响应处理和异常处理
 - 参数验证和数据转换
 - 缓存支持和管理
@@ -177,7 +258,8 @@ public class UserController {
 - 异步任务和线程池管理
 - 通用拦截器和过滤器
 
-**Maven依赖：**
+**Maven 依赖：**
+
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
@@ -187,26 +269,30 @@ public class UserController {
 ```
 
 **配置示例：**
+
 ```yaml
 plugin:
   parameter:
-    enable: true  # 启用统一响应格式
+    enable: true # 启用统一响应格式
   cache:
     type: ["default", "redis"]
     redis:
-      ttl: 600  # 缓存时间（秒）
+      ttl: 600 # 缓存时间（秒）
 ```
 
 #### spring-support-datasource-starter
+
 **数据源配置和管理模块**
 
 提供多数据源配置和管理功能：
+
 - 多数据源动态切换
 - 数据源连接池管理
 - 数据库连接监控
 - 事务管理增强
 
-**Maven依赖：**
+**Maven 依赖：**
+
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
@@ -216,16 +302,19 @@ plugin:
 ```
 
 #### spring-support-mybatis-starter
-**MyBatis Plus集成模块**
 
-基于MyBatis Plus的数据库操作增强：
+**MyBatis Plus 集成模块**
+
+基于 MyBatis Plus 的数据库操作增强：
+
 - 自动代码生成
 - 分页插件集成
 - 乐观锁支持
 - 逻辑删除
 - 自动填充功能
 
-**Maven依赖：**
+**Maven 依赖：**
+
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
@@ -237,17 +326,20 @@ plugin:
 ### 🛡️ 容错和稳定性模块
 
 #### spring-support-circuit-breaker-starter
+
 **熔断降级和增强限流模块**
 
-基于Resilience4j的完整容错解决方案：
+基于 Resilience4j 的完整容错解决方案：
+
 - 🔥 **熔断器** - 防止级联故障，快速失败
 - 🔄 **重试机制** - 自动重试失败操作
 - 🚦 **增强限流** - 多维度限流（IP、用户、API、全局）
 - 🏠 **舱壁隔离** - 资源隔离，防止资源耗尽
 - ⏰ **超时控制** - 防止长时间等待
-- 📊 **动态管理** - Web管理界面，实时监控和配置
+- 📊 **动态管理** - Web 管理界面，实时监控和配置
 
-**Maven依赖：**
+**Maven 依赖：**
+
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
@@ -257,6 +349,7 @@ plugin:
 ```
 
 **配置示例：**
+
 ```yaml
 plugin:
   circuit-breaker:
@@ -268,12 +361,12 @@ plugin:
       instances:
         userService:
           failure-rate-threshold: 30.0
-    
+
     # 增强限流配置
     rate-limiter:
       limit-for-period: 100
       limit-refresh-period: 1s
-      enable-management: true  # 启用管理页面
+      enable-management: true # 启用管理页面
       rules:
         api-limit:
           name: "API限流"
@@ -288,6 +381,7 @@ plugin:
 ```
 
 **使用示例：**
+
 ```
 // 使用组合注解
 @CircuitBreakerProtection(
@@ -313,16 +407,19 @@ public List<User> searchUsers(String keyword) { ... }
 ### 🗄️ 缓存和存储模块
 
 #### spring-support-redis-starter
-**Redis缓存集成模块**
 
-提供Redis缓存的完整集成方案：
-- Redis连接池配置
+**Redis 缓存集成模块**
+
+提供 Redis 缓存的完整集成方案：
+
+- Redis 连接池配置
 - 分布式锁实现
 - 缓存注解增强
 - 序列化配置
 - 集群支持
 
-**Maven依赖：**
+**Maven 依赖：**
+
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
@@ -332,15 +429,18 @@ public List<User> searchUsers(String keyword) { ... }
 ```
 
 #### spring-support-minio-starter
-**MinIO对象存储模块**
 
-MinIO对象存储服务集成：
+**MinIO 对象存储模块**
+
+MinIO 对象存储服务集成：
+
 - 文件上传下载
 - 存储桶管理
 - 文件预览和分享
 - 权限控制
 
-**Maven依赖：**
+**Maven 依赖：**
+
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
@@ -352,15 +452,18 @@ MinIO对象存储服务集成：
 ### 📡 消息和通信模块
 
 #### spring-support-email-starter
+
 **邮件发送服务模块**
 
 企业级邮件发送解决方案：
+
 - 多邮件服务商支持
 - 模板邮件
 - 附件支持
 - 发送状态跟踪
 
-**Maven依赖：**
+**Maven 依赖：**
+
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
@@ -370,15 +473,18 @@ MinIO对象存储服务集成：
 ```
 
 #### spring-support-mqtt-starter
-**MQTT消息队列模块**
 
-MQTT协议消息队列集成：
+**MQTT 消息队列模块**
+
+MQTT 协议消息队列集成：
+
 - 发布订阅模式
-- QoS质量保证
+- QoS 质量保证
 - 连接管理
 - 消息持久化
 
-**Maven依赖：**
+**Maven 依赖：**
+
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
@@ -390,15 +496,18 @@ MQTT协议消息队列集成：
 ### 🔍 搜索和数据处理模块
 
 #### spring-support-elasticsearch-starter
-**Elasticsearch搜索引擎模块**
 
-Elasticsearch集成和搜索功能：
+**Elasticsearch 搜索引擎模块**
+
+Elasticsearch 集成和搜索功能：
+
 - 全文搜索
 - 聚合分析
 - 索引管理
 - 查询构建器
 
-**Maven依赖：**
+**Maven 依赖：**
+
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
@@ -410,15 +519,18 @@ Elasticsearch集成和搜索功能：
 ### 📊 监控和日志模块
 
 #### spring-support-prometheus-starter
-**Prometheus监控模块**
+
+**Prometheus 监控模块**
 
 应用性能监控和指标收集：
+
 - 自定义指标
-- JVM监控
-- HTTP请求监控
+- JVM 监控
+- HTTP 请求监控
 - 数据库连接池监控
 
-**Maven依赖：**
+**Maven 依赖：**
+
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
@@ -428,15 +540,18 @@ Elasticsearch集成和搜索功能：
 ```
 
 #### spring-support-loki-starter
-**Loki日志收集模块**
 
-集成Grafana Loki进行日志收集和分析：
+**Loki 日志收集模块**
+
+集成 Grafana Loki 进行日志收集和分析：
+
 - 结构化日志
 - 日志聚合
 - 实时日志流
 - 日志查询和过滤
 
-**Maven依赖：**
+**Maven 依赖：**
+
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
@@ -448,15 +563,18 @@ Elasticsearch集成和搜索功能：
 ### 🔐 认证和安全模块
 
 #### spring-support-oauth-client-starter
-**OAuth客户端认证模块**
 
-OAuth 2.0客户端集成：
-- 多OAuth提供商支持
+**OAuth 客户端认证模块**
+
+OAuth 2.0 客户端集成：
+
+- 多 OAuth 提供商支持
 - 令牌管理
 - 用户信息获取
 - 权限控制
 
-**Maven依赖：**
+**Maven 依赖：**
+
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
@@ -466,15 +584,18 @@ OAuth 2.0客户端集成：
 ```
 
 #### spring-support-token-starter
+
 **令牌认证模块**
 
 基于数据库的令牌认证功能：
+
 - 令牌生成和验证
-- IP白名单控制
+- IP 白名单控制
 - 令牌有效期管理
 - 用户关联认证
 
-**Maven依赖：**
+**Maven 依赖：**
+
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
@@ -486,15 +607,18 @@ OAuth 2.0客户端集成：
 ### 🌐 服务发现和配置模块
 
 #### spring-support-discovery-starter
+
 **服务发现模块**
 
 微服务架构中的服务发现功能：
+
 - 服务注册与发现
 - 健康检查
 - 负载均衡
 - 服务路由
 
-**Maven依赖：**
+**Maven 依赖：**
+
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
@@ -504,15 +628,18 @@ OAuth 2.0客户端集成：
 ```
 
 #### spring-support-configcenter-starter
+
 **配置中心模块**
 
 分布式配置管理：
+
 - 配置热更新
 - 环境隔离
 - 配置版本管理
 - 配置加密
 
-**Maven依赖：**
+**Maven 依赖：**
+
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
@@ -521,18 +648,21 @@ OAuth 2.0客户端集成：
 </dependency>
 ```
 
-### 📚 API文档模块
+### 📚 API 文档模块
 
 #### spring-support-swagger-starter
-**Swagger API文档模块**
 
-自动生成API文档：
-- OpenAPI 3.0支持
+**Swagger API 文档模块**
+
+自动生成 API 文档：
+
+- OpenAPI 3.0 支持
 - 交互式文档界面
-- API测试功能
+- API 测试功能
 - 文档自定义
 
-**Maven依赖：**
+**Maven 依赖：**
+
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
@@ -542,6 +672,7 @@ OAuth 2.0客户端集成：
 ```
 
 **配置示例：**
+
 ```yaml
 springdoc:
   api-docs:
@@ -555,15 +686,18 @@ springdoc:
 ### 🏢 数据库扩展模块
 
 #### spring-support-mybatis-tenant-starter
-**MyBatis多租户支持模块**
 
-SaaS应用的多租户数据隔离：
+**MyBatis 多租户支持模块**
+
+SaaS 应用的多租户数据隔离：
+
 - 租户数据隔离
 - 动态数据源切换
 - 租户上下文管理
 - 数据权限控制
 
-**Maven依赖：**
+**Maven 依赖：**
+
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
@@ -575,15 +709,18 @@ SaaS应用的多租户数据隔离：
 ### 🔌 第三方服务集成模块
 
 #### spring-support-tencent-starter
+
 **腾讯云服务集成模块**
 
-腾讯云服务SDK集成：
-- 对象存储COS
-- 短信服务SMS
+腾讯云服务 SDK 集成：
+
+- 对象存储 COS
+- 短信服务 SMS
 - 人脸识别
 - 语音识别
 
-**Maven依赖：**
+**Maven 依赖：**
+
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
@@ -593,15 +730,18 @@ SaaS应用的多租户数据隔离：
 ```
 
 #### spring-support-pay-client-starter
+
 **支付客户端模块**
 
 多支付平台集成：
+
 - 支付宝支付
 - 微信支付
 - 银联支付
 - 支付回调处理
 
-**Maven依赖：**
+**Maven 依赖：**
+
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
@@ -611,15 +751,18 @@ SaaS应用的多租户数据隔离：
 ```
 
 #### spring-support-guacamole-starter
-**Apache Guacamole远程桌面模块**
+
+**Apache Guacamole 远程桌面模块**
 
 远程桌面访问功能：
-- VNC协议支持
-- RDP协议支持
-- SSH协议支持
-- Web端远程访问
 
-**Maven依赖：**
+- VNC 协议支持
+- RDP 协议支持
+- SSH 协议支持
+- Web 端远程访问
+
+**Maven 依赖：**
+
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
@@ -631,15 +774,18 @@ SaaS应用的多租户数据隔离：
 ### 📡 实时通信模块
 
 #### spring-support-socketio-starter
-**Socket.IO实时通信模块**
 
-WebSocket实时通信：
+**Socket.IO 实时通信模块**
+
+WebSocket 实时通信：
+
 - 实时消息推送
 - 房间管理
 - 事件处理
 - 连接管理
 
-**Maven依赖：**
+**Maven 依赖：**
+
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
@@ -649,15 +795,18 @@ WebSocket实时通信：
 ```
 
 #### spring-support-sse-starter
-**Server-Sent Events模块**
+
+**Server-Sent Events 模块**
 
 服务器推送事件：
+
 - 单向数据流
 - 自动重连
 - 事件类型支持
 - 浏览器兼容
 
-**Maven依赖：**
+**Maven 依赖：**
+
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
@@ -667,15 +816,18 @@ WebSocket实时通信：
 ```
 
 #### spring-support-rpc-starter
-**RPC远程调用模块**
+
+**RPC 远程调用模块**
 
 远程过程调用支持：
+
 - 多协议支持
 - 服务发现集成
 - 负载均衡
 - 容错处理
 
-**Maven依赖：**
+**Maven 依赖：**
+
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
@@ -686,27 +838,30 @@ WebSocket实时通信：
 
 ## 🔧 版本兼容性
 
-| Spring Support | Spring Boot | Java | 说明 |
-|----------------|-------------|------|------|
-| 4.0.0.32 | 3.4.5 | 21+ | 当前版本，推荐使用 |
-| 4.0.0.x | 3.2.x | 21+ | 稳定版本 |
+| Spring Support | Spring Boot | Java | 说明               |
+| -------------- | ----------- | ---- | ------------------ |
+| 4.0.0.32       | 3.4.5       | 21+  | 当前版本，推荐使用 |
+| 4.0.0.x        | 3.2.x       | 21+  | 稳定版本           |
 
 ## 📝 更新日志
 
 ### v4.0.0.32 (2024-12-20)
 
 #### 🚀 新功能
-- **增强限流功能**：从common模块迁移到circuit-breaker模块，使用resilience4j实现
-- **多维度限流**：支持全局、IP、用户、API四种限流维度
-- **动态管理页面**：提供Web界面进行限流器的实时监控和管理
-- **SpEL表达式支持**：限流键支持Spring表达式语言
+
+- **增强限流功能**：从 common 模块迁移到 circuit-breaker 模块，使用 resilience4j 实现
+- **多维度限流**：支持全局、IP、用户、API 四种限流维度
+- **动态管理页面**：提供 Web 界面进行限流器的实时监控和管理
+- **SpEL 表达式支持**：限流键支持 Spring 表达式语言
 
 #### 🔧 改进
+
 - **模块重构**：优化模块间依赖关系，提高可维护性
 - **配置统一**：统一各模块的配置命名规范
 - **文档完善**：更新所有模块的使用文档和示例
 
 #### 🐛 修复
+
 - 修复限流功能在高并发场景下的性能问题
 - 优化熔断器状态转换逻辑
 
@@ -714,8 +869,8 @@ WebSocket实时通信：
 
 我们欢迎所有形式的贡献，包括但不限于：
 
-1. **提交Issue** - 报告bug或提出新功能建议
-2. **提交PR** - 修复bug或实现新功能
+1. **提交 Issue** - 报告 bug 或提出新功能建议
+2. **提交 PR** - 修复 bug 或实现新功能
 3. **完善文档** - 改进文档或添加示例
 4. **分享经验** - 分享使用心得和最佳实践
 
