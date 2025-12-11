@@ -39,8 +39,5 @@ public class TransactionProperties {
      * 写事务
      */
     private String writeOnly = "";
-    /**
-     * 是否开启
-     */
-    private boolean enable;
+
 }

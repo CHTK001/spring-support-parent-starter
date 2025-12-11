@@ -24,10 +24,6 @@ public class CreateTableProperties {
 
     public static final String PRE = "plugin.table";
 
-    /**
-     * 是否开启自动建表
-     */
-    private boolean enable;
 
     /**
      * 异步建表
