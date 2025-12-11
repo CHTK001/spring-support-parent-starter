@@ -42,6 +42,18 @@ public enum AuthType {
     GITEE("gitee", "Gitee认证"),
 
     /**
+     * GitHub认证
+     * <p>GitHub第三方OAuth2.0登录</p>
+     */
+    GITHUB("github", "GitHub认证"),
+
+    /**
+     * 第三方认证
+     * <p>通用第三方OAuth2.0登录，用于Gitee、GitHub、微信等第三方平台</p>
+     */
+    THIRD_PARTY("third_party", "第三方认证"),
+
+    /**
      * 无认证类型
      * <p>用于默认值或未指定认证类型的场景</p>
      */
