@@ -42,8 +42,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-import org.springframework.boot.au@ConditionalOnProperty(prefix = "plugin.message-converter", name = "enable", havingValue = "true", matchIfMissing = false)
-toconfigure.condition.ConditionalOnProperty;
 
 /**
  * 跨域处理
