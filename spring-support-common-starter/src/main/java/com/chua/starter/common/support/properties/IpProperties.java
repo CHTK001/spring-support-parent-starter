@@ -18,10 +18,7 @@ public class IpProperties {
 
 
     public static final String PRE = "plugin.ip";
-    /**
-     * 是否开启IP控制
-     */
-    private boolean enable;
+
 
     /**
      * 数据库文件路径
