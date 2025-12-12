@@ -64,6 +64,13 @@ public class LoginData {
     @ApiModelProperty(value = "租户ID")
     @Schema(description = "租户ID")
     private String tenantId;
+
+    /**
+     * 租户编码
+     */
+    @ApiModelProperty(value = "租户编码")
+    @Schema(description = "租户编码")
+    private String tenantCode;
     /**
      * 谷歌验证码
      */
