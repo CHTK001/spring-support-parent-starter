@@ -82,11 +82,17 @@ public class UserStatisticProvider {
 
         String address = getIpAddress(request);
         AuthClientExecute clientExecute = AuthClientExecute.getInstance();
-        // 构建扩展参数，包含地址和租户ID
+        // 构建扩展参数，包含地址、租户ID和租户编码
         var extBuilder = ImmutableBuilder.<String, Object>builderOfMap()
                 .put("address", address);
         if (StringUtils.isNotBlank(loginData.getTenantId())) {
             extBuilder.put("tenantId", loginData.getTenantId());
+        }
+        if (StringUtils.isNotBlank(loginData.getTenantCode())) {
+            extBuilder.put("tenantCode", loginData.getTenantCode());
+        }
+        if (StringUtils.isNotBlank(loginData.getAccountType())) {
+            extBuilder.put("accountType", loginData.getAccountType());
         }
         LoginAuthResult accessToken = clientExecute.getAccessToken(
                 loginData.getUsername(),
