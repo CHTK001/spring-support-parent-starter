@@ -41,4 +41,10 @@ public interface MonitorTopics {
     // ==================== URL QPS Statistics ====================
     /** URL 请求统计上报 */
     String URL_QPS_REPORT = "monitor/url/qps-report";
+
+    // ==================== Node Control ====================
+    /** 节点重启控制 */
+    String NODE_RESTART = "monitor/control/node-restart";
+    /** 节点关闭控制 */
+    String NODE_SHUTDOWN = "monitor/control/node-shutdown";
 }
