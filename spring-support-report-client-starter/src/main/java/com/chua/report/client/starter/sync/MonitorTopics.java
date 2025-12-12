@@ -47,4 +47,12 @@ public interface MonitorTopics {
     String NODE_RESTART = "monitor/control/node-restart";
     /** 节点关闭控制 */
     String NODE_SHUTDOWN = "monitor/control/node-shutdown";
+
+    // ==================== Node Maintenance ====================
+    /** 节点配置备份 */
+    String NODE_BACKUP = "monitor/maintenance/backup";
+    /** 节点升级 */
+    String NODE_UPGRADE = "monitor/maintenance/upgrade";
+    /** 节点配置还原 */
+    String NODE_RESTORE = "monitor/maintenance/restore";
 }
