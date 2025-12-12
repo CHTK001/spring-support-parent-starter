@@ -86,6 +86,9 @@
         <!-- 运维和管理模块 -->
         <module>spring-support-shell-starter</module>           <!-- SSH Shell管理模块 -->
         <module>spring-support-ssh-starter</module>
+
+        <!-- 定时任务模块 -->
+        <module>spring-support-job-starter</module>             <!-- 定时任务调度模块 -->
     </modules>
 
     <!-- 项目属性配置 -->
@@ -191,6 +194,13 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-unified-server-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <!-- 定时任务模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-job-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
 
