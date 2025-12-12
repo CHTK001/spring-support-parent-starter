@@ -176,7 +176,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
 
                                 // 读取备份内容获取描述
                                 String content = Files.readString(path, StandardCharsets.UTF_8);
-                                Map<String, Object> backupData = Json.toMapStringObject(content);
+                                Map<String, Object> backupData = Json.getJsonObject(content);
                                 backup.put("description", MapUtils.getString(backupData, "description"));
                                 backup.put("backupTime", MapUtils.getLong(backupData, "backupTime"));
                                 backup.put("applicationName", MapUtils.getString(backupData, "applicationName"));
@@ -242,7 +242,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
             }
 
             String content = Files.readString(backupFile, StandardCharsets.UTF_8);
-            Map<String, Object> backupData = Json.toMapStringObject(content);
+            Map<String, Object> backupData = Json.getJsonObject(content);
 
             return Map.of("code", 200, "message", "成功", "data", backupData);
         } catch (Exception e) {
@@ -481,7 +481,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
 
             // 读取备份内容
             String content = Files.readString(backupFile, StandardCharsets.UTF_8);
-            Map<String, Object> backupData = Json.toMapStringObject(content);
+            Map<String, Object> backupData = Json.getJsonObject(content);
 
             // 获取当前配置
             Map<String, Object> currentEnv = collectEnvironmentProperties();
@@ -542,7 +542,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
 
             // 读取备份内容
             String content = Files.readString(backupFile, StandardCharsets.UTF_8);
-            Map<String, Object> backupData = Json.toMapStringObject(content);
+            Map<String, Object> backupData = Json.getJsonObject(content);
 
             // 还原配置（通过系统属性设置，重启后生效）
             Map<String, Object> backupEnv = MapUtils.getMap(backupData, "environment");
