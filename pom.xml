@@ -68,8 +68,7 @@
         <module>spring-support-discovery-starter</module>       <!-- 服务发现 -->
         <module>spring-support-configcenter-starter</module>    <!-- 配置中心 -->
 
-        <!-- 数据库扩展模块 -->
-        <module>spring-support-mybatis-tenant-starter</module>  <!-- MyBatis多租户支持 -->
+        <!-- 数据库扩展模块（已迁移到 spring-api-support-common-tenant-starter） -->
 
         <!-- 监控和日志模块 -->
         <module>spring-support-report-client-starter</module>   <!-- 设备数据上报客户端 -->

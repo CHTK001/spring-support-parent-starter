@@ -1,7 +1,0 @@
-# Auto Configuration
-org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-  com.chua.tenant.support.common.configuration.TenantAutoConfiguration
-
-# Environment Post Processor - 配置串联
-org.springframework.boot.env.EnvironmentPostProcessor=\
-  com.chua.tenant.support.common.configuration.TenantEnvironmentPostProcessor
