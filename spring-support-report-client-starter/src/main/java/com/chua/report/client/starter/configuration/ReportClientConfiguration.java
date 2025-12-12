@@ -12,6 +12,7 @@ import com.chua.report.client.starter.sync.handler.FileHandler;
 import com.chua.report.client.starter.sync.handler.JobDispatchHandler;
 import com.chua.report.client.starter.sync.handler.LoggingConfigHandler;
 import com.chua.report.client.starter.sync.handler.MyBatisConfigHandler;
+import com.chua.report.client.starter.sync.handler.NodeControlHandler;
 import com.chua.starter.common.support.api.feature.ApiFeatureManager;
 import com.chua.sync.support.client.SyncClient;
 import com.chua.sync.support.configuration.SyncAutoConfiguration;
@@ -164,7 +165,15 @@ public class ReportClientConfiguration implements ApplicationContextAware {
             log.info("[ReportClient] 已启动 URL QPS 统计上报");
         }
 
-        log.info("[ReportClient] 初始化完成 (AppRegister, Job, File, DeviceMetrics, MyBatis, UrlQps)");
+        // 注册节点控制处理器（重启/关闭）
+        syncClient.subscribe(MonitorTopics.NODE_RESTART, MonitorTopics.NODE_SHUTDOWN);
+        NodeControlHandler nodeControlHandler = new NodeControlHandler();
+        nodeControlHandler.setApplicationContext(applicationContext);
+        syncClient.registerHandler(MonitorTopics.NODE_RESTART, nodeControlHandler);
+        syncClient.registerHandler(MonitorTopics.NODE_SHUTDOWN, nodeControlHandler);
+        log.info("[ReportClient] 已注册节点控制处理器（重启/关闭）");
+
+        log.info("[ReportClient] 初始化完成 (AppRegister, Job, File, DeviceMetrics, MyBatis, UrlQps, NodeControl)");
     }
 
     @PreDestroy
