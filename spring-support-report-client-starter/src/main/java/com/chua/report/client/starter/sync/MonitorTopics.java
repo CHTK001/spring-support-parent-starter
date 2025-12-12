@@ -33,4 +33,12 @@ public interface MonitorTopics {
     // ==================== Logging Config ====================
     /** 日志级别配置 */
     String LOGGING_CONFIG = "monitor/control/log-level";
+
+    // ==================== MyBatis Config ====================
+    /** MyBatis 配置管理 */
+    String MYBATIS_CONFIG = "monitor/control/mybatis";
+
+    // ==================== URL QPS Statistics ====================
+    /** URL 请求统计上报 */
+    String URL_QPS_REPORT = "monitor/url/qps-report";
 }
