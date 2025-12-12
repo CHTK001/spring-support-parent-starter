@@ -55,4 +55,12 @@ public interface MonitorTopics {
     String NODE_UPGRADE = "monitor/maintenance/upgrade";
     /** 节点配置还原 */
     String NODE_RESTORE = "monitor/maintenance/restore";
+
+    // ==================== Log Push ====================
+    /** 日志推送（Agent -> Monitor） */
+    String LOG_PUSH = "monitor/log/push";
+    /** 日志订阅请求（Monitor -> Agent） */
+    String LOG_SUBSCRIBE = "monitor/log/subscribe";
+    /** 日志取消订阅（Monitor -> Agent） */
+    String LOG_UNSUBSCRIBE = "monitor/log/unsubscribe";
 }
