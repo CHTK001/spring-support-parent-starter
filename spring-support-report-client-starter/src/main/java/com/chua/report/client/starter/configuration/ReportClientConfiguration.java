@@ -5,26 +5,30 @@ import com.chua.report.client.starter.job.JobReporter;
 import com.chua.report.client.starter.properties.ReportProperties;
 import com.chua.report.client.starter.report.AppRegisterReporter;
 import com.chua.report.client.starter.report.DeviceMetricsReporter;
+import com.chua.report.client.starter.report.UrlQpsReporter;
 import com.chua.report.client.starter.sync.MonitorTopics;
 import com.chua.report.client.starter.sync.handler.ApiFeatureHandler;
 import com.chua.report.client.starter.sync.handler.FileHandler;
 import com.chua.report.client.starter.sync.handler.JobDispatchHandler;
 import com.chua.report.client.starter.sync.handler.LoggingConfigHandler;
+import com.chua.report.client.starter.sync.handler.MyBatisConfigHandler;
 import com.chua.starter.common.support.api.feature.ApiFeatureManager;
 import com.chua.sync.support.client.SyncClient;
 import com.chua.sync.support.configuration.SyncAutoConfiguration;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
 
@@ -43,12 +47,13 @@ import org.springframework.core.env.Environment;
 @ConditionalOnClass(SyncClient.class)
 @ConditionalOnBean(SyncClient.class)
 @EnableConfigurationProperties(ReportProperties.class)
-public class ReportClientConfiguration {
+public class ReportClientConfiguration implements ApplicationContextAware {
 
     private final SyncClient syncClient;
     private final Environment environment;
     private final ReportProperties reportProperties;
     private final ObjectProvider<ApiFeatureManager> featureManagerProvider;
+    private ApplicationContext applicationContext;
 
     public ReportClientConfiguration(SyncClient syncClient, Environment environment,
                                       ReportProperties reportProperties,
@@ -57,6 +62,11 @@ public class ReportClientConfiguration {
         this.environment = environment;
         this.reportProperties = reportProperties;
         this.featureManagerProvider = featureManagerProvider;
+    }
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.applicationContext = applicationContext;
     }
 
     @Value("${spring.application.name:unknown}")
@@ -131,7 +141,30 @@ public class ReportClientConfiguration {
             reporter.start();
         }
 
-        log.info("[ReportClient] 初始化完成 (AppRegister, Job, File, DeviceMetrics)");
+        // 注册 MyBatis 处理器
+        try {
+            Class.forName("org.apache.ibatis.session.SqlSessionFactory");
+            syncClient.subscribe(MonitorTopics.MYBATIS_CONFIG);
+            MyBatisConfigHandler myBatisHandler = new MyBatisConfigHandler();
+            myBatisHandler.setApplicationContext(applicationContext);
+            syncClient.registerHandler(MonitorTopics.MYBATIS_CONFIG, myBatisHandler);
+            log.info("[ReportClient] 已注册 MyBatis 配置处理器");
+        } catch (ClassNotFoundException e) {
+            log.debug("[ReportClient] MyBatis 未启用，跳过注册 MyBatis 处理器");
+        }
+
+        // 启动 URL QPS 统计上报
+        if (reportProperties.getUrlQps().isEnabled()) {
+            UrlQpsReporter urlQpsReporter = UrlQpsReporter.getInstance();
+            urlQpsReporter.setSyncClient(syncClient);
+            urlQpsReporter.setAppName(appName);
+            urlQpsReporter.setHost(reportProperties.getInfo().getHost());
+            urlQpsReporter.setIntervalSeconds(reportProperties.getUrlQps().getInterval());
+            urlQpsReporter.start();
+            log.info("[ReportClient] 已启动 URL QPS 统计上报");
+        }
+
+        log.info("[ReportClient] 初始化完成 (AppRegister, Job, File, DeviceMetrics, MyBatis, UrlQps)");
     }
 
     @PreDestroy

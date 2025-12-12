@@ -114,6 +114,11 @@ public class ReportProperties {
     private ClientInfo info = new ClientInfo();
 
     /**
+     * URL QPS 统计配置
+     */
+    private UrlQps urlQps = new UrlQps();
+
+    /**
      * 客户端信息配置
      */
     @Data
@@ -126,6 +131,35 @@ public class ReportProperties {
          * </p>
          */
         private String host;
+    }
+
+    /**
+     * URL QPS 统计配置
+     */
+    @Data
+    public static class UrlQps {
+
+        /**
+         * 是否启用 URL QPS 统计
+         */
+        private boolean enabled = true;
+
+        /**
+         * 上报间隔（秒）
+         */
+        private long interval = 30;
+
+        /**
+         * 排除的 URL 前缀
+         * <p>
+         * 如: /actuator, /health
+         * </p>
+         */
+        private Set<String> excludePatterns = new HashSet<>(Arrays.asList(
+                "/actuator",
+                "/health",
+                "/favicon.ico"
+        ));
     }
 
 }
