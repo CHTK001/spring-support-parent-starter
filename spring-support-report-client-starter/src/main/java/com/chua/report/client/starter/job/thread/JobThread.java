@@ -17,7 +17,11 @@ import java.util.Set;
 import java.util.concurrent.*;
 
 /**
- * 作业线程
+ * 作业执行线程
+ * <p>
+ * 每个任务对应一个独立的JobThread实例，通过队列接收触发参数并执行任务。
+ * 支持超时控制、重复触发检测、空闲自动回收等特性。
+ * </p>
  *
  * @author CH
  * @version 1.0.0
@@ -25,69 +29,116 @@ import java.util.concurrent.*;
  */
 @Slf4j
 @SuppressWarnings("ALL")
-public class JobThread extends Thread{
+public class JobThread extends Thread {
 
+    /**
+     * 任务ID
+     */
     private final int jobId;
-    private final JobHandler handler;
-    private final LinkedBlockingQueue<TriggerParam> triggerQueue;
-    private final Set<Long> triggerLogIdSet;		// avoid repeat trigger for the same TRIGGER_LOG_ID
 
+    /**
+     * 任务处理器
+     */
+    private final JobHandler handler;
+
+    /**
+     * 触发参数队列
+     */
+    private final LinkedBlockingQueue<TriggerParam> triggerQueue;
+
+    /**
+     * 触发日志ID集合，用于防止重复触发
+     */
+    private final Set<Long> triggerLogIdSet;
+
+    /**
+     * 停止标志
+     */
     private volatile boolean toStop = false;
+
+    /**
+     * 停止原因
+     */
     private String stopReason;
 
-    private boolean running = false;    // if running job
-    private int idleTimes = 0;			// idel times
+    /**
+     * 是否正在执行任务
+     */
+    private boolean running = false;
+
+    /**
+     * 空闲次数计数器
+     */
+    private int idleTimes = 0;
 
 
+    /**
+     * 最大空闲次数，超过后线程将被回收
+     */
+    private static final int MAX_IDLE_TIMES = 30;
+
+    /**
+     * 构造函数
+     *
+     * @param jobId   任务ID
+     * @param handler 任务处理器
+     */
     public JobThread(int jobId, JobHandler handler) {
         this.jobId = jobId;
         this.handler = handler;
-        this.triggerQueue = new LinkedBlockingQueue<TriggerParam>();
-        this.triggerLogIdSet = Collections.synchronizedSet(new HashSet<Long>());
-
-        // assign job thread name
-        this.setName("job, JobThread-"+jobId+"-"+System.currentTimeMillis());
+        this.triggerQueue = new LinkedBlockingQueue<>();
+        this.triggerLogIdSet = Collections.synchronizedSet(new HashSet<>());
+        // 设置线程名称
+        this.setName("JobThread-" + jobId + "-" + System.currentTimeMillis());
     }
+
+    /**
+     * 获取任务处理器
+     *
+     * @return 任务处理器实例
+     */
     public JobHandler getHandler() {
         return handler;
     }
 
     /**
-     * new trigger to queue
+     * 将触发参数推送到队列
      *
-     * @param triggerParam
-     * @return
+     * @param triggerParam 触发参数
+     * @return 推送结果
      */
     public ReturnResult<String> pushTriggerQueue(TriggerParam triggerParam) {
-        // avoid repeat
+        // 防止重复触发
         if (triggerLogIdSet.contains(triggerParam.getLogId())) {
-            log.info(">>>>>>>>>>> repeate trigger job, logId:{}", triggerParam.getLogId());
-            return ReturnResult.illegal("repeate trigger job, logId:" + triggerParam.getLogId());
+            log.warn("重复触发任务, 已忽略, 日志ID: {}", triggerParam.getLogId());
+            return ReturnResult.illegal("重复触发任务, 日志ID: " + triggerParam.getLogId());
         }
 
         triggerLogIdSet.add(triggerParam.getLogId());
         triggerQueue.add(triggerParam);
+        log.debug("任务已加入触发队列, 任务ID: {}, 日志ID: {}", jobId, triggerParam.getLogId());
         return ReturnResult.SUCCESS;
     }
 
     /**
-     * kill job thread
+     * 停止任务线程
+     * <p>
+     * 通过共享变量方式通知线程停止，而不是使用Thread.interrupt。
+     * 因为interrupt只能终止线程的阻塞状态，不能终止运行中的线程。
+     * </p>
      *
-     * @param stopReason
+     * @param stopReason 停止原因
      */
     public void toStop(String stopReason) {
-        /**
-         * Thread.interrupt只支持终止线程的阻塞状态(wait、join、sleep)，
-         * 在阻塞出抛出InterruptedException异常,但是并不会终止运行的线程本身；
-         * 所以需要注意，此处彻底销毁本线程，需要通过共享变量方式；
-         */
         this.toStop = true;
         this.stopReason = stopReason;
+        log.info("任务线程停止中, 任务ID: {}, 原因: {}", jobId, stopReason);
     }
 
     /**
-     * is running job
-     * @return
+     * 检查任务是否正在运行或队列中有待处理任务
+     *
+     * @return true表示正在运行或有待处理任务
      */
     public boolean isRunningOrHasQueue() {
         return running || !triggerQueue.isEmpty();
@@ -188,9 +239,11 @@ public class JobThread extends Thread{
                     );
 
                 } else {
-                    if (idleTimes > 30) {
-                        if(triggerQueue.isEmpty()) {	// avoid concurrent trigger causes jobId-lost
-                            JobThreadFactory.removeJobThread(jobId, "excutor idel times over limit.");
+                    // 空闲次数超过限制，回收线程
+                    if (idleTimes > MAX_IDLE_TIMES) {
+                        // 避免并发触发导致任务丢失
+                        if (triggerQueue.isEmpty()) {
+                            JobThreadFactory.removeJobThread(jobId, "空闲次数超过限制，回收线程");
                         }
                     }
                 }
@@ -220,7 +273,7 @@ public class JobThread extends Thread{
             log.error(e.getMessage(), e);
         }
 
-        log.info(">>>>>>>>>>> job JobThread stoped, hashCode:{}", Thread.currentThread());
+        log.info("任务线程已停止, 任务ID: {}", jobId);
     }
 
     private void reportJob(TriggerParam triggerParam, String status, String message) {
