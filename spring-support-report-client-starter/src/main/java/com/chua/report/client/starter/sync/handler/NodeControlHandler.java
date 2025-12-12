@@ -312,11 +312,14 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
                 curl -s -o nul -w "%%%%{http_code}" "%%HEALTH_URL%%" > %%TEMP%%\\health_code.txt 2>nul
                 set /p HTTP_CODE=<%%TEMP%%\\health_code.txt
 
-                if "%%HTTP_CODE%%"=="200" (
-                    echo [%%date%% %%time%%] 应用启动成功！HTTP 状态码: %%HTTP_CODE%% >> "%%LOG_FILE%%"
-                    echo 应用启动成功，守护脚本退出
-                    del /q %%TEMP%%\\health_code.txt 2>nul
-                    goto END
+                :: 不是 404 和 000（连接失败）都算成功
+                if not "%%HTTP_CODE%%"=="404" (
+                    if not "%%HTTP_CODE%%"=="000" (
+                        echo [%%date%% %%time%%] 应用启动成功！HTTP 状态码: %%HTTP_CODE%% >> "%%LOG_FILE%%"
+                        echo 应用启动成功，守护脚本退出
+                        del /q %%TEMP%%\\health_code.txt 2>nul
+                        goto END
+                    )
                 )
 
                 echo [%%date%% %%time%%] 等待应用启动... (%%ELAPSED%%/%%TIMEOUT%%秒) HTTP: %%HTTP_CODE%% >> "%%LOG_FILE%%"
@@ -363,7 +366,8 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
                     # 检查健康状态
                     HTTP_CODE=$(curl -s -o /dev/null -w "%%{http_code}" "$HEALTH_URL" 2>/dev/null)
 
-                    if [ "$HTTP_CODE" = "200" ]; then
+                    # 不是 404 和 000（连接失败）都算成功
+                    if [ "$HTTP_CODE" != "404" ] && [ "$HTTP_CODE" != "000" ] && [ -n "$HTTP_CODE" ]; then
                         echo "[$(date '+%%Y-%%m-%%d %%H:%%M:%%S')] 应用启动成功！HTTP 状态码: $HTTP_CODE" >> "$LOG_FILE"
                         echo "应用启动成功，守护脚本退出"
                         exit 0
