@@ -165,7 +165,7 @@ public class UrlQpsReporter {
             reportData.put("stats", statsList);
 
             // 发送到服务端
-            syncClient.send(MonitorTopics.URL_QPS_REPORT, reportData);
+            syncClient.publish(MonitorTopics.URL_QPS_REPORT, reportData);
             log.debug("[UrlQpsReporter] 上报成功，URL 数量: {}", statsList.size());
 
         } catch (Exception e) {

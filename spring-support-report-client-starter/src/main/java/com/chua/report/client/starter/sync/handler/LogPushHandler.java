@@ -8,7 +8,7 @@ import com.chua.common.support.annotations.Spi;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.report.client.starter.sync.MonitorTopics;
-import com.chua.sync.support.SyncClient;
+import com.chua.sync.support.client.SyncClient;
 import com.chua.sync.support.spi.SyncMessageHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.LoggerFactory;
@@ -231,7 +231,7 @@ public class LogPushHandler implements SyncMessageHandler, ApplicationContextAwa
         }
 
         try {
-            syncClient.send(MonitorTopics.LOG_PUSH, logEntry);
+            syncClient.publish(MonitorTopics.LOG_PUSH, logEntry);
         } catch (Exception e) {
             // 推送失败不记录日志，避免死循环
         }
