@@ -1,6 +1,6 @@
 package com.chua.starter.job.support;
 
-import com.chua.common.support.annotations.Job;
+import com.chua.starter.job.support.annotation.Job;
 import com.chua.starter.job.support.glue.GlueFactory;
 import com.chua.starter.job.support.handler.BeanJobHandler;
 import com.chua.starter.job.support.handler.JobHandler;
