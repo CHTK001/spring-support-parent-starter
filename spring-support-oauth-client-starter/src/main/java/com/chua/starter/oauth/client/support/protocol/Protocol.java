@@ -110,6 +110,120 @@ public interface Protocol {
     }
 
     /**
+     * 获取在线用户列表
+     * <p>获取所有在线用户信息，支持分页和筛选</p>
+     *
+     * @param query 查询参数
+     * @return 在线用户列表结果
+     */
+    default OnlineUserResult getOnlineUsers(OnlineUserQuery query) {
+        return OnlineUserResult.empty();
+    }
+
+    /**
+     * 在线用户查询参数
+     */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    class OnlineUserQuery {
+        /**
+         * 用户名（模糊匹配）
+         */
+        private String username;
+        /**
+         * IP地址（模糊匹配）
+         */
+        private String ip;
+        /**
+         * 页码（从1开始）
+         */
+        private int page = 1;
+        /**
+         * 每页大小
+         */
+        private int size = 20;
+    }
+
+    /**
+     * 在线用户列表返回结果
+     */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    class OnlineUserResult {
+        /**
+         * 在线用户列表
+         */
+        private java.util.List<OnlineUserInfo> users;
+        /**
+         * 总数量
+         */
+        private int total;
+        /**
+         * 当前页码
+         */
+        private int page;
+        /**
+         * 每页大小
+         */
+        private int size;
+
+        public static OnlineUserResult empty() {
+            return new OnlineUserResult(java.util.Collections.emptyList(), 0, 1, 20);
+        }
+    }
+
+    /**
+     * 在线用户信息
+     */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    class OnlineUserInfo {
+        /**
+         * 用户ID
+         */
+        private String userId;
+        /**
+         * 用户名
+         */
+        private String username;
+        /**
+         * 昵称
+         */
+        private String nickname;
+        /**
+         * 登录IP
+         */
+        private String loginIp;
+        /**
+         * 登录地址
+         */
+        private String loginAddress;
+        /**
+         * 浏览器
+         */
+        private String browser;
+        /**
+         * 操作系统
+         */
+        private String os;
+        /**
+         * 登录时间（时间戳）
+         */
+        private Long loginTime;
+        /**
+         * Token
+         */
+        private String token;
+        /**
+         * 登录类型
+         */
+        private String loginType;
+    }
+
+    /**
      * 用户在线状态信息
      * <p>包含当前在线数、最大允许在线数、在线模式等信息</p>
      *
