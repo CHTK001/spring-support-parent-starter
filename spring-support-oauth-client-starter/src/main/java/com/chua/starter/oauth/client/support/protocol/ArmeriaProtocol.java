@@ -196,6 +196,109 @@ public class ArmeriaProtocol extends AbstractProtocol {
         throw new AuthException(information.getInformation().getMessage());
     }
 
+    @Override
+    public OnlineUserResult getOnlineUsers(OnlineUserQuery query) {
+        JsonObject jsonObject = new JsonObject();
+        jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
+        jsonObject.put("x-oauth-secret-key", authClientProperties.getKey().getSecretKey());
+        if (query != null) {
+            jsonObject.put("x-oauth-query-username", query.getUsername());
+            jsonObject.put("x-oauth-query-ip", query.getIp());
+            jsonObject.put("x-oauth-query-page", query.getPage());
+            jsonObject.put("x-oauth-query-size", query.getSize());
+        }
+        try {
+            AuthenticationInformation information = createAuthenticationInformation(
+                    jsonObject, null, "/online/list");
+            if (information.getInformation().getCode() == 200) {
+                Object data = information.getReturnResult();
+                if (data instanceof java.util.Map) {
+                    @SuppressWarnings("unchecked")
+                    java.util.Map<String, Object> resultMap = (java.util.Map<String, Object>) data;
+                    return parseOnlineUserResult(resultMap);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("获取在线用户列表失败", e);
+        }
+        return OnlineUserResult.empty();
+    }
+
+    @Override
+    public OnlineStatus getOnlineStatus(String uid) {
+        JsonObject jsonObject = new JsonObject();
+        jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
+        jsonObject.put("x-oauth-secret-key", authClientProperties.getKey().getSecretKey());
+        jsonObject.put("x-oauth-uid", uid);
+        try {
+            AuthenticationInformation information = createAuthenticationInformation(
+                    jsonObject, null, "/online/status");
+            if (information.getInformation().getCode() == 200) {
+                Object data = information.getReturnResult();
+                if (data instanceof java.util.Map) {
+                    @SuppressWarnings("unchecked")
+                    java.util.Map<String, Object> resultMap = (java.util.Map<String, Object>) data;
+                    OnlineStatus status = new OnlineStatus();
+                    status.setOnlineCount(getIntValue(resultMap, "onlineCount", 0));
+                    status.setMaxOnlineCount(getIntValue(resultMap, "maxOnlineCount", -1));
+                    status.setOnlineMode(getStringValue(resultMap, "onlineMode", "MULTIPLE"));
+                    return status;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("获取用户在线状态失败: uid={}", uid, e);
+        }
+        return OnlineStatus.defaultStatus();
+    }
+
+    private OnlineUserResult parseOnlineUserResult(java.util.Map<String, Object> resultMap) {
+        OnlineUserResult result = new OnlineUserResult();
+        result.setTotal(getIntValue(resultMap, "total", 0));
+        result.setPage(getIntValue(resultMap, "page", 1));
+        result.setSize(getIntValue(resultMap, "size", 20));
+        Object usersObj = resultMap.get("users");
+        if (usersObj instanceof java.util.List) {
+            @SuppressWarnings("unchecked")
+            java.util.List<java.util.Map<String, Object>> usersList = 
+                    (java.util.List<java.util.Map<String, Object>>) usersObj;
+            java.util.List<OnlineUserInfo> users = new java.util.ArrayList<>();
+            for (java.util.Map<String, Object> userMap : usersList) {
+                OnlineUserInfo info = new OnlineUserInfo();
+                info.setUserId(getStringValue(userMap, "userId", null));
+                info.setUsername(getStringValue(userMap, "username", null));
+                info.setNickname(getStringValue(userMap, "nickname", null));
+                info.setLoginIp(getStringValue(userMap, "loginIp", null));
+                info.setLoginAddress(getStringValue(userMap, "loginAddress", null));
+                info.setBrowser(getStringValue(userMap, "browser", null));
+                info.setOs(getStringValue(userMap, "os", null));
+                info.setToken(getStringValue(userMap, "token", null));
+                info.setLoginType(getStringValue(userMap, "loginType", null));
+                Object loginTimeObj = userMap.get("loginTime");
+                if (loginTimeObj instanceof Number) {
+                    info.setLoginTime(((Number) loginTimeObj).longValue());
+                }
+                users.add(info);
+            }
+            result.setUsers(users);
+        } else {
+            result.setUsers(java.util.Collections.emptyList());
+        }
+        return result;
+    }
+
+    private int getIntValue(java.util.Map<String, Object> map, String key, int defaultValue) {
+        Object value = map.get(key);
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
+        }
+        return defaultValue;
+    }
+
+    private String getStringValue(java.util.Map<String, Object> map, String key, String defaultValue) {
+        Object value = map.get(key);
+        return value != null ? value.toString() : defaultValue;
+    }
+
     /**
      * 创建认证信息
      * 使用 Armeria WebClient 向远程认证服务器发送请求
