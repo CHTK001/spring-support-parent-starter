@@ -417,6 +417,51 @@ public class AuthClientExecute {
         return status != null ? status.getOnlineCount() : 0;
     }
 
+    /**
+     * 获取在线用户列表
+     * <p>通过调用服务器端接口获取在线用户信息</p>
+     *
+     * @param username 用户名（模糊匹配，可为null）
+     * @param ip       IP地址（模糊匹配，可为null）
+     * @param page     页码（从1开始）
+     * @param size     每页大小
+     * @return 在线用户列表结果
+     */
+    public Protocol.OnlineUserResult getOnlineUsers(String username, String ip, int page, int size) {
+        Protocol.OnlineUserQuery query = new Protocol.OnlineUserQuery(username, ip, page, size);
+        return getOnlineUsers(query);
+    }
+
+    /**
+     * 获取在线用户列表
+     * <p>通过调用服务器端接口获取在线用户信息</p>
+     *
+     * @param query 查询参数
+     * @return 在线用户列表结果
+     */
+    public Protocol.OnlineUserResult getOnlineUsers(Protocol.OnlineUserQuery query) {
+        try {
+            Protocol protocol = ServiceProvider.of(Protocol.class)
+                    .getNewExtension(authClientProperties.getProtocol(), authClientProperties);
+            if (protocol == null) {
+                return Protocol.OnlineUserResult.empty();
+            }
+            return protocol.getOnlineUsers(query);
+        } catch (Exception e) {
+            return Protocol.OnlineUserResult.empty();
+        }
+    }
+
+    /**
+     * 获取所有在线用户列表（默认分页）
+     * <p>通过调用服务器端接口获取在线用户信息</p>
+     *
+     * @return 在线用户列表结果
+     */
+    public Protocol.OnlineUserResult getOnlineUsers() {
+        return getOnlineUsers(null, null, 1, 100);
+    }
+
     // ==================== 临时令牌功能 ====================
 
     /**
