@@ -729,7 +729,7 @@ public class SyncClient implements InitializingBean, DisposableBean {
         log.info("[Sync客户端] 正在停止...");
 
         // 发送下线通知
-        if (connected.get() && protocolClient != null) {
+        if (connected.get() && syncClient != null) {
             try {
                 publish(syncProperties.getClient().getOfflineTopic(), Map.of(
                         "clientId", getClientId(),
