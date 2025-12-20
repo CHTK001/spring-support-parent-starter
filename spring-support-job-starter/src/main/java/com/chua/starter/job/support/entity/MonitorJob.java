@@ -11,11 +11,25 @@ import java.io.Serializable;
 import java.util.Date;
 
 /**
- * 任务
+ * 定时任务实体
+ * <p>
+ * 对应数据库表 monitor_job，存储任务的配置信息。
+ * 包括任务的调度配置、执行器配置、Glue脚本配置等。
+ * </p>
+ *
+ * <h3>主要字段分类</h3>
+ * <ul>
+ *     <li><b>基本信息</b> - jobId, jobName, jobAuthor, jobDesc</li>
+ *     <li><b>调度配置</b> - jobScheduleType, jobScheduleTime, jobTriggerStatus</li>
+ *     <li><b>执行配置</b> - jobExecuteBean, jobExecuteParam, jobExecuteTimeout, jobFailRetry</li>
+ *     <li><b>Glue配置</b> - jobGlueType, jobGlueSource, jobGlueUpdatetime</li>
+ *     <li><b>触发状态</b> - jobTriggerLastTime, jobTriggerNextTime</li>
+ * </ul>
  *
  * @author CH
  * @version 1.0.0
  * @since 2024/03/08
+ * @see MonitorJobLog
  */
 @Data
 @TableName(value = "monitor_job")

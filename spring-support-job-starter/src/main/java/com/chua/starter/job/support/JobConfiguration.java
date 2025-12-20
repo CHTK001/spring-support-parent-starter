@@ -19,11 +19,35 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 /**
- * Job配置类
+ * Job调度模块自动配置类
+ * <p>
+ * 这是Spring Boot Auto-configuration配置类，负责初始化Job调度系统的所有组件。
+ * 通过 {@code plugin.job.enable=true} 启用（默认启用）。
+ * </p>
+ * 
+ * <h3>自动配置内容:</h3>
+ * <ul>
+ *     <li>{@link ThreadPoolTaskScheduler} - 任务调度线程池</li>
+ *     <li>{@link JobAnnotationScanner} - @Job注解扫描器</li>
+ *     <li>{@link SchedulerTrigger} - 调度系统启动器</li>
+ *     <li>{@link JobLogDetailService} - 日志详情服务</li>
+ *     <li>{@link JobLogBackupService} - 日志备份服务</li>
+ * </ul>
+ * 
+ * <h3>配置属性:</h3>
+ * <pre>
+ * plugin.job.enable=true          # 启用Job模块
+ * plugin.job.pool-size=10         # 线程池大小
+ * plugin.job.log-path=/data/logs  # 日志路径
+ * plugin.job.log-retention-days=30 # 日志保留天数
+ * plugin.job.auto-backup-enabled=true # 自动备份
+ * </pre>
  *
  * @author CH
  * @version 1.0.0
  * @since 2024/03/11
+ * @see JobProperties
+ * @see SchedulerTrigger
  */
 @Slf4j
 @Configuration
@@ -36,9 +60,18 @@ public class JobConfiguration {
 
     /**
      * Job线程池任务调度器
+     * <p>
+     * 配置参数:
+     * <ul>
+     *     <li>poolSize: 线程池核心大小，默认10</li>
+     *     <li>threadNamePrefix: 线程名前缀 "job-scheduler-"</li>
+     *     <li>waitForTasksToComplete: 关闭时等待任务完成</li>
+     *     <li>awaitTermination: 最大等待60秒</li>
+     * </ul>
+     * </p>
      *
      * @param jobProperties 配置属性
-     * @return ThreadPoolTaskScheduler
+     * @return ThreadPoolTaskScheduler 任务调度器
      */
     @Bean(name = "jobThreadPoolTaskScheduler")
     @ConditionalOnMissingBean(name = "jobThreadPoolTaskScheduler")
@@ -49,17 +82,22 @@ public class JobConfiguration {
         scheduler.setWaitForTasksToCompleteOnShutdown(true);
         scheduler.setAwaitTerminationSeconds(60);
 
-        // 初始化日志路径
+        // 初始化日志文件存储路径
         JobFileAppender.initLogPath(jobProperties.getLogPath());
 
-        log.info(">>>>>>>>>>> job scheduler init success, poolSize:{}", jobProperties.getPoolSize());
+        log.info(">>>>>>>>>>> Job调度器初始化完成, 线程池大小:{}, 日志路径:{}", 
+                jobProperties.getPoolSize(), jobProperties.getLogPath());
         return scheduler;
     }
 
     /**
      * Job注解扫描器
+     * <p>
+     * 扫描带有 {@link com.chua.starter.job.support.annotation.Job} 注解的方法，
+     * 自动注册为JobHandler。
+     * </p>
      *
-     * @return JobAnnotationScanner
+     * @return JobAnnotationScanner 注解扫描器
      */
     @Bean
     @ConditionalOnMissingBean
@@ -69,8 +107,16 @@ public class JobConfiguration {
 
     /**
      * 定时任务触发器
+     * <p>
+     * 调度系统的核心启动器，负责:
+     * <ul>
+     *     <li>启动核心触发处理器</li>
+     *     <li>启动时间环处理器</li>
+     *     <li>启动触发线程池</li>
+     * </ul>
+     * </p>
      *
-     * @return 定时任务触发器
+     * @return SchedulerTrigger 调度触发器
      */
     @Bean
     @ConditionalOnMissingBean

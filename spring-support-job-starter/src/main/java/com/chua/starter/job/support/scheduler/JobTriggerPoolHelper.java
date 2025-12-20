@@ -56,7 +56,7 @@ public class JobTriggerPoolHelper {
     public void stop() {
         fastTriggerPool.shutdownNow();
         slowTriggerPool.shutdownNow();
-        log.info("任务触发线程池已关闭");
+        log.info(">>>>>>>>>>> 任务触发线程池已关闭");
     }
 
     /**
@@ -103,7 +103,7 @@ public class JobTriggerPoolHelper {
                 // 执行触发逻辑
                 LocalJobTrigger.trigger(jobId, triggerType, failRetryCount, executorShardingParam, executorParam);
             } catch (Exception e) {
-                log.error("任务触发执行异常, 任务ID: {}, 错误: {}", jobId, e.getMessage(), e);
+                log.error(">>>>>>>>>>> 任务触发执行异常, jobId={}, 错误={}", jobId, e.getMessage(), e);
             } finally {
 
                 // 检查并更新超时计数Map

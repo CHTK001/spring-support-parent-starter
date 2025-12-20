@@ -10,11 +10,36 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
- * 作业文件追加器
+ * 任务日志文件处理器
+ * <p>
+ * 负责任务执行日志的文件存储操作，包括日志文件的创建、追加和读取。
+ * 日志文件按日期和日志ID进行组织存储。
+ * </p>
+ *
+ * <h3>目录结构</h3>
+ * <pre>
+ * {logBasePath}/
+ *   ├── 2024-03-11/
+ *   │   ├── 1001.log
+ *   │   └── 1002.log
+ *   ├── 2024-03-12/
+ *   │   └── 1003.log
+ *   └── gluesource/      (脚本源码目录)
+ * </pre>
+ *
+ * <h3>主要方法</h3>
+ * <ul>
+ *     <li>{@link #initLogPath(String)} - 初始化日志路径</li>
+ *     <li>{@link #makeLogFileName(Date, long)} - 生成日志文件名</li>
+ *     <li>{@link #appendLog(String, String)} - 追加日志内容</li>
+ *     <li>{@link #readLog(String, int)} - 读取日志内容</li>
+ * </ul>
  *
  * @author CH
  * @version 1.0.0
  * @since 2024/03/11
+ * @see DefaultJobLog
+ * @see LogResult
  */
 @Slf4j
 public class JobFileAppender {

@@ -11,10 +11,15 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 任务日志详情 Mapper 接口
+ * 任务日志详情Mapper接口
+ * <p>
+ * 提供任务执行过程中详细日志的数据库操作。
+ * 支持按任务日志ID、任务ID查询，以及日志清理等操作。
+ * </p>
  *
  * @author CH
  * @since 2024/12/19
+ * @see MonitorJobLogDetail
  */
 @Mapper
 public interface MonitorJobLogDetailMapper extends BaseMapper<MonitorJobLogDetail> {
