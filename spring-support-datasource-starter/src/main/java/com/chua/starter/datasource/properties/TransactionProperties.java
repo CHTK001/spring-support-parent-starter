@@ -5,6 +5,18 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * 事务配置
+ * <p>
+ * 配置示例:
+ * <pre>
+ * plugin:
+ *   transaction:
+ *     enable: true                                    # 是否启用声明式事务
+ *     timeout: 30                                     # 事务超时时间(秒)
+ *     tx-mapper: "com.example.**.service.impl.*"      # 事务切入点表达式
+ *     read-only: "get*,query*,find*,select*,list*"    # 只读事务方法前缀(逗号分隔)
+ *     no-tx: "log*,async*"                            # 无事务方法前缀(逗号分隔)
+ *     write-only: "save*,insert*,add*,update*,delete*,remove*" # 写事务方法前缀(逗号分隔)
+ * </pre>
  *
  * @author CH
  * @since 2021-07-19
