@@ -213,6 +213,15 @@ public class UserResume implements Serializable {
     @Schema(description = "Token过期时间（秒）")
     private Long expireTime;
 
+    // ==================== 浏览器指纹 ====================
+
+    /**
+     * 浏览器指纹
+     * <p>登录时记录的浏览器指纹，用于验证请求是否来自同一浏览器</p>
+     */
+    @Schema(description = "浏览器指纹")
+    private String fingerprint;
+
     // ==================== 扩展信息 ====================
 
     /**

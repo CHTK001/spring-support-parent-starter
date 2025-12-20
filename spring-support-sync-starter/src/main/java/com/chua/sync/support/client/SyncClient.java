@@ -1,13 +1,10 @@
 package com.chua.sync.support.client;
 
-import com.chua.common.support.protocol.ClientSetting;
 import com.chua.common.support.protocol.ProtocolSetting;
 import com.chua.common.support.protocol.listener.ConnectionEvent;
 import com.chua.common.support.protocol.listener.ConnectionListener;
 import com.chua.common.support.protocol.listener.DataEvent;
 import com.chua.common.support.protocol.listener.TopicListener;
-import com.chua.common.support.protocol.sync.SyncProtocol;
-import com.chua.common.support.protocol.sync.SyncProtocolClient;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.sync.support.pojo.ClientInfo;
 import com.chua.sync.support.pojo.SyncResponse;
@@ -58,10 +55,10 @@ public class SyncClient implements InitializingBean, DisposableBean {
     private final Environment environment;
 
     /**
-     * 同步协议客户端
+     * 同步客户端
      */
     @Getter
-    private SyncProtocolClient protocolClient;
+    private com.chua.common.support.protocol.sync.SyncClient syncClient;
 
     /**
      * 定时同步调度器
@@ -117,7 +114,7 @@ public class SyncClient implements InitializingBean, DisposableBean {
      * 获取客户端ID
      */
     public String getClientId() {
-        return protocolClient != null ? protocolClient.getClientId() : null;
+        return syncClient != null ? syncClient.getClientId() : null;
     }
 
     /**
@@ -294,11 +291,8 @@ public class SyncClient implements InitializingBean, DisposableBean {
                     .withOption("maxReconnectAttempts", clientConfig.getMaxReconnectAttempts())
                     .withOption("reconnectInterval", clientConfig.getReconnectInterval());
 
-            // 创建同步协议实例
-            SyncProtocol syncProtocol = SyncProtocol.create(protocol, protocolSetting);
-
-            // 创建客户端
-            protocolClient = syncProtocol.createClient(protocolSetting);
+            // 使用新的 SyncClient 接口创建客户端
+            syncClient = com.chua.common.support.protocol.sync.SyncClient.create(protocol, protocolSetting);
 
             // 订阅所有配置的主题 + 系统主题
             List<String> allTopics = new ArrayList<>(syncProperties.getTopics().keySet());
@@ -306,11 +300,11 @@ public class SyncClient implements InitializingBean, DisposableBean {
             allTopics.add(SyncServer.TOPIC_RESPONSE);
             allTopics.add(SyncServer.TOPIC_CONNECT);      // 监听其他客户端连接事件
             allTopics.add(SyncServer.TOPIC_DISCONNECT);   // 监听其他客户端断开事件
-            protocolClient.subscribe(allTopics.toArray(new String[0]));
+            syncClient.subscribe(allTopics.toArray(new String[0]));
 
             // 为每个主题添加监听器
             for (String topic : allTopics) {
-                protocolClient.getListenerManager().addTopicListener(new TopicListener() {
+                syncClient.getListenerManager().addTopicListener(new TopicListener() {
                     @Override
                     public String getTopic() {
                         return topic;
@@ -324,7 +318,7 @@ public class SyncClient implements InitializingBean, DisposableBean {
             }
 
             // 添加连接监听器
-            protocolClient.getListenerManager().addConnectionListener(new ConnectionListener() {
+            syncClient.getListenerManager().addConnectionListener(new ConnectionListener() {
                 @Override
                 public void onEvent(ConnectionEvent event) {
                     boolean isConnected = event.getEventType() == ConnectionEvent.Type.CONNECTED ||
@@ -333,9 +327,9 @@ public class SyncClient implements InitializingBean, DisposableBean {
                 }
             });
 
-            // 连接服务端（底层会自动处理重连）
-            protocolClient.connect();
-            clientInfo.setClientId(protocolClient.getClientId());
+            // 连接服务端
+            syncClient.connect();
+            clientInfo.setClientId(syncClient.getClientId());
             connected.set(true);
 
             // 自动注册
@@ -347,7 +341,7 @@ public class SyncClient implements InitializingBean, DisposableBean {
             notifyConnectionListeners(true);
 
             log.info("[Sync客户端] 连接成功，协议: {}，服务器: {}:{}, clientId={}",
-                    syncProperties.getClient().getProtocol(), host, port, protocolClient.getClientId());
+                    syncProperties.getClient().getProtocol(), host, port, syncClient.getClientId());
         } catch (Exception e) {
             log.error("[Sync客户端] 连接失败，底层将自动重连", e);
             connected.set(false);
@@ -401,13 +395,13 @@ public class SyncClient implements InitializingBean, DisposableBean {
      * 动态订阅主题
      */
     public void subscribe(String... topics) {
-        if (protocolClient == null) return;
-        protocolClient.subscribe(topics);
+        if (syncClient == null) return;
+        syncClient.subscribe(topics);
         dynamicTopics.addAll(Arrays.asList(topics));
         
         // 为新主题添加监听器
         for (String topic : topics) {
-            protocolClient.getListenerManager().addTopicListener(new TopicListener() {
+            syncClient.getListenerManager().addTopicListener(new TopicListener() {
                 @Override
                 public String getTopic() {
                     return topic;
@@ -563,11 +557,11 @@ public class SyncClient implements InitializingBean, DisposableBean {
      * @param data  数据
      */
     public void publish(String topic, Object data) {
-        if (!connected.get() || protocolClient == null) {
+        if (!connected.get() || syncClient == null) {
             log.warn("[Sync客户端] 未连接服务端，无法发布消息");
             return;
         }
-        protocolClient.publish(topic, data);
+        syncClient.publish(topic, data);
         log.debug("[Sync客户端] 已发布消息: topic={}", topic);
     }
 
@@ -575,11 +569,11 @@ public class SyncClient implements InitializingBean, DisposableBean {
      * 发送健康检查请求
      */
     public void healthCheck() {
-        if (!connected.get() || protocolClient == null) {
+        if (!connected.get() || syncClient == null) {
             log.warn("[Sync客户端] 未连接服务端，无法进行健康检查");
             return;
         }
-        protocolClient.publish(SyncServer.TOPIC_HEALTH, Map.of("action", "ping"));
+        syncClient.publish(SyncServer.TOPIC_HEALTH, Map.of("action", "ping"));
     }
 
     /**
@@ -622,7 +616,7 @@ public class SyncClient implements InitializingBean, DisposableBean {
      */
     private void syncConnectionStatus() {
         try {
-            if (protocolClient == null) {
+            if (syncClient == null) {
                 if (connected.get()) {
                     connected.set(false);
                     notifyConnectionListeners(false);
@@ -631,7 +625,7 @@ public class SyncClient implements InitializingBean, DisposableBean {
             }
 
             // 同步底层连接状态
-            boolean actualConnected = protocolClient.isConnected();
+            boolean actualConnected = syncClient.isConnected();
             if (connected.get() != actualConnected) {
                 connected.set(actualConnected);
                 notifyConnectionListeners(actualConnected);
@@ -750,8 +744,8 @@ public class SyncClient implements InitializingBean, DisposableBean {
             scheduler.shutdown();
         }
 
-        if (protocolClient != null) {
-            protocolClient.close();
+        if (syncClient != null) {
+            syncClient.close();
         }
 
         connected.set(false);

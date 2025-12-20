@@ -79,6 +79,11 @@ public class ApiProperties {
     private InternalConfig internal = new InternalConfig();
 
     /**
+     * 灰度发布配置
+     */
+    private GrayConfig gray = new GrayConfig();
+
+    /**
      * 是否启用 API 控制功能（版本或平台）
      *
      * @return 是否启用
@@ -97,7 +102,7 @@ public class ApiProperties {
         /**
          * 是否开启版本控制
          */
-        private boolean enable = false;
+        private boolean enable = true;
     }
 
     /**
@@ -180,7 +185,7 @@ public class ApiProperties {
         /**
          * 是否开启加密功能
          */
-        private boolean enable = false;
+        private boolean enable = true;
 
         /**
          * 是否开启响应加密
@@ -212,7 +217,7 @@ public class ApiProperties {
         /**
          * 是否开启请求解密
          */
-        private boolean enable = false;
+        private boolean enable = true;
 
         /**
          * 请求解密密钥
@@ -239,7 +244,7 @@ public class ApiProperties {
         /**
          * 是否开启虚拟映射
          */
-        private boolean enable = false;
+        private boolean enable = true;
 
         /**
          * 虚拟映射
@@ -260,7 +265,7 @@ public class ApiProperties {
         /**
          * 是否开启 Mock 功能
          */
-        private boolean enable = false;
+        private boolean enable = true;
 
         /**
          * Mock 生效的环境（逗号分隔）
@@ -277,7 +282,7 @@ public class ApiProperties {
         /**
          * 是否开启功能开关
          */
-        private boolean enable = false;
+        private boolean enable = true;
 
         /**
          * 功能开关管理接口路径
@@ -294,7 +299,7 @@ public class ApiProperties {
         /**
          * 是否开启内部接口控制
          */
-        private boolean enable = false;
+        private boolean enable = true;
 
         /**
          * 全局IP白名单（适用于所有内部接口）
@@ -316,12 +321,56 @@ public class ApiProperties {
         /**
          * 是否开启废弃接口提示
          */
-        private boolean enable = false;
+        private boolean enable = true;
 
         /**
          * 是否在响应头中添加废弃警告
          */
         private boolean addWarningHeader = true;
+    }
+
+    /**
+     * 灰度发布配置
+     */
+    @Data
+    public static class GrayConfig {
+
+        /**
+         * 是否开启灰度发布功能
+         */
+        private boolean enable = true;
+
+        /**
+         * 灰度标识请求头名称
+         * <p>
+         * 请求命中灰度后，会在响应头中添加此头
+         * </p>
+         */
+        private String headerName = "X-Gray-Hit";
+
+        /**
+         * 全局灰度用户白名单
+         * <p>
+         * 这些用户始终进入灰度版本
+         * </p>
+         */
+        private List<String> globalUsers = Collections.emptyList();
+
+        /**
+         * 全局灰度IP白名单
+         * <p>
+         * 这些IP始终进入灰度版本
+         * </p>
+         */
+        private List<String> globalIps = Collections.emptyList();
+
+        /**
+         * 默认灰度百分比
+         * <p>
+         * 注解未指定百分比时使用此默认值
+         * </p>
+         */
+        private int defaultPercentage = 0;
     }
 }
 

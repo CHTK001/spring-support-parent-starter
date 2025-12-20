@@ -120,6 +120,58 @@ public class JobContext {
         CONTEXT_HOLDER.remove();
     }
 
+    // ==================== 静态快捷方法 ====================
+
+    /**
+     * 获取当前任务参数
+     *
+     * @return 任务参数，如果不存在返回null
+     */
+    public static String getJobParam() {
+        JobContext context = getJobContext();
+        return context != null ? context.jobParam : null;
+    }
+
+    /**
+     * 获取当前任务ID
+     *
+     * @return 任务ID，如果不存在返回-1
+     */
+    public static long getCurrentJobId() {
+        JobContext context = getJobContext();
+        return context != null ? context.jobId : -1;
+    }
+
+    /**
+     * 获取当前分片索引
+     *
+     * @return 分片索引，如果不存在返回0
+     */
+    public static int getCurrentShardIndex() {
+        JobContext context = getJobContext();
+        return context != null ? context.shardIndex : 0;
+    }
+
+    /**
+     * 获取当前分片总数
+     *
+     * @return 分片总数，如果不存在返回1
+     */
+    public static int getCurrentShardTotal() {
+        JobContext context = getJobContext();
+        return context != null ? context.shardTotal : 1;
+    }
+
+    /**
+     * 获取当前日志文件名
+     *
+     * @return 日志文件名，如果不存在返回null
+     */
+    public static String getCurrentLogFileName() {
+        JobContext context = getJobContext();
+        return context != null ? context.jobLogFileName : null;
+    }
+
     /**
      * 设置任务执行成功
      *

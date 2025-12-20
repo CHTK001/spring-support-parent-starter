@@ -65,7 +65,7 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
 
     @Override
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
-        if(!rpcProperties.isOpen()) {
+        if(!rpcProperties.isEnable()) {
             return;
         }
         String[] beanNames = beanFactory.getBeanDefinitionNames();
@@ -96,7 +96,7 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
 
     @Override
     public void postProcessMergedBeanDefinition(RootBeanDefinition beanDefinition, Class<?> beanType, String beanName) {
-        if(!rpcProperties.isOpen()) {
+        if(!rpcProperties.isEnable()) {
             return;
         }
         AnnotatedInjectionMetadata metadata = findInjectionMetadata(beanName, beanType, null);
@@ -110,7 +110,7 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
 
     @Override
     public PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName) throws BeansException {
-        if(!rpcProperties.isOpen()) {
+        if(!rpcProperties.isEnable()) {
             return pvs;
         }
         try {
@@ -129,7 +129,7 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
 
     @Override
     protected Object doGetInjectedBean(AnnotationAttributes attributes, Object bean, String beanName, Class<?> injectedType, AnnotatedInjectElement injectedElement) throws Exception {
-        if(!rpcProperties.isOpen()) {
+        if(!rpcProperties.isEnable()) {
             return bean;
         }
         if (injectedElement.injectedObject == null) {
@@ -248,7 +248,6 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
             return;
         }
         rpcProperties = new RpcProperties();
-        rpcProperties.setOpen(false);
         rpcProperties.setEnable(false);
 
     }

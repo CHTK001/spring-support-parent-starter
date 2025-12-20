@@ -2,15 +2,19 @@ package com.chua.starter.common.support.api.interceptor;
 
 import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.net.Version;
 import com.chua.common.support.utils.ArrayUtils;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.api.annotations.ApiDeprecated;
 import com.chua.starter.common.support.api.annotations.ApiFeature;
+import com.chua.starter.common.support.api.annotations.ApiGray;
 import com.chua.starter.common.support.api.annotations.ApiInternal;
 import com.chua.starter.common.support.api.annotations.ApiMock;
 import com.chua.starter.common.support.api.feature.ApiFeatureManager;
+import com.chua.starter.common.support.api.gray.ApiGrayEvaluator;
 import com.chua.starter.common.support.api.properties.ApiProperties;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +27,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -42,6 +47,7 @@ public class ApiControlInterceptor implements HandlerInterceptor {
     private final ApiProperties apiProperties;
     private final Environment environment;
     private final ApiFeatureManager featureManager;
+    private final ApiGrayEvaluator grayEvaluator = new ApiGrayEvaluator();
 
     /**
      * 内网IP正则表达式
@@ -79,6 +85,11 @@ public class ApiControlInterceptor implements HandlerInterceptor {
 
         // 处理 @ApiDeprecated
         if (!handleApiDeprecated(handlerMethod, request, response)) {
+            return false;
+        }
+
+        // 处理 @ApiGray
+        if (!handleApiGray(handlerMethod, request, response)) {
             return false;
         }
 
@@ -342,6 +353,9 @@ public class ApiControlInterceptor implements HandlerInterceptor {
 
     /**
      * 处理 @ApiDeprecated 注解
+     * <p>
+     * 支持语义化版本号（如 1.0.0, 1.0.0-release, 2.0.0-rc.1）进行比较
+     * </p>
      */
     private boolean handleApiDeprecated(HandlerMethod handlerMethod, HttpServletRequest request,
                                         HttpServletResponse response) throws IOException {
@@ -354,12 +368,13 @@ public class ApiControlInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        // 获取请求版本
-        double requestVersion = getRequestVersion(request);
-        double sinceVersion = parseVersion(apiDeprecated.since());
-        double removedVersion = StringUtils.isBlank(apiDeprecated.removedIn())
-                ? Double.MAX_VALUE
-                : parseVersion(apiDeprecated.removedIn());
+        // 获取请求版本（使用语义化版本）
+        Version requestVersion = getRequestVersion(request);
+        Version sinceVersion = Version.parse(apiDeprecated.since());
+        // removedIn 为空时使用 "latest" 表示永远不会移除
+        Version removedVersion = StringUtils.isBlank(apiDeprecated.removedIn())
+                ? Version.parse("latest")
+                : Version.parse(apiDeprecated.removedIn());
 
         // 添加废弃警告头
         if (apiDeprecated.addWarningHeader()) {
@@ -372,14 +387,14 @@ public class ApiControlInterceptor implements HandlerInterceptor {
         }
 
         // 如果请求版本 >= 移除版本，返回 410 Gone
-        if (requestVersion >= removedVersion) {
+        if (requestVersion.compareTo(removedVersion) >= 0) {
             log.warn("接口已移除: {} (removed in {})", request.getRequestURI(), apiDeprecated.removedIn());
             writeResponse(response, 410, ReturnResult.error("此接口已被移除"));
             return false;
         }
 
         // 如果请求版本 >= 废弃版本
-        if (requestVersion >= sinceVersion) {
+        if (requestVersion.compareTo(sinceVersion) >= 0) {
             // 有替代接口，返回提示
             if (StringUtils.isNotBlank(apiDeprecated.replacement())) {
                 log.debug("接口已废弃，建议使用: {}", apiDeprecated.replacement());
@@ -394,6 +409,75 @@ public class ApiControlInterceptor implements HandlerInterceptor {
         }
 
         return true;
+    }
+
+    /**
+     * 处理 @ApiGray 注解
+     */
+    private boolean handleApiGray(HandlerMethod handlerMethod, HttpServletRequest request,
+                                  HttpServletResponse response) throws IOException {
+        var apiGray = AnnotationUtils.findAnnotation(handlerMethod.getMethod(), ApiGray.class);
+        if (apiGray == null) {
+            return true;
+        }
+
+        // 检查全局灰度开关
+        if (!isGrayEnabled()) {
+            return true;
+        }
+
+        // 获取用户信息
+        Object userId = request.getAttribute("userId");
+        if (userId == null) {
+            userId = request.getSession().getAttribute("userId");
+        }
+        String username = (String) request.getSession().getAttribute("username");
+
+        // 评估灰度规则
+        boolean hitGray = grayEvaluator.evaluate(apiGray, request, userId, username);
+
+        if (hitGray) {
+            // 命中灰度，添加响应头并继续执行
+            String headerName = apiProperties.getGray().getHeaderName();
+            response.setHeader(headerName, "true");
+            response.setHeader(headerName + "-Version", StringUtils.defaultString(apiGray.value(), "default"));
+            log.debug("灰度命中: uri={}, version={}", request.getRequestURI(), apiGray.value());
+            return true;
+        }
+
+        // 未命中灰度
+        if (apiGray.forceGray()) {
+            // 强制灰度模式，未命中则拒绝访问
+            log.debug("灰度未命中(强制模式): uri={}", request.getRequestURI());
+            
+            // 检查是否有降级接口
+            if (StringUtils.isNotBlank(apiGray.fallback())) {
+                // 转发到降级接口
+                log.debug("灰度降级: {} -> {}", request.getRequestURI(), apiGray.fallback());
+                try {
+                    request.getRequestDispatcher(apiGray.fallback()).forward(request, response);
+                } catch (ServletException e) {
+                    throw new RuntimeException(e);
+                }
+                return false;
+            }
+            
+            // 返回未命中灰度的响应
+            writeResponse(response, apiGray.notInGrayStatus(), 
+                    ReturnResult.error(apiGray.notInGrayMessage()));
+            return false;
+        }
+
+        // 非强制灰度模式，未命中则正常执行
+        log.debug("灰度未命中(非强制模式)，继续执行: uri={}", request.getRequestURI());
+        return true;
+    }
+
+    /**
+     * 检查灰度功能是否开启
+     */
+    private boolean isGrayEnabled() {
+        return apiProperties.getGray() != null && apiProperties.getGray().isEnable();
     }
 
     /**
@@ -431,40 +515,34 @@ public class ApiControlInterceptor implements HandlerInterceptor {
 
     /**
      * 获取请求中的 API 版本
+     * <p>
+     * 支持从请求头、URL路径、查询参数中获取语义化版本号
+     * </p>
+     * @return 解析后的 Version 对象
      */
-    private double getRequestVersion(HttpServletRequest request) {
+    private Version getRequestVersion(HttpServletRequest request) {
         // 从请求头获取
         String versionHeader = request.getHeader("X-API-Version");
         if (StringUtils.isNotBlank(versionHeader)) {
-            return parseVersion(versionHeader);
+            return Version.parse(versionHeader);
         }
 
-        // 从 URL 路径解析 (如 /api/v2/users)
+        // 从 URL 路径解析 (如 /api/v2/users, /api/v1.0.0/users, /api/v2.1.0-beta/users)
         String uri = request.getRequestURI();
-        var matcher = java.util.regex.Pattern.compile("/v(\\d+(?:\\.\\d+)?)/").matcher(uri);
+        // 支持语义化版本格式: v1, v1.0, v1.0.0, v1.0.0-rc.1
+        Matcher matcher = Pattern.compile("/v([0-9]+(?:\\.[0-9]+)*(?:-[0-9A-Za-z.-]+)?)/").matcher(uri);
         if (matcher.find()) {
-            return parseVersion(matcher.group(1));
+            return Version.parse(matcher.group(1));
         }
 
         // 从查询参数获取
         String versionParam = request.getParameter("version");
         if (StringUtils.isNotBlank(versionParam)) {
-            return parseVersion(versionParam);
+            return Version.parse(versionParam);
         }
 
-        // 默认版本 1.0
-        return 1.0;
-    }
-
-    /**
-     * 解析版本号
-     */
-    private double parseVersion(String version) {
-        try {
-            return Double.parseDouble(version);
-        } catch (NumberFormatException e) {
-            return 1.0;
-        }
+        // 默认版本 1.0.0
+        return Version.parse("1.0.0");
     }
 
     /**

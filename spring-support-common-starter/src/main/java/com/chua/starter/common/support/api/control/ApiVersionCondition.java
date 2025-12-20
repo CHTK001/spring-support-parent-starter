@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.api.control;
 
+import com.chua.common.support.net.Version;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.common.support.api.annotations.ApiVersion;
 import jakarta.servlet.http.HttpServletRequest;
@@ -8,12 +9,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.servlet.mvc.condition.RequestCondition;
 
 import java.util.Map;
-import java.util.regex.Pattern;
 
 /**
  * API 版本条件
  * <p>
  * 用于匹配请求中的版本号与 API 定义的版本号。
+ * </p>
+ * <p>
+ * 支持的版本指定方式：
+ * <ul>
+ *   <li>查询参数：?apiVersion=1 或 ?apiVersion=v1</li>
+ *   <li>请求头：X-Api-Version: 1</li>
+ *   <li>特殊值：apiVersion=latest 自动匹配最新版本</li>
+ * </ul>
  * </p>
  *
  * @author CH
@@ -24,9 +32,19 @@ import java.util.regex.Pattern;
 public class ApiVersionCondition implements RequestCondition<ApiVersionCondition> {
 
     /**
-     * 接口路径中的版本号前缀，如: api/v[1-n]/test
+     * 版本参数名
      */
-    private final static Pattern VERSION_PREFIX_PATTERN = Pattern.compile("/v([0-9]+\\.{0,1}[0-9]{0,2})/");
+    private static final String VERSION_PARAM = "apiVersion";
+
+    /**
+     * 版本请求头名
+     */
+    private static final String VERSION_HEADER = "X-Api-Version";
+
+    /**
+     * 最新版本标识
+     */
+    private static final String LATEST = "latest";
 
     /**
      * API VERSION interface
@@ -51,9 +69,9 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
     /**
      * 判断是否匹配
      * <p>
-     * 支持两种版本指定方式：
-     * 1. 查询参数：?version=1 或 ?version=v1
-     * 2. 路径前缀：/api/v1/xxx
+     * 支持的版本指定方式：
+     * 1. 查询参数：?apiVersion=1 或 ?apiVersion=v1 或 ?apiVersion=latest
+     * 2. 请求头：X-Api-Version: 1 或 X-Api-Version: latest
      * </p>
      *
      * @param httpServletRequest HTTP 请求
@@ -61,26 +79,24 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
      */
     @Override
     public ApiVersionCondition getMatchingCondition(HttpServletRequest httpServletRequest) {
-        // 1. 从查询参数获取版本号 ?version=1 或 ?version=v1
+        // 1. 从查询参数获取版本号 ?apiVersion=1 或 ?apiVersion=v1 或 ?apiVersion=latest
         Map<String, String> queryParams = MapUtils.asMap(httpServletRequest.getQueryString(), "&", "=");
-        String versionStr = MapUtils.getString(queryParams, "version");
+        String versionStr = MapUtils.getString(queryParams, VERSION_PARAM);
         
-        // 2. 如果没有查询参数，尝试从路径中获取版本号 /api/v1/xxx
-        if (null == versionStr) {
-            java.util.regex.Matcher matcher = VERSION_PREFIX_PATTERN.matcher(httpServletRequest.getRequestURI());
-            if (matcher.find()) {
-                versionStr = matcher.group(1);
-            }
+        // 2. 如果没有查询参数，尝试从请求头获取 X-Api-Version
+        if (null == versionStr || versionStr.isEmpty()) {
+            versionStr = httpServletRequest.getHeader(VERSION_HEADER);
         }
         
         // 没有指定版本，匹配所有
-        if (null == versionStr) {
+        if (null == versionStr || versionStr.isEmpty()) {
             return this;
         }
         
-        // 移除版本号前缀 v/V
-        if (versionStr.startsWith("v") || versionStr.startsWith("V")) {
-            versionStr = versionStr.substring(1);
+        // 支持 latest 关键字，表示匹配最新版本
+        if (LATEST.equalsIgnoreCase(versionStr)) {
+            // latest 总是匹配，由 compareTo 决定优先级（版本号最大的优先）
+            return this;
         }
 
         ApiVersion currentApiVersion = getApiVersion();
@@ -88,16 +104,31 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
             return this;
         }
 
-        // 比较请求版本与当前API版本
-        double requestVersion = parseVersion(versionStr);
-        double apiVersionValue = currentApiVersion.value();
+        // 比较请求版本与当前API版本（语义化版本）
+        Version requestVersion = parseVersion(versionStr);
+Version apiVersionValue = Version.parse(currentApiVersion.value());
         
         // 请求版本 >= API版本 则匹配
-        if (requestVersion >= apiVersionValue) {
+        if (requestVersion.compareTo(apiVersionValue) >= 0) {
             return this;
         }
 
         return null;
+    }
+
+    /**
+     * 判断请求是否指定了 latest 版本
+     *
+     * @param httpServletRequest HTTP 请求
+     * @return 是否为 latest
+     */
+    private boolean isLatestVersion(HttpServletRequest httpServletRequest) {
+        Map<String, String> queryParams = MapUtils.asMap(httpServletRequest.getQueryString(), "&", "=");
+        String versionStr = MapUtils.getString(queryParams, VERSION_PARAM);
+        if (null == versionStr || versionStr.isEmpty()) {
+            versionStr = httpServletRequest.getHeader(VERSION_HEADER);
+        }
+        return LATEST.equalsIgnoreCase(versionStr);
     }
     
     /**
@@ -106,17 +137,20 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
      * @param versionStr 版本号字符串
      * @return 版本号数值
      */
-    private double parseVersion(String versionStr) {
+    private Version parseVersion(String versionStr) {
         try {
-            return Double.parseDouble(versionStr);
-        } catch (NumberFormatException e) {
-            log.warn("无法解析版本号:  {}", versionStr);
-            return 0.0;
+            return Version.parse(versionStr);
+        } catch (Exception e) {
+            log.warn("无法解析版本号: {}", versionStr);
+            return Version.parse("1.0.0");
         }
     }
 
     /**
      * 比较优先级（版本号大的优先）
+     * <p>
+     * 当请求指定 apiVersion=latest 时，版本号最大的接口优先匹配。
+     * </p>
      *
      * @param other              另一个条件
      * @param httpServletRequest HTTP 请求
@@ -124,10 +158,16 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
      */
     @Override
     public int compareTo(ApiVersionCondition other, HttpServletRequest httpServletRequest) {
-        double thisVersion = getApiVersion() != null ? getApiVersion().value() : 0.0;
-        double otherVersion = other.getApiVersion() != null ? other.getApiVersion().value() : 0.0;
-        // 版本号大的优先匹配
-        return Double.compare(otherVersion, thisVersion);
+        Version thisVersion = getApiVersion() != null ? Version.parse(getApiVersion().value()) : Version.parse("0");
+        Version otherVersion = other.getApiVersion() != null ? Version.parse(other.getApiVersion().value()) : Version.parse("0");
+        
+        // 如果是 latest，请求需要选择最大可用版本（降序）
+        if (isLatestVersion(httpServletRequest)) {
+            return otherVersion.compareTo(thisVersion);
+        }
+        
+        // 普通情况：选择不大于请求版本中的最大版本，依旧按照版本降序
+        return otherVersion.compareTo(thisVersion);
     }
 }
 
