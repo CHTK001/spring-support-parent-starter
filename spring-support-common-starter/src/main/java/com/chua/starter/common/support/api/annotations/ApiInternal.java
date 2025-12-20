@@ -11,7 +11,9 @@ import java.lang.annotation.*;
  *
  * <h3>处理优先级：1（最高）</h3>
  * <p>
- * 在所有 API 控制注解中优先级最高，最先处理。
+ * 优先级顺序：@ApiInternal(1) &gt; @ApiFeature(2) &gt; @ApiMock(3) &gt; @ApiDeprecated(4) &gt; @ApiGray(5)
+ * </p>
+ * <p>
  * 处理阶段：拦截器阶段（请求进入前）。
  * </p>
  *

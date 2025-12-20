@@ -1,6 +1,11 @@
 package com.chua.starter.job.support;
 
 import com.chua.starter.job.support.log.JobFileAppender;
+import com.chua.starter.job.support.log.JobLogBackupService;
+import com.chua.starter.job.support.log.JobLogDetailService;
+import com.chua.starter.job.support.mapper.MonitorJobLogBackupMapper;
+import com.chua.starter.job.support.mapper.MonitorJobLogDetailMapper;
+import com.chua.starter.job.support.mapper.MonitorJobLogMapper;
 import com.chua.starter.job.support.scheduler.SchedulerTrigger;
 import lombok.extern.slf4j.Slf4j;
 import org.mybatis.spring.annotation.MapperScan;
@@ -8,7 +13,9 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 /**
@@ -20,8 +27,10 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
  */
 @Slf4j
 @Configuration
+@EnableScheduling
 @EnableConfigurationProperties(JobProperties.class)
 @MapperScan("com.chua.starter.job.support.mapper")
+@ComponentScan("com.chua.starter.job.support.log")
 @ConditionalOnProperty(prefix = JobProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = true)
 public class JobConfiguration {
 

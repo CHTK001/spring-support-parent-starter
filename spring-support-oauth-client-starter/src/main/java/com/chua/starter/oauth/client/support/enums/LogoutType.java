@@ -22,5 +22,9 @@ public enum LogoutType {
     /**
      * 注销
      */
-    UN_REGISTER
+    UN_REGISTER,
+    /**
+     * 踢下线
+     */
+    KICK
 }

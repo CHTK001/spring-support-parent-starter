@@ -21,18 +21,14 @@ import java.util.Set;
 @Data
 @ConfigurationProperties(prefix = RpcProperties.PRE, ignoreInvalidFields = true, ignoreUnknownFields = true)
 public class RpcProperties {
+
+    public static final String PRE = "plugin.rpc";
+    public static final String DEFAULT_SERIALIZATION = "hessian";
+
     /**
      * 是否启用
      */
     private boolean enable = false;
-
-
-    public static final String PRE = "plugin.rpc";
-    public static final String DEFAULT_SERIALIZATION = "hessian";
-    /**
-     * 是否开启
-     */
-    private boolean open;
     /**
      * 扫描
      */

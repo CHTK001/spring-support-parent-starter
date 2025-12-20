@@ -91,7 +91,7 @@ public class ConfigCenterProperties {
          * 注意：需要配合 @RefreshScope 使用，或者使用 @ConfigValue 注解。
          * </p>
          */
-        private boolean valueAnnotationEnabled = false;
+        private boolean valueAnnotationEnabled = true;
 
         /**
          * 是否支持 @ConfigValue 注解热更新

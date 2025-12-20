@@ -1,0 +1,52 @@
+package com.chua.starter.job.support.mapper;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.chua.starter.job.support.entity.MonitorJobLogBackup;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+
+import java.util.List;
+
+/**
+ * 任务日志备份 Mapper 接口
+ *
+ * @author CH
+ * @since 2024/12/19
+ */
+@Mapper
+public interface MonitorJobLogBackupMapper extends BaseMapper<MonitorJobLogBackup> {
+
+    /**
+     * 查询最近的备份记录
+     *
+     * @param limit 限制数量
+     * @return 备份记录列表
+     */
+    @Select("SELECT * FROM monitor_job_log_backup ORDER BY job_log_backup_start_time DESC LIMIT #{limit}")
+    List<MonitorJobLogBackup> selectRecent(@Param("limit") int limit);
+
+    /**
+     * 查询正在运行的备份
+     *
+     * @return 正在运行的备份
+     */
+    @Select("SELECT * FROM monitor_job_log_backup WHERE job_log_backup_status = 'RUNNING' ORDER BY job_log_backup_start_time DESC LIMIT 1")
+    MonitorJobLogBackup selectRunning();
+
+    /**
+     * 统计备份文件总大小
+     *
+     * @return 总大小(字节)
+     */
+    @Select("SELECT COALESCE(SUM(job_log_backup_file_size), 0) FROM monitor_job_log_backup WHERE job_log_backup_status = 'SUCCESS'")
+    long sumBackupSize();
+
+    /**
+     * 统计备份日志总条数
+     *
+     * @return 总条数
+     */
+    @Select("SELECT COALESCE(SUM(job_log_backup_count), 0) FROM monitor_job_log_backup WHERE job_log_backup_status = 'SUCCESS'")
+    long sumBackupCount();
+}

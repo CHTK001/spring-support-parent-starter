@@ -121,6 +121,78 @@ public interface Protocol {
     }
 
     /**
+     * 验证浏览器指纹
+     * <p>向服务器验证当前请求的浏览器指纹是否与登录时一致</p>
+     *
+     * @param token       当前访问令牌
+     * @param fingerprint 当前请求的浏览器指纹
+     * @return 验证结果
+     */
+    default FingerprintVerifyResult verifyFingerprint(String token, String fingerprint) {
+        return FingerprintVerifyResult.notSupported();
+    }
+
+    /**
+     * 指纹验证结果
+     */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    class FingerprintVerifyResult {
+        /**
+         * 是否验证通过
+         */
+        private boolean valid;
+        /**
+         * 错误码
+         */
+        private int code;
+        /**
+         * 错误消息
+         */
+        private String message;
+        /**
+         * 登录时的指纹（用于客户端缓存）
+         */
+        private String storedFingerprint;
+
+        /**
+         * 验证通过
+         */
+        public static FingerprintVerifyResult success(String storedFingerprint) {
+            return new FingerprintVerifyResult(true, 200, "OK", storedFingerprint);
+        }
+
+        /**
+         * 指纹不匹配
+         */
+        public static FingerprintVerifyResult mismatch() {
+            return new FingerprintVerifyResult(false, 40301, "浏览器指纹不匹配，请重新登录", null);
+        }
+
+        /**
+         * 缺少指纹
+         */
+        public static FingerprintVerifyResult missing() {
+            return new FingerprintVerifyResult(false, 40302, "缺少浏览器指纹", null);
+        }
+
+        /**
+         * 不支持指纹验证
+         */
+        public static FingerprintVerifyResult notSupported() {
+            return new FingerprintVerifyResult(false, 501, "当前协议不支持指纹验证", null);
+        }
+
+        /**
+         * 服务器错误
+         */
+        public static FingerprintVerifyResult serverError(String message) {
+            return new FingerprintVerifyResult(false, 500, message, null);
+        }
+    }
+
+    /**
      * 在线用户查询参数
      */
     @Data
