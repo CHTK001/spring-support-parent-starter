@@ -9,14 +9,39 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 环形调度处理器
+ * 时间环调度处理器
  * <p>
- * 基于时间环的秒级任务触发器
+ * 基于时间环的秒级任务触发器，实现精确的秒级任务调度。
+ * 时间环是一个60索引的环形数据结构，每个索引对应一秒。
  * </p>
+ *
+ * <h3>工作原理</h3>
+ * <ol>
+ *     <li>{@link CoreTriggerHandler}将任务推送到时间环的指定秒数位置</li>
+ *     <li>时间环线程每秒精确触发一次</li>
+ *     <li>取出当前秒数和前一秒的任务（避免跨秒丢失）</li>
+ *     <li>通过{@link JobTriggerPoolHelper}触发任务执行</li>
+ * </ol>
+ *
+ * <h3>数据结构</h3>
+ * <pre>
+ * ringData: Map&lt;Integer, List&lt;Integer&gt;&gt;
+ *   key: 0-59的秒数
+ *   value: 该秒需要执行的任务ID列表
+ * </pre>
+ *
+ * <h3>特性</h3>
+ * <ul>
+ *     <li>毫秒级精度：通过sleep对齐到每秒的开始</li>
+ *     <li>容错机制：向前检查一个刻度，避免处理耗时导致丢失</li>
+ *     <li>优雅停止：关闭时等待环上任务全部执行完毕</li>
+ * </ul>
  *
  * @author CH
  * @version 1.0.0
  * @since 2024/03/08
+ * @see CoreTriggerHandler
+ * @see JobTriggerPoolHelper
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -87,7 +112,7 @@ public class RingTriggerHandler implements TriggerHandler, Runnable {
         }
         ringItemData.add(jobId);
 
-        log.debug(">>>>>>>>>>> job, schedule push time-ring : " + ringSecond + " = " + List.of(ringItemData));
+        log.debug(">>>>>>>>>>> 推送到时间环: 秒数={}, 任务ID={}", ringSecond, ringItemData);
     }
 
     @Override
@@ -117,7 +142,7 @@ public class RingTriggerHandler implements TriggerHandler, Runnable {
                 }
 
                 // 时间环触发
-                log.debug(">>>>>>>>>>> job, time-ring beat : " + nowSecond + " = " + Collections.singletonList(ringItemData));
+                log.debug(">>>>>>>>>>> 时间环触发: 当前秒={}, 任务数={}", nowSecond, ringItemData.size());
                 if (!ringItemData.isEmpty()) {
                     // 执行触发
                     for (int jobId : ringItemData) {
@@ -127,10 +152,10 @@ public class RingTriggerHandler implements TriggerHandler, Runnable {
                 }
             } catch (Exception e) {
                 if (!ringThreadToStop) {
-                    log.error(">>>>>>>>>>> job, ringThread error:{}", e.getMessage(), e);
+                    log.error(">>>>>>>>>>> 时间环线程异常: {}", e.getMessage(), e);
                 }
             }
         }
-        log.info(">>>>>>>>>>> job, ringThread stop");
+        log.info(">>>>>>>>>>> 时间环线程已停止");
     }
 }

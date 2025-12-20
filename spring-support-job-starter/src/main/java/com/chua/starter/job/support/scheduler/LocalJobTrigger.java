@@ -11,12 +11,29 @@ import java.util.Date;
 /**
  * 本地任务触发器
  * <p>
- * 负责触发本地注册的 JobHandler 执行
+ * 负责触发本地注册的JobHandler执行。
+ * 该类是任务执行的入口点，处理任务触发的整个流程。
  * </p>
+ *
+ * <h3>触发流程</h3>
+ * <ol>
+ *     <li>加载任务配置信息</li>
+ *     <li>创建并保存任务日志记录</li>
+ *     <li>调用{@link JobConfig#runLocal}执行本地任务</li>
+ *     <li>更新日志执行结果</li>
+ * </ol>
+ *
+ * <h3>参数说明</h3>
+ * <ul>
+ *     <li><b>failRetryCount</b> - &gt;=0使用指定值，&lt;0使用任务配置</li>
+ *     <li><b>executorParam</b> - 不为null时覆盖任务配置的参数</li>
+ * </ul>
  *
  * @author CH
  * @version 1.0.0
  * @since 2024/03/08
+ * @see JobConfig#runLocal
+ * @see JobTriggerPoolHelper
  */
 public class LocalJobTrigger {
     private static final Logger logger = LoggerFactory.getLogger(LocalJobTrigger.class);
@@ -39,7 +56,7 @@ public class LocalJobTrigger {
         // 加载任务数据
         MonitorJob jobInfo = JobConfig.getInstance().loadById(jobId);
         if (jobInfo == null) {
-            logger.warn(">>>>>>>>>>>> trigger fail, jobId invalid，jobId={}", jobId);
+            logger.warn(">>>>>>>>>>>> 任务触发失败, 任务不存在, jobId={}", jobId);
             return;
         }
         if (executorParam != null) {
@@ -69,12 +86,12 @@ public class LocalJobTrigger {
         jobLog.setJobLogExecuteCode("PADDING");
         jobLog.setJobLogTriggerParam(jobInfo.getJobExecuteParam());
         JobConfig.getInstance().saveLog(jobLog);
-        logger.debug(">>>>>>>>>>> job trigger start, jobId:{}", jobLog.getJobLogId());
+        logger.debug(">>>>>>>>>>> 任务触发开始, 日志ID={}", jobLog.getJobLogId());
 
         // 2、执行本地任务
         JobConfig.getInstance().runLocal(jobLog, jobInfo);
 
-        logger.debug(">>>>>>>>>>> job trigger end, jobId:{}", jobLog.getJobLogId());
+        logger.debug(">>>>>>>>>>> 任务触发完成, 日志ID={}", jobLog.getJobLogId());
     }
 
 }

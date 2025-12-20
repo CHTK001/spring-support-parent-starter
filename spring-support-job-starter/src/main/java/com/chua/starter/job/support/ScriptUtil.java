@@ -12,11 +12,43 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * 脚本工具类
+ * 脚本执行工具类
+ * <p>
+ * 提供脚本文件的创建和执行能力，支持多种脚本语言的运行。
+ * 主要用于{@link GlueTypeEnum}中的脚本类型任务执行。
+ * </p>
+ *
+ * <h3>主要功能</h3>
+ * <ul>
+ *     <li>{@link #markScriptFile(String, String)} - 创建脚本文件</li>
+ *     <li>{@link #execToFile(String, String, String, String...)} - 执行脚本并输出日志</li>
+ * </ul>
+ *
+ * <h3>使用示例</h3>
+ * <pre>{@code
+ * // 创建Shell脚本文件
+ * String scriptFile = "/tmp/job_123.sh";
+ * ScriptUtil.markScriptFile(scriptFile, "#!/bin/bash\necho 'Hello World'");
+ *
+ * // 执行脚本并将输出写入日志文件
+ * int exitCode = ScriptUtil.execToFile("bash", scriptFile, "/data/logs/job_123.log", "param1", "param2");
+ * if (exitCode == 0) {
+ *     // 执行成功
+ * }
+ * }</pre>
+ *
+ * <h3>注意事项</h3>
+ * <ul>
+ *     <li>脚本文件会使用UTF-8编码写入</li>
+ *     <li>执行结果的标准输出和错误输出都会写入日志文件</li>
+ *     <li>返回值为脚本执行的退出码，0表示成功，-1表示执行异常</li>
+ * </ul>
  *
  * @author CH
  * @version 1.0.0
  * @since 2024/03/11
+ * @see GlueTypeEnum
+ * @see com.chua.starter.job.support.handler.ScriptJobHandler
  */
 public class ScriptUtil {
 

@@ -14,11 +14,24 @@ import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
- * 任务日志
+ * 任务执行日志实体
+ * <p>
+ * 对应数据库表 monitor_job_log，记录每次任务执行的信息。
+ * 包括触发时间、执行状态、耗时、执行结果等。
+ * </p>
+ *
+ * <h3>状态说明</h3>
+ * <ul>
+ *     <li><b>PADDING</b> - 执行中，任务已触发正在执行</li>
+ *     <li><b>SUCCESS</b> - 执行成功</li>
+ *     <li><b>FAILURE</b> - 执行失败</li>
+ * </ul>
  *
  * @author CH
  * @version 1.0.0
  * @since 2024/03/08
+ * @see MonitorJob
+ * @see MonitorJobLogDetail
  */
 @Data
 @TableName(value = "monitor_job_log")
