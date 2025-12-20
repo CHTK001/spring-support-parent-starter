@@ -8,6 +8,7 @@ import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.common.support.utils.ObjectUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.datasource.properties.DataSourceScriptProperties;
+import com.chua.starter.datasource.support.DatabaseFileProvider;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -27,6 +28,11 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -73,17 +79,21 @@ public class DataSourceScriptConfiguration {
      * 1. V版本号__init_任意.sql  - 初始化脚本（同名只执行最高版本）
      *    示例：V1.0.0__init_user.sql, V2.0.0__init_user.sql → 只执行V2.0.0版本
      *
-     * 2. V版本号__add_任意.sql   - 增量脚本（全部执行，按脚本名+版本判断）
+     * 2. V版本号__initdata_任意.sql - 初始化数据脚本（异步执行，使用虚拟线程）
+     *    示例：V1.0.0__initdata_dict.sql → 表结构创建后异步执行
+     *
+     * 3. V版本号__add_任意.sql   - 增量脚本（全部执行，按脚本名+版本判断）
      *    示例：V1.0.0__add_index.sql, V1.0.1__add_index.sql → 两个都执行
      *
-     * 3. V版本号__任意.sql       - 普通脚本（全部执行，按脚本名+版本判断）
+     * 4. V版本号__任意.sql       - 普通脚本（全部执行，按脚本名+版本判断）
      *    示例：V1.0.0__update_data.sql → 执行一次
      * </pre>
      *
      * <h3>执行顺序：</h3>
      * <ol>
-     *   <li>先执行 INIT 脚本（按版本号排序，同名只执行最高版本）</li>
-     *   <li>再执行 ADD 和普通脚本（按文件名排序）</li>
+     *   <li>同步执行 INIT 脚本（表结构，按版本号排序，同名只执行最高版本）</li>
+     *   <li>同步执行 ADD 和普通脚本（按文件名排序）</li>
+     *   <li>异步执行 INITDATA 脚本（初始化数据，使用虚拟线程）</li>
      * </ol>
      *
      * @author CH
@@ -132,6 +142,9 @@ public class DataSourceScriptConfiguration {
                     }
                 }
 
+                // 通过 ServiceLoader 加载各模块提供的数据库脚本
+                list.addAll(loadResourcesFromProviders());
+
                 // 过滤符合命名规范的脚本文件
                 list = list.stream()
                         .filter(res -> res.getFilename() != null &&
@@ -145,11 +158,13 @@ public class DataSourceScriptConfiguration {
                 }
 
                 // 4. 分离脚本类型
-                // INIT 脚本：同名脚本只执行最高版本
-                // ADD/NORMAL 脚本：全部执行，按脚本名+版本判断是否已执行
+                // INIT 脚本：同名脚本只执行最高版本（同步执行）
+                // ADD/NORMAL 脚本：全部执行，按脚本名+版本判断是否已执行（同步执行）
+                // INITDATA 脚本：初始化数据，异步执行（使用虚拟线程）
                 // 不符合格式的脚本：跳过不执行
                 Map<String, Resource> initScriptsToExecute = new LinkedHashMap<>();
                 List<Resource> otherScriptsToExecute = new ArrayList<>();
+                List<Resource> initDataScriptsToExecute = new ArrayList<>();
                 int skippedCount = 0;
 
                 for (Resource res : list) {
@@ -196,8 +211,11 @@ public class DataSourceScriptConfiguration {
                                 }
                             }
                         }
+                    } else if ("INITDATA".equals(scriptType)) {
+                        // INITDATA 脚本加入异步执行列表
+                        initDataScriptsToExecute.add(res);
                     } else {
-                        // ADD 和 NORMAL 脚本全部加入执行列表
+                        // ADD 和 NORMAL 脚本全部加入同步执行列表
                         otherScriptsToExecute.add(res);
                     }
                 }
@@ -206,10 +224,14 @@ public class DataSourceScriptConfiguration {
                     log.info("跳过 {} 个不符合格式的脚本", skippedCount);
                 }
 
-                // 合并待执行脚本列表：先执行 INIT，再执行 ADD/NORMAL
+                // 合并同步执行脚本列表：先执行 INIT（表结构），再执行 ADD/NORMAL
                 List<Resource> scriptsToExecute = new ArrayList<>();
                 scriptsToExecute.addAll(initScriptsToExecute.values());
                 scriptsToExecute.addAll(otherScriptsToExecute);
+                
+                if (dataSourceScriptProperties.isVerbose()) {
+                    log.info("同步脚本: {} 个, 异步数据脚本: {} 个", scriptsToExecute.size(), initDataScriptsToExecute.size());
+                }
 
                 String tableName = dataSourceScriptProperties.getVersionTable();
                 String tablePrefix = extractTablePrefix(tableName);
@@ -383,9 +405,156 @@ public class DataSourceScriptConfiguration {
                         overallProgressBar.close();
                     }
                 }
+                // 同步脚本执行完成后，异步执行 INITDATA 脚本
+                if (!initDataScriptsToExecute.isEmpty()) {
+                    executeInitDataScriptsAsync(initDataScriptsToExecute, tableName, tablePrefix);
+                }
             } catch (IOException e) {
                 throw new RuntimeException("读取脚本资源失败", e);
             }
+        }
+
+        /**
+         * 使用虚拟线程异步执行 INITDATA 脚本
+         * <p>
+         * 这些脚本主要是初始化数据（INSERT语句），不影响系统启动
+         * </p>
+         *
+         * @param scripts     待执行的 INITDATA 脚本列表
+         * @param tableName   版本记录表名
+         * @param tablePrefix 表字段前缀
+         */
+        private void executeInitDataScriptsAsync(List<Resource> scripts, String tableName, String tablePrefix) {
+            int parallelism = dataSourceScriptProperties.getInitdataParallelism();
+            int timeoutMinutes = dataSourceScriptProperties.getInitdataTimeoutMinutes();
+            
+            log.info("开始异步执行 {} 个初始化数据脚本（虚拟线程，并发数: {}）", 
+                    scripts.size(), parallelism > 0 ? parallelism : "无限制");
+            
+            // 记录异步执行结果
+            AtomicInteger successCount = new AtomicInteger(0);
+            AtomicInteger failCount = new AtomicInteger(0);
+            List<String> failedScripts = new CopyOnWriteArrayList<>();
+            
+            // 使用 CountDownLatch 等待所有脚本执行完成
+            CountDownLatch latch = new CountDownLatch(scripts.size());
+            
+            // 使用 Semaphore 控制并发数量（如果配置了parallelism）
+            Semaphore semaphore = parallelism > 0 ? new Semaphore(parallelism) : null;
+            
+            for (Resource res : scripts) {
+                // 使用虚拟线程执行每个脚本
+                Thread.startVirtualThread(() -> {
+                    // 如果配置了并发限制，先获取信号量
+                    if (semaphore != null) {
+                        try {
+                            semaphore.acquire();
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            latch.countDown();
+                            return;
+                        }
+                    }
+                    
+                    String fileName = res.getFilename();
+                    String version = versionOf(fileName);
+                    String description = descriptionOf(fileName);
+                    String scriptType = "INITDATA";
+                    
+                    try {
+                        String currentChecksum = checksum(res);
+                        
+                        // 检查是否已执行过
+                        Integer count = jdbc.queryForObject(
+                                String.format("SELECT COUNT(*) FROM %s WHERE %s_script_name = ? AND %s_version = ?",
+                                        tableName, tablePrefix, tablePrefix),
+                                Integer.class, fileName, version);
+                        
+                        if (count != null && count > 0) {
+                            if (dataSourceScriptProperties.isVerbose()) {
+                                log.debug("[异步] 跳过已执行的数据脚本: {} (v{})", fileName, version);
+                            }
+                            return;
+                        }
+                        
+                        long startTime = System.currentTimeMillis();
+                        String success = "false";
+                        
+                        try (Connection scriptConnection = ds.getConnection()) {
+                            boolean originalAutoCommit = scriptConnection.getAutoCommit();
+                            scriptConnection.setAutoCommit(false);
+                            
+                            try {
+                                EncodedResource encodedResource = new EncodedResource(res, dataSourceScriptProperties.getSqlScriptEncoding());
+                                executeScriptWithProgress(scriptConnection, encodedResource, fileName);
+                                scriptConnection.commit();
+                                success = "true";
+                                successCount.incrementAndGet();
+                                
+                                long duration = System.currentTimeMillis() - startTime;
+                                log.info("[异步] 成功执行数据脚本: {} (v{}) - 耗时: {}ms", fileName, version, duration);
+                                
+                            } catch (Exception e) {
+                                try {
+                                    scriptConnection.rollback();
+                                } catch (SQLException rollbackEx) {
+                                    log.error("[异步] 回滚事务失败", rollbackEx);
+                                }
+                                throw e;
+                            } finally {
+                                scriptConnection.setAutoCommit(originalAutoCommit);
+                            }
+                        }
+                        
+                        // 记录执行结果
+                        jdbc.update(
+                                String.format("INSERT INTO %s(%s_version,%s_script_name,%s_script_type,%s_description,%s_checksum,%s_success) VALUES(?,?,?,?,?,?)",
+                                        tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix),
+                                version, fileName, scriptType, description, currentChecksum, success);
+                        
+                    } catch (Exception e) {
+                        failCount.incrementAndGet();
+                        failedScripts.add(fileName);
+                        log.error("[异步] 执行数据脚本失败: {} (v{})", fileName, version, e);
+                        
+                        // 记录失败
+                        try {
+                            String currentChecksum = checksum(res);
+                            jdbc.update(
+                                    String.format("INSERT INTO %s(%s_version,%s_script_name,%s_script_type,%s_description,%s_checksum,%s_success) VALUES(?,?,?,?,?,?)",
+                                            tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix),
+                                    version, fileName, scriptType, description, currentChecksum, "false");
+                        } catch (Exception recordEx) {
+                            log.error("[异步] 记录失败信息失败", recordEx);
+                        }
+                    } finally {
+                        // 释放信号量
+                        if (semaphore != null) {
+                            semaphore.release();
+                        }
+                        latch.countDown();
+                    }
+                });
+            }
+            
+            // 启动一个虚拟线程等待所有脚本执行完成并输出统计信息
+            Thread.startVirtualThread(() -> {
+                try {
+                    boolean completed = latch.await(timeoutMinutes, TimeUnit.MINUTES);
+                    if (completed) {
+                        log.info("异步数据脚本执行完成: 成功 {} 个, 失败 {} 个", 
+                                successCount.get(), failCount.get());
+                        if (!failedScripts.isEmpty()) {
+                            log.warn("失败的脚本: {}", failedScripts);
+                        }
+                    } else {
+                        log.warn("异步数据脚本执行超时（{}分钟），部分脚本可能未完成", timeoutMinutes);
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    log.warn("等待异步脚本执行被中断");
+                }
+            });
         }
 
         /**
@@ -540,6 +709,51 @@ public class DataSourceScriptConfiguration {
         }
 
         /**
+         * 通过 ServiceLoader 加载各模块提供的数据库脚本
+         * <p>
+         * 使用 SPI 机制自动发现并加载实现了 DatabaseFileProvider 接口的模块
+         * </p>
+         *
+         * @return 所有模块提供的脚本资源列表
+         */
+        private List<Resource> loadResourcesFromProviders() {
+            List<Resource> resources = new ArrayList<>();
+            ServiceLoader<DatabaseFileProvider> providers = ServiceLoader.load(DatabaseFileProvider.class);
+            
+            // 收集并排序提供者
+            List<DatabaseFileProvider> sortedProviders = new ArrayList<>();
+            for (DatabaseFileProvider provider : providers) {
+                sortedProviders.add(provider);
+            }
+            sortedProviders.sort(Comparator.comparingInt(DatabaseFileProvider::getOrder));
+            
+            for (DatabaseFileProvider provider : sortedProviders) {
+                try {
+                    if (provider.isSupported()) {
+                        List<Resource> providerResources = provider.getResources();
+                        if (providerResources != null && !providerResources.isEmpty()) {
+                            resources.addAll(providerResources);
+                            if (dataSourceScriptProperties.isVerbose()) {
+                                log.info("从 {} 加载 {} 个数据库脚本 (order={})", 
+                                        provider.getName(), 
+                                        providerResources.size(),
+                                        provider.getOrder());
+                            }
+                        }
+                    } else {
+                        if (dataSourceScriptProperties.isVerbose()) {
+                            log.debug("跳过未启用的数据库脚本提供者: {}", provider.getName());
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("加载 {} 的数据库脚本失败: {}", provider.getName(), e.getMessage());
+                }
+            }
+            
+            return resources;
+        }
+
+        /**
          * 扫描多个路径下的脚本资源
          *
          * @param resolver 资源解析器
@@ -568,14 +782,15 @@ public class DataSourceScriptConfiguration {
          * 获取脚本类型
          * 根据文件名格式判断：
          * <ul>
-         *   <li>V版本号__init_任意.sql → INIT（初始化脚本）</li>
-         *   <li>V版本号__add_任意.sql  → ADD（增量脚本）</li>
-         *   <li>V版本号__任意.sql      → NORMAL（普通脚本）</li>
-         *   <li>其他格式              → null（不执行）</li>
+         *   <li>V版本号__init_任意.sql     → INIT（初始化表结构脚本，同步执行）</li>
+         *   <li>V版本号__initdata_任意.sql → INITDATA（初始化数据脚本，异步执行）</li>
+         *   <li>V版本号__add_任意.sql      → ADD（增量脚本，同步执行）</li>
+         *   <li>V版本号__任意.sql          → NORMAL（普通脚本，同步执行）</li>
+         *   <li>其他格式                  → null（不执行）</li>
          * </ul>
          *
          * @param fileName 文件名
-         * @return 脚本类型：INIT、ADD、NORMAL 或 null（不符合格式）
+         * @return 脚本类型：INIT、INITDATA、ADD、NORMAL 或 null（不符合格式）
          */
         private String getScriptType(String fileName) {
             String separator = dataSourceScriptProperties.getVersionSeparator();
@@ -590,8 +805,10 @@ public class DataSourceScriptConfiguration {
             // 获取分隔符后的描述部分
             String afterSeparator = fileName.substring(separatorIndex + separator.length());
             
-            // 判断脚本类型
-            if (afterSeparator.startsWith("init_")) {
+            // 判断脚本类型（注意：initdata_ 必须在 init_ 之前判断，因为 initdata_ 也以 init 开头）
+            if (afterSeparator.startsWith("initdata_")) {
+                return "INITDATA";
+            } else if (afterSeparator.startsWith("init_")) {
                 return "INIT";
             } else if (afterSeparator.startsWith("add_")) {
                 return "ADD";

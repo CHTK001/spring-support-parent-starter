@@ -199,6 +199,21 @@ public class DataSourceScriptProperties {
     private Set<ReleaseType> allowedReleaseTypes;
 
     /**
+     * 初始化数据脚本(initdata)的并发执行数量
+     * 使用虚拟线程并发执行 initdata 脚本
+     * 默认值: 0（无限制，每个脚本一个虚拟线程）
+     * 示例: plugin.datasource.script.initdata-parallelism=4
+     */
+    private int initdataParallelism = 0;
+
+    /**
+     * 初始化数据脚本(initdata)的等待超时时间（分钟）
+     * 默认值: 5
+     * 示例: plugin.datasource.script.initdata-timeout-minutes=10
+     */
+    private int initdataTimeoutMinutes = 5;
+
+    /**
      * 版本发布类型枚举
      * 用于控制允许执行的脚本版本类型
      *
