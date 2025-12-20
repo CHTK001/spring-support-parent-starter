@@ -1,6 +1,8 @@
 package com.chua.sync.support.client;
 
+import com.chua.common.support.protocol.ClientSetting;
 import com.chua.common.support.protocol.ProtocolSetting;
+import com.chua.common.support.protocol.ServerSetting;
 import com.chua.common.support.protocol.listener.ConnectionEvent;
 import com.chua.common.support.protocol.listener.ConnectionListener;
 import com.chua.common.support.protocol.listener.DataEvent;
@@ -279,17 +281,15 @@ public class SyncClient implements InitializingBean, DisposableBean {
             String protocol = clientConfig.getProtocol();
 
             // 构建协议配置（包含重连参数）
-            ProtocolSetting protocolSetting = ProtocolSetting.builder()
+            ClientSetting protocolSetting = ClientSetting.builder()
                     .protocol(protocol)
                     .host(host)
                     .port(port)
-                    .heartbeat(clientConfig.isHeartbeat())
-                    .heartbeatInterval(clientConfig.getHeartbeatInterval())
-                    .connectTimeoutMillis(clientConfig.getConnectTimeout())
-                    .build()
-                    .withOption("autoReconnect", clientConfig.isAutoReconnect())
-                    .withOption("maxReconnectAttempts", clientConfig.getMaxReconnectAttempts())
-                    .withOption("reconnectInterval", clientConfig.getReconnectInterval());
+                    .connectTimeoutMillis(10000)          // 连接超时10秒
+                    .autoReconnectEnabled(true)           // 启用自动重连
+                    .maxRetries(-1)                       // 无限重连（-1表示无限）
+                    .retryIntervalMillis(5000)            // 重连间隔5秒（不自动断开空闲连接）
+                    .build();
 
             // 使用新的 SyncClient 接口创建客户端
             syncClient = com.chua.common.support.protocol.sync.SyncClient.create(protocol, protocolSetting);
