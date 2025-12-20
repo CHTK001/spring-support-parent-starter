@@ -37,6 +37,21 @@ public class JobProperties {
     private int logRetentionDays = 30;
 
     /**
+     * 备份文件保留天数
+     */
+    private int backupRetentionDays = 90;
+
+    /**
+     * 是否启用自动备份
+     */
+    private boolean autoBackupEnabled = true;
+
+    /**
+     * 自动备份 CRON 表达式（默认每天凌晨3点）
+     */
+    private String autoBackupCron = "0 0 3 * * ?";
+
+    /**
      * 触发池快速最大值
      */
     private int triggerPoolFastMax = 200;

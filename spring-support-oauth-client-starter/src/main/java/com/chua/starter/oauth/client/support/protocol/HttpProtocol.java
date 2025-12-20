@@ -224,6 +224,41 @@ public class HttpProtocol extends AbstractProtocol {
     }
 
     @Override
+    public FingerprintVerifyResult verifyFingerprint(String token, String fingerprint) {
+        JsonObject jsonObject = new JsonObject();
+        // 构建请求数据
+        jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
+        jsonObject.put("x-oauth-secret-key", authClientProperties.getKey().getSecretKey());
+        jsonObject.put("x-oauth-token", token);
+        jsonObject.put("x-oauth-fingerprint", fingerprint);
+        jsonObject.put("x-oauth-verify-fingerprint", true);
+
+        try {
+            AuthenticationInformation information = createAuthenticationInformation(
+                    jsonObject, null, authClientProperties.getOauthUrl());
+
+            int code = information.getInformation().getCode();
+            if (code == 200) {
+                // 验证通过，返回存储的指纹
+                String storedFingerprint = null;
+                if (information.getReturnResult() != null) {
+                    storedFingerprint = information.getReturnResult().getFingerprint();
+                }
+                return FingerprintVerifyResult.success(storedFingerprint);
+            } else if (code == 40301) {
+                return FingerprintVerifyResult.mismatch();
+            } else if (code == 40302) {
+                return FingerprintVerifyResult.missing();
+            } else {
+                return FingerprintVerifyResult.serverError(information.getInformation().getMessage());
+            }
+        } catch (Exception e) {
+            log.warn("指纹验证失败: token={}", token, e);
+            return FingerprintVerifyResult.serverError("指纹验证失败: " + e.getMessage());
+        }
+    }
+
+    @Override
     public OnlineStatus getOnlineStatus(String uid) {
         JsonObject jsonObject = new JsonObject();
         // 构建请求数据
@@ -355,6 +390,12 @@ public class HttpProtocol extends AbstractProtocol {
                     .header("x-oauth-encode", String.valueOf(isEncode()))
                     .header("x-oauth-serial", createData(key, key1))
                     .header("x-oauth-sign", SignUtils.generateSignFromMap(jsonObject));
+            
+            // 添加 AK/SK 请求头（如果启用）
+            String accessKey = getAccessKey();
+            if (StringUtils.isNotBlank(accessKey)) {
+                requestWithBody = requestWithBody.header("x-oauth-ak", accessKey);
+            }
             
             // 传递 traceId 用于链路追踪
             String traceId = MDC.get("traceId");

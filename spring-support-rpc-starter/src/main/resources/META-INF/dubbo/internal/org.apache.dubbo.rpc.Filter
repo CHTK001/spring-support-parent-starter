@@ -1,2 +1,0 @@
-auth-consumer=com.chua.starter.remote.support.filter.AuthConsumerAuthFilter
-auth-provider=com.chua.starter.remote.support.filter.AuthProviderAuthFilter

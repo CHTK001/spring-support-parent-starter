@@ -2,12 +2,13 @@ package com.chua.sync.support.server;
 
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.protocol.ProtocolSetting;
-import com.chua.common.support.protocol.sync.*;
-import com.chua.common.support.utils.MapUtils;
+import com.chua.common.support.protocol.sync.SyncConnectionListener;
+import com.chua.common.support.protocol.sync.SyncMessage;
+import com.chua.common.support.protocol.sync.SyncMessageListener;
+import com.chua.common.support.protocol.sync.SyncSession;
 import com.chua.sync.support.pojo.ClientInfo;
 import com.chua.sync.support.properties.SyncProperties;
 import com.chua.sync.support.spi.SyncMessageHandler;
-import com.fasterxml.jackson.databind.util.BeanUtil;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -54,10 +55,10 @@ public class SyncServerInstance {
     private final SyncProperties syncProperties;
 
     /**
-     * 协议服务端
+     * 同步服务端
      */
     @Getter
-    private SyncProtocolServer protocolServer;
+    private com.chua.common.support.protocol.sync.SyncServer syncServer;
 
     /**
      * 消息处理器映射
@@ -138,14 +139,14 @@ public class SyncServerInstance {
                     .connectTimeoutMillis(syncProperties.getServer().getConnectTimeout())
                     .build();
 
-            SyncProtocol syncProtocol = SyncProtocol.create(protocol, protocolSetting);
-            protocolServer = syncProtocol.createServer(protocolSetting);
+            // 使用新的 SyncServer 接口创建服务端
+            syncServer = com.chua.common.support.protocol.sync.SyncServer.create(protocol, protocolSetting);
 
             // 添加监听器
-            protocolServer.addConnectionListener(new InternalConnectionListener());
-            protocolServer.addMessageListener(new InternalMessageListener());
+            syncServer.addConnectionListener(new InternalConnectionListener());
+            syncServer.addMessageListener(new InternalMessageListener());
 
-            protocolServer.start();
+            syncServer.start();
             running = true;
 
             log.info("[SyncServer:{}] 启动成功, protocol={}, address={}:{}",
@@ -162,8 +163,8 @@ public class SyncServerInstance {
         if (!running) return;
 
         try {
-            if (protocolServer != null) {
-                protocolServer.stop();
+            if (syncServer != null) {
+                syncServer.stop();
             }
             sessionMap.clear();
             clientInfoMap.clear();
@@ -178,16 +179,16 @@ public class SyncServerInstance {
      * 发送消息到指定会话
      */
     public void send(String sessionId, String topic, Object data) {
-        if (protocolServer == null || !running) return;
-        protocolServer.send(sessionId, topic, data);
+        if (syncServer == null || !running) return;
+        syncServer.send(sessionId, topic, data);
     }
 
     /**
      * 广播消息
      */
     public void broadcast(String topic, Object data) {
-        if (protocolServer == null || !running) return;
-        protocolServer.broadcast(topic, data);
+        if (syncServer == null || !running) return;
+        syncServer.broadcast(topic, data);
     }
 
     /**

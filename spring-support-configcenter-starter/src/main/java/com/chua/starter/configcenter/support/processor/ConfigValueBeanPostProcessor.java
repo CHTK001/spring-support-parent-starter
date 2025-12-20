@@ -21,7 +21,7 @@ import java.util.regex.Pattern;
 /**
  * ConfigValue注解Bean后置处理器
  * <p>
- * 在Bean初始化后扫描@ConfigValue注解，注入配置值并支持热更新。
+ * 在Bean初始化后扫描@ConfigValue注解，注入配置值并支持热更新和配置推送。
  * </p>
  *
  * <h3>功能</h3>
@@ -30,11 +30,12 @@ import java.util.regex.Pattern;
  *     <li>从Environment中获取配置值并注入</li>
  *     <li>注册热更新监听器</li>
  *     <li>配置变化时自动更新字段值</li>
+ *     <li>支持配置推送到配置中心（强制推送或仅当不存在时推送）</li>
  * </ul>
  *
  * @author CH
  * @since 2024-12-05
- * @version 1.0.0
+ * @version 1.1.0
  */
 @Slf4j
 public class ConfigValueBeanPostProcessor implements BeanPostProcessor, EnvironmentAware {
@@ -126,6 +127,9 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
             String expression = annotation.value();
             ParsedExpression parsed = parseExpression(expression);
 
+            // 处理配置推送
+            handlePublish(annotation, parsed, beanName, field.getName());
+
             // 注入初始值
             String value = resolveValue(parsed.key, parsed.defaultValue);
             injectFieldValue(bean, field, value);
@@ -166,6 +170,9 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
             String expression = annotation.value();
             ParsedExpression parsed = parseExpression(expression);
 
+            // 处理配置推送
+            handlePublish(annotation, parsed, beanName, method.getName());
+
             // 注入初始值
             String value = resolveValue(parsed.key, parsed.defaultValue);
             injectMethodValue(bean, method, value);
@@ -187,6 +194,74 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
                         parsed.key, beanName, method.getName());
             }
         }
+    }
+
+    /**
+     * 处理配置推送
+     *
+     * @param annotation 注解
+     * @param parsed     解析后的表达式
+     * @param beanName   Bean名称
+     * @param memberName 成员名称（字段或方法）
+     */
+    private void handlePublish(ConfigValue annotation, ParsedExpression parsed, String beanName, String memberName) {
+        // 检查配置中心是否支持推送
+        if (configCenter == null || !configCenter.isSupportPublish()) {
+            if (annotation.publish() || annotation.publishIfAbsent()) {
+                log.warn("配置中心不支持推送，忽略推送配置: key={}, bean={}, member={}",
+                        parsed.key, beanName, memberName);
+            }
+            return;
+        }
+
+        // 获取要推送的值
+        String publishValue = getPublishValue(annotation, parsed);
+        if (StringUtils.isEmpty(publishValue)) {
+            return;
+        }
+
+        // 获取dataId和group
+        String dataId = StringUtils.isNotEmpty(annotation.dataId()) ? annotation.dataId() : configCenter.getDefaultDataId();
+        String group = StringUtils.isNotEmpty(annotation.group()) ? annotation.group() : configCenter.getDefaultGroup();
+
+        boolean success = false;
+        if (annotation.publish()) {
+            // 强制推送
+            success = configCenter.publish(dataId, group, parsed.key, publishValue);
+            if (success) {
+                log.info("【配置中心】强制推送配置成功: dataId={}, group={}, key={}, value={}",
+                        dataId, group, parsed.key, publishValue);
+            } else {
+                log.warn("【配置中心】强制推送配置失败: dataId={}, group={}, key={}",
+                        dataId, group, parsed.key);
+            }
+        } else if (annotation.publishIfAbsent()) {
+            // 仅当不存在时推送
+            success = configCenter.publishIfAbsent(dataId, group, parsed.key, publishValue);
+            if (success) {
+                log.info("【配置中心】推送配置成功（不存在时）: dataId={}, group={}, key={}, value={}",
+                        dataId, group, parsed.key, publishValue);
+            } else {
+                log.debug("【配置中心】配置已存在，跳过推送: dataId={}, group={}, key={}",
+                        dataId, group, parsed.key);
+            }
+        }
+    }
+
+    /**
+     * 获取要推送的值
+     *
+     * @param annotation 注解
+     * @param parsed     解析后的表达式
+     * @return 要推送的值
+     */
+    private String getPublishValue(ConfigValue annotation, ParsedExpression parsed) {
+        // 优先使用注解的defaultValue属性
+        if (StringUtils.isNotEmpty(annotation.defaultValue())) {
+            return annotation.defaultValue();
+        }
+        // 其次使用表达式中的默认值
+        return parsed.defaultValue;
     }
 
     /**

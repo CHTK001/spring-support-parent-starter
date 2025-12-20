@@ -59,6 +59,30 @@ public class GlobalSettingFactory {
     }
 
     /**
+     * 根据设置组名和属性名获取配置值
+     *
+     * @param group 设置组名称
+     * @param name  属性名称
+     * @return 对应的属性值字符串，如果不存在则返回null
+     */
+    public String get(String group, String name) {
+        List<Object> ts = GROUP.get(PREFIX + group);
+        if (null == ts || ts.isEmpty()) {
+            return null;
+        }
+        for (Object t : ts) {
+            if (t == null) {
+                continue;
+            }
+            Object value = FieldStation.of(t).getValue(name);
+            if (value != null) {
+                return String.valueOf(value);
+            }
+        }
+        return null;
+    }
+
+    /**
      * 根据设置名称和类类型获取全局设置对象如果对象不存在则创建并返回
      *
      * @param group 设置名称

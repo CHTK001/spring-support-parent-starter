@@ -111,6 +111,14 @@ public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware {
                 log.info("║ @ApiMock       Mock模式: 关闭");
             }
             
+            // 灰度发布控制
+            ApiProperties.GrayConfig gray = apiProperties.getGray();
+            if (gray != null && gray.isEnable()) {
+                log.info("║ @ApiGray       灰度发布: 开启");
+            } else {
+                log.info("║ @ApiGray       灰度发布: 关闭");
+            }
+            
             log.info("╚══════════════════════════════════════════════════════════════════════════════");
             return new ApiVersionRequestMappingHandlerMapping(apiProperties, environment);
         }

@@ -6,11 +6,14 @@ import java.lang.annotation.*;
  * API 废弃标记注解
  * <p>
  * 用于标记即将废弃的 API 接口，支持版本控制和替代接口提示。
+ * 支持语义化版本号（如 1.0.0, 1.0.0-release, 2.0.0-rc.1）。
  * </p>
  *
  * <h3>处理优先级：4</h3>
  * <p>
- * 在拦截器阶段处理，在 @ApiMock 之后处理。
+ * 优先级顺序：@ApiInternal(1) &gt; @ApiFeature(2) &gt; @ApiMock(3) &gt; @ApiDeprecated(4) &gt; @ApiGray(5)
+ * </p>
+ * <p>
  * 处理阶段：拦截器阶段（请求进入前）。
  * </p>
  *

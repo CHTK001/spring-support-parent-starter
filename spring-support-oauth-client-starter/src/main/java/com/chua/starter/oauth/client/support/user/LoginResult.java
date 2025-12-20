@@ -24,6 +24,13 @@ public class LoginResult {
      * 刷新token
      */
     private String refreshToken;
+
+    /**
+     * 浏览器指纹
+     * <p>登录时记录的浏览器指纹</p>
+     */
+    private String fingerprint;
+
     /**
      * 用户信息
      */

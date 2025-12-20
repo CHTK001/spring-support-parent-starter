@@ -32,6 +32,14 @@ public enum Information {
      */
     AUTHENTICATION_SERVER_NO_EXIST(501, "鉴权服务器异常"),
     /**
+     * 40301 - 签名不匹配
+     */
+    FINGERPRINT_MISMATCH(40301, "签名不匹配，请重新登录"),
+    /**
+     * 40302 - 签名不存在或已过期
+     */
+    FINGERPRINT_MISSING(40302, "签名不存在或已过期"),
+    /**
      * -1
      */
     OTHER(-1, "其它错误");

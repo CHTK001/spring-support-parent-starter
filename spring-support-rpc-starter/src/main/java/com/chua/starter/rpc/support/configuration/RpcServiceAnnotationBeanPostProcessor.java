@@ -22,6 +22,7 @@ import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.config.*;
 import org.springframework.beans.factory.support.*;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
@@ -45,8 +46,6 @@ import static com.chua.starter.common.support.configuration.SpringBeanUtils.reso
 import static org.springframework.context.annotation.AnnotationConfigUtils.CONFIGURATION_BEAN_NAME_GENERATOR;
 import static org.springframework.core.annotation.AnnotationUtils.findAnnotation;
 import static org.springframework.util.ClassUtils.resolveClassName;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;@ConditionalOnProperty(prefix = "plugin.rpc", name = "enable", havingValue = "true", matchIfMissing = false)
-
 
 /**
  * rpc资源注释配置
@@ -55,6 +54,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;@C
  * @version 1.0.0
  * @since 2024/04/07
  */
+@ConditionalOnProperty(prefix = "plugin.rpc", name = "enable", havingValue = "true", matchIfMissing = false)
 @EnableConfigurationProperties(RpcProperties.class)
 @Slf4j
 public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegistryPostProcessor, EnvironmentAware,
@@ -79,7 +79,7 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
     @Override
     public void afterPropertiesSet() throws Exception {
         rpcProperties = Binder.get(SpringBeanUtils.getEnvironment()).bindOrCreate(RpcProperties.PRE, RpcProperties.class);
-        if(!rpcProperties.isOpen()) {
+        if(!rpcProperties.isEnable()) {
             return;
         }
         if (null == rpcProperties || CollectionUtils.isEmpty(rpcProperties.getScan())) {
@@ -92,7 +92,7 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
 
     @Override
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
-        if(!rpcProperties.isOpen()) {
+        if(!rpcProperties.isEnable()) {
             return;
         }
         if (this.registry == null) {
@@ -120,7 +120,7 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
-        if(!rpcProperties.isOpen()) {
+        if(!rpcProperties.isEnable()) {
             return;
         }
         this.registry = registry;

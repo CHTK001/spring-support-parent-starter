@@ -10,7 +10,9 @@ import java.lang.annotation.*;
  *
  * <h3>处理优先级：2</h3>
  * <p>
- * 在拦截器阶段处理，优先级仅次于 @ApiInternal。
+ * 优先级顺序：@ApiInternal(1) &gt; @ApiFeature(2) &gt; @ApiMock(3) &gt; @ApiDeprecated(4) &gt; @ApiGray(5)
+ * </p>
+ * <p>
  * 处理阶段：拦截器阶段（请求进入前）。
  * </p>
  *

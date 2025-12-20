@@ -10,15 +10,14 @@
 
 - ✅ 同步调用
 - ✅ 异步调用
-- ✅ 泛化调用
-- ✅ 服务降级
 
 ### 🔧 协议支持
 
 - ✅ Dubbo 协议
-- ✅ gRPC 协议
+- ✅ SOFA 协议
 - ✅ HTTP 协议
-- ✅ 自定义协议
+- ✅ JSON-RPC 协议
+- ✅ Armeria 协议
 
 ## 🚀 快速开始
 
@@ -28,7 +27,7 @@
 <dependency>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-rpc-starter</artifactId>
-    <version>4.0.0.32</version>
+    <version>4.0.0.34</version>
 </dependency>
 ```
 
@@ -41,14 +40,18 @@ plugin:
     # 默认: false
     enable: true
 
-    # RPC 协议
-    protocol: dubbo
+    # RPC 类型 (DUBBO, SOFA, HTTP, JSON, ARMERIA)
+    type: DUBBO
 
-    # 注册中心地址
-    registry-address: zookeeper://localhost:2181
+    # 注册中心配置
+    registry:
+      - address: zookeeper://localhost:2181
 
-    # 服务端口
-    port: 20880
+    # 协议配置
+    protocols:
+      - name: dubbo
+        host: 0.0.0.0
+        port: 20880
 ```
 
 ### 3. 提供服务
@@ -70,7 +73,7 @@ public class UserServiceImpl implements UserService {
 @Service
 public class OrderService {
 
-    @RpcReference
+    @RpcResource
     private UserService userService;
 
     public void createOrder(Long userId) {
@@ -85,22 +88,33 @@ public class OrderService {
 ```yaml
 plugin:
   rpc:
+    # 是否启用
     enable: true
-    protocol: dubbo
-    registry-address: zookeeper://localhost:2181
-    port: 20880
-
-    # 超时配置
-    timeout: 3000
-
-    # 重试次数
-    retries: 2
-
-    # 负载均衡策略
-    loadbalance: random
-
-    # 序列化方式
-    serialization: hessian2
+    
+    # RPC类型: DUBBO, SOFA, HTTP, JSON, ARMERIA
+    type: DUBBO
+    
+    # 应用名称
+    application-name: ${spring.application.name:app}
+    
+    # 注册中心配置(支持多个)
+    registry:
+      - address: zookeeper://localhost:2181
+        timeout: 3000
+        check: false
+    
+    # 协议配置(支持多个)
+    protocols:
+      - name: dubbo
+        host: 0.0.0.0
+        port: 20880
+    
+    # 消费者配置
+    consumer:
+      timeout: 3000
+      retries: 2
+      load-balance: random
+      check: false
 ```
 
 ## 📄 许可证
@@ -110,5 +124,5 @@ plugin:
 ---
 
 **作者**: CH  
-**版本**: 4.0.0.32  
-**更新时间**: 2024/12/11
+**版本**: 4.0.0.34  
+**更新时间**: 2024/12/18

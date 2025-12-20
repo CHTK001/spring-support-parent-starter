@@ -150,7 +150,13 @@ public abstract class AbstractProtocol implements Protocol {
         if (!enableEncryption) {
             return value;
         }
-        return Codec.build(encryption, key).encodeHex(value);
+        String data = value;
+        // AK/SK 二次加密
+        AuthClientProperties.Aksk aksk = authClientProperties.getKey();
+        if (aksk != null && aksk.isEnabled() && StringUtils.isNotBlank(aksk.getSecretKey())) {
+            data = Codec.build(encryption, aksk.getSecretKey()).encodeHex(data);
+        }
+        return Codec.build(encryption, key).encodeHex(data);
     }
 
     /**
@@ -165,7 +171,26 @@ public abstract class AbstractProtocol implements Protocol {
         if (!enableEncryption) {
             return jsonObjectJSONString;
         }
-        return Codec.build(encryption, key).encodeHex(jsonObjectJSONString);
+        String data = jsonObjectJSONString;
+        // AK/SK 二次加密
+        AuthClientProperties.Aksk aksk = authClientProperties.getKey();
+        if (aksk != null && aksk.isEnabled() && StringUtils.isNotBlank(aksk.getSecretKey())) {
+            data = Codec.build(encryption, aksk.getSecretKey()).encodeHex(data);
+        }
+        return Codec.build(encryption, key).encodeHex(data);
+    }
+    
+    /**
+     * 获取 AccessKey（用于请求头）
+     *
+     * @return AccessKey，未启用返回 null
+     */
+    protected String getAccessKey() {
+        AuthClientProperties.Aksk aksk = authClientProperties.getKey();
+        if (aksk != null && aksk.isEnabled()) {
+            return aksk.getAccessKey();
+        }
+        return null;
     }
 
     /**
@@ -253,7 +278,7 @@ public abstract class AbstractProtocol implements Protocol {
         if(authenticationInformation.getInformation() != OK) {
             throw new IllegalArgumentException("升级失败");
         }
-        return new LoginResult(authenticationInformation.getToken(), authenticationInformation.getRefreshToken(), authenticationInformation.getReturnResult());
+        return new LoginResult(authenticationInformation.getToken(), authenticationInformation.getRefreshToken(), null, authenticationInformation.getReturnResult());
     }
 
     /**

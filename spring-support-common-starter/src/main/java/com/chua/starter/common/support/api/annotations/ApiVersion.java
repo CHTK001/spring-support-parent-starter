@@ -6,12 +6,15 @@ import java.lang.annotation.*;
  * API 版本控制注解
  * <p>
  * 用于实现 API 接口的版本管理，支持多版本 API 并行运行。
+ * 支持语义化版本号（如 1, 1.0, 1.0.0, 1.0.0-rc.1, 1.0.0-release）。
  * </p>
  *
- * <h3>处理优先级：7（最低）</h3>
+ * <h3>处理优先级：8（映射注册阶段最低）</h3>
  * <p>
- * 在映射注册阶段处理，启动时为接口添加版本号路径前缀。
- * 处理阶段：映射注册阶段（应用启动时）。
+ * 映射注册阶段优先级顺序：@ApiProfile(6) &gt; @ApiPlatform(7) &gt; @ApiVersion(8)
+ * </p>
+ * <p>
+ * 处理阶段：映射注册阶段（应用启动时），为接口添加版本匹配条件。
  * </p>
  *
  * <h3>使用场景</h3>
@@ -28,6 +31,13 @@ import java.lang.annotation.*;
  *     version:
  *       enable: true  # 必须开启版本控制
  * </pre>
+ *
+ * <h3>版本指定方式</h3>
+ * <ul>
+ *   <li>查询参数：?apiVersion=1 或 ?apiVersion=v1</li>
+ *   <li>请求头：X-Api-Version: 1</li>
+ *   <li>最新版本：?apiVersion=latest 或 X-Api-Version: latest</li>
+ * </ul>
  *
  * <h3>使用示例</h3>
  * <pre>
@@ -48,13 +58,15 @@ import java.lang.annotation.*;
  * }
  *
  * // 请求方式：
- * // GET /api/v1/user/info  -> 调用 getInfo()
- * // GET /api/v2/user/info  -> 调用 getInfoV2()
+ * // GET /api/user/info?apiVersion=1      -> 调用 getInfo()
+ * // GET /api/user/info?apiVersion=2      -> 调用 getInfoV2()
+ * // GET /api/user/info?apiVersion=latest -> 调用 getInfoV2() (最新版本)
+ * // 或使用请求头 X-Api-Version: 2
  * </pre>
  *
  * @author CH
  * @since 2020-09-23
- * @version 1.0.0
+ * @version 1.1.0
  * @see com.chua.starter.common.support.api.control.ApiVersionCondition
  * @see com.chua.starter.common.support.api.control.ApiVersionRequestMappingHandlerMapping
  */
@@ -64,12 +76,12 @@ import java.lang.annotation.*;
 public @interface ApiVersion {
 
     /**
-     * API版本号
+     * API版本号（语义化字符串）
      * <p>
-     * 可使用整数(1)或小数(1.0)表示版本。
+     * 支持格式：1、1.0、1.0.0、1.0.0-rc.1、1.0.0-release 等。
      * </p>
      *
-     * @return 版本号，默认为 1
+     * @return 版本号字符串，默认为 "1"
      */
-    double value() default 1;
+    String value() default "1";
 }

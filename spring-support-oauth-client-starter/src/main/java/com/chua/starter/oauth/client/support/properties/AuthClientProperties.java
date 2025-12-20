@@ -173,18 +173,30 @@ public class AuthClientProperties {
      */
     private TempUser temp = new TempUser();
 
+    /**
+     * 指纹验证配置
+     */
+    private Fingerprint fingerprint = new Fingerprint();
+
 
     /**
-     * 密钥
+     * AK/SK 密钥配置
+     * <p>
+     * 用于对请求数据进行二次加密，提高安全性
+     * </p>
      */
     @Data
     public static class Aksk {
         /**
-         * ak
+         * 是否启用AK/SK加密
+         */
+        private boolean enabled = false;
+        /**
+         * AccessKey (用于标识客户端)
          */
         private String accessKey;
         /**
-         * sk
+         * SecretKey (用于加密数据)
          */
         private String secretKey;
     }
@@ -204,6 +216,27 @@ public class AuthClientProperties {
          * </p>
          */
         private String user = "admin:admin@123!456";
+    }
+
+    /**
+     * 指纹验证配置
+     * <p>
+     * 用于配置浏览器指纹验证功能
+     * </p>
+     */
+    @Data
+    public static class Fingerprint {
+        /**
+         * 是否开启全局指纹验证
+         * <p>
+         * 开启后，所有需要认证的接口都会验证浏览器指纹，
+         * 而不仅仅是标记了 @VerifyFingerprint 注解的接口。
+         * </p>
+         * <p>
+         * 默认关闭，只有标记了 @VerifyFingerprint 注解的接口才会验证指纹。
+         * </p>
+         */
+        private boolean globalVerification = false;
     }
 
     /**
