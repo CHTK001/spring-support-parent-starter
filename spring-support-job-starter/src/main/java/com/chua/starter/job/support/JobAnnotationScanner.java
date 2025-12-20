@@ -17,14 +17,46 @@ import java.lang.reflect.Method;
 import java.util.Map;
 
 /**
- * Job注解扫描器
+ * 任务注解扫描器
  * <p>
- * 扫描所有带有@Job注解的方法，并注册为JobHandler
+ * 在Spring容器初始化期间扫描所有带有{@link Job}注解的方法，
+ * 并将其自动注册为JobHandler到{@link JobHandlerFactory}中。
  * </p>
+ *
+ * <h3>工作流程</h3>
+ * <ol>
+ *     <li>实现{@link BeanPostProcessor}，在Bean初始化后扫描@Job注解</li>
+ *     <li>使用{@link MethodIntrospector}查找带有@Job注解的方法</li>
+ *     <li>为每个找到的方法创建{@link BeanJobHandler}并注册</li>
+ *     <li>在所有单例初始化完成后，初始化{@link GlueFactory}</li>
+ * </ol>
+ *
+ * <h3>使用示例</h3>
+ * <pre>{@code
+ * @Component
+ * public class MyJobHandler {
+ *
+ *     @Job(value = "demoJobHandler", init = "init", destroy = "destroy")
+ *     public void execute() {
+ *         // 任务执行逻辑
+ *     }
+ *
+ *     public void init() {
+ *         // 任务初始化
+ *     }
+ *
+ *     public void destroy() {
+ *         // 任务销毁
+ *     }
+ * }
+ * }</pre>
  *
  * @author CH
  * @version 1.0.0
  * @since 2024/03/11
+ * @see Job
+ * @see JobHandlerFactory
+ * @see BeanJobHandler
  */
 @Slf4j
 public class JobAnnotationScanner implements BeanPostProcessor, SmartInitializingSingleton, DisposableBean {
@@ -50,7 +82,7 @@ public class JobAnnotationScanner implements BeanPostProcessor, SmartInitializin
                     (MethodIntrospector.MetadataLookup<Job>) method ->
                             AnnotatedElementUtils.findMergedAnnotation(method, Job.class));
         } catch (Throwable ex) {
-            log.error("扫描@Job注解方法失败: {}", beanName, ex);
+            log.error("扫描@Job注解方法失败, beanName={}", beanName, ex);
         }
 
         if (annotatedMethods == null || annotatedMethods.isEmpty()) {
@@ -117,6 +149,6 @@ public class JobAnnotationScanner implements BeanPostProcessor, SmartInitializin
         JobHandler jobHandler = new BeanJobHandler(bean, executeMethod, initMethod, destroyMethod);
         JobHandlerFactory.getInstance().register(name, jobHandler);
 
-        log.info(">>>>>>>>>>> job register jobhandler success, name:{}, handler:{}", name, jobHandler);
+        log.info(">>>>>>>>>>> 注册JobHandler成功, 名称={}, 处理器={}", name, jobHandler);
     }
 }

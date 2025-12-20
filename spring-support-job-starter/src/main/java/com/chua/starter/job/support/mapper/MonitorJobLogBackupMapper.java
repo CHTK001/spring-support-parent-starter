@@ -9,10 +9,15 @@ import org.apache.ibatis.annotations.Select;
 import java.util.List;
 
 /**
- * 任务日志备份 Mapper 接口
+ * 任务日志备份Mapper接口
+ * <p>
+ * 提供任务日志备份记录的数据库操作。
+ * 支持查询最近备份、运行中备份、统计备份大小等操作。
+ * </p>
  *
  * @author CH
  * @since 2024/12/19
+ * @see MonitorJobLogBackup
  */
 @Mapper
 public interface MonitorJobLogBackupMapper extends BaseMapper<MonitorJobLogBackup> {

@@ -16,12 +16,37 @@ import static com.chua.starter.job.support.scheduler.RingTriggerHandler.pushTime
 /**
  * 核心调度处理器
  * <p>
- * 负责扫描数据库中待执行的任务，并推送到时间环中
+ * 负责周期性扫描数据库中待执行的任务，根据任务的调度配置计算执行时间，
+ * 并将任务推送到{@link RingTriggerHandler}时间环中等待触发。
  * </p>
+ *
+ * <h3>调度流程</h3>
+ * <ol>
+ *     <li>每秒扫描数据库，预读未来5秒内需要执行的任务</li>
+ *     <li>判断任务的触发时间与当前时间的关系</li>
+ *     <li>超时超过5秒：根据失效策略处理</li>
+ *     <li>超时不超5秒：立即触发执行</li>
+ *     <li>未超时：推送到时间环等待执行</li>
+ * </ol>
+ *
+ * <h3>失效策略</h3>
+ * <ul>
+ *     <li>{@link MisfireStrategyEnum#DO_NOTHING} - 跳过本次执行，更新下次触发时间</li>
+ *     <li>{@link MisfireStrategyEnum#FIRE_ONCE_NOW} - 立即触发一次，然后更新下次触发时间</li>
+ * </ul>
+ *
+ * <h3>配置参数</h3>
+ * <ul>
+ *     <li>预读时间窗口：5秒 ({@link JobHelper#PRE_READ_MS})</li>
+ *     <li>预读数量：(快速线程池大小 + 慢速线程池大小) * 20</li>
+ * </ul>
  *
  * @author CH
  * @version 1.0.0
  * @since 2024/03/08
+ * @see RingTriggerHandler
+ * @see MisfireStrategyEnum
+ * @see SchedulerTrigger
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -61,7 +86,7 @@ public class CoreTriggerHandler implements TriggerHandler, Runnable {
                 log.error(e.getMessage(), e);
             }
         }
-        log.info(">>>>>>>>> init job admin scheduler success.");
+        log.info(">>>>>>>>> 任务调度器初始化成功");
 
         // 预读数量: 线程池大小 * 触发qps (每个触发耗时50ms, qps = 1000/50 = 20)
         int preReadCount = (JobConfig.getInstance().getTriggerPoolFastMax() + JobConfig.getInstance().getTriggerPoolSlowMax()) * 20;
@@ -83,14 +108,14 @@ public class CoreTriggerHandler implements TriggerHandler, Runnable {
 
                         if (nowTime > jobInfo.getJobTriggerNextTime() + PRE_READ_MS) {
                             // 2.1、触发超时 > 5s：跳过 && 更新下次触发时间
-                            log.warn(">>>>>>>>>>> job, schedule misfire, jobId = " + jobInfo.getJobId());
+                            log.warn(">>>>>>>>>>> 任务触发超时, jobId={}", jobInfo.getJobId());
 
                             // 失效策略匹配
                             MisfireStrategyEnum misfireStrategyEnum = MisfireStrategyEnum.match(jobInfo.getJobExecuteMisfireStrategy(), MisfireStrategyEnum.DO_NOTHING);
                             if (MisfireStrategyEnum.FIRE_ONCE_NOW == misfireStrategyEnum) {
                                 // 立即触发一次
                                 JobTriggerPoolHelper.trigger(jobInfo.getJobId(), TriggerTypeEnum.MISFIRE, -1, null, null);
-                                log.debug(">>>>>>>>>>> job, schedule push trigger : jobId = " + jobInfo.getJobId());
+                                log.debug(">>>>>>>>>>> 任务失效补征触发, jobId={}", jobInfo.getJobId());
                             }
 
                             // 更新下次触发时间
@@ -101,7 +126,7 @@ public class CoreTriggerHandler implements TriggerHandler, Runnable {
 
                             // 触发
                             JobTriggerPoolHelper.trigger(jobInfo.getJobId(), TriggerTypeEnum.CRON, -1, null, null);
-                            log.debug(">>>>>>>>>>> job, schedule push trigger : jobId = " + jobInfo.getJobId());
+                            log.debug(">>>>>>>>>>> 任务调度触发, jobId={}", jobInfo.getJobId());
 
                             // 更新下次触发时间
                             refreshNextValidTime(jobInfo, new Date());
@@ -147,7 +172,7 @@ public class CoreTriggerHandler implements TriggerHandler, Runnable {
 
             } catch (Exception e) {
                 if (!scheduleThreadToStop) {
-                    log.error(">>>>>>>>>>> job, coreThread error:{}", e.getMessage(), e);
+                    log.error(">>>>>>>>>>> 核心调度线程异常: {}", e.getMessage(), e);
                 }
             } finally {
                 jobLock.unlock();
@@ -167,7 +192,7 @@ public class CoreTriggerHandler implements TriggerHandler, Runnable {
 
         }
 
-        log.info(">>>>>>>>>>> job, coreThread stop");
+        log.info(">>>>>>>>>>> 核心调度线程已停止");
     }
 
     private void refreshNextValidTime(MonitorJob jobInfo, Date fromTime) throws Exception {
@@ -179,7 +204,7 @@ public class CoreTriggerHandler implements TriggerHandler, Runnable {
             jobInfo.setJobTriggerStatus(0);
             jobInfo.setJobTriggerLastTime(0L);
             jobInfo.setJobTriggerNextTime(0L);
-            log.warn(">>>>>>>>>>> job, refreshNextValidTime fail for job: jobId={}, scheduleType={}, scheduleConf={}",
+            log.warn(">>>>>>>>>>> 更新下次触发时间失败, jobId={}, 调度类型={}, 调度配置={}",
                     jobInfo.getJobId(), jobInfo.getJobScheduleType(), jobInfo.getJobScheduleTime());
         }
     }
