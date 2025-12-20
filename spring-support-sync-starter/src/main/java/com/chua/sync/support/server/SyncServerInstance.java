@@ -2,6 +2,7 @@ package com.chua.sync.support.server;
 
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.protocol.ProtocolSetting;
+import com.chua.common.support.protocol.ServerSetting;
 import com.chua.common.support.protocol.sync.SyncConnectionListener;
 import com.chua.common.support.protocol.sync.SyncMessage;
 import com.chua.common.support.protocol.sync.SyncMessageListener;
@@ -130,13 +131,13 @@ public class SyncServerInstance {
         try {
             String protocol = instanceConfig.getProtocol();
 
-            ProtocolSetting protocolSetting = ProtocolSetting.builder()
+            ServerSetting protocolSetting = ServerSetting.builder()
                     .protocol(protocol)
                     .host(instanceConfig.getHost())
                     .port(instanceConfig.getPort())
-                    .heartbeat(syncProperties.getServer().isHeartbeat())
-                    .heartbeatInterval(syncProperties.getServer().getHeartbeatInterval())
-                    .connectTimeoutMillis(syncProperties.getServer().getConnectTimeout())
+                    .maxConnections(1000)        // 最大连接数
+                    .workerThreads(4)            // 工作线程数
+                    .keepAliveEnabled(true)      // 启用连接保活（不自动断开空闲连接）
                     .build();
 
             // 使用新的 SyncServer 接口创建服务端
