@@ -57,13 +57,29 @@ public class DataSourceContextSupport {
     }
 
     /**
-     * 添加数据源
+     * 获取数据源
      *
      * @param name 名称
-     * @return dataSource 添加数据源
+     * @return dataSource 数据源
      */
     public static DataSource getDatasource(String name) {
         return (DataSource) TARGET_DATA_SOURCES.get(name);
+    }
+
+    /**
+     * 获取所有数据源
+     *
+     * @return 所有数据源Map
+     */
+    @SuppressWarnings("unchecked")
+    public static Map<String, DataSource> getAllDataSources() {
+        Map<String, DataSource> result = new ConcurrentHashMap<>();
+        for (Map.Entry<Object, Object> entry : TARGET_DATA_SOURCES.entrySet()) {
+            if (entry.getKey() instanceof String && entry.getValue() instanceof DataSource) {
+                result.put((String) entry.getKey(), (DataSource) entry.getValue());
+            }
+        }
+        return result;
     }
 
     /**
