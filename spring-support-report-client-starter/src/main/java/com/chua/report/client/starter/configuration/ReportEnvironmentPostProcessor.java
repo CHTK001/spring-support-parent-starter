@@ -23,17 +23,18 @@ import java.util.Map;
 public class ReportEnvironmentPostProcessor implements EnvironmentPostProcessor {
 
     private static final DeferredLog log = new DeferredLog();
-    private static final String REPORT_PREFIX = "plugin.report.client.";
+    private static final String REPORT_CLIENT_PREFIX = "plugin.report.client.";
+    private static final String REPORT_PREFIX = "plugin.report.";
     private static final String SYNC_PREFIX = "plugin.sync.";
 
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         log.info("[ReportEnvPostProcessor] 开始处理环境配置");
-        
+
         // 检查上报客户端是否启用
-        String enabled = environment.getProperty(REPORT_PREFIX + "enable", "true");
+        String enabled = environment.getProperty(REPORT_CLIENT_PREFIX + "enable", "true");
         log.info("[ReportEnvPostProcessor] plugin.report.client.enable = " + enabled);
-        
+
         if (!"true".equalsIgnoreCase(enabled)) {
             log.info("[ReportEnvPostProcessor] 上报客户端未启用，跳过");
             return;
@@ -42,18 +43,25 @@ public class ReportEnvironmentPostProcessor implements EnvironmentPostProcessor 
         // 准备要设置的 sync 配置
         Map<String, Object> syncProperties = new HashMap<>();
 
-        // 自动启用 sync
-        if (environment.getProperty(SYNC_PREFIX + "enable") == null) {
-            syncProperties.put(SYNC_PREFIX + "enable", "true");
-            log.info("[ReportEnvPostProcessor] 设置 plugin.sync.enable = true");
+        // 自动启用 sync client
+        if ("true".equals(environment.getProperty(REPORT_CLIENT_PREFIX + "enable"))) {
+            syncProperties.put(SYNC_PREFIX + "client.enable", "true");
+            log.info("[ReportEnvPostProcessor] 设置 plugin.sync.client.enable = true");
         }
 
         // 设置为客户端模式
-        if (environment.getProperty(SYNC_PREFIX + "type") == null) {
-            syncProperties.put(SYNC_PREFIX + "type", "client");
+        if (environment.getProperty(REPORT_PREFIX + "type") != null) {
+            syncProperties.put(SYNC_PREFIX + "type", environment.getProperty(REPORT_PREFIX + "type"));
             log.info("[ReportEnvPostProcessor] 设置 plugin.sync.type = client");
         } else {
-            log.info("[ReportEnvPostProcessor] plugin.sync.type 已存在: " + environment.getProperty(SYNC_PREFIX + "type"));
+            String property = environment.getProperty(SYNC_PREFIX + "type");
+            if (property != null) {
+                syncProperties.put(SYNC_PREFIX + "type", property);
+                log.info("[ReportEnvPostProcessor] 设置 plugin.sync.type = client");
+            } else {
+                syncProperties.put(SYNC_PREFIX + "type", "client");
+                log.info("[ReportEnvPostProcessor] 设置 plugin.sync.type = client");
+            }
         }
 
         // 串联客户端配置
@@ -72,10 +80,10 @@ public class ReportEnvironmentPostProcessor implements EnvironmentPostProcessor 
      */
     private void linkClientConfig(ConfigurableEnvironment environment, Map<String, Object> syncProperties) {
         // 服务端连接配置
-        String serverHost = environment.getProperty(REPORT_PREFIX + "host", "localhost");
-        String serverPort = environment.getProperty(REPORT_PREFIX + "port", "29170");
-        String protocol = environment.getProperty(REPORT_PREFIX + "protocol", "rsocket-sync");
-        String clientRealHost = environment.getProperty(REPORT_PREFIX + "info.host");
+        String serverHost = environment.getProperty(REPORT_CLIENT_PREFIX + "host", "localhost");
+        String serverPort = environment.getProperty(REPORT_CLIENT_PREFIX + "port", "29170");
+        String protocol = environment.getProperty(REPORT_CLIENT_PREFIX + "protocol", "rsocket-sync");
+        String clientRealHost = environment.getProperty(REPORT_CLIENT_PREFIX + "info.host");
 
         if (environment.getProperty(SYNC_PREFIX + "client.server-host") == null) {
             syncProperties.put(SYNC_PREFIX + "client.server-host", serverHost);
@@ -86,12 +94,12 @@ public class ReportEnvironmentPostProcessor implements EnvironmentPostProcessor 
         if (environment.getProperty(SYNC_PREFIX + "client.protocol") == null) {
             syncProperties.put(SYNC_PREFIX + "client.protocol", protocol);
         }
-        if (environment.getProperty(SYNC_PREFIX + "client.host") == null) {
+        if (environment.getProperty(SYNC_PREFIX + "client.ip-address") == null) {
             syncProperties.put(SYNC_PREFIX + "client.ip-address", clientRealHost);
         }
 
-        // 多网卡场景指定 IP
-        String clientHost = environment.getProperty(REPORT_PREFIX + "client-info.host");
+        // 多网卡场景指定 IP（优先级更高）
+        String clientHost = environment.getProperty(REPORT_CLIENT_PREFIX + "info.host");
         if (clientHost != null && !clientHost.isEmpty()) {
             syncProperties.put(SYNC_PREFIX + "client.ip-address", clientHost);
         }
