@@ -1,7 +1,7 @@
 package com.chua.starter.job.support.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.chua.starter.job.support.entity.MonitorJobLogDetail;
+import com.chua.starter.job.support.entity.SysJobLogDetail;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -19,10 +19,10 @@ import java.util.List;
  *
  * @author CH
  * @since 2024/12/19
- * @see MonitorJobLogDetail
+ * @see SysJobLogDetail
  */
 @Mapper
-public interface MonitorJobLogDetailMapper extends BaseMapper<MonitorJobLogDetail> {
+public interface SysJobLogDetailMapper extends BaseMapper<SysJobLogDetail> {
 
     /**
      * 根据任务日志ID查询详情列表
@@ -30,8 +30,8 @@ public interface MonitorJobLogDetailMapper extends BaseMapper<MonitorJobLogDetai
      * @param jobLogId 任务日志ID
      * @return 详情列表
      */
-    @Select("SELECT * FROM monitor_job_log_detail WHERE job_log_id = #{jobLogId} ORDER BY job_log_detail_time ASC")
-    List<MonitorJobLogDetail> selectByJobLogId(@Param("jobLogId") Integer jobLogId);
+    @Select("SELECT * FROM sys_job_log_detail WHERE job_log_id = #{jobLogId} ORDER BY job_log_detail_time ASC")
+    List<SysJobLogDetail> selectByJobLogId(@Param("jobLogId") Integer jobLogId);
 
     /**
      * 根据任务ID查询详情列表
@@ -39,8 +39,8 @@ public interface MonitorJobLogDetailMapper extends BaseMapper<MonitorJobLogDetai
      * @param jobId 任务ID
      * @return 详情列表
      */
-    @Select("SELECT * FROM monitor_job_log_detail WHERE job_id = #{jobId} ORDER BY job_log_detail_time DESC LIMIT 1000")
-    List<MonitorJobLogDetail> selectByJobId(@Param("jobId") Integer jobId);
+    @Select("SELECT * FROM sys_job_log_detail WHERE job_id = #{jobId} ORDER BY job_log_detail_time DESC LIMIT 1000")
+    List<SysJobLogDetail> selectByJobId(@Param("jobId") Integer jobId);
 
     /**
      * 删除指定时间之前的日志详情
@@ -48,7 +48,7 @@ public interface MonitorJobLogDetailMapper extends BaseMapper<MonitorJobLogDetai
      * @param beforeTime 截止时间
      * @return 删除数量
      */
-    @Delete("DELETE FROM monitor_job_log_detail WHERE job_log_detail_time < #{beforeTime}")
+    @Delete("DELETE FROM sys_job_log_detail WHERE job_log_detail_time < #{beforeTime}")
     int deleteBeforeTime(@Param("beforeTime") LocalDateTime beforeTime);
 
     /**
@@ -57,7 +57,7 @@ public interface MonitorJobLogDetailMapper extends BaseMapper<MonitorJobLogDetai
      * @param jobLogId 任务日志ID
      * @return 删除数量
      */
-    @Delete("DELETE FROM monitor_job_log_detail WHERE job_log_id = #{jobLogId}")
+    @Delete("DELETE FROM sys_job_log_detail WHERE job_log_id = #{jobLogId}")
     int deleteByJobLogId(@Param("jobLogId") Integer jobLogId);
 
     /**
@@ -67,6 +67,6 @@ public interface MonitorJobLogDetailMapper extends BaseMapper<MonitorJobLogDetai
      * @param endTime   结束时间
      * @return 日志数量
      */
-    @Select("SELECT COUNT(*) FROM monitor_job_log_detail WHERE job_log_detail_time BETWEEN #{startTime} AND #{endTime}")
+    @Select("SELECT COUNT(*) FROM sys_job_log_detail WHERE job_log_detail_time BETWEEN #{startTime} AND #{endTime}")
     long countByTimeRange(@Param("startTime") LocalDateTime startTime, @Param("endTime") LocalDateTime endTime);
 }

@@ -2,7 +2,7 @@ package com.chua.starter.job.support.scheduler;
 
 import com.chua.advanced.support.express.CronExpression;
 import com.chua.starter.job.support.JobProperties;
-import com.chua.starter.job.support.entity.MonitorJob;
+import com.chua.starter.job.support.entity.SysJob;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -101,10 +101,10 @@ public class CoreTriggerHandler implements TriggerHandler, Runnable {
 
                 // 1、预读任务
                 long nowTime = System.currentTimeMillis();
-                List<MonitorJob> scheduleList = JobConfig.getInstance().scheduleJobQuery(nowTime + PRE_READ_MS, preReadCount);
+                List<SysJob> scheduleList = JobConfig.getInstance().scheduleJobQuery(nowTime + PRE_READ_MS, preReadCount);
                 if (scheduleList != null && !scheduleList.isEmpty()) {
                     // 2、推送到时间环
-                    for (MonitorJob jobInfo : scheduleList) {
+                    for (SysJob jobInfo : scheduleList) {
 
                         if (nowTime > jobInfo.getJobTriggerNextTime() + PRE_READ_MS) {
                             // 2.1、触发超时 > 5s：跳过 && 更新下次触发时间
@@ -162,7 +162,7 @@ public class CoreTriggerHandler implements TriggerHandler, Runnable {
                     }
 
                     // 3、更新触发信息
-                    for (MonitorJob jobInfo : scheduleList) {
+                    for (SysJob jobInfo : scheduleList) {
                         JobConfig.getInstance().scheduleUpdate(jobInfo);
                     }
 
@@ -195,7 +195,7 @@ public class CoreTriggerHandler implements TriggerHandler, Runnable {
         log.info(">>>>>>>>>>> 核心调度线程已停止");
     }
 
-    private void refreshNextValidTime(MonitorJob jobInfo, Date fromTime) throws Exception {
+    private void refreshNextValidTime(SysJob jobInfo, Date fromTime) throws Exception {
         Date nextValidTime = generateNextValidTime(jobInfo, fromTime);
         if (nextValidTime != null) {
             jobInfo.setJobTriggerLastTime(jobInfo.getJobTriggerNextTime());
@@ -209,7 +209,7 @@ public class CoreTriggerHandler implements TriggerHandler, Runnable {
         }
     }
 
-    public static Date generateNextValidTime(MonitorJob jobInfo, Date fromTime) throws Exception {
+    public static Date generateNextValidTime(SysJob jobInfo, Date fromTime) throws Exception {
         SchedulerTypeEnum scheduleTypeEnum = SchedulerTypeEnum.match(jobInfo.getJobScheduleType(), null);
         if (SchedulerTypeEnum.CRON == scheduleTypeEnum) {
             return new CronExpression(jobInfo.getJobScheduleTime()).getNextValidTimeAfter(fromTime);

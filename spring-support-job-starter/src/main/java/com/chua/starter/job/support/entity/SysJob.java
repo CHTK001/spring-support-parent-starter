@@ -13,7 +13,7 @@ import java.util.Date;
 /**
  * 定时任务实体
  * <p>
- * 对应数据库表 monitor_job，存储任务的配置信息。
+ * 对应数据库表 sys_job，存储任务的配置信息。
  * 包括任务的调度配置、执行器配置、Glue脚本配置等。
  * </p>
  *
@@ -29,11 +29,11 @@ import java.util.Date;
  * @author CH
  * @version 1.0.0
  * @since 2024/03/08
- * @see MonitorJobLog
+ * @see SysJobLog
  */
 @Data
-@TableName(value = "monitor_job")
-public class MonitorJob implements Serializable {
+@TableName(value = "sys_job")
+public class SysJob implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;

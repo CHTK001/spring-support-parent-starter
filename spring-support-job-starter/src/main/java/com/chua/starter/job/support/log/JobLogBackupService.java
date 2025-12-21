@@ -5,12 +5,12 @@ import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.FileUtils;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.starter.job.support.JobProperties;
-import com.chua.starter.job.support.entity.MonitorJobLog;
-import com.chua.starter.job.support.entity.MonitorJobLogBackup;
-import com.chua.starter.job.support.entity.MonitorJobLogDetail;
-import com.chua.starter.job.support.mapper.MonitorJobLogBackupMapper;
-import com.chua.starter.job.support.mapper.MonitorJobLogDetailMapper;
-import com.chua.starter.job.support.mapper.MonitorJobLogMapper;
+import com.chua.starter.job.support.entity.SysJobLog;
+import com.chua.starter.job.support.entity.SysJobLogBackup;
+import com.chua.starter.job.support.entity.SysJobLogDetail;
+import com.chua.starter.job.support.mapper.SysJobLogBackupMapper;
+import com.chua.starter.job.support.mapper.SysJobLogDetailMapper;
+import com.chua.starter.job.support.mapper.SysJobLogMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -45,9 +45,9 @@ import java.util.zip.ZipOutputStream;
 public class JobLogBackupService {
 
     private final JobProperties jobProperties;
-    private final MonitorJobLogMapper jobLogMapper;
-    private final MonitorJobLogDetailMapper jobLogDetailMapper;
-    private final MonitorJobLogBackupMapper jobLogBackupMapper;
+    private final SysJobLogMapper jobLogMapper;
+    private final SysJobLogDetailMapper jobLogDetailMapper;
+    private final SysJobLogBackupMapper jobLogBackupMapper;
 
     private final AtomicBoolean isBackupRunning = new AtomicBoolean(false);
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
@@ -61,14 +61,14 @@ public class JobLogBackupService {
      * @param cleanAfter   备份后是否清理原始日志
      * @return 备份记录
      */
-    public MonitorJobLogBackup startBackup(LocalDate startDate, LocalDate endDate, 
+    public SysJobLogBackup startBackup(LocalDate startDate, LocalDate endDate, 
                                             String compressType, boolean cleanAfter) {
         if (!isBackupRunning.compareAndSet(false, true)) {
             log.warn("备份任务正在运行中，请稍后再试");
             return null;
         }
 
-        MonitorJobLogBackup backup = new MonitorJobLogBackup();
+        SysJobLogBackup backup = new SysJobLogBackup();
         backup.setJobLogBackupStartDate(startDate);
         backup.setJobLogBackupEndDate(endDate);
         backup.setJobLogBackupStatus("RUNNING");
@@ -113,7 +113,7 @@ public class JobLogBackupService {
             LocalDate endDate = LocalDate.now().minusDays(retentionDays);
             LocalDate startDate = endDate.minusDays(7); // 每次备份7天的数据
 
-            MonitorJobLogBackup backup = new MonitorJobLogBackup();
+            SysJobLogBackup backup = new SysJobLogBackup();
             backup.setJobLogBackupStartDate(startDate);
             backup.setJobLogBackupEndDate(endDate);
             backup.setJobLogBackupStatus("RUNNING");
@@ -133,7 +133,7 @@ public class JobLogBackupService {
     /**
      * 执行备份
      */
-    private void doBackup(MonitorJobLogBackup backup, boolean cleanAfter) {
+    private void doBackup(SysJobLogBackup backup, boolean cleanAfter) {
         long startTime = System.currentTimeMillis();
         String backupPath = getBackupPath();
 
@@ -142,9 +142,9 @@ public class JobLogBackupService {
             LocalDate startDate = backup.getJobLogBackupStartDate();
             LocalDate endDate = backup.getJobLogBackupEndDate();
 
-            List<MonitorJobLog> logs = jobLogMapper.selectList(
-                    Wrappers.<MonitorJobLog>lambdaQuery()
-                            .between(MonitorJobLog::getJobLogTriggerDate, startDate, endDate)
+            List<SysJobLog> logs = jobLogMapper.selectList(
+                    Wrappers.<SysJobLog>lambdaQuery()
+                            .between(SysJobLog::getJobLogTriggerDate, startDate, endDate)
             );
 
             if (logs == null || logs.isEmpty()) {
@@ -189,8 +189,8 @@ public class JobLogBackupService {
             // 清理原始日志
             if (cleanAfter) {
                 int deleted = jobLogMapper.delete(
-                        Wrappers.<MonitorJobLog>lambdaQuery()
-                                .between(MonitorJobLog::getJobLogTriggerDate, startDate, endDate)
+                        Wrappers.<SysJobLog>lambdaQuery()
+                                .between(SysJobLog::getJobLogTriggerDate, startDate, endDate)
                 );
                 // 清理日志详情
                 LocalDateTime startDateTime = startDate.atStartOfDay();
@@ -218,7 +218,7 @@ public class JobLogBackupService {
     /**
      * 创建 ZIP 备份
      */
-    private long createZipBackup(String filePath, List<MonitorJobLog> logs,
+    private long createZipBackup(String filePath, List<SysJobLog> logs,
                                   LocalDate startDate, LocalDate endDate) throws IOException {
         File file = new File(filePath);
         try (ZipOutputStream zos = new ZipOutputStream(
@@ -231,8 +231,8 @@ public class JobLogBackupService {
             zos.closeEntry();
 
             // 写入日志详情
-            for (MonitorJobLog log : logs) {
-                List<MonitorJobLogDetail> details = jobLogDetailMapper.selectByJobLogId(log.getJobLogId());
+            for (SysJobLog log : logs) {
+                List<SysJobLogDetail> details = jobLogDetailMapper.selectByJobLogId(log.getJobLogId());
                 if (details != null && !details.isEmpty()) {
                     ZipEntry detailEntry = new ZipEntry("details/job_log_" + log.getJobLogId() + ".json");
                     zos.putNextEntry(detailEntry);
@@ -267,7 +267,7 @@ public class JobLogBackupService {
     /**
      * 创建 GZIP 备份
      */
-    private long createGzipBackup(String filePath, List<MonitorJobLog> logs) throws IOException {
+    private long createGzipBackup(String filePath, List<SysJobLog> logs) throws IOException {
         File file = new File(filePath);
         try (GZIPOutputStream gzos = new GZIPOutputStream(
                 new BufferedOutputStream(new FileOutputStream(file)))) {
@@ -294,7 +294,7 @@ public class JobLogBackupService {
     /**
      * 获取最近的备份记录
      */
-    public List<MonitorJobLogBackup> getRecentBackups(int limit) {
+    public List<SysJobLogBackup> getRecentBackups(int limit) {
         return jobLogBackupMapper.selectRecent(limit);
     }
 
@@ -302,7 +302,7 @@ public class JobLogBackupService {
      * 删除备份
      */
     public boolean deleteBackup(Long backupId) {
-        MonitorJobLogBackup backup = jobLogBackupMapper.selectById(backupId);
+        SysJobLogBackup backup = jobLogBackupMapper.selectById(backupId);
         if (backup == null) {
             return false;
         }
@@ -325,7 +325,7 @@ public class JobLogBackupService {
      * 下载备份文件
      */
     public byte[] downloadBackup(Long backupId) throws IOException {
-        MonitorJobLogBackup backup = jobLogBackupMapper.selectById(backupId);
+        SysJobLogBackup backup = jobLogBackupMapper.selectById(backupId);
         if (backup == null || backup.getJobLogBackupFilePath() == null) {
             return null;
         }
@@ -346,13 +346,13 @@ public class JobLogBackupService {
      */
     public int cleanExpiredBackups(int retentionDays) {
         LocalDateTime expireTime = LocalDateTime.now().minusDays(retentionDays);
-        List<MonitorJobLogBackup> expiredBackups = jobLogBackupMapper.selectList(
-                Wrappers.<MonitorJobLogBackup>lambdaQuery()
-                        .lt(MonitorJobLogBackup::getCreateTime, expireTime)
+        List<SysJobLogBackup> expiredBackups = jobLogBackupMapper.selectList(
+                Wrappers.<SysJobLogBackup>lambdaQuery()
+                        .lt(SysJobLogBackup::getCreateTime, expireTime)
         );
 
         int count = 0;
-        for (MonitorJobLogBackup backup : expiredBackups) {
+        for (SysJobLogBackup backup : expiredBackups) {
             if (deleteBackup(backup.getJobLogBackupId())) {
                 count++;
             }

@@ -1,7 +1,7 @@
 package com.chua.starter.job.support.log;
 
-import com.chua.starter.job.support.entity.MonitorJobLogDetail;
-import com.chua.starter.job.support.mapper.MonitorJobLogDetailMapper;
+import com.chua.starter.job.support.entity.SysJobLogDetail;
+import com.chua.starter.job.support.mapper.SysJobLogDetailMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,7 +24,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JobLogDetailService {
 
-    private final MonitorJobLogDetailMapper jobLogDetailMapper;
+    private final SysJobLogDetailMapper jobLogDetailMapper;
 
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
@@ -37,7 +37,7 @@ public class JobLogDetailService {
      * @param content  日志内容
      * @return 日志详情
      */
-    public MonitorJobLogDetail log(Integer jobLogId, Integer jobId, String level, String content) {
+    public SysJobLogDetail log(Integer jobLogId, Integer jobId, String level, String content) {
         return log(jobLogId, jobId, level, content, null, null);
     }
 
@@ -52,9 +52,9 @@ public class JobLogDetailService {
      * @param progress 执行进度
      * @return 日志详情
      */
-    public MonitorJobLogDetail log(Integer jobLogId, Integer jobId, String level, String content, 
+    public SysJobLogDetail log(Integer jobLogId, Integer jobId, String level, String content, 
                                     String phase, Integer progress) {
-        MonitorJobLogDetail detail = new MonitorJobLogDetail();
+        SysJobLogDetail detail = new SysJobLogDetail();
         detail.setJobLogId(jobLogId);
         detail.setJobId(jobId);
         detail.setJobLogDetailLevel(level);
@@ -78,35 +78,35 @@ public class JobLogDetailService {
     /**
      * 记录 INFO 级别日志
      */
-    public MonitorJobLogDetail info(Integer jobLogId, Integer jobId, String content) {
+    public SysJobLogDetail info(Integer jobLogId, Integer jobId, String content) {
         return log(jobLogId, jobId, "INFO", content);
     }
 
     /**
      * 记录 INFO 级别日志（带阶段和进度）
      */
-    public MonitorJobLogDetail info(Integer jobLogId, Integer jobId, String content, String phase, Integer progress) {
+    public SysJobLogDetail info(Integer jobLogId, Integer jobId, String content, String phase, Integer progress) {
         return log(jobLogId, jobId, "INFO", content, phase, progress);
     }
 
     /**
      * 记录 WARN 级别日志
      */
-    public MonitorJobLogDetail warn(Integer jobLogId, Integer jobId, String content) {
+    public SysJobLogDetail warn(Integer jobLogId, Integer jobId, String content) {
         return log(jobLogId, jobId, "WARN", content);
     }
 
     /**
      * 记录 ERROR 级别日志
      */
-    public MonitorJobLogDetail error(Integer jobLogId, Integer jobId, String content) {
+    public SysJobLogDetail error(Integer jobLogId, Integer jobId, String content) {
         return log(jobLogId, jobId, "ERROR", content);
     }
 
     /**
      * 记录 ERROR 级别日志（带异常）
      */
-    public MonitorJobLogDetail error(Integer jobLogId, Integer jobId, String content, Throwable t) {
+    public SysJobLogDetail error(Integer jobLogId, Integer jobId, String content, Throwable t) {
         StringBuilder sb = new StringBuilder(content);
         if (t != null) {
             sb.append("\n").append(t.getClass().getName()).append(": ").append(t.getMessage());
@@ -124,7 +124,7 @@ public class JobLogDetailService {
     /**
      * 记录 DEBUG 级别日志
      */
-    public MonitorJobLogDetail debug(Integer jobLogId, Integer jobId, String content) {
+    public SysJobLogDetail debug(Integer jobLogId, Integer jobId, String content) {
         return log(jobLogId, jobId, "DEBUG", content);
     }
 
@@ -134,13 +134,13 @@ public class JobLogDetailService {
      * @param details 日志详情列表
      * @return 保存数量
      */
-    public int batchSave(List<MonitorJobLogDetail> details) {
+    public int batchSave(List<SysJobLogDetail> details) {
         if (details == null || details.isEmpty()) {
             return 0;
         }
 
         int count = 0;
-        for (MonitorJobLogDetail detail : details) {
+        for (SysJobLogDetail detail : details) {
             detail.setCreateTime(LocalDateTime.now());
             if (detail.getJobLogDetailTime() == null) {
                 detail.setJobLogDetailTime(LocalDateTime.now());
@@ -157,7 +157,7 @@ public class JobLogDetailService {
      * @param jobLogId 任务日志ID
      * @return 详情列表
      */
-    public List<MonitorJobLogDetail> getByJobLogId(Integer jobLogId) {
+    public List<SysJobLogDetail> getByJobLogId(Integer jobLogId) {
         return jobLogDetailMapper.selectByJobLogId(jobLogId);
     }
 
@@ -167,7 +167,7 @@ public class JobLogDetailService {
      * @param jobId 任务ID
      * @return 详情列表
      */
-    public List<MonitorJobLogDetail> getRecentByJobId(Integer jobId) {
+    public List<SysJobLogDetail> getRecentByJobId(Integer jobId) {
         return jobLogDetailMapper.selectByJobId(jobId);
     }
 
@@ -196,7 +196,7 @@ public class JobLogDetailService {
     /**
      * 格式化日志行
      */
-    private String formatLogLine(MonitorJobLogDetail detail) {
+    private String formatLogLine(SysJobLogDetail detail) {
         StringBuilder sb = new StringBuilder();
         sb.append("[").append(detail.getJobLogDetailTime().format(TIME_FORMATTER)).append("]");
         sb.append(" [").append(String.format("%-5s", detail.getJobLogDetailLevel())).append("]");
