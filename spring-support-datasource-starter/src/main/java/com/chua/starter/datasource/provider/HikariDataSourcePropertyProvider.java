@@ -35,13 +35,35 @@ public class HikariDataSourcePropertyProvider implements DataSourcePropertyProvi
         properties.put("password", dataSource.getPassword());
         properties.put("driverClassName", dataSource.getDriverClassName());
         
-        // 连接池属性
-        properties.put("maximumPoolSize", dataSource.getMaximumPoolSize());
-        properties.put("minimumIdle", dataSource.getMinimumIdle());
-        properties.put("idleTimeout", dataSource.getIdleTimeout());
-        properties.put("maxLifetime", dataSource.getMaxLifetime());
-        properties.put("connectionTimeout", dataSource.getConnectionTimeout());
-        properties.put("validationTimeout", dataSource.getValidationTimeout());
+        // 连接池属性 - 只添加有效值（非负数）
+        int maximumPoolSize = dataSource.getMaximumPoolSize();
+        int minimumIdle = dataSource.getMinimumIdle();
+        
+        if (maximumPoolSize > 0) {
+            properties.put("maximumPoolSize", maximumPoolSize);
+        }
+        // minimumIdle为-1表示未设置，使用HikariCP默认值
+        if (minimumIdle >= 0) {
+            properties.put("minimumIdle", minimumIdle);
+        }
+        
+        long idleTimeout = dataSource.getIdleTimeout();
+        long maxLifetime = dataSource.getMaxLifetime();
+        long connectionTimeout = dataSource.getConnectionTimeout();
+        long validationTimeout = dataSource.getValidationTimeout();
+        
+        if (idleTimeout > 0) {
+            properties.put("idleTimeout", idleTimeout);
+        }
+        if (maxLifetime > 0) {
+            properties.put("maxLifetime", maxLifetime);
+        }
+        if (connectionTimeout > 0) {
+            properties.put("connectionTimeout", connectionTimeout);
+        }
+        if (validationTimeout > 0) {
+            properties.put("validationTimeout", validationTimeout);
+        }
         properties.put("leakDetectionThreshold", dataSource.getLeakDetectionThreshold());
         
         // 其他属性
@@ -75,7 +97,13 @@ public class HikariDataSourcePropertyProvider implements DataSourcePropertyProvi
             
             // 连接池属性
             case "maximumPoolSize", "maxPoolSize" -> dataSource.setMaximumPoolSize(toInt(value));
-            case "minimumIdle", "minIdle" -> dataSource.setMinimumIdle(toInt(value));
+            case "minimumIdle", "minIdle" -> {
+                int minIdle = toInt(value);
+                // 只设置非负值，负值表示未配置，使用HikariCP默认值
+                if (minIdle >= 0) {
+                    dataSource.setMinimumIdle(minIdle);
+                }
+            }
             case "idleTimeout" -> dataSource.setIdleTimeout(toLong(value));
             case "maxLifetime" -> dataSource.setMaxLifetime(toLong(value));
             case "connectionTimeout" -> dataSource.setConnectionTimeout(toLong(value));
