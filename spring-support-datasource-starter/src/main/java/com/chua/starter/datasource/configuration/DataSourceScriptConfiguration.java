@@ -62,12 +62,10 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                 try {
                     log.info("检测到 DataSource [{}] 初始化完成，开始执行数据库脚本...", beanName);
                     FlywayLikePopulator populator = new FlywayLikePopulator(ds, dataSourceScriptProperties);
-                    try (Connection connection = ds.getConnection()) {
-                        populator.populate(connection);
-                    }
+                    populator.populate();
                     log.info("DataSource [{}] 数据库脚本执行完成", beanName);
                 } catch (SQLException e) {
-                    throw new RuntimeException("执行数据库脚本失败: " + beanName, e);
+                    log.warn("执行数据库脚本失败: {}", beanName, e);
                 }
             }
         }
@@ -133,10 +131,9 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         /**
          * 执行数据库脚本迁移
          *
-         * @param connection 数据库连接
          * @throws SQLException SQL异常
          */
-        public void populate(Connection connection) throws SQLException {
+        public void populate() throws SQLException {
             try {
                 // 1. 创建版本记录表（兼容多种数据库）
                 createVersionTable();
@@ -633,9 +630,16 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                         
                         // 每50条执行一次批处理，或者到达最后一条
                         if ((i + 1) % batchSize == 0 || i == validStatements.size() - 1) {
-                            stmt.executeBatch();
-                            stmt.clearBatch();
-                            
+                            try {
+                                stmt.executeBatch();
+                                stmt.clearBatch();
+                            } catch (Exception e) {
+                                if(e.getMessage().contains(" already exists")) {
+                                    continue;
+                                }
+                                throw new RuntimeException(e);
+                            }
+
                             // 更新进度条
                             if (scriptProgressBar != null) {
                                 int executed = Math.min(i + 1, totalStatements);

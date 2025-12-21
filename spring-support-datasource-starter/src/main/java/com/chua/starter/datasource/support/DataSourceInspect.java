@@ -3,9 +3,10 @@ package com.chua.starter.datasource.support;
 import com.chua.starter.datasource.properties.HikariDataSourceProperties;
 import com.chua.starter.datasource.properties.MultiDataSourceProperties;
 import com.chua.starter.datasource.properties.MultiHikariDataSourceProperties;
+import com.chua.starter.datasource.provider.DataSourcePropertyProvider;
+import com.chua.starter.datasource.provider.DataSourcePropertyProviderFactory;
 import com.chua.starter.datasource.util.ClassUtils;
 import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
@@ -24,13 +25,8 @@ import org.springframework.context.EnvironmentAware;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.MutablePropertySources;
-import org.springframework.util.ReflectionUtils;
-import org.springframework.util.StringUtils;
 
 import javax.sql.DataSource;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.*;
 
 /**
@@ -41,20 +37,20 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
         EnvironmentAware,
         ApplicationContextAware {
 
-    private static final String MAX_IDLE = "maxIdle";
-    protected Class<DataSource> dataSourceClass = (Class<DataSource>) ClassUtils.forNames("com.alibaba.druid.pool.DruidDataSource", "com.zaxxer.hikari.HikariDataSource");
-
-    protected Map<String, List<String>> mapping = new HashMap<>();
+    protected Class<DataSource> dataSourceClass;
     private ApplicationContext applicationContext;
 
     @Value("${spring.datasource.druid.filters:}")
     private String filter;
 
     {
-        mapping.put("jdbcUrl", Lists.newArrayList("url"));
-        mapping.put("jdbcUser", Lists.newArrayList("username"));
-        mapping.put("jdbcPassword", Lists.newArrayList("password"));
-        mapping.put("jdbcDriverClass", Lists.newArrayList("driverClassName"));
+        // 使用Provider工厂获取首选数据源类型
+        Class<? extends DataSource> preferredType = DataSourcePropertyProviderFactory.getPreferredDataSourceType();
+        if (preferredType != null) {
+            dataSourceClass = (Class<DataSource>) preferredType;
+        } else {
+            dataSourceClass = (Class<DataSource>) ClassUtils.forNames("com.alibaba.druid.pool.DruidDataSource", "com.zaxxer.hikari.HikariDataSource");
+        }
     }
 
     private static final String TRANSACTION = "_transaction";
@@ -177,32 +173,23 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
             if (null == dataSource) {
                 continue;
             }
-            Class<? extends DataSource> aClass = dataSource.getClass();
 
             BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.rootBeanDefinition(dataSourceClass);
-            ReflectionUtils.doWithFields(aClass, field -> {
-                if (Modifier.isStatic(field.getModifiers())) {
-                    return;
-                }
-                String newName = getRealName(aClass, field);
-                if (null == newName) {
-                    return;
-                }
-
-               com.chua.common.support.utils.ClassUtils.setAccessible(field);
-                Object value = ReflectionUtils.getField(field, dataSource);
-                if (null == value) {
-                    return;
-                }
-                beanDefinitionBuilder.addPropertyValue(newName, value);
-            });
+            
+            // 使用Provider获取属性，替代反射
+            DataSourcePropertyProvider<DataSource> provider = DataSourcePropertyProviderFactory.getProvider(dataSource);
+            if (provider != null) {
+                Map<String, Object> properties = provider.getProperties(dataSource);
+                properties.forEach((name, value) -> {
+                    if (value != null) {
+                        beanDefinitionBuilder.addPropertyValue(name, value);
+                    }
+                });
+            }
 
             if (beanDefinitionRegistry.containsBeanDefinition(string)) {
                 return;
             }
-//            BeanDefinitionBuilder beanDefinitionBuilderTransaction = BeanDefinitionBuilder.rootBeanDefinition(DataSourceTransactionManager.class);
-//            beanDefinitionBuilderTransaction.addConstructorArgValue(dataSource);
-//            beanDefinitionRegistry.registerBeanDefinition(string + TRANSACTION, beanDefinitionBuilderTransaction.getBeanDefinition());
 
             beanDefinitionRegistry.registerBeanDefinition(string, beanDefinitionBuilder.getBeanDefinition());
             DataSourceContextSupport.addDatasource(string, dataSource);
@@ -256,13 +243,12 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
         Class<? extends DataSource> dataSourceType = getDataSourceType(objectMap, prefix);
         BindResult<? extends DataSource> bindResult = Binder.get(environment).bind(prefix, dataSourceType);
         DataSource dataSource = bindResult.orElse(null);
-        if (null != dataSource && dataSourceClass.isAssignableFrom(dataSource.getClass())) {
-            Method method = ReflectionUtils.findMethod(dataSource.getClass(), "setFilters", String.class);
-            if (null != method && null != filter) {
-                ReflectionUtils.makeAccessible(method);
-                ReflectionUtils.invokeMethod(method, dataSource, filter);
-            }
+        
+        // 使用Provider设置过滤器，替代反射
+        if (null != dataSource && null != filter && !filter.isEmpty()) {
+            DataSourcePropertyProviderFactory.setFilters(dataSource, filter);
         }
+        
         //补充名称
         analysisMapping(objectMap, prefix, dataSource);
         return dataSource;
@@ -286,42 +272,37 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
     /**
      * 名称映射
      *
-     * @param objectMap  数据源
+     * @param objectMap  数据源配置
      * @param prefix     前缀
      * @param dataSource 数据源
      */
     private void analysisMapping(Map<String, Object> objectMap, String prefix, DataSource dataSource) {
-        Map<String, Object> items = new HashMap<>();
-        Object item = null;
-        for (Map.Entry<String, List<String>> entry : mapping.entrySet()) {
-            Object value = objectMap.get(prefix + "." + entry.getKey());
-            for (String s : entry.getValue()) {
-                item = objectMap.get(prefix + "." + s);
-                if (null != item) {
-                    value = item;
-                }
-                items.put(s, value);
-            }
-            items.put(entry.getKey(), value);
+        if (dataSource == null) {
+            return;
         }
-
-        Class<? extends DataSource> aClass = dataSource.getClass();
-        ReflectionUtils.doWithFields(aClass, field -> {
-            String name = field.getName();
-            if (items.containsKey(name)) {
-                Method method1 = ReflectionUtils.findMethod(aClass,
-                        "set" + name.substring(0, 1).toUpperCase() + name.substring(1), String.class);
-                if (null == method1) {
-                    return;
-                }
-                Object o = items.get(name);
-                if (null == o) {
-                    return;
-                }
-                ReflectionUtils.makeAccessible(method1);
-                ReflectionUtils.invokeMethod(method1, dataSource, o);
+        
+        // 使用Provider设置属性，替代反射
+        DataSourcePropertyProvider<DataSource> provider = DataSourcePropertyProviderFactory.getProvider(dataSource);
+        if (provider == null) {
+            return;
+        }
+        
+        Map<String, String> propertyMapping = provider.getPropertyNameMapping();
+        Map<String, Object> properties = new HashMap<>();
+        
+        // 收集需要设置的属性
+        for (Map.Entry<String, String> entry : propertyMapping.entrySet()) {
+            String configKey = entry.getKey();
+            String propertyName = entry.getValue();
+            
+            Object value = objectMap.get(prefix + "." + configKey);
+            if (value != null) {
+                properties.put(propertyName, value);
             }
-        });
+        }
+        
+        // 通过Provider设置属性
+        provider.setProperties(dataSource, properties);
     }
 
     @Override
@@ -338,31 +319,5 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
     public void setEnvironment(Environment environment) {
         this.environment = environment;
         this.environmentSupport = new EnvironmentSupport(environment);
-    }
-
-    /**
-     * 获取真实名称
-     *
-     * @param aClass 类
-     * @param field  字段
-     * @return 获取真实名称
-     */
-    private String getRealName(Class<? extends DataSource> aClass, Field field) {
-        List<String> items = Lists.newLinkedList();
-        items.add(field.getName());
-        items.addAll(Optional.ofNullable(mapping.get(field.getName())).orElse(Collections.emptyList()));
-        for (String item : items) {
-            if (MAX_IDLE.equals(item)) {
-                return null;
-            }
-            try {
-                if (aClass.getMethod("set" + StringUtils.capitalize(item), field.getType()) == null) {
-                    continue;
-                }
-                return item;
-            } catch (NoSuchMethodException ignored) {
-            }
-        }
-        return null;
     }
 }
