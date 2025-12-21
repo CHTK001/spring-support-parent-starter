@@ -35,7 +35,7 @@ public class SyncAutoConfiguration {
     public void init() {
         String type = environment.getProperty("plugin.sync.type");
         Boolean serverEnable = environment.getProperty("plugin.sync.server.enable", Boolean.class, false);
-        Boolean clientEnable = environment.getProperty("plugin.sync.client.enable", Boolean.class, true);
+        Boolean clientEnable = environment.getProperty("plugin.sync.client.enable", Boolean.class, false);
         log.info("[SyncAutoConfiguration] plugin.sync.type = {}, server.enable = {}, client.enable = {}", 
                 type, serverEnable, clientEnable);
     }
@@ -55,10 +55,6 @@ public class SyncAutoConfiguration {
     @ConditionalOnMissingBean
     @Conditional(SyncServerCondition.class)
     public SyncServer syncServer(SyncProperties syncProperties) {
-        if (!syncProperties.isServerEnabled()) {
-            log.info("[SyncAutoConfiguration] 服务端未启用，跳过创建 SyncServer");
-            return null;
-        }
         log.info("[SyncAutoConfiguration] 创建同步服务端 SyncServer");
         return new SyncServer(syncProperties);
     }
@@ -78,10 +74,6 @@ public class SyncAutoConfiguration {
     @ConditionalOnMissingBean
     @Conditional(SyncClientCondition.class)
     public SyncClient syncClient(SyncProperties syncProperties) {
-        if (!syncProperties.isClientEnabled()) {
-            log.info("[SyncAutoConfiguration] 客户端未启用，跳过创建 SyncClient");
-            return null;
-        }
         log.info("[SyncAutoConfiguration] 创建同步客户端 SyncClient");
         return new SyncClient(syncProperties, environment);
     }

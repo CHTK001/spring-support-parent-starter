@@ -24,7 +24,7 @@ public class SshServerProperties {
     /**
      * 是否启用SSH服务端
      */
-    private boolean enabled = true;
+    private boolean enabled = false;
 
     /**
      * SSH服务端监听地址
