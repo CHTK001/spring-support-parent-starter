@@ -1,7 +1,7 @@
 package com.chua.starter.job.support.scheduler;
 
-import com.chua.starter.job.support.entity.MonitorJob;
-import com.chua.starter.job.support.entity.MonitorJobLog;
+import com.chua.starter.job.support.entity.SysJob;
+import com.chua.starter.job.support.entity.SysJobLog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,7 +54,7 @@ public class LocalJobTrigger {
                                String executorParam) {
 
         // 加载任务数据
-        MonitorJob jobInfo = JobConfig.getInstance().loadById(jobId);
+        SysJob jobInfo = JobConfig.getInstance().loadById(jobId);
         if (jobInfo == null) {
             logger.warn(">>>>>>>>>>>> 任务触发失败, 任务不存在, jobId={}", jobId);
             return;
@@ -74,10 +74,10 @@ public class LocalJobTrigger {
      * @param finalFailRetryCount 最终失败重试次数
      * @param triggerType        触发类型
      */
-    private static void processTrigger(MonitorJob jobInfo, int finalFailRetryCount, TriggerTypeEnum triggerType) {
+    private static void processTrigger(SysJob jobInfo, int finalFailRetryCount, TriggerTypeEnum triggerType) {
 
         // 1、保存日志
-        MonitorJobLog jobLog = new MonitorJobLog();
+        SysJobLog jobLog = new SysJobLog();
         jobLog.setJobLogApp("local");
         jobLog.setJobLogTriggerBean(jobInfo.getJobExecuteBean());
         jobLog.setJobLogTriggerType(triggerType.getName());

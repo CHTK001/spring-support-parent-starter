@@ -1,6 +1,6 @@
 package com.chua.starter.job.support.service;
 
-import com.chua.starter.job.support.entity.MonitorJob;
+import com.chua.starter.job.support.entity.SysJob;
 
 import java.util.List;
 
@@ -37,7 +37,7 @@ public interface JobDynamicConfigService {
      * @param job 任务配置
      * @return 任务ID
      */
-    Integer createJob(MonitorJob job);
+    Integer createJob(SysJob job);
 
     /**
      * 更新任务
@@ -45,7 +45,7 @@ public interface JobDynamicConfigService {
      * @param job 任务配置
      * @return 是否成功
      */
-    boolean updateJob(MonitorJob job);
+    boolean updateJob(SysJob job);
 
     /**
      * 删除任务
@@ -85,7 +85,7 @@ public interface JobDynamicConfigService {
      * @param jobName 任务名称
      * @return 任务配置
      */
-    MonitorJob getJobByName(String jobName);
+    SysJob getJobByName(String jobName);
 
     /**
      * 根据ID获取任务
@@ -93,14 +93,14 @@ public interface JobDynamicConfigService {
      * @param jobId 任务ID
      * @return 任务配置
      */
-    MonitorJob getJobById(Integer jobId);
+    SysJob getJobById(Integer jobId);
 
     /**
      * 获取所有任务
      *
      * @return 任务列表
      */
-    List<MonitorJob> getAllJobs();
+    List<SysJob> getAllJobs();
 
     /**
      * 根据Bean名称获取任务列表
@@ -108,7 +108,7 @@ public interface JobDynamicConfigService {
      * @param beanName Bean名称
      * @return 任务列表
      */
-    List<MonitorJob> getJobsByBeanName(String beanName);
+    List<SysJob> getJobsByBeanName(String beanName);
 
     /**
      * 手动触发任务执行

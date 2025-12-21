@@ -3,12 +3,12 @@ package com.chua.starter.job.support.scheduler;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.starter.job.support.JobProperties;
-import com.chua.starter.job.support.entity.MonitorJob;
-import com.chua.starter.job.support.entity.MonitorJobLog;
+import com.chua.starter.job.support.entity.SysJob;
+import com.chua.starter.job.support.entity.SysJobLog;
 import com.chua.starter.job.support.handler.JobHandler;
 import com.chua.starter.job.support.handler.JobHandlerFactory;
-import com.chua.starter.job.support.mapper.MonitorJobLogMapper;
-import com.chua.starter.job.support.mapper.MonitorJobMapper;
+import com.chua.starter.job.support.mapper.SysJobLogMapper;
+import com.chua.starter.job.support.mapper.SysJobMapper;
 import com.chua.starter.job.support.thread.JobContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
@@ -55,12 +55,12 @@ public class JobConfig {
     /**
      * 任务Mapper
      */
-    private MonitorJobMapper monitorJobMapper;
+    private SysJobMapper sysJobMapper;
 
     /**
      * 任务日志Mapper
      */
-    private MonitorJobLogMapper monitorJobLogMapper;
+    private SysJobLogMapper sysJobLogMapper;
 
     /**
      * 本地锁，用于保证调度线程安全（单机版本）
@@ -114,10 +114,10 @@ public class JobConfig {
      * 通过作业ID加载监控作业。
      *
      * @param jobId 作业ID
-     * @return 返回MonitorJob对象，如果找不到则返回null。
+     * @return 返回SysJob对象，如果找不到则返回null。
      */
-    public MonitorJob loadById(int jobId) {
-        return monitorJobMapper.selectById(jobId);
+    public SysJob loadById(int jobId) {
+        return sysJobMapper.selectById(jobId);
     }
 
     /**
@@ -127,8 +127,8 @@ public class JobConfig {
      */
     public void register(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
-        this.monitorJobMapper = applicationContext.getBean(MonitorJobMapper.class);
-        this.monitorJobLogMapper = applicationContext.getBean(MonitorJobLogMapper.class);
+        this.sysJobMapper = applicationContext.getBean(SysJobMapper.class);
+        this.sysJobLogMapper = applicationContext.getBean(SysJobLogMapper.class);
         log.info("JobConfig: Spring应用上下文已注册");
     }
 
@@ -137,8 +137,8 @@ public class JobConfig {
      *
      * @param jobLog 监控作业日志对象
      */
-    public void saveLog(MonitorJobLog jobLog) {
-        monitorJobLogMapper.insert(jobLog);
+    public void saveLog(SysJobLog jobLog) {
+        sysJobLogMapper.insert(jobLog);
     }
 
     /**
@@ -146,8 +146,8 @@ public class JobConfig {
      *
      * @param jobLog 监控作业日志对象
      */
-    public void updateLog(MonitorJobLog jobLog) {
-        monitorJobLogMapper.updateById(jobLog);
+    public void updateLog(SysJobLog jobLog) {
+        sysJobLogMapper.updateById(jobLog);
     }
 
     /**
@@ -157,7 +157,7 @@ public class JobConfig {
      * @param jobInfo   任务信息
      * @return 执行结果
      */
-    public void runLocal(MonitorJobLog jobLog, MonitorJob jobInfo) {
+    public void runLocal(SysJobLog jobLog, SysJob jobInfo) {
         String handlerName = jobInfo.getJobExecuteBean();
         JobHandler handler = JobHandlerFactory.getInstance().get(handlerName);
 
@@ -223,13 +223,13 @@ public class JobConfig {
      * @param preReadCount  预读数量
      * @return 任务列表
      */
-    public List<MonitorJob> scheduleJobQuery(long nextTime, int preReadCount) {
-        return monitorJobMapper.selectPage(
+    public List<SysJob> scheduleJobQuery(long nextTime, int preReadCount) {
+        return sysJobMapper.selectPage(
                 new Page<>(1, preReadCount),
-                Wrappers.<MonitorJob>lambdaQuery()
-                        .eq(MonitorJob::getJobTriggerStatus, 1)
-                        .le(MonitorJob::getJobTriggerNextTime, nextTime)
-                        .orderByDesc(MonitorJob::getJobId)
+                Wrappers.<SysJob>lambdaQuery()
+                        .eq(SysJob::getJobTriggerStatus, 1)
+                        .le(SysJob::getJobTriggerNextTime, nextTime)
+                        .orderByDesc(SysJob::getJobId)
         ).getRecords();
     }
 
@@ -238,8 +238,8 @@ public class JobConfig {
      *
      * @param jobInfo 任务信息
      */
-    public void scheduleUpdate(MonitorJob jobInfo) {
-        monitorJobMapper.updateById(jobInfo);
+    public void scheduleUpdate(SysJob jobInfo) {
+        sysJobMapper.updateById(jobInfo);
     }
 
     /**

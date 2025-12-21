@@ -1,7 +1,7 @@
 package com.chua.starter.job.support.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.chua.starter.job.support.entity.MonitorJobLog;
+import com.chua.starter.job.support.entity.SysJobLog;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
@@ -14,9 +14,9 @@ import org.apache.ibatis.annotations.Mapper;
  * @author CH
  * @version 1.0.0
  * @since 2024/03/08
- * @see MonitorJobLog
+ * @see SysJobLog
  */
 @Mapper
-public interface MonitorJobLogMapper extends BaseMapper<MonitorJobLog> {
+public interface SysJobLogMapper extends BaseMapper<SysJobLog> {
 
 }

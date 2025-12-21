@@ -1,7 +1,7 @@
 package com.chua.starter.job.support.scheduler;
 
 import com.chua.advanced.support.express.CronExpression;
-import com.chua.starter.job.support.entity.MonitorJob;
+import com.chua.starter.job.support.entity.SysJob;
 
 import java.util.Date;
 
@@ -39,7 +39,7 @@ public class JobHelper {
      * @return {@link Date}
      * @throws Exception 例外
      */
-    public static Date generateNextValidTime(MonitorJob jobInfo, Date fromTime) throws Exception {
+    public static Date generateNextValidTime(SysJob jobInfo, Date fromTime) throws Exception {
         SchedulerTypeEnum scheduleTypeEnum = SchedulerTypeEnum.match(jobInfo.getJobScheduleType(), null);
         if (SchedulerTypeEnum.CRON == scheduleTypeEnum) {
             return new CronExpression(jobInfo.getJobScheduleTime()).getNextValidTimeAfter(fromTime);

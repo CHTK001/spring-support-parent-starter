@@ -1,8 +1,8 @@
 package com.chua.starter.job.support.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.chua.starter.job.support.entity.MonitorJob;
-import com.chua.starter.job.support.mapper.MonitorJobMapper;
+import com.chua.starter.job.support.entity.SysJob;
+import com.chua.starter.job.support.mapper.SysJobMapper;
 import com.chua.starter.job.support.scheduler.LocalJobTrigger;
 import com.chua.starter.job.support.scheduler.TriggerTypeEnum;
 import com.chua.starter.job.support.service.JobDynamicConfigService;
@@ -25,7 +25,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JobDynamicConfigServiceImpl implements JobDynamicConfigService {
 
-    private final MonitorJobMapper monitorJobMapper;
+    private final SysJobMapper sysJobMapper;
 
     /**
      * 任务状态：停止
@@ -43,7 +43,7 @@ public class JobDynamicConfigServiceImpl implements JobDynamicConfigService {
                                         String param, String desc, boolean autoStart) {
         log.info("注册或更新任务: jobName={}, cron={}, bean={}", jobName, cronExpr, beanName);
 
-        MonitorJob existingJob = getJobByName(jobName);
+        SysJob existingJob = getJobByName(jobName);
         if (existingJob != null) {
             // 更新现有任务
             existingJob.setJobScheduleTime(cronExpr);
@@ -53,13 +53,13 @@ public class JobDynamicConfigServiceImpl implements JobDynamicConfigService {
             if (autoStart && existingJob.getJobTriggerStatus() != STATUS_RUNNING) {
                 existingJob.setJobTriggerStatus(STATUS_RUNNING);
             }
-            monitorJobMapper.updateById(existingJob);
+            sysJobMapper.updateById(existingJob);
             log.info("任务更新成功: jobId={}, jobName={}", existingJob.getJobId(), jobName);
             return existingJob.getJobId();
         }
 
         // 创建新任务
-        MonitorJob job = new MonitorJob();
+        SysJob job = new SysJob();
         job.setJobName(jobName);
         job.setJobScheduleType("cron");
         job.setJobScheduleTime(cronExpr);
@@ -73,14 +73,14 @@ public class JobDynamicConfigServiceImpl implements JobDynamicConfigService {
         job.setJobExecuteTimeout(0);
         job.setJobExecuteMisfireStrategy("DO_NOTHING");
 
-        monitorJobMapper.insert(job);
+        sysJobMapper.insert(job);
         log.info("任务创建成功: jobId={}, jobName={}", job.getJobId(), jobName);
         return job.getJobId();
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Integer createJob(MonitorJob job) {
+    public Integer createJob(SysJob job) {
         log.info("创建任务: jobName={}", job.getJobName());
         
         // 设置默认值
@@ -106,16 +106,16 @@ public class JobDynamicConfigServiceImpl implements JobDynamicConfigService {
             job.setJobExecuteMisfireStrategy("DO_NOTHING");
         }
 
-        monitorJobMapper.insert(job);
+        sysJobMapper.insert(job);
         log.info("任务创建成功: jobId={}", job.getJobId());
         return job.getJobId();
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean updateJob(MonitorJob job) {
+    public boolean updateJob(SysJob job) {
         log.info("更新任务: jobId={}", job.getJobId());
-        return monitorJobMapper.updateById(job) > 0;
+        return sysJobMapper.updateById(job) > 0;
     }
 
     @Override
@@ -124,14 +124,14 @@ public class JobDynamicConfigServiceImpl implements JobDynamicConfigService {
         log.info("删除任务: jobId={}", jobId);
         // 先停止任务
         stopJob(jobId);
-        return monitorJobMapper.deleteById(jobId) > 0;
+        return sysJobMapper.deleteById(jobId) > 0;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteJobByName(String jobName) {
         log.info("根据名称删除任务: jobName={}", jobName);
-        MonitorJob job = getJobByName(jobName);
+        SysJob job = getJobByName(jobName);
         if (job == null) {
             return false;
         }
@@ -142,7 +142,7 @@ public class JobDynamicConfigServiceImpl implements JobDynamicConfigService {
     @Transactional(rollbackFor = Exception.class)
     public boolean startJob(Integer jobId) {
         log.info("启动任务: jobId={}", jobId);
-        MonitorJob job = monitorJobMapper.selectById(jobId);
+        SysJob job = sysJobMapper.selectById(jobId);
         if (job == null) {
             log.warn("任务不存在: jobId={}", jobId);
             return false;
@@ -153,14 +153,14 @@ public class JobDynamicConfigServiceImpl implements JobDynamicConfigService {
         long nextTriggerTime = calculateNextTriggerTime(job.getJobScheduleType(), job.getJobScheduleTime());
         job.setJobTriggerNextTime(nextTriggerTime);
         
-        return monitorJobMapper.updateById(job) > 0;
+        return sysJobMapper.updateById(job) > 0;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean stopJob(Integer jobId) {
         log.info("停止任务: jobId={}", jobId);
-        MonitorJob job = monitorJobMapper.selectById(jobId);
+        SysJob job = sysJobMapper.selectById(jobId);
         if (job == null) {
             log.warn("任务不存在: jobId={}", jobId);
             return false;
@@ -170,36 +170,36 @@ public class JobDynamicConfigServiceImpl implements JobDynamicConfigService {
         job.setJobTriggerLastTime(0L);
         job.setJobTriggerNextTime(0L);
         
-        return monitorJobMapper.updateById(job) > 0;
+        return sysJobMapper.updateById(job) > 0;
     }
 
     @Override
-    public MonitorJob getJobByName(String jobName) {
-        return monitorJobMapper.selectOne(Wrappers.<MonitorJob>lambdaQuery()
-                .eq(MonitorJob::getJobName, jobName)
+    public SysJob getJobByName(String jobName) {
+        return sysJobMapper.selectOne(Wrappers.<SysJob>lambdaQuery()
+                .eq(SysJob::getJobName, jobName)
                 .last("LIMIT 1"));
     }
 
     @Override
-    public MonitorJob getJobById(Integer jobId) {
-        return monitorJobMapper.selectById(jobId);
+    public SysJob getJobById(Integer jobId) {
+        return sysJobMapper.selectById(jobId);
     }
 
     @Override
-    public List<MonitorJob> getAllJobs() {
-        return monitorJobMapper.selectList(null);
+    public List<SysJob> getAllJobs() {
+        return sysJobMapper.selectList(null);
     }
 
     @Override
-    public List<MonitorJob> getJobsByBeanName(String beanName) {
-        return monitorJobMapper.selectList(Wrappers.<MonitorJob>lambdaQuery()
-                .eq(MonitorJob::getJobExecuteBean, beanName));
+    public List<SysJob> getJobsByBeanName(String beanName) {
+        return sysJobMapper.selectList(Wrappers.<SysJob>lambdaQuery()
+                .eq(SysJob::getJobExecuteBean, beanName));
     }
 
     @Override
     public boolean triggerJob(Integer jobId, String param) {
         log.info("手动触发任务: jobId={}, param={}", jobId, param);
-        MonitorJob job = monitorJobMapper.selectById(jobId);
+        SysJob job = sysJobMapper.selectById(jobId);
         if (job == null) {
             log.warn("任务不存在: jobId={}", jobId);
             return false;
@@ -222,7 +222,7 @@ public class JobDynamicConfigServiceImpl implements JobDynamicConfigService {
     @Transactional(rollbackFor = Exception.class)
     public boolean updateJobCron(Integer jobId, String cronExpr) {
         log.info("更新任务Cron: jobId={}, cron={}", jobId, cronExpr);
-        MonitorJob job = monitorJobMapper.selectById(jobId);
+        SysJob job = sysJobMapper.selectById(jobId);
         if (job == null) {
             return false;
         }
@@ -234,20 +234,20 @@ public class JobDynamicConfigServiceImpl implements JobDynamicConfigService {
             job.setJobTriggerNextTime(nextTriggerTime);
         }
         
-        return monitorJobMapper.updateById(job) > 0;
+        return sysJobMapper.updateById(job) > 0;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateJobParam(Integer jobId, String param) {
         log.info("更新任务参数: jobId={}, param={}", jobId, param);
-        MonitorJob job = monitorJobMapper.selectById(jobId);
+        SysJob job = sysJobMapper.selectById(jobId);
         if (job == null) {
             return false;
         }
         
         job.setJobExecuteParam(param);
-        return monitorJobMapper.updateById(job) > 0;
+        return sysJobMapper.updateById(job) > 0;
     }
 
     /**

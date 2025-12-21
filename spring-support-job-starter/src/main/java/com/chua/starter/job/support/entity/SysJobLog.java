@@ -16,7 +16,7 @@ import java.util.Date;
 /**
  * 任务执行日志实体
  * <p>
- * 对应数据库表 monitor_job_log，记录每次任务执行的信息。
+ * 对应数据库表 sys_job_log，记录每次任务执行的信息。
  * 包括触发时间、执行状态、耗时、执行结果等。
  * </p>
  *
@@ -30,12 +30,12 @@ import java.util.Date;
  * @author CH
  * @version 1.0.0
  * @since 2024/03/08
- * @see MonitorJob
- * @see MonitorJobLogDetail
+ * @see SysJob
+ * @see SysJobLogDetail
  */
 @Data
-@TableName(value = "monitor_job_log")
-public class MonitorJobLog implements Serializable {
+@TableName(value = "sys_job_log")
+public class SysJobLog implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
