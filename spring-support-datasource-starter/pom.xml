@@ -73,6 +73,61 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-jdbc</artifactId>
         </dependency>
+
+        <!-- ========== 数据源连接池依赖 (optional) ========== -->
+        
+        <!-- Druid连接池 - 阿里巴巴高性能数据库连接池 -->
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>druid-spring-boot-3-starter</artifactId>
+            <version>1.2.21</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- HikariCP连接池 - Spring Boot默认连接池 -->
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Apache DBCP2连接池 -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-dbcp2</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Tomcat JDBC连接池 -->
+        <dependency>
+            <groupId>org.apache.tomcat</groupId>
+            <artifactId>tomcat-jdbc</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- C3P0连接池 -->
+        <dependency>
+            <groupId>com.mchange</groupId>
+            <artifactId>c3p0</artifactId>
+            <version>0.9.5.5</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- ========== 分库分表和数据源合并依赖 (optional) ========== -->
+        
+        <!-- ShardingSphere 5.x 分库分表 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-shardingv5-starter</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Calcite数据源合并 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-calcite-starter</artifactId>
+            <optional>true</optional>
+        </dependency>
     </dependencies>
 
 </project>
