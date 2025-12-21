@@ -20,8 +20,8 @@ import java.time.LocalDateTime;
  * @since 2024/12/19
  */
 @Data
-@TableName(value = "monitor_job_log_detail")
-public class MonitorJobLogDetail implements Serializable {
+@TableName(value = "sys_job_log_detail")
+public class SysJobLogDetail implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;

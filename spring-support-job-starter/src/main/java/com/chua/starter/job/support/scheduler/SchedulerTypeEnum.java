@@ -19,7 +19,7 @@ import lombok.Getter;
  * @author CH
  * @version 1.0.0
  * @since 2024/03/08
- * @see JobHelper#generateNextValidTime(MonitorJob, Date)
+ * @see JobHelper#generateNextValidTime(SysJob, Date)
  * @see CoreTriggerHandler
  */
 @AllArgsConstructor
