@@ -4,22 +4,17 @@ import com.chua.common.support.lang.process.ProgressBar;
 import com.chua.common.support.lang.process.ProgressBarBuilder;
 import com.chua.common.support.lang.process.ProgressBarStyle;
 import com.chua.common.support.lang.version.Version;
-import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.common.support.utils.ObjectUtils;
-import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.datasource.properties.DataSourceScriptProperties;
 import com.chua.starter.datasource.support.DatabaseFileProvider;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.EncodedResource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.init.DataSourceInitializer;
-import org.springframework.jdbc.datasource.init.DatabasePopulator;
-import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.util.DigestUtils;
 
 import javax.sql.DataSource;
@@ -37,29 +32,46 @@ import java.util.stream.Collectors;
 
 /**
  * 数据源脚本配置类
+ * <p>
+ * 实现 BeanPostProcessor 接口，在 DataSource 初始化完成后立即执行数据库脚本，
+ * 确保脚本在其他依赖数据库的 Bean（如 EntityManagerFactory、SqlSessionFactory）之前执行。
+ * </p>
  *
  * @author CH
  * @since 2025/9/3 9:07
  */
 @Slf4j
-public class DataSourceScriptConfiguration {
+public class DataSourceScriptConfiguration implements BeanPostProcessor {
+
+    private final DataSourceScriptProperties dataSourceScriptProperties;
 
     /**
-     * 数据源初始化器配置
-     *
-     * @param ds                         数据源对象，用于执行初始化脚本
-     *                                   示例：可通过 {@code @Autowired} 注入一个 HikariDataSource 实例
-     * @param dataSourceScriptProperties 数据源脚本配置属性，包含脚本执行相关配置
-     *                                   示例：{@code plugin.datasource.script.enable=true}
-     * @return 数据源初始化器，用于在应用启动时执行数据库初始化脚本
+     * 已处理的 DataSource Bean 名称集合，避免重复执行
      */
-    @Bean
-    public DataSourceInitializer dataSourceInitializer(DataSource ds, @Autowired(required = false) DataSourceScriptProperties dataSourceScriptProperties) {
-        DataSourceInitializer initializer = new DataSourceInitializer();
-        initializer.setEnabled(dataSourceScriptProperties.isEnable());
-        initializer.setDataSource(ds);
-        initializer.setDatabasePopulator(new FlywayLikePopulator(ds, dataSourceScriptProperties));
-        return initializer;
+    private final Set<String> processedDataSources = Collections.synchronizedSet(new HashSet<>());
+
+    public DataSourceScriptConfiguration(DataSourceScriptProperties dataSourceScriptProperties) {
+        this.dataSourceScriptProperties = dataSourceScriptProperties;
+    }
+
+    @Override
+    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+        if (bean instanceof DataSource ds && dataSourceScriptProperties.isEnable()) {
+            // 避免重复处理同一个 DataSource
+            if (processedDataSources.add(beanName)) {
+                try {
+                    log.info("检测到 DataSource [{}] 初始化完成，开始执行数据库脚本...", beanName);
+                    FlywayLikePopulator populator = new FlywayLikePopulator(ds, dataSourceScriptProperties);
+                    try (Connection connection = ds.getConnection()) {
+                        populator.populate(connection);
+                    }
+                    log.info("DataSource [{}] 数据库脚本执行完成", beanName);
+                } catch (SQLException e) {
+                    throw new RuntimeException("执行数据库脚本失败: " + beanName, e);
+                }
+            }
+        }
+        return bean;
     }
 
     /**
@@ -100,7 +112,7 @@ public class DataSourceScriptConfiguration {
      * @version 1.2.0
      * @since 2025/9/3 9:07
      */
-    static class FlywayLikePopulator implements DatabasePopulator {
+    static class FlywayLikePopulator {
 
         private final DataSource ds;
         private final JdbcTemplate jdbc;
@@ -118,7 +130,12 @@ public class DataSourceScriptConfiguration {
             this.dataSourceScriptProperties = dataSourceScriptProperties;
         }
 
-        @Override
+        /**
+         * 执行数据库脚本迁移
+         *
+         * @param connection 数据库连接
+         * @throws SQLException SQL异常
+         */
         public void populate(Connection connection) throws SQLException {
             try {
                 // 1. 创建版本记录表（兼容多种数据库）
@@ -576,6 +593,9 @@ public class DataSourceScriptConfiguration {
                 String script = new String(resource.getResource().getInputStream().readAllBytes(),
                         ObjectUtils.defaultIfNull(resource.getCharset(), StandardCharsets.UTF_8));
                 
+                // 先移除多行注释 /* ... */（避免注释中的分号干扰分割）
+                script = removeBlockComments(script);
+                
                 // 分割SQL语句
                 String separator = dataSourceScriptProperties.getSeparator();
                 String[] statements = script.split(separator);
@@ -584,7 +604,8 @@ public class DataSourceScriptConfiguration {
                 List<String> validStatements = new ArrayList<>();
                 for (String sql : statements) {
                     String trimmed = sql.trim();
-                    if (!trimmed.isEmpty() && !trimmed.startsWith("--") && !trimmed.startsWith("/*")) {
+                    // 跳过空语句和单行注释
+                    if (!trimmed.isEmpty() && !trimmed.startsWith("--")) {
                         validStatements.add(trimmed);
                     }
                 }
@@ -640,6 +661,38 @@ public class DataSourceScriptConfiguration {
         }
 
         /* ---------- 工具方法 ---------- */
+
+        /**
+         * 移除SQL脚本中的多行注释
+         * <p>
+         * 避免注释中的分号干扰SQL语句分割
+         * </p>
+         *
+         * @param script SQL脚本内容
+         * @return 移除多行注释后的脚本
+         */
+        private String removeBlockComments(String script) {
+            StringBuilder result = new StringBuilder();
+            int i = 0;
+            while (i < script.length()) {
+                // 检查是否是多行注释开始
+                if (i < script.length() - 1 && script.charAt(i) == '/' && script.charAt(i + 1) == '*') {
+                    // 跳过整个注释块
+                    i += 2;
+                    while (i < script.length() - 1) {
+                        if (script.charAt(i) == '*' && script.charAt(i + 1) == '/') {
+                            i += 2;
+                            break;
+                        }
+                        i++;
+                    }
+                } else {
+                    result.append(script.charAt(i));
+                    i++;
+                }
+            }
+            return result.toString();
+        }
 
         /**
          * 创建版本记录表
