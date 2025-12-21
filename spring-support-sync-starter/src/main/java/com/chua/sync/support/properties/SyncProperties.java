@@ -137,7 +137,7 @@ public class SyncProperties {
         /**
          * 是否启用
          */
-        private boolean enable = false;
+        private boolean enable = true;
 
         /**
          * 描述
