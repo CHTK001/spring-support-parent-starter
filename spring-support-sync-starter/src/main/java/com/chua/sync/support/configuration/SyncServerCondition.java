@@ -19,7 +19,7 @@ public class SyncServerCondition implements Condition {
     @Override
     public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
         // 获取 type 配置，默认为 client
-        String type = context.getEnvironment().getProperty("plugin.sync.type", "client");
+        String type = context.getEnvironment().getProperty("plugin.sync.type", "server");
         // 获取 server.enable 配置，默认为 false
         Boolean serverEnable = context.getEnvironment().getProperty("plugin.sync.server.enable", Boolean.class, false);
         
