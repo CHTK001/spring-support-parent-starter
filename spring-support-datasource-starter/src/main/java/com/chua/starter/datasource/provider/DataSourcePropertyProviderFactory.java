@@ -1,6 +1,7 @@
 package com.chua.starter.datasource.provider;
 
 import com.chua.starter.datasource.util.ClassUtils;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.sql.DataSource;
 import java.util.*;
@@ -8,40 +9,55 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 数据源属性提供者工厂
- * 使用SPI机制加载和管理数据源属性提供者
+ * 使用Java SPI机制加载和管理数据源属性提供者
  *
  * @author CH
  * @since 2024/12/21
  */
+@Slf4j
 public class DataSourcePropertyProviderFactory {
 
     private static final Map<Class<?>, DataSourcePropertyProvider<?>> PROVIDER_CACHE = new ConcurrentHashMap<>();
     private static final List<DataSourcePropertyProvider<?>> PROVIDERS = new ArrayList<>();
 
     static {
-        // 静态初始化，加载默认的provider
-        loadDefaultProviders();
+        // 使用SPI机制加载Provider
+        loadProvidersBySpi();
     }
 
-    private static void loadDefaultProviders() {
-        // 尝试加载Druid Provider
-        if (ClassUtils.forName("com.alibaba.druid.pool.DruidDataSource") != null) {
+    /**
+     * 使用Java SPI机制加载Provider
+     */
+    private static void loadProvidersBySpi() {
+        ServiceLoader<DataSourcePropertyProvider> serviceLoader = ServiceLoader.load(DataSourcePropertyProvider.class);
+        for (DataSourcePropertyProvider<?> provider : serviceLoader) {
             try {
-                PROVIDERS.add(new DruidDataSourcePropertyProvider());
-            } catch (NoClassDefFoundError ignored) {
+                // 检查数据源类是否存在
+                if (isDataSourceClassAvailable(provider)) {
+                    PROVIDERS.add(provider);
+                    log.debug("加载数据源Provider: {}", provider.getClass().getName());
+                }
+            } catch (NoClassDefFoundError | Exception e) {
+                log.debug("跳过不可用的Provider: {}", provider.getClass().getName());
             }
         }
-
-        // 尝试加载Hikari Provider
-        if (ClassUtils.forName("com.zaxxer.hikari.HikariDataSource") != null) {
-            try {
-                PROVIDERS.add(new HikariDataSourcePropertyProvider());
-            } catch (NoClassDefFoundError ignored) {
-            }
-        }
-
+        
         // 按优先级排序
         PROVIDERS.sort(Comparator.comparingInt(DataSourcePropertyProvider::getOrder));
+        
+        log.info("已加载{}个数据源Provider", PROVIDERS.size());
+    }
+    
+    /**
+     * 检查Provider对应的数据源类是否可用
+     */
+    private static boolean isDataSourceClassAvailable(DataSourcePropertyProvider<?> provider) {
+        try {
+            Class<?> dataSourceType = provider.getDataSourceType();
+            return dataSourceType != null && ClassUtils.forName(dataSourceType.getName()) != null;
+        } catch (NoClassDefFoundError | Exception e) {
+            return false;
+        }
     }
 
     /**

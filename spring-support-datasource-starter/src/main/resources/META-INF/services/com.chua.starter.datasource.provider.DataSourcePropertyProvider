@@ -1,0 +1,11 @@
+# DataSource Property Providers
+# Druid (order=0, highest priority)
+com.chua.starter.datasource.provider.DruidDataSourcePropertyProvider
+# HikariCP (order=10)
+com.chua.starter.datasource.provider.HikariDataSourcePropertyProvider
+# Apache DBCP2 (order=20)
+com.chua.starter.datasource.provider.Dbcp2DataSourcePropertyProvider
+# Tomcat JDBC (order=30)
+com.chua.starter.datasource.provider.TomcatDataSourcePropertyProvider
+# C3P0 (order=40)
+com.chua.starter.datasource.provider.C3p0DataSourcePropertyProvider
