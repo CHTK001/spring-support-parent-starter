@@ -41,9 +41,9 @@ public class JobProperties {
 
     /**
      * 是否启用Job调度模块
-     * <p>默认: true</p>
+     * <p>默认: false</p>
      */
-    private boolean enable = true;
+    private boolean enable = false;
 
     /**
      * 调度线程池核心大小

@@ -12,9 +12,9 @@ ssh:
       password: true
       # 启用公钥认证
       public-key: false
-    # 用户配置
-    user: admin
-    password: admin123
+    # 用户配置 - 请修改为您自己的凭据
+    user: your_username
+    password: your_password
     # 会话配置
     session:
       # 会话超时时间（秒）

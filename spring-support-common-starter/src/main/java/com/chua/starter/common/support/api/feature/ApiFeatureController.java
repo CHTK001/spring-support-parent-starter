@@ -29,7 +29,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 @Api(tags = "功能开关管理")
 @ApiInternal(description = "功能开关管理内部接口")
-@ConditionalOnProperty(name = "plugin.api.feature.enable", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "plugin.api.feature.enable", havingValue = "true", matchIfMissing = false)
 public class ApiFeatureController {
 
     private final ApiFeatureManager featureManager;

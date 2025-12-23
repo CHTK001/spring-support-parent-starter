@@ -55,7 +55,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 @EnableConfigurationProperties(JobProperties.class)
 @MapperScan("com.chua.starter.job.support.mapper")
 @ComponentScan("com.chua.starter.job.support.log")
-@ConditionalOnProperty(prefix = JobProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = JobProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = false)
 public class JobConfiguration {
 
     /**
