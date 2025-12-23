@@ -43,7 +43,7 @@ Spring Support OAuth Client Starter 是一个功能强大的 OAuth 客户端模�
 <dependency>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-oauth-client-starter</artifactId>
-    <version>4.0.0.34</version>
+    <version>4.0.0.35</version>
 </dependency>
 ```
 

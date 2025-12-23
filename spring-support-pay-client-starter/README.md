@@ -25,7 +25,7 @@
 <dependency>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-pay-client-starter</artifactId>
-    <version>4.0.0.34</version>
+    <version>4.0.0.35</version>
 </dependency>
 ```
 
