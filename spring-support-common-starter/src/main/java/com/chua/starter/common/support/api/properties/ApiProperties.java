@@ -102,7 +102,7 @@ public class ApiProperties {
         /**
          * 是否开启版本控制
          */
-        private boolean enable = false;
+        private boolean enable = true;
     }
 
     /**
@@ -148,7 +148,7 @@ public class ApiProperties {
         /**
          * 是否开启平台标识
          */
-        private boolean enable = false;
+        private boolean enable = true;
 
         /**
          * 平台类型（枚举，优先级高于 aliasName）
@@ -265,7 +265,7 @@ public class ApiProperties {
         /**
          * 是否开启 Mock 功能
          */
-        private boolean enable = false;
+        private boolean enable = true;
 
         /**
          * Mock 生效的环境（逗号分隔）
@@ -282,7 +282,7 @@ public class ApiProperties {
         /**
          * 是否开启功能开关
          */
-        private boolean enable = false;
+        private boolean enable = true;
 
         /**
          * 功能开关管理接口路径
@@ -299,7 +299,7 @@ public class ApiProperties {
         /**
          * 是否开启内部接口控制
          */
-        private boolean enable = false;
+        private boolean enable = true;
 
         /**
          * 全局IP白名单（适用于所有内部接口）
@@ -321,7 +321,7 @@ public class ApiProperties {
         /**
          * 是否开启废弃接口提示
          */
-        private boolean enable = false;
+        private boolean enable = true;
 
         /**
          * 是否在响应头中添加废弃警告
@@ -338,7 +338,7 @@ public class ApiProperties {
         /**
          * 是否开启灰度发布功能
          */
-        private boolean enable = false;
+        private boolean enable = true;
 
         /**
          * 灰度标识请求头名称
