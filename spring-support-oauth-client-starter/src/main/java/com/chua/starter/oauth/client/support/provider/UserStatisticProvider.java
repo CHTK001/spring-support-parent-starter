@@ -49,7 +49,7 @@ import static com.chua.starter.common.support.utils.RequestUtils.getIpAddress;
 @RestController
 @RequestMapping("/v1/users")
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "plugin.oauth.temp.open", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "plugin.oauth.temp.open", havingValue = "true", matchIfMissing = false)
 public class UserStatisticProvider {
 
 
