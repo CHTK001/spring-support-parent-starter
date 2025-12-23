@@ -1,17 +1,16 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Spring Support Parent Starter - 浼佷笟绾pring Boot搴旂敤鏀寔妗嗘灦
+    Spring Support Parent Starter - 企业级Spring Boot应用支持框架
 
-    杩欐槸涓€涓熀浜嶴pring Boot 3.x鐨勪紒涓氱骇搴旂敤鏀寔妗嗘灦锛屾彁渚涗簡涓板瘜鐨勫姛鑳芥ā鍧楀拰缁勪欢锛?
-    甯姪寮€鍙戣€呭揩閫熸瀯寤轰紒涓氱骇搴旂敤銆傛鏋跺寘鍚暟鎹簱闆嗘垚銆佺紦瀛樸€佹秷鎭槦鍒椼€佹枃浠跺瓨鍌ㄣ€?
-    璁よ瘉鎺堟潈銆佺洃鎺с€佺涓夋柟鏈嶅姟闆嗘垚绛夊涓柟闈㈢殑鏀寔銆?
+    这是一个基于Spring Boot 3.x的企业级应用支持框架，提供了丰富的功能模块和组件。
+    帮助开发者快速构建企业级应用。
 
-    涓昏鐗规€э細
-    - 鍩轰簬Spring Boot 3.x鍜孞ava 21
-    - 妯″潡鍖栬璁★紝鎸夐渶寮曞叆
-    - 浼佷笟绾у姛鑳界粍浠?
-    - 缁熶竴閰嶇疆绠＄悊
-    - 寮€绠卞嵆鐢ㄧ殑闆嗘垚鏂规
+    主要特性:
+    - 基于Spring Boot 3.x和Java 21
+    - 模块化设计，按需引入
+    - 企业级功能组件
+    - 统一配置管理
+    - 开箱即用的集成方案
 
     @author CH
     @version 4.0.0.35
@@ -21,7 +20,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <!-- 缁ф壙Spring Boot鐖堕」鐩紝鑾峰緱渚濊禆鐗堟湰绠＄悊鍜屾彃浠堕厤缃?-->
+    <!-- 继承Spring Boot父项目 -->
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -29,22 +28,22 @@
         <relativePath/>
     </parent>
 
-    <!-- 椤圭洰鍩烘湰淇℃伅 -->
+    <!-- 项目基本信息 -->
     <groupId>com.chua</groupId>
     <artifactId>spring-support-parent-starter</artifactId>
     <packaging>pom</packaging> <!-- 鐖堕」鐩墦鍖呯被鍨嬩负pom -->
     <version>4.0.0.35</version>
-    <!-- 瀛愭ā鍧楀垪琛?- 鎸夊姛鑳藉垎绫荤粍缁?-->
+    <!-- 子模块列表 -->
     <modules>
         <!-- 鍩虹鍔熻兘妯″潡 -->
         <module>spring-support-datasource-starter</module>      <!-- 鏁版嵁婧愰厤缃拰绠＄悊 -->
-        <module>spring-support-common-starter</module>          <!-- 閫氱敤鍔熻兘鍜屽伐鍏风被 -->
+        <module>spring-support-common-starter</module>          <!-- 通用功能和工具类 -->
         <module>spring-support-mybatis-starter</module>         <!-- MyBatis Plus闆嗘垚 -->
 
-        <!-- 璁よ瘉鍜屽畨鍏ㄦā鍧?-->
+        <!-- 认证和安全模块 -->
         <module>spring-support-oauth-client-starter</module>    <!-- OAuth瀹㈡埛绔璇?-->
 
-        <!-- 缂撳瓨鍜屽瓨鍌ㄦā鍧?-->
+        <!-- 缓存和存储模块 -->
         <module>spring-support-redis-starter</module>           <!-- Redis缂撳瓨闆嗘垚 -->
         <module>spring-support-minio-starter</module>           <!-- MinIO瀵硅薄瀛樺偍 -->
 
@@ -92,29 +91,29 @@
 
     <!-- 椤圭洰灞炴€ч厤缃?-->
     <properties>
-        <!-- Java鐗堟湰閰嶇疆 - 浣跨敤Java 21 LTS鐗堟湰 -->
+        <!-- Java版本配置 - 使用Java 21 LTS版本 -->
         <java.version>21</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
 
-        <!-- Spring Boot鐗堟湰 -->
+        <!-- Spring Boot版本 -->
         <spring-boot.version>3.2.3</spring-boot.version>
 
-        <!-- 椤圭洰鐗堟湰绠＄悊 -->
-        <module.version>4.0.0.35</module.version>        <!-- 褰撳墠椤圭洰妯″潡鐗堟湰 -->
-        <utils.version>4.0.0.33</utils.version>          <!-- 宸ュ叿绫诲簱鐗堟湰 -->
+        <!-- 项目版本管理 -->
+        <module.version>4.0.0.35</module.version>        <!-- 当前项目模块版本 -->
+        <utils.version>4.0.0.33</utils.version>          <!-- 工具类库版本 -->
 
         <!-- 绗笁鏂逛緷璧栫増鏈?-->
-        <lombok.version>1.18.34</lombok.version>              <!-- Lombok鐗堟湰锛屾敮鎸丣ava 21 -->
-        <mybatis-plus.version>3.4.0</mybatis-plus.version>  <!-- MyBatis Plus鐗堟湰 -->
-        <dubbo.version>3.1.1</dubbo.version>                <!-- Dubbo RPC妗嗘灦鐗堟湰 -->
-        <resilience4j.version>2.2.0</resilience4j.version>  <!-- Resilience4j鐔旀柇闄嶇骇妗嗘灦鐗堟湰 -->
+        <lombok.version>1.18.34</lombok.version>              <!-- Lombok版本，支持Java 21 -->
+        <mybatis-plus.version>3.4.0</mybatis-plus.version>  <!-- MyBatis Plus版本 -->
+        <dubbo.version>3.1.1</dubbo.version>                <!-- Dubbo RPC框架版本 -->
+        <resilience4j.version>2.2.0</resilience4j.version>  <!-- Resilience4j熔断降级框架版本 -->
     </properties>
 
     <!-- 鍏叡渚濊禆 - 鎵€鏈夊瓙妯″潡閮戒細缁ф壙杩欎簺渚濊禆 -->
     <dependencies>
-        <!-- Lombok - 绠€鍖朖ava浠ｇ爜缂栧啓锛屾彁渚涙敞瑙ｈ嚜鍔ㄧ敓鎴恎etter/setter绛夋柟娉?-->
+        <!-- Lombok - 简化Java代码编写 -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
@@ -139,13 +138,13 @@
             </exclusions>
         </dependency>
 
-        <!-- Log4j2 日志框架 -->
+        <!-- Log4j2日志框架 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-log4j2</artifactId>
         </dependency>
 
-        <!-- Undertow Web瀹瑰櫒 - 楂樻€ц兘鐨刉eb鏈嶅姟鍣紝鏇夸唬榛樿鐨凾omcat -->
+        <!-- Undertow Web容器 - 高性能的Web服务器 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-undertow</artifactId>
@@ -539,7 +538,7 @@
                 <version>${utils.version}</version>
             </dependency>
 
-            <!-- Logback鏃ュ織妗嗘灦宸ュ叿 -->
+            <!-- Logback日志框架工具 (已禁用) -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <!-- <artifactId>utils-support-log-logback-starter</artifactId> -->
@@ -733,5 +732,3 @@
         </snapshotRepository>
     </distributionManagement>
 </project>
-
-
