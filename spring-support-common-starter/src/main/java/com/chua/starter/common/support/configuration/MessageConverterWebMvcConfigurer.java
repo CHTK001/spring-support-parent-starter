@@ -69,7 +69,9 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     }
     @Override
     public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
-        converters.addFirst(new BinaryHttpMessageConverter(apiResponseEncodeRegister, messageConverters));
+        if (apiResponseEncodeRegister != null) {
+            converters.addFirst(new BinaryHttpMessageConverter(apiResponseEncodeRegister, messageConverters));
+        }
     }
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
@@ -77,7 +79,9 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
 
     @Override
     public void configureContentNegotiation(ContentNegotiationConfigurer configurer) {
-        configurer.strategies(List.of(new ApiContentNegotiationStrategy(apiResponseEncodeRegister)));
+        if (apiResponseEncodeRegister != null) {
+            configurer.strategies(List.of(new ApiContentNegotiationStrategy(apiResponseEncodeRegister)));
+        }
     }
 
 
@@ -181,7 +185,11 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
         this.messageConverters = new LinkedList<>();
-        this.apiResponseEncodeRegister = applicationContext.getBean(ApiResponseEncodeRegister.class);
+        try {
+            this.apiResponseEncodeRegister = applicationContext.getBean(ApiResponseEncodeRegister.class);
+        } catch (BeansException e) {
+            log.debug("[MessageConverter] ApiResponseEncodeRegister not found, encoding disabled");
+        }
         messageConverters.add(new MappingJackson2HttpMessageConverter(applicationContext.getBean(ObjectMapper.class)));
 //        messageConverters.add(new FastJsonHttpMessageConverter());
         messageConverters.add(new StringHttpMessageConverter());

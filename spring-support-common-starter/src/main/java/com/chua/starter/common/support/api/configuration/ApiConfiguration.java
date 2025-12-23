@@ -57,69 +57,67 @@ public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware {
     @ConditionalOnMissingBean
     public RequestMappingHandlerMapping requestMappingInfoHandlerMapping() {
         if (apiProperties.isControlEnabled()) {
-            log.info("╔══════════════════════════════════════════════════════════════════════════════");
-            log.info("║ 【API控制】正在注册...");
-            log.info("╠══════════════════════════════════════════════════════════════════════════════");
+            log.info("[API控制] [注册开始]");
             
             // 版本控制
             ApiProperties.Version version = apiProperties.getVersion();
             if (version != null && version.isEnable()) {
-                log.info("║ @ApiVersion    版本控制: 开启");
+                log.info("[API控制] [@ApiVersion] [版本控制] [开启]");
             } else {
-                log.info("║ @ApiVersion    版本控制: 关闭");
+                log.info("[API控制] [@ApiVersion] [版本控制] [关闭]");
             }
             
             // 平台控制
             ApiProperties.Platform platform = apiProperties.getPlatform();
             if (platform != null && platform.isEnable()) {
-                log.info("║ @ApiPlatform   平台控制: 开启 (平台: {})", platform.getPlatformName());
+                log.info("[API控制] [@ApiPlatform] [平台控制] [开启] [平台: {}]", platform.getPlatformName());
             } else {
-                log.info("║ @ApiPlatform   平台控制: 关闭");
+                log.info("[API控制] [@ApiPlatform] [平台控制] [关闭]");
             }
             
-            log.info("║ @ApiProfile    环境控制: 开启");
+            log.info("[API控制] [@ApiProfile] [环境控制] [开启]");
             
             // 废弃接口控制
             ApiProperties.DeprecatedConfig deprecated = apiProperties.getDeprecated();
             if (deprecated != null && deprecated.isEnable()) {
-                log.info("║ @ApiDeprecated 废弃提示: 开启");
+                log.info("[API控制] [@ApiDeprecated] [废弃提示] [开启]");
             } else {
-                log.info("║ @ApiDeprecated 废弃提示: 关闭");
+                log.info("[API控制] [@ApiDeprecated] [废弃提示] [关闭]");
             }
             
             // 功能开关控制
             ApiProperties.FeatureConfig feature = apiProperties.getFeature();
             if (feature != null && feature.isEnable()) {
-                log.info("║ @ApiFeature    功能开关: 开启");
+                log.info("[API控制] [@ApiFeature] [功能开关] [开启]");
             } else {
-                log.info("║ @ApiFeature    功能开关: 关闭");
+                log.info("[API控制] [@ApiFeature] [功能开关] [关闭]");
             }
             
             // 内部接口控制
             ApiProperties.InternalConfig internal = apiProperties.getInternal();
             if (internal != null && internal.isEnable()) {
-                log.info("║ @ApiInternal   内部接口: 开启");
+                log.info("[API控制] [@ApiInternal] [内部接口] [开启]");
             } else {
-                log.info("║ @ApiInternal   内部接口: 关闭");
+                log.info("[API控制] [@ApiInternal] [内部接口] [关闭]");
             }
             
             // Mock 控制
             ApiProperties.MockConfig mock = apiProperties.getMock();
             if (mock != null && mock.isEnable()) {
-                log.info("║ @ApiMock       Mock模式: 开启 (环境: {})", mock.getProfiles());
+                log.info("[API控制] [@ApiMock] [Mock模式] [开启] [环境: {}]", mock.getProfiles());
             } else {
-                log.info("║ @ApiMock       Mock模式: 关闭");
+                log.info("[API控制] [@ApiMock] [Mock模式] [关闭]");
             }
             
             // 灰度发布控制
             ApiProperties.GrayConfig gray = apiProperties.getGray();
             if (gray != null && gray.isEnable()) {
-                log.info("║ @ApiGray       灰度发布: 开启");
+                log.info("[API控制] [@ApiGray] [灰度发布] [开启]");
             } else {
-                log.info("║ @ApiGray       灰度发布: 关闭");
+                log.info("[API控制] [@ApiGray] [灰度发布] [关闭]");
             }
             
-            log.info("╚══════════════════════════════════════════════════════════════════════════════");
+            log.info("[API控制] [注册完成]");
             return new ApiVersionRequestMappingHandlerMapping(apiProperties, environment);
         }
         log.debug("[API控制] 未开启版本/平台控制，使用默认 RequestMappingHandlerMapping");
@@ -149,7 +147,7 @@ public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware {
      */
     @Bean("apiResponseEncodeRegister")
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(name = "plugin.api.encode.enable", havingValue = "true", matchIfMissing = false)
+    @ConditionalOnProperty(name = "plugin.api.encode.enable", havingValue = "true", matchIfMissing = true)
     public ApiResponseEncodeRegister apiResponseEncodeRegister() {
         return new ApiResponseEncodeRegister(apiProperties.getEncode());
     }
@@ -177,7 +175,7 @@ public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware {
      */
     @Bean("apiRequestDecodeRegister")
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(name = "plugin.api.decode.enable", havingValue = "true")
+    @ConditionalOnProperty(name = "plugin.api.decode.enable", havingValue = "true", matchIfMissing = true)
     public ApiRequestDecodeRegister apiRequestDecodeRegister() {
         return new ApiRequestDecodeRegister(apiProperties.getDecode());
     }

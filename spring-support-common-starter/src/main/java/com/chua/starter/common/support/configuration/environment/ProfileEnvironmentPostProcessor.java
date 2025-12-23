@@ -8,6 +8,7 @@ import org.springframework.boot.env.PropertiesPropertySourceLoader;
 import org.springframework.boot.env.YamlPropertySourceLoader;
 import org.springframework.core.Ordered;
 import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.boot.origin.OriginTrackedValue;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.MutablePropertySources;
 import org.springframework.core.env.PropertySource;
@@ -229,7 +230,8 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
             if (source.getSource() instanceof Map) {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> sourceMap = (Map<String, Object>) source.getSource();
-                result.putAll(sourceMap);
+                // 解包 OriginTrackedValue
+                sourceMap.forEach((key, value) -> result.put(key, unwrapValue(value)));
             }
         }
         return result;
@@ -256,6 +258,19 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
                 target.put(key, newValue);
             }
         }
+    }
+
+    /**
+     * 解包 OriginTrackedValue
+     *
+     * @param value 原始值
+     * @return 解包后的值
+     */
+    private Object unwrapValue(Object value) {
+        if (value instanceof OriginTrackedValue) {
+            return ((OriginTrackedValue) value).getValue();
+        }
+        return value;
     }
 
     /**
