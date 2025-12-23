@@ -36,7 +36,7 @@ import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE
 @RestController
 @Slf4j
 @RequestMapping("/v1/option")
-@ConditionalOnProperty(prefix = OptionalProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = OptionalProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = false)
 @RequiredArgsConstructor
 @Tag(name = "选项")
 public class OptionalProvider {

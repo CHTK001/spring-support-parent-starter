@@ -57,7 +57,7 @@ public class LogConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean(name = "parameterLogFilterRegistration")
-    @ConditionalOnProperty(name = "plugin.log.enable", havingValue = "true", matchIfMissing = true)
+    @ConditionalOnProperty(name = "plugin.log.enable", havingValue = "true", matchIfMissing = false)
     public FilterRegistrationBean<ParameterLogFilter> parameterLogFilterRegistration(ApplicationContext applicationContext) {
         log.info(">>>>>>> 注册参数日志过滤器 [plugin.log.enable=true]");
         

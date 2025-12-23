@@ -32,7 +32,7 @@ import java.util.Map;
 @Slf4j
 @Configuration
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "plugin.api.feature.enable", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "plugin.api.feature.enable", havingValue = "true", matchIfMissing = false)
 public class ApiFeatureConfiguration implements WebMvcConfigurer {
 
     private final ApiProperties apiProperties;

@@ -26,7 +26,7 @@ import java.util.Set;
 @Slf4j
 @Configuration
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = ReportProperties.PRE + ".url-qps", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = ReportProperties.PRE + ".url-qps", name = "enabled", havingValue = "true", matchIfMissing = false)
 public class UrlQpsConfiguration implements WebMvcConfigurer {
 
     private final ReportProperties reportProperties;

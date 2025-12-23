@@ -18,7 +18,7 @@ import org.springframework.core.env.Environment;
  */
 @Configuration
 @EnableConfigurationProperties({ArthasClientProperties.class})
-@ConditionalOnProperty(prefix = ArthasClientProperties.PREFIX, name = "enable", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = ArthasClientProperties.PREFIX, name = "enable", havingValue = "true", matchIfMissing = false)
 public class ArthasReportClientAutoConfiguration {
 
     @Bean

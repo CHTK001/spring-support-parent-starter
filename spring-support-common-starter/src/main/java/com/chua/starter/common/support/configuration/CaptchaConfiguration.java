@@ -27,7 +27,7 @@ public class CaptchaConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = CaptchaProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = true)
+    @ConditionalOnProperty(prefix = CaptchaProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = false)
     public CaptchaProvider captchaProvider() {
         log.info(">>>>>>> 开启检验码接口");
         return new CaptchaProvider();
@@ -35,7 +35,7 @@ public class CaptchaConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = OptionalProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = true)
+    @ConditionalOnProperty(prefix = OptionalProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = false)
     public OptionalProvider optionalProvider(ApiProperties apiProperties) {
         log.info(">>>>>>> 开启SPI选项接口");
         return new OptionalProvider(apiProperties);

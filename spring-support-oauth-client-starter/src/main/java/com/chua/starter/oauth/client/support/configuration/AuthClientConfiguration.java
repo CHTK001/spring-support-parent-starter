@@ -107,7 +107,7 @@ public class AuthClientConfiguration
      * @return 用户统计提供者实例
      */
     @Bean
-    @ConditionalOnProperty(name = "plugin.oauth.temp.open", havingValue = "true", matchIfMissing = true)
+    @ConditionalOnProperty(name = "plugin.oauth.temp.open", havingValue = "true", matchIfMissing = false)
     public UserStatisticProvider tempProvider() {
         return new UserStatisticProvider();
     }

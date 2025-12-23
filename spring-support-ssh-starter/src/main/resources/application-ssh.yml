@@ -13,9 +13,9 @@ ssh:
       password: true
       # 启用公钥认证
       public-key: false
-      # 默认用户配置
-      username: admin
-      user-password: admin123
+      # 默认用户配置 - 请修改为您自己的凭据
+      username: your_username
+      user-password: your_password
       # 公钥文件路径（可选）
       public-key-file: ~/.ssh/id_rsa.pub
       # 私钥文件路径（可选）

@@ -38,7 +38,7 @@ import java.util.Base64;
 @Tag(name = "校验码")
 @Ignore
 @RequestMapping("${plugin.captcha.context-path:/v1/}")
-@ConditionalOnProperty(prefix = CaptchaProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = CaptchaProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = false)
 public class CaptchaProvider {
 
     @Autowired

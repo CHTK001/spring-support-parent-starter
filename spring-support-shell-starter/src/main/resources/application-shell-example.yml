@@ -16,8 +16,8 @@ ssh:
       # 启用公钥认证（可选）
       public-key: false
     # 默认用户配置（生产环境请修改）
-    user: admin
-    password: admin123
+    user: your_username
+    password: your_password
     # 会话配置
     session:
       # 会话超时时间（秒）

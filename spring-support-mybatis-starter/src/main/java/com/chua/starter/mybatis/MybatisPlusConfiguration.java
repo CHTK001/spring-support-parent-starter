@@ -181,7 +181,7 @@ public class MybatisPlusConfiguration {
      */
     @Bean("mapper-reload")
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = MybatisPlusProperties.PRE, name = "open-xml-reload", havingValue = "true", matchIfMissing = true)
+    @ConditionalOnProperty(prefix = MybatisPlusProperties.PRE, name = "open-xml-reload", havingValue = "true", matchIfMissing = false)
     public Reload xmlReload(List<SqlSessionFactory> sqlSessionFactory, MybatisPlusProperties mybatisProperties) {
         return new MapperReload(sqlSessionFactory, mybatisProperties);
     }

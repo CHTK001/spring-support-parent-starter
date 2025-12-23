@@ -27,7 +27,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = "plugin.pay", name = "state-machine-persist-type", havingValue = "DATABASE", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "plugin.pay", name = "state-machine-persist-type", havingValue = "DATABASE", matchIfMissing = false)
 public class DatabaseStateMachinePersister implements PayOrderStateMachinePersister {
 
     private final PayMerchantOrderMapper payMerchantOrderMapper;

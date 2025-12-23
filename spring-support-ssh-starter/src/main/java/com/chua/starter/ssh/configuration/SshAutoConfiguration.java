@@ -24,7 +24,7 @@ import org.springframework.context.annotation.Bean;
 @Slf4j
 @AutoConfiguration
 @ConditionalOnClass(name = "org.apache.sshd.server.SshServer")
-@ConditionalOnProperty(prefix = "plugin.ssh.server", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "plugin.ssh.server", name = "enabled", havingValue = "true", matchIfMissing = false)
 @EnableConfigurationProperties(SshServerProperties.class)
 public class SshAutoConfiguration {
 
