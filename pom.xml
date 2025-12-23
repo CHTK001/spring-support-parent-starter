@@ -31,65 +31,62 @@
     <!-- 项目基本信息 -->
     <groupId>com.chua</groupId>
     <artifactId>spring-support-parent-starter</artifactId>
-    <packaging>pom</packaging> <!-- 鐖堕」鐩墦鍖呯被鍨嬩负pom -->
+    <packaging>pom</packaging> 
     <version>4.0.0.35</version>
     <!-- 子模块列表 -->
     <modules>
-        <!-- 鍩虹鍔熻兘妯″潡 -->
-        <module>spring-support-datasource-starter</module>      <!-- 鏁版嵁婧愰厤缃拰绠＄悊 -->
+        <module>spring-support-datasource-starter</module>
         <module>spring-support-common-starter</module>          <!-- 通用功能和工具类 -->
-        <module>spring-support-mybatis-starter</module>         <!-- MyBatis Plus闆嗘垚 -->
+        <module>spring-support-mybatis-starter</module>         <!-- MyBatis Plus集成 -->
 
         <!-- 认证和安全模块 -->
-        <module>spring-support-oauth-client-starter</module>    <!-- OAuth瀹㈡埛绔璇?-->
+        <module>spring-support-oauth-client-starter</module>
 
         <!-- 缓存和存储模块 -->
-        <module>spring-support-redis-starter</module>           <!-- Redis缂撳瓨闆嗘垚 -->
-        <module>spring-support-minio-starter</module>           <!-- MinIO瀵硅薄瀛樺偍 -->
+        <module>spring-support-redis-starter</module>           <!-- Redis缓存集成 -->
+        <module>spring-support-minio-starter</module>           <!-- MinIO对象存储 -->
 
-        <!-- API鏂囨。鍜屾帴鍙ｆā鍧?-->
-        <module>spring-support-swagger-starter</module>         <!-- Swagger API鏂囨。 -->
+        <!-- API文档和接口模块 -->
+        <module>spring-support-swagger-starter</module>         <!-- Swagger API文档 -->
 
-        <!-- 娑堟伅鍜岄€氫俊妯″潡 -->
-        <module>spring-support-email-starter</module>           <!-- 閭欢鍙戦€佹湇鍔?-->
-        <module>spring-support-mqtt-starter</module>            <!-- MQTT娑堟伅闃熷垪 -->
-        <module>spring-support-socket-starter</module>          <!-- Socket鍩虹妯″潡锛圫PI鎶借薄锛?-->
-        <module>spring-support-socketio-starter</module>        <!-- Socket.IO瀹炴椂閫氫俊锛堝疄鐜皊ocket-starter鎺ュ彛锛?-->
-        <module>spring-support-rsocket-starter</module>         <!-- RSocket鍝嶅簲寮忛€氫俊锛堝疄鐜皊ocket-starter鎺ュ彛锛?-->
+        <!-- 消息和通信模块 -->
+        <module>spring-support-email-starter</module>
+        <module>spring-support-mqtt-starter</module>            <!-- MQTT消息队列 -->
+        <module>spring-support-socket-starter</module>
+        <module>spring-support-socketio-starter</module>        <!-- Socket.IO实时通信 -->
+        <module>spring-support-rsocket-starter</module>         <!-- RSocket响应式通信 -->
         <module>spring-support-sse-starter</module>             <!-- Server-Sent Events -->
-        <module>spring-support-rpc-starter</module>             <!-- RPC杩滅▼璋冪敤 -->
-        <module>spring-support-sync-starter</module>            <!-- 鍚屾鍗忚妯″潡锛堝鎴风/鏈嶅姟绔€氫俊锛?-->
+        <module>spring-support-rpc-starter</module>             <!-- RPC远程调用 -->
+        <module>spring-support-sync-starter</module>
 
         <!-- 鎼滅储鍜屾暟鎹鐞嗘ā鍧?-->
-        <module>spring-support-elasticsearch-starter</module>   <!-- Elasticsearch鎼滅储寮曟搸 -->
+        <module>spring-support-elasticsearch-starter</module>   <!-- Elasticsearch搜索引擎 -->
 
-        <!-- 鏈嶅姟鍙戠幇鍜岄厤缃ā鍧?-->
-        <module>spring-support-discovery-starter</module>       <!-- 鏈嶅姟鍙戠幇 -->
+        <module>spring-support-discovery-starter</module>       <!-- 服务发现 -->
         <module>spring-support-configcenter-starter</module>    <!-- 閰嶇疆涓績 -->
 
-        <!-- 鏁版嵁搴撴墿灞曟ā鍧楋紙宸茶縼绉诲埌 spring-api-support-common-tenant-starter锛?-->
+        <!-- 数据库扩展模块 -->
 
-        <!-- 鐩戞帶鍜屾棩蹇楁ā鍧?-->
-        <module>spring-support-report-client-starter</module>   <!-- 璁惧鏁版嵁涓婃姤瀹㈡埛绔?-->
-        <module>spring-support-report-client-arthas-starter</module>   <!-- 涓婃姤瀹㈡埛绔?Arthas 闆嗘垚 -->
-        <module>spring-support-prometheus-starter</module>      <!-- Prometheus鐩戞帶 -->
+        <!-- 监控和日志模块 -->
+        <module>spring-support-report-client-starter</module>
+        <module>spring-support-report-client-arthas-starter</module>   <!-- 上报客户端 Arthas集成 -->
+        <module>spring-support-prometheus-starter</module>      <!-- Prometheus监控 -->
 
-        <!-- 绗笁鏂规湇鍔￠泦鎴愭ā鍧?-->
         <module>spring-support-tencent-starter</module>         <!-- 鑵捐浜戞湇鍔￠泦鎴?-->
-        <module>spring-support-pay-client-starter</module>      <!-- 鏀粯瀹㈡埛绔?-->
+        <module>spring-support-pay-client-starter</module>
 
-        <!-- 瀹归敊鍜岀ǔ瀹氭€фā鍧?-->
-        <module>spring-support-strategy-starter</module>        <!-- 绛栫暐绠＄悊妯″潡锛堥檺娴併€佺啍鏂€侀檷绾х瓑閰嶇疆绠＄悊锛?-->
+        <!-- 容错和稳定性模块 -->
+        <module>spring-support-strategy-starter</module>
 
         <!-- 杩愮淮鍜岀鐞嗘ā鍧?-->
-        <module>spring-support-shell-starter</module>           <!-- SSH Shell绠＄悊妯″潡 -->
+        <module>spring-support-shell-starter</module>           <!-- SSH Shell管理模块 -->
         <module>spring-support-ssh-starter</module>
 
-        <!-- 瀹氭椂浠诲姟妯″潡 -->
-        <module>spring-support-job-starter</module>             <!-- 瀹氭椂浠诲姟璋冨害妯″潡 -->
+        <!-- 定时任务模块 -->
+        <module>spring-support-job-starter</module>             <!-- 定时任务调度模块 -->
     </modules>
 
-    <!-- 椤圭洰灞炴€ч厤缃?-->
+    <!-- 项目属性配置 -->
     <properties>
         <!-- Java版本配置 - 使用Java 21 LTS版本 -->
         <java.version>21</java.version>
@@ -104,28 +101,25 @@
         <module.version>4.0.0.35</module.version>        <!-- 当前项目模块版本 -->
         <utils.version>4.0.0.33</utils.version>          <!-- 工具类库版本 -->
 
-        <!-- 绗笁鏂逛緷璧栫増鏈?-->
         <lombok.version>1.18.34</lombok.version>              <!-- Lombok版本，支持Java 21 -->
         <mybatis-plus.version>3.4.0</mybatis-plus.version>  <!-- MyBatis Plus版本 -->
         <dubbo.version>3.1.1</dubbo.version>                <!-- Dubbo RPC框架版本 -->
         <resilience4j.version>2.2.0</resilience4j.version>  <!-- Resilience4j熔断降级框架版本 -->
     </properties>
 
-    <!-- 鍏叡渚濊禆 - 鎵€鏈夊瓙妯″潡閮戒細缁ф壙杩欎簺渚濊禆 -->
     <dependencies>
         <!-- Lombok - 简化Java代码编写 -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>${lombok.version}</version>
-            <scope>provided</scope> <!-- 缂栬瘧鏃朵緷璧栵紝杩愯鏃朵笉闇€瑕?-->
+            <scope>provided</scope>
         </dependency>
 
         <!-- Spring Boot Web Starter - 鎻愪緵Web搴旂敤鍩虹鍔熻兘 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
-            <!-- 鎺掗櫎榛樿鐨凾omcat瀹瑰櫒锛屼娇鐢║ndertow鏇夸唬 -->
             <exclusions>
                 <exclusion>
                     <groupId>org.springframework.boot</groupId>
@@ -153,19 +147,17 @@
     </dependencies>
 
 
-    <!-- 渚濊禆鐗堟湰绠＄悊 - 缁熶竴绠＄悊鎵€鏈変緷璧栫殑鐗堟湰锛岄伩鍏嶇増鏈啿绐?-->
+    <!-- 依赖版本管理 -->
     <dependencyManagement>
         <dependencies>
-            <!-- ========== Spring Support 妯″潡渚濊禆 ========== -->
+            <!-- Spring Support 模块依赖 -->
 
-            <!-- 鏈嶅姟鍙戠幇妯″潡 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-discovery-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
 
-            <!-- 璁惧鏁版嵁涓婃姤妯″潡 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-report-client-starter</artifactId>
@@ -185,7 +177,6 @@
                 <version>${module.version}</version>
             </dependency>
 
-            <!-- 缁熶竴瀹㈡埛绔拰鏈嶅姟绔ā鍧?-->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-unified-client-starter</artifactId>
@@ -198,7 +189,7 @@
                 <version>${module.version}</version>
             </dependency>
 
-            <!-- 瀹氭椂浠诲姟妯″潡 -->
+            <!-- 定时任务模块 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-job-starter</artifactId>
@@ -231,7 +222,7 @@
                 <artifactId>utils-support-mysql-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
-            <!-- 缃戠粶閫氫俊妗嗘灦 -->
+            <!-- 网络通信框架 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-netty-starter</artifactId>
@@ -242,21 +233,19 @@
                 <artifactId>utils-support-deeplearning-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
-            <!-- 鏁版嵁婧愭敮鎸?-->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-datasource-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
 
-            <!-- Apache Calcite SQL瑙ｆ瀽寮曟搸 -->
+            <!-- Apache Calcite SQL解析引擎 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-calcite-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
 
-            <!-- Nacos閰嶇疆涓績鍜屾湇鍔″彂鐜?-->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-nacos-starter</artifactId>
@@ -270,7 +259,7 @@
                 <version>${utils.version}</version>
             </dependency>
 
-            <!-- Spring妗嗘灦鎵╁睍宸ュ叿 -->
+            <!-- Spring框架扩展工具 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-spring-starter</artifactId>
@@ -291,35 +280,30 @@
                 <version>${utils.version}</version>
             </dependency>
 
-            <!-- Redis缂撳瓨宸ュ叿 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-redis-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
 
-            <!-- HTTP瀹㈡埛绔伐鍏?-->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-httpclient-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
 
-            <!-- JDK 15+鐗规€ф敮鎸?-->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-jdk15on-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
 
-            <!-- Groovy鑴氭湰寮曟搸鏀寔 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-groovy-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
 
-            <!-- Vert.x鍝嶅簲寮忔鏋舵敮鎸?-->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-vertx-starter</artifactId>
@@ -347,74 +331,62 @@
                 <version>${utils.version}</version>
             </dependency>
 
-            <!-- Elasticsearch鎼滅储寮曟搸宸ュ叿 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-elasticsearch-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
 
-            <!-- ========== Spring Support 鏍稿績妯″潡渚濊禆 ========== -->
 
-            <!-- 閫氱敤鍔熻兘妯″潡 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-common-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
 
-            <!-- 鐔旀柇闄嶇骇妯″潡 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-circuit-breaker-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
 
-            <!-- 鏁版嵁婧愰厤缃ā鍧?-->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-datasource-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
 
-            <!-- MyBatis Plus闆嗘垚妯″潡 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-mybatis-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
 
-            <!-- Shell鍛戒护鎵ц妯″潡 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-shell-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
 
-            <!-- Redis缂撳瓨闆嗘垚妯″潡 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-redis-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
 
-            <!-- ========== 娑堟伅鍜岄€氫俊妯″潡 ========== -->
 
-            <!-- MQTT娑堟伅闃熷垪妯″潡 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-mqtt-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
 
-            <!-- 璁㈤槄鍙戝竷妯″紡妯″潡 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-subscribe-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
 
-            <!-- Socket.IO瀹炴椂閫氫俊妯″潡 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-socketio-starter</artifactId>
@@ -427,28 +399,24 @@
                 <version>${module.version}</version>
             </dependency>
 
-            <!-- RSocket鍝嶅簲寮忛€氫俊妯″潡锛堜緷璧杣tils-support-rsocket-starter锛?-->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-rsocket-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
 
-            <!-- Utils Support RSocket妯″潡 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-rsocket-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
 
-            <!-- Server-Sent Events妯″潡 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-sse-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
 
-            <!-- RPC杩滅▼璋冪敤妯″潡 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-rpc-starter</artifactId>
@@ -457,7 +425,6 @@
 
             <!-- ========== 璁よ瘉鍜屽畨鍏ㄦā鍧?========== -->
 
-            <!-- OAuth瀹㈡埛绔璇佹ā鍧?-->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-oauth-client-starter</artifactId>
@@ -471,7 +438,7 @@
                 <version>${module.version}</version>
             </dependency>
 
-            <!-- WebJar闈欐€佽祫婧愭ā鍧?- 宸叉敞閲?
+            <!-- WebJar静态资源模块 - 已注释
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-webjar-starter</artifactId>
@@ -481,7 +448,6 @@
 
             <!-- ========== 瀛樺偍鍜屾枃浠跺鐞嗘ā鍧?========== -->
 
-            <!-- MinIO瀵硅薄瀛樺偍妯″潡 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-minio-starter</artifactId>
@@ -490,41 +456,33 @@
 
             <!-- ========== 鐩戞帶鍜岀鐞嗘ā鍧?========== -->
 
-            <!-- 鐩戞帶瀹㈡埛绔ā鍧?-->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-monitor-client-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
 
-            <!-- ========== 绗笁鏂规湇鍔￠泦鎴愭ā鍧?========== -->
 
-            <!-- 鏀粯瀹㈡埛绔ā鍧?-->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-pay-client-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
 
-            <!-- ========== API鏂囨。妯″潡 ========== -->
 
-            <!-- Swagger API鏂囨。妯″潡 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-swagger-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
 
-            <!-- ========== Utils Support 鎵╁睍宸ュ叿妯″潡 ========== -->
 
-            <!-- 閭欢鍙戦€佸伐鍏?-->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-email-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
 
-            <!-- ShardingSphere鍒嗗簱鍒嗚〃宸ュ叿 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-shardingv5-starter</artifactId>
@@ -535,13 +493,6 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-nginx-starter</artifactId>
-                <version>${utils.version}</version>
-            </dependency>
-
-            <!-- Logback日志框架工具 (已禁用) -->
-            <dependency>
-                <groupId>com.chua</groupId>
-                <!-- <artifactId>utils-support-log-logback-starter</artifactId> -->
                 <version>${utils.version}</version>
             </dependency>
 
@@ -566,14 +517,12 @@
                 <version>${utils.version}</version>
             </dependency>
 
-            <!-- API缃戝叧宸ュ叿 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-gateway-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
 
-            <!-- Milvus鍚戦噺鏁版嵁搴撳伐鍏?-->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-milvus-starter</artifactId>
@@ -587,7 +536,6 @@
                 <version>${utils.version}</version>
             </dependency>
 
-            <!-- 鑵捐浜戞湇鍔″伐鍏?-->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-tencent-starter</artifactId>
@@ -608,7 +556,7 @@
                 <version>${utils.version}</version>
             </dependency>
 
-            <!-- SSH Shell绠＄悊妯″潡 -->
+            <!-- SSH Shell管理模块 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-shell-starter</artifactId>
@@ -627,13 +575,12 @@
     <!-- 鏋勫缓閰嶇疆 -->
     <build>
         <plugins>
-            <!-- Maven婧愮爜鎵撳寘鎻掍欢 - 鐢熸垚婧愮爜jar鍖?-->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
                 <version>${maven-source-plugin.version}</version>
                 <executions>
-                    <!-- 鍦╬ackage闃舵鐢熸垚婧愮爜jar鍖?- 宸叉敞閲?
+                    <!-- 在package阶段生成源码jar包 - 已注释
                     <execution>
                         <phase>package</phase>
                         <goals>
@@ -641,7 +588,6 @@
                         </goals>
                     </execution>
                     -->
-                    <!-- 鍦╟ompile闃舵鐢熸垚婧愮爜jar鍖?-->
                     <execution>
                         <phase>compile</phase>
                         <goals>
@@ -651,16 +597,15 @@
                 </executions>
             </plugin>
 
-            <!-- Maven鍗曞厓娴嬭瘯鎻掍欢 - 閰嶇疆娴嬭瘯鎵ц -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${maven-surefire-plugin.version}</version>
                 <configuration>
-                    <skip>true</skip> <!-- 璺宠繃鍗曞厓娴嬭瘯鎵ц -->
+                    <skip>true</skip> 
                 </configuration>
             </plugin>
-            <!-- Maven JavaDoc鎻掍欢 - 鐢熸垚API鏂囨。 (宸叉敞閲?
+            <!-- Maven JavaDoc插件 - 生成API文档 (已注释
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
@@ -681,13 +626,12 @@
             </plugin>
             -->
 
-            <!-- Maven缂栬瘧鎻掍欢 - 閰嶇疆Java缂栬瘧鍙傛暟 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${maven-compiler-plugin.version}</version>
                 <configuration>
-                    <source>${java.version}</source>                    <!-- 婧愮爜Java鐗堟湰 -->
+                    <source>${java.version}</source>                    
                     <target>${java.version}</target>                    <!-- 鐩爣Java鐗堟湰 -->
                     <encoding>${project.build.sourceEncoding}</encoding> <!-- 缂栫爜鏍煎紡 -->
                     <compilerArgs>
@@ -716,15 +660,12 @@
         </plugins>
     </build>
 
-    <!-- 鍒嗗彂绠＄悊 - 閰嶇疆Maven浠撳簱鍙戝竷鍦板潃 -->
     <distributionManagement>
-        <!-- 姝ｅ紡鐗堟湰鍙戝竷浠撳簱 -->
         <repository>
             <id>boren001</id>
             <name>boren001</name>
             <url>http://192.168.110.100:8081/repository/maven-releases/</url>
         </repository>
-        <!-- 蹇収鐗堟湰鍙戝竷浠撳簱 -->
         <snapshotRepository>
             <id>boren001</id>
             <name>boren001</name>
