@@ -237,6 +237,17 @@
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-datasource-starter</artifactId>
                 <version>${utils.version}</version>
+                <exclusions>
+                    <!-- 排除 screw-core 带来的 logback，统一使用 log4j2 -->
+                    <exclusion>
+                        <groupId>ch.qos.logback</groupId>
+                        <artifactId>logback-classic</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>ch.qos.logback</groupId>
+                        <artifactId>logback-core</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
 
             <!-- Apache Calcite SQL解析引擎 -->
@@ -542,7 +553,37 @@
                 <version>${utils.version}</version>
             </dependency>
 
-            <!-- SSH杩炴帴宸ュ叿 -->
+            <!-- 百度云SDK -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-baidu-starter</artifactId>
+                <version>${utils.version}</version>
+                <exclusions>
+                    <!-- 排除 bce-java-sdk/hbase-client 带来的日志冲突，统一使用 log4j2 -->
+                    <exclusion>
+                        <groupId>ch.qos.logback</groupId>
+                        <artifactId>logback-classic</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>ch.qos.logback</groupId>
+                        <artifactId>logback-core</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.slf4j</groupId>
+                        <artifactId>slf4j-reload4j</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>ch.qos.reload4j</groupId>
+                        <artifactId>reload4j</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>log4j</groupId>
+                        <artifactId>log4j</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+
+            <!-- SSH连接工具 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-ssh-starter</artifactId>

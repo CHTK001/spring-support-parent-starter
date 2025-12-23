@@ -25,7 +25,7 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.34</version>
+        <version>4.0.0.35</version>
     </parent>
 
     <artifactId>spring-support-strategy-starter</artifactId>
@@ -44,12 +44,6 @@
             <artifactId>spring-support-common-starter</artifactId>
         </dependency>
 
-        <!-- 熔断降级模块 - 核心 Resilience4j 集成 -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-circuit-breaker-starter</artifactId>
-        </dependency>
-
         <!-- MyBatis Plus - 数据库操作 -->
         <dependency>
             <groupId>com.chua</groupId>
@@ -66,6 +60,22 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-datasource-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjweaver</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-circuitbreaker</artifactId>
+            <version>2.3.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-ratelimiter</artifactId>
+            <version>2.2.0</version>
+            <scope>compile</scope>
         </dependency>
 
     </dependencies>

@@ -182,7 +182,7 @@ public class ParameterLogFilter implements Filter {
             if (responseBody.length() > 500) {
                 responseBody = responseBody.substring(0, 500) + "...(截断)";
             }
-            log.debug("║ 响应内容: {}", responseBody);
+            log.debug("║ 响应内容: \r{}", responseBody);
         } else if (content.length >= NumberConstant.TWE_THOUSAND) {
             log.debug("║ 响应内容: (内容过长，共 {} 字节)", content.length);
         }
