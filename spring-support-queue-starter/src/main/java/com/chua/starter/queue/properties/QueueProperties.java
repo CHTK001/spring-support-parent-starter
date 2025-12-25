@@ -21,7 +21,7 @@ public class QueueProperties {
     private boolean enable = false;
 
     /**
-     * 消息队列类型（memory/mqtt/kafka/rabbitmq/rocketmq）
+     * 消息队列类型（memory/dead-letter/mqtt/kafka/rabbitmq/rocketmq）
      */
     private String type = "memory";
 
