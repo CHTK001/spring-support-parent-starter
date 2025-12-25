@@ -35,7 +35,7 @@ public class ReportProperties {
     private boolean enable = false;
 
     /**
-     * 通信协议: rsocket, websocket
+     * 通信协议: rsocket
      */
     private String protocol = "rsocket-sync";
 

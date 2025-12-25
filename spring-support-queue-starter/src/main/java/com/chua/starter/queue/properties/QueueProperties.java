@@ -92,6 +92,12 @@ public class QueueProperties {
         private boolean enable = true;
 
         /**
+         * 死信队列类型（memory/mqtt/kafka/rabbitmq/rocketmq）
+         * 默认为空，表示使用与主队列相同的类型
+         */
+        private String type;
+
+        /**
          * 最大重试次数
          */
         private int maxRetries = 3;
