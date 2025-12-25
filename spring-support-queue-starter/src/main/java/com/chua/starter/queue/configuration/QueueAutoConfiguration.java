@@ -2,6 +2,7 @@ package com.chua.starter.queue.configuration;
 
 import com.chua.starter.queue.MessageTemplate;
 import com.chua.starter.queue.properties.QueueProperties;
+import com.chua.starter.queue.template.MemoryMessageTemplate;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -28,6 +29,20 @@ public class QueueAutoConfiguration {
 
     @Autowired
     private QueueProperties queueProperties;
+
+    /**
+     * 内存消息队列模板
+     * <p>
+     * 当配置type=memory时启用，基于JDK的BlockingQueue实现。
+     * </p>
+     */
+    @Bean
+    @ConditionalOnMissingBean(MessageTemplate.class)
+    @ConditionalOnProperty(prefix = QueueProperties.PREFIX, name = "type", havingValue = "memory", matchIfMissing = true)
+    public MessageTemplate memoryMessageTemplate() {
+        log.info(">>>>> 创建内存消息队列模板");
+        return new MemoryMessageTemplate(queueProperties.getMemory());
+    }
 
     /**
      * 消息监听注解处理器
