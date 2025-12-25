@@ -3,9 +3,15 @@ package com.chua.starter.strategy.config;
 import com.chua.starter.strategy.aspect.DebounceAspect;
 import com.chua.starter.strategy.aspect.RateLimiterAspect;
 import com.chua.starter.strategy.aspect.SysCircuitBreakerConfigurationAspect;
+import com.chua.starter.strategy.template.DefaultLockTemplate;
+import com.chua.starter.strategy.template.DefaultStrategyTemplate;
+import com.chua.starter.strategy.template.LockTemplate;
+import com.chua.starter.strategy.template.StrategyTemplate;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
+import io.github.resilience4j.retry.RetryRegistry;
 import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -89,5 +95,62 @@ public class StrategyAutoConfiguration {
     @ConditionalOnMissingBean
     public RateLimiterRegistry rateLimiterRegistry() {
         return RateLimiterRegistry.ofDefaults();
+    }
+
+    /**
+     * Resilience4j CircuitBreaker 注册中心
+     *
+     * @return CircuitBreaker 注册中心
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public CircuitBreakerRegistry circuitBreakerRegistry() {
+        return CircuitBreakerRegistry.ofDefaults();
+    }
+
+    /**
+     * Resilience4j Retry 注册中心
+     *
+     * @return Retry 注册中心
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public RetryRegistry retryRegistry() {
+        return RetryRegistry.ofDefaults();
+    }
+
+    /**
+     * 策略模板
+     * <p>
+     * 提供统一的策略管理和执行API
+     * </p>
+     *
+     * @param rateLimiterRegistry    限流器注册中心
+     * @param circuitBreakerRegistry 熔断器注册中心
+     * @param retryRegistry          重试器注册中心
+     * @return 策略模板
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public StrategyTemplate strategyTemplate(
+            @Autowired(required = false) RateLimiterRegistry rateLimiterRegistry,
+            @Autowired(required = false) CircuitBreakerRegistry circuitBreakerRegistry,
+            @Autowired(required = false) RetryRegistry retryRegistry) {
+        return new DefaultStrategyTemplate(rateLimiterRegistry, circuitBreakerRegistry, retryRegistry);
+    }
+
+    /**
+     * 锁模板
+     * <p>
+     * 提供统一的分布式锁API，默认使用JVM内存锁实现。
+     * 分布式环境请引入 redis-starter 使用 Redisson 实现。
+     * </p>
+     *
+     * @return 锁模板
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public LockTemplate lockTemplate() {
+        return new DefaultLockTemplate();
     }
 }

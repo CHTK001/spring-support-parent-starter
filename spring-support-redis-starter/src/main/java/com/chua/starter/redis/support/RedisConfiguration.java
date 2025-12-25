@@ -1,6 +1,8 @@
 package com.chua.starter.redis.support;
 
 import com.chua.common.support.protocol.ClientSetting;
+import com.chua.starter.redis.support.lock.RedissonLockTemplate;
+import com.chua.starter.strategy.template.LockTemplate;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.redis.support.client.RedisClient;
 import com.chua.starter.redis.support.listener.RedisListener;
@@ -214,6 +216,19 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
         template.setHashKeySerializer(new StringRedisSerializer());
         template.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
         return template;
+    }
+
+    /**
+     * 基于 Redisson 的分布式锁模板
+     *
+     * @param redissonClient Redisson 客户端
+     * @return 分布式锁模板
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public LockTemplate lockTemplate(RedissonClient redissonClient) {
+        log.info(">>>>> 创建基于Redisson的分布式锁模板");
+        return new RedissonLockTemplate(redissonClient);
     }
 
     @Override

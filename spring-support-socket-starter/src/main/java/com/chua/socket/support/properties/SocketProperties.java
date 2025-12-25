@@ -156,7 +156,7 @@ public class SocketProperties {
         /**
          * 是否启用此房间
          */
-        private boolean enable = false;
+        private boolean enable = true;
 
         /**
          * 获取实际端口
@@ -165,7 +165,10 @@ public class SocketProperties {
          * @return 实际端口
          */
         public int getActualPort(int mainPort) {
-            return mainPort + port;
+            if(port < 0) {
+                return mainPort + port;
+            }
+            return port;
         }
 
         /**
