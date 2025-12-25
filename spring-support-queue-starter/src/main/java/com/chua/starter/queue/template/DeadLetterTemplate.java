@@ -10,6 +10,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
@@ -17,7 +18,8 @@ import java.util.function.BiConsumer;
 /**
  * 死信队列模板
  * <p>
- * 提供死信队列功能，当消息处理失败达到最大重试次数后，将消息转移到死信队列。
+ * 实现 MessageTemplate 接口，提供死信队列功能。
+ * 当消息处理失败达到最大重试次数后，将消息转移到死信队列。
  * 支持自动重试、延迟重试、死信回调等功能。
  * </p>
  *
@@ -26,7 +28,7 @@ import java.util.function.BiConsumer;
  * @since 2025-12-25
  */
 @Slf4j
-public class DeadLetterTemplate {
+public class DeadLetterTemplate implements MessageTemplate {
 
     /**
      * 死信队列前缀
@@ -117,6 +119,73 @@ public class DeadLetterTemplate {
         log.info("DeadLetterTemplate initialized with maxRetries: {}, retryDelay: {}ms, dlqType: {}",
                 config.getMaxRetries(), config.getRetryDelay().toMillis(), dlqMessageTemplate.getType());
     }
+
+    // ==================== MessageTemplate 接口实现 ====================
+
+    @Override
+    public SendResult send(String destination, Object payload) {
+        return dlqMessageTemplate.send(getDlqDestination(destination), payload);
+    }
+
+    @Override
+    public CompletableFuture<SendResult> sendAsync(String destination, Object payload) {
+        return dlqMessageTemplate.sendAsync(getDlqDestination(destination), payload);
+    }
+
+    @Override
+    public SendResult send(String destination, Object payload, Map<String, Object> headers) {
+        Map<String, Object> dlqHeaders = new ConcurrentHashMap<>(headers != null ? headers : Map.of());
+        dlqHeaders.put(HEADER_ORIGINAL_DESTINATION, destination);
+        dlqHeaders.put(HEADER_FAILURE_TIME, LocalDateTime.now().toString());
+        return dlqMessageTemplate.send(getDlqDestination(destination), payload, dlqHeaders);
+    }
+
+    @Override
+    public SendResult sendDelayed(String destination, Object payload, Duration delay) {
+        return dlqMessageTemplate.sendDelayed(getDlqDestination(destination), payload, delay);
+    }
+
+    @Override
+    public void subscribe(String destination, MessageHandler handler) {
+        dlqMessageTemplate.subscribe(getDlqDestination(destination), handler);
+    }
+
+    @Override
+    public void subscribe(String destination, String group, MessageHandler handler) {
+        dlqMessageTemplate.subscribe(getDlqDestination(destination), group, handler);
+    }
+
+    @Override
+    public void unsubscribe(String destination) {
+        dlqMessageTemplate.unsubscribe(getDlqDestination(destination));
+    }
+
+    @Override
+    public String getType() {
+        return "dead-letter";
+    }
+
+    @Override
+    public boolean isConnected() {
+        return dlqMessageTemplate.isConnected();
+    }
+
+    @Override
+    public void close() {
+        scheduler.shutdown();
+        try {
+            if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+                scheduler.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            scheduler.shutdownNow();
+        }
+        retryCounters.clear();
+        log.info("DeadLetterTemplate closed");
+    }
+
+    // ==================== 死信队列特有方法 ====================
 
     /**
      * 带重试的消息订阅
@@ -300,23 +369,6 @@ public class DeadLetterTemplate {
      */
     public String getRetryDestination(String originalDestination) {
         return RETRY_PREFIX + originalDestination;
-    }
-
-    /**
-     * 关闭资源
-     */
-    public void close() {
-        scheduler.shutdown();
-        try {
-            if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
-                scheduler.shutdownNow();
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            scheduler.shutdownNow();
-        }
-        retryCounters.clear();
-        log.info("DeadLetterTemplate closed");
     }
 
     /**
