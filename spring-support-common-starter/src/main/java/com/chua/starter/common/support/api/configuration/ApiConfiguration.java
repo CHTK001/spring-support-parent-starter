@@ -43,6 +43,10 @@ import java.util.concurrent.Executors;
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)
 public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware {
 
+    private static final String ANSI_GREEN = "\u001B[32m";
+    private static final String ANSI_RED = "\u001B[31m";
+    private static final String ANSI_RESET = "\u001B[0m";
+
     private ApiProperties apiProperties;
     private Environment environment;
 
@@ -62,59 +66,59 @@ public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware {
             // 版本控制
             ApiProperties.Version version = apiProperties.getVersion();
             if (version != null && version.isEnable()) {
-                log.info("[API控制] [@ApiVersion] [版本控制] [开启]");
+                log.info("[API控制] [@ApiVersion] [版本控制] [{}开启{}]", ANSI_GREEN, ANSI_RESET);
             } else {
-                log.info("[API控制] [@ApiVersion] [版本控制] [关闭]");
+                log.info("[API控制] [@ApiVersion] [版本控制] [{}关闭{}]", ANSI_RED, ANSI_RESET);
             }
             
             // 平台控制
             ApiProperties.Platform platform = apiProperties.getPlatform();
             if (platform != null && platform.isEnable()) {
-                log.info("[API控制] [@ApiPlatform] [平台控制] [开启] [平台: {}]", platform.getPlatformName());
+                log.info("[API控制] [@ApiPlatform] [平台控制] [{}开启{}] [平台: {}]", ANSI_GREEN, ANSI_RESET, platform.getPlatformName());
             } else {
-                log.info("[API控制] [@ApiPlatform] [平台控制] [关闭]");
+                log.info("[API控制] [@ApiPlatform] [平台控制] [{}关闭{}]", ANSI_RED, ANSI_RESET);
             }
             
-            log.info("[API控制] [@ApiProfile] [环境控制] [开启]");
+            log.info("[API控制] [@ApiProfile] [环境控制] [{}开启{}]", ANSI_GREEN, ANSI_RESET);
             
             // 废弃接口控制
             ApiProperties.DeprecatedConfig deprecated = apiProperties.getDeprecated();
             if (deprecated != null && deprecated.isEnable()) {
-                log.info("[API控制] [@ApiDeprecated] [废弃提示] [开启]");
+                log.info("[API控制] [@ApiDeprecated] [废弃提示] [{}开启{}]", ANSI_GREEN, ANSI_RESET);
             } else {
-                log.info("[API控制] [@ApiDeprecated] [废弃提示] [关闭]");
+                log.info("[API控制] [@ApiDeprecated] [废弃提示] [{}关闭{}]", ANSI_RED, ANSI_RESET);
             }
             
             // 功能开关控制
             ApiProperties.FeatureConfig feature = apiProperties.getFeature();
             if (feature != null && feature.isEnable()) {
-                log.info("[API控制] [@ApiFeature] [功能开关] [开启]");
+                log.info("[API控制] [@ApiFeature] [功能开关] [{}开启{}]", ANSI_GREEN, ANSI_RESET);
             } else {
-                log.info("[API控制] [@ApiFeature] [功能开关] [关闭]");
+                log.info("[API控制] [@ApiFeature] [功能开关] [{}关闭{}]", ANSI_RED, ANSI_RESET);
             }
             
             // 内部接口控制
             ApiProperties.InternalConfig internal = apiProperties.getInternal();
             if (internal != null && internal.isEnable()) {
-                log.info("[API控制] [@ApiInternal] [内部接口] [开启]");
+                log.info("[API控制] [@ApiInternal] [内部接口] [{}开启{}]", ANSI_GREEN, ANSI_RESET);
             } else {
-                log.info("[API控制] [@ApiInternal] [内部接口] [关闭]");
+                log.info("[API控制] [@ApiInternal] [内部接口] [{}关闭{}]", ANSI_RED, ANSI_RESET);
             }
             
             // Mock 控制
             ApiProperties.MockConfig mock = apiProperties.getMock();
             if (mock != null && mock.isEnable()) {
-                log.info("[API控制] [@ApiMock] [Mock模式] [开启] [环境: {}]", mock.getProfiles());
+                log.info("[API控制] [@ApiMock] [Mock模式] [{}开启{}] [环境: {}]", ANSI_GREEN, ANSI_RESET, mock.getProfiles());
             } else {
-                log.info("[API控制] [@ApiMock] [Mock模式] [关闭]");
+                log.info("[API控制] [@ApiMock] [Mock模式] [{}关闭{}]", ANSI_RED, ANSI_RESET);
             }
             
             // 灰度发布控制
             ApiProperties.GrayConfig gray = apiProperties.getGray();
             if (gray != null && gray.isEnable()) {
-                log.info("[API控制] [@ApiGray] [灰度发布] [开启]");
+                log.info("[API控制] [@ApiGray] [灰度发布] [{}开启{}]", ANSI_GREEN, ANSI_RESET);
             } else {
-                log.info("[API控制] [@ApiGray] [灰度发布] [关闭]");
+                log.info("[API控制] [@ApiGray] [灰度发布] [{}关闭{}]", ANSI_RED, ANSI_RESET);
             }
             
             log.info("[API控制] [注册完成]");

@@ -17,7 +17,12 @@ public enum SocketProtocol {
     /**
      * RSocket 协议
      */
-    RSOCKET("rsocket");
+    RSOCKET("rsocket"),
+
+    /**
+     * SSE (Server-Sent Events) 协议
+     */
+    SSE("sse");
 
     private final String value;
 

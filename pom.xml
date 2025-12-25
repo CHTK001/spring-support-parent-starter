@@ -49,13 +49,19 @@
         <!-- API文档和接口模块 -->
         <module>spring-support-swagger-starter</module>         <!-- Swagger API文档 -->
 
-        <!-- 消息和通信模块 -->
-        <module>spring-support-email-starter</module>
-        <module>spring-support-mqtt-starter</module>            <!-- MQTT消息队列 -->
-        <module>spring-support-socket-starter</module>
-        <module>spring-support-socketio-starter</module>        <!-- Socket.IO实时通信 -->
-        <module>spring-support-rsocket-starter</module>         <!-- RSocket响应式通信 -->
-        <module>spring-support-sse-starter</module>             <!-- Server-Sent Events -->
+        <!-- 消息与队列抽象 -->
+        <module>spring-support-queue-starter</module>
+        <module>spring-support-queue-mqtt-starter</module>
+        <module>spring-support-queue-kafka-starter</module>
+        <module>spring-support-queue-rabbitmq-starter</module>
+        <module>spring-support-queue-rocketmq-starter</module>
+
+        <!-- Socket 通信模块系列 -->
+        <module>spring-support-socket-starter</module>          <!-- Socket 基础抽象层 -->
+        <module>spring-support-socket-websocket-starter</module><!-- WebSocket 实现（同端口） -->
+        <module>spring-support-socket-io-starter</module>        <!-- Socket.IO 实现 -->
+        <module>spring-support-socket-rsocket-starter</module>         <!-- RSocket 实现 -->
+        <module>spring-support-socket-sse-starter</module>             <!-- SSE 实现 -->
         <module>spring-support-rpc-starter</module>             <!-- RPC远程调用 -->
         <module>spring-support-sync-starter</module>
 
@@ -70,7 +76,6 @@
         <!-- 监控和日志模块 -->
         <module>spring-support-report-client-starter</module>
         <module>spring-support-report-client-arthas-starter</module>   <!-- 上报客户端 Arthas集成 -->
-        <module>spring-support-prometheus-starter</module>      <!-- Prometheus监控 -->
 
         <module>spring-support-tencent-starter</module>         <!-- 鑵捐浜戞湇鍔￠泦鎴?-->
         <module>spring-support-pay-client-starter</module>
@@ -361,6 +366,13 @@
                 <version>${module.version}</version>
             </dependency>
 
+            <!-- 策略管理模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-strategy-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-datasource-starter</artifactId>
@@ -388,19 +400,38 @@
 
             <dependency>
                 <groupId>com.chua</groupId>
-                <artifactId>spring-support-mqtt-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.chua</groupId>
                 <artifactId>spring-support-subscribe-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
 
+            <!-- Socket 模块系列 -->
             <dependency>
                 <groupId>com.chua</groupId>
-                <artifactId>spring-support-socketio-starter</artifactId>
+                <artifactId>spring-support-socket-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-socket-websocket-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-socket-io-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-socket-rsocket-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-socket-sse-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
 
@@ -412,20 +443,8 @@
 
             <dependency>
                 <groupId>com.chua</groupId>
-                <artifactId>spring-support-rsocket-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.chua</groupId>
                 <artifactId>utils-support-rsocket-starter</artifactId>
                 <version>${utils.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-sse-starter</artifactId>
-                <version>${module.version}</version>
             </dependency>
 
             <dependency>

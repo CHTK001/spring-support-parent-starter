@@ -90,6 +90,13 @@
             <version>3.28.0</version>
         </dependency>
 
+        <!-- 策略模块 - 提供LockTemplate接口定义 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-strategy-starter</artifactId>
+            <optional>true</optional>
+        </dependency>
+
     </dependencies>
     <!-- 构建配置 -->
     <build>
