@@ -2,6 +2,7 @@ package com.chua.starter.queue.configuration;
 
 import com.chua.starter.queue.MessageTemplate;
 import com.chua.starter.queue.properties.QueueProperties;
+import com.chua.starter.queue.template.DeadLetterTemplate;
 import com.chua.starter.queue.template.MemoryMessageTemplate;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +43,28 @@ public class QueueAutoConfiguration {
     public MessageTemplate memoryMessageTemplate() {
         log.info(">>>>> 创建内存消息队列模板");
         return new MemoryMessageTemplate(queueProperties.getMemory());
+    }
+
+    /**
+     * 死信队列模板
+     * <p>
+     * 提供消息重试和死信队列功能。
+     * </p>
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = QueueProperties.PREFIX + ".dead-letter", name = "enable", havingValue = "true", matchIfMissing = true)
+    public DeadLetterTemplate deadLetterTemplate(MessageTemplate messageTemplate) {
+        QueueProperties.DeadLetterConfig dlConfig = queueProperties.getDeadLetter();
+        DeadLetterTemplate.DeadLetterConfig config = DeadLetterTemplate.DeadLetterConfig.builder()
+                .maxRetries(dlConfig.getMaxRetries())
+                .retryDelay(java.time.Duration.ofSeconds(dlConfig.getRetryDelaySeconds()))
+                .maxRetryDelay(java.time.Duration.ofSeconds(dlConfig.getMaxRetryDelaySeconds()))
+                .exponentialBackoff(dlConfig.isExponentialBackoff())
+                .backoffMultiplier(dlConfig.getBackoffMultiplier())
+                .build();
+        log.info(">>>>> 创建死信队列模板, maxRetries: {}", dlConfig.getMaxRetries());
+        return new DeadLetterTemplate(messageTemplate, config);
     }
 
     /**
