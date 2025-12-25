@@ -87,15 +87,19 @@ public class QueueProperties {
     @Data
     public static class DeadLetterConfig {
         /**
-         * 是否启用死信队列
+         * 队列容量
          */
-        private boolean enable = true;
+        private int queueCapacity = 10000;
 
         /**
-         * 死信队列类型（memory/mqtt/kafka/rabbitmq/rocketmq）
-         * 默认为空，表示使用与主队列相同的类型
+         * 发送超时（毫秒）
          */
-        private String type;
+        private long sendTimeout = 5000;
+
+        /**
+         * 延迟消息调度线程数
+         */
+        private int delayThreads = 2;
 
         /**
          * 最大重试次数
