@@ -36,6 +36,11 @@ public class QueueProperties {
     private MemoryConfig memory = new MemoryConfig();
 
     /**
+     * 死信队列配置
+     */
+    private DeadLetterConfig deadLetter = new DeadLetterConfig();
+
+    /**
      * MQTT配置
      */
     private MqttConfig mqtt = new MqttConfig();
@@ -74,6 +79,42 @@ public class QueueProperties {
          * 延迟消息调度线程数
          */
         private int delayThreads = 2;
+    }
+
+    /**
+     * 死信队列配置
+     */
+    @Data
+    public static class DeadLetterConfig {
+        /**
+         * 是否启用死信队列
+         */
+        private boolean enable = true;
+
+        /**
+         * 最大重试次数
+         */
+        private int maxRetries = 3;
+
+        /**
+         * 重试延迟（秒）
+         */
+        private long retryDelaySeconds = 5;
+
+        /**
+         * 最大重试延迟（秒）
+         */
+        private long maxRetryDelaySeconds = 300;
+
+        /**
+         * 是否启用指数退避
+         */
+        private boolean exponentialBackoff = true;
+
+        /**
+         * 退避乘数
+         */
+        private double backoffMultiplier = 2.0;
     }
 
     /**
