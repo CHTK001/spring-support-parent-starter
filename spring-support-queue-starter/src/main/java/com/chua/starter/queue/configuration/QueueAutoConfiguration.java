@@ -45,15 +45,23 @@ public class QueueAutoConfiguration {
     }
 
     /**
-     * 死信队列模板（作为主队列类型）
+     * 死信队列模板
      * <p>
-     * 当配置type=dead-letter时启用，提供自动重试和死信处理功能。
+     * 当配置type=dead-letter时启用，基于内存队列实现，提供自动重试和死信处理功能。
      * </p>
      */
     @Bean("deadLetterMessageTemplate")
     @ConditionalOnProperty(prefix = QueueProperties.PREFIX, name = "type", havingValue = "dead-letter")
     public MessageTemplate deadLetterMessageTemplate() {
         QueueProperties.DeadLetterConfig dlConfig = queueProperties.getDeadLetter();
+
+        // 创建底层内存队列
+        QueueProperties.MemoryConfig memoryConfig = new QueueProperties.MemoryConfig();
+        memoryConfig.setQueueCapacity(dlConfig.getQueueCapacity());
+        memoryConfig.setSendTimeout(dlConfig.getSendTimeout());
+        memoryConfig.setDelayThreads(dlConfig.getDelayThreads());
+        MessageTemplate underlyingTemplate = new MemoryMessageTemplate(memoryConfig);
+
         DeadLetterTemplate.DeadLetterConfig config = DeadLetterTemplate.DeadLetterConfig.builder()
                 .maxRetries(dlConfig.getMaxRetries())
                 .retryDelay(java.time.Duration.ofSeconds(dlConfig.getRetryDelaySeconds()))
@@ -62,62 +70,9 @@ public class QueueAutoConfiguration {
                 .backoffMultiplier(dlConfig.getBackoffMultiplier())
                 .build();
 
-        // 创建底层消息模板
-        MessageTemplate underlyingTemplate = createUnderlyingTemplate(dlConfig.getType());
-        log.info(">>>>> 创建死信队列消息模板, maxRetries: {}, underlyingType: {}",
-                dlConfig.getMaxRetries(), underlyingTemplate.getType());
+        log.info(">>>>> 创建死信队列模板, maxRetries: {}, queueCapacity: {}",
+                dlConfig.getMaxRetries(), dlConfig.getQueueCapacity());
         return new DeadLetterTemplate(underlyingTemplate, underlyingTemplate, config);
-    }
-
-    /**
-     * 死信队列模板（作为辅助Bean）
-     * <p>
-     * 当主队列不是dead-letter类型时，提供独立的死信队列功能。
-     * </p>
-     */
-    @Bean
-    @ConditionalOnMissingBean(DeadLetterTemplate.class)
-    @ConditionalOnProperty(prefix = QueueProperties.PREFIX + ".dead-letter", name = "enable", havingValue = "true", matchIfMissing = true)
-    public DeadLetterTemplate deadLetterTemplate(MessageTemplate messageTemplate) {
-        QueueProperties.DeadLetterConfig dlConfig = queueProperties.getDeadLetter();
-        DeadLetterTemplate.DeadLetterConfig config = DeadLetterTemplate.DeadLetterConfig.builder()
-                .maxRetries(dlConfig.getMaxRetries())
-                .retryDelay(java.time.Duration.ofSeconds(dlConfig.getRetryDelaySeconds()))
-                .maxRetryDelay(java.time.Duration.ofSeconds(dlConfig.getMaxRetryDelaySeconds()))
-                .exponentialBackoff(dlConfig.isExponentialBackoff())
-                .backoffMultiplier(dlConfig.getBackoffMultiplier())
-                .build();
-
-        // 创建死信队列底层消息模板
-        MessageTemplate dlqMessageTemplate = createDlqMessageTemplate(dlConfig, messageTemplate);
-        log.info(">>>>> 创建死信队列辅助模板, maxRetries: {}, dlqType: {}",
-                dlConfig.getMaxRetries(), dlqMessageTemplate.getType());
-        return new DeadLetterTemplate(messageTemplate, dlqMessageTemplate, config);
-    }
-
-    /**
-     * 创建底层消息模板
-     */
-    private MessageTemplate createUnderlyingTemplate(String type) {
-        String targetType = (type == null || type.isBlank()) ? "memory" : type.toLowerCase();
-        return switch (targetType) {
-            case "memory" -> new MemoryMessageTemplate(queueProperties.getMemory());
-            default -> {
-                log.warn("Unsupported underlying type: {}, using memory", type);
-                yield new MemoryMessageTemplate(queueProperties.getMemory());
-            }
-        };
-    }
-
-    /**
-     * 创建死信队列消息模板
-     */
-    private MessageTemplate createDlqMessageTemplate(QueueProperties.DeadLetterConfig dlConfig, MessageTemplate defaultTemplate) {
-        String dlqType = dlConfig.getType();
-        if (dlqType == null || dlqType.isBlank() || dlqType.equals(defaultTemplate.getType())) {
-            return defaultTemplate;
-        }
-        return createUnderlyingTemplate(dlqType);
     }
 
     /**
