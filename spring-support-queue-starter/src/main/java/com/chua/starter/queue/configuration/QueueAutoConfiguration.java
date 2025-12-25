@@ -49,6 +49,7 @@ public class QueueAutoConfiguration {
      * 死信队列模板
      * <p>
      * 提供消息重试和死信队列功能。
+     * 支持独立配置死信队列类型。
      * </p>
      */
     @Bean
@@ -63,8 +64,31 @@ public class QueueAutoConfiguration {
                 .exponentialBackoff(dlConfig.isExponentialBackoff())
                 .backoffMultiplier(dlConfig.getBackoffMultiplier())
                 .build();
-        log.info(">>>>> 创建死信队列模板, maxRetries: {}", dlConfig.getMaxRetries());
-        return new DeadLetterTemplate(messageTemplate, config);
+
+        // 创建死信队列消息模板
+        MessageTemplate dlqMessageTemplate = createDlqMessageTemplate(dlConfig, messageTemplate);
+        log.info(">>>>> 创建死信队列模板, maxRetries: {}, dlqType: {}", 
+                dlConfig.getMaxRetries(), dlqMessageTemplate.getType());
+        return new DeadLetterTemplate(messageTemplate, dlqMessageTemplate, config);
+    }
+
+    /**
+     * 创建死信队列消息模板
+     */
+    private MessageTemplate createDlqMessageTemplate(QueueProperties.DeadLetterConfig dlConfig, MessageTemplate defaultTemplate) {
+        String dlqType = dlConfig.getType();
+        if (dlqType == null || dlqType.isBlank() || dlqType.equals(defaultTemplate.getType())) {
+            return defaultTemplate;
+        }
+
+        // 根据配置的类型创建独立的消息模板
+        return switch (dlqType.toLowerCase()) {
+            case "memory" -> new MemoryMessageTemplate(queueProperties.getMemory());
+            default -> {
+                log.warn("Unsupported DLQ type: {}, using default template", dlqType);
+                yield defaultTemplate;
+            }
+        };
     }
 
     /**

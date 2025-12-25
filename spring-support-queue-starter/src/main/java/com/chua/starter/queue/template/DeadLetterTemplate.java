@@ -59,9 +59,14 @@ public class DeadLetterTemplate {
     public static final String HEADER_FAILURE_TIME = "X-Failure-Time";
 
     /**
-     * 消息模板
+     * 主消息模板
      */
     private final MessageTemplate messageTemplate;
+
+    /**
+     * 死信队列消息模板（可独立配置）
+     */
+    private final MessageTemplate dlqMessageTemplate;
 
     /**
      * 配置
@@ -83,16 +88,34 @@ public class DeadLetterTemplate {
      */
     private final ScheduledExecutorService scheduler;
 
+    /**
+     * 构造函数（使用同一个消息模板）
+     *
+     * @param messageTemplate 消息模板
+     * @param config          配置
+     */
     public DeadLetterTemplate(MessageTemplate messageTemplate, DeadLetterConfig config) {
+        this(messageTemplate, messageTemplate, config);
+    }
+
+    /**
+     * 构造函数（支持独立的死信队列消息模板）
+     *
+     * @param messageTemplate    主消息模板
+     * @param dlqMessageTemplate 死信队列消息模板
+     * @param config             配置
+     */
+    public DeadLetterTemplate(MessageTemplate messageTemplate, MessageTemplate dlqMessageTemplate, DeadLetterConfig config) {
         this.messageTemplate = messageTemplate;
+        this.dlqMessageTemplate = dlqMessageTemplate;
         this.config = config;
         this.scheduler = Executors.newScheduledThreadPool(2, r -> {
             Thread t = new Thread(r, "dlq-scheduler");
             t.setDaemon(true);
             return t;
         });
-        log.info("DeadLetterTemplate initialized with maxRetries: {}, retryDelay: {}ms",
-                config.getMaxRetries(), config.getRetryDelay().toMillis());
+        log.info("DeadLetterTemplate initialized with maxRetries: {}, retryDelay: {}ms, dlqType: {}",
+                config.getMaxRetries(), config.getRetryDelay().toMillis(), dlqMessageTemplate.getType());
     }
 
     /**
@@ -176,9 +199,10 @@ public class DeadLetterTemplate {
         headers.put(HEADER_FAILURE_REASON, reason);
         headers.put(HEADER_FAILURE_TIME, LocalDateTime.now().toString());
 
-        SendResult result = messageTemplate.send(dlqDestination, message.getPayload(), headers);
+        SendResult result = dlqMessageTemplate.send(dlqDestination, message.getPayload(), headers);
         if (result.isSuccess()) {
-            log.info("Message moved to dead letter queue: {}, messageId: {}", dlqDestination, message.getId());
+            log.info("Message moved to dead letter queue: {}, messageId: {}, dlqType: {}", 
+                    dlqDestination, message.getId(), dlqMessageTemplate.getType());
         }
         return result;
     }
@@ -191,8 +215,8 @@ public class DeadLetterTemplate {
      */
     public void subscribeDeadLetter(String originalDestination, MessageHandler handler) {
         String dlqDestination = getDlqDestination(originalDestination);
-        messageTemplate.subscribe(dlqDestination, handler);
-        log.info("Subscribed to dead letter queue: {}", dlqDestination);
+        dlqMessageTemplate.subscribe(dlqDestination, handler);
+        log.info("Subscribed to dead letter queue: {}, dlqType: {}", dlqDestination, dlqMessageTemplate.getType());
     }
 
     /**
@@ -231,7 +255,7 @@ public class DeadLetterTemplate {
         String dlqDestination = getDlqDestination(originalDestination);
         AtomicInteger processed = new AtomicInteger(0);
 
-        messageTemplate.subscribe(dlqDestination, message -> {
+        dlqMessageTemplate.subscribe(dlqDestination, message -> {
             if (processed.get() >= maxCount) {
                 return;
             }
@@ -336,14 +360,14 @@ public class DeadLetterTemplate {
         headers.put(HEADER_FAILURE_TIME, LocalDateTime.now().toString());
         headers.put(HEADER_RETRY_COUNT, config.getMaxRetries());
 
-        SendResult result = messageTemplate.send(dlqDestination, message.getPayload(), headers);
+        SendResult result = dlqMessageTemplate.send(dlqDestination, message.getPayload(), headers);
 
         if (result.isSuccess()) {
-            log.warn("Message moved to dead letter queue: {}, messageId: {}, reason: {}",
-                    dlqDestination, message.getId(), cause.getMessage());
+            log.warn("Message moved to dead letter queue: {}, messageId: {}, reason: {}, dlqType: {}",
+                    dlqDestination, message.getId(), cause.getMessage(), dlqMessageTemplate.getType());
         } else {
-            log.error("Failed to move message to dead letter queue: {}, messageId: {}",
-                    dlqDestination, message.getId());
+            log.error("Failed to move message to dead letter queue: {}, messageId: {}, dlqType: {}",
+                    dlqDestination, message.getId(), dlqMessageTemplate.getType());
         }
 
         // 触发回调
