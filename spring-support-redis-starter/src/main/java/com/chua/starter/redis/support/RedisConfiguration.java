@@ -218,19 +218,6 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
         return template;
     }
 
-    /**
-     * 基于 Redisson 的分布式锁模板
-     *
-     * @param redissonClient Redisson 客户端
-     * @return 分布式锁模板
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public LockTemplate lockTemplate(RedissonClient redissonClient) {
-        log.info(">>>>> 创建基于Redisson的分布式锁模板");
-        return new RedissonLockTemplate(redissonClient);
-    }
-
     @Override
     public int getOrder() {
         return Ordered.HIGHEST_PRECEDENCE;

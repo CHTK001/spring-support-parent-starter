@@ -21,14 +21,19 @@ public class QueueProperties {
     private boolean enable = false;
 
     /**
-     * 消息队列类型（mqtt/kafka/rabbitmq/rocketmq）
+     * 消息队列类型（memory/mqtt/kafka/rabbitmq/rocketmq）
      */
-    private String type = "mqtt";
+    private String type = "memory";
 
     /**
      * 默认目标地址
      */
     private String defaultDestination;
+
+    /**
+     * 内存队列配置
+     */
+    private MemoryConfig memory = new MemoryConfig();
 
     /**
      * MQTT配置
@@ -49,6 +54,27 @@ public class QueueProperties {
      * RocketMQ配置
      */
     private RocketMQConfig rocketmq = new RocketMQConfig();
+
+    /**
+     * 内存队列配置
+     */
+    @Data
+    public static class MemoryConfig {
+        /**
+         * 队列容量
+         */
+        private int queueCapacity = 10000;
+
+        /**
+         * 发送超时（毫秒）
+         */
+        private long sendTimeout = 5000;
+
+        /**
+         * 延迟消息调度线程数
+         */
+        private int delayThreads = 2;
+    }
 
     /**
      * MQTT配置
