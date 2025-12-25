@@ -21,7 +21,7 @@ public class QueueProperties {
     private boolean enable = false;
 
     /**
-     * 消息队列类型（memory/dead-letter/mqtt/kafka/rabbitmq/rocketmq）
+     * 消息队列类型（memory/mqtt/kafka/rabbitmq/rocketmq）
      */
     private String type = "memory";
 
@@ -34,11 +34,6 @@ public class QueueProperties {
      * 内存队列配置
      */
     private MemoryConfig memory = new MemoryConfig();
-
-    /**
-     * 死信队列配置
-     */
-    private DeadLetterConfig deadLetter = new DeadLetterConfig();
 
     /**
      * MQTT配置
@@ -79,52 +74,6 @@ public class QueueProperties {
          * 延迟消息调度线程数
          */
         private int delayThreads = 2;
-    }
-
-    /**
-     * 死信队列配置
-     */
-    @Data
-    public static class DeadLetterConfig {
-        /**
-         * 队列容量
-         */
-        private int queueCapacity = 10000;
-
-        /**
-         * 发送超时（毫秒）
-         */
-        private long sendTimeout = 5000;
-
-        /**
-         * 延迟消息调度线程数
-         */
-        private int delayThreads = 2;
-
-        /**
-         * 最大重试次数
-         */
-        private int maxRetries = 3;
-
-        /**
-         * 重试延迟（秒）
-         */
-        private long retryDelaySeconds = 5;
-
-        /**
-         * 最大重试延迟（秒）
-         */
-        private long maxRetryDelaySeconds = 300;
-
-        /**
-         * 是否启用指数退避
-         */
-        private boolean exponentialBackoff = true;
-
-        /**
-         * 退避乘数
-         */
-        private double backoffMultiplier = 2.0;
     }
 
     /**
