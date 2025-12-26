@@ -92,6 +92,12 @@
 
         <!-- AI深度学习模块 -->
         <module>spring-support-ai-starter</module>              <!-- AI深度学习功能模块 -->
+
+        <!-- 消息推送模块 -->
+        <module>spring-support-message-starter</module>         <!-- 消息推送集成 -->
+
+        <!-- API网关模块 -->
+        <module>spring-support-gateway-starter</module>         <!-- API网关 -->
     </modules>
 
     <!-- 项目属性配置 -->
@@ -642,6 +648,20 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-ai-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <!-- 消息推送模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-message-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <!-- API网关模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-gateway-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
         </dependencies>

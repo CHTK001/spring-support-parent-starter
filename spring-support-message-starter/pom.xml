@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Spring Support Message Starter - 消息推送集成模块
+
+    这是Spring Support框架的消息推送模块，提供统一的消息推送解决方案。
+    主要特性包括：
+
+    1. 多渠道支持 - 钉钉、飞书、邮件、短信等
+    2. MessageTemplate - 简化消息发送的模板类
+    3. 统一配置 - 通过YAML配置多个渠道
+    4. 自动装配 - Spring Boot自动配置
+
+    @author CH
+    @version 4.0.0.35
+-->
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 继承父项目配置 -->
+    <parent>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-parent-starter</artifactId>
+        <version>4.0.0.35</version>
+    </parent>
+
+    <!-- 项目基本信息 -->
+    <artifactId>spring-support-message-starter</artifactId>
+    <description>Spring Support框架消息推送模块，提供统一的多渠道消息推送功能</description>
+
+    <!-- 项目属性配置 -->
+    <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <!-- 依赖配置 -->
+    <dependencies>
+        <!-- 通用功能模块 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-common-starter</artifactId>
+        </dependency>
+
+        <!-- 消息推送核心依赖 - 包含MessagePush接口和基础实现 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-common-starter</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
+
+        <!--
+        可选依赖：各渠道实现
+        用户根据需要在自己的项目中添加对应的渠道依赖：
+        - utils-support-dingding-starter   钉钉机器人
+        - utils-support-feishu-starter     飞书消息
+        - utils-support-alibaba-starter    阿里云短信
+        - utils-support-tencent-starter    腾讯微信公众号
+        - utils-support-email-starter      邮件
+        -->
+    </dependencies>
+
+    <!-- 构建配置 -->
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>21</source>
+                    <target>21</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
