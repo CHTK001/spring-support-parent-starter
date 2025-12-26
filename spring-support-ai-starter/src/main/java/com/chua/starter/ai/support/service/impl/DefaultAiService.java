@@ -469,7 +469,7 @@ public class DefaultAiService implements AiService {
         for (PredictResult predictResult : result.getList()) {
             if (predictResult instanceof LabelPredictResult labelResult) {
                 textLines.add(OcrResult.TextLine.builder()
-                        .text(labelResult.getLabel())
+                        .text(labelResult.asString())
                         .confidence((float) labelResult.getConfidence())
                         .build());
             }
