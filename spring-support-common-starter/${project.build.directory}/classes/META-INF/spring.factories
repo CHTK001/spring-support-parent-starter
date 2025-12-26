@@ -1,0 +1,21 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+  com.chua.starter.common.support.configuration.MessageConverterWebMvcConfigurer,\
+  com.chua.starter.common.support.configuration.ResourceWebMvcConfigurer,\
+  com.chua.starter.common.support.configuration.AsyncThreadPoolConfiguration,\
+  com.chua.starter.common.support.configuration.TypeConverterRegisterConfiguration,\
+  com.chua.starter.common.support.jackson.configuration.JacksonConfiguration,\
+  com.chua.starter.common.support.cache.configuration.CacheConfiguration,\
+  com.chua.starter.common.support.configuration.CaptchaConfiguration,\
+  com.chua.starter.common.support.configuration.AutoCreateTableConfiguration,\
+  com.chua.starter.common.support.configuration.CommonConfiguration,\
+  com.chua.starter.common.support.configuration.ProjectConfiguration,\
+  com.chua.starter.common.support.api.configuration.ApiConfiguration,\
+  com.chua.starter.common.support.configuration.FilterConfiguration,\
+  com.chua.starter.common.support.cache.configuration.CacheProxyCachingConfiguration,\
+  com.chua.starter.common.support.cache.configuration.CacheCustomTenantedKeyGenerator,\
+  com.chua.starter.common.support.configuration.AutoControllerRegistrar
+
+org.springframework.boot.env.EnvironmentPostProcessor=\
+  com.chua.starter.common.support.configuration.environment.FreemarkerEnvironmentPostProcessor,\
+  com.chua.starter.common.support.configuration.environment.SpringEnvironmentPostProcessor,\
+  com.chua.starter.common.support.configuration.environment.ProfileEnvironmentPostProcessor

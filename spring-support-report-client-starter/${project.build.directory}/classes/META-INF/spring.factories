@@ -1,0 +1,6 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+  com.chua.report.client.starter.configuration.ReportClientConfiguration,\
+  com.chua.report.client.starter.configuration.ActuatorConfiguration
+
+org.springframework.boot.env.EnvironmentPostProcessor=\
+  com.chua.report.client.starter.configuration.ReportEnvironmentPostProcessor

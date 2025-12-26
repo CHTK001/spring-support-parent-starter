@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Spring Support AI Starter - AI深度学习功能模块
+
+    这是Spring Support框架的AI模块，提供了企业级应用中常用的AI深度学习功能。
+    包含以下主要功能：
+
+    1. 人脸检测 - 检测图片中的人脸位置
+    2. 人脸特征值 - 提取人脸特征向量
+    3. 图片检测 - 检测图片中的物体
+    4. 图片特征值 - 提取图片特征向量
+    5. 文本特征值 - 提取文本特征向量
+    6. OCR识别 - 光学字符识别
+    7. 版面分析 - 文档版面结构分析
+    8. 性别年龄 - 人脸性别年龄检测
+
+    @author CH
+    @version ********
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 继承父项目配置 -->
+    <parent>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-parent-starter</artifactId>
+        <version>********</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <!-- 项目基本信息 -->
+    <artifactId>spring-support-ai-starter</artifactId>
+    <description>Spring Support框架AI深度学习功能模块，提供人脸检测、特征提取、OCR、版面分析等AI能力</description>
+
+    <!-- 项目属性配置 -->
+    <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <!-- 依赖配置 -->
+    <dependencies>
+        <!-- Lombok - 简化Java代码编写 -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.34</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- 深度学习工具库 - 提供AI模型推理能力 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-deeplearning-starter</artifactId>
+        </dependency>
+
+        <!-- ONNX模型推理 - 提供ONNX Runtime模型推理能力 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-deeplearning-onnx-starter</artifactId>
+        </dependency>
+
+        <!-- 通用工具类库 - 提供基础的工具类和常用功能 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-common-starter</artifactId>
+        </dependency>
+
+        <!-- Spring Boot自动配置 - 提供自动配置功能 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+
+        <!-- Spring Boot配置处理器 - 生成配置元数据 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Reactor Core - 响应式编程支持 -->
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-core</artifactId>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <source>21</source>
+                    <target>21</target>
+                    <encoding>UTF-8</encoding>
+                    <proc>full</proc>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>1.18.36</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

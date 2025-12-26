@@ -5,6 +5,7 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static com.chua.socket.support.properties.SocketProperties.PRE;
@@ -52,9 +53,57 @@ public class SocketProperties {
 
     /**
      * 协议类型，默认 socketio
-     * 可选值：socketio, rsocket
+     * 可选值：socketio, rsocket, sse
      */
     private SocketProtocol protocol = SocketProtocol.SOCKETIO;
+
+    /**
+     * 多协议配置列表（可选）
+     * <p>
+     * 支持同时启用多种协议，每种协议可独立配置房间
+     * 如果配置了此项，将忽略单一的 protocol 和 room 配置
+     * </p>
+     * 示例配置：
+     * <pre>
+     * plugin:
+     *   socket:
+     *     enable: true
+     *     protocols:
+     *       - protocol: socketio
+     *         room:
+     *           - port: 9000
+     *       - protocol: rsocket
+     *         room:
+     *           - port: 9001
+     * </pre>
+     */
+    private List<ProtocolConfig> protocols = new ArrayList<>();
+
+    /**
+     * 获取有效的协议配置列表
+     * 优先返回 protocols 配置，如果为空则将单一 protocol 配置转换为列表
+     *
+     * @return 协议配置列表
+     */
+    public List<ProtocolConfig> getEffectiveProtocols() {
+        if (protocols != null && !protocols.isEmpty()) {
+            return protocols;
+        }
+        // 兼容旧配置：转换为单元素列表
+        ProtocolConfig config = new ProtocolConfig();
+        config.setProtocol(protocol);
+        config.setRoom(room);
+        return Collections.singletonList(config);
+    }
+
+    /**
+     * 是否为多协议模式
+     *
+     * @return 是否配置了多协议
+     */
+    public boolean isMultiProtocol() {
+        return protocols != null && !protocols.isEmpty();
+    }
 
     /**
      * 本地IP
@@ -116,6 +165,23 @@ public class SocketProperties {
      * 是否使用 Linux 的 Native Epoll
      */
     private boolean useLinuxNativeEpoll;
+
+    /**
+     * 协议配置
+     */
+    @Data
+    public static class ProtocolConfig {
+
+        /**
+         * 协议类型
+         */
+        private SocketProtocol protocol = SocketProtocol.SOCKETIO;
+
+        /**
+         * 房间配置列表
+         */
+        private List<Room> room = new ArrayList<>();
+    }
 
     /**
      * 房间配置
