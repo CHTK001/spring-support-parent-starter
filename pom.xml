@@ -89,6 +89,9 @@
 
         <!-- 定时任务模块 -->
         <module>spring-support-job-starter</module>             <!-- 定时任务调度模块 -->
+
+        <!-- AI深度学习模块 -->
+        <module>spring-support-ai-starter</module>              <!-- AI深度学习功能模块 -->
     </modules>
 
     <!-- 项目属性配置 -->
@@ -236,6 +239,11 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-deeplearning-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-deeplearning-onnx-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
             <dependency>
@@ -623,10 +631,17 @@
                 <version>${module.version}</version>
             </dependency>
 
-            <!-- SSH鏈嶅姟绔ā鍧?-->
+            <!-- SSH鏈嶅姟绔ā鍧?-->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-ssh-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <!-- AI深度学习模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-ai-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
         </dependencies>

@@ -1,0 +1,73 @@
+# SSH Shell 配置
+ssh:
+  shell:
+    # 启用SSH Shell功能
+    enable: true
+    # SSH服务器配置
+    host: 0.0.0.0
+    port: 2222
+    # 认证配置
+    authentication:
+      # 启用用户名密码认证
+      password: true
+      # 启用公钥认证
+      public-key: false
+    # 用户配置 - 请修改为您自己的凭据
+    user: your_username
+    password: your_password
+    # 会话配置
+    session:
+      # 会话超时时间（秒）
+      timeout: 3600
+      # 最大会话数
+      max-sessions: 10
+    # 命令配置
+    commands:
+      # 启用内置命令
+      built-in: true
+      # 命令历史记录
+      history:
+        enable: true
+        size: 1000
+    # 日志配置
+    audit:
+      enable: true
+      # 日志文件路径
+      file: logs/ssh-shell-audit.log
+
+# Spring Boot Actuator 配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,loggers
+  endpoint:
+    health:
+      show-details: always
+    loggers:
+      enabled: true
+
+# 登录追踪配置
+shell:
+  login:
+    # 启用登录追踪
+    tracking:
+      enabled: true
+      # Redis key前缀
+      redis-prefix: "shell:login:"
+      # 数据保留天数
+      retention-days: 30
+      # 记录详细信息
+      detailed: true
+    # 安全配置
+    security:
+      # 最大失败尝试次数
+      max-failed-attempts: 5
+      # 锁定时间（分钟）
+      lockout-duration: 30
+      # 启用IP白名单
+      ip-whitelist-enabled: false
+      # IP白名单
+      ip-whitelist:
+        - 127.0.0.1
+        - localhost

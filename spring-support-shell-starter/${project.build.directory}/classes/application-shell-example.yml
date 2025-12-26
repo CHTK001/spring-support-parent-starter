@@ -1,0 +1,122 @@
+# Spring Support Shell Starter 示例配置
+# 复制此文件内容到你的 application.yml 中
+
+# SSH Shell 基础配置
+ssh:
+  shell:
+    # 启用SSH Shell功能
+    enable: true
+    # SSH服务器配置
+    host: 0.0.0.0
+    port: 2222
+    # 认证配置
+    authentication:
+      # 启用用户名密码认证
+      password: true
+      # 启用公钥认证（可选）
+      public-key: false
+    # 默认用户配置（生产环境请修改）
+    user: your_username
+    password: your_password
+    # 会话配置
+    session:
+      # 会话超时时间（秒）
+      timeout: 3600
+      # 最大会话数
+      max-sessions: 10
+    # 命令配置
+    commands:
+      # 启用内置命令
+      built-in: true
+      # 命令历史记录
+      history:
+        enable: true
+        size: 1000
+    # 审计日志配置
+    audit:
+      enable: true
+      # 日志文件路径
+      file: logs/ssh-shell-audit.log
+
+# Spring Boot Actuator 配置（用于系统监控命令）
+management:
+  endpoints:
+    web:
+      exposure:
+        # 暴露健康检查、信息、指标、日志等端点
+        include: health,info,metrics,loggers
+  endpoint:
+    health:
+      show-details: always
+    loggers:
+      enabled: true
+
+# 登录追踪配置
+shell:
+  login:
+    # 追踪配置
+    tracking:
+      # 启用登录追踪
+      enabled: true
+      # Redis key前缀
+      redis-prefix: "shell:login:"
+      # 数据保留天数
+      retention-days: 30
+      # 是否记录详细信息
+      detailed: true
+    # 安全配置
+    security:
+      # 最大失败尝试次数
+      max-failed-attempts: 5
+      # 锁定时间（分钟）
+      lockout-duration: 30
+      # 启用IP白名单
+      ip-whitelist-enabled: false
+      # IP白名单列表
+      ip-whitelist:
+        - 127.0.0.1
+        - localhost
+        - 192.168.1.0/24  # 支持CIDR格式
+
+# Redis 配置（登录追踪功能需要）
+spring:
+  redis:
+    host: localhost
+    port: 6379
+    password: # Redis密码（如果有）
+    database: 0
+    timeout: 2000ms
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
+        max-wait: -1ms
+
+# 日志配置
+logging:
+  level:
+    # SSH Shell相关日志
+    com.chua.starter.shell: INFO
+    com.github.fonimus.ssh.shell: INFO
+    # 根日志级别
+    root: INFO
+  pattern:
+    # 控制台日志格式
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    # 文件日志格式
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    # 日志文件路径
+    name: logs/application.log
+
+# 应用信息配置（用于version命令）
+info:
+  app:
+    name: Spring Support Shell Application
+    description: SSH Shell管理应用
+    version: 4.0.0.32
+  build:
+    time: '20251226-0328'
+  java:
+    version: '21.0.9'
