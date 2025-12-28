@@ -2,7 +2,7 @@ package com.chua.starter.mybatis.interceptor;
 
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.utils.ObjectUtils;
-import com.chua.starter.common.support.annotations.DataScope;
+import com.chua.starter.mybatis.annotations.DataScope;
 import com.chua.starter.common.support.constant.DataFilterTypeEnum;
 import com.chua.starter.common.support.oauth.CurrentUser;
 import com.chua.starter.mybatis.permission.DeptRegister;

@@ -1,7 +1,7 @@
 package com.chua.starter.mybatis.interceptor;
 
 import com.baomidou.mybatisplus.extension.plugins.handler.MultiDataPermissionHandler;
-import com.chua.starter.common.support.annotations.DataScope;
+import com.chua.starter.mybatis.annotations.DataScope;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.constant.DataFilterTypeEnum;
 import com.chua.starter.common.support.oauth.AuthService;

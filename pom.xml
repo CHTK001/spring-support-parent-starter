@@ -44,7 +44,7 @@
 
         <!-- 缓存和存储模块 -->
         <module>spring-support-redis-starter</module>           <!-- Redis缓存集成 -->
-        <module>spring-support-minio-starter</module>           <!-- MinIO对象存储 -->
+        <!-- <module>spring-support-filesystem-minio-starter</module> -->  <!-- MinIO对象存储(模块暂不存在) -->
         <module>spring-support-filesystem-starter</module>      <!-- 统一文件存储抽象层 -->
 
         <!-- API文档和接口模块 -->
