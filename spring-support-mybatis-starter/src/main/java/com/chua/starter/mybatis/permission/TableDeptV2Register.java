@@ -7,12 +7,13 @@ import com.chua.starter.common.support.constant.DataFilterTypeEnum;
 import com.chua.starter.common.support.oauth.CurrentUser;
 import com.chua.starter.mybatis.properties.MybatisPlusDataScopeProperties;
 import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.expression.StringValue;
+import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
 import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.expression.operators.relational.InExpression;
+import net.sf.jsqlparser.expression.operators.relational.LikeExpression;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.ParenthesedSelect;
@@ -105,18 +106,43 @@ public class TableDeptV2Register implements DeptRegister {
         }
 
         if (DataFilterTypeEnum.DEPT_AND_SUB == dataPermission) {
+            // 使用 LIKE 前缀查询替代 find_in_set，可以利用索引
+            // SQL: sys_dept_id IN (SELECT sys_dept_id FROM sys_dept WHERE sys_dept_tree_id LIKE 'xxx%')
             InExpression inExpression = new InExpression();
             inExpression.setLeftExpression(new Column(table, deptIdColumn));
+
             ParenthesedSelect subSelect = new ParenthesedSelect();
             PlainSelect select = new PlainSelect();
             select.setSelectItems(Collections.singletonList(new SelectItem<>(new Column(deptIdColumn))));
-            select.setFromItem(table);
-            Function function = new Function();
-            function.setName("find_in_set");
-            function.setParameters(new ExpressionList<>(new LongValue(currentUser.getDeptId()), new Column(deptTreeIdColumn)));
-            select.setWhere(function);
+
+            // 使用配置的部门表
+            Table deptTable = new Table(dataScopeProperties.getTableName());
+            select.setFromItem(deptTable);
+
+            // 构建 LIKE 表达式: sys_dept_tree_id LIKE 'currentDeptTreeId%'
+            LikeExpression likeExpression = new LikeExpression();
+            likeExpression.setLeftExpression(new Column(deptTreeIdColumn));
+            // 需要获取当前部门的 tree_id，这里用子查询
+            PlainSelect treeIdSelect = new PlainSelect();
+            treeIdSelect.setSelectItems(Collections.singletonList(new SelectItem<>(new Column(deptTreeIdColumn))));
+            treeIdSelect.setFromItem(deptTable);
+            EqualsTo deptIdEquals = new EqualsTo();
+            deptIdEquals.setLeftExpression(new Column(deptIdColumn));
+            deptIdEquals.setRightExpression(new LongValue(currentUser.getDeptId()));
+            treeIdSelect.setWhere(deptIdEquals);
+            ParenthesedSelect treeIdSubSelect = new ParenthesedSelect();
+            treeIdSubSelect.setSelect(treeIdSelect);
+
+            // CONCAT(子查询, '%')
+            net.sf.jsqlparser.expression.Function concatFunc = new net.sf.jsqlparser.expression.Function();
+            concatFunc.setName("CONCAT");
+            concatFunc.setParameters(new ExpressionList<>(treeIdSubSelect, new StringValue("%")));
+            likeExpression.setRightExpression(concatFunc);
+
+            select.setWhere(likeExpression);
             subSelect.setSelect(select);
             inExpression.setRightExpression(subSelect);
+
             if (null == where) {
                 return NO_DATA;
             }
@@ -131,6 +157,30 @@ public class TableDeptV2Register implements DeptRegister {
                 return NO_DATA;
             }
             return equalsTo;
+        }
+
+        if (DataFilterTypeEnum.CUSTOM == dataPermission) {
+            // 自定义权限: 本人数据 + 自定义部门数据
+            // SQL: (create_by = userId OR sys_dept_id IN (deptIds))
+            EqualsTo selfCondition = new EqualsTo();
+            selfCondition.setLeftExpression(new Column(table, createByColumn));
+            selfCondition.setRightExpression(new StringValue(currentUser.getUserId()));
+
+            if (StringUtils.isNotEmpty(currentUser.getDataPermissionRule())) {
+                // 有自定义部门列表
+                Expression deptInExpression = createInExpression();
+                OrExpression orExpression = new OrExpression(selfCondition, deptInExpression);
+                if (null == where) {
+                    return NO_DATA;
+                }
+                return orExpression;
+            } else {
+                // 没有自定义部门，只看本人数据
+                if (null == where) {
+                    return NO_DATA;
+                }
+                return selfCondition;
+            }
         }
 
         return NO_DATA;

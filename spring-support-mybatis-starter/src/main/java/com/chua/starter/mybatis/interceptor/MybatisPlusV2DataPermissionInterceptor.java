@@ -27,21 +27,7 @@ public class MybatisPlusV2DataPermissionInterceptor extends DataPermissionInterc
 
     @Override
     protected void processDelete(Delete delete, int index, String sql, Object obj) {
-        if (!methodSecurityInterceptor.isEnable()) {
-            super.processDelete(delete, index, sql, obj);
-            return;
-        }
-
-        AuthService authService = SpringBeanUtils.getBean(AuthService.class);
-        if (null == authService) {
-            return;
-        }
-        CurrentUser currentUser = authService.getCurrentUser();
-        if (ObjectUtils.isEmpty(currentUser)) {
-            return;
-        }
-
-        if (!currentUser.isDept()) {
+        if (!shouldApplyDataPermission()) {
             return;
         }
         super.processDelete(delete, index, sql, obj);
@@ -49,20 +35,7 @@ public class MybatisPlusV2DataPermissionInterceptor extends DataPermissionInterc
 
     @Override
     protected void processUpdate(Update update, int index, String sql, Object obj) {
-        if (!methodSecurityInterceptor.isEnable()) {
-            super.processUpdate(update, index, sql, obj);
-            return;
-        }
-        AuthService authService = SpringBeanUtils.getBean(AuthService.class);
-        if (null == authService) {
-            return;
-        }
-        CurrentUser currentUser = authService.getCurrentUser();
-        if (ObjectUtils.isEmpty(currentUser)) {
-            return;
-        }
-
-        if (!currentUser.isDept()) {
+        if (!shouldApplyDataPermission()) {
             return;
         }
         super.processUpdate(update, index, sql, obj);
@@ -70,23 +43,35 @@ public class MybatisPlusV2DataPermissionInterceptor extends DataPermissionInterc
 
     @Override
     protected void processSelect(Select select, int index, String sql, Object obj) {
-        if (!methodSecurityInterceptor.isEnable()) {
-            super.processSelect(select, index, sql, obj);
-            return;
-        }
-
-        AuthService authService = SpringBeanUtils.getBean(AuthService.class);
-        if (null == authService) {
-            return;
-        }
-        CurrentUser currentUser = authService.getCurrentUser();
-        if (ObjectUtils.isEmpty(currentUser)) {
-            return;
-        }
-
-        if (!currentUser.isDept()) {
+        if (!shouldApplyDataPermission()) {
             return;
         }
         super.processSelect(select, index, sql, obj);
+    }
+
+    /**
+     * 判断是否应该应用数据权限
+     *
+     * @return true-应用, false-不应用
+     */
+    private boolean shouldApplyDataPermission() {
+        // 检查是否开启数据权限
+        if (!methodSecurityInterceptor.isEnable()) {
+            return false;
+        }
+
+        // 获取当前用户
+        AuthService authService = SpringBeanUtils.getBean(AuthService.class);
+        if (null == authService) {
+            return false;
+        }
+
+        CurrentUser currentUser = authService.getCurrentUser();
+        if (ObjectUtils.isEmpty(currentUser)) {
+            return false;
+        }
+
+        // 检查用户是否需要应用数据权限
+        return currentUser.isNeedDataPermission();
     }
 }

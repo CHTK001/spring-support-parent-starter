@@ -203,12 +203,24 @@ public class CurrentUser {
     }
 
     /**
-     * 是否部门权限
+     * 是否需要应用数据权限
+     * <p>当数据权限类型不是 ALL 时，需要应用数据权限过滤</p>
      *
-     * @return 是否部门权限
+     * @return 是否需要应用数据权限
      */
+    public boolean isNeedDataPermission() {
+        return null != this.dataPermission && this.dataPermission != DataFilterTypeEnum.ALL;
+    }
+
+    /**
+     * 是否部门权限（保留兼容性，建议使用 isNeedDataPermission）
+     *
+     * @return 是否需要应用数据权限
+     * @deprecated 使用 {@link #isNeedDataPermission()} 代替
+     */
+    @Deprecated
     public boolean isDept() {
-        return null != this.roles && this.roles.contains("DEPT");
+        return isNeedDataPermission();
     }
 }
 
