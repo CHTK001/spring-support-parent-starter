@@ -12,6 +12,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import static com.chua.starter.common.support.logger.ModuleLog.highlight;
+
 /**
  * 死信队列自动配置
  * <p>
@@ -49,8 +51,8 @@ public class DeadLetterAutoConfiguration {
         // 如果有主队列，使用主队列作为消息源；否则使用死信队列存储
         MessageTemplate sourceTemplate = mainMessageTemplate != null ? mainMessageTemplate : dlqStorage;
 
-        log.info(">>>>> 创建死信队列模板, type: {}, maxRetries: {}, queueCapacity: {}",
-                deadLetterProperties.getType(), deadLetterProperties.getMaxRetries(), deadLetterProperties.getQueueCapacity());
+        log.info("[Queue] 创建死信队列模板, 类型: {}, 最大重试: {}, 队列容量: {}",
+                highlight(deadLetterProperties.getType()), highlight(deadLetterProperties.getMaxRetries()), highlight(deadLetterProperties.getQueueCapacity()));
         return new DeadLetterTemplate(sourceTemplate, dlqStorage, config);
     }
 

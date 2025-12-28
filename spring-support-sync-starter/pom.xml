@@ -34,7 +34,12 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-common-starter</artifactId>
-            <version>4.0.0.33</version>
+        </dependency>
+
+        <!-- Spring Support Common Starter - 日志工具 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-common-starter</artifactId>
         </dependency>
 
         <dependency>

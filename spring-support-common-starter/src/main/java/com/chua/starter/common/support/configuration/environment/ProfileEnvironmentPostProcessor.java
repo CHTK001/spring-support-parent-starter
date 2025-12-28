@@ -88,12 +88,12 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
         // 检查是否启用
         String enabledValue = environment.getProperty(ENABLED_KEY, "true");
         if (!"true".equalsIgnoreCase(enabledValue)) {
-            log.debug("【OPS配置】已禁用 ({}={})", ENABLED_KEY, enabledValue);
+            log.debug("[OPS配置]已禁用 ({}={})", ENABLED_KEY, enabledValue);
             return;
         }
 
         String active = environment.getProperty("spring.profiles.active");
-        log.info("【OPS配置】开始加载环境目录配置，当前环境: {}", active);
+        log.info("[OPS配置]开始加载环境目录配置，当前环境: {}", active);
 
         PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
         MutablePropertySources propertySources = environment.getPropertySources();
@@ -126,18 +126,18 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
 
             // 使用 addLast，确保优先级低于业务配置和配置中心
             propertySources.addLast(new MapPropertySource(sourceName, properties));
-            log.debug("【OPS配置】注册配置: {}", sourceName);
+            log.debug("[OPS配置]注册配置: {}", sourceName);
         }
 
         // 日志输出
         if (!defaultLoadedConfigs.isEmpty()) {
-            log.info("【OPS配置】加载兜底配置 {}/，共 {} 个: {}", DEFAULT_PROFILE_DIR, defaultLoadedConfigs.size(), defaultLoadedConfigs);
+            log.info("[OPS配置]加载兜底配置 {}/，共 {} 个: {}", DEFAULT_PROFILE_DIR, defaultLoadedConfigs.size(), defaultLoadedConfigs);
         }
         if (!profileLoadedConfigs.isEmpty()) {
-            log.info("【OPS配置】加载环境配置 {}/，共 {} 个: {}", DIR_PREFIX + active, profileLoadedConfigs.size(), profileLoadedConfigs);
+            log.info("[OPS配置]加载环境配置 {}/，共 {} 个: {}", DIR_PREFIX + active, profileLoadedConfigs.size(), profileLoadedConfigs);
         }
         if (defaultLoadedConfigs.isEmpty() && profileLoadedConfigs.isEmpty()) {
-            log.debug("【OPS配置】未找到任何 ops 目录配置");
+            log.debug("[OPS配置]未找到任何 ops 目录配置");
         }
     }
 
@@ -155,7 +155,7 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
                                   List<String> loadedConfigs) {
         try {
             Resource[] resources = resolver.getResources("classpath:/" + profileDir + "/*");
-            log.debug("【OPS配置】扫描 {}/ 目录，发现 {} 个资源", profileDir, resources.length);
+            log.debug("[OPS配置]扫描 {}/ 目录，发现 {} 个资源", profileDir, resources.length);
 
             // 按文件名排序
             Arrays.sort(resources, Comparator.comparing(r -> {
@@ -189,13 +189,13 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
                     });
 
                     loadedConfigs.add(filename);
-                    log.debug("【OPS配置】加载配置: {}/{}", profileDir, filename);
+                    log.debug("[OPS配置]加载配置: {}/{}", profileDir, filename);
                 } catch (IOException e) {
-                    log.warn("【OPS配置】加载配置失败: {}/{}, 原因: {}", profileDir, filename, e.getMessage());
+                    log.warn("[OPS配置]加载配置失败: {}/{}, 原因: {}", profileDir, filename, e.getMessage());
                 }
             }
         } catch (IOException e) {
-            log.debug("【OPS配置】目录不存在或扫描失败: {}/", profileDir);
+            log.debug("[OPS配置]目录不存在或扫描失败: {}/", profileDir);
         }
     }
 

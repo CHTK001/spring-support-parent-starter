@@ -79,12 +79,12 @@ public class DebounceAspect {
         boolean acquired = debounceManager.tryAcquire(debounceKey, durationMs);
 
         if (acquired) {
-            log.debug("【防抖】通过 - Key: {}, 方法: {}", debounceKey, method.getName());
+            log.debug("[防抖]通过 - Key: {}, 方法: {}", debounceKey, method.getName());
             return joinPoint.proceed();
         }
 
         // 防抖触发
-        log.warn("【防抖】触发 - Key: {}, 方法: {}, 消息: {}", debounceKey, method.getName(), annotation.message());
+        log.warn("[防抖]触发 - Key: {}, 方法: {}, 消息: {}", debounceKey, method.getName(), annotation.message());
 
         // 检查是否有降级方法
         String fallbackMethod = annotation.fallbackMethod();
@@ -172,7 +172,7 @@ public class DebounceAspect {
                 return Long.parseLong(value.substring(0, value.length() - 1)) * 60 * 60 * 1000;
             }
         } catch (NumberFormatException e) {
-            log.warn("【防抖】无法解析时间表达式: {}，使用默认值 1000ms", value);
+            log.warn("[防抖]无法解析时间表达式: {}，使用默认值 1000ms", value);
         }
 
         return 1000L;
@@ -193,9 +193,9 @@ public class DebounceAspect {
             method.setAccessible(true);
             return method.invoke(target, joinPoint.getArgs());
         } catch (NoSuchMethodException e) {
-            log.warn("【防抖】降级方法不存在: {}", fallbackMethod);
+            log.warn("[防抖]降级方法不存在: {}", fallbackMethod);
         } catch (Exception e) {
-            log.error("【防抖】调用降级方法失败: {}", fallbackMethod, e);
+            log.error("[防抖]调用降级方法失败: {}", fallbackMethod, e);
         }
         return null;
     }

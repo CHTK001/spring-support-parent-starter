@@ -47,19 +47,19 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
 
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
-        log.info("【配置中心】开始处理配置中心");
+        log.info("[配置中心]开始处理配置中心");
         environmentRef = environment;
         
         ConfigCenterProperties configCenterProperties = Binder.get(environment)
                 .bindOrCreate(ConfigCenterProperties.PRE, ConfigCenterProperties.class);
         if (!configCenterProperties.isEnable()) {
-            log.warn("【配置中心】配置中心未启用");
+            log.warn("[配置中心]配置中心未启用");
             return;
         }
         
-        log.info("【配置中心】开始加载配置中心: {}", configCenterProperties.getProtocol());
+        log.info("[配置中心]开始加载配置中心: {}", configCenterProperties.getProtocol());
         String active = environment.getProperty("spring.profiles.active");
-        log.info("【配置中心】当前环境: {}", active);
+        log.info("[配置中心]当前环境: {}", active);
         
         // 创建 ConfigCenter 实例
         ConfigCenter configCenter = ServiceProvider.of(ConfigCenter.class)
@@ -73,7 +73,7 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
                         .build());
         
         if (null == configCenter) {
-            log.warn("【配置中心】暂不支持{}, 请重新设置!", configCenterProperties.getProtocol());
+            log.warn("[配置中心]暂不支持{}, 请重新设置!", configCenterProperties.getProtocol());
             return;
         }
 
@@ -88,12 +88,12 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
         // 注册配置变更监听（根据配置决定是否启用）
         if (configCenterProperties.getHotReload().isEnabled()) {
             registerConfigListener(configCenter, configCenterProperties);
-            log.info("【配置中心】热更新已启用");
+            log.info("[配置中心]热更新已启用");
         } else {
-            log.info("【配置中心】热更新已禁用");
+            log.info("[配置中心]热更新已禁用");
         }
         
-        log.info("【配置中心】配置中心初始化完成，支持监听: {}", configCenter.isSupportListener());
+        log.info("[配置中心]配置中心初始化完成，支持监听: {}", configCenter.isSupportListener());
     }
 
     /**
@@ -115,14 +115,14 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
             environment.getPropertySources()
                     .addLast(new OriginTrackedMapPropertySource(newName, stringObjectMap));
             LOADED_CONFIG_NAMES.add(newName);
-            log.info("【配置中心】加载配置: {}", newName);
+            log.info("[配置中心]加载配置: {}", newName);
             loaded.add(string);
         }
         
         // 加载不带环境后缀的配置
         for (String string : strings) {
             if (loaded.contains(string)) {
-                log.debug("【配置中心】已加载: {}-{}, 忽略{}", string, active, string);
+                log.debug("[配置中心]已加载: {}-{}, 忽略{}", string, active, string);
                 continue;
             }
             String newName = "application-" + string + ".yml";
@@ -134,7 +134,7 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
             environment.getPropertySources()
                     .addLast(new OriginTrackedMapPropertySource(newName, stringObjectMap));
             LOADED_CONFIG_NAMES.add(newName);
-            log.info("【配置中心】加载配置: {}", newName);
+            log.info("[配置中心]加载配置: {}", newName);
         }
     }
 
@@ -146,7 +146,7 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
      */
     private void registerConfigListener(ConfigCenter configCenter, ConfigCenterProperties properties) {
         if (!configCenter.isSupportListener()) {
-            log.warn("【配置中心】当前配置中心不支持监听功能");
+            log.warn("[配置中心]当前配置中心不支持监听功能");
             return;
         }
 
@@ -156,7 +156,7 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
         // 为每个已加载的配置文件注册监听
         for (String configName : LOADED_CONFIG_NAMES) {
             configCenter.addListener(configName, new EnvironmentConfigListener(configName, refreshDelayMs, logOnChange));
-            log.info("【配置中心】注册配置监听: {}", configName);
+            log.info("[配置中心]注册配置监听: {}", configName);
         }
     }
 
@@ -182,7 +182,7 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
         @Override
         public void onChange(String key, String oldValue, String newValue) {
             if (logOnChange) {
-                log.info("【配置中心】配置变更: configName={}, key={}, oldValue={}, newValue={}", 
+                log.info("[配置中心]配置变更: configName={}, key={}, oldValue={}, newValue={}", 
                         configName, key, oldValue, newValue);
             }
         }
@@ -196,13 +196,13 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
             // 防抖处理：避免配置频繁变更导致抖动
             long now = System.currentTimeMillis();
             if (now - lastRefreshTime < refreshDelayMs) {
-                log.debug("【配置中心】配置更新过于频繁，跳过本次更新: configName={}", configName);
+                log.debug("[配置中心]配置更新过于频繁，跳过本次更新: configName={}", configName);
                 return;
             }
             lastRefreshTime = now;
             
             if (logOnChange) {
-                log.info("【配置中心】配置更新: configName={}, key={}", configName, key);
+                log.info("[配置中心]配置更新: configName={}, key={}", configName, key);
             }
             
             // 重新加载配置
@@ -225,14 +225,14 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
             }
             
             if (logOnChange) {
-                log.info("【配置中心】已更新环境配置: {}", configName);
+                log.info("[配置中心]已更新环境配置: {}", configName);
             }
         }
 
         @Override
         public void onDelete(String key, String oldValue) {
             if (logOnChange) {
-                log.info("【配置中心】配置删除: configName={}, key={}", configName, key);
+                log.info("[配置中心]配置删除: configName={}, key={}", configName, key);
             }
         }
     }

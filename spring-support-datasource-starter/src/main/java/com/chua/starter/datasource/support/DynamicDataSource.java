@@ -14,6 +14,8 @@ import java.sql.Connection;
 import java.util.Collection;
 import java.util.Map;
 
+import static com.chua.starter.common.support.logger.ModuleLog.highlight;
+
 /**
  * 动态数据源
  *
@@ -138,7 +140,7 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
     protected Object determineCurrentLookupKey() {
         String dbType = DataSourceContextSupport.getDbType();
         if (null != dbType && log.isInfoEnabled()) {
-            log.info("数据源为: {}", dbType);
+            log.info("[Datasource] 当前数据源: {}", highlight(dbType));
         }
         return dbType;
     }

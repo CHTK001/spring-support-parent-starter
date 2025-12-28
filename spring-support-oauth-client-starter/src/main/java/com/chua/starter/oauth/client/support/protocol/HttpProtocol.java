@@ -10,6 +10,8 @@ import com.chua.common.support.utils.SignUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.starter.oauth.client.support.trace.TraceContext;
+import com.chua.starter.oauth.client.support.trace.TraceSpan;
 import com.chua.starter.oauth.client.support.entity.AppKeySecret;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
@@ -76,7 +78,7 @@ public class HttpProtocol extends AbstractProtocol {
                             .concurrency(200, 20)
                             .automaticRetries(false)  // 使用自定义重试机制
                             .verifySsl(true);
-                    log.info("【OAuth客户端】HTTP客户端初始化完成 - 连接超时: {}ms, 读取超时: {}ms",
+                    log.info("[OAuth客户端]HTTP客户端初始化完成 - 连接超时: {}ms, 读取超时: {}ms",
                             config.getConnectTimeout(), config.getReadTimeout());
                 }
             }
@@ -360,110 +362,150 @@ public class HttpProtocol extends AbstractProtocol {
      * 执行实际的HTTP请求
      */
     private AuthenticationInformation doRequest(JsonObject jsonObject, UpgradeType upgradeType, String path) {
-        // 获取认证服务器地址
-        String selectedUrl = selectUrl();
-        if (null == selectedUrl) {
-            return AuthenticationInformation.authServerError();
+        // 创建或获取追踪上下文
+        TraceContext traceContext = TraceContext.current();
+        boolean isNewTrace = false;
+        if (traceContext == null) {
+            traceContext = TraceContext.create();
+            traceContext.clientInfo(
+                    SpringBeanUtils.getEnvironment().resolvePlaceholders("${spring.application.name:}"),
+                    RequestUtils.getIpAddress()
+            );
+            isNewTrace = true;
         }
 
-        // 生成随机密钥和请求头参数
-        String key = IdUtils.simpleUuid();
-        jsonObject.put("x-ext-timestamp", System.currentTimeMillis());
-
-        String timestamp = System.nanoTime() + "";
-        String key1 = IdUtils.simpleUuid();
-
-        HttpResponse<String> httpResponse = null;
         try {
-            // 使用配置好超时的HTTP客户端
-            UnirestInstance client = httpClient != null ? httpClient : Unirest.primaryInstance();
+            // Span: 构建请求
+            TraceSpan buildSpan = traceContext.startSpan("client_build_request");
             
-            // 构建POST请求
-            HttpRequestWithBody withBody = client.post(
-                    StringUtils.endWithAppend(StringUtils.startWithAppend(selectedUrl, "http://"), "/") +
-                            StringUtils.startWithMove(path, "/"));
+            // 获取认证服务器地址
+            String selectedUrl = selectUrl();
+            if (null == selectedUrl) {
+                traceContext.endSpan();
+                return AuthenticationInformation.authServerError();
+            }
 
-            // 设置基础请求头
-            HttpRequestWithBody requestWithBody = withBody
-                    .header("x-oauth-timestamp", timestamp)
-                    .header("x-oauth-uuid", key1)
-                    .header("x-oauth-encode", String.valueOf(isEncode()))
-                    .header("x-oauth-serial", createData(key, key1))
-                    .header("x-oauth-sign", SignUtils.generateSignFromMap(jsonObject));
+            // 生成随机密钥和请求头参数
+            String key = IdUtils.simpleUuid();
+            jsonObject.put("x-ext-timestamp", System.currentTimeMillis());
+
+            String timestamp = System.nanoTime() + "";
+            String key1 = IdUtils.simpleUuid();
             
-            // 添加 AK/SK 请求头（如果启用）
-            String accessKey = getAccessKey();
-            if (StringUtils.isNotBlank(accessKey)) {
-                requestWithBody = requestWithBody.header("x-oauth-ak", accessKey);
+            traceContext.endSpan(); // 结束构建请求 Span
+
+            HttpResponse<String> httpResponse = null;
+            // Span: HTTP调用
+            TraceSpan httpSpan = traceContext.startSpan("client_http_call");
+            try {
+                // 使用配置好超时的HTTP客户端
+                UnirestInstance client = httpClient != null ? httpClient : Unirest.primaryInstance();
+                
+                // 构建POST请求
+                HttpRequestWithBody withBody = client.post(
+                        StringUtils.endWithAppend(StringUtils.startWithAppend(selectedUrl, "http://"), "/") +
+                                StringUtils.startWithMove(path, "/"));
+
+                // 设置基础请求头
+                HttpRequestWithBody requestWithBody = withBody
+                        .header("x-oauth-timestamp", timestamp)
+                        .header("x-oauth-uuid", key1)
+                        .header("x-oauth-encode", String.valueOf(isEncode()))
+                        .header("x-oauth-serial", createData(key, key1))
+                        .header("x-oauth-sign", SignUtils.generateSignFromMap(jsonObject));
+                
+                // 添加 AK/SK 请求头（如果启用）
+                String accessKey = getAccessKey();
+                if (StringUtils.isNotBlank(accessKey)) {
+                    requestWithBody = requestWithBody.header("x-oauth-ak", accessKey);
+                }
+                
+                // 传递追踪头用于链路追踪
+                requestWithBody = requestWithBody
+                        .header("x-trace-id", traceContext.getTraceId())
+                        .header("x-trace-timestamp", String.valueOf(traceContext.getStartTimestamp()))
+                        .header("x-trace-app-name", traceContext.getClientAppName() != null ? traceContext.getClientAppName() : "")
+                        .header("x-trace-client-ip", traceContext.getClientIp() != null ? traceContext.getClientIp() : "");
+
+                // 如果有升级类型，则添加相应请求头
+                if (null != upgradeType) {
+                    requestWithBody = requestWithBody.header("x-oauth-upgrade-type", upgradeType.name());
+                }
+
+                // 发送请求并获取响应
+                httpResponse = requestWithBody.contentType(APPLICATION_JSON)
+                        .body(JsonObject.create()
+                                .fluentPut("data", createData(jsonObject, key)).toJSONString())
+                        .asString();
+
+            } catch (UnirestException e) {
+                traceContext.endSpan(); // 结束HTTP调用 Span
+                // 完整记录请求异常信息
+                log.error("[OAuth客户端]认证请求异常 - traceId: {}, URL: {}, 路径: {}, 异常类型: {}, 异常信息: {}", 
+                        traceContext.getTraceId(), selectedUrl, path, e.getClass().getSimpleName(), e.getMessage());
+                if (log.isDebugEnabled()) {
+                    log.debug("[OAuth客户端]认证请求异常堆栈", e);
+                }
+                return AuthenticationInformation.authServerError();
+            } catch (Exception e) {
+                traceContext.endSpan(); // 结束HTTP调用 Span
+                // 捕获其他未预期异常
+                log.error("[OAuth客户端]认证请求未知异常 - traceId: {}, URL: {}, 路径: {}, 异常: {}", 
+                        traceContext.getTraceId(), selectedUrl, path, e.getMessage(), e);
+                return AuthenticationInformation.authServerError();
             }
-            
-            // 传递 traceId 用于链路追踪
-            String traceId = MDC.get("traceId");
-            if (StringUtils.isNotBlank(traceId)) {
-                requestWithBody = requestWithBody.header("x-trace-id", traceId);
+            traceContext.endSpan(); // 结束HTTP调用 Span
+
+            // Span: 解析响应
+            TraceSpan parseSpan = traceContext.startSpan("client_parse_response");
+            try {
+                // 检查响应是否为空
+                if (null == httpResponse) {
+                    log.warn("[OAuth客户端]认证服务器响应为空 - traceId: {}, URL: {}, 路径: {}", 
+                            traceContext.getTraceId(), selectedUrl, path);
+                    return AuthenticationInformation.authServerError();
+                }
+
+                // 获取响应状态码和内容
+                int status = httpResponse.getStatus();
+                String body = httpResponse.getBody();
+
+                // 判断响应是否为服务器错误或空数据
+                if (status >= 400 && status < 600) {
+                    log.warn("[OAuth客户端]认证服务器返回错误状态 - traceId: {}, URL: {}, 路径: {}, 状态码: {}, 响应: {}", 
+                            traceContext.getTraceId(), selectedUrl, path, status, body);
+                    return AuthenticationInformation.authServerNotFound();
+                }
+
+                if (Strings.isNullOrEmpty(body)) {
+                    log.warn("[OAuth客户端]认证服务器返回空响应 - traceId: {}, URL: {}, 路径: {}, 状态码: {}", 
+                            traceContext.getTraceId(), selectedUrl, path, status);
+                    return AuthenticationInformation.authServerNotFound();
+                }
+
+                // 成功响应时解析返回结果
+                if (status == 200) {
+                    log.debug("[OAuth客户端]认证请求成功 - traceId: {}, URL: {}, 路径: {}, 总耗时: {}ms", 
+                            traceContext.getTraceId(), selectedUrl, path, traceContext.getTotalCostMs());
+                    log.debug("[OAuth客户端]追踪详情: {}", traceContext.getSpansSummary());
+                    return createAuthenticationInformation(Json.fromJson(body, ReturnResult.class),
+                            httpResponse.getHeaders().getFirst("x-oauth-response-serial"),
+                            path);
+                }
+
+                // 其他状态码
+                log.warn("[OAuth客户端]认证服务器返回未知状态 - traceId: {}, URL: {}, 路径: {}, 状态码: {}", 
+                        traceContext.getTraceId(), selectedUrl, path, status);
+                return AuthenticationInformation.authServerError();
+            } finally {
+                traceContext.endSpan(); // 结束解析响应 Span
             }
-
-            // 如果有升级类型，则添加相应请求头
-            if (null != upgradeType) {
-                requestWithBody = requestWithBody.header("x-oauth-upgrade-type", upgradeType.name());
+        } finally {
+            // 如果是本方法创建的追踪上下文，则清理
+            if (isNewTrace) {
+                TraceContext.clear();
             }
-
-            // 发送请求并获取响应
-            httpResponse = requestWithBody.contentType(APPLICATION_JSON)
-                    .body(JsonObject.create()
-                            .fluentPut("data", createData(jsonObject, key)).toJSONString())
-                    .asString();
-
-        } catch (UnirestException e) {
-            // 完整记录请求异常信息
-            log.error("【OAuth客户端】认证请求异常 - URL: {}, 路径: {}, 异常类型: {}, 异常信息: {}", 
-                    selectedUrl, path, e.getClass().getSimpleName(), e.getMessage());
-            if (log.isDebugEnabled()) {
-                log.debug("【OAuth客户端】认证请求异常堆栈", e);
-            }
-            return AuthenticationInformation.authServerError();
-        } catch (Exception e) {
-            // 捕获其他未预期异常
-            log.error("【OAuth客户端】认证请求未知异常 - URL: {}, 路径: {}, 异常: {}", 
-                    selectedUrl, path, e.getMessage(), e);
-            return AuthenticationInformation.authServerError();
         }
-
-        // 检查响应是否为空
-        if (null == httpResponse) {
-            log.warn("【OAuth客户端】认证服务器响应为空 - URL: {}, 路径: {}", selectedUrl, path);
-            return AuthenticationInformation.authServerError();
-        }
-
-        // 获取响应状态码和内容
-        int status = httpResponse.getStatus();
-        String body = httpResponse.getBody();
-
-        // 判断响应是否为服务器错误或空数据
-        if (status >= 400 && status < 600) {
-            log.warn("【OAuth客户端】认证服务器返回错误状态 - URL: {}, 路径: {}, 状态码: {}, 响应: {}", 
-                    selectedUrl, path, status, body);
-            return AuthenticationInformation.authServerNotFound();
-        }
-
-        if (Strings.isNullOrEmpty(body)) {
-            log.warn("【OAuth客户端】认证服务器返回空响应 - URL: {}, 路径: {}, 状态码: {}", 
-                    selectedUrl, path, status);
-            return AuthenticationInformation.authServerNotFound();
-        }
-
-        // 成功响应时解析返回结果
-        if (status == 200) {
-            log.debug("【OAuth客户端】认证请求成功 - URL: {}, 路径: {}", selectedUrl, path);
-            return createAuthenticationInformation(Json.fromJson(body, ReturnResult.class),
-                    httpResponse.getHeaders().getFirst("x-oauth-response-serial"),
-                    path);
-        }
-
-        // 其他状态码
-        log.warn("【OAuth客户端】认证服务器返回未知状态 - URL: {}, 路径: {}, 状态码: {}", 
-                selectedUrl, path, status);
-        return AuthenticationInformation.authServerError();
     }
 
 }

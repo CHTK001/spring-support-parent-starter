@@ -6,6 +6,7 @@ import com.chua.sync.support.properties.SyncProperties;
 import com.chua.sync.support.spi.SyncMessageHandler;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import static com.chua.starter.common.support.logger.ModuleLog.*;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 
@@ -84,13 +85,13 @@ public class SyncServer implements InitializingBean, DisposableBean {
         ServiceProvider<SyncMessageHandler> serviceProvider = ServiceProvider.of(SyncMessageHandler.class);
         handlers.addAll(serviceProvider.collect());
         handlers.sort(Comparator.comparingInt(SyncMessageHandler::getOrder));
-        log.info("[SyncServer] 加载了 {} 个消息处理器", handlers.size());
+        log.info("[Sync] 加载 {} 个消息处理器", highlight(handlers.size()));
     }
 
     @Override
     public void afterPropertiesSet() throws Exception {
         if (!syncProperties.isServerEnabled()) {
-            log.info("[SyncServer] 服务端未启用");
+            log.info("[Sync] 服务端 [{}]", disabled());
             return;
         }
 
@@ -105,7 +106,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
 
         for (SyncProperties.ServerInstance config : instanceConfigs) {
             if (!config.isEnable()) {
-                log.info("[SyncServer] 实例 {} 未启用，跳过", config.getName());
+                log.info("[Sync] 实例 {} [{}]", config.getName(), disabled());
                 continue;
             }
 
@@ -129,7 +130,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
             instances.put(config.getName(), instance);
         }
 
-        log.info("[SyncServer] 启动了 {} 个服务实例", instances.size());
+        log.info("[Sync] 启动 {} 个服务实例 [{}]", highlight(instances.size()), enabled());
     }
 
     /**
@@ -181,7 +182,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
             try {
                 listener.accept(sessionId, clientInfo);
             } catch (Exception e) {
-                log.error("[SyncServer] 连接监听器执行失败", e);
+                log.error("[Sync] 连接监听器执行失败", e);
             }
         }
     }
@@ -191,7 +192,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
             try {
                 listener.accept(sessionId, clientInfo);
             } catch (Exception e) {
-                log.error("[SyncServer] 断开监听器执行失败", e);
+                log.error("[Sync] 断开监听器执行失败", e);
             }
         }
     }

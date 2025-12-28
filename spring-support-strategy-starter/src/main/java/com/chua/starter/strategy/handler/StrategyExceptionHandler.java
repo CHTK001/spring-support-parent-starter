@@ -35,7 +35,7 @@ public class StrategyExceptionHandler {
     @ExceptionHandler(RateLimiterAspect.RateLimitException.class)
     @ResponseStatus(HttpStatus.TOO_MANY_REQUESTS)
     public ReturnResult<Void> handleRateLimitException(RateLimiterAspect.RateLimitException e) {
-        log.warn("【限流】请求被限流: {}", e.getMessage());
+        log.warn("[限流]请求被限流: {}", e.getMessage());
         return ReturnResult.error(ReturnCode.SYSTEM_SERVER_BUSINESS_ERROR,  e.getMessage());
     }
 
@@ -48,7 +48,7 @@ public class StrategyExceptionHandler {
     @ExceptionHandler(DebounceException.class)
     @ResponseStatus(HttpStatus.TOO_MANY_REQUESTS)
     public ReturnResult<Void> handleDebounceException(DebounceException e) {
-        log.warn("【防抖】请求被拦截: {}", e.getMessage());
+        log.warn("[防抖]请求被拦截: {}", e.getMessage());
         return ReturnResult.error(ReturnCode.SYSTEM_SERVER_BUSINESS_ERROR, e.getMessage());
     }
 }

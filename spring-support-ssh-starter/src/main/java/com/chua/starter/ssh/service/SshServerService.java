@@ -2,6 +2,7 @@ package com.chua.starter.ssh.service;
 
 import com.chua.starter.ssh.properties.SshServerProperties;
 import lombok.extern.slf4j.Slf4j;
+import static com.chua.starter.common.support.logger.ModuleLog.*;
 import org.apache.sshd.common.file.virtualfs.VirtualFileSystemFactory;
 import org.apache.sshd.server.SshServer;
 import org.apache.sshd.server.auth.password.PasswordAuthenticator;
@@ -37,6 +38,8 @@ public class SshServerService implements InitializingBean, DisposableBean {
     public void afterPropertiesSet() throws Exception {
         if (properties.isEnabled()) {
             startSshServer();
+        } else {
+            log.info("[SSH] 服务状态 [{}]", disabled());
         }
     }
 
@@ -76,7 +79,7 @@ public class SshServerService implements InitializingBean, DisposableBean {
         // 启动服务器
         sshServer.start();
         
-        log.info("SSH服务端已启动，监听地址: {}:{}", properties.getHost(), properties.getPort());
+        log.info("[SSH] 服务已启动 {} [{}]", address(properties.getHost(), properties.getPort()), enabled());
     }
 
     /**
@@ -85,7 +88,7 @@ public class SshServerService implements InitializingBean, DisposableBean {
     private void stopSshServer() throws IOException {
         if (sshServer != null && !sshServer.isClosed()) {
             sshServer.stop();
-            log.info("SSH服务端已停止");
+            log.info("[SSH] 服务已停止");
         }
     }
 
@@ -105,9 +108,9 @@ public class SshServerService implements InitializingBean, DisposableBean {
                                           auth.getUserPassword().equals(password);
                     
                     if (authenticated) {
-                        log.info("用户 {} 通过密码认证成功，来源IP: {}", username, session.getClientAddress());
+                        log.info("[SSH] 用户 {} 认证 {} - IP: {}", username, success(), session.getClientAddress());
                     } else {
-                        log.warn("用户 {} 密码认证失败，来源IP: {}", username, session.getClientAddress());
+                        log.warn("[SSH] 用户 {} 认证 {} - IP: {}", username, failed(), session.getClientAddress());
                     }
                     
                     return authenticated;
@@ -117,7 +120,7 @@ public class SshServerService implements InitializingBean, DisposableBean {
 
         // TODO: 实现公钥认证
         if (auth.isPublicKey()) {
-            log.info("公钥认证已启用（待实现）");
+            log.info("[SSH] 公钥认证 [{}]", enabled());
         }
     }
 
@@ -134,7 +137,7 @@ public class SshServerService implements InitializingBean, DisposableBean {
             // 设置文件系统工厂
             sshServer.setFileSystemFactory(new VirtualFileSystemFactory(Paths.get(fileTransfer.getRootDirectory())));
             
-            log.info("SFTP文件传输已启用，根目录: {}", fileTransfer.getRootDirectory());
+            log.info("[SSH] SFTP文件传输 [{}] 根目录: {}", enabled(), highlight(fileTransfer.getRootDirectory()));
         }
     }
 
@@ -147,7 +150,7 @@ public class SshServerService implements InitializingBean, DisposableBean {
         // 设置会话超时
 //        sshServer.getProperties().put(SshServer.IDLE_TIMEOUT, session.getIdleTimeout() * 1000);
 
-        log.info("会话配置完成，超时时间: {}秒，最大会话数: {}", session.getTimeout(), session.getMaxSessions());
+        log.debug("[SSH] 会话配置 - 超时: {}s, 最大会话: {}", session.getTimeout(), session.getMaxSessions());
     }
 
     /**

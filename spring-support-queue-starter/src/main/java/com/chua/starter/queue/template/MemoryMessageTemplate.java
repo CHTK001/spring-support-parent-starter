@@ -14,6 +14,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.*;
 
+import static com.chua.starter.common.support.logger.ModuleLog.highlight;
+
 /**
  * 基于JDK的内存消息队列模板
  * <p>
@@ -77,7 +79,7 @@ public class MemoryMessageTemplate implements MessageTemplate {
             t.setDaemon(true);
             return t;
         });
-        log.info("Memory message queue initialized with capacity: {}", config.getQueueCapacity());
+        log.info("[Queue] 内存消息队列初始化完成, 容量: {}", highlight(config.getQueueCapacity()));
     }
 
     @Override
@@ -169,7 +171,7 @@ public class MemoryMessageTemplate implements MessageTemplate {
         // 启动消费者线程（如果尚未启动）
         consumerTasks.computeIfAbsent(destination, this::startConsumer);
 
-        log.info("Subscribed to destination: {}", destination);
+        log.info("[Queue] 订阅目标: {}", highlight(destination));
     }
 
     @Override
@@ -185,7 +187,7 @@ public class MemoryMessageTemplate implements MessageTemplate {
         if (task != null) {
             task.cancel(true);
         }
-        log.info("Unsubscribed from destination: {}", destination);
+        log.info("[Queue] 取消订阅: {}", highlight(destination));
     }
 
     @Override
@@ -227,7 +229,7 @@ public class MemoryMessageTemplate implements MessageTemplate {
         queues.clear();
         subscribers.clear();
 
-        log.info("Memory message queue closed");
+        log.info("[Queue] 内存消息队列已关闭");
     }
 
     /**
@@ -259,7 +261,7 @@ public class MemoryMessageTemplate implements MessageTemplate {
         BlockingQueue<Message> queue = queues.get(destination);
         if (queue != null) {
             queue.clear();
-            log.info("Queue cleared: {}", destination);
+            log.info("[Queue] 队列已清空: {}", highlight(destination));
         }
     }
 
@@ -268,7 +270,7 @@ public class MemoryMessageTemplate implements MessageTemplate {
      */
     public void clearAll() {
         queues.values().forEach(BlockingQueue::clear);
-        log.info("All queues cleared");
+        log.info("[Queue] 所有队列已清空");
     }
 
     /**

@@ -8,6 +8,7 @@ import com.chua.starter.job.support.mapper.SysJobLogDetailMapper;
 import com.chua.starter.job.support.mapper.SysJobLogMapper;
 import com.chua.starter.job.support.scheduler.SchedulerTrigger;
 import lombok.extern.slf4j.Slf4j;
+import static com.chua.starter.common.support.logger.ModuleLog.*;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -85,8 +86,8 @@ public class JobConfiguration {
         // 初始化日志文件存储路径
         JobFileAppender.initLogPath(jobProperties.getLogPath());
 
-        log.info(">>>>>>>>>>> Job调度器初始化完成, 线程池大小:{}, 日志路径:{}", 
-                jobProperties.getPoolSize(), jobProperties.getLogPath());
+        log.info("[Job] 调度器初始化完成 [{}], 线程池: {}, 日志路径: {}", 
+                enabled(), highlight(jobProperties.getPoolSize()), highlight(jobProperties.getLogPath()));
         return scheduler;
     }
 

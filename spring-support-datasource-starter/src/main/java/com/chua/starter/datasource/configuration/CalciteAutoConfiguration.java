@@ -15,6 +15,8 @@ import org.springframework.context.annotation.Configuration;
 import javax.sql.DataSource;
 import java.util.Map;
 
+import static com.chua.starter.common.support.logger.ModuleLog.highlight;
+
 /**
  * Calcite数据源合并自动配置
  * <p>
@@ -42,7 +44,7 @@ public class CalciteAutoConfiguration {
      */
     @Bean("calciteDataSource")
     public DataSource calciteDataSource() {
-        log.info("开始创建Calcite合并数据源...");
+        log.info("[Datasource] 开始创建Calcite合并数据源...");
         
         CalciteConnectorFactory factory = new CalciteConnectorFactory();
         
@@ -67,7 +69,7 @@ public class CalciteAutoConfiguration {
         }
         
         DataSource dataSource = factory.getDataSource(properties.getMaxPoolSize());
-        log.info("Calcite合并数据源创建完成，共合并{}个数据源", dataSources.size());
+        log.info("[Datasource] Calcite合并数据源创建完成, 共合并 {} 个数据源", highlight(dataSources.size()));
         
         return dataSource;
     }

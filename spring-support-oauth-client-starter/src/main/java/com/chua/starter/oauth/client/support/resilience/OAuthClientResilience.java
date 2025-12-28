@@ -44,7 +44,7 @@ public class OAuthClientResilience {
     public OAuthClientResilience(AuthClientProperties authClientProperties) {
         this.retryConfig = authClientProperties.getRetry();
         this.circuitBreakerConfig = authClientProperties.getCircuitBreaker();
-        log.info("【弹性处理器】初始化完成 - 重试启用: {}, 熔断启用: {}", 
+        log.info("[弹性处理器]初始化完成 - 重试启用: {}, 熔断启用: {}", 
                 retryConfig.isEnabled(), circuitBreakerConfig.isEnabled());
     }
 
@@ -61,7 +61,7 @@ public class OAuthClientResilience {
         
         // 检查熔断器状态
         if (circuitBreakerConfig.isEnabled() && isCircuitOpen()) {
-            log.warn("【熔断器】熔断器处于打开状态，执行降级逻辑");
+            log.warn("[熔断器]熔断器处于打开状态，执行降级逻辑");
             return fallback.get();
         }
 
@@ -95,26 +95,26 @@ public class OAuthClientResilience {
                 // 如果认证成功或明确失败（非网络错误），不需要重试
                 if (result != null && result.getInformation() != Information.AUTHENTICATION_SERVER_EXCEPTION) {
                     if (attempt > 1) {
-                        log.info("【重试机制】第{}次重试成功", attempt);
+                        log.info("[重试机制]第{}次重试成功", attempt);
                     }
                     return result;
                 }
 
                 // 服务器异常，需要重试
                 if (attempt < maxAttempts) {
-                    log.warn("【重试机制】第{}次请求失败，{}ms后重试 (共{}次)", attempt, delay, maxAttempts);
+                    log.warn("[重试机制]第{}次请求失败，{}ms后重试 (共{}次)", attempt, delay, maxAttempts);
                     Thread.sleep(delay);
                     // 指数退避
                     delay = Math.min((long) (delay * retryConfig.getMultiplier()), retryConfig.getMaxDelay());
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                log.warn("【重试机制】重试被中断");
+                log.warn("[重试机制]重试被中断");
                 break;
             } catch (Exception e) {
                 lastException = e;
                 if (attempt < maxAttempts) {
-                    log.warn("【重试机制】第{}次请求异常: {}, {}ms后重试", attempt, e.getMessage(), delay);
+                    log.warn("[重试机制]第{}次请求异常: {}, {}ms后重试", attempt, e.getMessage(), delay);
                     try {
                         Thread.sleep(delay);
                         delay = Math.min((long) (delay * retryConfig.getMultiplier()), retryConfig.getMaxDelay());
@@ -126,9 +126,9 @@ public class OAuthClientResilience {
             }
         }
 
-        log.error("【重试机制】达到最大重试次数({})，请求失败", maxAttempts);
+        log.error("[重试机制]达到最大重试次数({})，请求失败", maxAttempts);
         if (lastException != null) {
-            log.error("【重试机制】最后一次异常: {}", lastException.getMessage());
+            log.error("[重试机制]最后一次异常: {}", lastException.getMessage());
         }
         return AuthenticationInformation.authServerError();
     }
@@ -147,7 +147,7 @@ public class OAuthClientResilience {
                 // 进入半开状态
                 state = CircuitState.HALF_OPEN;
                 halfOpenRequestCount.set(0);
-                log.info("【熔断器】进入半开状态，开始尝试恢复");
+                log.info("[熔断器]进入半开状态，开始尝试恢复");
                 return false;
             }
             return true;
@@ -179,7 +179,7 @@ public class OAuthClientResilience {
                 // 半开状态成功，恢复关闭状态
                 if (successCount.get() >= circuitBreakerConfig.getPermittedCallsInHalfOpenState()) {
                     reset();
-                    log.info("【熔断器】服务恢复，熔断器关闭");
+                    log.info("[熔断器]服务恢复，熔断器关闭");
                 }
             }
         } else {
@@ -189,7 +189,7 @@ public class OAuthClientResilience {
             if (state == CircuitState.HALF_OPEN) {
                 // 半开状态失败，重新打开熔断器
                 state = CircuitState.OPEN;
-                log.warn("【熔断器】半开状态请求失败，重新打开熔断器");
+                log.warn("[熔断器]半开状态请求失败，重新打开熔断器");
             } else if (state == CircuitState.CLOSED) {
                 // 检查是否需要打开熔断器
                 int windowSize = circuitBreakerConfig.getSlidingWindowSize();
@@ -197,7 +197,7 @@ public class OAuthClientResilience {
                     int failureRate = (failureCount.get() * 100) / requestCount.get();
                     if (failureRate >= circuitBreakerConfig.getFailureRateThreshold()) {
                         state = CircuitState.OPEN;
-                        log.warn("【熔断器】失败率达到阈值({}%)，熔断器打开", failureRate);
+                        log.warn("[熔断器]失败率达到阈值({}%)，熔断器打开", failureRate);
                     }
                     // 重置计数器（滑动窗口）
                     failureCount.set(0);
@@ -238,7 +238,7 @@ public class OAuthClientResilience {
      * 创建降级响应
      */
     public static AuthenticationInformation createFallbackResponse(String message) {
-        log.warn("【降级处理】返回降级响应: {}", message);
+        log.warn("[降级处理]返回降级响应: {}", message);
         return new AuthenticationInformation(Information.AUTHENTICATION_SERVER_EXCEPTION, null);
     }
 }

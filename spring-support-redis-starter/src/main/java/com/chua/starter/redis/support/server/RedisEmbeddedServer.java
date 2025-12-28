@@ -7,6 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.DisposableBean;
 import redis.embedded.RedisServer;
 
+import static com.chua.starter.common.support.logger.ModuleLog.*;
+
 /**
  * redis
  *
@@ -24,17 +26,21 @@ public class RedisEmbeddedServer implements DisposableBean {
 
     @Override
     public void destroy() throws Exception {
-        redisServer.stop();
-        log.info("关闭嵌入式redis服务[{}:{}]", redisServerProperties.getHost(), redisServerProperties.getPort());
+        if (redisServer != null) {
+            redisServer.stop();
+            log.info("[Redis] 嵌入式服务已停止 {}", address(redisServerProperties.getHost(), redisServerProperties.getPort()));
+        }
     }
 
     @PostConstruct
     public void afterPropertiesSet() {
         if (!redisServerProperties.isOpenEmbedded()) {
+            log.info("[Redis] 嵌入式服务 [{}]", disabled());
             return;
         }
 
         if (NetUtils.isPortInUsed(redisServerProperties.getPort())) {
+            log.warn("[Redis] 端口 {} 已被占用, 跳过启动", redisServerProperties.getPort());
             return;
         }
 
@@ -46,6 +52,6 @@ public class RedisEmbeddedServer implements DisposableBean {
                 .build();
 
         redisServer.start();
-        log.info("开启嵌入式redis服务[{}:{}]", redisServerProperties.getHost(), redisServerProperties.getPort());
+        log.info("[Redis] 嵌入式服务已启动 {} [{}]", address(redisServerProperties.getHost(), redisServerProperties.getPort()), enabled());
     }
 }

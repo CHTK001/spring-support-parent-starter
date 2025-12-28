@@ -25,6 +25,12 @@
             <artifactId>utils-support-common-starter</artifactId>
         </dependency>
 
+        <!-- Spring Support Common Starter - 日志工具 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-common-starter</artifactId>
+        </dependency>
+
         <!-- Spring Boot Starter -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

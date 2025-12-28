@@ -6,6 +6,7 @@ import com.chua.socket.support.properties.SocketProperties;
 import com.chua.socket.support.session.SocketSessionTemplate;
 import com.chua.socket.support.spi.SocketProvider;
 import lombok.extern.slf4j.Slf4j;
+import static com.chua.starter.common.support.logger.ModuleLog.*;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -50,11 +51,11 @@ public class SocketConfiguration {
         Map<String, SocketSessionTemplate> templates = new LinkedHashMap<>();
         List<SocketProperties.ProtocolConfig> protocolConfigs = properties.getEffectiveProtocols();
 
-        log.info("[Socket] 加载 {} 个协议配置", protocolConfigs.size());
+        log.info("[Socket] 加载 {} 个协议配置", highlight(protocolConfigs.size()));
 
         for (SocketProperties.ProtocolConfig protocolConfig : protocolConfigs) {
             String protocolName = protocolConfig.getProtocol().getValue();
-            log.info("[Socket] 使用协议: {}", protocolName);
+            log.info("[Socket] 使用协议: {}", highlight(protocolName));
 
             // 通过 SPI 获取对应的 Socket 提供者
             SocketProvider provider = ServiceProvider.of(SocketProvider.class)
@@ -67,7 +68,7 @@ public class SocketConfiguration {
                 );
             }
 
-            log.info("[Socket] 加载 SPI 实现: {}", provider.getClass().getName());
+            log.debug("[Socket] 加载 SPI 实现: {}", provider.getClass().getSimpleName());
 
             // 创建协议特定的配置
             SocketProperties protocolProperties = createProtocolProperties(properties, protocolConfig);
@@ -159,12 +160,11 @@ public class SocketConfiguration {
                 String protocolName = config.getProtocol().getValue();
                 SocketSessionTemplate template = templates.get(protocolName);
                 if (template != null) {
-                    log.info("[Socket] 启动 {} 服务，预设端口: {}",
-                            protocolName,
-                            config.getRoom().stream()
-                                    .map(SocketProperties.Room::getPort)
-                                    .map(String::valueOf)
-                                    .collect(Collectors.joining(", ")));
+                    String ports = config.getRoom().stream()
+                            .map(SocketProperties.Room::getPort)
+                            .map(String::valueOf)
+                            .collect(Collectors.joining(", "));
+                    log.info("[Socket] 启动 {} 服务, 端口: {}", highlight(protocolName), highlight(ports));
                     template.start();
                 }
             }

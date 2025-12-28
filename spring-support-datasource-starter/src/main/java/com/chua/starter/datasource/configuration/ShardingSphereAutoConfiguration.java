@@ -14,6 +14,8 @@ import org.springframework.context.annotation.Configuration;
 import javax.sql.DataSource;
 import java.util.Map;
 
+import static com.chua.starter.common.support.logger.ModuleLog.success;
+
 /**
  * ShardingSphere 5.x 分库分表自动配置
  * <p>
@@ -40,7 +42,7 @@ public class ShardingSphereAutoConfiguration {
      */
     @Bean("shardingDataSource")
     public DataSource shardingDataSource() {
-        log.info("开始创建ShardingSphere分片数据源...");
+        log.info("[Datasource] 开始创建ShardingSphere分片数据源...");
         
         ShardingDataSourceBuilder builder = ShardingDataSourceBuilder.newBuilder();
         
@@ -84,7 +86,7 @@ public class ShardingSphereAutoConfiguration {
         builder.showSql(properties.isShowSql());
         
         DataSource dataSource = builder.build();
-        log.info("ShardingSphere分片数据源创建完成");
+        log.info("[Datasource] ShardingSphere分片数据源创建 [{}]", success());
         
         return dataSource;
     }

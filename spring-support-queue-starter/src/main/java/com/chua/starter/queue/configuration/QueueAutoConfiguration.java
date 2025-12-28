@@ -14,6 +14,8 @@ import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
 
+import static com.chua.starter.common.support.logger.ModuleLog.highlight;
+
 /**
  * 消息队列自动配置
  *
@@ -40,7 +42,7 @@ public class QueueAutoConfiguration {
     @ConditionalOnMissingBean(MessageTemplate.class)
     @ConditionalOnProperty(prefix = QueueProperties.PREFIX, name = "type", havingValue = "memory", matchIfMissing = true)
     public MessageTemplate memoryMessageTemplate() {
-        log.info(">>>>> 创建内存消息队列模板, queueCapacity: {}", queueProperties.getMemory().getQueueCapacity());
+        log.info("[Queue] 创建内存消息队列模板, 队列容量: {}", highlight(queueProperties.getMemory().getQueueCapacity()));
         return new MemoryMessageTemplate(queueProperties.getMemory());
     }
 

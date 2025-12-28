@@ -21,6 +21,8 @@ import org.springframework.web.socket.server.standard.ServletServerContainerFact
 import java.util.Collections;
 import java.util.List;
 
+import static com.chua.starter.common.support.logger.ModuleLog.highlight;
+
 /**
  * WebSocket 自动配置
  * <p>
@@ -75,7 +77,7 @@ public class WebSocketAutoConfiguration implements WebSocketConfigurer {
         DelegatingWebSocketHandler handler = delegatingWebSocketHandler(webSocketSessionManager());
         
         for (String endpoint : properties.getEndpoints()) {
-            log.info("[WebSocket] 注册端点: {}", endpoint);
+            log.info("[WebSocket] 注册端点: {}", highlight(endpoint));
             
             WebSocketHandlerRegistration registration = registry.addHandler(handler, endpoint);
             

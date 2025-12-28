@@ -84,7 +84,7 @@ public class ApiFeatureConfiguration implements WebMvcConfigurer {
 
         if (count > 0) {
             log.info("╔══════════════════════════════════════════════════════════════════════════════");
-            log.info("║ 【功能开关】已扫描注册 {} 个 @ApiFeature 功能开关", count);
+            log.info("║ [功能开关]已扫描注册 {} 个 @ApiFeature 功能开关", count);
             log.info("╚══════════════════════════════════════════════════════════════════════════════");
         }
     }

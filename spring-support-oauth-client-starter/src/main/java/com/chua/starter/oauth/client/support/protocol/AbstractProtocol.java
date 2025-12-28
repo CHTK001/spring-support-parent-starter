@@ -65,7 +65,7 @@ public abstract class AbstractProtocol implements Protocol {
                     CacheProvider provider = new GuavaCacheProvider((int) authClientProperties.getCacheTimeout() / 3600);
                     provider.afterPropertiesSet();
                     CACHEABLE = provider.cacheHotColdBackup(authClientProperties.isCacheHotColdBackup());
-                    log.info("【OAuth客户端】缓存初始化完成 - 超时时间: {}秒, 冷热备份: {}", 
+                    log.info("[OAuth客户端]缓存初始化完成 - 超时时间: {}秒, 冷热备份: {}", 
                             authClientProperties.getCacheTimeout(), 
                             authClientProperties.isCacheHotColdBackup());
                 }
@@ -81,7 +81,7 @@ public abstract class AbstractProtocol implements Protocol {
     public static void invalidateCache(String token) {
         if (CACHEABLE != null && token != null) {
             CACHEABLE.remove(token);
-            log.info("【OAuth客户端】已清除用户缓存 - Token: {}***", 
+            log.info("[OAuth客户端]已清除用户缓存 - Token: {}***", 
                     token.length() > 8 ? token.substring(0, 8) : token);
         }
     }
@@ -92,7 +92,7 @@ public abstract class AbstractProtocol implements Protocol {
     public static void invalidateAllCache() {
         if (CACHEABLE != null) {
             CACHEABLE.invalidateAll();
-            log.info("【OAuth客户端】已清除所有缓存");
+            log.info("[OAuth客户端]已清除所有缓存");
         }
     }
 

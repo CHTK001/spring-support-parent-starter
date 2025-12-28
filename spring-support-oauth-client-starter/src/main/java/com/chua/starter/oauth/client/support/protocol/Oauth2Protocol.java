@@ -78,7 +78,7 @@ public class Oauth2Protocol extends AbstractProtocol {
                             .concurrency(200, 20)
                             .automaticRetries(false)
                             .verifySsl(true);
-                    log.info("【OAuth2客户端】HTTP客户端初始化完成 - 连接超时: {}ms, 读取超时: {}ms",
+                    log.info("[OAuth2客户端]HTTP客户端初始化完成 - 连接超时: {}ms, 读取超时: {}ms",
                             config.getConnectTimeout(), config.getReadTimeout());
                 }
             }
@@ -133,7 +133,7 @@ public class Oauth2Protocol extends AbstractProtocol {
 
             return parseTokenResponse(response);
         } catch (UnirestException e) {
-            log.error("【OAuth2客户端】获取令牌失败", e);
+            log.error("[OAuth2客户端]获取令牌失败", e);
             return new LoginAuthResult(500, "获取令牌失败: " + e.getMessage());
         }
     }
@@ -165,7 +165,7 @@ public class Oauth2Protocol extends AbstractProtocol {
             
             throw new AuthException("登出失败: HTTP " + response.getStatus());
         } catch (UnirestException e) {
-            log.error("【OAuth2客户端】登出失败", e);
+            log.error("[OAuth2客户端]登出失败", e);
             throw new AuthException("登出失败: " + e.getMessage());
         }
     }
@@ -219,7 +219,7 @@ public class Oauth2Protocol extends AbstractProtocol {
 
             return parseAuthResponse(response);
         } catch (UnirestException e) {
-            log.error("【OAuth2客户端】client_credentials授权失败", e);
+            log.error("[OAuth2客户端]client_credentials授权失败", e);
             return AuthenticationInformation.authServerError();
         }
     }
@@ -251,7 +251,7 @@ public class Oauth2Protocol extends AbstractProtocol {
 
             return parseAuthResponse(response);
         } catch (UnirestException e) {
-            log.error("【OAuth2客户端】refresh_token授权失败", e);
+            log.error("[OAuth2客户端]refresh_token授权失败", e);
             return AuthenticationInformation.authServerError();
         }
     }
@@ -303,7 +303,7 @@ public class Oauth2Protocol extends AbstractProtocol {
             authInfo.setToken(token);
             return authInfo;
         } catch (UnirestException e) {
-            log.error("【OAuth2客户端】令牌内省失败", e);
+            log.error("[OAuth2客户端]令牌内省失败", e);
             return AuthenticationInformation.authServerError();
         }
     }
@@ -347,7 +347,7 @@ public class Oauth2Protocol extends AbstractProtocol {
 
             return userResult;
         } catch (UnirestException e) {
-            log.error("【OAuth2客户端】获取用户信息失败", e);
+            log.error("[OAuth2客户端]获取用户信息失败", e);
             return null;
         }
     }

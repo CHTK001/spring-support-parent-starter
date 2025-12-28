@@ -79,12 +79,12 @@ public class RateLimiterAspect {
 
         // 尝试获取许可
         if (limiter == null || limiter.tryAcquire()) {
-            log.debug("【限流】通过 - Key: {}, 方法: {}", limiterKey, method.getName());
+            log.debug("[限流]通过 - Key: {}, 方法: {}", limiterKey, method.getName());
             return joinPoint.proceed();
         }
 
         // 限流触发
-        log.warn("【限流】触发 - Key: {}, 方法: {}, 消息: {}", limiterKey, method.getName(), annotation.message());
+        log.warn("[限流]触发 - Key: {}, 方法: {}, 消息: {}", limiterKey, method.getName(), annotation.message());
         throw new RateLimitException(annotation.message());
     }
 
@@ -138,7 +138,7 @@ public class RateLimiterAspect {
             String type = annotation.type();
             int rate = annotation.value();
 
-            log.info("【限流】创建限流器 - Key: {}, 类型: {}, 速率: {}/s", key, type, rate);
+            log.info("[限流]创建限流器 - Key: {}, 类型: {}, 速率: {}/s", key, type, rate);
 
             return ServiceProvider.of(RateLimiterProvider.class).getNewExtension(type,
                     RateLimiterSetting.builder()
@@ -214,7 +214,7 @@ public class RateLimiterAspect {
      */
     public static void removeLimiter(String key) {
         LIMITER_CACHE.remove(key);
-        log.info("【限流】移除限流器 - Key: {}", key);
+        log.info("[限流]移除限流器 - Key: {}", key);
     }
 
     /**
@@ -222,7 +222,7 @@ public class RateLimiterAspect {
      */
     public static void clearAllLimiters() {
         LIMITER_CACHE.clear();
-        log.info("【限流】清除所有限流器");
+        log.info("[限流]清除所有限流器");
     }
 
     /**

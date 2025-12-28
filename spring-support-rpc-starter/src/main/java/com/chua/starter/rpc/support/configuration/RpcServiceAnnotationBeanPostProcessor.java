@@ -13,6 +13,7 @@ import com.chua.starter.rpc.support.properties.RpcProperties;
 import com.chua.starter.rpc.support.service.RpcServiceBean;
 import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
+import static com.chua.starter.common.support.logger.ModuleLog.*;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.factory.BeanClassLoaderAware;
@@ -136,11 +137,47 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
     public void setEnvironment(Environment environment) {
         this.environment = environment;
         this.rpcProperties = Binder.get(environment).bindOrCreate(RpcProperties.PRE, RpcProperties.class);
+        if (!rpcProperties.isEnable()) {
+            log.info("[RPC] 服务状态: [{}]", disabled());
+            return;
+        }
         this.rpcServer = RpcServer.createService(rpcProperties.getType().name(),
                 rpcProperties.getRegistry(),
                 rpcProperties.getProtocols(),
                 environment.resolvePlaceholders(rpcProperties.getApplicationName())
         );
+        printStartupInfo();
+    }
+    
+    /**
+     * 打印启动配置信息
+     */
+    private void printStartupInfo() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n[RPC] ════════════════════════════════════════\n");
+        sb.append("[RPC] 服务配置\n");
+        sb.append("[RPC] ├─ 类型: ").append(highlight(rpcProperties.getType().name())).append("\n");
+        sb.append("[RPC] ├─ 应用名: ").append(highlight(rpcProperties.getApplicationName())).append("\n");
+        sb.append("[RPC] ├─ 状态: [").append(enabled()).append("]\n");
+        
+        // 注册中心
+        if (rpcProperties.getRegistry() != null && !rpcProperties.getRegistry().isEmpty()) {
+            sb.append("[RPC] ├─ 注册中心:\n");
+            for (var reg : rpcProperties.getRegistry()) {
+                sb.append("[RPC] │  └─ ").append(address(reg.getAddress())).append("\n");
+            }
+        }
+        
+        // 协议
+        if (rpcProperties.getProtocols() != null && !rpcProperties.getProtocols().isEmpty()) {
+            sb.append("[RPC] └─ 协议:\n");
+            for (var protocol : rpcProperties.getProtocols()) {
+                sb.append("[RPC]    └─ ").append(protocol.getName()).append("://")
+                        .append(address(protocol.getHost(), protocol.getPort())).append("\n");
+            }
+        }
+        sb.append("[RPC] ════════════════════════════════════════");
+        log.info(sb.toString());
     }
 
 
@@ -201,8 +238,8 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
 
         scanned = true;
         if (CollectionUtils.isEmpty(packagesToScan)) {
-            if (log.isWarnEnabled()) {
-                log.warn("packagesToScan is empty , ServiceBean registry will be ignored!");
+        if (log.isWarnEnabled()) {
+                log.warn("[RPC] packagesToScan 为空, 跳过服务扫描");
             }
             return;
         }
@@ -234,7 +271,7 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
                     for (BeanDefinitionHolder beanDefinitionHolder : beanDefinitionHolders) {
                         serviceClasses.add(beanDefinitionHolder.getBeanDefinition().getBeanClassName());
                     }
-                    log.info("Found {} classes annotated by @Service under package [{}]: {}", beanDefinitionHolders.size(), packageToScan, serviceClasses);
+                    log.info("[RPC] 扫描包 [{}] 发现 {} 个 @RpcService: {}", packageToScan, highlight(beanDefinitionHolders.size()), serviceClasses);
                 }
 
                 for (BeanDefinitionHolder beanDefinitionHolder : beanDefinitionHolders) {
@@ -243,7 +280,7 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
                 }
             } else {
                 if (log.isWarnEnabled()) {
-                    log.warn("No class annotated by @Service was found under package [{}], ignore re-scanned classes: {}", packageToScan, scanExcludeFilter.getExcludedCount());
+                    log.warn("[RPC] 扫描包 [{}] 未发现 @RpcService", packageToScan);
                 }
             }
 
@@ -267,16 +304,8 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
         }
 
         if (beanNameGenerator == null) {
-
-            if (log.isInfoEnabled()) {
-
-                log.info("BeanNameGenerator bean can't be found in BeanFactory with name ["
-                        + CONFIGURATION_BEAN_NAME_GENERATOR + "]");
-                log.info("BeanNameGenerator will be a instance of {} , it maybe a potential problem on bean name generation.", AnnotationBeanNameGenerator.class.getName());
-            }
-
+            log.debug("[RPC] 使用默认 BeanNameGenerator: {}", AnnotationBeanNameGenerator.class.getSimpleName());
             beanNameGenerator = new AnnotationBeanNameGenerator();
-
         }
 
         return beanNameGenerator;
@@ -344,15 +373,14 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
                 return;
             }
 
-            String msg = "Found duplicated BeanDefinition of service interface [" + serviceInterface + "] with bean name [" + serviceBeanName +
-                    "], existing definition [ " + existingDefinition + "], new definition [" + serviceBeanDefinition + "]";
+            String msg = "[RPC] 发现重复的服务定义: " + serviceInterface + " -> " + serviceBeanName;
             log.error(msg);
             throw new BeanDefinitionStoreException(serviceBeanDefinition.getResourceDescription(), serviceBeanName, msg);
         }
 
         registry.registerBeanDefinition(serviceBeanName, serviceBeanDefinition);
         if (log.isInfoEnabled()) {
-            log.info("Register ServiceBean[{}]: {}", serviceBeanName, serviceBeanDefinition);
+            log.info("[RPC] 注册服务: {} -> {}", highlight(serviceInterface), serviceBeanName);
         }
     }
     /**

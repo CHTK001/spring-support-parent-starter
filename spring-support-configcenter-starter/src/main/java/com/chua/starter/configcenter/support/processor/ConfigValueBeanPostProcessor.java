@@ -229,20 +229,20 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
             // 强制推送
             success = configCenter.publish(dataId, group, parsed.key, publishValue);
             if (success) {
-                log.info("【配置中心】强制推送配置成功: dataId={}, group={}, key={}, value={}",
+                log.info("[配置中心]强制推送配置成功: dataId={}, group={}, key={}, value={}",
                         dataId, group, parsed.key, publishValue);
             } else {
-                log.warn("【配置中心】强制推送配置失败: dataId={}, group={}, key={}",
+                log.warn("[配置中心]强制推送配置失败: dataId={}, group={}, key={}",
                         dataId, group, parsed.key);
             }
         } else if (annotation.publishIfAbsent()) {
             // 仅当不存在时推送
             success = configCenter.publishIfAbsent(dataId, group, parsed.key, publishValue);
             if (success) {
-                log.info("【配置中心】推送配置成功（不存在时）: dataId={}, group={}, key={}, value={}",
+                log.info("[配置中心]推送配置成功（不存在时）: dataId={}, group={}, key={}, value={}",
                         dataId, group, parsed.key, publishValue);
             } else {
-                log.debug("【配置中心】配置已存在，跳过推送: dataId={}, group={}, key={}",
+                log.debug("[配置中心]配置已存在，跳过推送: dataId={}, group={}, key={}",
                         dataId, group, parsed.key);
             }
         }
@@ -280,7 +280,7 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
                 && !registeredListeners.contains(configKey)) {
             configCenter.addListener(configKey, new ConfigValueListener(configKey));
             registeredListeners.add(configKey);
-            log.info("【配置中心】注册配置监听: key={}", configKey);
+            log.info("[配置中心]注册配置监听: key={}", configKey);
         }
     }
 

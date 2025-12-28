@@ -119,7 +119,7 @@ public class AuthClientProperties {
      * <p>
      * 可选值：
      * <ul>
-     * <li><strong>armeria</strong> - Armeria协议，基于Netty高性能异步框架，【推荐】</li>
+     * <li><strong>armeria</strong> - Armeria协议，基于Netty高性能异步框架，[推荐]</li>
      * <li><strong>http</strong> - HTTP协议，基于Unirest，兼容性好</li>
      * <li><strong>static</strong> - 静态协议，用于测试</li>
      * </ul>
@@ -211,7 +211,7 @@ public class AuthClientProperties {
         /**
          * 临时账号配置(只用于账号类型为Embed)
          * <p>
-         * 【安全警告】生产环境禁止启用临时账号功能！
+         * [安全警告]生产环境禁止启用临时账号功能！
          * 格式: username:password;username2:password2
          * </p>
          */

@@ -15,6 +15,8 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 
+import static com.chua.starter.common.support.logger.ModuleLog.highlight;
+
 /**
  * 死信队列模板
  * <p>
@@ -116,8 +118,8 @@ public class DeadLetterTemplate implements MessageTemplate {
             t.setDaemon(true);
             return t;
         });
-        log.info("DeadLetterTemplate initialized with maxRetries: {}, retryDelay: {}ms, dlqType: {}",
-                config.getMaxRetries(), config.getRetryDelay().toMillis(), dlqMessageTemplate.getType());
+        log.info("[Queue] 死信队列初始化完成, 最大重试: {}, 重试延迟: {}ms, 类型: {}",
+                highlight(config.getMaxRetries()), highlight(config.getRetryDelay().toMillis()), highlight(dlqMessageTemplate.getType()));
     }
 
     // ==================== MessageTemplate 接口实现 ====================
@@ -182,7 +184,7 @@ public class DeadLetterTemplate implements MessageTemplate {
             scheduler.shutdownNow();
         }
         retryCounters.clear();
-        log.info("DeadLetterTemplate closed");
+        log.info("[Queue] 死信队列已关闭");
     }
 
     // ==================== 死信队列特有方法 ====================
@@ -207,7 +209,7 @@ public class DeadLetterTemplate implements MessageTemplate {
                 retryCounters.remove(messageId);
             } catch (Exception e) {
                 int retryCount = counter.incrementAndGet();
-                log.warn("Message processing failed, destination: {}, messageId: {}, retryCount: {}/{}",
+                log.warn("[Queue] 消息处理失败, 目标: {}, 消息ID: {}, 重试次数: {}/{}",
                         destination, messageId, retryCount, config.getMaxRetries(), e);
 
                 if (retryCount < config.getMaxRetries()) {
@@ -239,7 +241,7 @@ public class DeadLetterTemplate implements MessageTemplate {
                 retryCounters.remove(messageId);
             } catch (Exception e) {
                 int retryCount = counter.incrementAndGet();
-                log.warn("Message processing failed, destination: {}, group: {}, messageId: {}, retryCount: {}/{}",
+                log.warn("[Queue] 消息处理失败, 目标: {}, 组: {}, 消息ID: {}, 重试次数: {}/{}",
                         destination, group, messageId, retryCount, config.getMaxRetries(), e);
 
                 if (retryCount < config.getMaxRetries()) {
@@ -270,8 +272,8 @@ public class DeadLetterTemplate implements MessageTemplate {
 
         SendResult result = dlqMessageTemplate.send(dlqDestination, message.getPayload(), headers);
         if (result.isSuccess()) {
-            log.info("Message moved to dead letter queue: {}, messageId: {}, dlqType: {}", 
-                    dlqDestination, message.getId(), dlqMessageTemplate.getType());
+            log.info("[Queue] 消息已转移到死信队列: {}, 消息ID: {}, 类型: {}", 
+                    highlight(dlqDestination), message.getId(), highlight(dlqMessageTemplate.getType()));
         }
         return result;
     }
@@ -285,7 +287,7 @@ public class DeadLetterTemplate implements MessageTemplate {
     public void subscribeDeadLetter(String originalDestination, MessageHandler handler) {
         String dlqDestination = getDlqDestination(originalDestination);
         dlqMessageTemplate.subscribe(dlqDestination, handler);
-        log.info("Subscribed to dead letter queue: {}, dlqType: {}", dlqDestination, dlqMessageTemplate.getType());
+        log.info("[Queue] 订阅死信队列: {}, 类型: {}", highlight(dlqDestination), highlight(dlqMessageTemplate.getType()));
     }
 
     /**
@@ -307,7 +309,7 @@ public class DeadLetterTemplate implements MessageTemplate {
 
         SendResult result = messageTemplate.send(originalDestination, message.getPayload(), headers);
         if (result.isSuccess()) {
-            log.info("Dead letter message reprocessed to: {}, messageId: {}", originalDestination, message.getId());
+            log.info("[Queue] 死信消息已重新处理: {}, 消息ID: {}", highlight(originalDestination), message.getId());
         }
         return result;
     }
@@ -333,7 +335,7 @@ public class DeadLetterTemplate implements MessageTemplate {
                 if (handler.test(message)) {
                     reprocessDeadLetter(originalDestination, message);
                 } else {
-                    log.info("Dead letter message discarded: {}", message.getId());
+                    log.info("[Queue] 死信消息已丢弃: {}", message.getId());
                 }
                 processed.incrementAndGet();
             } catch (Exception e) {

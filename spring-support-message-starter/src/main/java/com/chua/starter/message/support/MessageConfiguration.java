@@ -28,7 +28,7 @@ public class MessageConfiguration {
     @Bean(destroyMethod = "close")
     @ConditionalOnMissingBean
     public MessageTemplate messageTemplate(MessageProperties properties) {
-        log.info(">>>>>>> 初始化消息推送模板");
+        log.info("[Message] 初始化消息推送模板");
         return new MessageTemplate(properties);
     }
 }

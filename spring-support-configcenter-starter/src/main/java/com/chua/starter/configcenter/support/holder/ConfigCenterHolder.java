@@ -31,7 +31,7 @@ public class ConfigCenterHolder {
             synchronized (ConfigCenterHolder.class) {
                 if (instance == null) {
                     instance = configCenter;
-                    log.info("【配置中心】ConfigCenter 实例已设置: {}", 
+                    log.info("[配置中心]ConfigCenter 实例已设置: {}", 
                             configCenter != null ? configCenter.getClass().getSimpleName() : "null");
                 }
             }
@@ -72,9 +72,9 @@ public class ConfigCenterHolder {
         if (instance != null) {
             try {
                 instance.close();
-                log.info("【配置中心】ConfigCenter 已关闭");
+                log.info("[配置中心]ConfigCenter 已关闭");
             } catch (Exception e) {
-                log.error("【配置中心】关闭 ConfigCenter 失败", e);
+                log.error("[配置中心]关闭 ConfigCenter 失败", e);
             }
             instance = null;
         }

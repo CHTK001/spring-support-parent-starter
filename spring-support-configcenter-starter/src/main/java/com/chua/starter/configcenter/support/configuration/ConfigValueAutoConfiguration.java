@@ -43,10 +43,10 @@ public class ConfigValueAutoConfiguration {
     public ConfigCenter configCenter() {
         ConfigCenter configCenter = ConfigCenterHolder.getInstance();
         if (configCenter != null) {
-            log.info("【配置中心】复用已创建的 ConfigCenter 实例，支持监听: {}", 
+            log.info("[ConfigCenter] 复用已创建的 ConfigCenter 实例, 支持监听: {}", 
                     configCenter.isSupportListener());
         } else {
-            log.warn("【配置中心】ConfigCenter 实例未初始化，@ConfigValue 热更新功能将不可用");
+            log.warn("[ConfigCenter] ConfigCenter 实例未初始化, @ConfigValue 热更新功能将不可用");
         }
         return configCenter;
     }
@@ -69,7 +69,7 @@ public class ConfigValueAutoConfiguration {
                 && properties.getHotReload().isConfigValueAnnotationEnabled();
         boolean supportListener = configCenter != null && configCenter.isSupportListener();
         
-        log.info("【配置中心】注册 ConfigValue 后置处理器，热更新功能: {}", 
+        log.info("[ConfigCenter] 注册 ConfigValue 后置处理器, 热更新功能: {}", 
                 (hotReloadEnabled && supportListener) ? "已启用" : "未启用");
         
         return new ConfigValueBeanPostProcessor(configCenter, hotReloadEnabled);

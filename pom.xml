@@ -45,6 +45,7 @@
         <!-- 缓存和存储模块 -->
         <module>spring-support-redis-starter</module>           <!-- Redis缓存集成 -->
         <module>spring-support-minio-starter</module>           <!-- MinIO对象存储 -->
+        <module>spring-support-filesystem-starter</module>      <!-- 统一文件存储抽象层 -->
 
         <!-- API文档和接口模块 -->
         <module>spring-support-swagger-starter</module>         <!-- Swagger API文档 -->
@@ -169,6 +170,13 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-discovery-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <!-- 文件存储模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-filesystem-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
 

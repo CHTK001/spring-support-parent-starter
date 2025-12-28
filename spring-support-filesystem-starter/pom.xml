@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    文件存储模块 - spring-support-filesystem-starter
+
+    该模块提供统一的文件存储抽象层，支持多种存储后端：
+    - MinIO：高性能分布式对象存储
+    - 阿里云 OSS
+    - 腾讯云 COS
+    - 华为云 OBS
+    - 本地文件系统
+    - FTP/SFTP
+    等
+
+    特性：
+    - 统一的 FileStorageTemplate API
+    - 支持 SPI 扩展机制
+    - 支持存储桶管理
+    - 支持文件上传、下载、删除、列表等操作
+    - 支持预签名 URL
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-parent-starter</artifactId>
+        <version>4.0.0.35</version>
+    </parent>
+
+    <artifactId>spring-support-filesystem-starter</artifactId>
+    <name>Spring Support FileSystem Starter - 文件存储模块</name>
+    <description>统一文件存储抽象层，支持 MinIO、OSS、COS 等多种存储后端</description>
+
+    <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <!-- 基础工具包，包含 FileStorage 接口 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-common-starter</artifactId>
+        </dependency>
+
+        <!-- MinIO 支持（可选） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-minio-starter</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Spring Boot Common -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-common-starter</artifactId>
+        </dependency>
+    </dependencies>
+
+</project>

@@ -12,6 +12,7 @@ import com.chua.starter.discovery.support.properties.DiscoveryProperties;
 import com.chua.starter.discovery.support.service.DiscoveryEnvironment;
 import com.chua.starter.discovery.support.service.DiscoveryService;
 import lombok.extern.slf4j.Slf4j;
+import static com.chua.starter.common.support.logger.ModuleLog.*;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
@@ -46,7 +47,7 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         DiscoveryListProperties properties = Binder.get(environment).bindOrCreate(DiscoveryListProperties.PRE, DiscoveryListProperties.class);
         if(!properties.isEnable()) {
-            log.warn("未开启 discovery 服务, 注册默认的服务");
+            log.info("[Discovery] 服务状态 [{}]", disabled());
             registry.registerBeanDefinition("discoveryService#embedd", BeanDefinitionBuilder.rootBeanDefinition(DiscoveryService.class, () ->{
                             return new DiscoveryService(new DefaultServiceDiscovery());
                     })
@@ -55,7 +56,7 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
             return;
         }
 
-        log.info(">>>>>>> 开启 discovery 服务");
+        log.info("[Discovery] 服务状态 [{}]", enabled());
         List<DiscoveryProperties> properties1 = properties.getProperties();
         for (DiscoveryProperties discoveryProperties : properties1) {
             if(discoveryProperties.isEnabled()) {
@@ -79,7 +80,7 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
         ServiceProvider<ServiceDiscovery> serviceProvider = ServiceProvider.of(ServiceDiscovery.class);
         ServiceDiscovery serviceDiscovery = serviceProvider.getNewExtension(discoveryProperties.getProtocol(), discoveryOption);
         if(null == serviceDiscovery) {
-            log.warn("未发现可用的 discovery 服务");
+            log.warn("[Discovery] 未发现可用的服务实现");
             registry.registerBeanDefinition(
                     discoveryProperties.getProtocol(), BeanDefinitionBuilder.rootBeanDefinition(ServiceDiscovery.class, DefaultServiceDiscovery::new).getBeanDefinition());
             return;
@@ -89,7 +90,7 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
         List<DiscoveryNodeProperties> node = discoveryProperties.getNode();
         for (DiscoveryNodeProperties discoveryNodeProperties : node) {
             discoveryList.add(registryNode(discoveryNodeProperties));
-            log.warn("注册发现服务{} => {}", discoveryProperties.getProtocol(), discoveryNodeProperties.getNamespace());
+            log.info("[Discovery] 注册服务: {} -> {}", highlight(discoveryProperties.getProtocol()), discoveryNodeProperties.getNamespace());
         }
         registry.registerBeanDefinition(
                         discoveryProperties.getProtocol(),
@@ -176,7 +177,7 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
                     serviceDiscovery.subscribe(discovery.getUriSpec(), new ServiceDiscoveryListener() {
                         @Override
                         public void listen(String s, Discovery discovery, Event event) {
-                            log.info("发现服务:{} -> {}", discovery, event);
+                            log.info("[Discovery] 服务变更: {} -> {}", highlight(discovery.getUriSpec()), event);
                         }
                     });
                 }

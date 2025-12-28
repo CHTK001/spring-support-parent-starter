@@ -16,6 +16,8 @@ import java.util.List;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import static com.chua.starter.common.support.logger.ModuleLog.highlight;
+
 /**
  * 订单超时定时任务
  *
@@ -46,9 +48,9 @@ public class PayMerchantScheduler implements InitializingBean, DisposableBean {
     public void orderToTimeout() {
         List<PayMerchant> payMerchants = payMerchantService.allEffective();
         try {
-            log.info("开始执行商户订单超时检测，共有商户：{}", payMerchants.size());
+            log.info("[Pay] 开始执行商户订单超时检测, 共有商户: {}", highlight(payMerchants.size()));
             for (PayMerchant payMerchant : payMerchants) {
-                log.info("开始执行商户【{}】订单超时检测", payMerchant.getPayMerchantName());
+                log.info("[Pay] 开始执行商户 {} 订单超时检测", highlight(payMerchant.getPayMerchantName()));
                 checkTimeout(payMerchant);
             }
         } catch (Exception e) {
@@ -63,7 +65,7 @@ public class PayMerchantScheduler implements InitializingBean, DisposableBean {
      */
     private void checkTimeout(PayMerchant payMerchant) {
         int timeoutCount = payMerchantOrderService.timeout(payMerchant.getPayMerchantId(), payMerchant.getPayMerchantOpenTimeoutTime());
-        log.info("商户【{}】订单超时检测，超时订单数：{}", payMerchant.getPayMerchantName(), timeoutCount);
+        log.info("[Pay] 商户 {} 订单超时检测, 超时订单数: {}", highlight(payMerchant.getPayMerchantName()), highlight(timeoutCount));
     }
 
     @Override

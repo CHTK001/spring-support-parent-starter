@@ -123,18 +123,18 @@ public class SqlInterceptor implements Interceptor {
         String message = "[SqlInterceptor] 执行 [" + name + "] 时间 [" + formatter.format(System.currentTimeMillis()) + "] sql耗时 [" + (double) time / 1000 + "] s";
         StringBuilder str = new StringBuilder();
         List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
-        str.append("\n").append("----------------------------begin【SQL Execute Message】--------------------------------\n");
+        str.append("\n").append("----------------------------begin[SQL Execute Message]--------------------------------\n");
         if (StringUtils.isNotBlank(traceId)) {
-            str.append("【TraceId】").append(traceId).append("\n");
+            str.append("[TraceId]").append(traceId).append("\n");
         }
-        str.append("【方法】").append(sqlId).append("\n");
-        str.append("【sql】\r\n").append(HIGHLIGHTING_FORMATTER.format(FORMATTER.format(MAP.get("sql").toString())));
+        str.append("[方法]").append(sqlId).append("\n");
+        str.append("[sql]\r\n").append(HIGHLIGHTING_FORMATTER.format(FORMATTER.format(MAP.get("sql").toString())));
         str.append("\n");
-//        str.append("【参数映射】").append(parameterMappings);
+//        str.append("[参数映射]").append(parameterMappings);
 //        str.append("\n");
-        str.append("【参数对象】").append(StringUtils.join((List<String>) MAP.get("parameters"), ", "));
+        str.append("[参数对象]").append(StringUtils.join((List<String>) MAP.get("parameters"), ", "));
         str.append("\n");
-        str.append("【结果】 ");
+        str.append("[结果] ");
         if (result != null) {
             if (result instanceof List) {
                 str.append("共 ").append(((List) result).size()).append(" 条记录\n");
@@ -143,13 +143,13 @@ public class SqlInterceptor implements Interceptor {
             } else {
                 str.append("共 1 条记录").append("\n");
             }
-            //str.append("【结果详情】").append(result).append("\n");
+            //str.append("[结果详情]").append(result).append("\n");
         } else {
-            str.append("【结果】  NULL").append("\n");
+            str.append("[结果]  NULL").append("\n");
         }
-        str.append("【执行信息】").append(message);
+        str.append("[执行信息]").append(message);
         str.append("\n");
-        str.append("----------------------------end【SQL Execute Message】--------------------------------\n");
+        str.append("----------------------------end[SQL Execute Message]--------------------------------\n");
         return str.toString();
     }
 

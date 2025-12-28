@@ -61,7 +61,7 @@ public class WhitelistFileWatcher {
      */
     @PostConstruct
     public void initialize() {
-        log.info("【白名单监听】初始化开始 - 文件路径: {}", authClientProperties.getWhitelistFile());
+        log.info("[白名单监听]初始化开始 - 文件路径: {}", authClientProperties.getWhitelistFile());
         
         // 1. 合并配置文件白名单和外部文件白名单
         loadAndMergeWhitelist();
@@ -69,7 +69,7 @@ public class WhitelistFileWatcher {
         // 2. 启动文件监听
         startFileWatcher();
         
-        log.info("【白名单监听】初始化完成 - 合并后白名单数量: {}", mergedWhitelist.size());
+        log.info("[白名单监听]初始化完成 - 合并后白名单数量: {}", mergedWhitelist.size());
     }
 
     /**
@@ -82,7 +82,7 @@ public class WhitelistFileWatcher {
         List<String> configWhitelist = authClientProperties.getWhitelist();
         if (configWhitelist != null && !configWhitelist.isEmpty()) {
             mergedWhitelist.addAll(configWhitelist);
-            log.info("【白名单监听】加载配置文件白名单: {} 条", configWhitelist.size());
+            log.info("[白名单监听]加载配置文件白名单: {} 条", configWhitelist.size());
         }
         
         // 加载外部文件白名单
@@ -95,7 +95,7 @@ public class WhitelistFileWatcher {
         
         // 更新到 AuthClientProperties
         authClientProperties.setWhitelist(new ArrayList<>(mergedWhitelist));
-        log.info("【白名单监听】白名单合并完成 - 总数: {}", mergedWhitelist.size());
+        log.info("[白名单监听]白名单合并完成 - 总数: {}", mergedWhitelist.size());
     }
 
     /**
@@ -106,7 +106,7 @@ public class WhitelistFileWatcher {
         Path path = Paths.get(authClientProperties.getWhitelistFile());
         
         if (!Files.exists(path)) {
-            log.info("【白名单监听】外部白名单文件不存在，将创建: {}", authClientProperties.getWhitelistFile());
+            log.info("[白名单监听]外部白名单文件不存在，将创建: {}", authClientProperties.getWhitelistFile());
             createWhitelistFile(path);
             return whitelist;
         }
@@ -120,9 +120,9 @@ public class WhitelistFileWatcher {
                     whitelist.add(trimmed);
                 }
             }
-            log.info("【白名单监听】从文件加载白名单: {} 条", whitelist.size());
+            log.info("[白名单监听]从文件加载白名单: {} 条", whitelist.size());
         } catch (IOException e) {
-            log.error("【白名单监听】读取白名单文件失败: {}", e.getMessage());
+            log.error("[白名单监听]读取白名单文件失败: {}", e.getMessage());
         }
         
         return whitelist;
@@ -150,9 +150,9 @@ public class WhitelistFileWatcher {
                     ""
             );
             Files.write(path, lines, StandardCharsets.UTF_8);
-            log.info("【白名单监听】创建白名单文件成功: {}", path);
+            log.info("[白名单监听]创建白名单文件成功: {}", path);
         } catch (IOException e) {
-            log.error("【白名单监听】创建白名单文件失败: {}", e.getMessage());
+            log.error("[白名单监听]创建白名单文件失败: {}", e.getMessage());
         }
     }
 
@@ -188,9 +188,9 @@ public class WhitelistFileWatcher {
             Path fileName = path.getFileName();
             watchExecutor.submit(() -> watchFileChanges(fileName));
             
-            log.info("【白名单监听】文件监听已启动 - 监听目录: {}", dir);
+            log.info("[白名单监听]文件监听已启动 - 监听目录: {}", dir);
         } catch (IOException e) {
-            log.error("【白名单监听】启动文件监听失败: {}", e.getMessage());
+            log.error("[白名单监听]启动文件监听失败: {}", e.getMessage());
         }
     }
 
@@ -215,7 +215,7 @@ public class WhitelistFileWatcher {
                     
                     // 检查是否是白名单文件
                     if (changed.equals(fileName)) {
-                        log.info("【白名单监听】检测到文件变更: {}", changed);
+                        log.info("[白名单监听]检测到文件变更: {}", changed);
                         // 延迟一下，确保文件写入完成
                         Thread.sleep(100);
                         reloadWhitelist();
@@ -227,7 +227,7 @@ public class WhitelistFileWatcher {
                 Thread.currentThread().interrupt();
                 break;
             } catch (Exception e) {
-                log.error("【白名单监听】监听异常: {}", e.getMessage());
+                log.error("[白名单监听]监听异常: {}", e.getMessage());
             }
         }
     }
@@ -236,11 +236,11 @@ public class WhitelistFileWatcher {
      * 重新加载白名单
      */
     public void reloadWhitelist() {
-        log.info("【白名单监听】开始重新加载白名单...");
+        log.info("[白名单监听]开始重新加载白名单...");
         loadAndMergeWhitelist();
         // 清除认证缓存
         AbstractProtocol.invalidateAllCache();
-        log.info("【白名单监听】白名单重新加载完成，已清除认证缓存");
+        log.info("[白名单监听]白名单重新加载完成，已清除认证缓存");
     }
 
     /**
@@ -256,7 +256,7 @@ public class WhitelistFileWatcher {
         
         String trimmed = pattern.trim();
         if (mergedWhitelist.contains(trimmed)) {
-            log.info("【白名单监听】白名单已存在: {}", trimmed);
+            log.info("[白名单监听]白名单已存在: {}", trimmed);
             return false;
         }
         
@@ -264,7 +264,7 @@ public class WhitelistFileWatcher {
         authClientProperties.setWhitelist(new ArrayList<>(mergedWhitelist));
         persistWhitelist();
         
-        log.info("【白名单监听】添加白名单成功: {}", trimmed);
+        log.info("[白名单监听]添加白名单成功: {}", trimmed);
         return true;
     }
 
@@ -285,7 +285,7 @@ public class WhitelistFileWatcher {
         if (removed) {
             authClientProperties.setWhitelist(new ArrayList<>(mergedWhitelist));
             persistWhitelist();
-            log.info("【白名单监听】删除白名单成功: {}", trimmed);
+            log.info("[白名单监听]删除白名单成功: {}", trimmed);
         }
         
         return removed;
@@ -318,9 +318,9 @@ public class WhitelistFileWatcher {
             }
             
             Files.write(path, lines, StandardCharsets.UTF_8);
-            log.info("【白名单监听】白名单已持久化到文件: {}", path);
+            log.info("[白名单监听]白名单已持久化到文件: {}", path);
         } catch (IOException e) {
-            log.error("【白名单监听】持久化白名单失败: {}", e.getMessage());
+            log.error("[白名单监听]持久化白名单失败: {}", e.getMessage());
         }
     }
 
@@ -335,7 +335,7 @@ public class WhitelistFileWatcher {
             try {
                 watchService.close();
             } catch (IOException e) {
-                log.warn("【白名单监听】关闭WatchService失败: {}", e.getMessage());
+                log.warn("[白名单监听]关闭WatchService失败: {}", e.getMessage());
             }
         }
         
@@ -343,6 +343,6 @@ public class WhitelistFileWatcher {
             watchExecutor.shutdownNow();
         }
         
-        log.info("【白名单监听】已关闭");
+        log.info("[白名单监听]已关闭");
     }
 }

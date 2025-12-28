@@ -3,6 +3,7 @@ package com.chua.starter.minio.support.template;
 import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.utils.StringUtils;
 import lombok.extern.slf4j.Slf4j;
+import static com.chua.starter.common.support.logger.ModuleLog.*;
 import com.chua.starter.minio.support.properties.MinioProperties;
 import io.minio.*;
 import io.minio.http.Method;
@@ -192,10 +193,11 @@ public class MinioTemplate implements InitializingBean {
     public void initDefaultBucket() {
         String defaultBucketName = minioProperties.getDefaultBucketName();
         if (bucketExists(defaultBucketName)) {
-            log.info("默认存储桶已存在");
+            log.info("[Minio] 默认存储桶 {} 已存在", highlight(defaultBucketName));
         } else {
-            log.info("创建默认存储桶");
+            log.info("[Minio] 创建默认存储桶: {}", highlight(defaultBucketName));
             makeBucket(minioProperties.getDefaultBucketName());
         }
+        log.info("[Minio] 服务已连接 {}", address(minioProperties.getAddress()));
     }
 }

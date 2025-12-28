@@ -11,6 +11,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
+import static com.chua.starter.common.support.logger.ModuleLog.highlight;
+
 /**
  * 支付状态机自动配置
  * <p>
@@ -45,7 +47,7 @@ public class PayStateMachineAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(name = "redisTemplate")
     public RedisTemplate<String, Object> redisTemplate(StringRedisTemplate stringRedisTemplate) {
-        log.info("使用默认的 RedisTemplate 配置");
+        log.info("[Pay] 使用默认的 RedisTemplate 配置");
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(stringRedisTemplate.getConnectionFactory());
         template.setKeySerializer(stringRedisTemplate.getStringSerializer());
@@ -60,15 +62,12 @@ public class PayStateMachineAutoConfiguration {
      */
     @Bean
     public Object payStateMachineConfigurationLogger(PayProperties payProperties) {
-        log.info("========================================");
-        log.info("支付状态机配置");
-        log.info("========================================");
-        log.info("持久化类型: {}", payProperties.getStateMachinePersistType().getDescription());
-        log.info("Redis 缓存过期时间: {} 秒", payProperties.getRedisCacheExpireSeconds());
-        log.info("状态机超时时间: {} 毫秒", payProperties.getStateMachineTimeoutMillis());
-        log.info("启用状态机日志: {}", payProperties.getEnableStateMachineLog());
-        log.info("订单超时时间: {} 分钟", payProperties.getOrderTimeoutMinutes());
-        log.info("========================================");
+        log.info("[Pay] 状态机配置: 持久化类型={}, Redis过期={}s, 超时={}ms, 日志={}, 订单超时={}min",
+                highlight(payProperties.getStateMachinePersistType().getDescription()),
+                highlight(payProperties.getRedisCacheExpireSeconds()),
+                highlight(payProperties.getStateMachineTimeoutMillis()),
+                highlight(payProperties.getEnableStateMachineLog()),
+                highlight(payProperties.getOrderTimeoutMinutes()));
         return new Object();
     }
 }

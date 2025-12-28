@@ -29,6 +29,8 @@ import org.springframework.core.env.MutablePropertySources;
 import javax.sql.DataSource;
 import java.util.*;
 
+import static com.chua.starter.common.support.logger.ModuleLog.highlight;
+
 /**
  * 数据库注入
  */
@@ -117,7 +119,7 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
                     .rootBeanDefinition(DataSource.class, () -> dataSource1).getBeanDefinition()
             );
             DataSourceContextSupport.addDatasource(name, dataSource1);
-            log.info("注册数据源:{}", name);
+            log.info("[Datasource] 注册数据源: {}", highlight(name));
         }
     }
 
@@ -141,7 +143,7 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
         beanDefinitionBuilder.setPrimary(true);
         //注册动态数据源
         beanDefinitionRegistry.registerBeanDefinition("dynamicDataSource", beanDefinitionBuilder.getBeanDefinition());
-        log.info("注册动态数据源");
+        log.info("[Datasource] 注册动态数据源");
     }
 
     /**

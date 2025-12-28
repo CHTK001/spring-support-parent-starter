@@ -110,20 +110,22 @@ public class ParameterLogFilter implements Filter {
             return;
         }
 
-        // 打印请求分隔线
-        log.debug("╔══════════════════════════════════════════════════════════════════════════════");
-        log.debug("║ 【请求开始】 TraceId: {}", traceId);
-        log.debug("║ 请求时间: {}", now().format(DATE_TIME_FORMATTER));
-        log.debug("╠══════════════════════════════════════════════════════════════════════════════");
-        
         String contentType = requestWrapper.getHeader(HTTP_HEADER_CONTENT_TYPE);
+        StringBuilder logBuilder = new StringBuilder();
+        
+        // 构建请求头日志
+        logBuilder.append("╔══════════════════════════════════════════════════════════════════════════════\n");
+        logBuilder.append("║ [请求开始] TraceId: ").append(traceId).append("\n");
+        logBuilder.append("║ 请求时间: ").append(now().format(DATE_TIME_FORMATTER)).append("\n");
+        logBuilder.append("╠══════════════════════════════════════════════════════════════════════════════\n");
         
         try {
             // form-data 请求
             if (StringUtils.contains(contentType, "form-data")) {
-                printUrl(requestWrapper);
-                printHeader(requestWrapper);
-                log.debug("║ 请求类型: multipart/form-data (文件上传)");
+                appendUrl(logBuilder, requestWrapper);
+                appendHeader(logBuilder, requestWrapper);
+                logBuilder.append("║ 请求类型: multipart/form-data (文件上传)\n");
+                log.debug(logBuilder.toString());
                 filterChain.doFilter(requestWrapper, responseWrapper);
                 injectInterfaceServiceLog(requestWrapper);
                 printResponse(responseWrapper, startTime);
@@ -132,9 +134,10 @@ public class ParameterLogFilter implements Filter {
 
             // GET/DELETE 请求
             if (StringUtils.isEmpty(contentType) || GET.equals(method) || DELETE.equals(method)) {
-                printUrl(requestWrapper);
-                printQuery(requestWrapper);
-                printHeader(requestWrapper);
+                appendUrl(logBuilder, requestWrapper);
+                appendQuery(logBuilder, requestWrapper);
+                appendHeader(logBuilder, requestWrapper);
+                log.debug("\n{}", logBuilder);
                 filterChain.doFilter(requestWrapper, responseWrapper);
                 injectInterfaceServiceLog(request);
                 printResponse(responseWrapper, startTime);
@@ -143,14 +146,16 @@ public class ParameterLogFilter implements Filter {
 
             // POST/PUT/PATCH 请求
             if (POST.equalsIgnoreCase(method) || PUT.equalsIgnoreCase(method) || "patch".equalsIgnoreCase(method)) {
-                printBody(requestWrapper);
-                printHeader(requestWrapper);
+                appendBody(logBuilder, requestWrapper);
+                appendHeader(logBuilder, requestWrapper);
+                log.debug(logBuilder.toString());
                 filterChain.doFilter(requestWrapper, responseWrapper);
                 injectInterfaceServiceLog(requestWrapper);
                 printResponse(responseWrapper, startTime);
                 return;
             }
 
+            log.debug(logBuilder.toString());
             injectInterfaceServiceLog(requestWrapper);
             filterChain.doFilter(requestWrapper, responseWrapper);
             printResponse(responseWrapper, startTime);
@@ -169,10 +174,11 @@ public class ParameterLogFilter implements Filter {
         long costTime = System.currentTimeMillis() - startTime;
         int status = responseWrapper.getStatus();
         
-        log.debug("╠══════════════════════════════════════════════════════════════════════════════");
-        log.debug("║ 【响应信息】");
-        log.debug("║ 状态码: {}", status);
-        log.debug("║ 响应类型: {}", responseWrapper.getContentType());
+        StringBuilder sb = new StringBuilder();
+        sb.append("╠══════════════════════════════════════════════════════════════════════════════\n");
+        sb.append("║ [响应信息]\n");
+        sb.append("║ 状态码: ").append(status).append("\n");
+        sb.append("║ 响应类型: ").append(responseWrapper.getContentType()).append("\n");
         
         // 打印响应体（限制大小）
         byte[] content = responseWrapper.getContentAsByteArray();
@@ -182,13 +188,15 @@ public class ParameterLogFilter implements Filter {
             if (responseBody.length() > 500) {
                 responseBody = responseBody.substring(0, 500) + "...(截断)";
             }
-            log.debug("║ 响应内容: \r{}", responseBody);
+            sb.append("║ 响应内容: ").append(responseBody).append("\n");
         } else if (content.length >= NumberConstant.TWE_THOUSAND) {
-            log.debug("║ 响应内容: (内容过长，共 {} 字节)", content.length);
+            sb.append("║ 响应内容: (内容过长，共 ").append(content.length).append(" 字节)\n");
         }
         
-        log.debug("║ 耗时: {}ms", costTime);
-        log.debug("╚══════════════════════════════════════════════════════════════════════════════\r\n");
+        sb.append("║ 耗时: ").append(costTime).append("ms\n");
+        sb.append("╚══════════════════════════════════════════════════════════════════════════════\n");
+        
+        log.debug("\n{}", sb);
         
         // 慢请求警告
         if (costTime > 3000) {
@@ -241,30 +249,32 @@ public class ParameterLogFilter implements Filter {
     }
 
     /**
-     * 打印URL
+     * 追加URL信息到日志
      *
+     * @param sb      StringBuilder
      * @param request 请求
      */
-    private void printUrl(HttpServletRequest request) {
-        log.debug("║ 请求方法: {}", request.getMethod());
-        log.debug("║ 请求URI: {}", request.getRequestURI());
-        log.debug("║ 完整URL: {}", request.getRequestURL());
+    private void appendUrl(StringBuilder sb, HttpServletRequest request) {
+        sb.append("║ 请求方法: ").append(request.getMethod()).append("\n");
+        sb.append("║ 请求URI: ").append(request.getRequestURI()).append("\n");
+        sb.append("║ 完整URL: ").append(request.getRequestURL()).append("\n");
         String queryString = request.getQueryString();
         if (StringUtils.isNotEmpty(queryString)) {
-            log.debug("║ 查询字符串: {}", queryString);
+            sb.append("║ 查询字符串: ").append(queryString).append("\n");
         }
     }
 
     /**
-     * 打印请求头
+     * 追加请求头信息到日志
      *
+     * @param sb      StringBuilder
      * @param request 请求
      */
-    private void printHeader(HttpServletRequest request) {
-        log.debug("║ 客户端IP: {}", RequestUtils.getIpAddress(request));
-        log.debug("║ User-Agent: {}", request.getHeader("User-Agent"));
-        log.debug("║ Content-Type: {}", request.getContentType());
-        log.debug("║ Content-Length: {}", request.getContentLength());
+    private void appendHeader(StringBuilder sb, HttpServletRequest request) {
+        sb.append("║ 客户端IP: ").append(RequestUtils.getIpAddress(request)).append("\n");
+        sb.append("║ User-Agent: ").append(request.getHeader("User-Agent")).append("\n");
+        sb.append("║ Content-Type: ").append(request.getContentType()).append("\n");
+        sb.append("║ Content-Length: ").append(request.getContentLength()).append("\n");
         
         // 打印自定义请求头 (x- 开头)
         Enumeration<String> headerNames = request.getHeaderNames();
@@ -277,55 +287,49 @@ public class ParameterLogFilter implements Filter {
         }
 
         if (CollectionUtils.isNotEmpty(customHeaders)) {
-            log.debug("╟──────────────────── 自定义请求头 ────────────────────");
+            sb.append("╟──────────────────── 自定义请求头 ────────────────────\n");
             for (String headerName : customHeaders) {
-                log.debug("║ {}: {}", headerName, request.getHeader(headerName));
+                sb.append("║ ").append(headerName).append(": ").append(request.getHeader(headerName)).append("\n");
             }
         }
     }
 
     /**
-     * 打印查询参数
+     * 追加查询参数到日志
      *
+     * @param sb      StringBuilder
      * @param request 请求
-     * @throws IOException IO异常
      */
-    private void printQuery(HttpServletRequest request) throws IOException {
+    private void appendQuery(StringBuilder sb, HttpServletRequest request) {
         String queryString = request.getQueryString();
         if (StringUtils.isNotEmpty(queryString)) {
+            sb.append("╟──────────────────── 请求参数 ────────────────────\n");
             if (queryString.length() < NumberConstant.ONE_THOUSAND) {
                 String decoded = URLDecoder.decode(queryString, StandardCharsets.UTF_8);
-                log.debug("╟──────────────────── 请求参数 ────────────────────");
-                log.debug("║ {}", decoded);
+                sb.append("║ ").append(decoded).append("\n");
             } else {
-                log.debug("╟──────────────────── 请求参数 ────────────────────");
-                log.debug("║ (参数过长，共 {} 字符)", queryString.length());
+                sb.append("║ (参数过长，共 ").append(queryString.length()).append(" 字符)\n");
             }
         }
     }
 
     /**
-     * 打印请求体
+     * 追加请求体到日志
      *
+     * @param sb             StringBuilder
      * @param requestWrapper 请求包装器
-     * @throws IOException IO异常
      */
-    private void printBody(ContentCachingRequestWrapper requestWrapper) throws IOException {
-        log.debug("║ 请求方法: {}", requestWrapper.getMethod());
-        log.debug("║ 请求URL: {}", requestWrapper.getRequestURL());
+    private void appendBody(StringBuilder sb, ContentCachingRequestWrapper requestWrapper) {
+        sb.append("║ 请求方法: ").append(requestWrapper.getMethod()).append("\n");
+        sb.append("║ 请求URL: ").append(requestWrapper.getRequestURL()).append("\n");
         
         String body = IoUtils.toString(requestWrapper.getContentAsByteArray(), requestWrapper.getCharacterEncoding());
         if (StringUtils.isNotEmpty(body)) {
-            log.debug("╟──────────────────── 请求体 ────────────────────");
+            sb.append("╟──────────────────── 请求体 ────────────────────\n");
             if (body.length() < NumberConstant.TWE_THOUSAND) {
-                // 格式化 JSON 输出（如果是 JSON）
-                if (body.trim().startsWith("{") || body.trim().startsWith("[")) {
-                    log.debug("║ {}", body);
-                } else {
-                    log.debug("║ {}", body);
-                }
+                sb.append("║ ").append(body).append("\n");
             } else {
-                log.debug("║ (请求体过长，共 {} 字符)", body.length());
+                sb.append("║ (请求体过长，共 ").append(body.length()).append(" 字符)\n");
             }
         }
     }

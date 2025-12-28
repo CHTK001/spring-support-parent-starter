@@ -17,6 +17,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static com.chua.starter.common.support.logger.ModuleLog.highlight;
+
 /**
  * 消息监听注解处理器
  * <p>
@@ -86,8 +88,8 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
             template.subscribe(destination, handler);
         }
 
-        log.info("Registered message listener: {}.{} -> {} (type: {})",
-                bean.getClass().getSimpleName(), method.getName(), destination, type);
+        log.info("[Queue] 注册消息监听器: {}.{} -> {} (类型: {})",
+                highlight(bean.getClass().getSimpleName()), highlight(method.getName()), highlight(destination), highlight(type));
     }
 
     /**

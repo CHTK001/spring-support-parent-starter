@@ -7,6 +7,7 @@ import com.chua.starter.gateway.support.properties.GatewayProperties;
 import com.chua.starter.gateway.support.route.DiscoveryRouteLocator;
 import lombok.extern.slf4j.Slf4j;
 
+import static com.chua.starter.common.support.logger.ModuleLog.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -38,20 +39,21 @@ public class GatewayServerManager implements AutoCloseable {
     public void start() {
         List<GatewayProperties.PortConfig> ports = properties.getServer().getPorts();
         if (ports == null || ports.isEmpty()) {
-            log.warn("未配置任何网关代理端口");
+            log.warn("[Gateway] 未配置代理端口, 跳过启动");
             return;
         }
 
+        log.info("[Gateway] 启动网关代理服务, 配置 {} 个端口", highlight(ports.size()));
         for (GatewayProperties.PortConfig portConfig : ports) {
             if (!portConfig.isEnabled()) {
-                log.debug("端口 {} 未启用", portConfig.getPort());
+                log.debug("[Gateway] 端口 {} [{}]", portConfig.getPort(), disabled());
                 continue;
             }
 
             try {
                 startServer(portConfig);
             } catch (Exception e) {
-                log.error("启动网关代理端口 {} 失败: {}", portConfig.getPort(), e.getMessage(), e);
+                log.error("[Gateway] 启动端口 {} {}: {}", portConfig.getPort(), failed(), e.getMessage(), e);
             }
         }
     }
@@ -64,7 +66,7 @@ public class GatewayServerManager implements AutoCloseable {
         String host = properties.getServer().getHost();
         int port = portConfig.getPort();
 
-        log.info("启动网关代理服务器 - 协议: {}, 端口: {}", protocol, port);
+        log.info("[Gateway] 启动代理 - 协议: {}, 地址: {}", highlight(protocol), address(host, port));
 
         // 根据协议类型创建对应的代理服务器
         String protocolType = "http".equals(protocol) ? "http-proxy" : "tcp-proxy";
@@ -79,13 +81,13 @@ public class GatewayServerManager implements AutoCloseable {
         Protocol protocolInstance = Protocol.create(protocolType, protocolSetting);
 
         if (protocolInstance == null) {
-            log.error("不支持的协议类型: {}", protocolType);
+            log.error("[Gateway] 不支持的协议类型: {}", protocolType);
             return;
         }
 
         ProtocolServer server = protocolInstance.createServer(protocolSetting);
         if (server == null) {
-            log.error("创建代理服务器失败: {}", protocolType);
+            log.error("[Gateway] 创建代理服务器失败: {}", protocolType);
             return;
         }
 
@@ -93,7 +95,7 @@ public class GatewayServerManager implements AutoCloseable {
         server.start();
         servers.put(port, server);
 
-        log.info("网关代理服务器启动成功 - {}:{}", host, port);
+        log.info("[Gateway] 代理服务启动 {} - {}", success(), address(host, port));
     }
 
     /**
@@ -103,12 +105,13 @@ public class GatewayServerManager implements AutoCloseable {
         for (Map.Entry<Integer, ProtocolServer> entry : servers.entrySet()) {
             try {
                 entry.getValue().stop();
-                log.info("停止网关代理端口: {}", entry.getKey());
+                log.info("[Gateway] 停止代理端口: {}", entry.getKey());
             } catch (Exception e) {
-                log.warn("停止网关代理端口 {} 失败: {}", entry.getKey(), e.getMessage());
+                log.warn("[Gateway] 停止端口 {} {}: {}", entry.getKey(), failed(), e.getMessage());
             }
         }
         servers.clear();
+        log.info("[Gateway] 网关服务已停止");
     }
 
     /**

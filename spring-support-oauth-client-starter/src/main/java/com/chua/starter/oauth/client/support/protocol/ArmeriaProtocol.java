@@ -101,7 +101,7 @@ public class ArmeriaProtocol extends AbstractProtocol {
                             .maxResponseLength(10 * 1024 * 1024) // 10MB
                             .build();
                     
-                    log.info("【Armeria】OAuth客户端已初始化 - URL: {}, 连接超时: {}ms, 读取超时: {}ms", 
+                    log.info("[Armeria]OAuth客户端已初始化 - URL: {}, 连接超时: {}ms, 读取超时: {}ms", 
                             baseUrl, authClientProperties.getConnectTimeout(), authClientProperties.getReadTimeout());
                 }
             }
@@ -361,18 +361,18 @@ public class ArmeriaProtocol extends AbstractProtocol {
             String body = response.contentUtf8();
 
             if (status >= 400 && status < 600) {
-                log.warn("【Armeria】认证服务器返回错误状态 - URL: {}, 路径: {}, 状态码: {}", 
+                log.warn("[Armeria]认证服务器返回错误状态 - URL: {}, 路径: {}, 状态码: {}", 
                         selectedUrl, path, status);
                 return AuthenticationInformation.authServerNotFound();
             }
 
             if (Strings.isNullOrEmpty(body)) {
-                log.warn("【Armeria】认证服务器返回空响应 - URL: {}, 路径: {}", selectedUrl, path);
+                log.warn("[Armeria]认证服务器返回空响应 - URL: {}, 路径: {}", selectedUrl, path);
                 return AuthenticationInformation.authServerNotFound();
             }
 
             if (status == 200) {
-                log.debug("【Armeria】认证请求成功 - URL: {}, 路径: {}", selectedUrl, path);
+                log.debug("[Armeria]认证请求成功 - URL: {}, 路径: {}", selectedUrl, path);
                 String responseSerial = response.headers().get("x-oauth-response-serial");
                 return createAuthenticationInformation(
                         Json.fromJson(body, ReturnResult.class),
@@ -383,9 +383,9 @@ public class ArmeriaProtocol extends AbstractProtocol {
             return AuthenticationInformation.authServerError();
             
         } catch (Exception e) {
-            log.error("【Armeria】OAuth请求异常 - 路径: {}, 异常: {}", path, e.getMessage());
+            log.error("[Armeria]OAuth请求异常 - 路径: {}, 异常: {}", path, e.getMessage());
             if (log.isDebugEnabled()) {
-                log.debug("【Armeria】请求异常堆栈", e);
+                log.debug("[Armeria]请求异常堆栈", e);
             }
             return AuthenticationInformation.authServerError();
         }

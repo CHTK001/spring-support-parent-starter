@@ -13,6 +13,10 @@ import org.springframework.core.env.Environment;
 @Slf4j
 @RequiredArgsConstructor
 public class Knife4jRunner implements CommandLineRunner {
+
+    private static final String CYAN = "\u001B[36m";
+    private static final String RESET = "\u001B[0m";
+
     private final Environment environment;
 
     @Override
@@ -22,7 +26,9 @@ public class Knife4jRunner implements CommandLineRunner {
             contextPath = contextPath + "/";
         }
         String port = environment.getProperty("server.port", "8080");
-        log.info("\r\n当前swagger文档地址      " + "http://127.0.0.1:" + port + "/" + StringUtils.removeEnd(StringUtils.removeStart(contextPath, "/"), "/") + "/doc.html"
-                + "\r\n健康检查               " + "http://127.0.0.1:" + port + "/" + StringUtils.removeEnd(StringUtils.removeStart(contextPath, "/"), "/") + "/actuator");
+        String basePath = StringUtils.removeEnd(StringUtils.removeStart(contextPath, "/"), "/");
+        log.info("[Swagger] 文档地址: {}  健康检查: {}",
+                CYAN + "http://127.0.0.1:" + port + "/" + basePath + "/doc.html" + RESET,
+                CYAN + "http://127.0.0.1:" + port + "/" + basePath + "/actuator" + RESET);
     }
 }

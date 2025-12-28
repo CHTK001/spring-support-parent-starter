@@ -5,6 +5,7 @@ import com.chua.sync.support.properties.SyncProperties;
 import com.chua.sync.support.server.SyncServer;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import static com.chua.starter.common.support.logger.ModuleLog.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -36,8 +37,8 @@ public class SyncAutoConfiguration {
         String type = environment.getProperty("plugin.sync.type");
         Boolean serverEnable = environment.getProperty("plugin.sync.server.enable", Boolean.class, false);
         Boolean clientEnable = environment.getProperty("plugin.sync.client.enable", Boolean.class, false);
-        log.info("[SyncAutoConfiguration] plugin.sync.type = {}, server.enable = {}, client.enable = {}", 
-                type, serverEnable, clientEnable);
+        log.info("[Sync] 模式: {}, 服务端: [{}], 客户端: [{}]", 
+                highlight(type), status(serverEnable), status(clientEnable));
     }
 
     /**
@@ -55,7 +56,7 @@ public class SyncAutoConfiguration {
     @ConditionalOnMissingBean
     @Conditional(SyncServerCondition.class)
     public SyncServer syncServer(SyncProperties syncProperties) {
-        log.info("[SyncAutoConfiguration] 创建同步服务端 SyncServer");
+        log.info("[Sync] 创建服务端");
         return new SyncServer(syncProperties);
     }
 
@@ -74,7 +75,7 @@ public class SyncAutoConfiguration {
     @ConditionalOnMissingBean
     @Conditional(SyncClientCondition.class)
     public SyncClient syncClient(SyncProperties syncProperties) {
-        log.info("[SyncAutoConfiguration] 创建同步客户端 SyncClient");
+        log.info("[Sync] 创建客户端");
         return new SyncClient(syncProperties, environment);
     }
 }

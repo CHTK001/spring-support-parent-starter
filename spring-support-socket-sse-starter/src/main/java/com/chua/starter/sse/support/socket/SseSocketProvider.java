@@ -10,6 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 
+import static com.chua.starter.common.support.logger.ModuleLog.highlight;
+
 /**
  * SSE Socket 服务提供者
  * 实现 SocketProvider SPI，提供 SSE 协议支持
@@ -39,7 +41,7 @@ public class SseSocketProvider implements SocketProvider {
         }
 
         SseSocketSessionTemplate template = new SseSocketSessionTemplate(timeout);
-        log.info("[SSE] 创建 SseSocketSessionTemplate, timeout={}ms", timeout);
+        log.info("[SSE] 创建 SseSocketSessionTemplate, timeout={}ms", highlight(timeout));
 
         return template;
     }

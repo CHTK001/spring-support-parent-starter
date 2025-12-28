@@ -10,6 +10,7 @@ import com.chua.socketio.support.server.DelegateSocketIOServer;
 import com.corundumstudio.socketio.*;
 import com.corundumstudio.socketio.protocol.JacksonJsonSupport;
 import lombok.extern.slf4j.Slf4j;
+import static com.chua.starter.common.support.logger.ModuleLog.*;
 
 import java.util.Collections;
 import java.util.LinkedList;
@@ -188,10 +189,10 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
             String host = room.getActualHost(properties.getHost());
             int port = room.getActualPort(room.getPort());
             String contextPath = room.getContextPath();
-            printer.addRow(clientId,host, port, contextPath);
+            printer.addRow(clientId, host, port, contextPath);
             startServer(clientId, host, port, contextPath);
         }
-        log.info("\n{}", printer.draw());
+        log.info("[SocketIO] 服务启动 [{}]\n{}", enabled(), printer.draw());
     }
 
     /**
@@ -228,11 +229,11 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
 
             server.start();
             servers.put(clientId, server);
-            log.info("[SocketIO] 服务启动成功: clientId={}, host={}, port={}, contextPath={}", 
-                    clientId, host, port, contextPath);
+            log.info("[SocketIO] 服务启动 {} - {} context={}", 
+                    success(), address(host, port), contextPath);
 
         } catch (Exception e) {
-            log.error("[SocketIO] 服务启动失败: clientId={}", clientId, e);
+            log.error("[SocketIO] 服务启动 {} - clientId={}", failed(), clientId, e);
             throw new RuntimeException("Socket.IO 服务启动失败: " + clientId, e);
         }
     }
