@@ -5,7 +5,7 @@ import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.net.UserAgent;
 import com.chua.common.support.utils.*;
-import com.chua.starter.common.support.annotations.UserLogger;
+import com.chua.starter.common.support.annotations.UserLog;
 import com.chua.starter.common.support.utils.RequestUtils;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -36,13 +36,14 @@ import java.util.*;
 import static com.chua.common.support.constant.NameConstant.*;
 
 /**
- * 操作日志切入点顾问
- * <p>用于拦截带有 {@link UserLogger} 注解的方法，记录用户操作日志</p>
+ * 用户操作日志切入点顾问
+ * <p>用于拦截带有 {@link UserLog} 注解的方法，记录用户操作日志</p>
  * <p>日志格式：[时间] 用户名 执行了 模块-操作名称 (耗时: xxxms, 状态: 成功/失败)</p>
  *
  * @author CH
  * @version 1.0
  * @since 2024-01-01
+ * @see UserLog
  */
 @Lazy
 @Slf4j
@@ -69,7 +70,7 @@ public class UserLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdviso
 
     @Override
     public boolean matches(Method method, Class<?> targetClass) {
-        return method.isAnnotationPresent(UserLogger.class) && !method.isAnnotationPresent(LoggerIgnore.class);
+        return method.isAnnotationPresent(UserLog.class) && !method.isAnnotationPresent(LoggerIgnore.class);
     }
 
     @Override
@@ -116,13 +117,13 @@ public class UserLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdviso
      */
     void createOperateLogger(Object proceed, Throwable throwable, MethodInvocation invocation, long startTime) {
         Method method = invocation.getMethod();
-        UserLogger userLogger = method.getDeclaredAnnotation(UserLogger.class);
-        if (null == userLogger) {
-            log.debug("方法 {} 未标注 @UserLogger 注解，跳过日志记录", method.getName());
+        UserLog userLog = method.getDeclaredAnnotation(UserLog.class);
+        if (null == userLog) {
+            log.debug("方法 {} 未标注 @UserLog 注解，跳过日志记录", method.getName());
             return;
         }
 
-        String name = getName(userLogger, method);
+        String name = getName(userLog, method);
         if (null == name) {
             log.debug("无法获取操作名称，跳过日志记录，方法: {}", method.getName());
             return;
@@ -138,7 +139,7 @@ public class UserLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdviso
         String displayUsername = StringUtils.isNotBlank(username) ? username : ANONYMOUS_USER;
         // 获取操作模块
         String module = getModule(method);
-        String logModule = StringUtils.defaultString(userLogger.module(), module);
+        String logModule = StringUtils.defaultString(userLog.module(), module);
         // 判断操作状态
         boolean isSuccess = (null == throwable);
         String statusText = isSuccess ? "成功" : "失败";
@@ -151,7 +152,7 @@ public class UserLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdviso
         String header = request.getHeader("login-agent");
         UserAgent userAgent = UserAgent.parseUserAgentString(header);
         UserLoggerInfo userLoggerInfo = new UserLoggerInfo(name);
-        userLoggerInfo.setLoginType(userLogger.loginType());
+        userLoggerInfo.setLoginType(userLog.loginType());
         userLoggerInfo.setCreateBy(RequestUtils.getUserId());
         userLoggerInfo.setBrowser(userAgent.getBrowser().toString());
         userLoggerInfo.setUa(header);
@@ -165,7 +166,7 @@ public class UserLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdviso
         userLoggerInfo.setMethodName(method.getName());
 
         // 记录请求参数
-        if (userLogger.logArgs()) {
+        if (userLog.logArgs()) {
             String paramJson = buildParamJson(invocation);
             if (null != paramJson && paramJson.length() < 2000) {
                 userLoggerInfo.setLogParam(paramJson);
@@ -173,7 +174,7 @@ public class UserLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdviso
             log.debug("请求参数: {}", paramJson);
         }
 
-        String content = userLogger.content();
+        String content = userLog.content();
         userLoggerInfo.setLogStatus(isSuccess ? 1 : 0);
         userLoggerInfo.setLogMapping(RequestUtils.getUrl(request));
         userLoggerInfo.setLogCode(IdUtils.createUlid());
@@ -335,14 +336,14 @@ public class UserLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdviso
 
     /**
      * 获取操作名称
-     * <p>优先级：UserLogger.name() > Swagger Operation.summary() > Swagger ApiOperation.value()</p>
+     * <p>优先级：UserLog.name() > Swagger Operation.summary() > Swagger ApiOperation.value()</p>
      *
-     * @param userLogger 用户日志注解
-     * @param method     方法对象
+     * @param userLog 用户日志注解
+     * @param method  方法对象
      * @return 操作名称，如果无法获取返回null
      */
-    private String getName(UserLogger userLogger, Method method) {
-        String name = userLogger.name();
+    private String getName(UserLog userLog, Method method) {
+        String name = userLog.name();
         if (StringUtils.isNotBlank(name)) {
             return name;
         }

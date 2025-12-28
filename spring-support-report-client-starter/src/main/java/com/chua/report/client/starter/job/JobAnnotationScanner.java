@@ -2,7 +2,7 @@ package com.chua.report.client.starter.job;
 
 import com.chua.report.client.starter.job.handler.BeanJobHandler;
 import com.chua.report.client.starter.job.handler.JobHandlerFactory;
-import com.chua.starter.common.support.annotations.Job;
+import com.chua.starter.job.support.annotation.Job;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;

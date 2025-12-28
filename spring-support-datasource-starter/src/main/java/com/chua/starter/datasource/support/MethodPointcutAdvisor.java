@@ -1,6 +1,6 @@
 package com.chua.starter.datasource.support;
 
-import com.chua.starter.common.support.annotations.DS;
+import com.chua.starter.datasource.annotation.DS;
 import com.chua.starter.datasource.properties.MultiDataSourceSettingProperties;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
