@@ -50,6 +50,27 @@ import static com.chua.common.support.utils.ClassUtils.isAssignableFrom;
 @SuppressWarnings("ALL")
 public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>, EnvironmentAware {
 
+    /**
+     * 忽略包装的URL关键字
+     */
+    private static final String SWAGGER_PATH = "swagger";
+    
+    /**
+     * Actuator类型标识
+     */
+    private static final String ACTUATOR_SUBTYPE = "spring-boot.actuator";
+    
+    /**
+     * 流式响应类型
+     */
+    private static final String EVENT_STREAM = "event-stream";
+    private static final String OCTET_STREAM = "octet-stream";
+    
+    /**
+     * PageResult类名后缀
+     */
+    private static final String PAGE_RESULT_SUFFIX = "result.PageResult";
+
     @Resource(name = "uniform")
     private ExecutorService executorService;
 
@@ -83,7 +104,7 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
         }
 
 
-        if (o instanceof ReturnResult || (null != o && (o.getClass().getTypeName().endsWith("result.PageResult")))) {
+        if (o instanceof ReturnResult || isPageResultType(o)) {
             return o;
         }
 
@@ -177,14 +198,10 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
                 deferredResult.setErrorResult(ReturnResult.error(ReturnCode.SYSTEM_EXECUTION_TIMEOUT));
             });
 
-            deferredResult.onError(new Consumer<Throwable>() {
-
-                @Override
-                public void accept(Throwable it) {
-                    it.printStackTrace();
-                    deferredResult.setErrorResult(ReturnResult.error(ReturnCode.SYSTEM_EXECUTION_ERROR));
-                }
-            });
+                    deferredResult.onError(throwable -> {
+                        log.error("[统一响应]异步任务执行失败", throwable);
+                        deferredResult.setErrorResult(ReturnResult.error(ReturnCode.SYSTEM_EXECUTION_ERROR));
+                    });
 
             return deferredResult;
         }
@@ -193,46 +210,37 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
 
     @SneakyThrows
     private boolean isIgnoreReturnFormat(MethodParameter methodParameter, Method method, Class<?> declaringClass, ServerHttpRequest serverHttpRequest, MediaType mediaType) {
+        // 检查方法级别注解
         if (methodParameter.hasMethodAnnotation(ApiReturnFormatIgnore.class)) {
             return true;
         }
 
+        // 检查类级别注解或ResponseEntity类型
         if (declaringClass.isAnnotationPresent(ApiReturnFormatIgnore.class) ||
-                isAssignableFrom(ResponseEntity.class, declaringClass)
-        ) {
+                isAssignableFrom(ResponseEntity.class, declaringClass)) {
             return true;
         }
 
-        if (declaringClass.isAnnotationPresent(ApiReturnFormatIgnore.class) ||
-                isAssignableFrom(ResponseEntity.class, declaringClass)
-        ) {
-            return true;
-        }
-
+        // 检查Swagger路径
         String url = serverHttpRequest.getURI().toURL().toExternalForm();
-
-        if (url.contains("swagger")) {
+        if (url.contains(SWAGGER_PATH)) {
             return true;
         }
 
+        // 检查响应类型
         String subtype = mediaType.getSubtype();
-        if (subtype.contains("spring-boot.actuator")) {
+        if (subtype.contains(ACTUATOR_SUBTYPE) || 
+            subtype.contains(EVENT_STREAM) || 
+            subtype.contains(OCTET_STREAM)) {
             return true;
         }
 
-        if (subtype.contains("event-stream") || subtype.contains("octet-stream")) {
-            return true;
-        }
-
+        // 检查IgnoreReturnType注解
         if (AnnotationUtils.isAnnotationDeclaredLocally(IgnoreReturnType.class, declaringClass)) {
             return true;
         }
 
-        if (null != methodParameter.getMethodAnnotation(IgnoreReturnType.class)) {
-            return true;
-        }
-
-        return false;
+        return methodParameter.getMethodAnnotation(IgnoreReturnType.class) != null;
     }
 
     @Override
@@ -241,6 +249,20 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
                 .bindOrCreate(ApiProperties.PRE, ApiProperties.class);
         ignoreFormatPackages = apiProperties.getIgnoreFormatPackages();
         noPackages = null == ignoreFormatPackages || ignoreFormatPackages.length == 0;
+    }
+    
+    /**
+     * 判断是否为PageResult类型
+     *
+     * @param obj 对象
+     * @return 是否为PageResult类型
+     */
+    private boolean isPageResultType(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        String typeName = obj.getClass().getTypeName();
+        return typeName.endsWith(PAGE_RESULT_SUFFIX);
     }
 }
 

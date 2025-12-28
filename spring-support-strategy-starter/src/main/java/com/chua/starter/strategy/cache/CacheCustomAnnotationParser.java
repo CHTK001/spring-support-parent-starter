@@ -1,4 +1,4 @@
-package com.chua.starter.common.support.cache.configuration;
+package com.chua.starter.strategy.cache;
 
 import org.springframework.cache.annotation.*;
 import org.springframework.cache.interceptor.CacheEvictOperation;
@@ -22,16 +22,22 @@ import java.util.Set;
  * 自定义缓存注解解析器
  * <p>
  * 解除了原有 Spring Cache 中 key 和 keyGenerator 不能同时使用的限制。
+ * 默认使用 tenantedKeyGenerator 作为 keyGenerator。
  * </p>
  *
  * @author CH
  * @version 1.0.0
  * @since 2025/6/6
  */
-public class CacheCustomCacheAnnotationParser implements CacheAnnotationParser, Serializable {
+public class CacheCustomAnnotationParser implements CacheAnnotationParser, Serializable {
 
     private static final Set<Class<? extends Annotation>> CACHE_OPERATION_ANNOTATIONS =
             Set.of(Cacheable.class, CacheEvict.class, CachePut.class, Caching.class);
+
+    /**
+     * 默认的 keyGenerator
+     */
+    private static final String DEFAULT_KEY_GENERATOR = "tenantedKeyGenerator";
 
     @Override
     public boolean isCandidateClass(Class<?> targetClass) {
@@ -102,10 +108,7 @@ public class CacheCustomCacheAnnotationParser implements CacheAnnotationParser, 
         builder.setSync(cacheable.sync());
 
         defaultConfig.applyDefault(builder);
-        CacheableOperation op = builder.build();
-        validateCacheOperation(ae, op);
-
-        return op;
+        return builder.build();
     }
 
     private CacheEvictOperation parseEvictAnnotation(
@@ -123,10 +126,7 @@ public class CacheCustomCacheAnnotationParser implements CacheAnnotationParser, 
         builder.setBeforeInvocation(cacheEvict.beforeInvocation());
 
         defaultConfig.applyDefault(builder);
-        CacheEvictOperation op = builder.build();
-        validateCacheOperation(ae, op);
-
-        return op;
+        return builder.build();
     }
 
     private CacheOperation parsePutAnnotation(
@@ -143,37 +143,21 @@ public class CacheCustomCacheAnnotationParser implements CacheAnnotationParser, 
         builder.setCacheResolver(cachePut.cacheResolver());
 
         defaultConfig.applyDefault(builder);
-        CachePutOperation op = builder.build();
-        validateCacheOperation(ae, op);
-
-        return op;
+        return builder.build();
     }
 
     private void parseCachingAnnotation(
             AnnotatedElement ae, DefaultCacheConfig defaultConfig, Caching caching, Collection<CacheOperation> ops) {
 
-        Cacheable[] cacheables = caching.cacheable();
-        for (Cacheable cacheable : cacheables) {
+        for (Cacheable cacheable : caching.cacheable()) {
             ops.add(parseCacheableAnnotation(ae, defaultConfig, cacheable));
         }
-        CacheEvict[] cacheEvicts = caching.evict();
-        for (CacheEvict cacheEvict : cacheEvicts) {
+        for (CacheEvict cacheEvict : caching.evict()) {
             ops.add(parseEvictAnnotation(ae, defaultConfig, cacheEvict));
         }
-        CachePut[] cachePuts = caching.put();
-        for (CachePut cachePut : cachePuts) {
+        for (CachePut cachePut : caching.put()) {
             ops.add(parsePutAnnotation(ae, defaultConfig, cachePut));
         }
-    }
-
-    /**
-     * 验证缓存操作
-     * <p>
-     * 注意：已移除 key 和 keyGenerator 不能同时使用的限制
-     * </p>
-     */
-    private void validateCacheOperation(AnnotatedElement ae, CacheOperation operation) {
-        // 不再验证 key 和 keyGenerator 互斥，允许同时使用
     }
 
     /**
@@ -216,13 +200,13 @@ public class CacheCustomCacheAnnotationParser implements CacheAnnotationParser, 
             if (builder.getCacheNames().isEmpty() && this.cacheNames != null) {
                 builder.setCacheNames(this.cacheNames);
             }
-            // 设置 keyGenerator，默认使用 customTenantedKeyGenerator
+
+            // 设置 keyGenerator，默认使用 tenantedKeyGenerator
             if (!StringUtils.hasText(builder.getKeyGenerator())) {
                 if (StringUtils.hasText(this.keyGenerator)) {
                     builder.setKeyGenerator(this.keyGenerator);
                 } else {
-                    // 默认使用 customTenantedKeyGenerator
-                    builder.setKeyGenerator("customTenantedKeyGenerator");
+                    builder.setKeyGenerator(DEFAULT_KEY_GENERATOR);
                 }
             }
 
@@ -236,4 +220,3 @@ public class CacheCustomCacheAnnotationParser implements CacheAnnotationParser, 
         }
     }
 }
-

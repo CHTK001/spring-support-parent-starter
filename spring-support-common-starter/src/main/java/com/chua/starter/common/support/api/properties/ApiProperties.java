@@ -1,8 +1,14 @@
 package com.chua.starter.common.support.api.properties;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 import lombok.Getter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.Collections;
 import java.util.List;
@@ -19,6 +25,7 @@ import java.util.Map;
  * @version 2.0.0
  */
 @Data
+@Validated
 @ConfigurationProperties(prefix = ApiProperties.PRE, ignoreInvalidFields = true)
 public class ApiProperties {
 
@@ -32,55 +39,75 @@ public class ApiProperties {
     /**
      * 版本控制配置
      */
+    @Valid
+    @NotNull(message = "版本配置不能为空")
     private Version version = new Version();
 
     /**
      * 平台配置
      */
+    @Valid
+    @NotNull(message = "平台配置不能为空")
     private Platform platform = new Platform();
 
     /**
      * 自动统一返回结构
      */
     private boolean uniform = true;
+    
     /**
      * 响应编码配置
      */
+    @Valid
+    @NotNull(message = "响应编码配置不能为空")
     private ResponseEncodeProperties encode = new ResponseEncodeProperties();
 
     /**
      * 请求解码配置
      */
+    @Valid
+    @NotNull(message = "请求解码配置不能为空")
     private RequestDecodeProperties decode = new RequestDecodeProperties();
 
     /**
      * SPI 配置
      */
+    @Valid
     private SpiConfig spi = new SpiConfig();
 
     /**
      * Mock 配置
      */
+    @Valid
+    @NotNull(message = "Mock配置不能为空")
     private MockConfig mock = new MockConfig();
 
     /**
      * 功能开关配置
      */
+    @Valid
+    @NotNull(message = "功能开关配置不能为空")
     private FeatureConfig feature = new FeatureConfig();
 
     /**
      * 废弃接口配置
      */
+    @Valid
+    @NotNull(message = "废弃接口配置不能为空")
     private DeprecatedConfig deprecated = new DeprecatedConfig();
 
     /**
      * 内部接口配置
      */
+    @Valid
+    @NotNull(message = "内部接口配置不能为空")
     private InternalConfig internal = new InternalConfig();
 
     /**
      * 灰度发布配置
      */
+    @Valid
+    @NotNull(message = "灰度发布配置不能为空")
     private GrayConfig gray = new GrayConfig();
 
     /**
@@ -200,11 +227,14 @@ public class ApiProperties {
         /**
          * 编解码器类型（sm2/aes/rsa等）
          */
+        @NotNull(message = "编解码器类型不能为空")
+        @Pattern(regexp = "^(sm2|aes|rsa|des)$", message = "编解码器类型必须为sm2/aes/rsa/des之一")
         private String codecType = "sm2";
 
         /**
          * 白名单（不需要加密的接口路径）
          */
+        @NotNull(message = "白名单不能为null，可以为空列表")
         private List<String> whiteList = Collections.emptyList();
     }
 
@@ -232,7 +262,27 @@ public class ApiProperties {
         /**
          * 解码器类型（sm4/aes等）
          */
+        @NotNull(message = "解码器类型不能为空")
+        @Pattern(regexp = "^(sm4|aes|des)$", message = "解码器类型必须为sm4/aes/des之一")
         private String codecType = "sm4";
+        
+        /**
+         * 解密失败时是否拒绝请求
+         * <p>
+         * true: 解密失败时抛出异常，拒绝请求
+         * false: 解密失败时返回原始数据（默认，保证业务连续性）
+         * </p>
+         */
+        private boolean rejectOnDecodeFailure = false;
+        
+        /**
+         * 不需要解密的路径白名单
+         * <p>
+         * 支持Ant风格路径匹配，如: /api/public/**, /health
+         * </p>
+         */
+        @NotNull(message = "白名单不能为null，可以为空列表")
+        private List<String> whiteList = Collections.emptyList();
     }
 
     /**
@@ -265,11 +315,12 @@ public class ApiProperties {
         /**
          * 是否开启 Mock 功能
          */
-        private boolean enable = true;
+        private boolean enable = false;
 
         /**
          * Mock 生效的环境（逗号分隔）
          */
+        @NotNull(message = "Mock生效环境不能为空")
         private String profiles = "dev,test";
     }
 
@@ -282,11 +333,13 @@ public class ApiProperties {
         /**
          * 是否开启功能开关
          */
-        private boolean enable = true;
+        private boolean enable = false;
 
         /**
          * 功能开关管理接口路径
          */
+        @NotNull(message = "功能开关管理接口路径不能为空")
+        @Pattern(regexp = "^/.*", message = "接口路径必须以/开头")
         private String path = "/api/features";
     }
 
@@ -338,7 +391,7 @@ public class ApiProperties {
         /**
          * 是否开启灰度发布功能
          */
-        private boolean enable = true;
+        private boolean enable = false;
 
         /**
          * 灰度标识请求头名称
@@ -346,6 +399,7 @@ public class ApiProperties {
          * 请求命中灰度后，会在响应头中添加此头
          * </p>
          */
+        @NotNull(message = "灰度标识请求头名称不能为空")
         private String headerName = "X-Gray-Hit";
 
         /**
@@ -354,6 +408,7 @@ public class ApiProperties {
          * 这些用户始终进入灰度版本
          * </p>
          */
+        @NotNull(message = "全局灰度用户白名单不能为null，可以为空列表")
         private List<String> globalUsers = Collections.emptyList();
 
         /**
@@ -362,6 +417,7 @@ public class ApiProperties {
          * 这些IP始终进入灰度版本
          * </p>
          */
+        @NotNull(message = "全局灰度IP白名单不能为null，可以为空列表")
         private List<String> globalIps = Collections.emptyList();
 
         /**
@@ -370,6 +426,8 @@ public class ApiProperties {
          * 注解未指定百分比时使用此默认值
          * </p>
          */
+        @Min(value = 0, message = "灰度百分比不能小于0")
+        @Max(value = 100, message = "灰度百分比不能大于100")
         private int defaultPercentage = 0;
     }
 }

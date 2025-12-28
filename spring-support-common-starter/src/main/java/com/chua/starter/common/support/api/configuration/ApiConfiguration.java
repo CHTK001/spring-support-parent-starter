@@ -169,7 +169,10 @@ public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware {
     @ConditionalOnBean(ApiRequestDecodeRegister.class)
     @ConditionalOnProperty(name = "plugin.api.decode.enable", havingValue = "true")
     public ApiRequestDecodeBodyAdvice apiRequestDecodeBodyAdvice(ApiRequestDecodeRegister apiRequestDecodeRegister) {
-        return new ApiRequestDecodeBodyAdvice(apiRequestDecodeRegister);
+        ApiRequestDecodeBodyAdvice advice = new ApiRequestDecodeBodyAdvice(apiRequestDecodeRegister);
+        ApiProperties.RequestDecodeProperties decodeConfig = apiProperties.getDecode();
+        advice.setRejectOnDecodeFailure(decodeConfig.isRejectOnDecodeFailure());
+        return advice;
     }
 
     /**

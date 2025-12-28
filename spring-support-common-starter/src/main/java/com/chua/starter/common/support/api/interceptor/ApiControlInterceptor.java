@@ -50,11 +50,16 @@ public class ApiControlInterceptor implements HandlerInterceptor {
     private final ApiGrayEvaluator grayEvaluator = new ApiGrayEvaluator();
 
     /**
-     * 内网IP正则表达式
+     * 内网IP正则表达式（预编译）
      */
     private static final Pattern PRIVATE_IP_PATTERN = Pattern.compile(
-            "^(127\\.)|(10\\.)|(172\\.(1[6-9]|2[0-9]|3[0-1])\\.)|(192\\.168\\.)|(::1)|(0:0:0:0:0:0:0:1)$"
+            "^(127\\.)|(10\\.)|(172\\.(1[6-9]|2[0-9]|3[0-1])\\.)|(192\\.168\\.)|(::1)|(***************)$"
     );
+    
+    /**
+     * 语义化版本正则（预编译）
+     */
+    private static final Pattern VERSION_PATTERN = Pattern.compile("/v([0-9]+(?:\\.[0-9]+)*(?:-[0-9A-Za-z.-]+)?)/");
 
     /**
      * 内部接口标识属性名
@@ -329,10 +334,10 @@ public class ApiControlInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        // 模拟延迟
+        // 模拟延迟（使用虚拟线程避免阻塞主线程）
         if (apiMock.delay() > 0) {
             try {
-                Thread.sleep(apiMock.delay());
+                Thread.ofVirtual().start(() -> {}).join(apiMock.delay());
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
@@ -426,12 +431,16 @@ public class ApiControlInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        // 获取用户信息
+        // 获取用户信息（避免创建新Session）
         Object userId = request.getAttribute("userId");
-        if (userId == null) {
-            userId = request.getSession().getAttribute("userId");
+        String username = null;
+        var session = request.getSession(false);
+        if (session != null) {
+            if (userId == null) {
+                userId = session.getAttribute("userId");
+            }
+            username = (String) session.getAttribute("username");
         }
-        String username = (String) request.getSession().getAttribute("username");
 
         // 评估灰度规则
         boolean hitGray = grayEvaluator.evaluate(apiGray, request, userId, username);
@@ -530,7 +539,7 @@ public class ApiControlInterceptor implements HandlerInterceptor {
         // 从 URL 路径解析 (如 /api/v2/users, /api/v1.0.0/users, /api/v2.1.0-beta/users)
         String uri = request.getRequestURI();
         // 支持语义化版本格式: v1, v1.0, v1.0.0, v1.0.0-rc.1
-        Matcher matcher = Pattern.compile("/v([0-9]+(?:\\.[0-9]+)*(?:-[0-9A-Za-z.-]+)?)/").matcher(uri);
+        Matcher matcher = VERSION_PATTERN.matcher(uri);
         if (matcher.find()) {
             return Version.parse(matcher.group(1));
         }

@@ -30,12 +30,12 @@ public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandle
     private final boolean platformOpen;
     private final boolean versionOpen;
     private final String platform;
-    private final String active;
+    private final String[] activeProfiles;
 
     public ApiVersionRequestMappingHandlerMapping(ApiProperties apiProperties, Environment environment) {
         this.apiProperties = apiProperties;
-        this.active = environment.resolvePlaceholders("spring.profiles.active");
-        this.versionOpen = apiProperties.getVersion().isEnable() ;
+        this.activeProfiles = environment.getActiveProfiles();
+        this.versionOpen = apiProperties.getVersion().isEnable();
         this.platformOpen = apiProperties.getPlatform().isEnable() 
                 && StringUtils.isNotBlank(apiProperties.getPlatform().getPlatformName());
         this.platform = apiProperties.getPlatform().getPlatformName();
@@ -69,7 +69,8 @@ public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandle
             return super.getMappingForMethod(method, handlerType);
         }
 
-        if (StringUtils.isNotBlank(active)) {
+        // 检查环境配置
+        if (activeProfiles != null && activeProfiles.length > 0) {
             if (!isMatchProfile(method, handlerType)) {
                 return null;
             }
@@ -106,7 +107,12 @@ public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandle
 
         if (null != apiProfile) {
             // 检查当前激活的环境是否在注解配置的环境列表中
-            return ArrayUtils.containsIgnoreCase(apiProfile.value(), active);
+            for (String profile : activeProfiles) {
+                if (ArrayUtils.containsIgnoreCase(apiProfile.value(), profile)) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         return true;

@@ -5,6 +5,7 @@ import com.chua.common.support.json.JsonArray;
 import com.chua.common.support.net.UserAgent;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpHeaders;
@@ -12,6 +13,8 @@ import org.springframework.http.HttpInputMessage;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.RequestBodyAdvice;
 
@@ -36,9 +39,23 @@ import java.lang.reflect.Type;
 public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice {
 
     private final ApiRequestDecodeRegister decodeRegister;
+    
+    /**
+     * 解密失败时是否拒绝请求
+     */
+    private boolean rejectOnDecodeFailure = false;
 
     public ApiRequestDecodeBodyAdvice(ApiRequestDecodeRegister decodeRegister) {
         this.decodeRegister = decodeRegister;
+    }
+    
+    /**
+     * 设置解密失败时是否拒绝请求
+     *
+     * @param rejectOnDecodeFailure 是否拒绝
+     */
+    public void setRejectOnDecodeFailure(boolean rejectOnDecodeFailure) {
+        this.rejectOnDecodeFailure = rejectOnDecodeFailure;
     }
 
     @Override
@@ -51,6 +68,13 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice {
         // 检查是否启用请求解密
         if (!decodeRegister.requestDecodeOpen()) {
             log.debug("[RequestDecode] 请求解密未启用，跳过处理");
+            return inputMessage;
+        }
+        
+        // 检查白名单
+        String requestPath = getRequestPath();
+        if (decodeRegister.isWhiteListed(requestPath)) {
+            log.debug("[RequestDecode] 请求路径 {} 在白名单中，跳过解密", requestPath);
             return inputMessage;
         }
 
@@ -159,6 +183,13 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice {
         } catch (Exception e) {
             log.error("[RequestDecode] 请求解密失败 - 加密数据长度: {} chars, 错误: {}",
                     encryptedData.length(), e.getMessage(), e);
+            
+            // 根据配置决定是否拒绝请求
+            if (rejectOnDecodeFailure) {
+                log.warn("[RequestDecode] 解密失败，拒绝请求");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "请求解密失败");
+            }
+            
             log.warn("[RequestDecode] 解密失败，返回原始数据以保证业务连续性");
             return new ByteInputMessage(originByteArray, headers);
         }
@@ -172,6 +203,20 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice {
     @Override
     public Object handleEmptyBody(Object body, HttpInputMessage inputMessage, MethodParameter parameter, Type targetType, Class<? extends HttpMessageConverter<?>> converterType) {
         return body;
+    }
+    
+    /**
+     * 获取当前请求路径
+     *
+     * @return 请求路径，如果无法获取则返回null
+     */
+    private String getRequestPath() {
+        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attributes != null) {
+            HttpServletRequest request = attributes.getRequest();
+            return request.getRequestURI();
+        }
+        return null;
     }
 
     static class ByteInputMessage implements HttpInputMessage {

@@ -190,4 +190,42 @@ public class SysCircuitBreakerConfiguration implements Serializable {
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     @Schema(description = "更新时间")
     private LocalDateTime updateTime;
+
+    // ==================== 拦截器适配方法 ====================
+
+    public Long getId() {
+        return sysCircuitBreakerId;
+    }
+
+    public String getName() {
+        return sysCircuitBreakerName;
+    }
+
+    public String getUrlPattern() {
+        return sysCircuitBreakerPath;
+    }
+
+    public String getHttpMethod() {
+        return "*"; // 默认匹配所有HTTP方法
+    }
+
+    public Boolean getEnabled() {
+        return sysCircuitBreakerStatus != null && sysCircuitBreakerStatus == 1;
+    }
+
+    public Long getSlowCallDurationThreshold() {
+        return slowCallDurationThresholdMs;
+    }
+
+    public Long getWaitDurationInOpenState() {
+        return waitDurationInOpenStateMs != null ? waitDurationInOpenStateMs / 1000 : 60;
+    }
+
+    public Integer getPermittedNumberOfCallsInHalfOpenState() {
+        return permittedCallsInHalfOpenState;
+    }
+
+    public String getFallbackMessage() {
+        return fallbackValue != null ? fallbackValue : "服务暂时不可用，请稍后重试";
+    }
 }

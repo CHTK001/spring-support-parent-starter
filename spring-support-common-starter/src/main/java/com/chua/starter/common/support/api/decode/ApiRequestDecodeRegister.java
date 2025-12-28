@@ -9,9 +9,13 @@ import com.chua.starter.common.support.application.GlobalSettingFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.binary.Hex;
 
+import org.springframework.util.AntPathMatcher;
+import org.springframework.util.PathMatcher;
+
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.List;
 import java.util.stream.Collectors;
 
 /**
@@ -41,9 +45,15 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
      * 请求时间戳存储 - 用于防止重放攻击
      */
     private final ConcurrentHashMap<String, Long> requestTimestampStore = new ConcurrentHashMap<>();
+    
+    /**
+     * 路径匹配器
+     */
+    private static final PathMatcher PATH_MATCHER = new AntPathMatcher();
 
     private final GlobalSettingFactory globalSettingFactory = GlobalSettingFactory.getInstance();
     private final ApiProperties.RequestDecodeProperties decodeConfig;
+    private final List<String> whiteList;
 
     private Codec requestCodec;
     private ApiRequestDecodeSetting decodeSetting;
@@ -56,6 +66,9 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
      */
     public ApiRequestDecodeRegister(ApiProperties.RequestDecodeProperties decodeConfig) {
         this.decodeConfig = decodeConfig;
+        this.whiteList = decodeConfig.getWhiteList() != null 
+                ? decodeConfig.getWhiteList() 
+                : Collections.emptyList();
         if (!decodeConfig.isExtInject()) {
             globalSettingFactory.register("config", new ApiRequestDecodeSetting());
             globalSettingFactory.setIfNoChange("config", "codecRequestOpen", decodeConfig.isEnable());
@@ -78,6 +91,25 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
             return;
         }
         this.upgrade(globalSettingFactory.get("decode", ApiRequestDecodeSetting.class));
+    }
+
+    /**
+     * 检查请求路径是否在白名单中
+     *
+     * @param requestPath 请求路径
+     * @return 是否在白名单中
+     */
+    public boolean isWhiteListed(String requestPath) {
+        if (whiteList.isEmpty() || StringUtils.isEmpty(requestPath)) {
+            return false;
+        }
+        for (String pattern : whiteList) {
+            if (PATH_MATCHER.match(pattern, requestPath)) {
+                log.debug("[RequestDecode] 路径 {} 匹配白名单规则 {}", requestPath, pattern);
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

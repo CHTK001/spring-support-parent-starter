@@ -1,10 +1,10 @@
-package com.chua.starter.common.support.cache.configuration;
+package com.chua.starter.strategy.cache;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.annotation.AnnotationCacheOperationSource;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.interceptor.CacheOperationSource;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
 /**
@@ -18,6 +18,7 @@ import org.springframework.context.annotation.Primary;
  * @since 2025/6/6
  */
 @EnableCaching
+@ConditionalOnProperty(prefix = CacheProperties.PRE, name = "enable", havingValue = "true")
 public class CacheProxyCachingConfiguration {
 
     @Bean
@@ -27,8 +28,7 @@ public class CacheProxyCachingConfiguration {
     }
 
     @Bean
-    public CacheCustomCacheAnnotationParser cacheAnnotationParser() {
-        return new CacheCustomCacheAnnotationParser();
+    public CacheCustomAnnotationParser cacheAnnotationParser() {
+        return new CacheCustomAnnotationParser();
     }
 }
-

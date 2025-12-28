@@ -135,4 +135,18 @@ public class SysCircuitBreakerRecord implements Serializable {
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     @Schema(description = "创建时间")
     private LocalDateTime createTime;
+
+    // ==================== 拦截器适配方法 ====================
+
+    public void setConfigId(Long configId) {
+        this.sysCircuitBreakerId = configId;
+    }
+
+    public void setConfigName(String configName) {
+        this.sysCircuitBreakerName = configName;
+    }
+
+    public void setRequestUri(String requestUri) {
+        this.sysCircuitBreakerPath = requestUri;
+    }
 }
