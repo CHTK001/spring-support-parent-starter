@@ -94,6 +94,14 @@ public class SocketIOSession implements SocketSession {
     }
 
     @Override
+    public void sendBinary(String event, byte[] data) {
+        if (client.isChannelOpen()) {
+            // Socket.IO 原生支持二进制数据传输
+            client.sendEvent(event, data);
+        }
+    }
+
+    @Override
     @SuppressWarnings("unchecked")
     public <T> T getConnection() {
         return (T) client;

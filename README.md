@@ -21,44 +21,111 @@ Spring Support Parent Starter 是一个基于 Spring Boot 3.x 的企业级应用
 
 ## 🏗️ 架构设计
 
+### 模块分层架构
+
+```mermaid
+graph TB
+    subgraph "应用层"
+        APP["💻 你的应用"]
+    end
+    
+    subgraph "🛡️ 接入层模块"
+        API["API 统一响应"]
+        SWAGGER["Swagger 文档"]
+        OAUTH["OAuth 认证"]
+    end
+    
+    subgraph "🐝 业务支持模块"
+        COMMON["通用功能"]
+        CACHE["缓存管理"]
+        QUEUE["消息队列"]
+        SOCKET["实时通信"]
+    end
+    
+    subgraph "💾 数据层模块"
+        DATASOURCE["数据源"]
+        MYBATIS["MyBatis Plus"]
+        REDIS["Redis"]
+        ES["Elasticsearch"]
+    end
+    
+    subgraph "⚙️ 基础设施模块"
+        DISCOVERY["服务发现"]
+        CONFIG["配置中心"]
+        MONITOR["监控上报"]
+    end
+    
+    APP --> API
+    APP --> SWAGGER
+    APP --> OAUTH
+    APP --> COMMON
+    APP --> CACHE
+    APP --> QUEUE
+    APP --> SOCKET
+    APP --> DATASOURCE
+    APP --> MYBATIS
+    
+    COMMON --> REDIS
+    CACHE --> REDIS
+    DATASOURCE --> MYBATIS
+    COMMON --> ES
+    
+    APP -.-> DISCOVERY
+    APP -.-> CONFIG
+    APP -.-> MONITOR
+```
+
+### 完整模块列表
+
 ```
 Spring Support Parent Starter
-├── 基础功能模块
+├── 🔧 基础功能模块
 │   ├── spring-support-common-starter          # 通用功能和工具类
 │   ├── spring-support-datasource-starter      # 数据源配置和管理
 │   └── spring-support-mybatis-starter         # MyBatis Plus集成
-├── 认证和安全模块
+├── 🔐 认证和安全模块
 │   └── spring-support-oauth-client-starter    # OAuth客户端认证
-├── 缓存和存储模块
+├── 💾 缓存和存储模块
 │   ├── spring-support-redis-starter           # Redis缓存集成
-│   └── spring-support-minio-starter           # MinIO对象存储
-├── 容错和稳定性模块
-│   └── spring-support-circuit-breaker-starter # 熔断降级和限流
-├── 消息和通信模块
-│   ├── spring-support-email-starter           # 邮件发送服务
-│   ├── spring-support-mqtt-starter            # MQTT消息队列
-│   ├── spring-support-socketio-starter        # Socket.IO实时通信
-│   ├── spring-support-sse-starter             # Server-Sent Events
+│   ├── spring-support-filesystem-minio-starter # MinIO对象存储
+│   └── spring-support-filesystem-starter      # 统一文件存储抽象
+├── 🛡️ 容错和稳定性模块
+│   └── spring-support-strategy-starter        # 策略和容错
+├── 📡 消息和通信模块
+│   ├── spring-support-queue-starter           # 消息队列抽象
+│   ├── spring-support-queue-mqtt-starter      # MQTT消息队列
+│   ├── spring-support-queue-kafka-starter     # Kafka消息队列
+│   ├── spring-support-queue-rabbitmq-starter  # RabbitMQ消息队列
+│   ├── spring-support-queue-rocketmq-starter  # RocketMQ消息队列
+│   ├── spring-support-socket-starter          # Socket抽象层
+│   ├── spring-support-socket-websocket-starter # WebSocket实现
+│   ├── spring-support-socket-io-starter        # Socket.IO实现
+│   ├── spring-support-socket-rsocket-starter   # RSocket实现
+│   ├── spring-support-socket-sse-starter       # SSE实现
 │   ├── spring-support-rpc-starter             # RPC远程调用
-│   ├── spring-support-subscribe-starter       # 订阅发布模式
-│   └── spring-support-websockify-starter      # WebSocket代理
-├── 搜索和数据处理模块
+│   ├── spring-support-sync-starter            # 同步服务
+│   └── spring-support-message-starter         # 消息推送
+├── 🔍 搜索和数据处理模块
 │   └── spring-support-elasticsearch-starter   # Elasticsearch搜索引擎
-├── 服务发现和配置模块
+├── 🌐 服务发现和配置模块
 │   ├── spring-support-discovery-starter       # 服务发现
 │   └── spring-support-configcenter-starter    # 配置中心
-├── 监控和日志模块
-│   ├── spring-support-prometheus-starter      # Prometheus监控
-│   ├── spring-support-loki-starter            # Loki日志收集
-│   └── spring-support-report-client-starter   # 设备数据上报客户端
-├── API文档和接口模块
+├── 📊 监控和日志模块
+│   ├── spring-support-report-client-starter   # 设备数据上报客户端
+│   └── spring-support-report-client-arthas-starter # Arthas诊断集成
+├── 📚 API文档模块
 │   └── spring-support-swagger-starter         # Swagger API文档
-├── 数据库扩展模块
-│   └── spring-support-mybatis-tenant-starter  # MyBatis多租户支持
-└── 第三方服务集成模块
+├── 🛠️ 运维管理模块
+│   ├── spring-support-shell-starter           # SSH Shell管理
+│   ├── spring-support-ssh-starter             # SSH服务
+│   └── spring-support-job-starter             # 定时任务调度
+├── 🤖 AI深度学习模块
+│   └── spring-support-ai-starter              # AI深度学习功能
+├── 🌐 API网关模块
+│   └── spring-support-gateway-starter         # API网关
+└── 🔌 第三方服务集成模块
     ├── spring-support-tencent-starter         # 腾讯云服务集成
-    ├── spring-support-pay-client-starter      # 支付客户端
-    └── spring-support-guacamole-starter       # Apache Guacamole远程桌面
+    └── spring-support-pay-client-starter      # 支付客户端
 ```
 
 ## 🚀 快速开始
@@ -901,6 +968,138 @@ WebSocket 实时通信：
 - [MyBatis Plus](https://baomidou.com/)
 - [Redis](https://redis.io/)
 - [Elasticsearch](https://www.elastic.co/)
+
+---
+
+## 📚 模块文档
+
+> 💡 **提示：** 点击模块名称查看详细文档和配置说明。完整配置示例请参考 [`application-example.yml`](application-example.yml) 和 [`application-example.properties`](application-example.properties)
+
+### 🔧 基础功能模块
+
+- **[spring-support-common-starter](spring-support-common-starter/README.md)** - 通用工具模块
+  - 异步任务、缓存管理、工具类等
+
+### 🌐 接入层模块
+
+- **[spring-support-swagger-starter](spring-support-swagger-starter/README.md)** - API文档模块
+  - Knife4j/Swagger接口文档生成
+
+- **[spring-support-gateway-starter](spring-support-gateway-starter/README.md)** - 网关模块
+  - 路由、限流、熔断等
+
+### 🛡️ 安全认证模块
+
+- **[spring-support-oauth-client-starter](spring-support-oauth-client-starter/README.md)** - OAuth客户端模块
+  - OAuth 2.0认证集成
+
+### 💾 数据访问层模块
+
+- **[spring-support-datasource-starter](spring-support-datasource-starter/README.md)** - 数据源模块
+  - 多数据源、动态数据源、多租户支持
+
+- **[spring-support-mybatis-starter](spring-support-mybatis-starter/README.md)** - MyBatis模块
+  - MyBatis Plus增强、分页、逻辑删除、乐观锁等
+
+- **[spring-support-redis-starter](spring-support-redis-starter/README.md)** - Redis模块
+  - Redis操作、分布式锁、缓存管理
+
+- **[spring-support-elasticsearch-starter](spring-support-elasticsearch-starter/README.md)** - Elasticsearch模块
+  - 全文搜索、日志分析
+
+### 📁 文件存储模块
+
+- **[spring-support-filesystem-starter](spring-support-filesystem-starter/README.md)** - 文件系统抽象模块
+  - 统一文件操作接口
+
+- **[spring-support-filesystem-minio-starter](spring-support-filesystem-minio-starter/README.md)** - MinIO存储模块
+  - MinIO对象存储集成
+
+### 📡 消息队列模块
+
+- **[spring-support-queue-starter](spring-support-queue-starter/README.md)** - 消息队列抽象模块
+  - 统一消息队列接口
+
+- **[spring-support-queue-rabbitmq-starter](spring-support-queue-rabbitmq-starter/README.md)** - RabbitMQ模块
+  - RabbitMQ消息队列实现
+
+- **[spring-support-queue-kafka-starter](spring-support-queue-kafka-starter/README.md)** - Kafka模块
+  - Kafka消息队列实现
+
+- **[spring-support-queue-rocketmq-starter](spring-support-queue-rocketmq-starter/README.md)** - RocketMQ模块
+  - RocketMQ消息队列实现
+
+- **[spring-support-queue-mqtt-starter](spring-support-queue-mqtt-starter/README.md)** - MQTT模块
+  - MQTT物联网消息协议实现
+
+### 🔌 Socket通信模块
+
+- **[spring-support-socket-starter](spring-support-socket-starter/README.md)** - Socket抽象模块
+  - 统一Socket通信接口
+
+- **[spring-support-socket-websocket-starter](spring-support-socket-websocket-starter/README.md)** - WebSocket模块
+  - WebSocket双向通信
+
+- **[spring-support-socket-io-starter](spring-support-socket-io-starter/README.md)** - Socket.IO模块
+  - Socket.IO实时通信
+
+- **[spring-support-socket-rsocket-starter](spring-support-socket-rsocket-starter/README.md)** - RSocket模块
+  - RSocket响应式通信
+
+- **[spring-support-socket-sse-starter](spring-support-socket-sse-starter/README.md)** - SSE模块
+  - Server-Sent Events服务器推送
+
+### 🌐 微服务治理模块
+
+- **[spring-support-discovery-starter](spring-support-discovery-starter/README.md)** - 服务发现模块
+  - Nacos、Eureka、Consul服务注册与发现
+
+- **[spring-support-configcenter-starter](spring-support-configcenter-starter/README.md)** - 配置中心模块
+  - 动态配置管理、配置热更新
+
+- **[spring-support-rpc-starter](spring-support-rpc-starter/README.md)** - RPC模块
+  - 远程过程调用支持
+
+### 📊 业务支撑模块
+
+- **[spring-support-report-client-starter](spring-support-report-client-starter/README.md)** - 报表模块
+  - 报表生成、导出
+
+- **[spring-support-report-client-arthas-starter](spring-support-report-client-arthas-starter/README.md)** - Arthas诊断模块
+  - 性能监控、问题诊断
+
+- **[spring-support-pay-client-starter](spring-support-pay-client-starter/README.md)** - 支付模块
+  - 支付宝、微信支付集成
+
+- **[spring-support-tencent-starter](spring-support-tencent-starter/README.md)** - 腾讯云服务模块
+  - COS对象存储、SMS短信服务
+
+- **[spring-support-message-starter](spring-support-message-starter/README.md)** - 消息通知模块
+  - 邮件、短信、微信公众号通知
+
+### 🤖 AI集成模块
+
+- **[spring-support-ai-starter](spring-support-ai-starter/README.md)** - AI服务模块
+  - OpenAI、文心一言、通义千问等AI大模型集成
+
+### 🛠️ 运维管理模块
+
+- **[spring-support-job-starter](spring-support-job-starter/README.md)** - 定时任务模块
+  - 定时任务调度管理
+
+- **[spring-support-shell-starter](spring-support-shell-starter/README.md)** - Shell命令模块
+  - Shell脚本执行
+
+- **[spring-support-ssh-starter](spring-support-ssh-starter/README.md)** - SSH服务模块
+  - SSH远程登录和命令执行
+
+- **[spring-support-sync-starter](spring-support-sync-starter/README.md)** - 数据同步模块
+  - 数据同步和迁移
+
+### 🎯 设计模式模块
+
+- **[spring-support-strategy-starter](spring-support-strategy-starter/README.md)** - 策略模式模块
+  - 策略模式实现支持
 
 ---
 

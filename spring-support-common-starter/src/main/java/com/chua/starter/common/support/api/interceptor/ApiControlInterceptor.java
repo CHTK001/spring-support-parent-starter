@@ -51,9 +51,19 @@ public class ApiControlInterceptor implements HandlerInterceptor {
 
     /**
      * 内网IP正则表达式（预编译）
+     * <p>
+     * 支持的内网IP范围：
+     * - 127.0.0.0/8 (Loopback)
+     * - 10.0.0.0/8 (Private Network)
+     * - 172.16.0.0/12 (Private Network)
+     * - 192.168.0.0/16 (Private Network)
+     * - ::1 (IPv6 Loopback)
+     * - fc00::/7 (IPv6 Unique Local Address)
+     * - fe80::/10 (IPv6 Link-Local)
+     * </p>
      */
     private static final Pattern PRIVATE_IP_PATTERN = Pattern.compile(
-            "^(127\\.)|(10\\.)|(172\\.(1[6-9]|2[0-9]|3[0-1])\\.)|(192\\.168\\.)|(::1)|(***************)$"
+            "^(127\\.)|(10\\.)|(172\\.(1[6-9]|2[0-9]|3[0-1])\\.)|(192\\.168\\.)|(::1)|(fc00:)|(fe80:)$"
     );
     
     /**

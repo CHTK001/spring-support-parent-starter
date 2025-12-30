@@ -99,6 +99,17 @@ public interface SocketSession {
     void send(String event, Object data);
 
     /**
+     * 发送二进制数据
+     *
+     * @param event 事件名称
+     * @param data  二进制数据
+     */
+    default void sendBinary(String event, byte[] data) {
+        // 默认实现: 转换为 Base64 发送
+        send(event, java.util.Base64.getEncoder().encodeToString(data));
+    }
+
+    /**
      * 获取底层连接对象
      *
      * @param <T> 连接对象类型

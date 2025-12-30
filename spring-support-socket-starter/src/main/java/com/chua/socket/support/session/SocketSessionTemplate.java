@@ -189,6 +189,58 @@ public interface SocketSessionTemplate {
     int getOnlineCount();
 
     /**
+     * 向指定会话ID的客户端发送二进制数据
+     *
+     * @param sessionId 目标客户端的会话ID
+     * @param event     触发的事件名称
+     * @param data      二进制数据
+     */
+    default void sendBinary(String sessionId, String event, byte[] data) {
+        SocketSession session = getSession(sessionId);
+        if (session != null) {
+            session.sendBinary(event, data);
+        }
+    }
+
+    /**
+     * 广播二进制数据到所有客户端
+     *
+     * @param event 触发的事件名称
+     * @param data  二进制数据
+     */
+    default void broadcastBinary(String event, byte[] data) {
+        List<SocketSession> sessions = getOnlineSessions();
+        for (SocketSession session : sessions) {
+            try {
+                session.sendBinary(event, data);
+            } catch (Exception e) {
+                // 忽略单个会话发送失败
+            }
+        }
+    }
+
+    /**
+     * 向指定用户发送二进制数据
+     *
+     * @param userId 目标用户ID
+     * @param event  触发的事件名称
+     * @param data   二进制数据
+     */
+    default void sendBinaryToUser(String userId, String event, byte[] data) {
+        List<SocketSession> sessions = getOnlineSessions();
+        for (SocketSession session : sessions) {
+            SocketUser user = session.getUser();
+            if (user != null && userId.equals(user.getUserId())) {
+                try {
+                    session.sendBinary(event, data);
+                } catch (Exception e) {
+                    // 忽略单个会话发送失败
+                }
+            }
+        }
+    }
+
+    /**
      * 启动服务
      */
     void start();
