@@ -82,6 +82,47 @@ public class GatewayProperties {
          * 主机地址
          */
         private String host = "0.0.0.0";
+
+        /**
+         * 服务发现配置
+         */
+        private DiscoveryProperties discovery = new DiscoveryProperties();
+    }
+
+    /**
+     * 服务发现配置
+     */
+    @Data
+    public static class DiscoveryProperties {
+        /**
+         * 是否启用动态服务发现
+         */
+        private boolean enabled = false;
+
+        /**
+         * 服务发现类型: consul, nacos, zookeeper, etcd, redis, hazelcast, multicast, default
+         */
+        private String type;
+
+        /**
+         * 服务发现地址（多个地址用逗号分隔）
+         */
+        private String address;
+
+        /**
+         * 服务发现协议
+         */
+        private String protocol;
+
+        /**
+         * 服务发现额外配置
+         */
+        private java.util.Map<String, String> options = new java.util.LinkedHashMap<>();
+
+        /**
+         * 是否启用服务订阅（监听服务变化）
+         */
+        private boolean subscribe = false;
     }
 
     /**

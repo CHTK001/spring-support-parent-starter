@@ -24,6 +24,7 @@ import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import com.google.common.base.Strings;
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import kong.unirest.HttpRequestWithBody;
 import kong.unirest.HttpResponse;
 import kong.unirest.Unirest;
@@ -87,13 +88,23 @@ public class HttpProtocol extends AbstractProtocol {
 
     @Override
     protected AuthenticationInformation approve(Cookie cookie, String token, String subProtocol) {
+        // 如果传入的subProtocol（认证类型）为空，尝试从Header读取 x-oauth-type
+        if (StringUtils.isBlank(subProtocol)) {
+            HttpServletRequest request = RequestUtils.getRequest();
+            if (request != null) {
+                subProtocol = request.getHeader("x-oauth-type");
+                if (StringUtils.isNotBlank(subProtocol)) {
+                    log.debug("[HttpProtocol]从Header读取认证类型: {}", subProtocol);
+                }
+            }
+        }
+        
         JsonObject jsonObject = new JsonObject();
         // 构建认证数据
         jsonObject.put("x-oauth-cookie", null == cookie ? null : cookie.getValue());
         jsonObject.put("x-oauth-token", token);
         jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
         jsonObject.put("x-oauth-secret-key", authClientProperties.getKey().getSecretKey());
-        jsonObject.put("x-oauth-sub-protocol", StringUtils.defaultString(subProtocol, "DEFAULT").toUpperCase());
         jsonObject.put("x-oauth-param-address", RequestUtils.getIpAddress());
         jsonObject.put("x-oauth-param-app-name", SpringBeanUtils.getEnvironment().resolvePlaceholders("${spring.application.name:}"));
         return createAuthenticationInformation(jsonObject, null, authClientProperties.getOauthUrl());
@@ -101,6 +112,10 @@ public class HttpProtocol extends AbstractProtocol {
 
     @Override
     protected AuthenticationInformation authenticationUserCode(AppKeySecret appKeySecret) {
+        // 注意：指纹校验应该在Filter层进行，因为需要比对用户信息里的指纹
+        // 协议层此时还没有用户信息，无法进行真正的指纹比对
+        // 指纹比对逻辑在 AuthFilter.verifyFingerprint() 中实现
+        
         JsonObject jsonObject = new JsonObject();
         // 构建认证数据
         jsonObject.put("x-oauth-user-code", Json.toJSONBytes(appKeySecret));
@@ -109,6 +124,26 @@ public class HttpProtocol extends AbstractProtocol {
         jsonObject.put("x-oauth-param-address", RequestUtils.getIpAddress());
         jsonObject.put("x-oauth-param-app-name", SpringBeanUtils.getEnvironment().resolvePlaceholders("${spring.application.name:}"));
         return createAuthenticationInformation(jsonObject, null, authClientProperties.getOauthUrl());
+    }
+    
+    /**
+     * 脱敏 AppKey
+     */
+    private String maskAppKey(String appKey) {
+        if (appKey == null || appKey.length() < 8) {
+            return "***";
+        }
+        return appKey.substring(0, 4) + "..." + appKey.substring(appKey.length() - 4);
+    }
+    
+    /**
+     * 脱敏指纹
+     */
+    private String maskFingerprint(String fingerprint) {
+        if (fingerprint == null || fingerprint.length() < 8) {
+            return "***";
+        }
+        return fingerprint.substring(0, 4) + "..." + fingerprint.substring(fingerprint.length() - 4);
     }
 
     @Override
@@ -418,6 +453,15 @@ public class HttpProtocol extends AbstractProtocol {
                 String accessKey = getAccessKey();
                 if (StringUtils.isNotBlank(accessKey)) {
                     requestWithBody = requestWithBody.header("x-oauth-ak", accessKey);
+                }
+                
+                // 添加认证类型请求头（x-oauth-type）
+                HttpServletRequest currentRequest = RequestUtils.getRequest();
+                if (currentRequest != null) {
+                    String authType = currentRequest.getHeader("x-oauth-type");
+                    if (StringUtils.isNotBlank(authType)) {
+                        requestWithBody = requestWithBody.header("x-oauth-type", authType);
+                    }
                 }
                 
                 // 传递追踪头用于链路追踪

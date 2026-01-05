@@ -83,12 +83,22 @@ public class RSocketProtocol extends AbstractProtocol {
 
     @Override
     protected AuthenticationInformation approve(Cookie cookie, String token, String subProtocol) {
+        // 如果传入的subProtocol（认证类型）为空，尝试从Header读取 x-oauth-type
+        if (StringUtils.isBlank(subProtocol)) {
+            jakarta.servlet.http.HttpServletRequest request = RequestUtils.getRequest();
+            if (request != null) {
+                subProtocol = request.getHeader("x-oauth-type");
+                if (StringUtils.isNotBlank(subProtocol)) {
+                    log.debug("[RSocketProtocol]从Header读取认证类型: {}", subProtocol);
+                }
+            }
+        }
+        
         JsonObject jsonObject = new JsonObject();
         jsonObject.put("x-oauth-cookie", null == cookie ? null : cookie.getValue());
         jsonObject.put("x-oauth-token", token);
         jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
         jsonObject.put("x-oauth-secret-key", authClientProperties.getKey().getSecretKey());
-        jsonObject.put("x-oauth-sub-protocol", StringUtils.defaultString(subProtocol, "DEFAULT").toUpperCase());
         jsonObject.put("x-oauth-param-address", RequestUtils.getIpAddress());
         jsonObject.put("x-oauth-param-app-name",
                 SpringBeanUtils.getEnvironment().resolvePlaceholders("${spring.application.name:}"));
@@ -186,6 +196,13 @@ public class RSocketProtocol extends AbstractProtocol {
             String timestamp = System.nanoTime() + "";
             String key1 = IdUtils.simpleUuid();
 
+            // 添加认证类型到元数据（x-oauth-type）
+            jakarta.servlet.http.HttpServletRequest currentRequest = RequestUtils.getRequest();
+            String authType = null;
+            if (currentRequest != null) {
+                authType = currentRequest.getHeader("x-oauth-type");
+            }
+            
             // 构建元数据
             JsonObject metadata = new JsonObject();
             metadata.put("route", route);
@@ -194,6 +211,9 @@ public class RSocketProtocol extends AbstractProtocol {
             metadata.put("x-oauth-encode", String.valueOf(isEncode()));
             metadata.put("x-oauth-serial", createData(key, key1));
             metadata.put("x-oauth-sign", SignUtils.generateSignFromMap(jsonObject));
+            if (StringUtils.isNotBlank(authType)) {
+                metadata.put("x-oauth-type", authType);
+            }
             if (upgradeType != null) {
                 metadata.put("x-oauth-upgrade-type", upgradeType.name());
             }

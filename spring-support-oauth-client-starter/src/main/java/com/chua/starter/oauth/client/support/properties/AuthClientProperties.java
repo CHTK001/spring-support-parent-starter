@@ -237,6 +237,69 @@ public class AuthClientProperties {
          * </p>
          */
         private boolean globalVerification = false;
+        
+        /**
+         * 是否启用客户端指纹校验
+         * <p>
+         * 开启后，客户端在发送认证请求前会先校验指纹是否在白名单中。
+         * 如果指纹不在白名单中，客户端会拒绝发送请求，返回错误信息。
+         * </p>
+         * <p>
+         * 默认关闭，指纹校验由服务端完成。
+         * </p>
+         */
+        private boolean enableClientVerification = false;
+        
+        /**
+         * 指纹配置缓存时间（秒）
+         * <p>
+         * 客户端会缓存从服务端获取的 appKey 指纹配置，此配置控制缓存的有效期。
+         * 默认 1 小时（3600 秒）。
+         * </p>
+         */
+        private long configCacheTimeout = 3600;
+        
+        /**
+         * AppKey 指纹配置映射
+         * <p>
+         * Key: AppKey
+         * Value: 指纹配置（enableFingerprint: 0-不启用, 1-启用; fingerprintWhitelist: 指纹白名单，多个用逗号分隔）
+         * </p>
+         * <p>
+         * 配置示例：
+         * <pre>
+         * plugin:
+         *   oauth:
+         *     fingerprint:
+         *       appKeyConfigs:
+         *         "appKey1":
+         *           enableFingerprint: 1
+         *           fingerprintWhitelist: "fingerprint1,fingerprint2"
+         *         "appKey2":
+         *           enableFingerprint: 0
+         * </pre>
+         * </p>
+         */
+        private java.util.Map<String, AppKeyFingerprintConfig> appKeyConfigs = new java.util.HashMap<>();
+    }
+    
+    /**
+     * AppKey 指纹配置
+     */
+    @Data
+    public static class AppKeyFingerprintConfig {
+        /**
+         * 是否启用指纹检测
+         * <p>
+         * 0: 不启用, 1: 启用
+         * </p>
+         */
+        private Integer enableFingerprint = 0;
+        
+        /**
+         * 指纹白名单（多个指纹用逗号分隔）
+         */
+        private String fingerprintWhitelist;
     }
 
     /**

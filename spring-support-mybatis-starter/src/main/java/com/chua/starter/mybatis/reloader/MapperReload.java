@@ -4,9 +4,6 @@ import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.mybatis.properties.MybatisPlusProperties;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.io.monitor.FileAlterationListenerAdaptor;
-import org.apache.commons.io.monitor.FileAlterationMonitor;
-import org.apache.commons.io.monitor.FileAlterationObserver;
 import org.apache.ibatis.builder.xml.XMLMapperBuilder;
 import org.apache.ibatis.builder.xml.XMLMapperEntityResolver;
 import org.apache.ibatis.mapping.MappedStatement;
@@ -22,11 +19,14 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.nio.file.*;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 加载器
@@ -41,7 +41,10 @@ public class MapperReload implements Reload, DisposableBean {
     private final List<SqlSessionFactory> sqlSessionFactories;
     private final MybatisPlusProperties mybatisProperties;
 
-    private final Map<String, FileAlterationMonitor> monitorMap = new ConcurrentHashMap<>();
+    private final Map<String, WatchService> watchServiceMap = new ConcurrentHashMap<>();
+    private final Map<String, Thread> watchThreadMap = new ConcurrentHashMap<>();
+    private final AtomicBoolean running = new AtomicBoolean(true);
+    private ExecutorService watchExecutor;
 
     public MapperReload(List<SqlSessionFactory> sqlSessionFactories, MybatisPlusProperties mybatisProperties) {
         this.sqlSessionFactories = sqlSessionFactories;
@@ -51,7 +54,8 @@ public class MapperReload implements Reload, DisposableBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        ThreadUtils.newStaticThreadPool().execute(() -> {
+        watchExecutor = ThreadUtils.newStaticThreadPool();
+        watchExecutor.execute(() -> {
             Resource[] resources = null;
             try {
                 resources = patternResolver.getResources("classpath*:**/*Mapper.xml");
@@ -86,33 +90,67 @@ public class MapperReload implements Reload, DisposableBean {
 
     private void register(File source) {
         File parentFile = source.getParentFile();
-        monitorMap.computeIfAbsent(parentFile.getAbsolutePath(), new Function<String, FileAlterationMonitor>() {
-            @Override
-            public FileAlterationMonitor apply(String s) {
-                long interval = mybatisProperties.getReloadTime();
-                FileAlterationObserver fileAlterationObserver = new FileAlterationObserver(parentFile);
-                fileAlterationObserver.addListener(new FileAlterationListenerAdaptor() {
-                    @Override
-                    public void onFileChange(File file) {
-                        reload(file.getName());
-                        super.onFileChange(file);
+        String parentPath = parentFile.getAbsolutePath();
+        
+        watchServiceMap.computeIfAbsent(parentPath, path -> {
+            try {
+                Path watchPath = Paths.get(path);
+                WatchService watchService = FileSystems.getDefault().newWatchService();
+                
+                // 注册文件修改和删除事件
+                watchPath.register(watchService, 
+                    StandardWatchEventKinds.ENTRY_MODIFY,
+                    StandardWatchEventKinds.ENTRY_DELETE);
+                
+                // 启动监听线程
+                Thread watchThread = new Thread(() -> {
+                    try {
+                        while (running.get()) {
+                            WatchKey key = watchService.poll(mybatisProperties.getReloadTime(), TimeUnit.MILLISECONDS);
+                            if (key == null) {
+                                continue;
+                            }
+                            
+                            for (WatchEvent<?> event : key.pollEvents()) {
+                                WatchEvent.Kind<?> kind = event.kind();
+                                
+                                if (kind == StandardWatchEventKinds.ENTRY_MODIFY) {
+                                    @SuppressWarnings("unchecked")
+                                    WatchEvent<Path> ev = (WatchEvent<Path>) event;
+                                    Path fileName = ev.context();
+                                    
+                                    // 只处理 XML 文件
+                                    if (fileName.toString().endsWith(".xml")) {
+                                        String mapperXml = fileName.toString();
+                                        log.debug("Detected file change: {}", mapperXml);
+                                        reload(mapperXml);
+                                    }
+                                }
+                            }
+                            
+                            boolean valid = key.reset();
+                            if (!valid) {
+                                break;
+                            }
+                        }
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        log.debug("Watch thread interrupted for path: {}", path);
+                    } catch (Exception e) {
+                        log.error("Error in watch thread for path: {}", path, e);
                     }
-
-                    @Override
-                    public void onFileDelete(File file) {
-                        super.onFileDelete(file);
-                    }
-                });
-
-                FileAlterationMonitor monitor = new FileAlterationMonitor(interval, fileAlterationObserver);
-                try {
-                    monitor.start();
-                } catch (Exception ignored) {
-                }
-                return monitor;
+                }, "MapperReload-Watch-" + path);
+                
+                watchThread.setDaemon(true);
+                watchThread.start();
+                watchThreadMap.put(parentPath, watchThread);
+                
+                return watchService;
+            } catch (IOException e) {
+                log.error("Failed to create watch service for path: {}", path, e);
+                return null;
             }
         });
-
     }
 
     @Override
@@ -199,11 +237,37 @@ public class MapperReload implements Reload, DisposableBean {
 
     @Override
     public void destroy() throws Exception {
-        for (FileAlterationMonitor monitor : monitorMap.values()) {
+        running.set(false);
+        
+        // 关闭所有 WatchService
+        for (Map.Entry<String, WatchService> entry : watchServiceMap.entrySet()) {
             try {
-                monitor.stop();
-            } catch (Exception ignored) {
+                entry.getValue().close();
+            } catch (IOException e) {
+                log.debug("Error closing watch service for path: {}", entry.getKey(), e);
             }
+        }
+        
+        // 等待所有监听线程结束
+        for (Map.Entry<String, Thread> entry : watchThreadMap.entrySet()) {
+            try {
+                Thread thread = entry.getValue();
+                if (thread != null && thread.isAlive()) {
+                    thread.interrupt();
+                    thread.join(1000); // 等待最多1秒
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.debug("Interrupted while waiting for watch thread: {}", entry.getKey());
+            }
+        }
+        
+        watchServiceMap.clear();
+        watchThreadMap.clear();
+        
+        // 关闭线程池
+        if (watchExecutor != null) {
+            watchExecutor.shutdown();
         }
     }
 }

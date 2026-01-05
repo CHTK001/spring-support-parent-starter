@@ -427,6 +427,77 @@ public class CustomPermissionEvaluator {
 }
 ```
 
+## 🔄 OAuth 认证流程图
+
+```mermaid
+sequenceDiagram
+    participant User as 用户/浏览器
+    participant Web as Web层<br/>(Controller/Filter)
+    participant Filter as AuthFilter<br/>(认证过滤器)
+    participant Cache as Cache<br/>(本地缓存)
+    participant Session as Session<br/>(会话存储)
+    participant Protocol as ProtocolExecutor<br/>(协议执行器)
+    participant Server as OAuth服务端
+    participant Principal as OAuthPrincipal<br/>(Principal对象)
+
+    User->>Web: 1. 发起HTTP请求
+    Web->>Filter: 2. 请求被AuthFilter拦截
+    
+    alt 请求在排除列表中
+        Filter->>Web: 直接放行
+        Web->>User: 返回响应
+    else 需要认证
+        Filter->>Session: 3. 检查Session中是否有Token
+        alt Session中有Token
+            Session-->>Filter: 返回Token和UserResume
+            Filter->>Cache: 4. 检查缓存中是否有用户信息
+            alt 缓存命中
+                Cache-->>Filter: 返回缓存的UserResume
+                Filter->>Principal: 5. 创建OAuthPrincipal
+                Principal-->>Filter: 返回Principal对象
+                Filter->>Web: 6. 设置Principal到Request
+                Web->>User: 7. 返回响应
+            else 缓存未命中
+                Filter->>Protocol: 8. 调用ProtocolExecutor验证Token
+                Protocol->>Server: 9. 发送认证请求<br/>(Header: x-oauth-type, x-oauth-token)
+                Server-->>Protocol: 10. 返回UserResume
+                Protocol-->>Filter: 返回用户信息
+                Filter->>Cache: 11. 缓存用户信息
+                Filter->>Session: 12. 更新Session
+                Filter->>Principal: 13. 创建OAuthPrincipal
+                Principal-->>Filter: 返回Principal对象
+                Filter->>Web: 14. 设置Principal到Request
+                Web->>User: 15. 返回响应
+            end
+        else Session中没有Token
+            Filter->>Protocol: 16. 检查请求头中的Token
+            alt 请求头中有Token
+                Protocol->>Server: 17. 发送认证请求验证Token
+                alt Token有效
+                    Server-->>Protocol: 返回UserResume
+                    Protocol-->>Filter: 返回用户信息
+                    Filter->>Session: 18. 保存Token和UserResume到Session
+                    Filter->>Cache: 19. 缓存用户信息
+                    Filter->>Principal: 20. 创建OAuthPrincipal
+                    Principal-->>Filter: 返回Principal对象
+                    Filter->>Web: 21. 设置Principal到Request
+                    Web->>User: 22. 返回响应
+                else Token无效
+                    Server-->>Protocol: 返回认证失败
+                    Protocol-->>Filter: 认证失败
+                    Filter->>Web: 23. 返回401未授权
+                    Web->>User: 返回401错误
+                end
+            else 请求头中没有Token
+                Filter->>Web: 24. 返回401未授权
+                Web->>User: 返回401错误
+            end
+        end
+    end
+
+    Note over User,Principal: 认证成功后，用户可以通过<br/>request.getUserPrincipal()<br/>获取OAuthPrincipal对象
+```
+
 ## 📝 注意事项
 
 1. **登录方法限制**：OAuth 客户端不支持直接的用户名密码登录，`request.login()`方法会抛出`ServletException`

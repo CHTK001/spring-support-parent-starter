@@ -13,3 +13,5 @@ com.chua.starter.common.support.actuator.ActuatorConfiguration
 com.chua.starter.common.support.configuration.AutoControllerRegistrar
 com.chua.starter.common.support.configuration.VirtualThreadConfiguration
 com.chua.starter.common.support.configuration.VirtualThreadAsyncConfiguration
+com.chua.starter.common.support.configuration.security.RequestFingerprintAutoConfiguration
+com.chua.starter.common.support.configuration.security.SecurityFiltersAutoConfiguration

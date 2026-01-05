@@ -1,8 +1,13 @@
 package com.chua.plugin.support.configuration;
 
+import com.chua.common.support.objects.ConfigureObjectContext;
+import com.chua.common.support.objects.DefaultConfigureObjectContext;
+import com.chua.common.support.objects.ObjectContextSetting;
 import com.chua.common.support.objects.plugin.DefaultPluginManager;
 import com.chua.common.support.objects.plugin.PluginManager;
 import com.chua.common.support.objects.plugin.PluginWrapper;
+import com.chua.starter.common.support.plugin.SpringPluginManager;
+import com.chua.starter.common.support.plugin.registry.PluginBeanDynamicRegistry;
 import com.chua.plugin.support.properties.PluginProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -38,16 +43,46 @@ import java.io.File;
 public class PluginAutoConfiguration {
 
     /**
+     * 创建 ObjectContext Bean
+     *
+     * @return ObjectContext 实例
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public ConfigureObjectContext objectContext() {
+        ObjectContextSetting setting = ObjectContextSetting.builder()
+                .build();
+        ConfigureObjectContext context = new DefaultConfigureObjectContext(setting);
+        log.info("ObjectContext created: {}", context.getClass().getSimpleName());
+        return context;
+    }
+
+    /**
+     * 创建 PluginBeanDynamicRegistry Bean
+     *
+     * @return PluginBeanDynamicRegistry
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public PluginBeanDynamicRegistry pluginBeanDynamicRegistry() {
+        return new PluginBeanDynamicRegistry();
+    }
+
+    /**
      * 创建插件管理器Bean
      *
      * @param properties 插件配置属性
+     * @param objectContext ObjectContext 实例
+     * @param dynamicRegistry 动态注册器
      * @return 插件管理器实例
      */
     @Bean
     @ConditionalOnMissingBean
-    public PluginManager pluginManager(PluginProperties properties) {
+    public PluginManager pluginManager(PluginProperties properties,
+                                       ConfigureObjectContext objectContext,
+                                       PluginBeanDynamicRegistry dynamicRegistry) {
         log.info("=".repeat(60));
-        log.info("Initializing Plugin System (PF4J Compatible)");
+        log.info("Initializing Plugin System (PF4J Compatible with Spring Integration)");
         log.info("Runtime Mode: {}", properties.getRuntimeMode());
         log.info("=".repeat(60));
 
@@ -61,11 +96,16 @@ public class PluginAutoConfiguration {
             log.info("Created plugins directory: {}", pluginsRoot.getAbsolutePath());
         }
 
-        // 创建插件管理器
-        DefaultPluginManager pluginManager = new DefaultPluginManager(
+        // 创建 Spring 集成的插件管理器
+        SpringPluginManager pluginManager = new SpringPluginManager(
             pluginsRoot,
+            objectContext,
             properties.isAutoStart()
         );
+
+        // 设置动态注册器
+        pluginManager.setDynamicRegistry(dynamicRegistry);
+        dynamicRegistry.setPluginManager(pluginManager);
 
         log.info("Plugin Manager created: {}", pluginManager.getClass().getSimpleName());
         log.info("Plugins Root: {}", pluginsRoot.getAbsolutePath());
@@ -87,7 +127,7 @@ public class PluginAutoConfiguration {
 
         log.info("=".repeat(60));
         log.info("Plugin System Initialized Successfully");
-        log.info("Total Plugins: {}", pluginManager.getPluginCount());
+        log.info("Total Plugins: {}", pluginManager.getPlugins().size());
         log.info("=".repeat(60));
 
         return pluginManager;
@@ -125,7 +165,7 @@ public class PluginAutoConfiguration {
             pluginManager.loadPlugins();
             long elapsed = System.currentTimeMillis() - startTime;
 
-            int pluginCount = pluginManager.getPluginCount();
+            int pluginCount = pluginManager.getPlugins().size();
             if (pluginCount > 0) {
                 log.info("Loaded {} plugin(s) in {}ms", pluginCount, elapsed);
             } else {
@@ -140,9 +180,20 @@ public class PluginAutoConfiguration {
      * 启用目录监听器
      */
     private void enableDirectoryWatcher(PluginManager pluginManager, PluginProperties properties) {
-        if (pluginManager instanceof DefaultPluginManager) {
-            DefaultPluginManager defaultManager = (DefaultPluginManager) pluginManager;
+        if (pluginManager instanceof SpringPluginManager springManager) {
+            try {
+                // 使用 SpringPluginManager 的方法，确保文件监听时能触发 Spring Bean 注册
+                springManager.startDirectoryWatcher();
+                springManager.setAutoReload(properties.isAutoReload());
 
+                log.info("Directory watcher enabled (with Spring integration)");
+                log.info("  - Auto Reload: {}", properties.isAutoReload());
+                log.info("  - Watch Directory: {}", pluginManager.getPluginsRoot().getAbsolutePath());
+            } catch (Exception e) {
+                log.error("Failed to start directory watcher", e);
+            }
+        } else if (pluginManager instanceof DefaultPluginManager defaultManager) {
+            // 降级：如果不是 SpringPluginManager，使用 DefaultPluginManager 的方法
             try {
                 defaultManager.startDirectoryWatcher();
                 defaultManager.setAutoReload(properties.isAutoReload());
@@ -160,7 +211,7 @@ public class PluginAutoConfiguration {
      * 打印插件信息
      */
     private void printPluginInfo(PluginManager pluginManager, PluginProperties properties) {
-        int pluginCount = pluginManager.getPluginCount();
+        int pluginCount = pluginManager.getPlugins().size();
         if (pluginCount == 0) {
             return;
         }

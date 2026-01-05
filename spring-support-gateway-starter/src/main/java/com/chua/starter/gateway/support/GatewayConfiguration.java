@@ -3,6 +3,7 @@ package com.chua.starter.gateway.support;
 import com.chua.common.support.discovery.ServiceDiscovery;
 import com.chua.starter.discovery.support.service.DiscoveryService;
 import com.chua.starter.gateway.support.client.GatewayClient;
+import com.chua.starter.gateway.support.discovery.DynamicServiceDiscoveryManager;
 import com.chua.starter.gateway.support.loadbalancer.LoadBalancer;
 import com.chua.starter.gateway.support.loadbalancer.RandomLoadBalancer;
 import com.chua.starter.gateway.support.loadbalancer.RoundRobinLoadBalancer;
@@ -15,6 +16,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * 网关自动配置
@@ -25,6 +27,7 @@ import org.springframework.context.annotation.Bean;
 @Slf4j
 @EnableConfigurationProperties(GatewayProperties.class)
 @ConditionalOnProperty(prefix = GatewayProperties.PREFIX, name = "enable", havingValue = "true")
+@EnableScheduling
 public class GatewayConfiguration {
 
     /**
@@ -62,6 +65,19 @@ public class GatewayConfiguration {
     public GatewayServerManager gatewayServerManager(GatewayProperties properties, DiscoveryRouteLocator routeLocator) {
         log.info(">>>>>>> 初始化网关服务端管理器");
         return new GatewayServerManager(properties, routeLocator);
+    }
+
+    /**
+     * 服务端模式 - 创建动态服务发现管理器
+     */
+    @Bean(initMethod = "initialize", destroyMethod = "close")
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = GatewayProperties.PREFIX, name = "mode", havingValue = "server", matchIfMissing = true)
+    @ConditionalOnProperty(prefix = GatewayProperties.PREFIX + ".server.discovery", name = "enabled", havingValue = "true")
+    public DynamicServiceDiscoveryManager dynamicServiceDiscoveryManager(
+            GatewayProperties properties, DiscoveryRouteLocator routeLocator) {
+        log.info(">>>>>>> 初始化动态服务发现管理器");
+        return new DynamicServiceDiscoveryManager(properties, routeLocator);
     }
 
     /**

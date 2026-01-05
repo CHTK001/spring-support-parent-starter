@@ -278,7 +278,12 @@ public class WebRequest {
         if (oauthProtocol != null) {
             log.debug("[WebRequest鉴权]请求头指定协议: {}", oauthProtocol);
         }
-
+        
+        // 从Header读取认证类型（x-oauth-type用于认证类型：oauth2、appkey、jwt等）
+        String authType = request.getHeader("x-oauth-type");
+        if (authType != null) {
+            log.debug("[WebRequest鉴权]请求头指定认证类型: {}", authType);
+        }
 
         if(isPass()) {
             return AuthenticationInformation.passAuthenticationInformation();
@@ -286,7 +291,7 @@ public class WebRequest {
         
         AuthenticationInformation result = ServiceProvider.of(Protocol.class)
                 .getNewExtension(protocol, authProperties)
-                .approve(cookie, token, oauthProtocol);
+                .approve(cookie, token, authType);
         
         long costTime = System.currentTimeMillis() - startTime;
         
