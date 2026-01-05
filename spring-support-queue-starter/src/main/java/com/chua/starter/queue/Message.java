@@ -55,6 +55,19 @@ public class Message {
     private String group;
 
     /**
+     * 消息确认对象（用于手动确认）
+     * <p>
+     * 当 autoAck=false 时，此对象可用于手动确认或拒绝消息。
+     * </p>
+     */
+    private Acknowledgment acknowledgment;
+
+    /**
+     * 原始消息对象（用于获取底层队列的原始消息，如 RabbitMQ Channel、Kafka ConsumerRecord 等）
+     */
+    private Object originalMessage;
+
+    /**
      * 获取字符串格式的消息内容
      *
      * @return 字符串内容

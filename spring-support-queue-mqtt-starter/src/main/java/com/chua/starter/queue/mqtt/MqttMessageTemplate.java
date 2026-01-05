@@ -1,5 +1,6 @@
 package com.chua.starter.queue.mqtt;
 
+import com.chua.starter.queue.Acknowledgment;
 import com.chua.starter.queue.Message;
 import com.chua.starter.queue.MessageHandler;
 import com.chua.starter.queue.MessageTemplate;
@@ -51,16 +52,19 @@ public class MqttMessageTemplate implements MessageTemplate {
     }
 
     @Override
-    public void subscribe(String destination, MessageHandler handler) {
+    public void subscribe(String destination, MessageHandler handler, boolean autoAck) {
         try {
             IMqttMessageListener listener = (topic, message) -> {
+                MqttAcknowledgment ack = new MqttAcknowledgment();
                 Message msg = Message.builder()
                         .destination(topic)
                         .payload(message.getPayload())
                         .timestamp(System.currentTimeMillis())
                         .type(getType())
+                        .originalMessage(message)
+                        .acknowledgment(ack)
                         .build();
-                handler.handle(msg);
+                handler.handle(msg, ack);
             };
             int qos = Math.max(0, Math.min(2, properties.getMqtt().getQos()));
             client.subscribe(destination, qos, listener);
@@ -71,9 +75,29 @@ public class MqttMessageTemplate implements MessageTemplate {
     }
 
     @Override
-    public void subscribe(String destination, String group, MessageHandler handler) {
+    public void subscribe(String destination, String group, MessageHandler handler, boolean autoAck) {
         // MQTT没有消费组的概念，直接调用普通订阅
-        subscribe(destination, handler);
+        subscribe(destination, handler, autoAck);
+    }
+
+    /**
+     * MQTT 的 ACK 实现
+     * <p>
+     * MQTT 的确认机制通过 QoS 级别实现，这里提供接口一致性
+     * </p>
+     */
+    private static class MqttAcknowledgment implements Acknowledgment {
+        @Override
+        public void acknowledge() {
+            // MQTT 的确认通过 QoS 级别在协议层处理
+            // 这里提供接口一致性，实际确认由 MQTT 客户端自动处理
+        }
+
+        @Override
+        public void nack(boolean requeue) {
+            // MQTT 不支持 nack，这里提供接口一致性
+            acknowledge();
+        }
     }
 
     @Override

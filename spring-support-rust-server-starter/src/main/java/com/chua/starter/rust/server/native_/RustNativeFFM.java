@@ -2,6 +2,8 @@ package com.chua.starter.rust.server.native_;
 
 import java.lang.foreign.*;
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 
 /**
  * Java 21 FFM API 接口用于调用 Rust 动态库
@@ -89,13 +91,13 @@ public class RustNativeFFM {
      */
     public int startServer(String host, short port, MemorySegment callback) {
         try (Arena arena = Arena.ofConfined()) {
-            MemorySegment hostSegment = arena.allocateFrom(host);
+            MemorySegment hostSegment = arena.allocateUtf8String(host);
             return (int) rustServerStart.invoke(hostSegment, port, callback, MemorySegment.NULL);
         } catch (Throwable e) {
             throw new RuntimeException("Failed to start server", e);
         }
     }
-    
+
     /**
      * 停止 HTTP 服务器
      *
@@ -123,7 +125,7 @@ public class RustNativeFFM {
                            MemorySegment bodyData, long bodyLen) {
         try (Arena arena = Arena.ofConfined()) {
             MemorySegment headersSegment = headersJson != null 
-                    ? arena.allocateFrom(headersJson) 
+                    ? arena.allocateUtf8String(headersJson) 
                     : MemorySegment.NULL;
             
             return (int) rustServerSendResponse.invoke(
@@ -132,7 +134,7 @@ public class RustNativeFFM {
             throw new RuntimeException("Failed to send response", e);
         }
     }
-    
+
     /**
      * 创建回调函数的 upcall stub
      *
@@ -141,28 +143,34 @@ public class RustNativeFFM {
      * @return 回调函数的内存段
      */
     public static MemorySegment createCallback(RequestCallback callback, Arena arena) {
-        return linker().upcallStub(
-                (MemorySegment requestIdSeg, MemorySegment methodSeg, MemorySegment uriSeg,
-                 MemorySegment headersSeg, MemorySegment bodySeg, MemorySegment bodyLenSeg,
-                 MemorySegment userDataSeg) -> {
-                    try {
-                        long requestId = requestIdSeg.address();
-                        String method = methodSeg.getString(0);
-                        String uri = uriSeg.getString(0);
-                        String headers = headersSeg.getString(0);
-                        long bodyLen = bodyLenSeg.address();
-                        
-                        return callback.onRequest(requestId, method, uri, headers, bodySeg, bodyLen);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        return -1;
-                    }
-                },
-                CALLBACK_DESCRIPTOR,
-                arena
-        );
+        try {
+            MethodHandle handle = MethodHandles.lookup().findStatic(
+                RustNativeFFM.class, "callbackTrampoline",
+                MethodType.methodType(int.class, long.class, MemorySegment.class, MemorySegment.class,
+                    MemorySegment.class, MemorySegment.class, long.class, MemorySegment.class, RequestCallback.class)
+            );
+            handle = MethodHandles.insertArguments(handle, 7, callback);
+            return linker().upcallStub(handle, CALLBACK_DESCRIPTOR, arena);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create callback", e);
+        }
     }
     
+    private static int callbackTrampoline(long requestId, MemorySegment methodSeg, MemorySegment uriSeg,
+                                         MemorySegment headersSeg, MemorySegment bodySeg, long bodyLen,
+                                         MemorySegment userDataSeg, RequestCallback callback) {
+        try {
+            String method = methodSeg.reinterpret(1000).getUtf8String(0);
+            String uri = uriSeg.reinterpret(1000).getUtf8String(0);
+            String headers = headersSeg.reinterpret(10000).getUtf8String(0);
+            
+            return callback.onRequest(requestId, method, uri, headers, bodySeg, bodyLen);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return -1;
+        }
+    }
+
     private static Linker linker() {
         return Linker.nativeLinker();
     }

@@ -137,6 +137,9 @@
 
         <!-- API网关模块 -->
         <module>spring-support-gateway-starter</module>         <!-- API网关 -->
+
+        <!-- Rust 高性能服务器模块 -->
+        <module>spring-support-rust-server-starter</module>     <!-- Rust HTTP服务器容器 -->
     </modules>
 
     <!-- 项目属性配置 -->
@@ -148,7 +151,7 @@
         <maven.compiler.target>21</maven.compiler.target>
 
         <!-- 项目版本管理 -->
-        <revision>4.0.0.33-SNAPSHOT</revision>               <!-- 当前项目版本，使用revision便于统一管理 -->
+        <revision>4.0.0.35</revision>               <!-- 当前项目版本，使用revision便于统一管理 -->
         <module.version>${revision}</module.version>        <!-- 当前项目模块版本 -->
         <utils.version>${revision}</utils.version>          <!-- 工具类库版本 -->
 
@@ -943,6 +946,13 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-gateway-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <!-- Rust HTTP 服务器模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-rust-server-starter</artifactId>
                 <version>${module.version}</version>
             </dependency>
         </dependencies>

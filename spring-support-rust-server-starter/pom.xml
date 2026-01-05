@@ -14,6 +14,20 @@
     <name>Spring Support Rust Server Starter</name>
     <description>高性能 Rust HTTP 服务器容器，替代 Tomcat/Undertow，提供更高的吞吐量和并发能力</description>
 
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <compilerArgs>
+                        <arg>--enable-preview</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
     <dependencies>
         <!-- Spring Web MVC -->
         <dependency>

@@ -1,6 +1,7 @@
 package com.chua.starter.queue.template;
 
 import com.chua.common.support.json.Json;
+import com.chua.starter.queue.Acknowledgment;
 import com.chua.starter.queue.Message;
 import com.chua.starter.queue.MessageHandler;
 import com.chua.starter.queue.MessageTemplate;
@@ -160,7 +161,7 @@ public class MemoryMessageTemplate implements MessageTemplate {
     }
 
     @Override
-    public void subscribe(String destination, MessageHandler handler) {
+    public void subscribe(String destination, MessageHandler handler, boolean autoAck) {
         CopyOnWriteArrayList<MessageHandler> handlers = subscribers.computeIfAbsent(
                 destination, k -> new CopyOnWriteArrayList<>());
         handlers.add(handler);
@@ -171,13 +172,13 @@ public class MemoryMessageTemplate implements MessageTemplate {
         // 启动消费者线程（如果尚未启动）
         consumerTasks.computeIfAbsent(destination, this::startConsumer);
 
-        log.info("[Queue] 订阅目标: {}", highlight(destination));
+        log.info("[Queue] 订阅目标: {} (autoAck: {})", highlight(destination), highlight(String.valueOf(autoAck)));
     }
 
     @Override
-    public void subscribe(String destination, String group, MessageHandler handler) {
+    public void subscribe(String destination, String group, MessageHandler handler, boolean autoAck) {
         // 内存队列不支持消费组，直接订阅
-        subscribe(destination, handler);
+        subscribe(destination, handler, autoAck);
     }
 
     @Override
@@ -317,12 +318,34 @@ public class MemoryMessageTemplate implements MessageTemplate {
             return;
         }
 
+        // 内存队列的 ACK 实现（虽然不需要真正的 ack，但保持接口一致）
+        MemoryAcknowledgment ack = new MemoryAcknowledgment();
+        if (message.getAcknowledgment() == null) {
+            message.setAcknowledgment(ack);
+        }
+
         for (MessageHandler handler : handlers) {
             try {
-                handler.handle(message);
+                handler.handle(message, message.getAcknowledgment());
             } catch (Exception e) {
                 log.error("Handler error for destination: {}", destination, e);
             }
+        }
+    }
+
+    /**
+     * 内存队列的 ACK 实现（用于保持接口一致性）
+     */
+    private static class MemoryAcknowledgment implements Acknowledgment {
+        @Override
+        public void acknowledge() {
+            // 内存队列中，消息从队列取出即视为已确认
+        }
+
+        @Override
+        public void nack(boolean requeue) {
+            // 内存队列不支持 requeue，nack 等同于丢弃
+            // 如果需要 requeue，需要在业务层实现
         }
     }
 

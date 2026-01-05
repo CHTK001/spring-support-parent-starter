@@ -65,7 +65,18 @@ public interface MessageTemplate {
      * @param destination 目标地址
      * @param handler     消息处理器
      */
-    void subscribe(String destination, MessageHandler handler);
+    default void subscribe(String destination, MessageHandler handler) {
+        subscribe(destination, handler, true);
+    }
+
+    /**
+     * 订阅消息（指定是否自动确认）
+     *
+     * @param destination 目标地址
+     * @param handler     消息处理器
+     * @param autoAck     是否自动确认（true=自动确认，false=手动确认）
+     */
+    void subscribe(String destination, MessageHandler handler, boolean autoAck);
 
     /**
      * 订阅消息（指定消费组）
@@ -75,7 +86,65 @@ public interface MessageTemplate {
      * @param handler     消息处理器
      */
     default void subscribe(String destination, String group, MessageHandler handler) {
-        subscribe(destination, handler);
+        subscribe(destination, group, handler, true);
+    }
+
+    /**
+     * 订阅消息（指定消费组和是否自动确认）
+     *
+     * @param destination 目标地址
+     * @param group       消费组
+     * @param handler     消息处理器
+     * @param autoAck     是否自动确认（true=自动确认，false=手动确认）
+     */
+    default void subscribe(String destination, String group, MessageHandler handler, boolean autoAck) {
+        subscribe(destination, handler, autoAck);
+    }
+
+    /**
+     * 订阅消息（指定并发数）
+     * <p>
+     * 默认实现：如果 concurrency > 1，创建多个消费者实例。
+     * 具体实现类可以重写此方法以提供更高效的并发支持。
+     * </p>
+     *
+     * @param destination 目标地址
+     * @param handler     消息处理器
+     * @param autoAck     是否自动确认
+     * @param concurrency 并发消费者数量（>= 1）
+     */
+    default void subscribe(String destination, MessageHandler handler, boolean autoAck, int concurrency) {
+        if (concurrency <= 1) {
+            subscribe(destination, handler, autoAck);
+        } else {
+            // 默认实现：创建多个消费者实例
+            for (int i = 0; i < concurrency; i++) {
+                subscribe(destination, handler, autoAck);
+            }
+        }
+    }
+
+    /**
+     * 订阅消息（指定消费组、是否自动确认和并发数）
+     *
+     * @param destination 目标地址
+     * @param group       消费组
+     * @param handler     消息处理器
+     * @param autoAck     是否自动确认
+     * @param concurrency 并发消费者数量（>= 1）
+     */
+    default void subscribe(String destination, String group, MessageHandler handler, boolean autoAck, int concurrency) {
+        if (concurrency <= 1) {
+            subscribe(destination, group, handler, autoAck);
+        } else {
+            // 默认实现：创建多个消费者实例，每个使用不同的组名
+            for (int i = 0; i < concurrency; i++) {
+                String groupWithConcurrency = (group != null && !group.isEmpty()) 
+                        ? group + "-concurrent-" + i 
+                        : "concurrent-" + i;
+                subscribe(destination, groupWithConcurrency, handler, autoAck);
+            }
+        }
     }
 
     /**

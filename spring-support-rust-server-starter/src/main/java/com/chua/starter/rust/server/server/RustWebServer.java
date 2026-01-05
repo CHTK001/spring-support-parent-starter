@@ -255,7 +255,7 @@ public class RustWebServer implements WebServer {
             long bodyLen = 0;
             if (responseMsg.getBody() != null && responseMsg.getBody().length > 0) {
                 bodyLen = responseMsg.getBody().length;
-                bodySegment = arena.allocateFrom(ValueLayout.JAVA_BYTE, responseMsg.getBody());
+                bodySegment = arena.allocateArray(ValueLayout.JAVA_BYTE, responseMsg.getBody());
             }
 
             // 调用 Rust 发送响应
