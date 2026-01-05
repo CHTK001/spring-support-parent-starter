@@ -1,6 +1,2 @@
-*.dll filter=lfs diff=lfs merge=lfs -text
-*.so filter=lfs diff=lfs merge=lfs -text
-*.dylib filter=lfs diff=lfs merge=lfs -text
-*.so !text !filter !merge !diff
-*.dll !text !filter !merge !diff
-*.dylib !text !filter !merge !diff
+# LFS removed - files are now stored in regular Git
+# Binary files are handled as binary by default
