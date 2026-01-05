@@ -23,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 public class KafkaMessageTemplate implements MessageTemplate {
@@ -30,6 +31,8 @@ public class KafkaMessageTemplate implements MessageTemplate {
     private final KafkaProducer<String, byte[]> producer;
     private final QueueProperties props;
     private final Map<String, ConsumerRunner> consumers = new ConcurrentHashMap<>();
+    private final Executor virtualExecutor = Executors.newThreadPerTaskExecutor(
+            Thread.ofVirtual().name("kafka-send-", 0).factory());
 
     public KafkaMessageTemplate(KafkaProducer<String, byte[]> producer, QueueProperties props) {
         this.producer = producer;
@@ -40,16 +43,18 @@ public class KafkaMessageTemplate implements MessageTemplate {
     public SendResult send(String destination, Object payload) {
         try {
             ProducerRecord<String, byte[]> record = new ProducerRecord<>(destination, toBytes(payload));
-            producer.send(record);
+            // 使用 get() 等待发送完成，确保消息已发送到 broker，设置 30 秒超时避免无限阻塞
+            producer.send(record).get(30, TimeUnit.SECONDS);
             return SendResult.success(null, destination);
         } catch (Exception e) {
+            log.error("Failed to send message to topic: {}", destination, e);
             return SendResult.failure(destination, e);
         }
     }
 
     @Override
     public CompletableFuture<SendResult> sendAsync(String destination, Object payload) {
-        return CompletableFuture.supplyAsync(() -> send(destination, payload));
+        return CompletableFuture.supplyAsync(() -> send(destination, payload), virtualExecutor);
     }
 
     @Override
@@ -62,9 +67,11 @@ public class KafkaMessageTemplate implements MessageTemplate {
                     record.headers().add(new RecordHeader(e.getKey(), hv));
                 }
             }
-            producer.send(record);
+            // 使用 get() 等待发送完成，确保消息已发送到 broker，设置 30 秒超时避免无限阻塞
+            producer.send(record).get(30, TimeUnit.SECONDS);
             return SendResult.success(null, destination);
         } catch (Exception e) {
+            log.error("Failed to send message to topic: {}", destination, e);
             return SendResult.failure(destination, e);
         }
     }
@@ -115,14 +122,17 @@ public class KafkaMessageTemplate implements MessageTemplate {
     @Override
     public void unsubscribe(String destination) {
         // Unsubscribe all groups for this destination
+        List<ConsumerRunner> toShutdown = new ArrayList<>();
         consumers.entrySet().removeIf(e -> {
             String key = e.getKey();
             if (key.startsWith(destination + "|")) {
-                e.getValue().shutdown();
+                toShutdown.add(e.getValue());
                 return true;
             }
             return false;
         });
+        // 等待所有消费者关闭完成
+        toShutdown.forEach(ConsumerRunner::shutdown);
     }
 
     @Override
@@ -147,15 +157,19 @@ public class KafkaMessageTemplate implements MessageTemplate {
         } catch (Exception e) {
             log.warn("Failed to close Kafka producer: {}", e.getMessage());
         }
-        consumers.values().forEach(ConsumerRunner::shutdown);
+        // 等待所有消费者关闭完成
+        List<ConsumerRunner> toShutdown = new ArrayList<>(consumers.values());
         consumers.clear();
+        toShutdown.forEach(ConsumerRunner::shutdown);
     }
 
     private static byte[] toBytes(Object payload) {
-        if (payload == null) return new byte[0];
-        if (payload instanceof byte[]) return (byte[]) payload;
-        if (payload instanceof String) return ((String) payload).getBytes(StandardCharsets.UTF_8);
-        return Objects.toString(payload).getBytes(StandardCharsets.UTF_8);
+        return switch (payload) {
+            case null -> new byte[0];
+            case byte[] bytes -> bytes;
+            case String str -> str.getBytes(StandardCharsets.UTF_8);
+            default -> Objects.toString(payload).getBytes(StandardCharsets.UTF_8);
+        };
     }
 
     private static class ConsumerRunner {
@@ -163,11 +177,7 @@ public class KafkaMessageTemplate implements MessageTemplate {
         private final MessageHandler handler;
         private final String destination;
         private final boolean autoAck;
-        private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
-            Thread t = new Thread(r, "kafka-consumer-" + UUID.randomUUID());
-            t.setDaemon(true);
-            return t;
-        });
+        private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
         private volatile boolean running = true;
 
         ConsumerRunner(KafkaConsumer<String, byte[]> consumer, MessageHandler handler, String destination, boolean autoAck) {
@@ -189,14 +199,37 @@ public class KafkaMessageTemplate implements MessageTemplate {
                         if (autoAck) {
                             // 自动确认模式
                             records.forEach(record -> {
+                                Map<String, Object> headers = new HashMap<>();
+                                if (record.headers() != null) {
+                                    record.headers().forEach(header -> {
+                                        String key = header.key();
+                                        byte[] value = header.value();
+                                        if (key != null && value != null) {
+                                            // 尝试将 header 值转换为字符串，如果失败则保留为字节数组
+                                            try {
+                                                String strValue = new String(value, StandardCharsets.UTF_8);
+                                                headers.put(key, strValue);
+                                            } catch (Exception e) {
+                                                headers.put(key, value);
+                                            }
+                                        }
+                                    });
+                                }
                                 Message msg = Message.builder()
                                         .destination(record.topic())
                                         .payload(record.value())
+                                        .headers(headers)
                                         .timestamp(record.timestamp())
                                         .type("kafka")
                                         .originalMessage(record)
                                         .build();
-                                handler.handle(msg, new AutoAcknowledgment());
+                                try {
+                                    handler.handle(msg, new AutoAcknowledgment());
+                                } catch (Exception e) {
+                                    // 自动确认模式下，即使异常也记录日志（消息已自动确认，无法重试）
+                                    log.error("Error handling message in auto-ack mode, topic: {}, partition: {}, offset: {}", 
+                                            record.topic(), record.partition(), record.offset(), e);
+                                }
                             });
                         } else {
                             // 手动确认模式：跟踪每个消息的确认状态，只提交已确认的消息
@@ -210,50 +243,58 @@ public class KafkaMessageTemplate implements MessageTemplate {
                                 KafkaAcknowledgment ack = new KafkaAcknowledgment(consumer, record);
                                 ackMap.put(record, ack);
                                 
+                                Map<String, Object> headers = new HashMap<>();
+                                if (record.headers() != null) {
+                                    record.headers().forEach(header -> {
+                                        String key = header.key();
+                                        byte[] value = header.value();
+                                        if (key != null && value != null) {
+                                            // 尝试将 header 值转换为字符串，如果失败则保留为字节数组
+                                            try {
+                                                String strValue = new String(value, StandardCharsets.UTF_8);
+                                                headers.put(key, strValue);
+                                            } catch (Exception e) {
+                                                headers.put(key, value);
+                                            }
+                                        }
+                                    });
+                                }
                                 Message msg = Message.builder()
                                         .destination(record.topic())
                                         .payload(record.value())
+                                        .headers(headers)
                                         .timestamp(record.timestamp())
                                         .type("kafka")
                                         .originalMessage(record)
                                         .acknowledgment(ack)
                                         .build();
-                                handler.handle(msg, ack);
+                                try {
+                                    handler.handle(msg, ack);
+                                } catch (Exception e) {
+                                    // 处理异常，记录日志，但不确认消息（让消息重试）
+                                    log.error("Error handling message from topic: {}, partition: {}, offset: {}", 
+                                            record.topic(), record.partition(), record.offset(), e);
+                                    // 不标记为已确认，这样 offset 不会被提交，消息会重新消费
+                                }
                             }
 
                             // 只提交已确认的消息的 offset
                             // 对于未确认的消息，不提交 offset，下次会重新消费
-                            List<ConsumerRecord<String, byte[]>> acknowledgedRecords = new ArrayList<>();
-                            for (Map.Entry<ConsumerRecord<String, byte[]>, KafkaAcknowledgment> entry : ackMap.entrySet()) {
-                                if (entry.getValue().isAcknowledged()) {
-                                    acknowledgedRecords.add(entry.getKey());
-                                }
-                            }
+                            // 使用流式处理优化性能，一次性完成过滤和分组
+                            Map<TopicPartition, OffsetAndMetadata> offsetsToCommit = ackMap.entrySet().stream()
+                                    .filter(entry -> entry.getValue().isAcknowledged())
+                                    .map(Map.Entry::getKey)
+                                    .collect(Collectors.toMap(
+                                            record -> new TopicPartition(record.topic(), record.partition()),
+                                            record -> new OffsetAndMetadata(record.offset() + 1),
+                                            (existing, replacement) -> existing.offset() >= replacement.offset() 
+                                                    ? existing : replacement
+                                    ));
                             
-                            if (!acknowledgedRecords.isEmpty()) {
+                            if (!offsetsToCommit.isEmpty()) {
                                 try {
-                                    // 按分区分组，只提交已确认消息的 offset
-                                    // 对于每个分区，提交到最后一个已确认消息的 offset + 1
-                                    Map<TopicPartition, OffsetAndMetadata> offsetsToCommit = new HashMap<>();
-                                    
-                                    for (ConsumerRecord<String, byte[]> record : acknowledgedRecords) {
-                                        TopicPartition partition = new TopicPartition(record.topic(), record.partition());
-                                        // 提交到当前消息的 offset + 1（表示已消费到此位置）
-                                        long nextOffset = record.offset() + 1;
-                                        OffsetAndMetadata offsetMetadata = new OffsetAndMetadata(nextOffset);
-                                        
-                                        // 如果同一个分区有多个已确认的消息，只保留最大的 offset
-                                        OffsetAndMetadata existing = offsetsToCommit.get(partition);
-                                        if (existing == null || existing.offset() < nextOffset) {
-                                            offsetsToCommit.put(partition, offsetMetadata);
-                                        }
-                                    }
-                                    
-                                    // 提交所有分区的 offset
-                                    if (!offsetsToCommit.isEmpty()) {
-                                        consumer.commitSync(offsetsToCommit);
-                                        log.debug("Committed offsets for {} partitions", offsetsToCommit.size());
-                                    }
+                                    consumer.commitSync(offsetsToCommit);
+                                    log.debug("Committed offsets for {} partitions", offsetsToCommit.size());
                                 } catch (Exception e) {
                                     // 提交失败，记录日志但不中断处理
                                     log.error("Failed to commit offset: {}", e.getMessage(), e);
@@ -262,12 +303,15 @@ public class KafkaMessageTemplate implements MessageTemplate {
                             // 如果所有消息都未确认，不提交 offset，下次会重新消费
                         }
                     }
+                } catch (org.apache.kafka.common.errors.WakeupException e) {
+                    // 正常的唤醒异常，用于关闭消费者
+                    log.debug("Kafka consumer woken up for destination: {}", destination);
                 } catch (Exception e) {
                     log.error("Kafka consumer error for destination: {}", destination, e);
+                    // 发生异常时，继续运行而不是退出（除非是 WakeupException）
                 } finally {
-                    try { consumer.close(); } catch (Exception e) {
-                        log.warn("Failed to close Kafka consumer: {}", e.getMessage());
-                    }
+                    // 只有在 shutdown 时才关闭 consumer，不应该在正常循环中关闭
+                    // consumer 的关闭应该在 shutdown() 方法中处理
                 }
             });
         }
@@ -291,6 +335,13 @@ public class KafkaMessageTemplate implements MessageTemplate {
                 executor.shutdownNow();
                 Thread.currentThread().interrupt();
                 log.warn("Interrupted while waiting for Kafka consumer executor to terminate");
+            } finally {
+                // 在 shutdown 时关闭 consumer
+                try {
+                    consumer.close();
+                } catch (Exception e) {
+                    log.warn("Failed to close Kafka consumer: {}", e.getMessage());
+                }
             }
         }
     }
@@ -337,12 +388,14 @@ public class KafkaMessageTemplate implements MessageTemplate {
         @Override
         public void nackToDeadLetter(String deadLetterQueue, String reason) {
             if (!acknowledged) {
-                // 记录死信队列信息，但实际发送到死信队列需要外部支持（如 DeadLetterTemplate）
+                // 记录死信队列信息
                 this.deadLetterQueue = deadLetterQueue;
                 this.deadLetterReason = reason;
-                // 标记为已确认，这样 offset 会被提交，消息不会重新消费
-                // 但实际应该由外部组件负责发送到死信队列
-                acknowledged = true;
+                // 注意：Kafka 不支持直接发送到死信队列
+                // 这里不标记为已确认，这样 offset 不会被提交，消息会重新消费
+                // 实际发送到死信队列应该由外部组件（如 DeadLetterTemplate）在 handler 中处理
+                // 如果外部组件已经处理了死信队列，应该调用 acknowledge() 来确认消息
+                // 这里保持未确认状态，让调用者决定是否确认
             }
         }
 
@@ -373,6 +426,11 @@ public class KafkaMessageTemplate implements MessageTemplate {
         public void nack(boolean requeue) {
             // 自动确认模式下，nack 等同于 ack
             acknowledge();
+        }
+
+        @Override
+        public boolean isAcknowledged() {
+            return true; // 自动确认模式下，始终认为已确认
         }
     }
 }

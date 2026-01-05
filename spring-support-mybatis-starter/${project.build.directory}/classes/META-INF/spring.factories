@@ -1,4 +1,0 @@
-org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-  com.chua.starter.mybatis.MybatisPlusConfiguration
-org.springframework.boot.env.EnvironmentPostProcessor=\
-  com.chua.starter.mybatis.MybatisPlusEnvironmentPostProcessor

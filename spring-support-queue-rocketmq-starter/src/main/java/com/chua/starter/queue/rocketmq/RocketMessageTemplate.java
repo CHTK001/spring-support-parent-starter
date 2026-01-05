@@ -6,6 +6,7 @@ import com.chua.starter.queue.MessageHandler;
 import com.chua.starter.queue.MessageTemplate;
 import com.chua.starter.queue.SendResult;
 import com.chua.starter.queue.properties.QueueProperties;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
 import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyContext;
 import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyStatus;
@@ -15,17 +16,23 @@ import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.messaging.support.MessageBuilder;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
+@Slf4j
 public class RocketMessageTemplate implements MessageTemplate {
 
     private final RocketMQTemplate rocketMQTemplate;
     private final QueueProperties props;
     private final Map<String, DefaultMQPushConsumer> consumers = new ConcurrentHashMap<>();
+    private final Executor virtualExecutor = Executors.newThreadPerTaskExecutor(
+            Thread.ofVirtual().name("rocketmq-send-", 0).factory());
 
     public RocketMessageTemplate(RocketMQTemplate rocketMQTemplate, QueueProperties props) {
         this.rocketMQTemplate = rocketMQTemplate;
@@ -44,7 +51,7 @@ public class RocketMessageTemplate implements MessageTemplate {
 
     @Override
     public CompletableFuture<SendResult> sendAsync(String destination, Object payload) {
-        return CompletableFuture.supplyAsync(() -> send(destination, payload));
+        return CompletableFuture.supplyAsync(() -> send(destination, payload), virtualExecutor);
     }
 
     @Override
@@ -78,7 +85,7 @@ public class RocketMessageTemplate implements MessageTemplate {
     @Override
     public void subscribe(String destination, String group, MessageHandler handler, boolean autoAck, int concurrency) {
         String actualGroup = group == null || group.isEmpty() ? props.getRocketmq().getConsumerGroup() : group;
-        String key = destination + "|" + actualGroup + "|" + autoAck;
+        String key = destination + "|" + actualGroup + "|" + autoAck + "|" + concurrency;
         
         consumers.computeIfAbsent(key, k -> {
             try {
@@ -100,9 +107,18 @@ public class RocketMessageTemplate implements MessageTemplate {
                         // 如果自动确认，直接返回成功
                         if (finalAutoAck) {
                             for (MessageExt ext : msgs) {
+                                Map<String, Object> headers = new HashMap<>();
+                                if (ext.getProperties() != null && !ext.getProperties().isEmpty()) {
+                                    ext.getProperties().forEach((k, v) -> {
+                                        if (k != null && v != null) {
+                                            headers.put(k, v);
+                                        }
+                                    });
+                                }
                                 Message m = Message.builder()
                                         .destination(ext.getTopic())
                                         .payload(ext.getBody())
+                                        .headers(headers)
                                         .timestamp(ext.getBornTimestamp())
                                         .type(getType())
                                         .originalMessage(ext)
@@ -112,6 +128,8 @@ public class RocketMessageTemplate implements MessageTemplate {
                                 } catch (Exception e) {
                                     // 自动确认模式下，即使异常也返回成功（避免消息堆积）
                                     // 如果需要重试，应该使用手动确认模式
+                                    log.error("Error handling message in auto-ack mode, topic: {}, msgId: {}", 
+                                            ext.getTopic(), ext.getMsgId(), e);
                                 }
                             }
                             return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
@@ -125,9 +143,18 @@ public class RocketMessageTemplate implements MessageTemplate {
                             RocketAcknowledgment ack = new RocketAcknowledgment(context, ext);
                             ackMap.put(ext, ack);
                             
+                            Map<String, Object> headers = new HashMap<>();
+                            if (ext.getProperties() != null && !ext.getProperties().isEmpty()) {
+                                ext.getProperties().forEach((k, v) -> {
+                                    if (k != null && v != null) {
+                                        headers.put(k, v);
+                                    }
+                                });
+                            }
                             Message m = Message.builder()
                                     .destination(ext.getTopic())
                                     .payload(ext.getBody())
+                                    .headers(headers)
                                     .timestamp(ext.getBornTimestamp())
                                     .type(getType())
                                     .originalMessage(ext)
@@ -142,14 +169,24 @@ public class RocketMessageTemplate implements MessageTemplate {
                                     allAcknowledged = false;
                                 }
                             } catch (Exception e) {
-                                // 处理异常，标记为未确认
+                                // 处理异常，记录日志并标记为未确认
+                                log.error("Error handling message in manual-ack mode, topic: {}, msgId: {}", 
+                                        ext.getTopic(), ext.getMsgId(), e);
                                 allAcknowledged = false;
                             }
                         }
                         
                         // 如果所有消息都已确认，返回成功；否则返回重试
                         // 注意：RocketMQ 的批量消息确认是原子性的，要么全部成功，要么全部重试
-                        // 如果需要更细粒度的控制，应该使用 MessageListenerOrderly 逐个处理
+                        // 这意味着如果批量消息中部分已确认、部分未确认，会导致全部重试（包括已确认的消息）
+                        // 这是 RocketMQ 的设计限制，如果需要更细粒度的控制，应该：
+                        // 1. 使用 MessageListenerOrderly 逐个处理消息
+                        // 2. 或者在 handler 中确保所有消息都被正确处理（要么全部确认，要么全部不确认）
+                        // 3. 或者减少批量消息的大小，降低部分确认的概率
+                        if (!allAcknowledged) {
+                            log.warn("Some messages in batch were not acknowledged, all messages will be retried. " +
+                                    "Consider using MessageListenerOrderly for finer-grained control.");
+                        }
                         return allAcknowledged ? ConsumeConcurrentlyStatus.CONSUME_SUCCESS : ConsumeConcurrentlyStatus.RECONSUME_LATER;
                     }
                 });
@@ -255,8 +292,9 @@ public class RocketMessageTemplate implements MessageTemplate {
             if (key.startsWith(destination + "|")) {
                 try { 
                     e.getValue().shutdown(); 
+                    log.debug("Unsubscribed from topic: {}, group: {}", destination, key);
                 } catch (Exception ex) {
-                    // 记录日志但不抛出异常
+                    log.warn("Error unsubscribing from topic: {}", destination, ex);
                 }
                 return true;
             }
@@ -279,8 +317,9 @@ public class RocketMessageTemplate implements MessageTemplate {
         consumers.values().forEach(c -> { 
             try { 
                 c.shutdown(); 
+                log.debug("Closed RocketMQ consumer");
             } catch (Exception e) {
-                // 记录日志但不抛出异常
+                log.warn("Error closing RocketMQ consumer", e);
             } 
         });
         consumers.clear();

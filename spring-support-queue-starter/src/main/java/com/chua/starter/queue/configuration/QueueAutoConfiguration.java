@@ -2,7 +2,7 @@ package com.chua.starter.queue.configuration;
 
 import com.chua.starter.queue.MessageTemplate;
 import com.chua.starter.queue.properties.QueueProperties;
-import com.chua.starter.queue.template.MemoryMessageTemplate;
+import com.chua.starter.queue.template.LocalMessageTemplate;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -33,17 +33,18 @@ public class QueueAutoConfiguration {
     private QueueProperties queueProperties;
 
     /**
-     * 内存消息队列模板
+     * 本地消息队列模板（基于Guava EventBus）
      * <p>
-     * 当配置type=memory时启用，基于JDK的BlockingQueue实现。
+     * 当配置type=local时启用，基于Guava EventBus实现。
+     * 默认使用本地消息队列（当未指定type或type=local时）。
      * </p>
      */
-    @Bean
+    @Bean(destroyMethod = "close")
     @ConditionalOnMissingBean(MessageTemplate.class)
-    @ConditionalOnProperty(prefix = QueueProperties.PREFIX, name = "type", havingValue = "memory", matchIfMissing = true)
-    public MessageTemplate memoryMessageTemplate() {
-        log.info("[Queue] 创建内存消息队列模板, 队列容量: {}", highlight(queueProperties.getMemory().getQueueCapacity()));
-        return new MemoryMessageTemplate(queueProperties.getMemory());
+    @ConditionalOnProperty(prefix = QueueProperties.PREFIX, name = "type", havingValue = "local", matchIfMissing = true)
+    public MessageTemplate localMessageTemplate() {
+        log.info("[Queue] 创建本地消息队列模板 (基于Guava EventBus)");
+        return new LocalMessageTemplate(queueProperties.getLocal());
     }
 
     /**

@@ -185,6 +185,7 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
                 .filter(SocketSession::isConnected)
                 .map(SocketSession::getUser)
                 .filter(user -> user != null)
+                .distinct()
                 .collect(Collectors.toList());
     }
 

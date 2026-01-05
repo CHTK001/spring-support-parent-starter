@@ -13,9 +13,11 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -135,6 +137,10 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
         if (sessions != null && session instanceof RSocketSessionImpl impl) {
             sessions.remove(impl);
             sessionClientMap.remove(impl.getId());
+            // 如果列表为空，清理空列表以节省内存
+            if (sessions.isEmpty()) {
+                sessionCache.remove(clientId);
+            }
         }
     }
 
@@ -178,7 +184,12 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
             for (RSocketSessionImpl session : sessions) {
                 SocketUser user = session.getUser();
                 if (user != null && userId.equals(user.getUserId())) {
-                    session.send(event, msg);
+                    try {
+                        session.send(event, msg);
+                    } catch (Exception e) {
+                        log.warn("[RSocket] 发送消息给用户失败: userId={}, sessionId={}, event={}", 
+                                userId, session.getId(), event, e);
+                    }
                 }
             }
         }
@@ -186,7 +197,7 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
 
     @Override
     public List<SocketSession> getOnlineSessions() {
-        List<SocketSession> result = new LinkedList<>();
+        List<SocketSession> result = new java.util.ArrayList<>();
         for (List<RSocketSessionImpl> sessions : sessionCache.values()) {
             result.addAll(sessions);
         }
@@ -201,11 +212,11 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
         }
 
         if (roomId == null || roomId.isEmpty()) {
-            return new LinkedList<>(sessions);
+            return new java.util.ArrayList<>(sessions);
         }
 
         // 根据 roomId 过滤会话
-        List<SocketSession> result = new LinkedList<>();
+        List<SocketSession> result = new java.util.ArrayList<>();
         for (RSocketSessionImpl session : sessions) {
             Object sessionRoomId = session.getAttribute("roomId");
             if (roomId.equals(sessionRoomId)) {
@@ -217,8 +228,8 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
 
     @Override
     public List<SocketUser> getOnlineUsers(String type) {
-        List<SocketUser> result = new LinkedList<>();
-        List<String> userIds = new LinkedList<>();
+        List<SocketUser> result = new java.util.ArrayList<>();
+        java.util.Set<String> userIds = new java.util.HashSet<>();
         
         List<RSocketSessionImpl> sessions = sessionCache.get(type);
         if (sessions == null) {
@@ -227,9 +238,8 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
 
         for (RSocketSessionImpl session : sessions) {
             SocketUser user = session.getUser();
-            if (user != null && !userIds.contains(user.getUserId())) {
+            if (user != null && userIds.add(user.getUserId())) {
                 result.add(user);
-                userIds.add(user.getUserId());
             }
         }
         return result;
@@ -239,7 +249,9 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     public int getOnlineCount() {
         int count = 0;
         for (List<RSocketSessionImpl> sessions : sessionCache.values()) {
-            count += sessions.size();
+            count += (int) sessions.stream()
+                    .filter(SocketSession::isConnected)
+                    .count();
         }
         return count;
     }

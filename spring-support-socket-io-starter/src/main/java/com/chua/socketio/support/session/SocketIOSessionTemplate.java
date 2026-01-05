@@ -13,9 +13,11 @@ import lombok.extern.slf4j.Slf4j;
 import static com.chua.starter.common.support.logger.ModuleLog.*;
 
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -57,6 +59,10 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
         List<SocketIOSession> sessions = sessionCache.get(clientId);
         if (sessions != null && session instanceof SocketIOSession ioSession) {
             sessions.remove(ioSession);
+            // 如果列表为空，清理空列表以节省内存
+            if (sessions.isEmpty()) {
+                sessionCache.remove(clientId);
+            }
         }
     }
 
@@ -84,7 +90,12 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     public void broadcast(String event, String msg) {
         for (List<SocketIOSession> sessions : sessionCache.values()) {
             for (SocketIOSession session : sessions) {
-                session.send(event, msg);
+                try {
+                    session.send(event, msg);
+                } catch (Exception e) {
+                    log.warn("[SocketIO] 广播消息失败: sessionId={}, event={}", 
+                            session.getId(), event, e);
+                }
             }
         }
     }
@@ -95,7 +106,12 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
             for (SocketIOSession session : sessions) {
                 SocketUser user = session.getUser();
                 if (user != null && userId.equals(user.getUserId())) {
-                    session.send(event, msg);
+                    try {
+                        session.send(event, msg);
+                    } catch (Exception e) {
+                        log.warn("[SocketIO] 发送消息给用户失败: userId={}, sessionId={}, event={}", 
+                                userId, session.getId(), event, e);
+                    }
                 }
             }
         }
@@ -103,7 +119,7 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
 
     @Override
     public List<SocketSession> getOnlineSessions() {
-        List<SocketSession> result = new LinkedList<>();
+        List<SocketSession> result = new java.util.ArrayList<>();
         for (List<SocketIOSession> sessions : sessionCache.values()) {
             result.addAll(sessions);
         }
@@ -118,11 +134,11 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
         }
 
         if (roomId == null || roomId.isEmpty()) {
-            return new LinkedList<>(sessions);
+            return new java.util.ArrayList<>(sessions);
         }
 
         // 根据 roomId 过滤会话
-        List<SocketSession> result = new LinkedList<>();
+        List<SocketSession> result = new java.util.ArrayList<>();
         for (SocketIOSession session : sessions) {
             Object sessionRoomId = session.getAttribute("roomId");
             if (roomId.equals(sessionRoomId)) {
@@ -134,8 +150,8 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
 
     @Override
     public List<SocketUser> getOnlineUsers(String type) {
-        List<SocketUser> result = new LinkedList<>();
-        List<String> userIds = new LinkedList<>();
+        List<SocketUser> result = new java.util.ArrayList<>();
+        java.util.Set<String> userIds = new java.util.HashSet<>();
         
         List<SocketIOSession> sessions = sessionCache.get(type);
         if (sessions == null) {
@@ -144,9 +160,8 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
 
         for (SocketIOSession session : sessions) {
             SocketUser user = session.getUser();
-            if (user != null && !userIds.contains(user.getUserId())) {
+            if (user != null && userIds.add(user.getUserId())) {
                 result.add(user);
-                userIds.add(user.getUserId());
             }
         }
         return result;
@@ -156,7 +171,9 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     public int getOnlineCount() {
         int count = 0;
         for (List<SocketIOSession> sessions : sessionCache.values()) {
-            count += sessions.size();
+            count += (int) sessions.stream()
+                    .filter(SocketSession::isConnected)
+                    .count();
         }
         return count;
     }

@@ -24,19 +24,9 @@ public class DeadLetterProperties {
     private boolean enable = false;
 
     /**
-     * 队列类型（memory/mqtt/kafka/rabbitmq/rocketmq）
+     * 队列类型（local/mqtt/kafka/rabbitmq/rocketmq）
      */
-    private String type = "memory";
-
-    /**
-     * 队列容量
-     */
-    private int queueCapacity = 10000;
-
-    /**
-     * 发送超时（毫秒）
-     */
-    private long sendTimeout = 5000;
+    private String type = "local";
 
     /**
      * 延迟消息调度线程数

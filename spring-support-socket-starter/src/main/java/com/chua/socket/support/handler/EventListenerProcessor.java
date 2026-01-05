@@ -129,22 +129,23 @@ public class EventListenerProcessor {
         public void invoke(SocketSession session, Object data) throws Exception {
             Class<?>[] paramTypes = method.getParameterTypes();
             
-            if (paramTypes.length == 0) {
-                method.invoke(listener);
-            } else if (paramTypes.length == 1) {
-                if (SocketSession.class.isAssignableFrom(paramTypes[0])) {
-                    method.invoke(listener, session);
-                } else {
-                    method.invoke(listener, data);
+            switch (paramTypes.length) {
+                case 0 -> method.invoke(listener);
+                case 1 -> {
+                    if (SocketSession.class.isAssignableFrom(paramTypes[0])) {
+                        method.invoke(listener, session);
+                    } else {
+                        method.invoke(listener, data);
+                    }
                 }
-            } else if (paramTypes.length == 2) {
-                if (SocketSession.class.isAssignableFrom(paramTypes[0])) {
-                    method.invoke(listener, session, data);
-                } else {
-                    method.invoke(listener, data, session);
+                case 2 -> {
+                    if (SocketSession.class.isAssignableFrom(paramTypes[0])) {
+                        method.invoke(listener, session, data);
+                    } else {
+                        method.invoke(listener, data, session);
+                    }
                 }
-            } else {
-                log.warn("[EventProcessor] 不支持超过2个参数的事件处理方法: {}", getMethodName());
+                default -> log.warn("[EventProcessor] 不支持超过2个参数的事件处理方法: {}", getMethodName());
             }
         }
 

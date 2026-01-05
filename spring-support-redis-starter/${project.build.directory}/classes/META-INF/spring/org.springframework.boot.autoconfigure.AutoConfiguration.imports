@@ -1,3 +1,0 @@
-com.chua.starter.redis.support.RedisConfiguration
-com.chua.starter.redis.support.CacheConfiguration
-com.chua.starter.redis.support.LockTemplateConfiguration

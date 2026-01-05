@@ -1,3 +1,0 @@
-org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-  com.chua.starter.pay.support.configuration.PayConfiguration,\
-  com.chua.starter.pay.support.configuration.PayCommonStateMachineAutoConfiguration

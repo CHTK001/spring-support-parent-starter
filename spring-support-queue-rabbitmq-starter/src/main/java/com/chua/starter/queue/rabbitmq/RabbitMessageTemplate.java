@@ -7,6 +7,7 @@ import com.chua.starter.queue.MessageTemplate;
 import com.chua.starter.queue.SendResult;
 import com.chua.starter.queue.properties.QueueProperties;
 import com.rabbitmq.client.Channel;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.AcknowledgeMode;
 import org.springframework.amqp.core.AmqpTemplate;
 import org.springframework.amqp.core.MessageBuilder;
@@ -17,11 +18,17 @@ import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
 import org.springframework.amqp.rabbit.listener.api.ChannelAwareMessageListener;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
+@Slf4j
 public class RabbitMessageTemplate implements MessageTemplate {
 
     private final AmqpTemplate amqpTemplate;
@@ -29,6 +36,8 @@ public class RabbitMessageTemplate implements MessageTemplate {
     private final QueueProperties props;
     private final Map<String, SimpleMessageListenerContainer> containers = new ConcurrentHashMap<>();
     private final Map<String, Boolean> autoAckMap = new ConcurrentHashMap<>();
+    private final Executor virtualExecutor = Executors.newThreadPerTaskExecutor(
+            Thread.ofVirtual().name("rabbitmq-send-", 0).factory());
 
     public RabbitMessageTemplate(AmqpTemplate amqpTemplate, ConnectionFactory connectionFactory, QueueProperties props) {
         this.amqpTemplate = amqpTemplate;
@@ -52,7 +61,7 @@ public class RabbitMessageTemplate implements MessageTemplate {
 
     @Override
     public CompletableFuture<SendResult> sendAsync(String destination, Object payload) {
-        return CompletableFuture.supplyAsync(() -> send(destination, payload));
+        return CompletableFuture.supplyAsync(() -> send(destination, payload), virtualExecutor);
     }
 
     @Override
@@ -108,14 +117,29 @@ public class RabbitMessageTemplate implements MessageTemplate {
             if (autoAck) {
                 // 自动确认模式
                 container.setMessageListener((org.springframework.amqp.core.Message msg) -> {
+                    Map<String, Object> headers = new HashMap<>();
+                    if (msg.getMessageProperties() != null && msg.getMessageProperties().getHeaders() != null) {
+                        msg.getMessageProperties().getHeaders().forEach((k, v) -> {
+                            if (v != null) {
+                                headers.put(k, v);
+                            }
+                        });
+                    }
                     Message m = Message.builder()
                             .destination(destination)
                             .payload(msg.getBody())
+                            .headers(headers)
                             .timestamp(System.currentTimeMillis())
                             .type(getType())
                             .originalMessage(msg)
                             .build();
-                    handler.handle(m, new AutoAcknowledgment());
+                    try {
+                        handler.handle(m, new AutoAcknowledgment());
+                    } catch (Exception e) {
+                        // 自动确认模式下，即使异常也记录日志（消息已自动确认，无法重试）
+                        log.error("Error handling message in auto-ack mode, queue: {}, messageId: {}", 
+                                destination, msg.getMessageProperties().getMessageId(), e);
+                    }
                 });
             } else {
                 // 手动确认模式
@@ -123,15 +147,38 @@ public class RabbitMessageTemplate implements MessageTemplate {
                     long deliveryTag = msg.getMessageProperties().getDeliveryTag();
                     RabbitAcknowledgment ack = new RabbitAcknowledgment(channel, deliveryTag);
                     
+                    Map<String, Object> headers = new HashMap<>();
+                    if (msg.getMessageProperties() != null && msg.getMessageProperties().getHeaders() != null) {
+                        msg.getMessageProperties().getHeaders().forEach((k, v) -> {
+                            if (v != null) {
+                                headers.put(k, v);
+                            }
+                        });
+                    }
                     Message m = Message.builder()
                             .destination(destination)
                             .payload(msg.getBody())
+                            .headers(headers)
                             .timestamp(System.currentTimeMillis())
                             .type(getType())
                             .originalMessage(msg)
                             .acknowledgment(ack)
                             .build();
-                    handler.handle(m, ack);
+                    try {
+                        handler.handle(m, ack);
+                        // 如果 handler 没有确认也没有 nack，消息会保持未确认状态
+                        // Spring AMQP 会根据配置决定是否重新入队
+                    } catch (Exception e) {
+                        // 处理异常，记录日志
+                        log.error("Error handling message from queue: {}, deliveryTag: {}", 
+                                destination, deliveryTag, e);
+                        // 如果消息未被确认，RabbitMQ 会根据配置决定是否重新入队
+                        // 这里不抛出异常，避免 Spring AMQP 拒绝消息
+                        // 如果 handler 没有确认消息，消息会保持未确认状态，可以重新入队
+                        // 注意：如果消息一直失败，会导致消息堆积，需要监控和处理
+                        // 如果需要拒绝消息，应该在 handler 中调用 ack.nack(false)
+                        // 如果需要重新入队，应该在 handler 中调用 ack.nack(true) 或不调用任何确认方法
+                    }
                 });
             }
             
@@ -162,7 +209,15 @@ public class RabbitMessageTemplate implements MessageTemplate {
                     channel.basicAck(deliveryTag, false);
                     acknowledged = true;
                 } catch (Exception e) {
-                    throw new RuntimeException("Failed to acknowledge message", e);
+                    // 确认失败时，记录日志但不抛出异常，避免影响消息处理流程
+                    log.warn("Failed to acknowledge message, deliveryTag: {}", deliveryTag, e);
+                    // 如果 channel 已关闭，RabbitMQ 会自动处理未确认的消息
+                    // 抛出异常可能导致消息重复处理
+                    // 注意：这可能导致消息重复处理，但比抛出异常导致整个处理失败要好
+                    // 理想情况下，应该检查 channel 状态，但这里简化处理
+                    acknowledged = false; // 标记为未确认，因为确认操作失败
+                    // 不抛出异常，避免影响消息处理流程
+                    // 如果确实需要严格处理，可以考虑使用回调或异步确认
                 }
             }
         }
@@ -174,7 +229,11 @@ public class RabbitMessageTemplate implements MessageTemplate {
                     channel.basicNack(deliveryTag, false, requeue);
                     acknowledged = true;
                 } catch (Exception e) {
-                    throw new RuntimeException("Failed to nack message", e);
+                    // nack 失败时，记录日志但不抛出异常，避免影响消息处理流程
+                    log.warn("Failed to nack message, deliveryTag: {}, requeue: {}", deliveryTag, requeue, e);
+                    // 如果 channel 已关闭，RabbitMQ 会自动处理未确认的消息
+                    acknowledged = false; // 标记为未确认，因为 nack 操作失败
+                    // 不抛出异常，避免影响消息处理流程
                 }
             }
         }
@@ -191,7 +250,12 @@ public class RabbitMessageTemplate implements MessageTemplate {
                     channel.basicNack(deliveryTag, false, false);
                     acknowledged = true;
                 } catch (Exception e) {
-                    throw new RuntimeException("Failed to nack message to dead letter queue", e);
+                    // nack 失败时，记录日志但不抛出异常，避免影响消息处理流程
+                    log.error("Failed to nack message to dead letter queue, deliveryTag: {}, deadLetterQueue: {}", 
+                            deliveryTag, deadLetterQueue, e);
+                    // 标记为未确认，因为 nack 操作失败
+                    acknowledged = false;
+                    // 不抛出异常，避免影响消息处理流程
                 }
             }
         }
@@ -234,13 +298,42 @@ public class RabbitMessageTemplate implements MessageTemplate {
     @Override
     public void unsubscribe(String destination) {
         // 移除所有以 destination 开头的容器
+        List<SimpleMessageListenerContainer> toStop = new ArrayList<>();
+        List<String> keysToRemove = new ArrayList<>();
         containers.entrySet().removeIf(e -> {
             String key = e.getKey();
             if (key.startsWith(destination + "|")) {
-                e.getValue().stop();
+                toStop.add(e.getValue());
+                keysToRemove.add(key);
                 return true;
             }
             return false;
+        });
+        // 清理 autoAckMap
+        keysToRemove.forEach(autoAckMap::remove);
+        // 停止所有容器并等待完成
+        toStop.forEach(container -> {
+            try {
+                container.stop();
+                // 等待容器完全停止
+                int maxWait = 5000; // 最多等待 5 秒
+                int waited = 0;
+                while (container.isRunning() && waited < maxWait) {
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt(); // 恢复中断状态
+                        log.warn("Interrupted while waiting for container to stop for destination: {}", destination);
+                        break; // 中断时退出循环
+                    }
+                    waited += 100;
+                }
+                if (container.isRunning()) {
+                    log.warn("Container did not stop within timeout for destination: {}", destination);
+                }
+            } catch (Exception e) {
+                log.warn("Error stopping container for destination: {}", destination, e);
+            }
         });
     }
 
@@ -256,14 +349,41 @@ public class RabbitMessageTemplate implements MessageTemplate {
 
     @Override
     public void close() {
-        containers.values().forEach(SimpleMessageListenerContainer::stop);
+        List<SimpleMessageListenerContainer> toStop = new ArrayList<>(containers.values());
         containers.clear();
+        autoAckMap.clear(); // 清理 autoAckMap
+        // 停止所有容器并等待完成
+        toStop.forEach(container -> {
+            try {
+                container.stop();
+                // 等待容器完全停止
+                int maxWait = 5000; // 最多等待 5 秒
+                int waited = 0;
+                while (container.isRunning() && waited < maxWait) {
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt(); // 恢复中断状态
+                        log.warn("Interrupted while waiting for container to stop during close");
+                        break; // 中断时退出循环
+                    }
+                    waited += 100;
+                }
+                if (container.isRunning()) {
+                    log.warn("Container did not stop within timeout during close");
+                }
+            } catch (Exception e) {
+                log.warn("Error stopping container during close", e);
+            }
+        });
     }
 
     private static byte[] toBytes(Object payload) {
-        if (payload == null) return new byte[0];
-        if (payload instanceof byte[]) return (byte[]) payload;
-        if (payload instanceof String) return ((String) payload).getBytes(StandardCharsets.UTF_8);
-        return Objects.toString(payload).getBytes(StandardCharsets.UTF_8);
+        return switch (payload) {
+            case null -> new byte[0];
+            case byte[] bytes -> bytes;
+            case String str -> str.getBytes(StandardCharsets.UTF_8);
+            default -> Objects.toString(payload).getBytes(StandardCharsets.UTF_8);
+        };
     }
 }

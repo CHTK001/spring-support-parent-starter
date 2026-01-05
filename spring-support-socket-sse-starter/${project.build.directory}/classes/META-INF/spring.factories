@@ -1,3 +1,0 @@
-org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-  com.chua.starter.sse.support.SseTemplate,\
-  com.chua.starter.sse.support.DefaultSseEventBusConfigurer

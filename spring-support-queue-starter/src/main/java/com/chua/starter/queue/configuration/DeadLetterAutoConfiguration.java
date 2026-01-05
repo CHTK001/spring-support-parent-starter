@@ -4,7 +4,7 @@ import com.chua.starter.queue.MessageTemplate;
 import com.chua.starter.queue.properties.DeadLetterProperties;
 import com.chua.starter.queue.properties.QueueProperties;
 import com.chua.starter.queue.template.DeadLetterTemplate;
-import com.chua.starter.queue.template.MemoryMessageTemplate;
+import com.chua.starter.queue.template.LocalMessageTemplate;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -35,7 +35,7 @@ public class DeadLetterAutoConfiguration {
     /**
      * 死信队列消息模板
      */
-    @Bean
+    @Bean(destroyMethod = "close")
     public DeadLetterTemplate deadLetterTemplate(@Autowired(required = false) MessageTemplate mainMessageTemplate) {
         // 创建死信队列底层存储
         MessageTemplate dlqStorage = createDlqStorage();
@@ -51,8 +51,8 @@ public class DeadLetterAutoConfiguration {
         // 如果有主队列，使用主队列作为消息源；否则使用死信队列存储
         MessageTemplate sourceTemplate = mainMessageTemplate != null ? mainMessageTemplate : dlqStorage;
 
-        log.info("[Queue] 创建死信队列模板, 类型: {}, 最大重试: {}, 队列容量: {}",
-                highlight(deadLetterProperties.getType()), highlight(deadLetterProperties.getMaxRetries()), highlight(deadLetterProperties.getQueueCapacity()));
+        log.info("[Queue] 创建死信队列模板, 类型: {}, 最大重试: {}",
+                highlight(deadLetterProperties.getType()), highlight(deadLetterProperties.getMaxRetries()));
         return new DeadLetterTemplate(sourceTemplate, dlqStorage, config);
     }
 
@@ -61,21 +61,17 @@ public class DeadLetterAutoConfiguration {
      */
     private MessageTemplate createDlqStorage() {
         String type = deadLetterProperties.getType();
-        return switch (type != null ? type.toLowerCase() : "memory") {
-            case "memory" -> {
-                QueueProperties.MemoryConfig memoryConfig = new QueueProperties.MemoryConfig();
-                memoryConfig.setQueueCapacity(deadLetterProperties.getQueueCapacity());
-                memoryConfig.setSendTimeout(deadLetterProperties.getSendTimeout());
-                memoryConfig.setDelayThreads(deadLetterProperties.getDelayThreads());
-                yield new MemoryMessageTemplate(memoryConfig);
+        return switch (type != null ? type.toLowerCase() : "local") {
+            case "local" -> {
+                QueueProperties.LocalConfig localConfig = new QueueProperties.LocalConfig();
+                localConfig.setDelayThreads(deadLetterProperties.getDelayThreads());
+                yield new LocalMessageTemplate(localConfig);
             }
             default -> {
-                log.warn("Unsupported dead-letter queue type: {}, using memory", type);
-                QueueProperties.MemoryConfig memoryConfig = new QueueProperties.MemoryConfig();
-                memoryConfig.setQueueCapacity(deadLetterProperties.getQueueCapacity());
-                memoryConfig.setSendTimeout(deadLetterProperties.getSendTimeout());
-                memoryConfig.setDelayThreads(deadLetterProperties.getDelayThreads());
-                yield new MemoryMessageTemplate(memoryConfig);
+                log.warn("Unsupported dead-letter queue type: {}, using local", type);
+                QueueProperties.LocalConfig localConfig = new QueueProperties.LocalConfig();
+                localConfig.setDelayThreads(deadLetterProperties.getDelayThreads());
+                yield new LocalMessageTemplate(localConfig);
             }
         };
     }
