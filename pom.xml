@@ -6,14 +6,14 @@
     帮助开发者快速构建企业级应用。
 
     主要特性:
-    - 基于Spring Boot 3.x和Java 21
+    - 基于Spring Boot 3.x和Java 25
     - 模块化设计，按需引入
     - 企业级功能组件
     - 统一配置管理
     - 开箱即用的集成方案
 
     @author CH
-    @version 4.0.0.35
+    @version 4.0.0.36
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -87,6 +87,7 @@
 
         <!-- API文档和接口模块 -->
         <module>spring-support-swagger-starter</module>         <!-- Swagger API文档 -->
+        <module>spring-support-swagger2-starter</module>         <!-- Swagger 2.x 兼容模块 -->
 
         <!-- 消息与队列抽象 -->
         <module>spring-support-queue-starter</module>
@@ -138,25 +139,24 @@
         <!-- API网关模块 -->
         <module>spring-support-gateway-starter</module>         <!-- API网关 -->
 
-        <!-- Rust 高性能服务器模块 -->
-        <module>spring-support-rust-server-starter</module>     <!-- Rust HTTP服务器容器 -->
     </modules>
 
     <!-- 项目属性配置 -->
     <properties>
-        <!-- Java版本配置 - 使用Java 21 LTS版本 -->
-        <java.version>21</java.version>
+        <!-- Java版本配置 - 使用Java 25 LTS版本 -->
+        <java.version>25</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
 
         <!-- 项目版本管理 -->
-        <revision>4.0.0.35</revision>               <!-- 当前项目版本，使用revision便于统一管理 -->
+        <revision>4.0.0.36</revision>               <!-- 当前项目版本，使用revision便于统一管理 -->
         <module.version>${revision}</module.version>        <!-- 当前项目模块版本 -->
-        <utils.version>${revision}</utils.version>          <!-- 工具类库版本 -->
+        <!-- 工具类库版本与 utils-support-parent-starter 保持一致，当前为 4.0.0.34 -->
+        <utils.version>4.0.0.34</utils.version>
 
         <!-- 框架和库版本管理 -->
-        <lombok.version>1.18.36</lombok.version>              <!-- Lombok版本，支持Java 21 -->
+        <lombok.version>1.18.36</lombok.version>              <!-- Lombok版本，支持Java 25 -->
         <mybatis-plus.version>3.5.11</mybatis-plus.version>  <!-- MyBatis Plus版本 -->
         <mybatis-plus-join.version>1.5.3</mybatis-plus-join.version>  <!-- MyBatis Plus Join版本 -->
         <dubbo.version>3.1.1</dubbo.version>                <!-- Dubbo RPC框架版本 -->
@@ -169,6 +169,7 @@
         <validation-api.version>2.0.1.Final</validation-api.version> <!-- Validation API版本 -->
         <spel-extension.version>1.0.0</spel-extension.version>     <!-- SpEL扩展版本 -->
         <mybatis-plus-generator.version>3.5.5</mybatis-plus-generator.version> <!-- MyBatis Plus代码生成器 -->
+        <guava.version>33.3.1-jre</guava.version>                              <!-- Google Guava工具库版本 -->
         <freemarker.version>2.3.32</freemarker.version>     <!-- FreeMarker模板引擎版本 -->
         
         <!-- Maven插件版本管理 -->
@@ -209,6 +210,7 @@
             <!-- ========== Spring Boot 基础模块（可选） ========== -->
             
             <!-- Spring Boot Web Starter - Web应用基础，子模块按需引入 -->
+            <!-- 版本由 Spring Boot 父 POM 管理，无需显式指定 -->
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-starter-web</artifactId>
@@ -479,13 +481,6 @@
             </dependency>
             -->
 
-            <!-- 定时任务模块 -->
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-job-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
-
             <!-- ========== Utils Support 工具类模块依赖 ========== -->
 
             <!-- 微服务框架支持 -->
@@ -503,7 +498,7 @@
 
             <dependency>
                 <groupId>com.chua</groupId>
-                <artifactId>utils-support-advanced-starter</artifactId>
+                <artifactId>utils-support-extension-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
 
@@ -618,6 +613,12 @@
 
             <!-- Google Guava工具库 -->
             <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>${guava.version}</version>
+            </dependency>
+            
+            <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-guava-starter</artifactId>
                 <version>${utils.version}</version>
@@ -643,13 +644,6 @@
                 <version>${utils.version}</version>
             </dependency>
 
-
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-common-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
-
             <!-- 注意：该模块在项目中不存在，如需使用请先创建
             <dependency>
                 <groupId>com.chua</groupId>
@@ -658,102 +652,13 @@
             </dependency>
             -->
 
-            <!-- 策略管理模块 -->
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-strategy-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-datasource-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-mybatis-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-shell-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-redis-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
-
-
-            <!-- 注意：该模块在项目中不存在，如需使用请先创建
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-subscribe-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
-            -->
-
-            <!-- Socket 模块系列 -->
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-socket-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-socket-websocket-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-socket-io-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-socket-rsocket-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-socket-sse-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-sync-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
-
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-rsocket-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
 
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-rpc-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
-
             <!-- ========== 认证和安全模块 ========== -->
-
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-oauth-client-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
 
             <!-- OAuth服务端认证模块 - 该模块在项目中不存在，如需使用请先创建
             <dependency>
@@ -773,13 +678,6 @@
 
             <!-- ========== 存储和文件处理模块 ========== -->
 
-            <!-- MinIO对象存储 - 实际模块名为 spring-support-filesystem-minio-starter -->
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-filesystem-minio-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
-
             <!-- ========== 监控和管理模块 ========== -->
 
             <!-- 注意：该模块在项目中不存在，如需使用请先创建
@@ -789,20 +687,6 @@
                 <version>${module.version}</version>
             </dependency>
             -->
-
-
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-pay-client-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
-
-
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-swagger-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
 
 
             <dependency>
@@ -914,47 +798,6 @@
                 <version>${utils.version}</version>
             </dependency>
 
-            <!-- SSH Shell管理模块 -->
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-shell-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
-
-            <!-- SSH服务端模块 -->
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-ssh-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
-
-            <!-- AI深度学习模块 -->
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-ai-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
-
-            <!-- 消息推送模块 -->
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-message-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
-
-            <!-- API网关模块 -->
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-gateway-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
-
-            <!-- Rust HTTP 服务器模块 -->
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-rust-server-starter</artifactId>
-                <version>${module.version}</version>
-            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -1018,8 +861,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${maven-compiler-plugin.version}</version>
                 <configuration>
-                    <source>${java.version}</source>                    
-                    <target>${java.version}</target>                    <!-- 目标Java版本 -->
+                    <release>${java.version}</release>                   <!-- 使用release参数，自动处理source和target -->
                     <encoding>${project.build.sourceEncoding}</encoding> <!-- 编码格式 -->
                     <compilerArgs>
                         <arg>-parameters</arg>                          <!-- 保留参数名信息 -->
@@ -1063,8 +905,8 @@
                                     <message>Maven 3.6.3或更高版本是必需的</message>
                                 </requireMavenVersion>
                                 <requireJavaVersion>
-                                    <version>[21,)</version>
-                                    <message>Java 21或更高版本是必需的</message>
+                                    <version>[25,)</version>
+                                    <message>Java 25或更高版本是必需的</message>
                                 </requireJavaVersion>
                                 <bannedDependencies>
                                     <excludes>
