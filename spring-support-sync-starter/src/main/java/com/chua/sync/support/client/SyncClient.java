@@ -1,4 +1,4 @@
-package com.chua.sync.support.client;
+﻿package com.chua.sync.support.client;
 
 import com.chua.common.support.protocol.ClientSetting;
 import com.chua.common.support.protocol.ProtocolSetting;

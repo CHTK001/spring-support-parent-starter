@@ -1,4 +1,4 @@
-package com.chua.starter.oauth.client.support.infomation;
+﻿package com.chua.starter.oauth.client.support.infomation;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

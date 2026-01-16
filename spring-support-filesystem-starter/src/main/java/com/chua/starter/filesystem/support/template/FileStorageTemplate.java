@@ -1,4 +1,4 @@
-package com.chua.starter.filesystem.support.template;
+﻿package com.chua.starter.filesystem.support.template;
 
 import com.chua.common.support.oss.FileStorage;
 import com.chua.common.support.oss.request.GetObjectRequest;

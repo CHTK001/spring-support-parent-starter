@@ -7,7 +7,6 @@ import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.Data;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
@@ -170,8 +169,7 @@ public class RequestFingerprintAutoConfiguration {
      */
     private String nullToEmpty(String s) { return s == null ? "" : s; }
 
-    @Data
-    public static class FingerprintProps {
+        public static class FingerprintProps {
         private boolean enabled = false;
         private String headerName = "X-Request-Fingerprint";
         private String algorithm = "SHA-256";
@@ -227,7 +225,565 @@ public class RequestFingerprintAutoConfiguration {
         public java.io.BufferedReader getReader() {
             return new java.io.BufferedReader(new java.io.InputStreamReader(getInputStream(), StandardCharsets.UTF_8));
         }
+    /**
+     * 获取 cache
+     *
+     * @return cache
+     */
+    public Map<String, Long> getCache() {
+        return cache;
     }
+
+    /**
+     * 设置 cache
+     *
+     * @param cache cache
+     */
+    public void setCache(Map<String, Long> cache) {
+        this.cache = cache;
+    }
+
+    /**
+     * 获取 request
+     *
+     * @return request
+     */
+    public HttpServletRequest getRequest() {
+        return request;
+    }
+
+    /**
+     * 设置 request
+     *
+     * @param request request
+     */
+    public void setRequest(HttpServletRequest request) {
+        this.request = request;
+    }
+
+    /**
+     * 获取 response
+     *
+     * @return response
+     */
+    public HttpServletResponse getResponse() {
+        return response;
+    }
+
+    /**
+     * 设置 response
+     *
+     * @param response response
+     */
+    public void setResponse(HttpServletResponse response) {
+        this.response = response;
+    }
+
+    /**
+     * 获取 wrapped
+     *
+     * @return wrapped
+     */
+    public CachedBodyHttpServletRequest getWrapped() {
+        return wrapped;
+    }
+
+    /**
+     * 设置 wrapped
+     *
+     * @param wrapped wrapped
+     */
+    public void setWrapped(CachedBodyHttpServletRequest wrapped) {
+        this.wrapped = wrapped;
+    }
+
+    /**
+     * 获取 fp
+     *
+     * @return fp
+     */
+    public String getFp() {
+        return fp;
+    }
+
+    /**
+     * 设置 fp
+     *
+     * @param fp fp
+     */
+    public void setFp(String fp) {
+        this.fp = fp;
+    }
+
+    /**
+     * 获取 now
+     *
+     * @return now
+     */
+    public long getNow() {
+        return now;
+    }
+
+    /**
+     * 设置 now
+     *
+     * @param now now
+     */
+    public void setNow(long now) {
+        this.now = now;
+    }
+
+    /**
+     * 获取 until
+     *
+     * @return until
+     */
+    public Long getUntil() {
+        return until;
+    }
+
+    /**
+     * 设置 until
+     *
+     * @param until until
+     */
+    public void setUntil(Long until) {
+        this.until = until;
+    }
+
+    /**
+     * 获取 hf
+     *
+     * @return hf
+     */
+    public HashFunction getHf() {
+        return hf;
+    }
+
+    /**
+     * 设置 hf
+     *
+     * @param hf hf
+     */
+    public void setHf(HashFunction hf) {
+        this.hf = hf;
+    }
+
+    /**
+     * 获取 hasher
+     *
+     * @return hasher
+     */
+    public Hasher getHasher() {
+        return hasher;
+    }
+
+    /**
+     * 设置 hasher
+     *
+     * @param hasher hasher
+     */
+    public void setHasher(Hasher hasher) {
+        this.hasher = hasher;
+    }
+
+    /**
+     * 获取 names
+     *
+     * @return names
+     */
+    public List<String> getNames() {
+        return names;
+    }
+
+    /**
+     * 设置 names
+     *
+     * @param names names
+     */
+    public void setNames(List<String> names) {
+        this.names = names;
+    }
+
+    /**
+     * 获取 keys
+     *
+     * @return keys
+     */
+    public List<String> getKeys() {
+        return keys;
+    }
+
+    /**
+     * 设置 keys
+     *
+     * @param keys keys
+     */
+    public void setKeys(List<String> keys) {
+        this.keys = keys;
+    }
+
+    /**
+     * 获取 v
+     *
+     * @return v
+     */
+    public String getV() {
+        return v;
+    }
+
+    /**
+     * 设置 v
+     *
+     * @param v v
+     */
+    public void setV(String v) {
+        this.v = v;
+    }
+
+                                    /**
+     * 获取 len
+     *
+     * @return len
+     */
+    public long getLen() {
+        return len;
+    }
+
+    /**
+     * 设置 len
+     *
+     * @param len len
+     */
+    public void setLen(long len) {
+        this.len = len;
+    }
+
+    /**
+     * 获取 a
+     *
+     * @return a
+     */
+    public String getA() {
+        return a;
+    }
+
+    /**
+     * 设置 a
+     *
+     * @param a a
+     */
+    public void setA(String a) {
+        this.a = a;
+    }
+
+            /**
+     * 获取 enabled
+     *
+     * @return enabled
+     */
+    public boolean getEnabled() {
+        return enabled;
+    }
+
+    /**
+     * 设置 enabled
+     *
+     * @param enabled enabled
+     */
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    /**
+     * 获取 headerName
+     *
+     * @return headerName
+     */
+    public String getHeaderName() {
+        return headerName;
+    }
+
+    /**
+     * 设置 headerName
+     *
+     * @param headerName headerName
+     */
+    public void setHeaderName(String headerName) {
+        this.headerName = headerName;
+    }
+
+    /**
+     * 获取 algorithm
+     *
+     * @return algorithm
+     */
+    public String getAlgorithm() {
+        return algorithm;
+    }
+
+    /**
+     * 设置 algorithm
+     *
+     * @param algorithm algorithm
+     */
+    public void setAlgorithm(String algorithm) {
+        this.algorithm = algorithm;
+    }
+
+    /**
+     * 获取 salt
+     *
+     * @return salt
+     */
+    public String getSalt() {
+        return salt;
+    }
+
+    /**
+     * 设置 salt
+     *
+     * @param salt salt
+     */
+    public void setSalt(String salt) {
+        this.salt = salt;
+    }
+
+    /**
+     * 获取 includeMethod
+     *
+     * @return includeMethod
+     */
+    public boolean getIncludeMethod() {
+        return includeMethod;
+    }
+
+    /**
+     * 设置 includeMethod
+     *
+     * @param includeMethod includeMethod
+     */
+    public void setIncludeMethod(boolean includeMethod) {
+        this.includeMethod = includeMethod;
+    }
+
+    /**
+     * 获取 includePath
+     *
+     * @return includePath
+     */
+    public boolean getIncludePath() {
+        return includePath;
+    }
+
+    /**
+     * 设置 includePath
+     *
+     * @param includePath includePath
+     */
+    public void setIncludePath(boolean includePath) {
+        this.includePath = includePath;
+    }
+
+    /**
+     * 获取 includeParams
+     *
+     * @return includeParams
+     */
+    public boolean getIncludeParams() {
+        return includeParams;
+    }
+
+    /**
+     * 设置 includeParams
+     *
+     * @param includeParams includeParams
+     */
+    public void setIncludeParams(boolean includeParams) {
+        this.includeParams = includeParams;
+    }
+
+    /**
+     * 获取 includeHeaders
+     *
+     * @return includeHeaders
+     */
+    public Set<String> getIncludeHeaders() {
+        return includeHeaders;
+    }
+
+    /**
+     * 设置 includeHeaders
+     *
+     * @param includeHeaders includeHeaders
+     */
+    public void setIncludeHeaders(Set<String> includeHeaders) {
+        this.includeHeaders = includeHeaders;
+    }
+
+    /**
+     * 获取 includeBody
+     *
+     * @return includeBody
+     */
+    public boolean getIncludeBody() {
+        return includeBody;
+    }
+
+    /**
+     * 设置 includeBody
+     *
+     * @param includeBody includeBody
+     */
+    public void setIncludeBody(boolean includeBody) {
+        this.includeBody = includeBody;
+    }
+
+    /**
+     * 获取 includeBodyMaxBytes
+     *
+     * @return includeBodyMaxBytes
+     */
+    public long getIncludeBodyMaxBytes() {
+        return includeBodyMaxBytes;
+    }
+
+    /**
+     * 设置 includeBodyMaxBytes
+     *
+     * @param includeBodyMaxBytes includeBodyMaxBytes
+     */
+    public void setIncludeBodyMaxBytes(long includeBodyMaxBytes) {
+        this.includeBodyMaxBytes = includeBodyMaxBytes;
+    }
+
+    /**
+     * 获取 bodyMethods
+     *
+     * @return bodyMethods
+     */
+    public Set<String> getBodyMethods() {
+        return bodyMethods;
+    }
+
+    /**
+     * 设置 bodyMethods
+     *
+     * @param bodyMethods bodyMethods
+     */
+    public void setBodyMethods(Set<String> bodyMethods) {
+        this.bodyMethods = bodyMethods;
+    }
+
+    /**
+     * 获取 validityMs
+     *
+     * @return validityMs
+     */
+    public long getValidityMs() {
+        return validityMs;
+    }
+
+    /**
+     * 设置 validityMs
+     *
+     * @param validityMs validityMs
+     */
+    public void setValidityMs(long validityMs) {
+        this.validityMs = validityMs;
+    }
+
+    /**
+     * 获取 rejectDuplicate
+     *
+     * @return rejectDuplicate
+     */
+    public boolean getRejectDuplicate() {
+        return rejectDuplicate;
+    }
+
+    /**
+     * 设置 rejectDuplicate
+     *
+     * @param rejectDuplicate rejectDuplicate
+     */
+    public void setRejectDuplicate(boolean rejectDuplicate) {
+        this.rejectDuplicate = rejectDuplicate;
+    }
+
+    /**
+     * 获取 cachedBody
+     *
+     * @return cachedBody
+     */
+    public byte[] getCachedBody() {
+        return cachedBody;
+    }
+
+    /**
+     * 设置 cachedBody
+     *
+     * @param cachedBody cachedBody
+     */
+    public void setCachedBody(byte[] cachedBody) {
+        this.cachedBody = cachedBody;
+    }
+
+    /**
+     * 获取 buf
+     *
+     * @return buf
+     */
+    public byte[] getBuf() {
+        return buf;
+    }
+
+    /**
+     * 设置 buf
+     *
+     * @param buf buf
+     */
+    public void setBuf(byte[] buf) {
+        this.buf = buf;
+    }
+
+    /**
+     * 获取 remaining
+     *
+     * @return remaining
+     */
+    public long getRemaining() {
+        return remaining;
+    }
+
+    /**
+     * 设置 remaining
+     *
+     * @param remaining remaining
+     */
+    public void setRemaining(long remaining) {
+        this.remaining = remaining;
+    }
+
+    /**
+     * 获取 read
+     *
+     * @return read
+     */
+    public int getRead() {
+        return read;
+    }
+
+    /**
+     * 设置 read
+     *
+     * @param read read
+     */
+    public void setRead(int read) {
+        this.read = read;
+    }
+
+                    }
 }
 
 

@@ -12,7 +12,6 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.ContextualSerializer;
-import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.springframework.util.ConcurrentReferenceHashMap;
 import org.springframework.util.ReflectionUtils;
@@ -24,12 +23,24 @@ import java.util.Objects;
 
 /**
  */
-@RequiredArgsConstructor
 public class ApiCryptoSerializer extends JsonSerializer<String> implements ContextualSerializer {
 
     /**
      * 加密类型
      */
+    /**
+     * 构造函数
+     *
+     * @param codec Codec
+     * @param name String
+     * @param key String
+     */
+    public ApiCryptoSerializer(Codec codec, String name, String key) {
+        this.codec = codec;
+        this.name = name;
+        this.key = key;
+    }
+
     private final Codec codec;
     private final String name;
     private final String key;

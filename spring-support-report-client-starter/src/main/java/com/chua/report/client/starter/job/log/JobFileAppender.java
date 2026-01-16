@@ -1,4 +1,4 @@
-package com.chua.report.client.starter.job.log;
+﻿package com.chua.report.client.starter.job.log;
 
 import com.chua.common.support.utils.FileUtils;
 import lombok.extern.slf4j.Slf4j;

@@ -1,10 +1,12 @@
 package com.chua.starter.common.support.api.gray;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.api.annotations.ApiGray;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
@@ -25,8 +27,9 @@ import java.util.concurrent.ThreadLocalRandom;
  * @since 2024/12/18
  * @version 1.0.0
  */
-@Slf4j
 public class ApiGrayEvaluator {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ApiGrayEvaluator.class);
+
 
     private static final ExpressionParser PARSER = new SpelExpressionParser();
     

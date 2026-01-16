@@ -1,6 +1,6 @@
-package com.chua.report.client.starter.sync.handler;
+﻿package com.chua.report.client.starter.sync.handler;
 
-import com.chua.common.support.annotations.Spi;
+import com.chua.common.support.core.annotation.Spi;
 import com.chua.common.support.protocol.request.HttpServletRequest;
 import com.chua.common.support.protocol.request.ServletResponse;
 import com.chua.report.client.starter.job.TriggerParam;

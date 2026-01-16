@@ -1,4 +1,4 @@
-package com.chua.starter.job.support.thread;
+﻿package com.chua.starter.job.support.thread;
 
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.job.support.handler.JobHandler;

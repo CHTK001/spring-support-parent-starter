@@ -1,4 +1,4 @@
-package com.chua.starter.pay.support.pojo;
+﻿package com.chua.starter.pay.support.pojo;
 
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;

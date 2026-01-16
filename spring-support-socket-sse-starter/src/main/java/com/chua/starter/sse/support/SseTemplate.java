@@ -1,4 +1,4 @@
-package com.chua.starter.sse.support;
+﻿package com.chua.starter.sse.support;
 
 import ch.rasc.sse.eventbus.SseEvent;
 import ch.rasc.sse.eventbus.SseEventBus;

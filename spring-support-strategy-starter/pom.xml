@@ -32,8 +32,8 @@
     <description>策略管理模块 - 提供限流、熔断、降级等策略的配置管理和API接口</description>
 
     <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -66,36 +66,11 @@
             <artifactId>aspectjweaver</artifactId>
         </dependency>
 
+        <!-- Utils Support Resilience4j Starter - 使用 utils-parent 下的 Resilience4j 实现 -->
         <dependency>
-            <groupId>io.github.resilience4j</groupId>
-            <artifactId>resilience4j-circuitbreaker</artifactId>
-            <version>2.3.0</version>
-        </dependency>
-        <dependency>
-            <groupId>io.github.resilience4j</groupId>
-            <artifactId>resilience4j-ratelimiter</artifactId>
-            <version>2.2.0</version>
-            <scope>compile</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>io.github.resilience4j</groupId>
-            <artifactId>resilience4j-retry</artifactId>
-            <version>2.3.0</version>
-        </dependency>
-
-        <!-- Resilience4j Bulkhead - 舱壁隔离 -->
-        <dependency>
-            <groupId>io.github.resilience4j</groupId>
-            <artifactId>resilience4j-bulkhead</artifactId>
-            <version>2.3.0</version>
-        </dependency>
-
-        <!-- Resilience4j TimeLimiter - 超时控制 -->
-        <dependency>
-            <groupId>io.github.resilience4j</groupId>
-            <artifactId>resilience4j-timelimiter</artifactId>
-            <version>2.3.0</version>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-resilience4j-starter</artifactId>
+            <version>4.0.0.33</version>
         </dependency>
 
         <!-- Spring Data Redis - 分布式缓存支持 -->

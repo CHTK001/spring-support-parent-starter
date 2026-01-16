@@ -1,4 +1,4 @@
-package com.chua.starter.socket.websocket.properties;
+﻿package com.chua.starter.socket.websocket.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

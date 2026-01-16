@@ -1,4 +1,7 @@
 package com.chua.starter.common.support.provider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.objects.ObjectContext;
@@ -14,8 +17,6 @@ import com.chua.starter.common.support.api.properties.ApiProperties;
 import com.chua.starter.common.support.properties.OptionalProperties;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,12 +35,21 @@ import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE
  * @author CH
  */
 @RestController
-@Slf4j
 @RequestMapping("/v1/option")
 @ConditionalOnProperty(prefix = OptionalProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = false)
-@RequiredArgsConstructor
 @Tag(name = "选项")
 public class OptionalProvider {
+    /**
+     * 构造函数
+     *
+     * @param apiProperties ApiProperties
+     */
+    public OptionalProvider(ApiProperties apiProperties) {
+        this.apiProperties = apiProperties;
+    }
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(OptionalProvider.class);
+
 
     private final ApiProperties apiProperties;
     /**

@@ -1,4 +1,4 @@
-package com.chua.starter.pay.support.properties;
+﻿package com.chua.starter.pay.support.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

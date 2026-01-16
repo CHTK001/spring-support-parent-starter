@@ -1,4 +1,4 @@
-package com.chua.starter.mybatis.interceptor;
+﻿package com.chua.starter.mybatis.interceptor;
 
 /**
  * 只读模式异常

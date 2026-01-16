@@ -1,4 +1,4 @@
-package com.chua.starter.mybatis.p6spy;
+﻿package com.chua.starter.mybatis.p6spy;
 
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.p6spy.engine.spy.appender.MessageFormattingStrategy;

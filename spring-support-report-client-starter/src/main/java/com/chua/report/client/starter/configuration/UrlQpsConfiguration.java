@@ -1,4 +1,4 @@
-package com.chua.report.client.starter.configuration;
+﻿package com.chua.report.client.starter.configuration;
 
 import com.chua.report.client.starter.interceptor.UrlQpsInterceptor;
 import com.chua.report.client.starter.properties.ReportProperties;

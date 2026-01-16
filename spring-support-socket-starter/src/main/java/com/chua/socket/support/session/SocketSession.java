@@ -1,4 +1,4 @@
-package com.chua.socket.support.session;
+﻿package com.chua.socket.support.session;
 
 import java.util.Map;
 

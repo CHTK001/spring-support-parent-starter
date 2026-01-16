@@ -1,4 +1,4 @@
-package com.chua.starter.strategy.service;
+﻿package com.chua.starter.strategy.service;
 
 import com.chua.common.support.json.Json;
 import lombok.Data;

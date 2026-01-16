@@ -1,4 +1,4 @@
-package com.chua.starter.oauth.client.support.execute;
+﻿package com.chua.starter.oauth.client.support.execute;
 
 import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.function.Splitter;

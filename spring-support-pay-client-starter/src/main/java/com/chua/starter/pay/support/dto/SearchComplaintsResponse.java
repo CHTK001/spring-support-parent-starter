@@ -1,4 +1,4 @@
-package com.chua.starter.pay.support.dto;
+﻿package com.chua.starter.pay.support.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;

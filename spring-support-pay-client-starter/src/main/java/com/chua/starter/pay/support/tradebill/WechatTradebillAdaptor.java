@@ -1,6 +1,6 @@
-package com.chua.starter.pay.support.tradebill;
+﻿package com.chua.starter.pay.support.tradebill;
 
-import com.chua.common.support.annotations.Spi;
+import com.chua.common.support.core.annotation.Spi;
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;

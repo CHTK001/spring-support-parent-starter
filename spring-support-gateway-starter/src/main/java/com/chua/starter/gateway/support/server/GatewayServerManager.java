@@ -1,4 +1,4 @@
-package com.chua.starter.gateway.support.server;
+﻿package com.chua.starter.gateway.support.server;
 
 import com.chua.common.support.protocol.Protocol;
 import com.chua.common.support.protocol.ProtocolSetting;

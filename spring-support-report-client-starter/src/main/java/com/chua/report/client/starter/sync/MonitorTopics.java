@@ -1,4 +1,4 @@
-package com.chua.report.client.starter.sync;
+﻿package com.chua.report.client.starter.sync;
 
 /**
  * Monitor 通信主题常量

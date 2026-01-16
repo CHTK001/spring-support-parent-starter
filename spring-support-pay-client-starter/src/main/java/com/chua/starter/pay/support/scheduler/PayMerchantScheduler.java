@@ -1,4 +1,4 @@
-package com.chua.starter.pay.support.scheduler;
+﻿package com.chua.starter.pay.support.scheduler;
 
 import com.chua.common.support.function.NamedThreadFactory;
 import com.chua.common.support.utils.ThreadUtils;

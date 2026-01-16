@@ -1,4 +1,4 @@
-package com.chua.starter.oauth.client.support.provider;
+﻿package com.chua.starter.oauth.client.support.provider;
 
 import com.chua.starter.common.support.annotations.RequestParamMapping;
 import io.swagger.annotations.ApiModel;

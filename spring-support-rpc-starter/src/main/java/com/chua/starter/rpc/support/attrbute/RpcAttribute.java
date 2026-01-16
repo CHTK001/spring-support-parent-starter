@@ -1,4 +1,4 @@
-package com.chua.starter.rpc.support.attrbute;
+﻿package com.chua.starter.rpc.support.attrbute;
 
 import lombok.Data;
 

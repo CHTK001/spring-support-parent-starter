@@ -2,10 +2,6 @@ package com.chua.starter.common.support.oauth;
 
 import com.chua.starter.common.support.constant.DataFilterTypeEnum;
 import com.google.common.base.Strings;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.experimental.Accessors;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.util.CollectionUtils;
 
@@ -18,11 +14,14 @@ import java.util.Set;
  *
  * @author CH
  */
-@Data
 @Accessors(chain = true)
-@NoArgsConstructor
-@AllArgsConstructor
 public class CurrentUser {
+    /**
+     * 无参构造函数
+     */
+    public CurrentUser() {
+    }
+
 
     private static final String ANY = "*";
     /**
@@ -222,5 +221,365 @@ public class CurrentUser {
     public boolean isDept() {
         return isNeedDataPermission();
     }
-}
+    /**
+     * 获取 unionId
+     *
+     * @return unionId
+     */
+    public String getUnionId() {
+        return unionId;
+    }
+
+    /**
+     * 设置 unionId
+     *
+     * @param unionId unionId
+     */
+    public void setUnionId(String unionId) {
+        this.unionId = unionId;
+    }
+
+    /**
+     * 获取 openId
+     *
+     * @return openId
+     */
+    public String getOpenId() {
+        return openId;
+    }
+
+    /**
+     * 设置 openId
+     *
+     * @param openId openId
+     */
+    public void setOpenId(String openId) {
+        this.openId = openId;
+    }
+
+    /**
+     * 获取 uid
+     *
+     * @return uid
+     */
+    public String getUid() {
+        return uid;
+    }
+
+    /**
+     * 设置 uid
+     *
+     * @param uid uid
+     */
+    public void setUid(String uid) {
+        this.uid = uid;
+    }
+
+    /**
+     * 获取 userId
+     *
+     * @return userId
+     */
+    public String getUserId() {
+        return userId;
+    }
+
+    /**
+     * 设置 userId
+     *
+     * @param userId userId
+     */
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    /**
+     * 获取 tenantId
+     *
+     * @return tenantId
+     */
+    public String getTenantId() {
+        return tenantId;
+    }
+
+    /**
+     * 设置 tenantId
+     *
+     * @param tenantId tenantId
+     */
+    public void setTenantId(String tenantId) {
+        this.tenantId = tenantId;
+    }
+
+    /**
+     * 获取 username
+     *
+     * @return username
+     */
+    public String getUsername() {
+        return username;
+    }
+
+    /**
+     * 设置 username
+     *
+     * @param username username
+     */
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    /**
+     * 获取 deptId
+     *
+     * @return deptId
+     */
+    public String getDeptId() {
+        return deptId;
+    }
+
+    /**
+     * 设置 deptId
+     *
+     * @param deptId deptId
+     */
+    public void setDeptId(String deptId) {
+        this.deptId = deptId;
+    }
+
+    /**
+     * 获取 phone
+     *
+     * @return phone
+     */
+    public String getPhone() {
+        return phone;
+    }
+
+    /**
+     * 设置 phone
+     *
+     * @param phone phone
+     */
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    /**
+     * 获取 card
+     *
+     * @return card
+     */
+    public String getCard() {
+        return card;
+    }
+
+    /**
+     * 设置 card
+     *
+     * @param card card
+     */
+    public void setCard(String card) {
+        this.card = card;
+    }
+
+    /**
+     * 获取 name
+     *
+     * @return name
+     */
+    public String getName() {
+        return name;
+    }
+
+    /**
+     * 设置 name
+     *
+     * @param name name
+     */
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    /**
+     * 获取 sex
+     *
+     * @return sex
+     */
+    public String getSex() {
+        return sex;
+    }
+
+    /**
+     * 设置 sex
+     *
+     * @param sex sex
+     */
+    public void setSex(String sex) {
+        this.sex = sex;
+    }
+
+    /**
+     * 获取 permission
+     *
+     * @return permission
+     */
+    public Set<String> getPermission() {
+        return permission;
+    }
+
+    /**
+     * 设置 permission
+     *
+     * @param permission permission
+     */
+    public void setPermission(Set<String> permission) {
+        this.permission = permission;
+    }
+
+    /**
+     * 获取 dataPermission
+     *
+     * @return dataPermission
+     */
+    public DataFilterTypeEnum getDataPermission() {
+        return dataPermission;
+    }
+
+    /**
+     * 设置 dataPermission
+     *
+     * @param dataPermission dataPermission
+     */
+    public void setDataPermission(DataFilterTypeEnum dataPermission) {
+        this.dataPermission = dataPermission;
+    }
+
+    /**
+     * 获取 dataPermissionRule
+     *
+     * @return dataPermissionRule
+     */
+    public String getDataPermissionRule() {
+        return dataPermissionRule;
+    }
+
+    /**
+     * 设置 dataPermissionRule
+     *
+     * @param dataPermissionRule dataPermissionRule
+     */
+    public void setDataPermissionRule(String dataPermissionRule) {
+        this.dataPermissionRule = dataPermissionRule;
+    }
+
+    /**
+     * 获取 roles
+     *
+     * @return roles
+     */
+    public Set<String> getRoles() {
+        return roles;
+    }
+
+    /**
+     * 设置 roles
+     *
+     * @param roles roles
+     */
+    public void setRoles(Set<String> roles) {
+        this.roles = roles;
+    }
+
+    /**
+     * 获取 ext
+     *
+     * @return ext
+     */
+    public Map<String, Object> getExt() {
+        return ext;
+    }
+
+    /**
+     * 设置 ext
+     *
+     * @param ext ext
+     */
+    public void setExt(Map<String, Object> ext) {
+        this.ext = ext;
+    }
+
+    /**
+     * 获取 lastIp
+     *
+     * @return lastIp
+     */
+    public String getLastIp() {
+        return lastIp;
+    }
+
+    /**
+     * 设置 lastIp
+     *
+     * @param lastIp lastIp
+     */
+    public void setLastIp(String lastIp) {
+        this.lastIp = lastIp;
+    }
+
+            /**
+     * 获取 antPathMatcher
+     *
+     * @return antPathMatcher
+     */
+    public AntPathMatcher getAntPathMatcher() {
+        return antPathMatcher;
+    }
+
+    /**
+     * 设置 antPathMatcher
+     *
+     * @param antPathMatcher antPathMatcher
+     */
+    public void setAntPathMatcher(AntPathMatcher antPathMatcher) {
+        this.antPathMatcher = antPathMatcher;
+    }
+
+                                            /**
+     * 获取 hasRole
+     *
+     * @return hasRole
+     */
+    public boolean getHasRole() {
+        return hasRole;
+    }
+
+    /**
+     * 设置 hasRole
+     *
+     * @param hasRole hasRole
+     */
+    public void setHasRole(boolean hasRole) {
+        this.hasRole = hasRole;
+    }
+
+                    /**
+     * 获取 antPathMatcher
+     *
+     * @return antPathMatcher
+     */
+    public AntPathMatcher getAntPathMatcher() {
+        return antPathMatcher;
+    }
+
+    /**
+     * 设置 antPathMatcher
+     *
+     * @param antPathMatcher antPathMatcher
+     */
+    public void setAntPathMatcher(AntPathMatcher antPathMatcher) {
+        this.antPathMatcher = antPathMatcher;
+    }
+
+                                                        }
 

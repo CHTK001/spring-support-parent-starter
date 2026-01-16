@@ -1,4 +1,4 @@
-package com.chua.starter.configcenter.support.configuration;
+﻿package com.chua.starter.configcenter.support.configuration;
 
 import com.chua.common.support.config.ConfigCenter;
 import com.chua.common.support.config.ConfigListener;
@@ -98,13 +98,41 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
 
     /**
      * 加载配置文件
+     * <p>
+     * 配置加载优先级（从高到低）：
+     * 1. 远程配置中心：Application-{appName}-{profile}（如：Application-xxx-dev）
+     * 2. 远程配置中心：Application-{appName}（如：Application-xxx）
+     * 3. spring.profiles.include 指定的配置（带环境后缀）：application-{name}-{profile}.yml
+     * 4. spring.profiles.include 指定的配置（不带环境后缀）：application-{name}.yml
+     * </p>
+     *
+     * @param environment 环境对象
+     * @param configCenter 配置中心实例
+     * @param active 激活的环境
      */
     private void loadConfigurations(ConfigurableEnvironment environment, ConfigCenter configCenter, String active) {
+        // 1. 优先加载默认的 Application 配置（基于 spring.application.name）
+        String applicationName = environment.getProperty("spring.application.name");
+        if (StringUtils.isNotEmpty(applicationName) && StringUtils.isNotEmpty(active)) {
+            // 1.1 优先加载 Application-{appName}-{profile}（远程配置中心，带环境后缀）
+            String appConfigWithProfile = "Application-%s-%s".formatted(applicationName, active);
+            loadConfigIfExists(environment, configCenter, appConfigWithProfile);
+            
+            // 1.2 加载 Application-{appName}（远程配置中心，不带环境后缀）
+            String appConfig = "Application-%s".formatted(applicationName);
+            loadConfigIfExists(environment, configCenter, appConfig);
+        }
+        
+        // 2. 加载 spring.profiles.include 指定的配置
         String include = environment.getProperty("spring.profiles.include");
+        if (StringUtils.isEmpty(include)) {
+            return;
+        }
+        
         List<String> strings = Splitter.on(",").trimResults().omitEmptyStrings().splitToList(include);
         List<String> loaded = new ArrayList<>(strings.size());
         
-        // 优先加载带环境后缀的配置
+        // 2.1 优先加载带环境后缀的配置
         for (String string : strings) {
             String newName = "application-%s-%s.yml".formatted(string, active);
             Map<String, Object> stringObjectMap = configCenter.get(newName);
@@ -119,7 +147,7 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
             loaded.add(string);
         }
         
-        // 加载不带环境后缀的配置
+        // 2.2 加载不带环境后缀的配置
         for (String string : strings) {
             if (loaded.contains(string)) {
                 log.debug("[配置中心]已加载: {}-{}, 忽略{}", string, active, string);
@@ -136,6 +164,26 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
             LOADED_CONFIG_NAMES.add(newName);
             log.info("[配置中心]加载配置: {}", newName);
         }
+    }
+
+    /**
+     * 加载配置文件（如果存在）
+     *
+     * @param environment 环境对象
+     * @param configCenter 配置中心实例
+     * @param configName 配置名称
+     */
+    private void loadConfigIfExists(ConfigurableEnvironment environment, ConfigCenter configCenter, String configName) {
+        Map<String, Object> configMap = configCenter.get(configName);
+        if (configMap == null || configMap.isEmpty()) {
+            log.debug("[配置中心]配置不存在，跳过: {}", configName);
+            return;
+        }
+
+        environment.getPropertySources()
+                .addLast(new OriginTrackedMapPropertySource(configName, configMap));
+        LOADED_CONFIG_NAMES.add(configName);
+        log.info("[配置中心]加载配置: {}", configName);
     }
 
     /**

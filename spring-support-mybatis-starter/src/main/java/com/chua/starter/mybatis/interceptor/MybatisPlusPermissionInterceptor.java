@@ -1,4 +1,4 @@
-package com.chua.starter.mybatis.interceptor;
+﻿package com.chua.starter.mybatis.interceptor;
 
 import com.baomidou.mybatisplus.core.toolkit.PluginUtils;
 import com.baomidou.mybatisplus.extension.parser.JsqlParserSupport;
@@ -13,6 +13,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.statement.delete.Delete;
 import net.sf.jsqlparser.statement.select.PlainSelect;
@@ -32,9 +33,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 数据拦截器
+ * 数据权限拦截器
+ * 用于在执行查询时自动添加数据权限过滤条件
+ *
  * @author CH
  */
+@Slf4j
 @Data
 @NoArgsConstructor
 @ToString(callSuper = true)
@@ -49,7 +53,14 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
     }
 
     /**
-     * 主要处理查询
+     * 查询前置处理，解析SQL并添加数据权限条件
+     *
+     * @param executor      执行器
+     * @param ms           MappedStatement对象
+     * @param parameter    参数对象
+     * @param rowBounds    行边界
+     * @param resultHandler 结果处理器
+     * @param boundSql     BoundSql对象
      */
     @Override
     public void beforeQuery(Executor executor, MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
@@ -60,26 +71,60 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
     }
 
     /**
-     * 操作前置处理，可以在这里改改sql啥的
+     * 操作前置处理
+     *
+     * @param sh                  StatementHandler对象
+     * @param connection          数据库连接
+     * @param transactionTimeout 事务超时时间
      */
     @Override
     public void beforePrepare(StatementHandler sh, Connection connection, Integer transactionTimeout) {
         InnerInterceptor.super.beforePrepare(sh, connection, transactionTimeout);
     }
 
+    /**
+     * 处理删除语句
+     *
+     * @param delete Delete语句对象
+     * @param index  索引
+     * @param sql    SQL语句
+     * @param obj    对象
+     */
     @Override
     protected void processDelete(Delete delete, int index, String sql, Object obj) {
         super.processDelete(delete, index, sql, obj);
     }
 
+    /**
+     * 处理更新语句
+     *
+     * @param update Update语句对象
+     * @param index  索引
+     * @param sql    SQL语句
+     * @param obj    对象
+     */
     @Override
     protected void processUpdate(Update update, int index, String sql, Object obj) {
         super.processUpdate(update, index, sql, obj);
     }
 
+    /**
+     * 处理查询语句，添加数据权限过滤条件
+     *
+     * @param select Select语句对象
+     * @param index  索引
+     * @param sql    SQL语句
+     * @param obj    对象
+     */
     @Override
     protected void processSelect(Select select, int index, String sql, Object obj) {
-        CurrentUser currentUser = SpringBeanUtils.getBean(AuthService.class).getCurrentUser();
+        AuthService authService = SpringBeanUtils.getBean(AuthService.class);
+        if (authService == null) {
+            log.debug("未找到AuthService，跳过数据权限处理");
+            return;
+        }
+
+        CurrentUser currentUser = authService.getCurrentUser();
         if (ObjectUtils.isEmpty(currentUser)) {
             return;
         }
@@ -87,22 +132,38 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
         if (!currentUser.isDept()) {
             return;
         }
+
         Select selectBody = select.getSelectBody();
         try {
             // 单个sql
-            if (selectBody instanceof PlainSelect) {
-                this.setWhere((PlainSelect) selectBody, obj.toString(), currentUser);
+            if (selectBody instanceof PlainSelect plainSelect) {
+                this.setWhere(plainSelect, obj.toString(), currentUser);
             } else if (selectBody instanceof SetOperationList setOperationList) {
                 // 多个sql，用;号隔开，一般不会用到。例如：select * from login;select * from role;
                 List<Select> selects = setOperationList.getSelects();
-                selects.forEach(s -> this.setWhere((PlainSelect) s, obj.toString(), currentUser));
+                selects.forEach(s -> {
+                    if (s.getSelectBody() instanceof PlainSelect ps) {
+                        this.setWhere(ps, obj.toString(), currentUser);
+                    }
+                });
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("处理数据权限异常, mappedStatementId: {}", obj, e);
         }
     }
 
+    /**
+     * 设置WHERE条件，添加数据权限过滤
+     *
+     * @param plainSelect PlainSelect对象
+     * @param mapperId    Mapper方法ID
+     * @param currentUser 当前用户
+     */
     protected void setWhere(PlainSelect plainSelect, String mapperId, CurrentUser currentUser) {
+        if (mybatisPlusPermissionHandler == null) {
+            return;
+        }
+
         if (mybatisPlusPermissionHandler instanceof SelectDataPermissionHandler selectDataPermissionHandler) {
             selectDataPermissionHandler.processSelect(plainSelect, plainSelect.getWhere(), mapperId, currentUser);
         } else {

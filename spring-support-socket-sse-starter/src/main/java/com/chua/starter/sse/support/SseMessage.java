@@ -1,4 +1,4 @@
-package com.chua.starter.sse.support;
+﻿package com.chua.starter.sse.support;
 
 import lombok.Builder;
 import lombok.Data;

@@ -1,4 +1,7 @@
 package com.chua.starter.common.support.api.response;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 import com.chua.common.support.annotations.IgnoreReturnType;
 import com.chua.common.support.http.ContentDisposition;
@@ -11,7 +14,6 @@ import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import com.chua.starter.common.support.api.properties.ApiProperties;
 import jakarta.annotation.Resource;
 import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.core.MethodParameter;
@@ -46,9 +48,10 @@ import static com.chua.common.support.utils.ClassUtils.isAssignableFrom;
  * @version 1.0.0
  */
 @RestControllerAdvice
-@Slf4j
 @SuppressWarnings("ALL")
 public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>, EnvironmentAware {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ApiUniformResponseBodyAdvice.class);
+
 
     /**
      * 忽略包装的URL关键字

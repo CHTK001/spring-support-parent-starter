@@ -1,8 +1,6 @@
 package com.chua.starter.common.support.exception;
 
 import com.chua.common.support.lang.code.ResultCode;
-import lombok.Getter;
-
 /**
  * 自定义业务异常
  * <p>
@@ -14,7 +12,6 @@ import lombok.Getter;
  * @since 2022/7/31
  * @version 1.0.0
  */
-@Getter
 public class BusinessException extends RuntimeException {
 
     /**
@@ -59,6 +56,16 @@ public class BusinessException extends RuntimeException {
     public BusinessException(Throwable cause) {
         super(cause);
     }
+    /**
+     * 获取 resultCode
+     *
+     * @return resultCode
+     */
+    public ResultCode getResultCode() {
+        return resultCode;
+    }
+
+
 
 }
 

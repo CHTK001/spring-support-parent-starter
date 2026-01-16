@@ -1,4 +1,4 @@
-package com.chua.starter.mybatis.permission;
+﻿package com.chua.starter.mybatis.permission;
 
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.chua.starter.common.support.constant.DataFilterTypeEnum;
@@ -108,6 +108,8 @@ public abstract class AbstractDeptRegister implements DeptRegister {
             select.setFromItem(deptTable);
 
             // 创建函数表达式 - find_in_set
+            // 性能警告：find_in_set 函数无法使用索引，性能较差
+            // 建议：使用 TableDeptRegister，它使用 LIKE 前缀查询，可以利用索引
             Function function = new Function();
             function.setName("find_in_set");
             ExpressionList params = new ExpressionList<>();

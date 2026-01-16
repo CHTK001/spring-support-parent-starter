@@ -1,4 +1,4 @@
-package com.chua.report.client.starter.job.thread;
+﻿package com.chua.report.client.starter.job.thread;
 
 import com.chua.report.client.starter.job.handler.JobHandler;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;

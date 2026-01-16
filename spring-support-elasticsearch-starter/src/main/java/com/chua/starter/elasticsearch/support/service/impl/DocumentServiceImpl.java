@@ -1,4 +1,4 @@
-package com.chua.starter.elasticsearch.support.service.impl;
+﻿package com.chua.starter.elasticsearch.support.service.impl;
 
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.json.Json;

@@ -1,4 +1,4 @@
-package com.chua.starter.elasticsearch.support;
+﻿package com.chua.starter.elasticsearch.support;
 
 import com.chua.starter.elasticsearch.support.properties.ElasticSearchProperties;
 import com.chua.starter.elasticsearch.support.service.impl.DocumentServiceImpl;

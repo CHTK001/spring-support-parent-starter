@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Spring Support Swagger2 Starter - Swagger 2.x 兼容模块
+
+    提供 Swagger 2.x 注解支持，用于兼容使用老版本 Swagger 的项目。
+    该模块仅提供 Swagger 2.x 的注解依赖，不包含 Swagger UI 等运行时组件。
+
+    使用场景：
+    - 需要兼容使用 @Api、@ApiOperation、@ApiParam 等 Swagger 2.x 注解的老项目
+    - 与 spring-support-swagger-starter（Swagger 3.x）可以同时使用
+    - 通过反射机制，common-starter 中的日志组件可以自动识别 Swagger 2.x 注解
+
+    @author CH
+    @version 4.0.0.35
+-->
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.chua</groupId>
+    <artifactId>spring-support-parent-starter</artifactId>
+    <version>4.0.0.35</version>
+  </parent>
+  <artifactId>spring-support-swagger2-starter</artifactId>
+  <version>4.0.0.35</version>
+  <description>Swagger 2.x 兼容模块，提供 Swagger 2.x 注解支持</description>
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  <properties>
+    <maven.compiler.target>21</maven.compiler.target>
+    <maven.compiler.source>21</maven.compiler.source>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+  <dependencies>
+    <dependency>
+      <groupId>io.swagger</groupId>
+      <artifactId>swagger-annotations</artifactId>
+      <version>1.6.14</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-autoconfigure</artifactId>
+    </dependency>
+  </dependencies>
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+        <configuration>
+          <source>21</source>
+          <target>21</target>
+          <encoding>UTF-8</encoding>
+          <proc>full</proc>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+              <version>1.18.36</version>
+            </path>
+          </annotationProcessorPaths>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

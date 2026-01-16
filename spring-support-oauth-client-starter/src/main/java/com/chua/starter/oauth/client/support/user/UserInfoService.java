@@ -1,7 +1,7 @@
-package com.chua.starter.oauth.client.support.user;
+﻿package com.chua.starter.oauth.client.support.user;
 
 
-import com.chua.common.support.annotations.Spi;
+import com.chua.common.support.core.annotation.Spi;
 
 /**
  * 用户信息服务接口

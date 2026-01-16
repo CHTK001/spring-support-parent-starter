@@ -1,4 +1,7 @@
 package com.chua.starter.common.support.api.interceptor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.code.ReturnResult;
@@ -17,8 +20,6 @@ import com.chua.starter.common.support.api.properties.ApiProperties;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.ClassPathResource;
@@ -40,9 +41,30 @@ import java.util.regex.Pattern;
  * @since 2024/12/08
  * @version 1.0.0
  */
-@Slf4j
-@RequiredArgsConstructor
 public class ApiControlInterceptor implements HandlerInterceptor {
+    /**
+     * 构造函数
+     *
+     * @param apiProperties ApiProperties
+     * @param environment Environment
+     * @param featureManager ApiFeatureManager
+     * @param grayEvaluator ApiGrayEvaluator
+     * @param PRIVATE_IP_PATTERN Pattern
+     * @param VERSION_PATTERN Pattern
+     * @param ATTR_SKIP_AUTH String
+     */
+    public ApiControlInterceptor(ApiProperties apiProperties, Environment environment, ApiFeatureManager featureManager, ApiGrayEvaluator grayEvaluator, Pattern PRIVATE_IP_PATTERN, Pattern VERSION_PATTERN, String ATTR_SKIP_AUTH) {
+        this.apiProperties = apiProperties;
+        this.environment = environment;
+        this.featureManager = featureManager;
+        this.grayEvaluator = grayEvaluator;
+        this.PRIVATE_IP_PATTERN = PRIVATE_IP_PATTERN;
+        this.VERSION_PATTERN = VERSION_PATTERN;
+        this.ATTR_SKIP_AUTH = ATTR_SKIP_AUTH;
+    }
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ApiControlInterceptor.class);
+
 
     private final ApiProperties apiProperties;
     private final Environment environment;

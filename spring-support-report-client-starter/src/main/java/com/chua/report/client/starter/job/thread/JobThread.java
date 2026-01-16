@@ -1,4 +1,4 @@
-package com.chua.report.client.starter.job.thread;
+﻿package com.chua.report.client.starter.job.thread;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.report.client.starter.job.JobReporter;

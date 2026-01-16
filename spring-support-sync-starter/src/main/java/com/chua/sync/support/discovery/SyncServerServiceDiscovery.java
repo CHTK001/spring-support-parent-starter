@@ -1,4 +1,4 @@
-package com.chua.sync.support.discovery;
+﻿package com.chua.sync.support.discovery;
 
 import com.chua.common.support.discovery.Discovery;
 import com.chua.common.support.discovery.ServiceDiscovery;

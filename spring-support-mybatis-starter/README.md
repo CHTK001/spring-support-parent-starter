@@ -20,7 +20,7 @@ Spring Support MyBatis Starter 是一个基于MyBatis Plus的增强ORM模块，�
 
 ### 🔒 数据安全
 - 乐观锁并发控制
-- 数据权限控制
+- 数据权限控制（支持声明式注解，多种权限类型，多表关联场景）
 - 多租户数据隔离
 - 逻辑删除支持
 
@@ -28,7 +28,7 @@ Spring Support MyBatis Starter 是一个基于MyBatis Plus的增强ORM模块，�
 - SQL执行监控
 - 性能分析
 - 操作审计日志
-- Mapper热重载
+- Mapper XML热重载（支持文件监听自动重载）
 
 ### 🏗️ 代码生成
 - 根据数据库表生成实体类
@@ -70,7 +70,10 @@ plugin:
     open-xml-reload: true              # 启用XML热重载
     data-scope:
       enable: true                     # 启用数据权限
-      tenant-enable: true              # 启用多租户
+      table-name: "sys_dept"           # 部门表名
+      dept-id-column: "sys_dept_id"    # 部门ID字段名
+      dept-tree-id-column: "sys_dept_tree_id"  # 部门树ID字段名
+      current-user-id-column: "create_by"      # 当前用户ID字段名
 ```
 
 ## 📋 详细功能说明
@@ -221,33 +224,154 @@ public class UserService extends ServiceImpl<UserMapper, User> {
 
 ### 3. 数据权限控制
 
+数据权限功能提供了声明式的数据访问控制，支持基于部门、用户的数据过滤，确保用户只能访问其权限范围内的数据。
+
+#### 功能特性
+
+- **声明式控制**：通过 `@DataScope` 注解轻松控制数据权限
+- **多种权限类型**：支持全部可见、本人可见、部门可见、部门及子级可见、指定部门可见、自定义权限
+- **多表关联支持**：支持通过 `deptAlias` 和 `userAlias` 指定表别名，适用于复杂多表查询
+- **性能优化**：使用 LIKE 前缀查询替代 `find_in_set`，可以利用数据库索引提升性能
+- **灵活配置**：支持方法级别和类级别的注解，可灵活控制每个方法的数据权限
+
 #### 启用数据权限
 
 ```yaml
 plugin:
   mybatis-plus:
     data-scope:
-      enable: true
-      tenant-enable: true
-      tenant-column: "tenant_id"  # 租户字段
-      ignore-tables:              # 忽略多租户的表
-        - "sys_config"
-        - "sys_dict"
+      enable: true                    # 是否启用数据权限
+      table-name: "sys_dept"          # 部门表名
+      dept-id-column: "sys_dept_id"   # 部门ID字段名
+      dept-tree-id-column: "sys_dept_tree_id"  # 部门树ID字段名（用于部门及子级查询）
+      current-user-id-column: "create_by"      # 当前用户ID字段名
 ```
 
+#### 数据权限类型
+
+| 类型 | 枚举值 | 说明 | SQL示例 |
+|------|--------|------|---------|
+| 全部可见 | `ALL` | 不进行数据权限过滤 | 无限制条件 |
+| 本人可见 | `SELF` | 只能查看自己创建的数据 | `WHERE create_by = 'currentUserId'` |
+| 所在部门可见 | `DEPT` | 只能查看所在部门的数据 | `WHERE sys_dept_id = currentDeptId` |
+| 所在部门及子级可见 | `DEPT_AND_SUB` | 可查看所在部门及所有子部门的数据 | `WHERE sys_dept_id IN (SELECT sys_dept_id FROM sys_dept WHERE sys_dept_tree_id LIKE 'currentDeptTreeId%')` |
+| 选择的部门可见 | `DEPT_SETS` | 可查看指定部门列表的数据 | `WHERE sys_dept_id IN (deptId1, deptId2, ...)` |
+| 自定义 | `CUSTOM` | 本人数据 + 指定部门数据 | `WHERE (create_by = 'currentUserId' OR sys_dept_id IN (...))` |
+
 #### 使用数据权限注解
+
+**基础用法**
+
+```java
+@Mapper
+public interface UserMapper extends BaseMapper<User> {
+    
+    /**
+     * 使用用户当前的数据权限（默认）
+     * 会根据用户登录时的数据权限类型自动过滤
+     */
+    @DataScope
+    List<User> selectUserList();
+    
+    /**
+     * 强制使用指定的数据权限类型
+     */
+    @DataScope(value = DataFilterTypeEnum.DEPT, useUserPermission = false)
+    List<User> selectDeptUserList();
+    
+    /**
+     * 禁用数据权限（管理员查询所有数据）
+     */
+    @DataScope(enabled = false)
+    List<User> selectAllUserList();
+}
+```
+
+**多表关联场景**
+
+当查询涉及多表关联时，可以通过 `deptAlias` 和 `userAlias` 指定表别名：
+
+```java
+@Mapper
+public interface UserMapper extends BaseMapper<User> {
+    
+    /**
+     * 多表关联查询示例
+     * 假设查询语句为：
+     * SELECT u.*, d.dept_name 
+     * FROM sys_user u 
+     * LEFT JOIN sys_dept d ON u.sys_dept_id = d.sys_dept_id
+     * 
+     * 通过 deptAlias="d" 指定部门表别名，userAlias="u" 指定用户表别名
+     */
+    @DataScope(
+        value = DataFilterTypeEnum.DEPT_AND_SUB,
+        deptAlias = "d",  // 部门表别名
+        userAlias = "u"   // 用户表别名
+    )
+    @Select("SELECT u.*, d.dept_name FROM sys_user u " +
+            "LEFT JOIN sys_dept d ON u.sys_dept_id = d.sys_dept_id")
+    List<UserVO> selectUserWithDept();
+}
+```
+
+**类级别注解**
+
+可以在 Mapper 接口上使用 `@DataScope` 注解，作用于该接口的所有方法：
+
+```java
+@DataScope(value = DataFilterTypeEnum.DEPT)
+@Mapper
+public interface UserMapper extends BaseMapper<User> {
+    // 该接口的所有方法默认使用部门权限
+    List<User> selectUserList();
+    
+    // 方法级别注解会覆盖类级别注解
+    @DataScope(value = DataFilterTypeEnum.SELF)
+    List<User> selectMyUserList();
+}
+```
+
+**Service 层使用**
 
 ```java
 @Service
 public class UserService extends ServiceImpl<UserMapper, User> {
     
-    @DataScope(deptAlias = "d", userAlias = "u")
+    /**
+     * Service 层方法会自动应用 Mapper 方法上的 @DataScope 注解
+     */
     public List<User> getUsersByDataScope() {
-        // 会自动添加数据权限条件
-        return this.list();
+        // 会自动应用 UserMapper.selectUserList() 上的数据权限
+        return baseMapper.selectUserList();
     }
 }
 ```
+
+#### 性能优化说明
+
+数据权限功能针对性能进行了优化：
+
+1. **LIKE 前缀查询**：`DEPT_AND_SUB` 类型使用 `LIKE 'treeId%'` 替代 `find_in_set`，可以利用索引
+2. **注解缓存**：`@DataScope` 注解信息会被缓存，避免重复解析
+3. **条件检查**：只有表包含部门ID字段时才应用数据权限，减少不必要的处理
+
+#### 配置属性说明
+
+| 属性 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `enable` | boolean | `false` | 是否启用数据权限功能 |
+| `table-name` | String | `"sys_dept"` | 部门表名 |
+| `dept-id-column` | String | `"sys_dept_id"` | 部门ID字段名 |
+| `dept-tree-id-column` | String | `"sys_dept_tree_id"` | 部门树ID字段名，用于部门及子级查询 |
+| `current-user-id-column` | String | `"create_by"` | 当前用户ID字段名，用于本人可见权限 |
+
+#### 注意事项
+
+1. **表字段要求**：数据权限只对包含 `dept-id-column` 字段的表生效
+2. **用户上下文**：需要实现 `AuthService` 接口提供当前用户信息
+3. **权限数据**：用户对象需要包含 `dataPermission`、`deptId`、`userId` 等字段
+4. **多表查询**：多表关联时必须正确指定 `deptAlias` 和 `userAlias`，否则可能生成错误的SQL
 
 ### 4. 多租户支持
 
@@ -360,7 +484,78 @@ public class CodeGeneratorController {
 }
 ```
 
-### 7. SQL监控
+### 7. Mapper XML热重载
+
+#### 功能说明
+
+Mapper XML热重载功能支持在开发环境中监听Mapper XML文件的变化，自动重新加载到MyBatis配置中，无需重启应用。
+
+#### 配置说明
+
+```yaml
+plugin:
+  mybatis-plus:
+    # 启用XML热重载
+    open-xml-reload: true
+    # 重载类型：AUTO（自动监听）、MANUAL（手动触发）
+    reload-type: AUTO
+    # 监听轮询间隔（毫秒）
+    reload-time: 1000
+    # 配置监听目录
+    reload-directories:
+      - path: "classpath:mapper"           # classpath路径
+        pattern: "*.xml"                    # 文件匹配模式
+        watch-enabled: true                 # 是否启用监听
+      - path: "/path/to/mapper"             # 本地文件系统路径
+        pattern: "**/*Mapper.xml"           # glob模式
+        watch-enabled: true
+```
+
+#### 使用方式
+
+**自动监听模式（AUTO）**：
+- 启动时自动扫描并加载所有Mapper XML文件
+- 自动监听文件系统中的XML文件变化
+- 文件修改后自动触发重载
+
+**手动触发模式（MANUAL）**：
+- 通过API接口手动触发重载
+- 支持按文件名或路径重载
+
+```java
+@RestController
+@RequestMapping("/mapper")
+public class MapperReloadController {
+    
+    @Autowired
+    private Reload mapperReload;
+    
+    /**
+     * 手动重载指定Mapper文件
+     */
+    @PostMapping("/reload")
+    public String reloadMapper(@RequestParam String mapperXml) {
+        return mapperReload.reload(mapperXml);
+    }
+    
+    /**
+     * 列出所有已加载的Mapper文件
+     */
+    @GetMapping("/list")
+    public List<FileInfo> listMappers() {
+        return mapperReload.listFiles();
+    }
+}
+```
+
+#### 注意事项
+
+1. **文件系统限制**：只能监听本地文件系统中的文件，jar包内的资源无法监听
+2. **开发环境使用**：建议仅在开发环境启用，生产环境应关闭
+3. **性能影响**：监听会占用一定系统资源，建议合理设置轮询间隔
+4. **文件路径**：支持classpath和本地文件系统路径，不支持jar包内路径
+
+### 8. SQL监控
 
 #### P6Spy配置
 
@@ -442,12 +637,10 @@ plugin:
     # 数据权限配置
     data-scope:
       enable: true
-      tenant-enable: true
-      tenant-column: "tenant_id"
-      ignore-tables:
-        - "sys_config"
-        - "sys_dict"
-        - "sys_log"
+      table-name: "sys_dept"
+      dept-id-column: "sys_dept_id"
+      dept-tree-id-column: "sys_dept_tree_id"
+      current-user-id-column: "create_by"
       
     # 代码生成配置
     generator:
@@ -479,27 +672,51 @@ public class CustomSqlInjector extends DefaultSqlInjector {
 
 ### 自定义数据权限处理
 
+如果需要自定义数据权限处理逻辑，可以实现 `MultiDataPermissionHandler` 接口：
+
 ```java
 @Component
-public class CustomDataPermissionHandler implements DataPermissionHandler {
+public class CustomDataPermissionHandler implements MultiDataPermissionHandler {
     
     @Override
-    public Expression getSqlSegment(Expression where, String mappedStatementId) {
+    public Expression getSqlSegment(Table table, Expression where, String mappedStatementId) {
         // 根据当前用户权限生成SQL条件
-        String currentUser = getCurrentUser();
-        UserPermission permission = getUserPermission(currentUser);
+        AuthService authService = SpringBeanUtils.getBean(AuthService.class);
+        CurrentUser currentUser = authService.getCurrentUser();
         
-        if (permission.isAdmin()) {
-            return where; // 管理员不限制
+        if (currentUser == null || currentUser.isAdmin()) {
+            return null; // 管理员或未登录用户不限制
         }
         
-        // 普通用户只能查看自己的数据
-        Expression userCondition = new EqualsTo(
-            new Column("create_by"), 
-            new StringValue(currentUser)
-        );
+        // 自定义权限逻辑
+        DataFilterTypeEnum dataPermission = currentUser.getDataPermission();
+        if (dataPermission == DataFilterTypeEnum.SELF) {
+            EqualsTo userCondition = new EqualsTo();
+            userCondition.setLeftExpression(new Column(table, "create_by"));
+            userCondition.setRightExpression(new StringValue(currentUser.getUserId()));
+            return where == null ? userCondition : new AndExpression(where, userCondition);
+        }
         
-        return where == null ? userCondition : new AndExpression(where, userCondition);
+        return null;
+    }
+}
+```
+
+然后在配置类中注册自定义处理器：
+
+```java
+@Configuration
+public class MybatisPlusConfiguration {
+    
+    @Bean
+    @ConditionalOnMissingBean
+    public DataPermissionInterceptor dataPermissionInterceptor(
+            @Autowired(required = false) MultiDataPermissionHandler dataPermissionHandler,
+            MybatisPlusDataScopeProperties dataScopeProperties) {
+        if (dataPermissionHandler == null) {
+            dataPermissionHandler = new MybatisPlusDataPermissionHandler(dataScopeProperties);
+        }
+        return new MybatisPlusDataPermissionInterceptor(dataPermissionHandler, dataScopeProperties);
     }
 }
 ```
@@ -509,8 +726,12 @@ public class CustomDataPermissionHandler implements DataPermissionHandler {
 1. **分页性能**：大数据量分页时建议使用游标分页或限制最大页数
 2. **乐观锁**：使用乐观锁时需要在更新操作中包含version字段
 3. **逻辑删除**：逻辑删除的数据仍占用存储空间，需要定期清理
-4. **多租户**：启用多租户后所有表操作都会自动添加租户条件
+4. **数据权限**：
+   - 数据权限只对包含部门ID字段的表生效
+   - 多表关联查询时必须正确指定 `deptAlias` 和 `userAlias`
+   - 确保用户对象包含完整的数据权限信息（`dataPermission`、`deptId`、`userId` 等）
 5. **SQL监控**：生产环境建议关闭详细SQL日志以提高性能
+6. **注解缓存**：`@DataScope` 注解信息会被缓存，修改注解后需要重启应用生效
 
 ## 🐛 故障排除
 

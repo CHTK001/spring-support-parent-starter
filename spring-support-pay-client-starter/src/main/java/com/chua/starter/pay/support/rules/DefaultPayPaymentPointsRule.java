@@ -1,4 +1,4 @@
-package com.chua.starter.pay.support.rules;
+﻿package com.chua.starter.pay.support.rules;
 
 import com.chua.common.support.annotations.SpiDefault;
 import com.chua.starter.pay.support.entity.PayMerchantConfigWechat;

@@ -1,4 +1,4 @@
-package com.chua.starter.mybatis.type;
+﻿package com.chua.starter.mybatis.type;
 
 import com.chua.common.support.function.Joiner;
 import com.chua.common.support.function.Splitter;

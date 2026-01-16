@@ -1,4 +1,4 @@
-package com.chua.socketio.support.server;
+﻿package com.chua.socketio.support.server;
 
 import com.corundumstudio.socketio.Configuration;
 import com.corundumstudio.socketio.SocketIOServer;

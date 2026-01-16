@@ -13,16 +13,11 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.ContextualSerializer;
 import com.google.common.base.Strings;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
-
 import java.io.IOException;
 import java.util.Objects;
 
 /**
  */
-@NoArgsConstructor
-@AllArgsConstructor
 public class CryptoSerializer extends JsonSerializer<String> implements ContextualSerializer {
 
     /**
@@ -34,13 +29,35 @@ public class CryptoSerializer extends JsonSerializer<String> implements Contextu
      * 加解密模式
      */
     private CryptoModule cryptoModule;
+    
     /**
      * 密钥
      */
     private String key;
 
-
     private Crypto.KeyType keyType;
+
+    /**
+     * 无参构造函数
+     */
+    public CryptoSerializer() {
+    }
+
+    /**
+     * 构造函数
+     *
+     * @param cryptoType 加密类型
+     * @param cryptoModule 加解密模式
+     * @param key 密钥
+     * @param keyType 密钥类型
+     */
+    public CryptoSerializer(CryptoType cryptoType, CryptoModule cryptoModule, String key, Crypto.KeyType keyType) {
+        this.cryptoType = cryptoType;
+        this.cryptoModule = cryptoModule;
+        this.key = key;
+        this.keyType = keyType;
+    }
+
 
     @Override
     public void serialize(final String origin, final JsonGenerator jsonGenerator,

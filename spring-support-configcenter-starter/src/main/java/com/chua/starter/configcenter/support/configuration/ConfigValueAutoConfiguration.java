@@ -1,8 +1,10 @@
-package com.chua.starter.configcenter.support.configuration;
+﻿package com.chua.starter.configcenter.support.configuration;
 
 import com.chua.common.support.config.ConfigCenter;
+import com.chua.starter.common.support.application.ModuleEnvironmentRegistration;
 import com.chua.starter.configcenter.support.holder.ConfigCenterHolder;
 import com.chua.starter.configcenter.support.processor.ConfigValueBeanPostProcessor;
+import com.chua.starter.configcenter.support.processor.ValueAnnotationBeanPostProcessor;
 import com.chua.starter.configcenter.support.properties.ConfigCenterProperties;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +24,6 @@ import org.springframework.context.annotation.Configuration;
  * @author CH
  * @since 2024-12-05
  * @version 1.0.0
-@ConditionalOnProperty(prefix = "plugin.config-center", name = "enable", havingValue = "true", matchIfMissing = false)
  */
 @Slf4j
 @Configuration
@@ -68,11 +69,48 @@ public class ConfigValueAutoConfiguration {
         boolean hotReloadEnabled = properties.getHotReload().isEnabled() 
                 && properties.getHotReload().isConfigValueAnnotationEnabled();
         boolean supportListener = configCenter != null && configCenter.isSupportListener();
+        long refreshDelayMs = properties.getHotReload().getRefreshDelayMs();
         
         log.info("[ConfigCenter] 注册 ConfigValue 后置处理器, 热更新功能: {}", 
                 (hotReloadEnabled && supportListener) ? "已启用" : "未启用");
         
-        return new ConfigValueBeanPostProcessor(configCenter, hotReloadEnabled);
+        return new ConfigValueBeanPostProcessor(configCenter, hotReloadEnabled, refreshDelayMs, properties.getHotReload().isLogOnChange());
+    }
+
+    /**
+     * 创建 @Value 注解 Bean 后置处理器
+     * <p>
+     * 负责扫描 @Value 注解并注册热更新监听和配置缓存。
+     * </p>
+     *
+     * @param configCenter 配置中心
+     * @param properties   配置属性
+     * @return Bean后置处理器
+     */
+    @Bean
+    public ValueAnnotationBeanPostProcessor valueAnnotationBeanPostProcessor(
+            ConfigCenter configCenter, 
+            ConfigCenterProperties properties) {
+        boolean hotReloadEnabled = properties.getHotReload().isEnabled() 
+                && properties.getHotReload().isValueAnnotationEnabled();
+        boolean supportListener = configCenter != null && configCenter.isSupportListener();
+        long refreshDelayMs = properties.getHotReload().getRefreshDelayMs();
+        
+        log.info("[ConfigCenter] 注册 @Value 后置处理器, 热更新功能: {}", 
+                (hotReloadEnabled && supportListener) ? "已启用" : "未启用");
+        
+        return new ValueAnnotationBeanPostProcessor(configCenter, hotReloadEnabled, refreshDelayMs);
+    }
+
+    /**
+     * 注册配置中心属性到全局环境
+     *
+     * @param properties 配置中心属性
+     * @return 模块环境注册器
+     */
+    @Bean
+    public ModuleEnvironmentRegistration configCenterModuleEnvironment(ConfigCenterProperties properties) {
+        return new ModuleEnvironmentRegistration(ConfigCenterProperties.PRE, properties, properties.isEnable());
     }
 
     /**

@@ -1,6 +1,6 @@
-package com.chua.report.client.starter.job.handler;
+﻿package com.chua.report.client.starter.job.handler;
 
-import com.chua.common.support.annotations.Spi;
+import com.chua.common.support.core.annotation.Spi;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.Method;

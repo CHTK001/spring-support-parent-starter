@@ -1,9 +1,10 @@
 package com.chua.starter.common.support.utils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.StringUtils;
-import lombok.extern.slf4j.Slf4j;
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -17,8 +18,9 @@ import java.util.stream.Collectors;
  * @author CH
  * @since 2024/12/04
  */
-@Slf4j
 public class SignUtils {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(SignUtils.class);
+
 
     /**
      * 默认的参数连接符

@@ -1,4 +1,4 @@
-package com.chua.starter.mybatis.interceptor;
+﻿package com.chua.starter.mybatis.interceptor;
 
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.executor.resultset.ResultSetHandler;

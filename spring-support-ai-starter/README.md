@@ -4,14 +4,29 @@ AI深度学习功能模块，提供企业级应用中常用的AI能力。
 
 ## 功能特性
 
+### 图像处理能力
 - **人脸检测** - 检测图片中的人脸位置
 - **人脸特征值** - 提取人脸特征向量，支持人脸比对
 - **图片检测** - 检测图片中的物体
 - **图片特征值** - 提取图片特征向量
-- **文本特征值** - 提取文本特征向量
 - **OCR识别** - 光学字符识别
 - **版面分析** - 文档版面结构分析
 - **性别年龄** - 人脸性别年龄检测
+
+### 设计特点
+- **链式API** - 提供流畅的调用体验
+- **多模式支持** - 同步、异步、响应式三种调用模式
+- **类型安全** - 强类型的结果对象
+- **易于扩展** - 基于SPI机制，支持自定义实现
+- **MCP支持** - 支持MCP（Model Context Protocol）前后置处理器，可扩展LLM对话能力
+
+## 注意事项
+
+⚠️ **重要说明**：
+- `AiChat`类主要用于**图像处理**功能，非LLM对话功能
+- 如需LLM对话能力，建议使用专门的ChatClient实现
+- `ChatClient`支持MCP（Model Context Protocol）前后置处理器，可通过SPI机制扩展
+- `AiClient`提供身份识别功能的简化操作接口，封装了`IdentificationEngine`
 
 ## 快速开始
 
@@ -139,7 +154,45 @@ AiChat.of(aiService)
     .subscribe(text -> System.out.println("识别结果: " + text));
 ```
 
-### 6. 直接使用AiService
+### 6. 使用AiClient（身份识别简化接口）
+
+```java
+@Autowired
+private IdentificationEngine identificationEngine;
+
+// 创建AiClient
+AiClient aiClient = AiClient.builder()
+    .engine(identificationEngine)
+    .build();
+
+// 人脸检测
+FaceDetectionResult faces = aiClient.detectFaces(imageBytes);
+
+// 提取人脸特征
+FeatureResult feature = aiClient.extractFaceFeature(imageFile);
+
+// 人脸比对
+float similarity = aiClient.compareFaces(image1, image2);
+```
+
+### 7. 使用ChatClient（支持MCP前后置处理）
+
+```java
+// 创建基础ChatClient
+ChatClient baseClient = ChatClient.create("openai", "your-api-key");
+
+// 使用Builder构建带MCP处理的ChatClient
+ChatClient chatClient = ChatClient.builder()
+    .client(baseClient)
+    .withPreprocessors()  // 自动加载MCP前置处理器
+    .withPostprocessors() // 自动加载MCP后置处理器
+    .build();
+
+// 使用ChatClient（会自动执行MCP前后置处理）
+String response = chatClient.chat("你好", new ChatContext());
+```
+
+### 8. 直接使用AiService
 
 ```java
 @Autowired
@@ -181,6 +234,25 @@ float similarity = feature1.cosineSimilarity(feature2);
 | `ocr(byte[]/File/InputStream)` | OCR识别 |
 | `analyzeLayout(byte[]/File)` | 版面分析 |
 
+### AiClient接口（身份识别简化接口）
+
+| 方法 | 说明 |
+|------|------|
+| `detectFaces(byte[]/File)` | 人脸检测 |
+| `extractFaceFeature(byte[]/File)` | 人脸特征提取 |
+| `compareFaces(byte[]/File, byte[]/File)` | 人脸比对，返回相似度（0-1） |
+
+### ChatClient接口（支持MCP）
+
+| 方法 | 说明 |
+|------|------|
+| `chat(String message)` | 发送聊天消息 |
+| `chat(String message, ChatContext context)` | 发送聊天消息（带上下文） |
+| `Builder.client(ChatClient)` | 设置基础ChatClient实现 |
+| `Builder.withPreprocessors()` | 自动加载MCP前置处理器 |
+| `Builder.withPostprocessors()` | 自动加载MCP后置处理器 |
+| `Builder.build()` | 构建带MCP处理的ChatClient |
+
 ### AiChat链式API
 
 | 方法 | 说明 |
@@ -201,6 +273,8 @@ float similarity = feature1.cosineSimilarity(feature2);
 
 ## 扩展
 
+### 自定义AI服务实现
+
 如需自定义AI服务实现，可实现`AiService`接口并注册为Spring Bean：
 
 ```java
@@ -210,7 +284,86 @@ public AiService customAiService() {
 }
 ```
 
+### MCP前后置处理器扩展
+
+框架支持通过SPI机制扩展MCP前后置处理器：
+
+```java
+// 实现MCP前置处理器
+@Component
+public class CustomMcpPreprocessor implements McpPreprocessor {
+    
+    @Override
+    public int getPriority() {
+        return 100; // 优先级，数字越小优先级越高
+    }
+    
+    @Override
+    public String preprocess(String rawInput, ChatContext context) {
+        // 自定义预处理逻辑
+        return rawInput.trim();
+    }
+}
+
+// 实现MCP后置处理器
+@Component
+public class CustomMcpPostprocessor implements McpPostprocessor {
+    
+    @Override
+    public int getPriority() {
+        return 100;
+    }
+    
+    @Override
+    public String postprocess(String rawOutput, ChatContext context) {
+        // 自定义后处理逻辑
+        return rawOutput;
+    }
+}
+```
+
+### SPI扩展机制
+
+框架基于SPI机制支持多种AI服务提供商，可通过配置文件指定：
+
+```yaml
+spring:
+  ai:
+    face-detection:
+      provider: baidu  # 支持 default, baidu, megvii, sensetime
+    ocr:
+      provider: paddleocr  # 支持 default, baidu, tesseract, paddleocr
+    image:
+      provider: aliyun  # 支持 default, baidu, aliyun
+    text:
+      provider: openai  # 支持 default, openai, baidu
+```
+
+## MCP支持说明
+
+### 架构设计
+
+- **底层接口**：`utils-support-deeplearning-starter` 提供通用的MCP接口（`com.chua.deeplearning.support.ml.bigmodel.mcp.McpPreprocessor`、`McpPostprocessor`）
+- **Spring层适配**：`spring-support-ai-starter` 提供Spring层的适配接口，通过`ChatContextAdapter`进行上下文转换
+- **自动加载**：通过SPI机制自动发现和加载MCP处理器，支持优先级排序
+
+### ChatClient MCP支持
+
+- ✅ **支持前置处理器**：在LLM处理前对输入进行预处理
+- ✅ **支持后置处理器**：在LLM处理后对输出进行后处理
+- ✅ **优先级排序**：处理器按优先级顺序执行
+- ✅ **异常处理**：单个处理器异常不影响整体流程
+- ✅ **上下文传递**：支持上下文信息在处理器间传递
+
+### 使用建议
+
+1. **合理使用优先级**：根据业务需求设置处理器优先级
+2. **异常处理**：确保处理器内部异常不会影响主流程
+3. **性能考虑**：避免在处理器中执行耗时操作
+4. **上下文管理**：合理使用上下文传递必要信息
+
 ## 依赖
 
-- utils-support-deeplearning-starter
-- utils-support-common-starter
+- utils-support-deeplearning-starter - 深度学习工具库
+- utils-support-common-starter - 通用工具类库
+- reactor-core (可选) - 响应式编程支持

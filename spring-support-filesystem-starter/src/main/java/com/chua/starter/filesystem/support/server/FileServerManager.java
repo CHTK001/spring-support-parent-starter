@@ -1,4 +1,4 @@
-package com.chua.starter.filesystem.support.server;
+﻿package com.chua.starter.filesystem.support.server;
 
 import com.chua.common.support.oss.FileStorage;
 import com.chua.common.support.protocol.ServerSetting;

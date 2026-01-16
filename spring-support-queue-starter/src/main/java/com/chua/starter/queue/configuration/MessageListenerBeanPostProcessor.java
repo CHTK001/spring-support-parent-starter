@@ -1,4 +1,4 @@
-package com.chua.starter.queue.configuration;
+﻿package com.chua.starter.queue.configuration;
 
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.utils.StringUtils;

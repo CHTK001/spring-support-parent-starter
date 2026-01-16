@@ -1,9 +1,11 @@
 package com.chua.starter.common.support.api.configuration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 import com.chua.starter.common.support.configuration.resolver.VersionArgumentResolver;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -25,8 +27,9 @@ import java.util.Collections;
  * @version 1.0.0
  * @since 2024/06/21
  */
-@Slf4j
 public class ApiFilterConfiguration {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ApiFilterConfiguration.class);
+
 
     /**
      * 响应头中的版本字段名

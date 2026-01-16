@@ -35,8 +35,8 @@
 
     <!-- 项目属性配置 -->
     <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -71,6 +71,7 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+            <version>3.5.9</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
@@ -83,8 +84,8 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <source>21</source>  <!-- 源码Java版本 -->
-                    <target>21</target>  <!-- 目标Java版本 -->
+                    <source>25</source>  <!-- 源码Java版本 -->
+                    <target>25</target>  <!-- 目标Java版本 -->
                 </configuration>
             </plugin>
         </plugins>

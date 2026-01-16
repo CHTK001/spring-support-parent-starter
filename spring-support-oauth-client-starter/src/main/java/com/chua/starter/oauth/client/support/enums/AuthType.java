@@ -1,4 +1,4 @@
-
+﻿
 package com.chua.starter.oauth.client.support.enums;
 
 /**

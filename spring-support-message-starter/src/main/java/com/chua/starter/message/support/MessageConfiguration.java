@@ -1,4 +1,4 @@
-package com.chua.starter.message.support;
+﻿package com.chua.starter.message.support;
 
 import com.chua.starter.message.support.properties.MessageProperties;
 import com.chua.starter.message.support.template.MessageTemplate;

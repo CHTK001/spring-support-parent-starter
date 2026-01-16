@@ -1,4 +1,7 @@
 package com.chua.starter.common.support.api.decode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 import com.chua.common.support.json.Json;
 import com.chua.common.support.json.JsonArray;
@@ -6,7 +9,6 @@ import com.chua.common.support.net.UserAgent;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpInputMessage;
@@ -34,9 +36,10 @@ import java.lang.reflect.Type;
  * @version 1.0.0
  */
 @RestControllerAdvice
-@Slf4j
 @SuppressWarnings("ALL")
 public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ApiRequestDecodeBodyAdvice.class);
+
 
     private final ApiRequestDecodeRegister decodeRegister;
     

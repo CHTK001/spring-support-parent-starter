@@ -1,9 +1,10 @@
-package com.chua.starter.datasource.datasource;
+﻿package com.chua.starter.datasource.datasource;
 
 import com.chua.starter.datasource.support.DynamicDataSource;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.calcite.adapter.jdbc.JdbcSchema;
 import org.apache.calcite.jdbc.CalciteConnection;
 import org.apache.calcite.schema.SchemaPlus;
@@ -33,6 +34,7 @@ import java.util.logging.Logger;
  *
  * @author CH
  */
+@Slf4j
 public class MultiDataSource implements DataSource {
     private final List<DataSource> dataSources;
     private final DynamicDataSource dynamicDataSource;
@@ -44,8 +46,6 @@ public class MultiDataSource implements DataSource {
     private final Map<SchemaPlus, SchemaPlus> cache = new ConcurrentHashMap<>();
 
     private PrintWriter printWriter = new PrintWriter(System.out);
-
-    private final Logger logger = Logger.getLogger(DataSource.class.getName());
 
     final Properties info = new Properties();
     private GenericObjectPool<Connection> pool;
@@ -199,7 +199,9 @@ public class MultiDataSource implements DataSource {
 
     @Override
     public Logger getParentLogger() throws SQLFeatureNotSupportedException {
-        return logger;
+        // DataSource接口要求返回java.util.logging.Logger，但实际使用SLF4J
+        // 返回null表示不支持，由SLF4J桥接处理
+        return null;
     }
 
 

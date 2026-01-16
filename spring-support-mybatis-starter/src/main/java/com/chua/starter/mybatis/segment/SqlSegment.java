@@ -1,4 +1,4 @@
-package com.chua.starter.mybatis.segment;
+﻿package com.chua.starter.mybatis.segment;
 
 import net.sf.jsqlparser.expression.Expression;
 

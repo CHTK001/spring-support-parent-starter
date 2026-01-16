@@ -1,4 +1,4 @@
-package com.chua.starter.pay.support.pojo;
+﻿package com.chua.starter.pay.support.pojo;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.chua.common.support.validator.group.AddGroup;

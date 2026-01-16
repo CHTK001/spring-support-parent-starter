@@ -1,4 +1,7 @@
 package com.chua.starter.common.support.serialize;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 import com.chua.common.support.converter.Converter;
 import com.chua.common.support.json.Json;
@@ -8,29 +11,42 @@ import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.node.*;
-
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
 /**
+ * JSON 数组转字符串反序列化器
+ *
  * @author CH
  */
 public class JsonArrayToStringDeserialize extends JsonDeserializer<String> {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(JsonArrayToStringDeserialize.class);
+
 
     @Override
     public String deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JacksonException {
         TreeNode treeNode = p.getCodec().readTree(p);
+        if (log.isTraceEnabled()) {
+            log.trace("[反序列化]使用 JsonArrayToStringDeserialize 反序列化, 节点类型: {}", treeNode.getClass().getSimpleName());
+        }
         if (treeNode.isArray()) {
             Object[] rs = new Object[treeNode.size()];
             for (int i = 0; i < rs.length; i++) {
                 TreeNode treeNode1 = treeNode.get(i);
                 rs[i] = analysisValue(treeNode1);
             }
+            if (log.isTraceEnabled()) {
+                log.trace("[反序列化]数组转字符串完成, 数组长度: {}", rs.length);
+            }
             return Json.toJson(rs);
         }
 
-        return Converter.convertIfNecessary(analysisValue(treeNode), String.class);
+        Object value = analysisValue(treeNode);
+        if (log.isTraceEnabled()) {
+            log.trace("[反序列化]非数组节点转字符串, 值类型: {}", value != null ? value.getClass().getSimpleName() : "null");
+        }
+        return Converter.convertIfNecessary(value, String.class);
     }
 
     public static Object analysisValue(TreeNode treeNode1) {

@@ -1,4 +1,4 @@
-package com.chua.starter.strategy.entity;
+﻿package com.chua.starter.strategy.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
 import io.swagger.v3.oas.annotations.media.Schema;

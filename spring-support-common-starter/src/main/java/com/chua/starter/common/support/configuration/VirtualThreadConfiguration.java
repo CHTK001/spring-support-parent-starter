@@ -1,8 +1,9 @@
 package com.chua.starter.common.support.configuration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 import com.chua.starter.common.support.properties.VirtualThreadProperties;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -58,12 +59,21 @@ import java.util.concurrent.Executors;
  * @author CH
  * @since 4.0.0
  */
-@Slf4j
 @Configuration
 @EnableConfigurationProperties(VirtualThreadProperties.class)
 @ConditionalOnProperty(prefix = VirtualThreadProperties.PREFIX, name = "enabled", havingValue = "true")
-@RequiredArgsConstructor
 public class VirtualThreadConfiguration {
+    /**
+     * 构造函数
+     *
+     * @param properties VirtualThreadProperties
+     */
+    public VirtualThreadConfiguration(VirtualThreadProperties properties) {
+        this.properties = properties;
+    }
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(VirtualThreadConfiguration.class);
+
 
     private final VirtualThreadProperties properties;
 
@@ -90,8 +100,7 @@ public class VirtualThreadConfiguration {
     /**
      * 配置 Undertow 使用虚拟线程处理请求
      */
-    @Slf4j
-    @Configuration
+        @Configuration
     @ConditionalOnClass(name = "io.undertow.Undertow")
     @ConditionalOnProperty(prefix = VirtualThreadProperties.PREFIX, name = "web-enabled", havingValue = "true", matchIfMissing = true)
     static class UndertowVirtualThreadConfiguration {
@@ -113,8 +122,7 @@ public class VirtualThreadConfiguration {
     /**
      * 配置 Jetty 使用虚拟线程处理请求
      */
-    @Slf4j
-    @Configuration
+        @Configuration
     @ConditionalOnClass(name = "org.eclipse.jetty.server.Server")
     @ConditionalOnProperty(prefix = VirtualThreadProperties.PREFIX, name = "web-enabled", havingValue = "true", matchIfMissing = true)
     static class JettyVirtualThreadConfiguration {
@@ -142,8 +150,7 @@ public class VirtualThreadConfiguration {
      * WebFlux 本身是响应式的，但当需要执行阻塞操作时可以使用虚拟线程
      * </p>
      */
-    @Slf4j
-    @Configuration
+        @Configuration
     @ConditionalOnClass(name = "reactor.netty.http.server.HttpServer")
     @ConditionalOnProperty(prefix = VirtualThreadProperties.PREFIX, name = "web-enabled", havingValue = "true", matchIfMissing = true)
     static class NettyVirtualThreadConfiguration {

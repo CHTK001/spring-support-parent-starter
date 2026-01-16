@@ -1,4 +1,4 @@
-package com.chua.report.client.starter.endpoint;
+﻿package com.chua.report.client.starter.endpoint;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.mapping.MappedStatement;

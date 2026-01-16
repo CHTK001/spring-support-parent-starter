@@ -1,4 +1,4 @@
-package com.chua.starter.configcenter.support.holder;
+﻿package com.chua.starter.configcenter.support.holder;
 
 import com.chua.common.support.config.ConfigCenter;
 import lombok.extern.slf4j.Slf4j;

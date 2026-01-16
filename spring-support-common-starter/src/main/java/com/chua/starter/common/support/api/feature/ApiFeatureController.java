@@ -2,10 +2,9 @@ package com.chua.starter.common.support.api.feature;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.common.support.api.annotations.ApiInternal;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
-import lombok.RequiredArgsConstructor;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,8 +25,7 @@ import java.util.Set;
  */
 @RestController
 @RequestMapping("${plugin.api.feature.path:/api/features}")
-@RequiredArgsConstructor
-@Api(tags = "功能开关管理")
+@Tag(name = "功能开关管理")
 @ApiInternal(description = "功能开关管理内部接口")
 @ConditionalOnProperty(name = "plugin.api.feature.enable", havingValue = "true", matchIfMissing = false)
 public class ApiFeatureController {
@@ -35,12 +33,21 @@ public class ApiFeatureController {
     private final ApiFeatureManager featureManager;
 
     /**
+     * 构造函数
+     *
+     * @param featureManager ApiFeatureManager
+     */
+    public ApiFeatureController(ApiFeatureManager featureManager) {
+        this.featureManager = featureManager;
+    }
+
+    /**
      * 获取所有功能开关列表
      *
      * @return 功能开关列表
      */
     @GetMapping
-    @ApiOperation("获取所有功能开关")
+    @Operation(summary = "获取所有功能开关")
     public ReturnResult<List<ApiFeatureInfo>> getAllFeaturesForApi() {
         return ReturnResult.ok(featureManager.getAllFeatures());
     }
@@ -52,9 +59,9 @@ public class ApiFeatureController {
      * @return 功能开关列表
      */
     @GetMapping("/group/{group}")
-    @ApiOperation("按分组获取功能开关")
+    @Operation(summary = "按分组获取功能开关")
     public ReturnResult<List<ApiFeatureInfo>> getFeaturesByGroupForApi(
-            @ApiParam("分组名称") @PathVariable String group) {
+            @Parameter(description = "分组名称") @PathVariable String group) {
         return ReturnResult.ok(featureManager.getFeaturesByGroup(group));
     }
 
@@ -64,7 +71,7 @@ public class ApiFeatureController {
      * @return 分组列表
      */
     @GetMapping("/groups")
-    @ApiOperation("获取所有分组")
+    @Operation(summary = "获取所有分组")
     public ReturnResult<Set<String>> getAllGroupsForApi() {
         return ReturnResult.ok(featureManager.getAllGroups());
     }
@@ -76,9 +83,9 @@ public class ApiFeatureController {
      * @return 功能开关信息
      */
     @GetMapping("/{featureId}")
-    @ApiOperation("获取功能开关详情")
+    @Operation(summary = "获取功能开关详情")
     public ReturnResult<ApiFeatureInfo> getFeatureInfoForApi(
-            @ApiParam("功能标识") @PathVariable String featureId) {
+            @Parameter(description = "功能标识") @PathVariable String featureId) {
         ApiFeatureInfo info = featureManager.getFeatureInfo(featureId);
         if (info == null) {
             return ReturnResult.error("功能开关不存在: " + featureId);
@@ -94,10 +101,10 @@ public class ApiFeatureController {
      * @return 操作结果
      */
     @PutMapping("/{featureId}")
-    @ApiOperation("设置功能开关状态")
+    @Operation(summary = "设置功能开关状态")
     public ReturnResult<Boolean> setFeatureEnabledForApi(
-            @ApiParam("功能标识") @PathVariable String featureId,
-            @ApiParam("是否启用") @RequestParam boolean enabled) {
+            @Parameter(description = "功能标识") @PathVariable String featureId,
+            @Parameter(description = "是否启用") @RequestParam boolean enabled) {
         boolean success = featureManager.setEnabled(featureId, enabled);
         if (!success) {
             return ReturnResult.error("功能开关不存在: " + featureId);
@@ -112,9 +119,9 @@ public class ApiFeatureController {
      * @return 操作结果
      */
     @PutMapping("/batch")
-    @ApiOperation("批量设置功能开关状态")
+    @Operation(summary = "批量设置功能开关状态")
     public ReturnResult<Boolean> setFeatureEnabledBatchForApi(
-            @ApiParam("状态映射") @RequestBody Map<String, Boolean> states) {
+            @Parameter(description = "状态映射") @RequestBody Map<String, Boolean> states) {
         featureManager.setEnabledBatch(states);
         return ReturnResult.ok(true);
     }
@@ -126,9 +133,9 @@ public class ApiFeatureController {
      * @return 操作结果
      */
     @PostMapping("/{featureId}/reset")
-    @ApiOperation("重置功能开关到默认状态")
+    @Operation(summary = "重置功能开关到默认状态")
     public ReturnResult<Boolean> resetFeatureForApi(
-            @ApiParam("功能标识") @PathVariable String featureId) {
+            @Parameter(description = "功能标识") @PathVariable String featureId) {
         featureManager.resetToDefault(featureId);
         return ReturnResult.ok(true);
     }
@@ -139,7 +146,7 @@ public class ApiFeatureController {
      * @return 操作结果
      */
     @PostMapping("/reset-all")
-    @ApiOperation("重置所有功能开关")
+    @Operation(summary = "重置所有功能开关")
     public ReturnResult<Boolean> resetAllFeaturesForApi() {
         featureManager.resetAllToDefault();
         return ReturnResult.ok(true);
@@ -151,7 +158,7 @@ public class ApiFeatureController {
      * @return 统计信息
      */
     @GetMapping("/stats")
-    @ApiOperation("获取功能开关统计")
+    @Operation(summary = "获取功能开关统计")
     public ReturnResult<Map<String, Object>> getFeatureStatsForApi() {
         return ReturnResult.ok(Map.of(
                 "total", featureManager.getFeatureCount(),

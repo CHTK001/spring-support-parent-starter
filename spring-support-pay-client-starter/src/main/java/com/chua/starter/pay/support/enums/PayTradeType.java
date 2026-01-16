@@ -1,4 +1,4 @@
-package com.chua.starter.pay.support.enums;
+﻿package com.chua.starter.pay.support.enums;
 
 import com.chua.starter.swagger.support.SwaggerEnum;
 import lombok.AllArgsConstructor;

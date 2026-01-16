@@ -1,6 +1,6 @@
-package com.chua.starter.pay.support.transfer;
+﻿package com.chua.starter.pay.support.transfer;
 
-import com.chua.common.support.annotations.Spi;
+import com.chua.common.support.core.annotation.Spi;
 import com.chua.common.support.constant.Action;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.objects.annotation.AutoInject;

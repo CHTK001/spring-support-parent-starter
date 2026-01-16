@@ -1,10 +1,12 @@
 package com.chua.starter.common.support.api.encode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 import com.chua.common.support.json.Json;
 import com.chua.common.support.lang.code.ReturnResult;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -25,10 +27,11 @@ import java.nio.charset.StandardCharsets;
  * @author CH
  */
 @RestControllerAdvice
-@Slf4j
 @SuppressWarnings("ALL")
 
 public class ApiResponseEncodeResponseBodyAdvice implements ResponseBodyAdvice<Object> {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ApiResponseEncodeResponseBodyAdvice.class);
+
 
     private final ApiResponseEncodeRegister apiResponseEncodeRegister;
 

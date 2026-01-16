@@ -34,9 +34,9 @@ import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.commons.lang3.StringUtils;
 import org.springdoc.core.models.ControllerAdviceInfo;
 import org.springdoc.core.models.MethodAttributes;
 import org.springdoc.core.parsers.ReturnTypeParser;
@@ -66,7 +66,17 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -76,7 +86,10 @@ import java.util.stream.Stream;
 import static java.util.Arrays.asList;
 import static org.springdoc.core.converters.ConverterUtils.isResponseTypeWrapper;
 import static org.springdoc.core.utils.Constants.DEFAULT_DESCRIPTION;
-import static org.springdoc.core.utils.SpringDocAnnotationsUtils.*;
+import static org.springdoc.core.utils.SpringDocAnnotationsUtils.extractSchema;
+import static org.springdoc.core.utils.SpringDocAnnotationsUtils.getContent;
+import static org.springdoc.core.utils.SpringDocAnnotationsUtils.isAnnotationToIgnore;
+import static org.springdoc.core.utils.SpringDocAnnotationsUtils.mergeSchema;
 
 // ！！！补丁位置 Maven: org.springdoc:springdoc-openapi-starter-common:2.3.0
 // 解决当前 knife4j 4.5 版本依赖的 springdoc 2.3 版本 与 Spring Boot 3.4 不兼容的问题
@@ -88,15 +101,13 @@ import static org.springdoc.core.utils.SpringDocAnnotationsUtils.*;
  */
 public class GenericResponseService implements ApplicationContextAware {
 
+    private static final Logger log = LoggerFactory.getLogger(GenericResponseService.class);
+
     /**
      * This extension name is used to temporary store
      * the exception classes.
      */
     private static final String EXTENSION_EXCEPTION_CLASSES = "x-exception-class";
-    /**
-     * The constant LOGGER.
-     */
-    private static final Logger LOGGER = LoggerFactory.getLogger(GenericResponseService.class);
     /**
      * The Response entity exception handler class.
      */
@@ -708,7 +719,7 @@ public class GenericResponseService implements ApplicationContextAware {
                 genericApiResponsesClone = objectMapper.readValue(objectMapper.writeValueAsString(genericApiResponseMap), ApiResponses.class);
                 return genericApiResponsesClone;
             } catch (JsonProcessingException e) {
-                LOGGER.warn("Json Processing Exception occurred: {}", e.getMessage());
+                log.warn("Json Processing Exception occurred: {}", e.getMessage());
                 return genericApiResponseMap;
             }
         } finally {

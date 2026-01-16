@@ -1,4 +1,4 @@
-package com.chua.starter.pay.support.statemachine;
+﻿package com.chua.starter.pay.support.statemachine;
 
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.statemachine.builder.StateMachineBuilder;

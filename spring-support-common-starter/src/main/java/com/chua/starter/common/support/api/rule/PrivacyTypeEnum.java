@@ -1,13 +1,10 @@
 package com.chua.starter.common.support.api.rule;
 
-import lombok.Getter;
-
 /**
  * 隐私数据类型枚举
  *
  * @author CH
  */
-@Getter
 public enum PrivacyTypeEnum {
     /**
      * 无

@@ -1,9 +1,8 @@
-package com.chua.starter.job.support.scheduler;
+﻿package com.chua.starter.job.support.scheduler;
 
 import com.chua.starter.job.support.entity.SysJob;
 import com.chua.starter.job.support.entity.SysJobLog;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDate;
 import java.util.Date;
@@ -35,8 +34,8 @@ import java.util.Date;
  * @see JobConfig#runLocal
  * @see JobTriggerPoolHelper
  */
+@Slf4j
 public class LocalJobTrigger {
-    private static final Logger logger = LoggerFactory.getLogger(LocalJobTrigger.class);
 
     /**
      * 触发任务
@@ -56,7 +55,7 @@ public class LocalJobTrigger {
         // 加载任务数据
         SysJob jobInfo = JobConfig.getInstance().loadById(jobId);
         if (jobInfo == null) {
-            logger.warn(">>>>>>>>>>>> 任务触发失败, 任务不存在, jobId={}", jobId);
+            log.warn(">>>>>>>>>>>> 任务触发失败, 任务不存在, jobId={}", jobId);
             return;
         }
         if (executorParam != null) {
@@ -86,12 +85,12 @@ public class LocalJobTrigger {
         jobLog.setJobLogExecuteCode("PADDING");
         jobLog.setJobLogTriggerParam(jobInfo.getJobExecuteParam());
         JobConfig.getInstance().saveLog(jobLog);
-        logger.debug(">>>>>>>>>>> 任务触发开始, 日志ID={}", jobLog.getJobLogId());
+        log.debug(">>>>>>>>>>> 任务触发开始, 日志ID={}", jobLog.getJobLogId());
 
         // 2、执行本地任务
         JobConfig.getInstance().runLocal(jobLog, jobInfo);
 
-        logger.debug(">>>>>>>>>>> 任务触发完成, 日志ID={}", jobLog.getJobLogId());
+        log.debug(">>>>>>>>>>> 任务触发完成, 日志ID={}", jobLog.getJobLogId());
     }
 
 }

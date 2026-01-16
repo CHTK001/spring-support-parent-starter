@@ -1,4 +1,4 @@
-package com.chua.starter.sse.support;
+﻿package com.chua.starter.sse.support;
 
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.Builder;

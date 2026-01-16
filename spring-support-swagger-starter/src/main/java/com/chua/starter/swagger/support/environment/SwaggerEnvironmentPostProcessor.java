@@ -9,24 +9,31 @@ import org.springframework.boot.env.EnvironmentPostProcessor;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MutablePropertySources;
 import org.springframework.core.env.PropertiesPropertySource;
-import org.springframework.core.env.PropertySource;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.ReflectionUtils;
 
-import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Properties;
 
 /**
- * freemarker
+ * Swagger环境后处理器
+ * 用于配置Knife4j和SpringDoc的相关属性
  *
  * @author CH
  */
 public class SwaggerEnvironmentPostProcessor implements EnvironmentPostProcessor {
-    private static final String ATTACHED_PROPERTY_SOURCE_NAME = "configurationProperties";
+    
+    /**
+     * 属性源名称
+     */
+    private static final String PROPERTY_SOURCE_NAME = "knife4j-extension";
 
+    /**
+     * 后处理环境
+     *
+     * @param environment 可配置环境
+     * @param application Spring应用
+     */
     @Override
-    @SuppressWarnings("ALL")
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         Properties properties = new Properties();
         properties.setProperty("springdoc.api-docs.enabled", "true");
@@ -35,58 +42,53 @@ public class SwaggerEnvironmentPostProcessor implements EnvironmentPostProcessor
         properties.setProperty("knife4j.enable", "${plugin.swagger.enable:true}");
         properties.setProperty("knife4j.basic.enable", "true");
         properties.setProperty("knife4j.basic.username", "${plugin.swagger.username:root}");
-        Knife4jProperties knife4jProperties = Binder.get(environment).bindOrCreate("plugin.swagger", Knife4jProperties.class);
+        Knife4jProperties knife4jProperties = Binder.get(environment)
+                .bindOrCreate("plugin.swagger", Knife4jProperties.class);
         properties.setProperty("knife4j.basic.password", "${plugin.swagger.password:root123}");
-        List<Knife4jProperties.Knife4j> j = knife4jProperties.getKnife4j();
-        if (!CollectionUtils.isEmpty(j)) {
-            for (int i = 0, jSize = j.size(); i < jSize; i++) {
-                Knife4jProperties.Knife4j knife4j = j.get(i);
-                properties.setProperty("knife4j.documents[" + i + "].group", StringUtils.defaultIfEmpty(knife4j.getGroup(), knife4j.getGroupName()));
-                properties.setProperty("knife4j.documents[" + i + "].name", StringUtils.defaultIfEmpty(knife4j.getGroup(), knife4j.getGroupName()));
+        
+        List<Knife4jProperties.Knife4j> knife4jList = knife4jProperties.getKnife4j();
+        if (!CollectionUtils.isEmpty(knife4jList)) {
+            for (int i = 0; i < knife4jList.size(); i++) {
+                Knife4jProperties.Knife4j knife4j = knife4jList.get(i);
+                String group = StringUtils.defaultIfEmpty(knife4j.getGroup(), knife4j.getGroupName());
+                properties.setProperty("knife4j.documents[" + i + "].group", group);
+                properties.setProperty("knife4j.documents[" + i + "].name", group);
                 properties.setProperty("springdoc.group-configs[" + i + "].group", knife4j.getGroupName());
                 properties.setProperty("springdoc.group-configs[" + i + "].title", knife4j.getTitle());
                 properties.setProperty("springdoc.group-configs[" + i + "].description", knife4j.getDescription());
                 properties.setProperty("springdoc.group-configs[" + i + "].version", knife4j.getVersion());
                 properties.setProperty("springdoc.group-configs[" + i + "].display-name", knife4j.getGroupName());
-                properties.setProperty("springdoc.group-configs[" + i + "].paths-to-match", StringUtils.defaultIfEmpty(joiner(knife4j.getPathsToMatch(), ","), "/**"));
-                properties.setProperty("springdoc.group-configs[" + i + "].packages-to-scan", joiner(knife4j.getBasePackage(), ","));
-//                registerPackages(properties, i, knife4j.getBasePackage());
+                properties.setProperty("springdoc.group-configs[" + i + "].paths-to-match", 
+                        StringUtils.defaultIfEmpty(joinArray(knife4j.getPathsToMatch(), ","), "/**"));
+                properties.setProperty("springdoc.group-configs[" + i + "].packages-to-scan", 
+                        joinArray(knife4j.getBasePackage(), ","));
             }
         }
-        PropertiesPropertySource propertiesPropertySource = new PropertiesPropertySource("knife4j-extension", properties);
+        
+        PropertiesPropertySource propertiesPropertySource = new PropertiesPropertySource(PROPERTY_SOURCE_NAME, properties);
         MutablePropertySources propertySources = environment.getPropertySources();
-        try {
-            PropertySource<?> propertySource = propertySources.get(ATTACHED_PROPERTY_SOURCE_NAME);
-            Iterable<PropertySource<?>> rs = (Iterable<PropertySource<?>>)propertySource.getSource();
-            Field field = ReflectionUtils.findField(rs.getClass(), "sources");
-            ReflectionUtils.makeAccessible(field);
-            MutablePropertySources newPropertySources = (MutablePropertySources) field.get(rs);
-            newPropertySources.addLast(propertiesPropertySource);
-        } catch (IllegalAccessException e) {
-            propertySources.addLast(propertiesPropertySource);
-        }
+        // 直接添加到属性源列表，不需要使用反射
+        propertySources.addLast(propertiesPropertySource);
     }
 
-    private String joiner(String[] basePackage, String s) {
+    /**
+     * 连接字符串数组
+     *
+     * @param array 字符串数组
+     * @param delimiter 分隔符
+     * @return 连接后的字符串
+     */
+    private String joinArray(String[] array, String delimiter) {
+        if (ArrayUtils.isEmpty(array)) {
+            return "";
+        }
         StringBuilder stringBuilder = new StringBuilder();
-        if (ArrayUtils.isEmpty(basePackage)) {
-            return stringBuilder.toString();
+        for (String item : array) {
+            if (stringBuilder.length() > 0) {
+                stringBuilder.append(delimiter);
+            }
+            stringBuilder.append(item);
         }
-        for (String s1 : basePackage) {
-            stringBuilder.append(s1).append(s);
-        }
-        return stringBuilder.substring(0, stringBuilder.length() - 1);
+        return stringBuilder.toString();
     }
-
-    private void registerPackages(Properties properties, int i, String[] basePackage) {
-        if (null == basePackage) {
-            return;
-        }
-        for (int j = 0; j < basePackage.length; j++) {
-            String s = basePackage[j];
-            properties.setProperty("springdoc.group-configs[" + i + "].packages-to-scan[" + j + "]", s);
-        }
-    }
-
-
 }

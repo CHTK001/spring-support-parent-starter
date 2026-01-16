@@ -1,7 +1,9 @@
 package com.chua.starter.common.support.log;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import com.chua.starter.common.support.application.ModuleEnvironmentRegistration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import jakarta.annotation.PostConstruct;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -32,12 +34,29 @@ import org.springframework.context.annotation.Bean;
  * @version 1.0.0
  * @since 2024/06/21
  */
-@Slf4j
-@RequiredArgsConstructor
 @EnableConfigurationProperties({LogProperties.class})
 public class LogConfiguration {
 
+    private static final Logger log = LoggerFactory.getLogger(LogConfiguration.class);
+
     private final LogProperties logProperties;
+
+    /**
+     * 构造函数
+     *
+     * @param logProperties LogProperties
+     */
+    public LogConfiguration(LogProperties logProperties) {
+        this.logProperties = logProperties;
+    }
+
+    /**
+     * 注册日志配置到全局环境
+     */
+    @PostConstruct
+    public void registerEnvironment() {
+        new ModuleEnvironmentRegistration("plugin.log", logProperties, logProperties.isEnable());
+    }
 
     /**
      * 参数日志过滤器

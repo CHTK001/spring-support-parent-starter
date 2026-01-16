@@ -1,27 +1,28 @@
-package com.chua.starter.strategy.template;
+﻿package com.chua.starter.strategy.template;
 
-import io.github.resilience4j.circuitbreaker.CircuitBreaker;
-import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
-import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
-import io.github.resilience4j.ratelimiter.RateLimiter;
-import io.github.resilience4j.ratelimiter.RateLimiterConfig;
-import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
-import io.github.resilience4j.retry.Retry;
-import io.github.resilience4j.retry.RetryConfig;
-import io.github.resilience4j.retry.RetryRegistry;
+import com.chua.common.support.resilience.rate.RateLimiterFlow;
+import com.chua.common.support.resilience.rate.RateLimiterProvider;
+import com.chua.common.support.resilience.rate.RateLimiterSetting;
+import com.chua.common.support.resilience.retry.RetryProvider;
+import com.chua.common.support.resilience.retry.RetrySetting;
+import com.chua.common.support.resilience.retry.RetryerFlow;
+import com.chua.common.support.task.resilience.ResilienceFlow;
+import com.chua.common.support.task.resilience.ResilienceProvider;
+import com.chua.common.support.task.resilience.ResilienceSetting;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
  * 默认策略模板实现
  * <p>
- * 基于 Resilience4j 实现限流、熔断、重试等策略
+ * 基于 utils-parent 下的模块实现限流、熔断、重试等策略
  * </p>
  *
  * @author CH
@@ -30,39 +31,42 @@ import java.util.function.Supplier;
 @Slf4j
 public class DefaultStrategyTemplate implements StrategyTemplate {
 
-    private final RateLimiterRegistry rateLimiterRegistry;
-    private final CircuitBreakerRegistry circuitBreakerRegistry;
-    private final RetryRegistry retryRegistry;
-
+    private final Map<String, RateLimiterProvider> rateLimiterMap = new ConcurrentHashMap<>();
+    private final Map<String, ResilienceProvider> circuitBreakerMap = new ConcurrentHashMap<>();
+    private final Map<String, RetryProvider> retryMap = new ConcurrentHashMap<>();
     private final Map<String, StrategyInfo> strategyInfoMap = new ConcurrentHashMap<>();
     private final Map<String, Map<String, Long>> debounceMap = new ConcurrentHashMap<>();
     private final Map<String, Duration> debounceDurations = new ConcurrentHashMap<>();
 
-    public DefaultStrategyTemplate() {
-        this.rateLimiterRegistry = RateLimiterRegistry.ofDefaults();
-        this.circuitBreakerRegistry = CircuitBreakerRegistry.ofDefaults();
-        this.retryRegistry = RetryRegistry.ofDefaults();
-    }
+    /**
+     * 默认限流器类型
+     */
+    private static final String DEFAULT_RATE_LIMITER_TYPE = "resilience4j";
 
-    public DefaultStrategyTemplate(RateLimiterRegistry rateLimiterRegistry,
-                                   CircuitBreakerRegistry circuitBreakerRegistry,
-                                   RetryRegistry retryRegistry) {
-        this.rateLimiterRegistry = rateLimiterRegistry != null ? rateLimiterRegistry : RateLimiterRegistry.ofDefaults();
-        this.circuitBreakerRegistry = circuitBreakerRegistry != null ? circuitBreakerRegistry : CircuitBreakerRegistry.ofDefaults();
-        this.retryRegistry = retryRegistry != null ? retryRegistry : RetryRegistry.ofDefaults();
-    }
+    /**
+     * 默认熔断器类型
+     */
+    private static final String DEFAULT_RESILIENCE_TYPE = "resilience4j";
+
+    /**
+     * 默认重试器类型
+     */
+    private static final String DEFAULT_RETRY_TYPE = "resilience4j";
 
     // ========== 限流策略 ==========
 
     @Override
     public void registerRateLimiter(String name, RateLimiterStrategyConfig config) {
-        RateLimiterConfig rateLimiterConfig = RateLimiterConfig.custom()
-                .limitForPeriod(config.getLimitForPeriod())
-                .limitRefreshPeriod(config.getLimitRefreshPeriod())
-                .timeoutDuration(config.getTimeoutDuration())
+        RateLimiterSetting setting = RateLimiterSetting.builder()
+                .name(name)
+                .permitsPerSecond(config.getLimitForPeriod())
+                .limitRefreshPeriod(config.getLimitRefreshPeriod().toMillis())
+                .timeoutDuration(config.getTimeoutDuration().toMillis())
+                .rateLimiterType(DEFAULT_RATE_LIMITER_TYPE)
                 .build();
 
-        rateLimiterRegistry.rateLimiter(name, rateLimiterConfig);
+        RateLimiterProvider provider = RateLimiterFlow.createRateLimiter(name, setting);
+        rateLimiterMap.put(name, provider);
 
         strategyInfoMap.put(name, StrategyInfo.builder()
                 .name(name)
@@ -77,7 +81,7 @@ public class DefaultStrategyTemplate implements StrategyTemplate {
 
     @Override
     public void updateRateLimiter(String name, RateLimiterStrategyConfig config) {
-        rateLimiterRegistry.remove(name);
+        rateLimiterMap.remove(name);
         registerRateLimiter(name, config);
 
         StrategyInfo info = strategyInfoMap.get(name);
@@ -91,8 +95,16 @@ public class DefaultStrategyTemplate implements StrategyTemplate {
 
     @Override
     public <T> T executeWithRateLimit(String name, Supplier<T> supplier) {
-        RateLimiter rateLimiter = rateLimiterRegistry.rateLimiter(name);
-        return RateLimiter.decorateSupplier(rateLimiter, supplier).get();
+        RateLimiterProvider provider = rateLimiterMap.get(name);
+        if (provider == null) {
+            throw new IllegalArgumentException("Rate limiter not found: " + name);
+        }
+
+        if (!provider.tryAcquire()) {
+            throw new RuntimeException("Rate limit exceeded for: " + name);
+        }
+
+        return supplier.get();
     }
 
     @Override
@@ -100,7 +112,7 @@ public class DefaultStrategyTemplate implements StrategyTemplate {
         try {
             return executeWithRateLimit(name, supplier);
         } catch (Exception e) {
-            log.warn("Rate limit exceeded for {}, executing fallback", name);
+            log.warn("Rate limit exceeded for {}, executing fallback", name, e);
             return fallback.get();
         }
     }
@@ -109,17 +121,20 @@ public class DefaultStrategyTemplate implements StrategyTemplate {
 
     @Override
     public void registerCircuitBreaker(String name, CircuitBreakerStrategyConfig config) {
-        CircuitBreakerConfig circuitBreakerConfig = CircuitBreakerConfig.custom()
-                .failureRateThreshold(config.getFailureRateThreshold())
-                .slowCallRateThreshold(config.getSlowCallRateThreshold())
-                .slowCallDurationThreshold(config.getSlowCallDurationThreshold())
+        ResilienceSetting setting = ResilienceSetting.builder()
+                .name(name)
+                .failureRateThreshold((int) config.getFailureRateThreshold())
+                .slowCallRateThreshold((int) config.getSlowCallRateThreshold())
+                .slowCallDurationThreshold(config.getSlowCallDurationThreshold().toMillis())
                 .permittedNumberOfCallsInHalfOpenState(config.getPermittedNumberOfCallsInHalfOpenState())
                 .slidingWindowSize(config.getSlidingWindowSize())
                 .minimumNumberOfCalls(config.getMinimumNumberOfCalls())
-                .waitDurationInOpenState(config.getWaitDurationInOpenState())
+                .waitDurationInOpenState(config.getWaitDurationInOpenState().toMillis())
+                .resilienceType(DEFAULT_RESILIENCE_TYPE)
                 .build();
 
-        circuitBreakerRegistry.circuitBreaker(name, circuitBreakerConfig);
+        ResilienceProvider provider = ResilienceFlow.createResilience(name, setting);
+        circuitBreakerMap.put(name, provider);
 
         strategyInfoMap.put(name, StrategyInfo.builder()
                 .name(name)
@@ -134,7 +149,7 @@ public class DefaultStrategyTemplate implements StrategyTemplate {
 
     @Override
     public void updateCircuitBreaker(String name, CircuitBreakerStrategyConfig config) {
-        circuitBreakerRegistry.remove(name);
+        circuitBreakerMap.remove(name);
         registerCircuitBreaker(name, config);
 
         StrategyInfo info = strategyInfoMap.get(name);
@@ -148,11 +163,15 @@ public class DefaultStrategyTemplate implements StrategyTemplate {
 
     @Override
     public <T> T executeWithCircuitBreaker(String name, Supplier<T> supplier, Function<Throwable, T> fallback) {
-        CircuitBreaker circuitBreaker = circuitBreakerRegistry.circuitBreaker(name);
+        ResilienceProvider provider = circuitBreakerMap.get(name);
+        if (provider == null) {
+            throw new IllegalArgumentException("Circuit breaker not found: " + name);
+        }
+
         try {
-            return CircuitBreaker.decorateSupplier(circuitBreaker, supplier).get();
-        } catch (Exception e) {
-            log.warn("Circuit breaker {} triggered, executing fallback", name);
+            return provider.execute(supplier);
+        } catch (Throwable e) {
+            log.warn("Circuit breaker {} triggered, executing fallback", name, e);
             return fallback.apply(e);
         }
     }
@@ -201,24 +220,21 @@ public class DefaultStrategyTemplate implements StrategyTemplate {
 
     @Override
     public void registerRetry(String name, RetryStrategyConfig config) {
-        RetryConfig.Builder<Object> builder = RetryConfig.custom()
+        RetrySetting.Builder builder = RetrySetting.builder()
                 .maxAttempts(config.getMaxAttempts())
                 .waitDuration(config.getWaitDuration());
 
         if (!config.getRetryExceptions().isEmpty()) {
-            builder.retryExceptions(config.getRetryExceptions().toArray(new Class[0]));
+            builder.retryOnExceptions(config.getRetryExceptions());
         }
 
         if (!config.getIgnoreExceptions().isEmpty()) {
-            builder.ignoreExceptions(config.getIgnoreExceptions().toArray(new Class[0]));
+            builder.ignoreOnExceptions(config.getIgnoreExceptions());
         }
 
-        if (config.isExponentialBackoff()) {
-            builder.intervalFunction(attempt -> 
-                    (long) (config.getWaitDuration().toMillis() * Math.pow(config.getExponentialBackoffMultiplier(), attempt - 1)));
-        }
-
-        retryRegistry.retry(name, builder.build());
+        RetrySetting setting = builder.build();
+        RetryProvider provider = RetryerFlow.create(name, DEFAULT_RETRY_TYPE, setting);
+        retryMap.put(name, provider);
 
         strategyInfoMap.put(name, StrategyInfo.builder()
                 .name(name)
@@ -233,8 +249,12 @@ public class DefaultStrategyTemplate implements StrategyTemplate {
 
     @Override
     public <T> T executeWithRetry(String name, Supplier<T> supplier) {
-        Retry retry = retryRegistry.retry(name);
-        return Retry.decorateSupplier(retry, supplier).get();
+        RetryProvider provider = retryMap.get(name);
+        if (provider == null) {
+            throw new IllegalArgumentException("Retry provider not found: " + name);
+        }
+
+        return provider.execute(supplier);
     }
 
     // ========== 策略链 ==========
@@ -269,9 +289,9 @@ public class DefaultStrategyTemplate implements StrategyTemplate {
         }
 
         switch (info.getType()) {
-            case RATE_LIMITER -> rateLimiterRegistry.remove(name);
-            case CIRCUIT_BREAKER -> circuitBreakerRegistry.remove(name);
-            case RETRY -> retryRegistry.remove(name);
+            case RATE_LIMITER -> rateLimiterMap.remove(name);
+            case CIRCUIT_BREAKER -> circuitBreakerMap.remove(name);
+            case RETRY -> retryMap.remove(name);
             case DEBOUNCE -> {
                 debounceDurations.remove(name);
                 debounceMap.remove(name);

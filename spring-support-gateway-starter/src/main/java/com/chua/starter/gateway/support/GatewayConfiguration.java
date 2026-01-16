@@ -1,4 +1,4 @@
-package com.chua.starter.gateway.support;
+﻿package com.chua.starter.gateway.support;
 
 import com.chua.common.support.discovery.ServiceDiscovery;
 import com.chua.starter.discovery.support.service.DiscoveryService;

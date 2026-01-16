@@ -1,4 +1,4 @@
-package com.chua.starter.oauth.client.support.web;
+﻿package com.chua.starter.oauth.client.support.web;
 
 import com.chua.common.support.annotations.Ignore;
 import com.chua.common.support.spi.ServiceProvider;

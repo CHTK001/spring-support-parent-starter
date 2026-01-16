@@ -1,4 +1,4 @@
-package com.chua.starter.job.support;
+﻿package com.chua.starter.job.support;
 
 import lombok.Getter;
 

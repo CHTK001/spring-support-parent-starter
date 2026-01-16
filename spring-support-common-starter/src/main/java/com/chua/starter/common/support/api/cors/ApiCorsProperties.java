@@ -1,6 +1,5 @@
 package com.chua.starter.common.support.api.cors;
 
-import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.HashSet;
@@ -27,7 +26,6 @@ import java.util.Set;
  * @version 1.0.0
  * @since 2024/12/07
  */
-@Data
 @ConfigurationProperties(prefix = "plugin.api.cors", ignoreInvalidFields = true)
 public class ApiCorsProperties {
 
@@ -44,4 +42,41 @@ public class ApiCorsProperties {
      */
     private Set<String> pattern = new HashSet<>();
 }
+    /**
+     * 获取 enable
+     *
+     * @return enable
+     */
+    public boolean getEnable() {
+        return enable;
+    }
+
+    /**
+     * 设置 enable
+     *
+     * @param enable enable
+     */
+    public void setEnable(boolean enable) {
+        this.enable = enable;
+    }
+
+    /**
+     * 获取 pattern
+     *
+     * @return pattern
+     */
+    public Set<String> getPattern() {
+        return pattern;
+    }
+
+    /**
+     * 设置 pattern
+     *
+     * @param pattern pattern
+     */
+    public void setPattern(Set<String> pattern) {
+        this.pattern = pattern;
+    }
+
+
 

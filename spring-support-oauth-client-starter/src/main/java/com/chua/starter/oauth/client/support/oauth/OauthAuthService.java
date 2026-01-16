@@ -1,4 +1,4 @@
-package com.chua.starter.oauth.client.support.oauth;
+﻿package com.chua.starter.oauth.client.support.oauth;
 
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.starter.common.support.oauth.AuthService;

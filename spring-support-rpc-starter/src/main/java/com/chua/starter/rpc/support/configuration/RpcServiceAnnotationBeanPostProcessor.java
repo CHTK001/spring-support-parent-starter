@@ -1,4 +1,4 @@
-package com.chua.starter.rpc.support.configuration;
+﻿package com.chua.starter.rpc.support.configuration;
 
 import com.chua.common.support.rpc.RpcServer;
 import com.chua.common.support.rpc.RpcService;

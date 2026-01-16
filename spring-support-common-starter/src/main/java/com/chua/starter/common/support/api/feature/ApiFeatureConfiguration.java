@@ -1,11 +1,12 @@
 package com.chua.starter.common.support.api.feature;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 import com.chua.starter.common.support.api.annotations.ApiFeature;
 import com.chua.starter.common.support.api.interceptor.ApiControlInterceptor;
 import com.chua.starter.common.support.api.properties.ApiProperties;
 import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -29,11 +30,24 @@ import java.util.Map;
  * @since 2024/12/08
  * @version 1.0.0
  */
-@Slf4j
 @Configuration
-@RequiredArgsConstructor
 @ConditionalOnProperty(name = "plugin.api.feature.enable", havingValue = "true", matchIfMissing = true)
 public class ApiFeatureConfiguration implements WebMvcConfigurer {
+    /**
+     * 构造函数
+     *
+     * @param apiProperties ApiProperties
+     * @param environment Environment
+     * @param requestMappingHandlerMapping RequestMappingHandlerMapping
+     */
+    public ApiFeatureConfiguration(ApiProperties apiProperties, Environment environment, RequestMappingHandlerMapping requestMappingHandlerMapping) {
+        this.apiProperties = apiProperties;
+        this.environment = environment;
+        this.requestMappingHandlerMapping = requestMappingHandlerMapping;
+    }
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ApiFeatureConfiguration.class);
+
 
     private final ApiProperties apiProperties;
     private final Environment environment;

@@ -1,4 +1,4 @@
-package com.chua.starter.ssh.configuration;
+﻿package com.chua.starter.ssh.configuration;
 
 import com.chua.starter.ssh.properties.SshServerProperties;
 import com.chua.starter.ssh.service.SshServerService;

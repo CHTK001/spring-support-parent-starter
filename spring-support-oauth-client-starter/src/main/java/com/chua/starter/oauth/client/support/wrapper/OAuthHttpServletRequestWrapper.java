@@ -1,4 +1,4 @@
-package com.chua.starter.oauth.client.support.wrapper;
+﻿package com.chua.starter.oauth.client.support.wrapper;
 
 import com.chua.starter.oauth.client.support.principal.OAuthPrincipal;
 import com.chua.starter.oauth.client.support.user.UserResume;

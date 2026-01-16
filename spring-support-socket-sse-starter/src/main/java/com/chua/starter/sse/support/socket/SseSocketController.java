@@ -1,4 +1,4 @@
-package com.chua.starter.sse.support.socket;
+﻿package com.chua.starter.sse.support.socket;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

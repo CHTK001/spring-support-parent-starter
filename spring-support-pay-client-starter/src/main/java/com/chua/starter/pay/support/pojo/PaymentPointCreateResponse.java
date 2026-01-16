@@ -1,4 +1,4 @@
-package com.chua.starter.pay.support.pojo;
+﻿package com.chua.starter.pay.support.pojo;
 
 import com.chua.starter.pay.support.enums.PaymentPointState;
 import io.swagger.v3.oas.annotations.media.Schema;

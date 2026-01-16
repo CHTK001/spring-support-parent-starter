@@ -1,4 +1,4 @@
-package com.chua.starter.minio.support.properties;
+﻿package com.chua.starter.minio.support.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

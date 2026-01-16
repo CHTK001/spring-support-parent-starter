@@ -1,4 +1,4 @@
-package com.chua.sync.support.pojo;
+﻿package com.chua.sync.support.pojo;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

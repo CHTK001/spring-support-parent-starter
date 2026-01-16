@@ -1,4 +1,7 @@
 package com.chua.starter.common.support.api.response;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.lang.code.ReturnResult;
@@ -18,7 +21,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.dao.DataAccessException;
@@ -75,8 +77,9 @@ import static com.chua.common.support.lang.code.ReturnCode.*;
  * @version 1.0.0
  */
 @RestControllerAdvice
-@Slf4j
 public class ApiExceptionAdvice {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ApiExceptionAdvice.class);
+
 
     /** 是否为生产环境（生产环境隐藏技术细节） */
     private static boolean isProduction = false;

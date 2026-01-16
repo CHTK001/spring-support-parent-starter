@@ -1,4 +1,4 @@
-package com.chua.starter.datasource.properties;
+﻿package com.chua.starter.datasource.properties;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;

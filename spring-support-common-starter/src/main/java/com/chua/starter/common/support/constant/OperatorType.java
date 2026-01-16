@@ -1,8 +1,5 @@
 package com.chua.starter.common.support.constant;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-
 /**
  * 运算符类型枚举
  * <p>
@@ -13,8 +10,6 @@ import lombok.Getter;
  * @version 1.0.0
  * @since 2024/01/22
  */
-@AllArgsConstructor
-@Getter
 public enum OperatorType {
 
     /**
@@ -53,4 +48,22 @@ public enum OperatorType {
      */
     private final String operator;
 
-}
+    /**
+     * 构造函数
+     *
+     * @param operator 运算符字符串
+     */
+    OperatorType(String operator) {
+        this.operator = operator;
+    }
+
+    /**
+     * 获取 operator
+     *
+     * @return operator
+     */
+    public String getOperator() {
+        return operator;
+    }
+
+

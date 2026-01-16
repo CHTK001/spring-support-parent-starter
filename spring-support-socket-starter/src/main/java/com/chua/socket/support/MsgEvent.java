@@ -1,4 +1,4 @@
-package com.chua.socket.support;
+﻿package com.chua.socket.support;
 
 import com.chua.common.support.json.Json;
 import lombok.AllArgsConstructor;

@@ -1,4 +1,4 @@
-package com.chua.starter.strategy.annotation;
+﻿package com.chua.starter.strategy.annotation;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;

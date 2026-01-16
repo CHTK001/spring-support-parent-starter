@@ -1,9 +1,12 @@
-package com.chua.starter.strategy.interceptor;
+﻿package com.chua.starter.strategy.interceptor;
 
 import com.chua.starter.strategy.entity.SysLimitConfiguration;
 import com.chua.starter.strategy.entity.SysLimitRecord;
+import com.chua.starter.strategy.event.RateLimitEvent;
 import com.chua.starter.strategy.service.SysLimitConfigurationService;
 import com.chua.starter.strategy.service.SysLimitRecordService;
+import com.chua.starter.strategy.util.StrategyEventPublisher;
+import com.chua.starter.strategy.util.UserContextHelper;
 import io.github.resilience4j.ratelimiter.RateLimiter;
 import io.github.resilience4j.ratelimiter.RateLimiterConfig;
 import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
@@ -70,6 +73,9 @@ public class SysLimitConfigurationInterceptor implements HandlerInterceptor {
             // 尝试获取许可
             rateLimiter.acquirePermission();
             log.debug("限流检查通过: {} - {}", config.getSysLimitName(), rateLimiterKey);
+            
+            // 发布允许事件
+            publishEvent(request, config, rateLimiterKey, true, null);
             return true;
         } catch (RequestNotPermitted e) {
             // 限流触发，记录日志
@@ -77,6 +83,9 @@ public class SysLimitConfigurationInterceptor implements HandlerInterceptor {
 
             // 异步保存限流记录
             saveRateLimitRecord(config, request);
+
+            // 发布拒绝事件
+            publishEvent(request, config, rateLimiterKey, false, config.getSysLimitMessage());
 
             // 返回限流错误
             response.setStatus(429);
@@ -186,8 +195,41 @@ public class SysLimitConfigurationInterceptor implements HandlerInterceptor {
      * @return 用户ID
      */
     private String getUserId(HttpServletRequest request) {
-        // TODO: 从SecurityContext或Session中获取用户ID
-        Object userId = request.getAttribute("userId");
-        return userId != null ? userId.toString() : "anonymous";
+        String userId = UserContextHelper.getUserId(request);
+        return userId != null ? userId : "anonymous";
+    }
+
+    /**
+     * 发布限流事件
+     *
+     * @param request        HTTP请求
+     * @param config         限流配置
+     * @param rateLimitKey   限流键
+     * @param allowed        是否允许通过
+     * @param reason         拒绝原因
+     */
+    private void publishEvent(HttpServletRequest request, SysLimitConfiguration config,
+                             String rateLimitKey, boolean allowed, String reason) {
+        String clientIp = getClientIp(request);
+        String userId = UserContextHelper.getUserId(request);
+
+        RateLimitEvent event = new RateLimitEvent(
+                this,
+                request.getRequestURI(),
+                request.getMethod(),
+                clientIp,
+                userId,
+                config.getSysLimitName(),
+                allowed,
+                reason,
+                null,
+                config.getSysLimitConfigurationId(),
+                config.getSysLimitDimension(),
+                rateLimitKey,
+                config.getSysLimitForPeriod(),
+                config.getSysLimitRefreshPeriodSeconds()
+        );
+
+        StrategyEventPublisher.publishEvent(event);
     }
 }

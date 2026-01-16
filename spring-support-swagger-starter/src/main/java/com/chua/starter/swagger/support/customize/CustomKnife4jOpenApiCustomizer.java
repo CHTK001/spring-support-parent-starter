@@ -24,10 +24,9 @@ import com.github.xiaoymin.knife4j.spring.configuration.Knife4jSetting;
 import com.github.xiaoymin.knife4j.spring.extension.OpenApiExtensionResolver;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.models.OpenAPI;
-import io.swagger.v3.oas.models.Operation;
-import io.swagger.v3.oas.models.parameters.Parameter;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ArrayUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springdoc.core.customizers.GlobalOpenApiCustomizer;
 import org.springdoc.core.properties.SpringDocConfigProperties;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -38,7 +37,12 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.lang.annotation.Annotation;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -48,24 +52,41 @@ import java.util.stream.Collectors;
  * 2022/12/11 22:40
  * @since 4.1.0
  */
-@Slf4j
 @Primary
 public class CustomKnife4jOpenApiCustomizer implements GlobalOpenApiCustomizer {
-    final Knife4jProperties knife4jProperties;
-    final SpringDocConfigProperties properties;
 
+    private static final Logger log = LoggerFactory.getLogger(CustomKnife4jOpenApiCustomizer.class);
+    
+    /**
+     * Knife4j配置属性
+     */
+    private final Knife4jProperties knife4jProperties;
+    
+    /**
+     * SpringDoc配置属性
+     */
+    private final SpringDocConfigProperties properties;
+
+    /**
+     * 构造函数
+     *
+     * @param knife4jProperties Knife4j配置属性
+     * @param properties SpringDoc配置属性
+     */
     public CustomKnife4jOpenApiCustomizer(Knife4jProperties knife4jProperties, SpringDocConfigProperties properties) {
         this.knife4jProperties = knife4jProperties;
         this.properties = properties;
     }
 
+    /**
+     * 定制OpenAPI
+     *
+     * @param openApi OpenAPI对象
+     */
     @Override
     public void customise(OpenAPI openApi) {
         log.debug("Knife4j OpenApiCustomizer");
         if (knife4jProperties.isEnable()) {
-//            openApi.getPaths().forEach((path, pathItem) -> {
-//                pathItem.readOperations().forEach(this::removeUserResumeParameters);
-//            });
             Knife4jSetting setting = knife4jProperties.getSetting();
             OpenApiExtensionResolver openApiExtensionResolver = new OpenApiExtensionResolver(setting, knife4jProperties.getDocuments());
             // 解析初始化
@@ -78,21 +99,11 @@ public class CustomKnife4jOpenApiCustomizer implements GlobalOpenApiCustomizer {
         }
     }
 
-    private void removeUserResumeParameters(Operation operation) {
-        List<Parameter> parameters = operation.getParameters();
-        if (null == parameters) {
-            return;
-        }
-        // 移除所有 UserResume 展开的参数
-        parameters.removeIf(param ->
-                param.getName().matches("unionId|openId|uid|userId|loginType|tenantId|address|deptId|rolesByRole|dataPermission|dataPermissionRule|lastIp"));
-    }
     /**
      * 往OpenAPI内tags字段添加x-order属性
      *
-     * @param openApi openApi
+     * @param openApi OpenAPI对象
      */
-
     private void addOrderExtension(OpenAPI openApi) {
         if (CollectionUtils.isEmpty(properties.getGroupConfigs())) {
             return;
@@ -140,6 +151,12 @@ public class CustomKnife4jOpenApiCustomizer implements GlobalOpenApiCustomizer {
         }
     }
 
+    /**
+     * 获取Tag注解
+     *
+     * @param clazz 类
+     * @return Tag注解
+     */
     private Tag getTag(Class<?> clazz) {
         // 从类上获取
         Tag tag = clazz.getAnnotation(Tag.class);
@@ -148,9 +165,9 @@ public class CustomKnife4jOpenApiCustomizer implements GlobalOpenApiCustomizer {
             Class<?>[] interfaces = clazz.getInterfaces();
             if (ArrayUtils.isNotEmpty(interfaces)) {
                 for (Class<?> interfaceClazz : interfaces) {
-                    Tag anno = interfaceClazz.getAnnotation(Tag.class);
-                    if (Objects.nonNull(anno)) {
-                        tag = anno;
+                    Tag annotation = interfaceClazz.getAnnotation(Tag.class);
+                    if (Objects.nonNull(annotation)) {
+                        tag = annotation;
                         break;
                     }
                 }
@@ -159,6 +176,13 @@ public class CustomKnife4jOpenApiCustomizer implements GlobalOpenApiCustomizer {
         return tag;
     }
 
+    /**
+     * 按注解扫描包
+     *
+     * @param packageName 包名
+     * @param annotationClass 注解类
+     * @return 类集合
+     */
     private Set<Class<?>> scanPackageByAnnotation(
             String packageName, final Class<? extends Annotation> annotationClass) {
         ClassPathScanningCandidateComponentProvider scanner =

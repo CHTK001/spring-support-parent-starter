@@ -1,9 +1,12 @@
-package com.chua.starter.strategy.interceptor;
+﻿package com.chua.starter.strategy.interceptor;
 
 import com.chua.starter.strategy.entity.SysCircuitBreakerConfiguration;
 import com.chua.starter.strategy.entity.SysCircuitBreakerRecord;
+import com.chua.starter.strategy.event.CircuitBreakerEvent;
 import com.chua.starter.strategy.service.SysCircuitBreakerConfigurationService;
 import com.chua.starter.strategy.service.SysCircuitBreakerRecordService;
+import com.chua.starter.strategy.util.StrategyEventPublisher;
+import com.chua.starter.strategy.util.UserContextHelper;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
@@ -68,10 +71,16 @@ public class CircuitBreakerInterceptor implements HandlerInterceptor {
             // 记录熔断
             recordCircuitBreak(config, request, "CIRCUIT_OPEN");
             
+            // 发布事件
+            publishEvent(request, config, circuitBreaker.getState().name(), false, "熔断器打开");
+            
             // 返回熔断响应
             handleCircuitOpen(response, config);
             return false;
         }
+
+        // 发布允许事件
+        publishEvent(request, config, circuitBreaker.getState().name(), true, null);
 
         // 记录开始时间
         request.setAttribute(CIRCUIT_BREAKER_START_TIME, System.currentTimeMillis());
@@ -99,6 +108,10 @@ public class CircuitBreakerInterceptor implements HandlerInterceptor {
             circuitBreaker.onError(duration, java.util.concurrent.TimeUnit.MILLISECONDS, 
                     ex != null ? ex : new RuntimeException("HTTP " + response.getStatus()));
             log.debug("熔断器记录失败: uri={}, duration={}ms", uri, duration);
+            
+            // 发布失败事件
+            publishEvent(request, config, circuitBreaker.getState().name(), true, 
+                    "请求失败: " + (ex != null ? ex.getMessage() : "HTTP " + response.getStatus()));
         } else {
             // 记录成功
             circuitBreaker.onSuccess(duration, java.util.concurrent.TimeUnit.MILLISECONDS);
@@ -215,5 +228,37 @@ public class CircuitBreakerInterceptor implements HandlerInterceptor {
             cb.reset();
             log.info("重置熔断器状态: name={}", name);
         }
+    }
+
+    /**
+     * 发布熔断事件
+     *
+     * @param request               HTTP请求
+     * @param config                熔断配置
+     * @param state                 熔断器状态
+     * @param allowed               是否允许通过
+     * @param reason                拒绝原因
+     */
+    private void publishEvent(HttpServletRequest request, SysCircuitBreakerConfiguration config,
+                             String state, boolean allowed, String reason) {
+        String clientIp = getClientIp(request);
+        String userId = UserContextHelper.getUserId(request);
+
+        CircuitBreakerEvent event = new CircuitBreakerEvent(
+                this,
+                request.getRequestURI(),
+                request.getMethod(),
+                clientIp,
+                userId,
+                config.getName(),
+                allowed,
+                reason,
+                null,
+                config.getId(),
+                state,
+                config.getFailureRateThreshold() != null ? config.getFailureRateThreshold().floatValue() : null
+        );
+
+        StrategyEventPublisher.publishEvent(event);
     }
 }

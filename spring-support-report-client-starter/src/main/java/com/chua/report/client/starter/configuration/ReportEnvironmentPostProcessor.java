@@ -1,4 +1,4 @@
-package com.chua.report.client.starter.configuration;
+﻿package com.chua.report.client.starter.configuration;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.env.EnvironmentPostProcessor;

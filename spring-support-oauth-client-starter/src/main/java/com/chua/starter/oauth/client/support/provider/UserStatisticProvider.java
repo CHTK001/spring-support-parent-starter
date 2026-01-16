@@ -1,4 +1,4 @@
-package com.chua.starter.oauth.client.support.provider;
+﻿package com.chua.starter.oauth.client.support.provider;
 
 import com.chua.common.support.annotations.Ignore;
 import com.chua.common.support.collection.ImmutableBuilder;

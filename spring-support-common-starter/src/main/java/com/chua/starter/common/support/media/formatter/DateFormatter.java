@@ -1,6 +1,6 @@
 package com.chua.starter.common.support.media.formatter;
 
-import com.chua.common.support.annotations.Spi;
+import com.chua.common.support.core.annotation.Spi;
 import com.chua.common.support.lang.date.DateTime;
 import org.springframework.format.annotation.DateTimeFormat;
 

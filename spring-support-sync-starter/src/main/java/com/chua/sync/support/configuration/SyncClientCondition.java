@@ -1,4 +1,4 @@
-package com.chua.sync.support.configuration;
+﻿package com.chua.sync.support.configuration;
 
 import org.springframework.context.annotation.Condition;
 import org.springframework.context.annotation.ConditionContext;

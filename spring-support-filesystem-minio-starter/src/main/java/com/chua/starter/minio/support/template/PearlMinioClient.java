@@ -1,4 +1,4 @@
-package com.chua.starter.minio.support.template;
+﻿package com.chua.starter.minio.support.template;
 
 import io.minio.MinioClient;
 

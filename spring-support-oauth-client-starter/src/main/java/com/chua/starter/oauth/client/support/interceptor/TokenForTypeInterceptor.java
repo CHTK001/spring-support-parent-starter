@@ -1,4 +1,4 @@
-package com.chua.starter.oauth.client.support.interceptor;
+﻿package com.chua.starter.oauth.client.support.interceptor;
 
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.annotation.TokenForType;

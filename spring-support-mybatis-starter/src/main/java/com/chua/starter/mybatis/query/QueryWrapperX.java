@@ -1,4 +1,4 @@
-package com.chua.starter.mybatis.query;
+﻿package com.chua.starter.mybatis.query;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.ArrayUtils;

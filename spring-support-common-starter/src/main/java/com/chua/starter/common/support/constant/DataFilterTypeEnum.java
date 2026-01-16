@@ -1,15 +1,9 @@
 package com.chua.starter.common.support.constant;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-
 /**
  * 权限
  * @author CH
  */
-@Getter
-@AllArgsConstructor
 public enum DataFilterTypeEnum {
     /**全部可见*/
     ALL(1, "全部可见"),
@@ -23,6 +17,16 @@ public enum DataFilterTypeEnum {
     DEPT_SETS(5, "选择的部门可见"),
     /**自定义*/
     CUSTOM(6, "自定义");
+    /**
+     * 构造函数
+     *
+     * @param code Integer
+     * @param label String
+     */
+    public DataFilterTypeEnum(Integer code, String label) {
+        this.code = code;
+        this.label = label;
+    }
 
 
     private final Integer code;
@@ -42,5 +46,23 @@ public enum DataFilterTypeEnum {
         }
         return null;
     }
-}
+    /**
+     * 获取 code
+     *
+     * @return code
+     */
+    public Integer getCode() {
+        return code;
+    }
+
+    /**
+     * 获取 label
+     *
+     * @return label
+     */
+    public String getLabel() {
+        return label;
+    }
+
+        }
 

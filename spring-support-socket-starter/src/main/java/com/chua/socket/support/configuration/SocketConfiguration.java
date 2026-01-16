@@ -1,4 +1,4 @@
-package com.chua.socket.support.configuration;
+﻿package com.chua.socket.support.configuration;
 
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.socket.support.SocketListener;

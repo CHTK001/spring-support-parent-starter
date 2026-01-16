@@ -1,4 +1,4 @@
-package com.chua.starter.rpc.support.resource;
+﻿package com.chua.starter.rpc.support.resource;
 
 import com.chua.common.support.rpc.RpcClient;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;

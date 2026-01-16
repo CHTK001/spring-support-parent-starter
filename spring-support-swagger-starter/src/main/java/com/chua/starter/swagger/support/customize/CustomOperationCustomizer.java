@@ -9,7 +9,6 @@ import com.github.xiaoymin.knife4j.extend.util.ExtensionUtils;
 import io.swagger.v3.oas.models.Operation;
 import org.springdoc.core.customizers.GlobalOperationCustomizer;
 import org.springframework.core.annotation.AnnotationUtils;
-import org.springframework.util.ClassUtils;
 import org.springframework.web.method.HandlerMethod;
 
 import java.util.Collections;
@@ -17,30 +16,39 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
+ * 操作定制器
+ * 用于处理Knife4j的ApiOperationSupport和ApiSupport注解，支持作者和排序
+ *
  * @author CH
  * @since 2025/5/27 13:37
  */
 public class CustomOperationCustomizer implements GlobalOperationCustomizer {
-    static Class USER_VALUE = null;
-
-    static {
-        try {
-            USER_VALUE = ClassUtils.forName("com.chua.starter.oauth.client.support.annotation.UserValue", CustomOperationCustomizer1.class.getClassLoader());
-        } catch (Exception ignored) {
-        }
-    }
 
     private final Knife4jProperties knife4jProperties;
     private final Map<String, String> defaultHeaders;
 
+    /**
+     * 构造函数
+     *
+     * @param knife4jProperties Knife4j配置属性
+     */
     public CustomOperationCustomizer(Knife4jProperties knife4jProperties) {
         this.knife4jProperties = knife4jProperties;
-        this.defaultHeaders = Optional.ofNullable(knife4jProperties.getDefaultHeader()).orElse(Collections.emptyMap());
+        this.defaultHeaders = Optional.ofNullable(knife4jProperties.getDefaultHeader())
+                .orElse(Collections.emptyMap());
     }
+
+    /**
+     * 定制操作
+     * 解析支持作者、接口排序
+     * 参考：https://gitee.com/xiaoym/knife4j/issues/I6FB9I
+     *
+     * @param operation 操作对象
+     * @param handlerMethod 处理器方法
+     * @return 定制后的操作对象
+     */
     @Override
     public Operation customize(Operation operation, HandlerMethod handlerMethod) {
-        // 解析支持作者、接口排序
-        // https://gitee.com/xiaoym/knife4j/issues/I6FB9I
         ApiOperationSupport operationSupport = AnnotationUtils.findAnnotation(handlerMethod.getMethod(), ApiOperationSupport.class);
         if (operationSupport != null) {
             String author = ExtensionUtils.getAuthors(operationSupport);

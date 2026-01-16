@@ -1,4 +1,4 @@
-package com.chua.starter.rpc.support.properties;
+﻿package com.chua.starter.rpc.support.properties;
 
 import com.chua.common.support.rpc.RpcConsumerConfig;
 import com.chua.common.support.rpc.RpcProtocolConfig;

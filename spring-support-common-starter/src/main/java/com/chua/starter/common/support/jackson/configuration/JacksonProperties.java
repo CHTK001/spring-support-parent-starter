@@ -1,6 +1,5 @@
 package com.chua.starter.common.support.jackson.configuration;
 
-import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -10,7 +9,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @version 1.0.0
  * @since 2024/12/3
  */
-@Data
 @ConfigurationProperties(prefix = JacksonProperties.PRE, ignoreInvalidFields = true)
 public class JacksonProperties {
     /**
@@ -26,3 +24,40 @@ public class JacksonProperties {
      */
     private boolean includeNull = false;
 }
+    /**
+     * 获取 enable
+     *
+     * @return enable
+     */
+    public boolean getEnable() {
+        return enable;
+    }
+
+    /**
+     * 设置 enable
+     *
+     * @param enable enable
+     */
+    public void setEnable(boolean enable) {
+        this.enable = enable;
+    }
+
+    /**
+     * 获取 includeNull
+     *
+     * @return includeNull
+     */
+    public boolean getIncludeNull() {
+        return includeNull;
+    }
+
+    /**
+     * 设置 includeNull
+     *
+     * @param includeNull includeNull
+     */
+    public void setIncludeNull(boolean includeNull) {
+        this.includeNull = includeNull;
+    }
+
+

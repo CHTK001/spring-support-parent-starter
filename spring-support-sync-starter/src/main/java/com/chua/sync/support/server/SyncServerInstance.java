@@ -1,4 +1,4 @@
-package com.chua.sync.support.server;
+﻿package com.chua.sync.support.server;
 
 import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.protocol.ProtocolSetting;

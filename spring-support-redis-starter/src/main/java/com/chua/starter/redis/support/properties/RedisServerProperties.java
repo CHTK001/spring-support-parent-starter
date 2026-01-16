@@ -1,4 +1,4 @@
-package com.chua.starter.redis.support.properties;
+﻿package com.chua.starter.redis.support.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

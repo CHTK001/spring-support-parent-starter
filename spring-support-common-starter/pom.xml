@@ -36,8 +36,8 @@
 
     <!-- 项目属性配置 -->
     <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -65,7 +65,20 @@
         <!-- 通用工具类库 - 提供基础的工具类和常用功能 -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>utils-support-advanced-starter</artifactId>
+            <artifactId>utils-support-extension-starter</artifactId>
+        </dependency>
+
+        <!-- 通用工具类库核心模块 - 提供 CommonConstant, Action, Version 等类 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-common-starter</artifactId>
+        </dependency>
+
+        <!-- Jakarta Servlet API - 提供 Servlet 相关接口 -->
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <scope>provided</scope>
         </dependency>
 
         <!-- Spring Boot参数验证 - 提供Bean Validation支持 -->
@@ -169,8 +182,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.13.0</version>
                 <configuration>
-                    <source>21</source>
-                    <target>21</target>
+                    <source>25</source>
+                    <target>25</target>
                     <encoding>UTF-8</encoding>
                     <proc>full</proc>
                     <annotationProcessorPaths>

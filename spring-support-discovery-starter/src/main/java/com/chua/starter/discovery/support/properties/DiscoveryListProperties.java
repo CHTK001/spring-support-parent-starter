@@ -1,4 +1,4 @@
-package com.chua.starter.discovery.support.properties;
+﻿package com.chua.starter.discovery.support.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

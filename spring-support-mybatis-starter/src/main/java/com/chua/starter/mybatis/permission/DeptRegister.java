@@ -1,4 +1,4 @@
-package com.chua.starter.mybatis.permission;
+﻿package com.chua.starter.mybatis.permission;
 
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;

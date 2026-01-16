@@ -1,6 +1,6 @@
 package com.chua.starter.common.support.media;
 
-import com.chua.common.support.annotations.Spi;
+import com.chua.common.support.core.annotation.Spi;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.unit.name.NamingCase;
 import com.chua.common.support.utils.ClassUtils;

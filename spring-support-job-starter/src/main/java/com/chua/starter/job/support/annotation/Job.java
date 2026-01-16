@@ -1,4 +1,4 @@
-package com.chua.starter.job.support.annotation;
+﻿package com.chua.starter.job.support.annotation;
 
 import java.lang.annotation.*;
 

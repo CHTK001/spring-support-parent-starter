@@ -1,8 +1,6 @@
 package com.chua.starter.common.support.api.version;
 
 import com.chua.common.support.utils.StringUtils;
-import lombok.Getter;
-
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -39,7 +37,6 @@ import java.util.regex.Pattern;
  * @since 2024/12/18
  * @version 1.0.0
  */
-@Getter
 public class Version implements Comparable<Version> {
 
     /**
@@ -410,4 +407,283 @@ public class Version implements Comparable<Version> {
     public String toString() {
         return original;
     }
-}
+    /**
+     * 获取 major
+     *
+     * @return major
+     */
+    public int getMajor() {
+        return major;
+    }
+
+    /**
+     * 获取 minor
+     *
+     * @return minor
+     */
+    public int getMinor() {
+        return minor;
+    }
+
+    /**
+     * 获取 patch
+     *
+     * @return patch
+     */
+    public int getPatch() {
+        return patch;
+    }
+
+    /**
+     * 获取 prerelease
+     *
+     * @return prerelease
+     */
+    public String getPrerelease() {
+        return prerelease;
+    }
+
+    /**
+     * 获取 buildMetadata
+     *
+     * @return buildMetadata
+     */
+    public String getBuildMetadata() {
+        return buildMetadata;
+    }
+
+    /**
+     * 获取 latest
+     *
+     * @return latest
+     */
+    public boolean getLatest() {
+        return latest;
+    }
+
+    /**
+     * 获取 original
+     *
+     * @return original
+     */
+    public String getOriginal() {
+        return original;
+    }
+
+    /**
+     * 获取 trimmed
+     *
+     * @return trimmed
+     */
+    public String getTrimmed() {
+        return trimmed;
+    }
+
+    /**
+     * 获取 matcher
+     *
+     * @return matcher
+     */
+    public Matcher getMatcher() {
+        return matcher;
+    }
+
+    /**
+     * 获取 d
+     *
+     * @return d
+     */
+    public double getD() {
+        return d;
+    }
+
+    /**
+     * 获取 major
+     *
+     * @return major
+     */
+    public int getMajor() {
+        return major;
+    }
+
+    /**
+     * 获取 minor
+     *
+     * @return minor
+     */
+    public int getMinor() {
+        return minor;
+    }
+
+    /**
+     * 获取 major
+     *
+     * @return major
+     */
+    public int getMajor() {
+        return major;
+    }
+
+    /**
+     * 获取 minor
+     *
+     * @return minor
+     */
+    public int getMinor() {
+        return minor;
+    }
+
+    /**
+     * 获取 patch
+     *
+     * @return patch
+     */
+    public int getPatch() {
+        return patch;
+    }
+
+    /**
+     * 获取 prerelease
+     *
+     * @return prerelease
+     */
+    public String getPrerelease() {
+        return prerelease;
+    }
+
+    /**
+     * 获取 buildMetadata
+     *
+     * @return buildMetadata
+     */
+    public String getBuildMetadata() {
+        return buildMetadata;
+    }
+
+    /**
+     * 获取 original
+     *
+     * @return original
+     */
+    public String getOriginal() {
+        return original;
+    }
+
+                /**
+     * 获取 result
+     *
+     * @return result
+     */
+    public int getResult() {
+        return result;
+    }
+
+        /**
+     * 获取 result
+     *
+     * @return result
+     */
+    public 比较次版本号 getResult() {
+        return result;
+    }
+
+        /**
+     * 获取 result
+     *
+     * @return result
+     */
+    public 比较修订号 getResult() {
+        return result;
+    }
+
+        /**
+     * 获取 hasPre1
+     *
+     * @return hasPre1
+     */
+    public boolean getHasPre1() {
+        return hasPre1;
+    }
+
+    /**
+     * 获取 hasPre2
+     *
+     * @return hasPre2
+     */
+    public boolean getHasPre2() {
+        return hasPre2;
+    }
+
+            /**
+     * 获取 parts1
+     *
+     * @return parts1
+     */
+    public String[] getParts1() {
+        return parts1;
+    }
+
+    /**
+     * 获取 parts2
+     *
+     * @return parts2
+     */
+    public String[] getParts2() {
+        return parts2;
+    }
+
+    /**
+     * 获取 priority1
+     *
+     * @return priority1
+     */
+    public int getPriority1() {
+        return priority1;
+    }
+
+    /**
+     * 获取 priority2
+     *
+     * @return priority2
+     */
+    public int getPriority2() {
+        return priority2;
+    }
+
+    /**
+     * 获取 num1
+     *
+     * @return num1
+     */
+    public int getNum1() {
+        return num1;
+    }
+
+    /**
+     * 获取 num2
+     *
+     * @return num2
+     */
+    public int getNum2() {
+        return num2;
+    }
+
+    /**
+     * 获取 sb
+     *
+     * @return sb
+     */
+    public StringBuilder getSb() {
+        return sb;
+    }
+
+            /**
+     * 获取 version
+     *
+     * @return version
+     */
+    public Version getVersion() {
+        return version;
+    }
+
+    }

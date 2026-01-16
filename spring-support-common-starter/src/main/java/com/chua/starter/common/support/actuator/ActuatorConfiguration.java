@@ -1,7 +1,10 @@
 package com.chua.starter.common.support.actuator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+
+import com.chua.starter.common.support.application.ModuleEnvironmentRegistration;
+import jakarta.annotation.PostConstruct;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -37,12 +40,29 @@ import org.springframework.context.annotation.Bean;
  * @since 2024/06/21
 @ConditionalOnProperty(prefix = "plugin.actuator", name = "enable", havingValue = "true", matchIfMissing = false)
  */
-@Slf4j
-@RequiredArgsConstructor
 @EnableConfigurationProperties(ActuatorProperties.class)
 public class ActuatorConfiguration {
+    /**
+     * 构造函数
+     *
+     * @param actuatorProperties ActuatorProperties
+     */
+    public ActuatorConfiguration(ActuatorProperties actuatorProperties) {
+        this.actuatorProperties = actuatorProperties;
+    }
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ActuatorConfiguration.class);
+
 
     private final ActuatorProperties actuatorProperties;
+
+    /**
+     * 注册 Actuator 配置到全局环境
+     */
+    @PostConstruct
+    public void registerEnvironment() {
+        new ModuleEnvironmentRegistration("plugin.actuator", actuatorProperties, actuatorProperties.isEnable());
+    }
 
     /**
      * Actuator 认证过滤器

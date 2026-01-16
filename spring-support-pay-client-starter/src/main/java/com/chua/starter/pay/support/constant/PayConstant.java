@@ -1,4 +1,4 @@
-package com.chua.starter.pay.support.constant;
+﻿package com.chua.starter.pay.support.constant;
 
 /**
  * 支付常量

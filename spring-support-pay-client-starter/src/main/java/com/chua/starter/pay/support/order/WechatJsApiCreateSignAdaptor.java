@@ -1,6 +1,6 @@
-package com.chua.starter.pay.support.order;
+﻿package com.chua.starter.pay.support.order;
 
-import com.chua.common.support.annotations.Spi;
+import com.chua.common.support.core.annotation.Spi;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.starter.pay.support.entity.PayMerchant;

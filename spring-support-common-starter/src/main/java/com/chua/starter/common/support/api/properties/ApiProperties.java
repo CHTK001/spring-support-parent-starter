@@ -5,8 +5,6 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
-import lombok.Data;
-import lombok.Getter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
@@ -24,7 +22,6 @@ import java.util.Map;
  * @since 2025/6/3
  * @version 2.0.0
  */
-@Data
 @Validated
 @ConfigurationProperties(prefix = ApiProperties.PRE, ignoreInvalidFields = true)
 public class ApiProperties {
@@ -123,8 +120,7 @@ public class ApiProperties {
     /**
      * 版本控制配置
      */
-    @Data
-    public static class Version {
+        public static class Version {
 
         /**
          * 是否开启版本控制
@@ -135,8 +131,7 @@ public class ApiProperties {
     /**
      * 平台类型枚举
      */
-    @Getter
-    public enum PlatformType {
+        public enum PlatformType {
         /**
          * 系统平台
          */
@@ -169,8 +164,7 @@ public class ApiProperties {
     /**
      * 平台配置
      */
-    @Data
-    public static class Platform {
+        public static class Platform {
 
         /**
          * 是否开启平台标识
@@ -206,8 +200,7 @@ public class ApiProperties {
     /**
      * 编解码配置
      */
-    @Data
-    public static class ResponseEncodeProperties {
+        public static class ResponseEncodeProperties {
 
         /**
          * 是否开启加密功能
@@ -241,8 +234,7 @@ public class ApiProperties {
     /**
      * 请求解码配置
      */
-    @Data
-    public static class RequestDecodeProperties {
+        public static class RequestDecodeProperties {
 
         /**
          * 是否开启请求解密
@@ -288,8 +280,7 @@ public class ApiProperties {
     /**
      * SPI 配置
      */
-    @Data
-    public static class SpiConfig {
+        public static class SpiConfig {
 
         /**
          * 是否开启虚拟映射
@@ -309,8 +300,7 @@ public class ApiProperties {
     /**
      * Mock 配置
      */
-    @Data
-    public static class MockConfig {
+        public static class MockConfig {
 
         /**
          * 是否开启 Mock 功能
@@ -327,8 +317,7 @@ public class ApiProperties {
     /**
      * 功能开关配置
      */
-    @Data
-    public static class FeatureConfig {
+        public static class FeatureConfig {
 
         /**
          * 是否开启功能开关
@@ -346,8 +335,7 @@ public class ApiProperties {
     /**
      * 内部接口配置
      */
-    @Data
-    public static class InternalConfig {
+        public static class InternalConfig {
 
         /**
          * 是否开启内部接口控制
@@ -368,8 +356,7 @@ public class ApiProperties {
     /**
      * 废弃接口配置
      */
-    @Data
-    public static class DeprecatedConfig {
+        public static class DeprecatedConfig {
 
         /**
          * 是否开启废弃接口提示
@@ -385,8 +372,7 @@ public class ApiProperties {
     /**
      * 灰度发布配置
      */
-    @Data
-    public static class GrayConfig {
+        public static class GrayConfig {
 
         /**
          * 是否开启灰度发布功能
@@ -430,5 +416,402 @@ public class ApiProperties {
         @Max(value = 100, message = "灰度百分比不能大于100")
         private int defaultPercentage = 0;
     }
+    /**
+     * 获取 ignoreFormatPackages
+     *
+     * @return ignoreFormatPackages
+     */
+    public String[] getIgnoreFormatPackages() {
+        return ignoreFormatPackages;
+    }
+
+    /**
+     * 获取 version
+     *
+     * @return version
+     */
+    public Version getVersion() {
+        return version;
+    }
+
+    /**
+     * 获取 platform
+     *
+     * @return platform
+     */
+    public Platform getPlatform() {
+        return platform;
+    }
+
+    /**
+     * 获取 uniform
+     *
+     * @return uniform
+     */
+    public boolean getUniform() {
+        return uniform;
+    }
+
+    /**
+     * 获取 encode
+     *
+     * @return encode
+     */
+    public ResponseEncodeProperties getEncode() {
+        return encode;
+    }
+
+    /**
+     * 获取 decode
+     *
+     * @return decode
+     */
+    public RequestDecodeProperties getDecode() {
+        return decode;
+    }
+
+    /**
+     * 获取 spi
+     *
+     * @return spi
+     */
+    public SpiConfig getSpi() {
+        return spi;
+    }
+
+    /**
+     * 获取 mock
+     *
+     * @return mock
+     */
+    public MockConfig getMock() {
+        return mock;
+    }
+
+    /**
+     * 获取 feature
+     *
+     * @return feature
+     */
+    public FeatureConfig getFeature() {
+        return feature;
+    }
+
+    /**
+     * 获取 deprecated
+     *
+     * @return deprecated
+     */
+    public DeprecatedConfig getDeprecated() {
+        return deprecated;
+    }
+
+    /**
+     * 获取 internal
+     *
+     * @return internal
+     */
+    public InternalConfig getInternal() {
+        return internal;
+    }
+
+    /**
+     * 获取 gray
+     *
+     * @return gray
+     */
+    public GrayConfig getGray() {
+        return gray;
+    }
+
+    /**
+     * 获取 enable
+     *
+     * @return enable
+     */
+    public boolean getEnable() {
+        return enable;
+    }
+
+    /**
+     * 获取 value
+     *
+     * @return value
+     */
+    public String getValue() {
+        return value;
+    }
+
+    /**
+     * 获取 enable
+     *
+     * @return enable
+     */
+    public boolean getEnable() {
+        return enable;
+    }
+
+    /**
+     * 获取 name
+     *
+     * @return name
+     */
+    public PlatformType getName() {
+        return name;
+    }
+
+    /**
+     * 获取 aliasName
+     *
+     * @return aliasName
+     */
+    public String getAliasName() {
+        return aliasName;
+    }
+
+        /**
+     * 获取 enable
+     *
+     * @return enable
+     */
+    public boolean getEnable() {
+        return enable;
+    }
+
+    /**
+     * 获取 responseEnable
+     *
+     * @return responseEnable
+     */
+    public boolean getResponseEnable() {
+        return responseEnable;
+    }
+
+    /**
+     * 获取 extInject
+     *
+     * @return extInject
+     */
+    public boolean getExtInject() {
+        return extInject;
+    }
+
+    /**
+     * 获取 codecType
+     *
+     * @return codecType
+     */
+    public String getCodecType() {
+        return codecType;
+    }
+
+    /**
+     * 获取 whiteList
+     *
+     * @return whiteList
+     */
+    public List<String> getWhiteList() {
+        return whiteList;
+    }
+
+    /**
+     * 获取 enable
+     *
+     * @return enable
+     */
+    public boolean getEnable() {
+        return enable;
+    }
+
+    /**
+     * 获取 codecRequestKey
+     *
+     * @return codecRequestKey
+     */
+    public String getCodecRequestKey() {
+        return codecRequestKey;
+    }
+
+    /**
+     * 获取 extInject
+     *
+     * @return extInject
+     */
+    public boolean getExtInject() {
+        return extInject;
+    }
+
+    /**
+     * 获取 codecType
+     *
+     * @return codecType
+     */
+    public String getCodecType() {
+        return codecType;
+    }
+
+    /**
+     * 获取 rejectOnDecodeFailure
+     *
+     * @return rejectOnDecodeFailure
+     */
+    public boolean getRejectOnDecodeFailure() {
+        return rejectOnDecodeFailure;
+    }
+
+    /**
+     * 获取 whiteList
+     *
+     * @return whiteList
+     */
+    public List<String> getWhiteList() {
+        return whiteList;
+    }
+
+    /**
+     * 获取 enable
+     *
+     * @return enable
+     */
+    public boolean getEnable() {
+        return enable;
+    }
+
+    /**
+     * 获取 mapping
+     *
+     * @return mapping
+     */
+    public Map<String, String> getMapping() {
+        return mapping;
+    }
+
+    /**
+     * 获取 enable
+     *
+     * @return enable
+     */
+    public boolean getEnable() {
+        return enable;
+    }
+
+    /**
+     * 获取 profiles
+     *
+     * @return profiles
+     */
+    public String getProfiles() {
+        return profiles;
+    }
+
+    /**
+     * 获取 enable
+     *
+     * @return enable
+     */
+    public boolean getEnable() {
+        return enable;
+    }
+
+    /**
+     * 获取 path
+     *
+     * @return path
+     */
+    public String getPath() {
+        return path;
+    }
+
+    /**
+     * 获取 enable
+     *
+     * @return enable
+     */
+    public boolean getEnable() {
+        return enable;
+    }
+
+    /**
+     * 获取 globalAllowedIps
+     *
+     * @return globalAllowedIps
+     */
+    public List<String> getGlobalAllowedIps() {
+        return globalAllowedIps;
+    }
+
+    /**
+     * 获取 globalAllowedServices
+     *
+     * @return globalAllowedServices
+     */
+    public List<String> getGlobalAllowedServices() {
+        return globalAllowedServices;
+    }
+
+    /**
+     * 获取 enable
+     *
+     * @return enable
+     */
+    public boolean getEnable() {
+        return enable;
+    }
+
+    /**
+     * 获取 addWarningHeader
+     *
+     * @return addWarningHeader
+     */
+    public boolean getAddWarningHeader() {
+        return addWarningHeader;
+    }
+
+    /**
+     * 获取 enable
+     *
+     * @return enable
+     */
+    public boolean getEnable() {
+        return enable;
+    }
+
+    /**
+     * 获取 headerName
+     *
+     * @return headerName
+     */
+    public String getHeaderName() {
+        return headerName;
+    }
+
+    /**
+     * 获取 globalUsers
+     *
+     * @return globalUsers
+     */
+    public List<String> getGlobalUsers() {
+        return globalUsers;
+    }
+
+    /**
+     * 获取 globalIps
+     *
+     * @return globalIps
+     */
+    public List<String> getGlobalIps() {
+        return globalIps;
+    }
+
+    /**
+     * 获取 defaultPercentage
+     *
+     * @return defaultPercentage
+     */
+    public int getDefaultPercentage() {
+        return defaultPercentage;
+    }
+
+
 }
 

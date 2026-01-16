@@ -1,4 +1,4 @@
-package com.chua.starter.job.support.log;
+﻿package com.chua.starter.job.support.log;
 
 import com.chua.starter.job.support.entity.SysJobLogDetail;
 import com.chua.starter.job.support.mapper.SysJobLogDetailMapper;

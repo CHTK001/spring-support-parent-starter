@@ -1,4 +1,4 @@
-package com.chua.sync.support.properties;
+﻿package com.chua.sync.support.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

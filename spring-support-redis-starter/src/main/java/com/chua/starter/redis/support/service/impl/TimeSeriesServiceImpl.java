@@ -1,4 +1,4 @@
-package com.chua.starter.redis.support.service.impl;
+﻿package com.chua.starter.redis.support.service.impl;
 
 import com.chua.advanced.support.indicator.DataIndicator;
 import com.chua.advanced.support.indicator.TimeIndicator;

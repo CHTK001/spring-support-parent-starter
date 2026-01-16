@@ -1,4 +1,4 @@
-package com.chua.starter.mybatis.properties;
+﻿package com.chua.starter.mybatis.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -45,6 +45,14 @@ public class MybatisPlusProperties {
      * 自动热加载时间
      */
     private int reloadTime = 3_000;
+
+    /**
+     * 热重载监听目录配置
+     * 支持本地文件系统路径和classpath路径
+     * 本地路径示例: /path/to/mapper, D:/mappers
+     * classpath路径示例: classpath:mapper, classpath*:mapper/**
+     */
+    private List<ReloadDirectory> reloadDirectories;
 
 
     @Data
@@ -98,5 +106,30 @@ public class MybatisPlusProperties {
          * 自动刷新
          */
         AUTO
+    }
+
+    /**
+     * 热重载目录配置
+     */
+    @Data
+    public static class ReloadDirectory {
+        /**
+         * 目录路径
+         * 支持格式：
+         * - 本地文件系统路径: /path/to/mapper, D:/mappers
+         * - classpath路径: classpath:mapper, classpath*:mapper/**
+         */
+        private String path;
+
+        /**
+         * 是否启用监听
+         * 本地路径默认启用，classpath路径在jar包中无法监听
+         */
+        private boolean watchEnabled = true;
+
+        /**
+         * 文件匹配模式，默认为 **/*Mapper.xml
+         */
+        private String pattern = "**/*Mapper.xml";
     }
 }

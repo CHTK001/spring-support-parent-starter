@@ -1,4 +1,4 @@
-package com.chua.starter.oauth.client.support.protocol;
+﻿package com.chua.starter.oauth.client.support.protocol;
 
 import com.chua.common.support.annotations.Extension;
 import com.chua.common.support.annotations.SpiDefault;

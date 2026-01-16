@@ -1,5 +1,8 @@
-package com.chua.starter.strategy.interceptor;
+﻿package com.chua.starter.strategy.interceptor;
 
+import com.chua.starter.strategy.event.IpAccessControlEvent;
+import com.chua.starter.strategy.util.StrategyEventPublisher;
+import com.chua.starter.strategy.util.UserContextHelper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -53,11 +56,15 @@ public class IpAccessControlInterceptor implements HandlerInterceptor {
             case Allowed allowed -> {
                 log.debug("IP访问允许: ip={}, uri={}, reason={}", clientIp, uri, allowed.reason());
                 recordAccess(clientIp, uri, true);
+                IpAccessRule matchedRule = findMatchedRule(clientIp, uri, rules);
+                publishEvent(request, allowed, matchedRule);
                 yield true;
             }
             case Denied denied -> {
                 log.warn("IP访问拒绝: ip={}, uri={}, reason={}", clientIp, uri, denied.reason());
                 recordAccess(clientIp, uri, false);
+                IpAccessRule matchedRule = findMatchedRule(clientIp, uri, rules);
+                publishEvent(request, denied, matchedRule);
                 handleDenied(response, denied);
                 yield false;
             }
@@ -181,6 +188,73 @@ public class IpAccessControlInterceptor implements HandlerInterceptor {
      */
     public void clearAccessStats() {
         accessRecords.clear();
+    }
+
+    /**
+     * 查找匹配的规则
+     *
+     * @param ip    客户端IP
+     * @param uri   请求URI
+     * @param rules 规则列表
+     * @return 匹配的规则，如果没有则返回null
+     */
+    private IpAccessRule findMatchedRule(String ip, String uri, List<IpAccessRule> rules) {
+        for (IpAccessRule rule : rules) {
+            if (!rule.enabled()) {
+                continue;
+            }
+            if (rule.urlPattern() != null && !pathMatcher.match(rule.urlPattern(), uri)) {
+                continue;
+            }
+            if (matchIp(ip, rule.ipPattern())) {
+                return rule;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 发布IP访问控制事件
+     *
+     * @param request HTTP请求
+     * @param decision 访问决策
+     * @param rule     匹配的规则
+     */
+    private void publishEvent(HttpServletRequest request, AccessDecision decision, IpAccessRule rule) {
+        String clientIp = getClientIp(request);
+        String userId = UserContextHelper.getUserId(request);
+
+        String ruleName = null;
+        String ruleType = null;
+        String ipPattern = null;
+        boolean allowed = decision instanceof Allowed;
+        String reason = switch (decision) {
+            case Allowed a -> a.reason();
+            case Denied d -> d.reason();
+        };
+
+        if (rule != null) {
+            ruleName = rule.name();
+            ruleType = rule.type().name();
+            ipPattern = rule.ipPattern();
+        }
+
+        IpAccessControlEvent event = new IpAccessControlEvent(
+                this,
+                request.getRequestURI(),
+                request.getMethod(),
+                clientIp,
+                userId,
+                "IP访问控制",
+                allowed,
+                reason,
+                null,
+                ruleName,
+                ruleType,
+                ipPattern
+        );
+
+        StrategyEventPublisher.publishEvent(event);
     }
 
     // ========== Java 21 sealed classes 和 records ==========

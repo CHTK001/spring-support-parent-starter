@@ -1,4 +1,7 @@
 package com.chua.starter.common.support.api.encode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.crypto.CodecKeyPair;
@@ -6,8 +9,6 @@ import com.chua.common.support.function.Upgrade;
 import com.chua.common.support.matcher.PathMatcher;
 import com.chua.starter.common.support.api.properties.ApiProperties;
 import com.chua.starter.common.support.application.GlobalSettingFactory;
-import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationListener;
 
 import java.util.List;
@@ -22,8 +23,9 @@ import java.util.List;
  * @version 2.0.0
  * @since 2024/01/22
  */
-@Slf4j
 public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfiguration>, ApplicationListener<ApiResponseEncodeConfiguration> {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ApiResponseEncodeRegister.class);
+
 
     private final List<String> whiteList;
     private final Codec codec;
@@ -131,8 +133,7 @@ public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfi
     /**
      * 编码结果
      */
-    @Data
-    public static class CodecResult {
+        public static class CodecResult {
         private String key;
         private String data;
         private String timestamp;
@@ -142,6 +143,313 @@ public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfi
             this.data = data;
             this.timestamp = timestamp;
         }
+    /**
+     * 获取 whiteList
+     *
+     * @return whiteList
+     */
+    public List<String> getWhiteList() {
+        return whiteList;
+    }
+
+    /**
+     * 设置 whiteList
+     *
+     * @param whiteList whiteList
+     */
+    public void setWhiteList(List<String> whiteList) {
+        this.whiteList = whiteList;
+    }
+
+    /**
+     * 获取 codec
+     *
+     * @return codec
+     */
+    public Codec getCodec() {
+        return codec;
+    }
+
+    /**
+     * 设置 codec
+     *
+     * @param codec codec
+     */
+    public void setCodec(Codec codec) {
+        this.codec = codec;
+    }
+
+    /**
+     * 获取 codecKeyPair
+     *
+     * @return codecKeyPair
+     */
+    public CodecKeyPair getCodecKeyPair() {
+        return codecKeyPair;
+    }
+
+    /**
+     * 设置 codecKeyPair
+     *
+     * @param codecKeyPair codecKeyPair
+     */
+    public void setCodecKeyPair(CodecKeyPair codecKeyPair) {
+        this.codecKeyPair = codecKeyPair;
+    }
+
+    /**
+     * 获取 publicKeyHex
+     *
+     * @return publicKeyHex
+     */
+    public String getPublicKeyHex() {
+        return publicKeyHex;
+    }
+
+    /**
+     * 设置 publicKeyHex
+     *
+     * @param publicKeyHex publicKeyHex
+     */
+    public void setPublicKeyHex(String publicKeyHex) {
+        this.publicKeyHex = publicKeyHex;
+    }
+
+    /**
+     * 获取 globalSettingFactory
+     *
+     * @return globalSettingFactory
+     */
+    public GlobalSettingFactory getGlobalSettingFactory() {
+        return globalSettingFactory;
+    }
+
+    /**
+     * 设置 globalSettingFactory
+     *
+     * @param globalSettingFactory globalSettingFactory
+     */
+    public void setGlobalSettingFactory(GlobalSettingFactory globalSettingFactory) {
+        this.globalSettingFactory = globalSettingFactory;
+    }
+
+    /**
+     * 获取 codecType
+     *
+     * @return codecType
+     */
+    public String getCodecType() {
+        return codecType;
+    }
+
+    /**
+     * 设置 codecType
+     *
+     * @param codecType codecType
+     */
+    public void setCodecType(String codecType) {
+        this.codecType = codecType;
+    }
+
+    /**
+     * 获取 apiResponseEncodeConfiguration
+     *
+     * @return apiResponseEncodeConfiguration
+     */
+    public ApiResponseEncodeConfiguration getApiResponseEncodeConfiguration() {
+        return apiResponseEncodeConfiguration;
+    }
+
+    /**
+     * 设置 apiResponseEncodeConfiguration
+     *
+     * @param apiResponseEncodeConfiguration apiResponseEncodeConfiguration
+     */
+    public void setApiResponseEncodeConfiguration(ApiResponseEncodeConfiguration apiResponseEncodeConfiguration) {
+        this.apiResponseEncodeConfiguration = apiResponseEncodeConfiguration;
+    }
+
+    /**
+     * 获取 extInject
+     *
+     * @return extInject
+     */
+    public boolean getExtInject() {
+        return extInject;
+    }
+
+    /**
+     * 设置 extInject
+     *
+     * @param extInject extInject
+     */
+    public void setExtInject(boolean extInject) {
+        this.extInject = extInject;
+    }
+
+    /**
+     * 获取 encryptedData
+     *
+     * @return encryptedData
+     */
+    public String getEncryptedData() {
+        return encryptedData;
+    }
+
+    /**
+     * 设置 encryptedData
+     *
+     * @param encryptedData encryptedData
+     */
+    public void setEncryptedData(String encryptedData) {
+        this.encryptedData = encryptedData;
+    }
+
+    /**
+     * 获取 transportKey
+     *
+     * @return transportKey
+     */
+    public String getTransportKey() {
+        return transportKey;
+    }
+
+    /**
+     * 设置 transportKey
+     *
+     * @param transportKey transportKey
+     */
+    public void setTransportKey(String transportKey) {
+        this.transportKey = transportKey;
+    }
+
+    /**
+     * 获取 keyLength
+     *
+     * @return keyLength
+     */
+    public String getKeyLength() {
+        return keyLength;
+    }
+
+    /**
+     * 设置 keyLength
+     *
+     * @param keyLength keyLength
+     */
+    public void setKeyLength(String keyLength) {
+        this.keyLength = keyLength;
+    }
+
+    /**
+     * 获取 encode
+     *
+     * @return encode
+     */
+    public String getEncode() {
+        return encode;
+    }
+
+    /**
+     * 设置 encode
+     *
+     * @param encode encode
+     */
+    public void setEncode(String encode) {
+        this.encode = encode;
+    }
+
+    /**
+     * 获取 transportKey
+     *
+     * @return transportKey
+     */
+    public String getTransportKey() {
+        return transportKey;
+    }
+
+    /**
+     * 设置 transportKey
+     *
+     * @param transportKey transportKey
+     */
+    public void setTransportKey(String transportKey) {
+        this.transportKey = transportKey;
+    }
+
+    /**
+     * 获取 keyLength
+     *
+     * @return keyLength
+     */
+    public String getKeyLength() {
+        return keyLength;
+    }
+
+    /**
+     * 设置 keyLength
+     *
+     * @param keyLength keyLength
+     */
+    public void setKeyLength(String keyLength) {
+        this.keyLength = keyLength;
+    }
+
+    /**
+     * 获取 key
+     *
+     * @return key
+     */
+    public String getKey() {
+        return key;
+    }
+
+    /**
+     * 设置 key
+     *
+     * @param key key
+     */
+    public void setKey(String key) {
+        this.key = key;
+    }
+
+    /**
+     * 获取 data
+     *
+     * @return data
+     */
+    public String getData() {
+        return data;
+    }
+
+    /**
+     * 设置 data
+     *
+     * @param data data
+     */
+    public void setData(String data) {
+        this.data = data;
+    }
+
+    /**
+     * 获取 timestamp
+     *
+     * @return timestamp
+     */
+    public String getTimestamp() {
+        return timestamp;
+    }
+
+    /**
+     * 设置 timestamp
+     *
+     * @param timestamp timestamp
+     */
+    public void setTimestamp(String timestamp) {
+        this.timestamp = timestamp;
+    }
+
+
     }
 }
 

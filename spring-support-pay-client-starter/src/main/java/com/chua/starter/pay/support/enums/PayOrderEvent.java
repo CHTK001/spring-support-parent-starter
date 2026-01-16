@@ -1,4 +1,4 @@
-package com.chua.starter.pay.support.enums;
+﻿package com.chua.starter.pay.support.enums;
 
 /**
  * 订单状态机事件枚举

@@ -1,4 +1,4 @@
-package com.chua.starter.oauth.client.support.properties;
+﻿package com.chua.starter.oauth.client.support.properties;
 
 import com.google.common.collect.Sets;
 import lombok.Data;

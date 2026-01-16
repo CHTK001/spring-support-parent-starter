@@ -1,4 +1,4 @@
-package com.chua.report.client.arthas.starter.properties;
+﻿package com.chua.report.client.arthas.starter.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

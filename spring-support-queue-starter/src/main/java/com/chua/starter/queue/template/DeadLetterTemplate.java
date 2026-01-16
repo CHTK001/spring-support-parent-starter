@@ -1,4 +1,4 @@
-package com.chua.starter.queue.template;
+﻿package com.chua.starter.queue.template;
 
 import com.chua.starter.queue.Message;
 import com.chua.starter.queue.MessageHandler;

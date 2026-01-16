@@ -1,4 +1,4 @@
-package com.chua.report.client.starter.report;
+﻿package com.chua.report.client.starter.report;
 
 import com.chua.report.client.starter.sync.MonitorTopics;
 import com.chua.sync.support.client.SyncClient;

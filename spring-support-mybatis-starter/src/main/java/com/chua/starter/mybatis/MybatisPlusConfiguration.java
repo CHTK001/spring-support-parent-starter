@@ -1,4 +1,4 @@
-package com.chua.starter.mybatis;
+﻿package com.chua.starter.mybatis;
 
 import com.baomidou.mybatisplus.autoconfigure.ConfigurationCustomizer;
 import com.baomidou.mybatisplus.core.config.GlobalConfig;
@@ -46,8 +46,23 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MybatisPlusConfiguration {
 
-    final  MybatisPlusProperties mybatisProperties;
-    final MybatisPlusDataScopeProperties methodSecurityInterceptor;
+    /**
+     * 逻辑删除字段名
+     */
+    private static final String LOGIC_DELETE_FIELD = "sys_deleted";
+
+    /**
+     * 逻辑删除值（已删除）
+     */
+    private static final String LOGIC_DELETE_VALUE = "1";
+
+    /**
+     * 逻辑未删除值（未删除）
+     */
+    private static final String LOGIC_NOT_DELETE_VALUE = "0";
+
+    private final MybatisPlusProperties mybatisProperties;
+    private final MybatisPlusDataScopeProperties methodSecurityInterceptor;
 
     static {
         JsqlParserGlobal.setParserMultiFunc((sql) -> {
@@ -71,14 +86,19 @@ public class MybatisPlusConfiguration {
     }
 
 
+    /**
+     * 配置MyBatis Plus全局配置
+     *
+     * @return GlobalConfig 全局配置对象
+     */
     @Bean
     public GlobalConfig globalConfig() {
         GlobalConfig globalConfig = new GlobalConfig();
         GlobalConfig.DbConfig dbConfig = new GlobalConfig.DbConfig();
         // 设置逻辑删除的全局值
-        dbConfig.setLogicDeleteField("sys_deleted");
-        dbConfig.setLogicDeleteValue("1");
-        dbConfig.setLogicNotDeleteValue("0");
+        dbConfig.setLogicDeleteField(LOGIC_DELETE_FIELD);
+        dbConfig.setLogicDeleteValue(LOGIC_DELETE_VALUE);
+        dbConfig.setLogicNotDeleteValue(LOGIC_NOT_DELETE_VALUE);
         globalConfig.setDbConfig(dbConfig);
         return globalConfig;
     }
@@ -102,30 +122,14 @@ public class MybatisPlusConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public DataPermissionInterceptor dataPermissionInterceptor(
-            @Autowired(required = false) MybatisPlusV2DataPermissionHandler dataPermissionHandler,
+            @Autowired(required = false) MybatisPlusDataPermissionHandler dataPermissionHandler,
             MybatisPlusDataScopeProperties methodSecurityInterceptor
             ) {
         if(null == dataPermissionHandler) {
-            dataPermissionHandler = new MybatisPlusV2DataPermissionHandler(methodSecurityInterceptor);
+            dataPermissionHandler = new MybatisPlusDataPermissionHandler(methodSecurityInterceptor);
         }
-        return new MybatisPlusV2DataPermissionInterceptor(dataPermissionHandler, methodSecurityInterceptor);
+        return new MybatisPlusDataPermissionInterceptor(dataPermissionHandler, methodSecurityInterceptor);
     }
-//    /**
-//     * 数据权限
-//     *
-//     * @return OptimisticLockerInnerInterceptor
-//     */
-//    @Bean
-//    @ConditionalOnMissingBean
-//    public MybatisPlusPermissionInterceptor dataPermissionInterceptor(
-//            @Autowired(required = false) DataPermissionHandler dataPermissionHandler,
-//            MybatisPlusDataScopeProperties methodSecurityInterceptor
-//            ) {
-//        if(null == dataPermissionHandler) {
-//            dataPermissionHandler = new MybatisPlusPermissionHandler(methodSecurityInterceptor);
-//        }
-//        return new MybatisPlusPermissionInterceptor(dataPermissionHandler, methodSecurityInterceptor);
-//    }
 
 
     /**

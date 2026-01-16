@@ -14,8 +14,8 @@
     <version>4.0.0.35</version>
 
     <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -43,7 +43,7 @@
 
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>utils-support-advanced-starter</artifactId>
+            <artifactId>utils-support-extension-starter</artifactId>
         </dependency>
     </dependencies>
 

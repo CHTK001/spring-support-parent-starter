@@ -1,4 +1,4 @@
-package com.chua.starter.job.support.scheduler;
+﻿package com.chua.starter.job.support.scheduler;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

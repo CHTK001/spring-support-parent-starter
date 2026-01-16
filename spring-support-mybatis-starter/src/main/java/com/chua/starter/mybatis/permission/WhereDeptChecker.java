@@ -1,4 +1,4 @@
-package com.chua.starter.mybatis.permission;
+﻿package com.chua.starter.mybatis.permission;
 
 import lombok.Getter;
 import net.sf.jsqlparser.expression.BinaryExpression;

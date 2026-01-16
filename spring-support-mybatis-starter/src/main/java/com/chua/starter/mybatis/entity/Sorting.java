@@ -1,9 +1,10 @@
-package com.chua.starter.mybatis.entity;
+﻿package com.chua.starter.mybatis.entity;
 
 import lombok.Data;
 
 /**
- * 排序
+ * 排序对象
+ * 用于指定排序字段和排序方向
  *
  * @author CH
  */
@@ -11,20 +12,22 @@ import lombok.Data;
 public class Sorting {
 
     /**
-     * 顺序 - 升序
+     * 排序方向 - 升序
      */
     public static final String ORDER_ASC = "asc";
+
     /**
-     * 顺序 - 降序
+     * 排序方向 - 降序
      */
     public static final String ORDER_DESC = "desc";
 
     /**
-     * 字段
+     * 排序字段名
      */
     private String field;
+
     /**
-     * 顺序
+     * 排序方向（asc 或 desc）
      */
     private String order;
 }

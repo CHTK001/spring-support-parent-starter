@@ -1,4 +1,4 @@
-package com.chua.report.client.arthas.starter.environment;
+﻿package com.chua.report.client.arthas.starter.environment;
 
 import com.chua.common.support.utils.StringUtils;
 import com.chua.report.client.arthas.starter.properties.ArthasClientProperties;

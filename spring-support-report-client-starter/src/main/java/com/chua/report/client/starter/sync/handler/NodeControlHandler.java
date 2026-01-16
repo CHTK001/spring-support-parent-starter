@@ -1,6 +1,6 @@
-package com.chua.report.client.starter.sync.handler;
+﻿package com.chua.report.client.starter.sync.handler;
 
-import com.chua.common.support.annotations.Spi;
+import com.chua.common.support.core.annotation.Spi;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.report.client.starter.sync.MonitorTopics;
 import com.chua.sync.support.spi.SyncMessageHandler;

@@ -1,4 +1,4 @@
-package com.chua.socket.support.properties;
+﻿package com.chua.socket.support.properties;
 
 import com.chua.socket.support.SocketProtocol;
 import lombok.Data;

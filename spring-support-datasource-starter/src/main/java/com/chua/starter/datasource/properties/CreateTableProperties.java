@@ -1,4 +1,4 @@
-package com.chua.starter.datasource.properties;
+﻿package com.chua.starter.datasource.properties;
 
 import com.chua.common.support.lang.engine.ddl.ActionType;
 import lombok.Data;

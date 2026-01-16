@@ -9,16 +9,12 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.ContextualSerializer;
 import com.google.common.base.Strings;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
-
 import java.io.IOException;
 import java.util.Objects;
 
 /**
+ * 隐私序列化器
  */
-@NoArgsConstructor
-@AllArgsConstructor
 public class PrivacySerializer extends JsonSerializer<String> implements ContextualSerializer {
 
     /**
@@ -37,6 +33,34 @@ public class PrivacySerializer extends JsonSerializer<String> implements Context
      * 用什么打码
      */
     private String symbol;
+
+    /**
+     * 隐私加密注解
+     */
+    private ApiFieldPrivacyEncrypt apiFieldPrivacyEncrypt;
+
+    /**
+     * 无参构造函数
+     */
+    public PrivacySerializer() {
+    }
+
+    /**
+     * 构造函数
+     *
+     * @param privacyTypeEnum 脱敏类型
+     * @param prefixNoMaskLen 前几位不脱敏
+     * @param suffixNoMaskLen 最后几位不脱敏
+     * @param symbol 用什么打码
+     * @param apiFieldPrivacyEncrypt 隐私加密注解
+     */
+    public PrivacySerializer(PrivacyTypeEnum privacyTypeEnum, Integer prefixNoMaskLen, Integer suffixNoMaskLen, String symbol, ApiFieldPrivacyEncrypt apiFieldPrivacyEncrypt) {
+        this.privacyTypeEnum = privacyTypeEnum;
+        this.prefixNoMaskLen = prefixNoMaskLen;
+        this.suffixNoMaskLen = suffixNoMaskLen;
+        this.symbol = symbol;
+        this.apiFieldPrivacyEncrypt = apiFieldPrivacyEncrypt;
+    }
 
     @Override
     public void serialize(final String origin, final JsonGenerator jsonGenerator,

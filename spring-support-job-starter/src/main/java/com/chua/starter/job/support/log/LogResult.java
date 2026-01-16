@@ -1,4 +1,4 @@
-package com.chua.starter.job.support.log;
+﻿package com.chua.starter.job.support.log;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

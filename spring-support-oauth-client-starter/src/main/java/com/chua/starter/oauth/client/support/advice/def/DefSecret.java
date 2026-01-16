@@ -1,4 +1,4 @@
-package com.chua.starter.oauth.client.support.advice.def;
+﻿package com.chua.starter.oauth.client.support.advice.def;
 
 /**
  * 默认

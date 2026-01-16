@@ -1,8 +1,5 @@
 package com.chua.starter.common.support.constant;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-
 /**
  * 位置
  *
@@ -10,8 +7,6 @@ import lombok.Getter;
  * @version 1.0.0
  * @since 2024/03/01
  */
-@Getter
-@AllArgsConstructor
 public enum Position {
 
 
@@ -31,5 +26,23 @@ public enum Position {
      */
     private final int value;
 
-}
+    /**
+     * 构造函数
+     *
+     * @param value 整数值
+     */
+    Position(int value) {
+        this.value = value;
+    }
+
+    /**
+     * 获取 value
+     *
+     * @return value
+     */
+    public int getValue() {
+        return value;
+    }
+
+
 

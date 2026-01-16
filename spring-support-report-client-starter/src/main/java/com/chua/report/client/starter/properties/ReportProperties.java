@@ -1,4 +1,4 @@
-package com.chua.report.client.starter.properties;
+﻿package com.chua.report.client.starter.properties;
 
 import com.chua.report.client.starter.report.MetricType;
 import lombok.Data;

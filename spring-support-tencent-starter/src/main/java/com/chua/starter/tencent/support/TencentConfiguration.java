@@ -1,4 +1,4 @@
-package com.chua.starter.tencent.support;
+﻿package com.chua.starter.tencent.support;
 
 import com.chua.starter.tencent.support.properties.TencentMiniAppProperties;
 import com.chua.tencent.support.Tencent;

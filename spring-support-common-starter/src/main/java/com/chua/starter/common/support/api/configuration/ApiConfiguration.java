@@ -1,4 +1,7 @@
 package com.chua.starter.common.support.api.configuration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 import com.chua.starter.common.support.api.control.ApiVersionRequestMappingHandlerMapping;
 import com.chua.starter.common.support.api.decode.ApiRequestDecodeBodyAdvice;
@@ -9,8 +12,8 @@ import com.chua.starter.common.support.api.properties.ApiProperties;
 import com.chua.starter.common.support.api.response.ApiExceptionAdvice;
 import com.chua.starter.common.support.api.response.ApiUniformResponseBodyAdvice;
 import com.chua.starter.common.support.application.GlobalSettingFactory;
+import com.chua.starter.common.support.application.ModuleEnvironmentRegistration;
 import jakarta.annotation.Priority;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -37,11 +40,12 @@ import java.util.concurrent.Executors;
  * @since 2024/12/07
  * @version 1.0.0
  */
-@Slf4j
 @EnableConfigurationProperties(ApiProperties.class)
 @Priority(0)
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)
 public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ApiConfiguration.class);
+
 
     private static final String ANSI_GREEN = "\u001B[32m";
     private static final String ANSI_RED = "\u001B[31m";
@@ -245,6 +249,7 @@ public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware {
             GlobalSettingFactory.PREFIX = apiProperties.getPlatform().getPlatformName();
         } catch (Exception ignored) {
         }
+        new ModuleEnvironmentRegistration(ApiProperties.PRE, apiProperties, true);
     }
 }
 

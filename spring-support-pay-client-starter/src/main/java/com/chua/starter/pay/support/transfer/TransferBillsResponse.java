@@ -1,4 +1,4 @@
-package com.chua.starter.pay.support.transfer;
+﻿package com.chua.starter.pay.support.transfer;
 
 import com.google.gson.annotations.SerializedName;
 import lombok.Data;

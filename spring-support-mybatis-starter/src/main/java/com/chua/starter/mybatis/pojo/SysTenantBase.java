@@ -1,4 +1,4 @@
-package com.chua.starter.mybatis.pojo;
+﻿package com.chua.starter.mybatis.pojo;
 
 import com.chua.common.support.datasource.annotation.ColumnDefinition;
 import io.swagger.annotations.ApiModelProperty;

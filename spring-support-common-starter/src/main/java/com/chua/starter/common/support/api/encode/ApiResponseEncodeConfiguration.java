@@ -2,8 +2,6 @@ package com.chua.starter.common.support.api.encode;
 
 import com.chua.common.support.function.Upgrade;
 import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.Setter;
 import org.springframework.context.ApplicationEvent;
 
 /**
@@ -13,8 +11,6 @@ import org.springframework.context.ApplicationEvent;
  * @since 2024/8/14
  */
 @EqualsAndHashCode(callSuper = true)
-@Getter
-@Setter
 public class ApiResponseEncodeConfiguration extends ApplicationEvent implements Upgrade<ApiResponseEncodeConfiguration> {
 
     /**
@@ -47,5 +43,24 @@ public class ApiResponseEncodeConfiguration extends ApplicationEvent implements 
     public void upgrade(ApiResponseEncodeConfiguration apiResponseEncodeConfiguration) {
         this.codecResponseOpen = apiResponseEncodeConfiguration.isCodecResponseOpen();
     }
+    /**
+     * 获取 codecResponseOpen
+     *
+     * @return codecResponseOpen
+     */
+    public boolean getCodecResponseOpen() {
+        return codecResponseOpen;
+    }
+
+    /**
+     * 设置 codecResponseOpen
+     *
+     * @param codecResponseOpen codecResponseOpen
+     */
+    public void setCodecResponseOpen(boolean codecResponseOpen) {
+        this.codecResponseOpen = codecResponseOpen;
+    }
+
+
 }
 

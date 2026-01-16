@@ -1,4 +1,4 @@
-package com.chua.starter.job.support.log;
+﻿package com.chua.starter.job.support.log;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.json.Json;

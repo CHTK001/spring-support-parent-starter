@@ -1,6 +1,5 @@
 package com.chua.starter.common.support.properties;
 
-import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -8,7 +7,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *
  * @author CH
  */
-@Data
 @ConfigurationProperties(prefix = IpProperties.PRE, ignoreInvalidFields = true)
 public class IpProperties {
     /**
@@ -30,4 +28,59 @@ public class IpProperties {
      */
     private String ipType = "qqwry";
 }
+    /**
+     * 获取 enable
+     *
+     * @return enable
+     */
+    public boolean getEnable() {
+        return enable;
+    }
+
+    /**
+     * 设置 enable
+     *
+     * @param enable enable
+     */
+    public void setEnable(boolean enable) {
+        this.enable = enable;
+    }
+
+    /**
+     * 获取 databaseFile
+     *
+     * @return databaseFile
+     */
+    public String getDatabaseFile() {
+        return databaseFile;
+    }
+
+    /**
+     * 设置 databaseFile
+     *
+     * @param databaseFile databaseFile
+     */
+    public void setDatabaseFile(String databaseFile) {
+        this.databaseFile = databaseFile;
+    }
+
+    /**
+     * 获取 ipType
+     *
+     * @return ipType
+     */
+    public String getIpType() {
+        return ipType;
+    }
+
+    /**
+     * 设置 ipType
+     *
+     * @param ipType ipType
+     */
+    public void setIpType(String ipType) {
+        this.ipType = ipType;
+    }
+
+
 

@@ -1,4 +1,4 @@
-package com.chua.starter.pay.support.callback;
+﻿package com.chua.starter.pay.support.callback;
 
 import com.alibaba.fastjson.JSONObject;
 import com.chua.common.support.annotations.Ignore;

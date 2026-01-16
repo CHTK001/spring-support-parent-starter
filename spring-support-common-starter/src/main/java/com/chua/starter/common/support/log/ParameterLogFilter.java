@@ -1,4 +1,7 @@
 package com.chua.starter.common.support.log;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 import com.chua.common.support.constant.NumberConstant;
 import com.chua.common.support.utils.CollectionUtils;
@@ -9,7 +12,6 @@ import com.chua.starter.common.support.utils.RequestUtils;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.util.ContentCachingRequestWrapper;
@@ -55,8 +57,9 @@ import static java.time.format.DateTimeFormatter.*;
  * @version 1.0.0
  * @since 2023/09/08
  */
-@Slf4j
 public class ParameterLogFilter implements Filter {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ParameterLogFilter.class);
+
 
     public static final DateTimeFormatter DATE_TIME_FORMATTER = ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
     private final LogProperties logProperties;

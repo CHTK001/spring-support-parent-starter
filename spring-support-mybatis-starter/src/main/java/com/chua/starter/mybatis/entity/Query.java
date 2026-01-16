@@ -1,4 +1,4 @@
-package com.chua.starter.mybatis.entity;
+﻿package com.chua.starter.mybatis.entity;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -27,22 +27,82 @@ import java.util.stream.Collectors;
 
 
 /**
- * page 查询
+ * 分页查询基类
+ * 提供分页、排序、字段选择等功能
+ *
+ * @param <T> 实体类型
  * @author CH
  */
-@Schema(description ="分页信息")
+@Schema(description = "分页信息")
 @Data
 @Accessors(chain = true)
 public class Query<T> implements Serializable {
+
+    /**
+     * 默认页码
+     */
     private static final Integer PAGE_NO = 1;
+
+    /**
+     * 默认每页条数
+     */
     private static final Integer PAGE_SIZE = 10;
 
     /**
      * 每页条数 - 不分页
-     *
      * 例如说，导出接口，可以设置 {@link #pageSize} 为 -1 不分页，查询所有数据。
      */
     public static final Integer PAGE_SIZE_NONE = -1;
+
+    /**
+     * 排序方向 - 降序
+     */
+    private static final String ORDER_DESC = "desc";
+
+    /**
+     * 排序方向 - 升序
+     */
+    private static final String ORDER_ASC = "asc";
+
+    /**
+     * 排序方向 - 降序（带空格）
+     */
+    private static final String ORDER_DESC_WITH_SPACE = " desc";
+
+    /**
+     * 排序方向 - 升序（带空格）
+     */
+    private static final String ORDER_ASC_WITH_SPACE = " asc";
+
+    /**
+     * 排序字段 - 创建时间
+     */
+    private static final String SORT_CREATE_TIME = "createTime";
+
+    /**
+     * 排序字段 - 更新时间
+     */
+    private static final String SORT_UPDATE_TIME = "updateTime";
+
+    /**
+     * 排序字段 - 受欢迎度
+     */
+    private static final String SORT_POPULAR = "popular";
+
+    /**
+     * 排序字段 - 最新
+     */
+    private static final String SORT_NEWEST = "newest";
+
+    /**
+     * 排序字段长度 - desc
+     */
+    private static final int ORDER_DESC_LENGTH = 4;
+
+    /**
+     * 排序字段长度 - asc
+     */
+    private static final int ORDER_ASC_LENGTH = 3;
 
     @Schema(description = "页码，从 1 开始", requiredMode = Schema.RequiredMode.REQUIRED,example = "1")
     @NotNull(message = "页码不能为空")
@@ -90,39 +150,39 @@ public class Query<T> implements Serializable {
     }
 
     /**
-     * 是否最近更新
+     * 是否按更新时间排序
      *
      * @return 是否排序
      */
     public boolean isUpdateTime() {
-        return sortBy("updateTime");
+        return sortBy(SORT_UPDATE_TIME);
     }
 
     /**
-     * 是否最新添加
+     * 是否按创建时间排序
      *
      * @return 是否排序
      */
     public boolean isCreateTime() {
-        return sortBy("createTime");
+        return sortBy(SORT_CREATE_TIME);
     }
 
     /**
-     * 是否最受欢迎
+     * 是否按受欢迎度排序
      *
      * @return 是否排序
      */
     public boolean isPopular() {
-        return sortBy("popular");
+        return sortBy(SORT_POPULAR);
     }
 
     /**
-     * 是否最受欢迎
+     * 是否按最新排序
      *
      * @return 是否排序
      */
     public boolean isNewest() {
-        return sortBy("newest");
+        return sortBy(SORT_NEWEST);
     }
 
     /**
@@ -141,26 +201,43 @@ public class Query<T> implements Serializable {
         return strings.contains(name.toLowerCase());
     }
     /**
-     * 初始化分页
+     * 初始化分页（包含排序）
      *
-     * @return {@link com.baomidou.mybatisplus.extension.plugins.pagination.Page}<{@link T}>
+     * @return 分页对象
      */
     public com.baomidou.mybatisplus.extension.plugins.pagination.Page<T> createFullPage() {
         Page<T> tPage = new Page<>(page, pageSize);
-        if (null != order) {
-            String[] orders = order.split(",");
-            List<OrderItem> orderItem = new LinkedList<>();
-            for (String s : orders) {
-                if (s.endsWith("desc")) {
-                    orderItem.add(OrderItem.desc(s.substring(0, s.length() - 4).trim()));
-                } else if (s.endsWith("asc")) {
-                    orderItem.add(OrderItem.asc(s.substring(0, s.length() - 3).trim()));
+        if (StringUtils.isNotEmpty(order)) {
+            List<OrderItem> orderItems = parseOrderItems(order);
+            tPage.setOrders(orderItems);
+        }
+        return tPage;
+    }
+
+    /**
+     * 解析排序字符串为 OrderItem 列表
+     *
+     * @param orderStr 排序字符串
+     * @return OrderItem 列表
+     */
+    private List<OrderItem> parseOrderItems(String orderStr) {
+        String[] orders = orderStr.split(",");
+        List<OrderItem> orderItems = new LinkedList<>();
+        for (String orderItem : orders) {
+            String trimmed = orderItem.trim();
+            if (trimmed.endsWith(ORDER_DESC)) {
+                String column = trimmed.substring(0, trimmed.length() - ORDER_DESC_LENGTH).trim();
+                if (StringUtils.isNotEmpty(column)) {
+                    orderItems.add(OrderItem.desc(column));
+                }
+            } else if (trimmed.endsWith(ORDER_ASC)) {
+                String column = trimmed.substring(0, trimmed.length() - ORDER_ASC_LENGTH).trim();
+                if (StringUtils.isNotEmpty(column)) {
+                    orderItems.add(OrderItem.asc(column));
                 }
             }
-            tPage.setOrders(orderItem);
         }
-
-        return tPage;
+        return orderItems;
     }
     /**
      * 初始化分页
@@ -172,85 +249,149 @@ public class Query<T> implements Serializable {
     }
 
     /**
-     * 初始化其它参数
+     * 初始化查询包装器
      *
-     * @return {@link com.baomidou.mybatisplus.core.conditions.query.QueryWrapper}<{@link T}>
+     * @param query 查询包装器
+     * @return 配置后的查询包装器
      */
     public QueryWrapper<T> wrapper(QueryWrapper<T> query) {
-        if(ArrayUtils.isNotEmpty(prop)) {
-           query.select(prop);
-        }
-
-        if (null != order) {
-            for (String s : order.split(",")) {
-                s = s.toLowerCase();
-                if (s.endsWith(" desc")) {
-                    query.orderByDesc(s.replace(" desc", ""));
-                } else if (s.endsWith(" asc")) {
-                    query.orderByAsc(s.replace(" asc", ""));
-                }
-            }
-        }
+        applySelect(query);
+        applyOrder(query);
         return query;
     }
+
+    /**
+     * 创建并初始化查询包装器
+     *
+     * @return 查询包装器
+     */
     public QueryWrapper<T> wrapper() {
         QueryWrapper<T> query = Wrappers.query();
         return wrapper(query);
     }
+
     /**
-     * 初始化其它参数
+     * 应用字段选择
      *
-     * @return {@link com.baomidou.mybatisplus.core.conditions.query.QueryWrapper}<{@link T}>
+     * @param query 查询包装器
+     */
+    private void applySelect(QueryWrapper<T> query) {
+        if (ArrayUtils.isNotEmpty(prop)) {
+            query.select(prop);
+        }
+    }
+
+    /**
+     * 应用排序
+     *
+     * @param query 查询包装器
+     */
+    private void applyOrder(QueryWrapper<T> query) {
+        if (StringUtils.isEmpty(order)) {
+            return;
+        }
+        String[] orders = order.split(",");
+        for (String orderItem : orders) {
+            String trimmed = orderItem.toLowerCase().trim();
+            if (trimmed.endsWith(ORDER_DESC_WITH_SPACE)) {
+                query.orderByDesc(trimmed.replace(ORDER_DESC_WITH_SPACE, ""));
+            } else if (trimmed.endsWith(ORDER_ASC_WITH_SPACE)) {
+                query.orderByAsc(trimmed.replace(ORDER_ASC_WITH_SPACE, ""));
+            }
+        }
+    }
+    /**
+     * 创建 MPJ 查询包装器
+     *
+     * @return MPJ 查询包装器
      */
     public MPJQueryWrapper<T> mpj() {
         MPJQueryWrapper<T> wrapper = new MPJQueryWrapper<>();
-        if(ArrayUtils.isNotEmpty(prop)) {
-            wrapper.select(prop);
-        }
-
-        if (null != order) {
-            for (String s : order.split(",")) {
-                s = s.toLowerCase();
-                if (s.endsWith(" desc")) {
-                    wrapper.orderByDesc(s.replace(" desc", ""));
-                } else if (s.endsWith(" asc")) {
-                    wrapper.orderByAsc(s.replace(" asc", ""));
-                }
-            }
-        }
+        applySelectToMpj(wrapper);
+        applyOrderToMpj(wrapper);
         return wrapper;
     }
+
     /**
-     * 初始化其它参数
+     * 应用字段选择到 MPJ 包装器
      *
-     * @return {@link com.baomidou.mybatisplus.core.conditions.query.QueryWrapper}<{@link T}>
+     * @param wrapper MPJ 查询包装器
+     */
+    private void applySelectToMpj(MPJQueryWrapper<T> wrapper) {
+        if (ArrayUtils.isNotEmpty(prop)) {
+            wrapper.select(prop);
+        }
+    }
+
+    /**
+     * 应用排序到 MPJ 包装器
+     *
+     * @param wrapper MPJ 查询包装器
+     */
+    private void applyOrderToMpj(MPJQueryWrapper<T> wrapper) {
+        if (StringUtils.isEmpty(order)) {
+            return;
+        }
+        String[] orders = order.split(",");
+        for (String orderItem : orders) {
+            String trimmed = orderItem.toLowerCase().trim();
+            if (trimmed.endsWith(ORDER_DESC_WITH_SPACE)) {
+                wrapper.orderByDesc(trimmed.replace(ORDER_DESC_WITH_SPACE, ""));
+            } else if (trimmed.endsWith(ORDER_ASC_WITH_SPACE)) {
+                wrapper.orderByAsc(trimmed.replace(ORDER_ASC_WITH_SPACE, ""));
+            }
+        }
+    }
+    /**
+     * 创建 Lambda 查询包装器
+     *
+     * @return Lambda 查询包装器
      */
     public LambdaQueryWrapper<T> lambda() {
         return wrapper().lambda();
     }
+
     /**
-     * 初始化其它参数
+     * 创建 MPJ Lambda 查询包装器
      *
-     * @return {@link com.baomidou.mybatisplus.core.conditions.query.QueryWrapper}<{@link T}>
+     * @return MPJ Lambda 查询包装器
      */
     public MPJLambdaWrapper<T> mpjLambda() {
         MPJLambdaWrapper<T> wrapper = MPJWrappers.lambdaJoin();
+        applySelectToMpjLambda(wrapper);
+        applyOrderToMpjLambda(wrapper);
+        return wrapper;
+    }
 
-        if(ArrayUtils.isNotEmpty(prop)) {
+    /**
+     * 应用字段选择到 MPJ Lambda 包装器
+     *
+     * @param wrapper MPJ Lambda 查询包装器
+     */
+    private void applySelectToMpjLambda(MPJLambdaWrapper<T> wrapper) {
+        if (ArrayUtils.isNotEmpty(prop)) {
             wrapper.select(prop);
         }
+    }
 
-        if (null != order) {
-            for (String s : order.split(",")) {
-                s = s.toLowerCase();
-                if (s.endsWith(" desc")) {
-                    wrapper.orderByDesc(s.replace(" desc", ""));
-                } else if (s.endsWith(" asc")) {
-                    wrapper.orderByAsc(s.replace(" asc", ""));
-                }
+    /**
+     * 应用排序到 MPJ Lambda 包装器
+     *
+     * @param wrapper MPJ Lambda 查询包装器
+     */
+    private void applyOrderToMpjLambda(MPJLambdaWrapper<T> wrapper) {
+        if (StringUtils.isEmpty(order)) {
+            return;
+        }
+        String[] orders = order.split(",");
+        for (String orderItem : orders) {
+            String trimmed = orderItem.toLowerCase().trim();
+            if (trimmed.endsWith(ORDER_DESC_WITH_SPACE)) {
+                wrapper.orderByDesc(trimmed.replace(ORDER_DESC_WITH_SPACE, ""));
+            } else if (trimmed.endsWith(ORDER_ASC_WITH_SPACE)) {
+                wrapper.orderByAsc(trimmed.replace(ORDER_ASC_WITH_SPACE, ""));
             }
         }
-        return wrapper;
     }
 
     /**

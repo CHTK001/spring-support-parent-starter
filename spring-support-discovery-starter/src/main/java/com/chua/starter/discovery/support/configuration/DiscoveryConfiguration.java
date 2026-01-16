@@ -1,4 +1,4 @@
-package com.chua.starter.discovery.support.configuration;
+﻿package com.chua.starter.discovery.support.configuration;
 
 import com.chua.common.support.discovery.*;
 import com.chua.common.support.spi.ServiceProvider;
@@ -46,10 +46,10 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         DiscoveryListProperties properties = Binder.get(environment).bindOrCreate(DiscoveryListProperties.PRE, DiscoveryListProperties.class);
-        if(!properties.isEnable()) {
+        if (!properties.isEnable()) {
             log.info("[Discovery] 服务状态 [{}]", disabled());
-            registry.registerBeanDefinition("discoveryService#embedd", BeanDefinitionBuilder.rootBeanDefinition(DiscoveryService.class, () ->{
-                            return new DiscoveryService(new DefaultServiceDiscovery());
+            registry.registerBeanDefinition("discoveryService#embedd", BeanDefinitionBuilder.rootBeanDefinition(DiscoveryService.class, () -> {
+                        return new DiscoveryService(new DefaultServiceDiscovery());
                     })
                     .setAutowireMode(AutowireCapableBeanFactory.AUTOWIRE_BY_TYPE)
                     .getBeanDefinition());
@@ -58,10 +58,26 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
 
         log.info("[Discovery] 服务状态 [{}]", enabled());
         List<DiscoveryProperties> properties1 = properties.getProperties();
+        boolean hasServiceDiscovery = false;
         for (DiscoveryProperties discoveryProperties : properties1) {
-            if(discoveryProperties.isEnabled()) {
-                registryBean(registry, discoveryProperties);
+            if (discoveryProperties.isEnabled()) {
+                boolean created = registryBean(registry, discoveryProperties, !hasServiceDiscovery);
+                if (created && !hasServiceDiscovery) {
+                    hasServiceDiscovery = true;
+                }
             }
+        }
+        if (!hasServiceDiscovery) {
+            log.warn("[Discovery] 未发现可用的服务发现配置, 将使用默认实现");
+            String baseBeanName = "serviceDiscovery#default";
+            String beanName = baseBeanName;
+            int index = 0;
+            while (registry.containsBeanDefinition(beanName)) {
+                beanName = baseBeanName + "#" + index++;
+            }
+            registry.registerBeanDefinition(beanName, BeanDefinitionBuilder.rootBeanDefinition(ServiceDiscovery.class, DefaultServiceDiscovery::new)
+                    .setPrimary(true)
+                    .getBeanDefinition());
         }
 
         registry.registerBeanDefinition("discoveryService#embedd", BeanDefinitionBuilder.rootBeanDefinition(DiscoveryService.class)
@@ -69,7 +85,15 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
                 .getBeanDefinition());
     }
 
-    private void registryBean(BeanDefinitionRegistry registry, DiscoveryProperties discoveryProperties) {
+    /**
+     * 注册服务发现实现
+     *
+     * @param registry            Bean 注册器
+     * @param discoveryProperties 当前发现配置
+     * @param primaryCandidate    是否作为首选实现
+     * @return 是否成功注册 ServiceDiscovery Bean
+     */
+    private boolean registryBean(BeanDefinitionRegistry registry, DiscoveryProperties discoveryProperties, boolean primaryCandidate) {
         DiscoveryOption discoveryOption = new DiscoveryOption();
         discoveryOption.setAddress(discoveryProperties.getAddress());
         discoveryOption.setUser(discoveryProperties.getUsername());
@@ -79,11 +103,18 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
 
         ServiceProvider<ServiceDiscovery> serviceProvider = ServiceProvider.of(ServiceDiscovery.class);
         ServiceDiscovery serviceDiscovery = serviceProvider.getNewExtension(discoveryProperties.getProtocol(), discoveryOption);
-        if(null == serviceDiscovery) {
+        String baseBeanName = "serviceDiscovery#" + discoveryProperties.getProtocol();
+        String beanName = baseBeanName;
+        int index = 0;
+        while (registry.containsBeanDefinition(beanName)) {
+            beanName = baseBeanName + "#" + index++;
+        }
+        if (null == serviceDiscovery) {
             log.warn("[Discovery] 未发现可用的服务实现");
-            registry.registerBeanDefinition(
-                    discoveryProperties.getProtocol(), BeanDefinitionBuilder.rootBeanDefinition(ServiceDiscovery.class, DefaultServiceDiscovery::new).getBeanDefinition());
-            return;
+            registry.registerBeanDefinition(beanName, BeanDefinitionBuilder.rootBeanDefinition(ServiceDiscovery.class, DefaultServiceDiscovery::new)
+                    .setPrimary(primaryCandidate)
+                    .getBeanDefinition());
+            return true;
         }
 
         List<Discovery> discoveryList = new LinkedList<>();
@@ -93,8 +124,9 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
             log.info("[Discovery] 注册服务: {} -> {}", highlight(discoveryProperties.getProtocol()), discoveryNodeProperties.getNamespace());
         }
         registry.registerBeanDefinition(
-                        discoveryProperties.getProtocol(),
-                createBeanDefinitionDiscovery(serviceDiscovery, discoveryList));
+                beanName,
+                createBeanDefinitionDiscovery(serviceDiscovery, discoveryList, primaryCandidate));
+        return true;
     }
 
     private Discovery registryNode(DiscoveryNodeProperties discoveryNodeProperties) {
@@ -137,12 +169,21 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
                 .build();
     }
 
-    private BeanDefinition createBeanDefinitionDiscovery(ServiceDiscovery serviceDiscovery, List<Discovery> discovery) {
+    /**
+     * 创建服务发现 BeanDefinition
+     *
+     * @param serviceDiscovery 服务发现实现
+     * @param discovery        发现配置列表
+     * @param primary          是否作为首选实现
+     * @return BeanDefinition
+     */
+    private BeanDefinition createBeanDefinitionDiscovery(ServiceDiscovery serviceDiscovery, List<Discovery> discovery, boolean primary) {
         BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.rootBeanDefinition(ServiceDiscovertyFactoryBean.class);
         beanDefinitionBuilder.addConstructorArgValue(serviceDiscovery);
         beanDefinitionBuilder.addConstructorArgValue(discovery);
         beanDefinitionBuilder.setDestroyMethodName("close");
         beanDefinitionBuilder.setInitMethodName("start");
+        beanDefinitionBuilder.setPrimary(primary);
         return beanDefinitionBuilder.getBeanDefinition();
     }
 

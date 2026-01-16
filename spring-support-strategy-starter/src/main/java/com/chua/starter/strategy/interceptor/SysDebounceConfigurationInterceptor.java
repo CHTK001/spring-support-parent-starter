@@ -1,9 +1,12 @@
-package com.chua.starter.strategy.interceptor;
+﻿package com.chua.starter.strategy.interceptor;
 
 import com.chua.common.support.task.debounce.DebounceException;
 import com.chua.common.support.task.debounce.DebounceManager;
 import com.chua.starter.strategy.entity.SysDebounceConfiguration;
+import com.chua.starter.strategy.event.DebounceEvent;
 import com.chua.starter.strategy.service.SysDebounceConfigurationService;
+import com.chua.starter.strategy.util.StrategyEventPublisher;
+import com.chua.starter.strategy.util.UserContextHelper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -51,10 +54,12 @@ public class SysDebounceConfigurationInterceptor implements HandlerInterceptor {
         if (acquired) {
             // 未被防抖，放行
             log.debug("防抖检查通过: {} - {}", config.getSysDebounceName(), debounceKey);
+            publishEvent(request, config, debounceKey, true, null);
             return true;
         } else {
             // 被防抖，拒绝请求
             log.debug("防抖触发: {} - {}", config.getSysDebounceName(), debounceKey);
+            publishEvent(request, config, debounceKey, false, config.getSysDebounceMessage());
             throw new DebounceException(config.getSysDebounceMessage());
         }
     }
@@ -111,9 +116,41 @@ public class SysDebounceConfigurationInterceptor implements HandlerInterceptor {
      * @return 用户ID
      */
     private String getUserId(HttpServletRequest request) {
-        // TODO: 从SecurityContext或Session中获取用户ID
-        Object userId = request.getAttribute("userId");
-        return userId != null ? userId.toString() : "anonymous";
+        String userId = UserContextHelper.getUserId(request);
+        return userId != null ? userId : "anonymous";
+    }
+
+    /**
+     * 发布防抖事件
+     *
+     * @param request       HTTP请求
+     * @param config        防抖配置
+     * @param debounceKey   防抖键
+     * @param allowed       是否允许通过
+     * @param reason        拒绝原因
+     */
+    private void publishEvent(HttpServletRequest request, SysDebounceConfiguration config,
+                             String debounceKey, boolean allowed, String reason) {
+        String clientIp = getClientIp(request);
+        String userId = UserContextHelper.getUserId(request);
+
+        DebounceEvent event = new DebounceEvent(
+                this,
+                request.getRequestURI(),
+                request.getMethod(),
+                clientIp,
+                userId,
+                config.getSysDebounceName(),
+                allowed,
+                reason,
+                null,
+                config.getSysDebounceConfigurationId(),
+                config.getSysDebounceMode(),
+                debounceKey,
+                config.getSysDebounceDuration()
+        );
+
+        StrategyEventPublisher.publishEvent(event);
     }
 
     /**

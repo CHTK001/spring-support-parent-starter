@@ -1,4 +1,4 @@
-package com.chua.starter.strategy.mapper;
+﻿package com.chua.starter.strategy.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.chua.starter.strategy.entity.SysLimitConfiguration;

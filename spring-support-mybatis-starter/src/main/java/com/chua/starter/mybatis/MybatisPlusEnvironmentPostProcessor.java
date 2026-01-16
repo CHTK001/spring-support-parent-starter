@@ -1,4 +1,4 @@
-package com.chua.starter.mybatis;
+﻿package com.chua.starter.mybatis;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.env.EnvironmentPostProcessor;

@@ -1,4 +1,4 @@
-package com.chua.starter.shell.configuration;
+﻿package com.chua.starter.shell.configuration;
 
 import com.chua.starter.shell.properties.ShellProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;

@@ -1,4 +1,4 @@
-package com.chua.starter.job.support.thread;
+﻿package com.chua.starter.job.support.thread;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.job.support.TriggerParam;

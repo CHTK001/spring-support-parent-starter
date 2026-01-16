@@ -1,4 +1,7 @@
 package com.chua.starter.common.support.api.decode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.function.Upgrade;
@@ -6,7 +9,6 @@ import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.api.properties.ApiProperties;
 import com.chua.starter.common.support.application.GlobalSettingFactory;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.binary.Hex;
 
 import org.springframework.util.AntPathMatcher;
@@ -28,8 +30,9 @@ import java.util.stream.Collectors;
  * @since 2024/12/07
  * @version 1.0.0
  */
-@Slf4j
 public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting> {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ApiRequestDecodeRegister.class);
+
 
     /**
      * 请求时间戳有效期(毫秒) - 默认10分钟

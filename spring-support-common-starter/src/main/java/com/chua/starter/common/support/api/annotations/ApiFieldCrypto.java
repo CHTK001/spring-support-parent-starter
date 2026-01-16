@@ -3,8 +3,6 @@ package com.chua.starter.common.support.api.annotations;
 import com.chua.starter.common.support.api.rule.ApiCryptoSerializer;
 import com.fasterxml.jackson.annotation.JacksonAnnotationsInside;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import lombok.Getter;
-
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -85,8 +83,7 @@ public @interface ApiFieldCrypto {
     /**
      * 加密算法类型枚举
      */
-    @Getter
-    enum ApiCryptoType {
+        enum ApiCryptoType {
         /**
          * AES对称加密算法
          * <p>高级加密标准(Advanced Encryption Standard)，密钥长度16/24/32字节</p>

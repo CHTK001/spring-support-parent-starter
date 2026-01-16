@@ -1,6 +1,5 @@
 package com.chua.starter.common.support.properties;
 
-import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -18,7 +17,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @author CH
  * @since 4.0.0
  */
-@Data
 @ConfigurationProperties(prefix = VirtualThreadProperties.PREFIX, ignoreInvalidFields = true)
 public class VirtualThreadProperties {
 
@@ -57,3 +55,94 @@ public class VirtualThreadProperties {
      */
     private boolean webEnabled = true;
 }
+    /**
+     * 获取 enabled
+     *
+     * @return enabled
+     */
+    public boolean getEnabled() {
+        return enabled;
+    }
+
+    /**
+     * 设置 enabled
+     *
+     * @param enabled enabled
+     */
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    /**
+     * 获取 threadNamePrefix
+     *
+     * @return threadNamePrefix
+     */
+    public String getThreadNamePrefix() {
+        return threadNamePrefix;
+    }
+
+    /**
+     * 设置 threadNamePrefix
+     *
+     * @param threadNamePrefix threadNamePrefix
+     */
+    public void setThreadNamePrefix(String threadNamePrefix) {
+        this.threadNamePrefix = threadNamePrefix;
+    }
+
+    /**
+     * 获取 asyncEnabled
+     *
+     * @return asyncEnabled
+     */
+    public boolean getAsyncEnabled() {
+        return asyncEnabled;
+    }
+
+    /**
+     * 设置 asyncEnabled
+     *
+     * @param asyncEnabled asyncEnabled
+     */
+    public void setAsyncEnabled(boolean asyncEnabled) {
+        this.asyncEnabled = asyncEnabled;
+    }
+
+    /**
+     * 获取 scheduledEnabled
+     *
+     * @return scheduledEnabled
+     */
+    public boolean getScheduledEnabled() {
+        return scheduledEnabled;
+    }
+
+    /**
+     * 设置 scheduledEnabled
+     *
+     * @param scheduledEnabled scheduledEnabled
+     */
+    public void setScheduledEnabled(boolean scheduledEnabled) {
+        this.scheduledEnabled = scheduledEnabled;
+    }
+
+    /**
+     * 获取 webEnabled
+     *
+     * @return webEnabled
+     */
+    public boolean getWebEnabled() {
+        return webEnabled;
+    }
+
+    /**
+     * 设置 webEnabled
+     *
+     * @param webEnabled webEnabled
+     */
+    public void setWebEnabled(boolean webEnabled) {
+        this.webEnabled = webEnabled;
+    }
+
+

@@ -1,4 +1,4 @@
-package com.chua.starter.queue;
+﻿package com.chua.starter.queue;
 
 import lombok.Builder;
 import lombok.Data;

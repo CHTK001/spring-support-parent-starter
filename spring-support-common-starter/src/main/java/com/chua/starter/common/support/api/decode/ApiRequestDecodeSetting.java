@@ -2,8 +2,6 @@ package com.chua.starter.common.support.api.decode;
 
 import com.chua.common.support.function.Upgrade;
 import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.Setter;
 import org.springframework.context.ApplicationEvent;
 
 /**
@@ -13,8 +11,6 @@ import org.springframework.context.ApplicationEvent;
  * @since 2024/12/07
  */
 @EqualsAndHashCode(callSuper = true)
-@Getter
-@Setter
 public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade<ApiRequestDecodeSetting> {
 
     /**
@@ -53,5 +49,42 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
         this.enable = setting.isEnable();
         this.codecRequestKey = setting.getCodecRequestKey();
     }
+    /**
+     * 获取 enable
+     *
+     * @return enable
+     */
+    public boolean getEnable() {
+        return enable;
+    }
+
+    /**
+     * 设置 enable
+     *
+     * @param enable enable
+     */
+    public void setEnable(boolean enable) {
+        this.enable = enable;
+    }
+
+    /**
+     * 获取 codecRequestKey
+     *
+     * @return codecRequestKey
+     */
+    public String getCodecRequestKey() {
+        return codecRequestKey;
+    }
+
+    /**
+     * 设置 codecRequestKey
+     *
+     * @param codecRequestKey codecRequestKey
+     */
+    public void setCodecRequestKey(String codecRequestKey) {
+        this.codecRequestKey = codecRequestKey;
+    }
+
+
 }
 

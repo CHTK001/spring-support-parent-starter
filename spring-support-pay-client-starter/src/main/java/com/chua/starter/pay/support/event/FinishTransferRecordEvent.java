@@ -1,4 +1,4 @@
-package com.chua.starter.pay.support.event;
+﻿package com.chua.starter.pay.support.event;
 
 import com.chua.starter.pay.support.entity.PayMerchantTransferRecord;
 import lombok.Getter;

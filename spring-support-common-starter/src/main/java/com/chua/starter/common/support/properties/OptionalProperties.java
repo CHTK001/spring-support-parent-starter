@@ -1,6 +1,5 @@
 package com.chua.starter.common.support.properties;
 
-import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -12,7 +11,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @author CH
  * @version 1.0.0
  */
-@Data
 @ConfigurationProperties(prefix = OptionalProperties.PRE, ignoreInvalidFields = true)
 public class OptionalProperties {
 
@@ -28,4 +26,23 @@ public class OptionalProperties {
 
 
 }
+    /**
+     * 获取 enable
+     *
+     * @return enable
+     */
+    public boolean getEnable() {
+        return enable;
+    }
+
+    /**
+     * 设置 enable
+     *
+     * @param enable enable
+     */
+    public void setEnable(boolean enable) {
+        this.enable = enable;
+    }
+
+
 

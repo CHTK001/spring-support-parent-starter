@@ -1,4 +1,4 @@
-package com.chua.starter.job.support;
+﻿package com.chua.starter.job.support;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

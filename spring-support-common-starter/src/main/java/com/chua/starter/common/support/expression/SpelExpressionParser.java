@@ -1,6 +1,6 @@
 package com.chua.starter.common.support.expression;
 
-import com.chua.common.support.annotations.Spi;
+import com.chua.common.support.core.annotation.Spi;
 import com.chua.common.support.lang.expression.parser.ExpressionParser;
 import com.chua.common.support.value.Value;
 import org.springframework.expression.EvaluationContext;

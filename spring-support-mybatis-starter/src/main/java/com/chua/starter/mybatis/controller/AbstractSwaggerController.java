@@ -1,4 +1,4 @@
-package com.chua.starter.mybatis.controller;
+﻿package com.chua.starter.mybatis.controller;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -32,12 +32,22 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> extend
      * @param entity 结果
      * @return 分页结果
      */
+    /**
+     * 分页查询数据
+     *
+     * @param page          分页参数
+     * @param entity        查询实体
+     * @param bindingResult 绑定结果
+     * @return 分页结果
+     */
     @ResponseBody
     @Operation(summary = "分页查询基础数据")
     @GetMapping("page")
-    public ReturnPageResult<T> page(Query<T> page, @Validated(SelectGroup.class)  T entity, BindingResult bindingResult) {
+    public ReturnPageResult<T> page(Query<T> page, @Validated(SelectGroup.class) T entity, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ReturnPageResult.error(bindingResult.getFieldError().getDefaultMessage());
+            var fieldError = bindingResult.getFieldError();
+            String errorMessage = fieldError != null ? fieldError.getDefaultMessage() : "参数验证失败";
+            return ReturnPageResult.error(errorMessage);
         }
         S service = getService();
         IPage<T> tPage = service.page(page.createPage(), createWrapper(entity));
@@ -54,12 +64,21 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> extend
      * @param entity 结果
      * @return 分页结果
      */
+    /**
+     * 查询基础数据
+     *
+     * @param entity        查询实体
+     * @param bindingResult 绑定结果
+     * @return 查询结果列表
+     */
     @ResponseBody
     @Operation(summary = "查询基础数据")
     @GetMapping("list")
     public ReturnResult<List<T>> list(@Validated(SelectGroup.class) T entity, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ReturnResult.error(bindingResult.getFieldError().getDefaultMessage());
+            var fieldError = bindingResult.getFieldError();
+            String errorMessage = fieldError != null ? fieldError.getDefaultMessage() : "参数验证失败";
+            return ReturnResult.error(errorMessage);
         }
         return ReturnResult.ok(getService().list( createWrapper(entity)));
     }

@@ -1,4 +1,4 @@
-package com.chua.starter.mybatis.type;
+﻿package com.chua.starter.mybatis.type;
 
 import com.baomidou.mybatisplus.extension.handlers.AbstractJsonTypeHandler;
 import com.chua.common.support.json.Json;

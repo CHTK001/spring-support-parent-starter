@@ -1,4 +1,4 @@
-package com.chua.sync.support.spi;
+﻿package com.chua.sync.support.spi;
 
 import java.util.Map;
 

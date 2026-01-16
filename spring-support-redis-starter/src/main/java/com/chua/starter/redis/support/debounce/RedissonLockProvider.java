@@ -1,6 +1,6 @@
-package com.chua.starter.redis.support.debounce;
+﻿package com.chua.starter.redis.support.debounce;
 
-import com.chua.common.support.annotations.Spi;
+import com.chua.common.support.core.annotation.Spi;
 import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.common.support.task.lock.LockProvider;
 import org.redisson.api.RLock;

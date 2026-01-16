@@ -1,6 +1,7 @@
-package com.chua.starter.redis.support;
+﻿package com.chua.starter.redis.support;
 
 import com.chua.common.support.protocol.ClientSetting;
+import com.chua.starter.common.support.application.ModuleEnvironmentRegistration;
 import com.chua.starter.redis.support.lock.RedissonLockTemplate;
 import com.chua.starter.strategy.template.LockTemplate;
 import com.chua.common.support.utils.StringUtils;
@@ -116,6 +117,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         redisServerProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate("plugin.redis.server", RedisServerProperties.class);
+        new ModuleEnvironmentRegistration("plugin.redis.server", redisServerProperties, redisServerProperties.isEnable());
     }
 
     @Bean

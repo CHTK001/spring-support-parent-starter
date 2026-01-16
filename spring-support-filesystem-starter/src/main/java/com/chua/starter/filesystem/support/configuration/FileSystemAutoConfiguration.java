@@ -1,4 +1,4 @@
-package com.chua.starter.filesystem.support.configuration;
+﻿package com.chua.starter.filesystem.support.configuration;
 
 import com.chua.starter.filesystem.support.properties.FileStorageProperties;
 import com.chua.starter.filesystem.support.server.FileServerManager;

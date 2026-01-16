@@ -5,8 +5,6 @@ import com.chua.starter.common.support.filter.CustomHttpServletRequestWrapper;
 import com.chua.starter.common.support.utils.RequestUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.Setter;
 import org.springframework.context.ApplicationEvent;
 import org.springframework.web.util.ContentCachingRequestWrapper;
 
@@ -21,8 +19,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * @author CH
  */
 @EqualsAndHashCode(callSuper = true)
-@Getter
-@Setter
 public class InterfaceLoggerInfo extends ApplicationEvent {
 
 
@@ -73,6 +69,151 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
                 this.body = wrapper.getContentAsByteArray();
             }
         }
+    /**
+     * 获取 request
+     *
+     * @return request
+     */
+    public HttpServletRequest getRequest() {
+        return request;
+    }
+
+    /**
+     * 设置 request
+     *
+     * @param request request
+     */
+    public void setRequest(HttpServletRequest request) {
+        this.request = request;
+    }
+
+    /**
+     * 获取 method
+     *
+     * @return method
+     */
+    public String getMethod() {
+        return method;
+    }
+
+    /**
+     * 设置 method
+     *
+     * @param method method
+     */
+    public void setMethod(String method) {
+        this.method = method;
+    }
+
+    /**
+     * 获取 url
+     *
+     * @return url
+     */
+    public String getUrl() {
+        return url;
+    }
+
+    /**
+     * 设置 url
+     *
+     * @param url url
+     */
+    public void setUrl(String url) {
+        this.url = url;
+    }
+
+    /**
+     * 获取 ip
+     *
+     * @return ip
+     */
+    public String getIp() {
+        return ip;
+    }
+
+    /**
+     * 设置 ip
+     *
+     * @param ip ip
+     */
+    public void setIp(String ip) {
+        this.ip = ip;
+    }
+
+    /**
+     * 获取 queryParams
+     *
+     * @return queryParams
+     */
+    public String getQueryParams() {
+        return queryParams;
+    }
+
+    /**
+     * 设置 queryParams
+     *
+     * @param queryParams queryParams
+     */
+    public void setQueryParams(String queryParams) {
+        this.queryParams = queryParams;
+    }
+
+    /**
+     * 获取 body
+     *
+     * @return body
+     */
+    public byte[] getBody() {
+        return body;
+    }
+
+    /**
+     * 设置 body
+     *
+     * @param body body
+     */
+    public void setBody(byte[] body) {
+        this.body = body;
+    }
+
+    /**
+     * 获取 header
+     *
+     * @return header
+     */
+    public String getHeader() {
+        return header;
+    }
+
+    /**
+     * 设置 header
+     *
+     * @param header header
+     */
+    public void setHeader(String header) {
+        this.header = header;
+    }
+
+    /**
+     * 获取 header
+     *
+     * @return header
+     */
+    public String getHeader() {
+        return header;
+    }
+
+    /**
+     * 设置 header
+     *
+     * @param header header
+     */
+    public void setHeader(String header) {
+        this.header = header;
+    }
+
+
         this.request = request;
     }
 }

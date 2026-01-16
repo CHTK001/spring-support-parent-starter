@@ -1,4 +1,4 @@
-package com.chua.starter.ai.support.model;
+﻿package com.chua.starter.ai.support.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

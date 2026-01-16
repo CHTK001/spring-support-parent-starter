@@ -1,8 +1,6 @@
 package com.chua.starter.common.support.exception;
 
 import com.chua.common.support.lang.code.ResultCode;
-import lombok.Getter;
-
 /**
  * 运行时消息异常
  * <p>
@@ -14,7 +12,6 @@ import lombok.Getter;
  * @since 2022/7/31
  * @version 1.0.0
  */
-@Getter
 public class RuntimeMessageException extends RuntimeException {
 
     /**
@@ -59,6 +56,16 @@ public class RuntimeMessageException extends RuntimeException {
     public RuntimeMessageException(Throwable cause) {
         super(cause);
     }
+    /**
+     * 获取 resultCode
+     *
+     * @return resultCode
+     */
+    public ResultCode getResultCode() {
+        return resultCode;
+    }
+
+
 
 }
 

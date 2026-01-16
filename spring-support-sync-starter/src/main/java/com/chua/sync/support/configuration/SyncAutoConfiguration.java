@@ -1,4 +1,4 @@
-package com.chua.sync.support.configuration;
+﻿package com.chua.sync.support.configuration;
 
 import com.chua.sync.support.client.SyncClient;
 import com.chua.sync.support.properties.SyncProperties;

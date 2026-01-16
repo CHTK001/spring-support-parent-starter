@@ -1,4 +1,4 @@
-package com.chua.starter.elasticsearch.support.pojo;
+﻿package com.chua.starter.elasticsearch.support.pojo;
 
 import lombok.Data;
 

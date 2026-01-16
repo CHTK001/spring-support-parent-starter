@@ -1,4 +1,4 @@
-package com.chua.starter.filesystem.support.properties;
+﻿package com.chua.starter.filesystem.support.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

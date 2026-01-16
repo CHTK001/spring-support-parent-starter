@@ -1,4 +1,4 @@
-package com.chua.starter.oauth.client.support.provider;
+﻿package com.chua.starter.oauth.client.support.provider;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;

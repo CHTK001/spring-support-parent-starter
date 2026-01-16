@@ -1,4 +1,4 @@
-package com.chua.starter.mybatis.interceptor;
+﻿package com.chua.starter.mybatis.interceptor;
 
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.utils.ObjectUtils;
@@ -11,6 +11,7 @@ import com.chua.starter.mybatis.permission.WhereDeptChecker;
 import com.chua.starter.mybatis.permission.WhereDeptRegister;
 import com.chua.starter.mybatis.properties.MybatisPlusDataScopeProperties;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.expression.operators.relational.NotEqualsTo;
@@ -20,10 +21,12 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 /**
- * 数据处理器
+ * 数据权限处理器
+ * 处理查询语句的数据权限过滤
  *
  * @author CH
  */
+@Slf4j
 @RequiredArgsConstructor
 public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler {
 
@@ -38,25 +41,44 @@ public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler
     final MybatisPlusDataScopeProperties metaDataScopeProperties;
 
 
+    /**
+     * 处理查询语句，应用数据权限过滤
+     *
+     * @param plainSelect      查询对象
+     * @param where           当前查询条件
+     * @param mappedStatementId Mapper 方法全限定名
+     * @param currentUser     当前登录用户
+     */
     @Override
     public void processSelect(PlainSelect plainSelect, Expression where, String mappedStatementId, CurrentUser currentUser) {
         try {
-            Class<?> clazz = Class.forName(mappedStatementId.substring(0, mappedStatementId.lastIndexOf(".")));
-            String methodName = mappedStatementId.substring(mappedStatementId.lastIndexOf(".") + 1);
+            int lastDotIndex = mappedStatementId.lastIndexOf(".");
+            if (lastDotIndex <= 0) {
+                return;
+            }
+
+            String className = mappedStatementId.substring(0, lastDotIndex);
+            String methodName = mappedStatementId.substring(lastDotIndex + 1);
+            Class<?> clazz = ClassUtils.forName(className);
+            if (clazz == null) {
+                return;
+            }
+
             List<Method> methods = ClassUtils.getMethods(clazz);
             for (Method method : methods) {
                 DataScope dataScope = method.getAnnotation(DataScope.class);
                 if (ObjectUtils.isNotEmpty(dataScope)) {
-                    if ((method.getName().equals(methodName) || (method.getName() + "_COUNT").equals(methodName))) {
-                        // 获取当前的用户
-                        dataScopeFilter(plainSelect, currentUser, metaDataScopeProperties, where, ObjectUtils.defaultIfNull(dataScope.value(), currentUser.getDataPermission()));
+                    if (method.getName().equals(methodName) || (method.getName() + "_COUNT").equals(methodName)) {
+                        DataFilterTypeEnum permission = ObjectUtils.defaultIfNull(dataScope.value(), currentUser.getDataPermission());
+                        dataScopeFilter(plainSelect, currentUser, metaDataScopeProperties, where, permission);
                     }
                     return;
                 }
-                dataScopeFilter(plainSelect, currentUser, metaDataScopeProperties, where, currentUser.getDataPermission());
             }
+            // 如果没有找到 DataScope 注解，使用用户默认权限
+            dataScopeFilter(plainSelect, currentUser, metaDataScopeProperties, where, currentUser.getDataPermission());
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("处理数据权限时发生异常: mappedStatementId={}", mappedStatementId, e);
         }
     }
 

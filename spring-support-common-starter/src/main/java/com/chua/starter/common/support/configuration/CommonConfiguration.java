@@ -4,8 +4,6 @@ import com.chua.common.support.objects.ConfigureObjectContext;
 import com.chua.common.support.objects.DefaultConfigureObjectContext;
 import com.chua.common.support.objects.ObjectContextSetting;
 import com.chua.starter.common.support.actuator.ActuatorProperties;
-import com.chua.starter.common.support.logger.SysLoggerPointcutAdvisor;
-import com.chua.starter.common.support.logger.UserLoggerPointcutAdvisor;
 import com.chua.starter.common.support.oauth.AuthService;
 import com.chua.starter.common.support.properties.*;
 import com.chua.starter.common.support.service.IptablesService;
@@ -106,42 +104,12 @@ public class CommonConfiguration {
     }
 
     /**
-     * 创建用户日志切入点顾问实例。
-     * 当容器中没有提供UserLoggerPointcutAdvisor实例时，使用此实现。
-     *
-     * @return {@link UserLoggerPointcutAdvisor} 用户日志切入点顾问实例
-     * @example
-     * <pre>
-     * // 使用示例
-     * &#64;Autowired
-     * private UserLoggerPointcutAdvisor userLoggerPointcutAdvisor;
-     * </pre>
+     * 用户日志和系统日志切面已迁移到各自模块：
+     * - UserLoggerPointcutAdvisor: spring-support-oauth-client-starter
+     * - SysLoggerPointcutAdvisor: spring-support-mybatis-starter
+     * 
+     * 各模块通过事件机制（@EventListener）监听日志事件进行处理。
      */
-    @Bean
-    @ConditionalOnMissingBean
-    @Lazy
-    public UserLoggerPointcutAdvisor userLoggerPointcutAdvisor() {
-        return new UserLoggerPointcutAdvisor();
-    }
-
-    /**
-     * 创建系统日志切入点顾问实例。
-     * 当容器中没有提供SysLoggerPointcutAdvisor实例时，使用此实现。
-     *
-     * @return {@link SysLoggerPointcutAdvisor} 系统日志切入点顾问实例
-     * @example
-     * <pre>
-     * // 使用示例
-     * &#64;Autowired
-     * private SysLoggerPointcutAdvisor sysLoggerPointcutAdvisor;
-     * </pre>
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    @Lazy
-    public SysLoggerPointcutAdvisor sysLoggerPointcutAdvisor() {
-        return new SysLoggerPointcutAdvisor();
-    }
 
     /**
      * 创建监控切入点顾问实例。

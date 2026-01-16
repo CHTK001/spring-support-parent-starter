@@ -1,4 +1,4 @@
-package com.chua.starter.datasource.configuration;
+﻿package com.chua.starter.datasource.configuration;
 
 import com.chua.sharding.v5.support.builder.ShardingDataSourceBuilder;
 import com.chua.starter.datasource.properties.ShardingDataSourceProperties;

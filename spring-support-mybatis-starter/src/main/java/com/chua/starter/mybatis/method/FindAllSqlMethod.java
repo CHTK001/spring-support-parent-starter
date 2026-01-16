@@ -1,4 +1,4 @@
-package com.chua.starter.mybatis.method;
+﻿package com.chua.starter.mybatis.method;
 
 import com.baomidou.mybatisplus.core.injector.AbstractMethod;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;

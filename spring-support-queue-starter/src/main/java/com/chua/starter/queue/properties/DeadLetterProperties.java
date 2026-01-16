@@ -1,4 +1,4 @@
-package com.chua.starter.queue.properties;
+﻿package com.chua.starter.queue.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

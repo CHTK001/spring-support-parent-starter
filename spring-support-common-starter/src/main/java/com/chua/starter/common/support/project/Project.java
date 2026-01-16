@@ -7,8 +7,6 @@ import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.NumberUtils;
 import com.chua.common.support.utils.StringUtils;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.core.env.Environment;
@@ -20,9 +18,13 @@ import java.util.Map;
  * @author CH
  * @since 2024/9/6
  */
-@Data
-@NoArgsConstructor
 public class Project {
+    /**
+     * 无参构造函数
+     */
+    public Project() {
+    }
+
     public static final String KEY = "oo00OOOO00ooll11";
 
     private static final Project INSTANCE = new Project();
@@ -168,5 +170,330 @@ public class Project {
                 .put("endpoints", endpoints)
                 .put("endpointsUrl", endpointsUrl).asSynchronizedMap();
     }
+    /**
+     * 获取 applicationName
+     *
+     * @return applicationName
+     */
+    public String getApplicationName() {
+        return applicationName;
+    }
+
+    /**
+     * 设置 applicationName
+     *
+     * @param applicationName applicationName
+     */
+    public void setApplicationName(String applicationName) {
+        this.applicationName = applicationName;
+    }
+
+    /**
+     * 获取 applicationPort
+     *
+     * @return applicationPort
+     */
+    public Integer getApplicationPort() {
+        return applicationPort;
+    }
+
+    /**
+     * 设置 applicationPort
+     *
+     * @param applicationPort applicationPort
+     */
+    public void setApplicationPort(Integer applicationPort) {
+        this.applicationPort = applicationPort;
+    }
+
+    /**
+     * 获取 applicationHost
+     *
+     * @return applicationHost
+     */
+    public String getApplicationHost() {
+        return applicationHost;
+    }
+
+    /**
+     * 设置 applicationHost
+     *
+     * @param applicationHost applicationHost
+     */
+    public void setApplicationHost(String applicationHost) {
+        this.applicationHost = applicationHost;
+    }
+
+    /**
+     * 获取 applicationActive
+     *
+     * @return applicationActive
+     */
+    public String getApplicationActive() {
+        return applicationActive;
+    }
+
+    /**
+     * 设置 applicationActive
+     *
+     * @param applicationActive applicationActive
+     */
+    public void setApplicationActive(String applicationActive) {
+        this.applicationActive = applicationActive;
+    }
+
+    /**
+     * 获取 applicationActiveInclude
+     *
+     * @return applicationActiveInclude
+     */
+    public String getApplicationActiveInclude() {
+        return applicationActiveInclude;
+    }
+
+    /**
+     * 设置 applicationActiveInclude
+     *
+     * @param applicationActiveInclude applicationActiveInclude
+     */
+    public void setApplicationActiveInclude(String applicationActiveInclude) {
+        this.applicationActiveInclude = applicationActiveInclude;
+    }
+
+    /**
+     * 获取 contextPath
+     *
+     * @return contextPath
+     */
+    public String getContextPath() {
+        return contextPath;
+    }
+
+    /**
+     * 设置 contextPath
+     *
+     * @param contextPath contextPath
+     */
+    public void setContextPath(String contextPath) {
+        this.contextPath = contextPath;
+    }
+
+    /**
+     * 获取 endpointsUrl
+     *
+     * @return endpointsUrl
+     */
+    public String getEndpointsUrl() {
+        return endpointsUrl;
+    }
+
+    /**
+     * 设置 endpointsUrl
+     *
+     * @param endpointsUrl endpointsUrl
+     */
+    public void setEndpointsUrl(String endpointsUrl) {
+        this.endpointsUrl = endpointsUrl;
+    }
+
+    /**
+     * 获取 endpoints
+     *
+     * @return endpoints
+     */
+    public String getEndpoints() {
+        return endpoints;
+    }
+
+    /**
+     * 设置 endpoints
+     *
+     * @param endpoints endpoints
+     */
+    public void setEndpoints(String endpoints) {
+        this.endpoints = endpoints;
+    }
+
+    /**
+     * 获取 dataSourceUrl
+     *
+     * @return dataSourceUrl
+     */
+    public String getDataSourceUrl() {
+        return dataSourceUrl;
+    }
+
+    /**
+     * 设置 dataSourceUrl
+     *
+     * @param dataSourceUrl dataSourceUrl
+     */
+    public void setDataSourceUrl(String dataSourceUrl) {
+        this.dataSourceUrl = dataSourceUrl;
+    }
+
+    /**
+     * 获取 dataSourceDriver
+     *
+     * @return dataSourceDriver
+     */
+    public String getDataSourceDriver() {
+        return dataSourceDriver;
+    }
+
+    /**
+     * 设置 dataSourceDriver
+     *
+     * @param dataSourceDriver dataSourceDriver
+     */
+    public void setDataSourceDriver(String dataSourceDriver) {
+        this.dataSourceDriver = dataSourceDriver;
+    }
+
+    /**
+     * 获取 dataSourceUsername
+     *
+     * @return dataSourceUsername
+     */
+    public String getDataSourceUsername() {
+        return dataSourceUsername;
+    }
+
+    /**
+     * 设置 dataSourceUsername
+     *
+     * @param dataSourceUsername dataSourceUsername
+     */
+    public void setDataSourceUsername(String dataSourceUsername) {
+        this.dataSourceUsername = dataSourceUsername;
+    }
+
+    /**
+     * 获取 dataSourcePassword
+     *
+     * @return dataSourcePassword
+     */
+    public String getDataSourcePassword() {
+        return dataSourcePassword;
+    }
+
+    /**
+     * 设置 dataSourcePassword
+     *
+     * @param dataSourcePassword dataSourcePassword
+     */
+    public void setDataSourcePassword(String dataSourcePassword) {
+        this.dataSourcePassword = dataSourcePassword;
+    }
+
+    /**
+     * 获取 environment
+     *
+     * @return environment
+     */
+    public Environment getEnvironment() {
+        return environment;
+    }
+
+    /**
+     * 设置 environment
+     *
+     * @param environment environment
+     */
+    public void setEnvironment(Environment environment) {
+        this.environment = environment;
+    }
+
+    /**
+     * 获取 clientProtocolEndpointPort
+     *
+     * @return clientProtocolEndpointPort
+     */
+    public String getClientProtocolEndpointPort() {
+        return clientProtocolEndpointPort;
+    }
+
+    /**
+     * 设置 clientProtocolEndpointPort
+     *
+     * @param clientProtocolEndpointPort clientProtocolEndpointPort
+     */
+    public void setClientProtocolEndpointPort(String clientProtocolEndpointPort) {
+        this.clientProtocolEndpointPort = clientProtocolEndpointPort;
+    }
+
+    /**
+     * 获取 clientProtocolEndpointProtocol
+     *
+     * @return clientProtocolEndpointProtocol
+     */
+    public String getClientProtocolEndpointProtocol() {
+        return clientProtocolEndpointProtocol;
+    }
+
+    /**
+     * 设置 clientProtocolEndpointProtocol
+     *
+     * @param clientProtocolEndpointProtocol clientProtocolEndpointProtocol
+     */
+    public void setClientProtocolEndpointProtocol(String clientProtocolEndpointProtocol) {
+        this.clientProtocolEndpointProtocol = clientProtocolEndpointProtocol;
+    }
+
+    /**
+     * 获取 localHost
+     *
+     * @return localHost
+     */
+    public String getLocalHost() {
+        return localHost;
+    }
+
+    /**
+     * 设置 localHost
+     *
+     * @param localHost localHost
+     */
+    public void setLocalHost(String localHost) {
+        this.localHost = localHost;
+    }
+
+    /**
+     * 获取 dataSourceProperties
+     *
+     * @return dataSourceProperties
+     */
+    public DataSourceProperties getDataSourceProperties() {
+        return dataSourceProperties;
+    }
+
+    /**
+     * 设置 dataSourceProperties
+     *
+     * @param dataSourceProperties dataSourceProperties
+     */
+    public void setDataSourceProperties(DataSourceProperties dataSourceProperties) {
+        this.dataSourceProperties = dataSourceProperties;
+    }
+
+    /**
+     * 获取 netAddress
+     *
+     * @return netAddress
+     */
+    public NetAddress getNetAddress() {
+        return netAddress;
+    }
+
+    /**
+     * 设置 netAddress
+     *
+     * @param netAddress netAddress
+     */
+    public void setNetAddress(NetAddress netAddress) {
+        this.netAddress = netAddress;
+    }
+
+
 }
 

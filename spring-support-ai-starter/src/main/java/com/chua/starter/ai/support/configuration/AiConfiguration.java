@@ -1,6 +1,10 @@
-package com.chua.starter.ai.support.configuration;
+﻿package com.chua.starter.ai.support.configuration;
 
 import com.chua.starter.ai.support.chat.AiChat;
+import com.chua.starter.ai.support.engine.AiClient;
+import com.chua.starter.ai.support.engine.AiClientConfigUtils;
+import com.chua.starter.ai.support.engine.IdentificationEngine;
+import com.chua.starter.ai.support.engine.impl.AiChatIdentificationEngine;
 import com.chua.starter.ai.support.properties.AiProperties;
 import com.chua.starter.ai.support.service.AiService;
 import com.chua.starter.ai.support.service.AsyncAiService;
@@ -8,6 +12,7 @@ import com.chua.starter.ai.support.service.ReactiveAiService;
 import com.chua.starter.ai.support.service.impl.DefaultAiService;
 import com.chua.starter.ai.support.service.impl.DefaultAsyncAiService;
 import com.chua.starter.ai.support.service.impl.DefaultReactiveAiService;
+import com.chua.starter.common.support.application.ModuleEnvironmentRegistration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -66,6 +71,48 @@ public class AiConfiguration {
     @Lazy
     public ReactiveAiService reactiveAiService(AiService aiService) {
         return new DefaultReactiveAiService(aiService);
+    }
+
+    /**
+     * 注册身份识别引擎Bean
+     *
+     * @param aiService AI服务实例
+     * @return 身份识别引擎实例
+     */
+    @Bean
+    @ConditionalOnMissingBean(IdentificationEngine.class)
+    @Lazy
+    public IdentificationEngine identificationEngine(AiService aiService) {
+        return new AiChatIdentificationEngine(aiService);
+    }
+
+    /**
+     * 注册AI客户端Bean
+     *
+     * @param identificationEngine 身份识别引擎实例
+     * @param aiProperties         AI配置属性
+     * @return AI客户端实例
+     */
+    @Bean
+    @ConditionalOnMissingBean(AiClient.class)
+    @Lazy
+    public AiClient aiClient(IdentificationEngine identificationEngine, AiProperties aiProperties) {
+        var config = AiClientConfigUtils.fromProperties(aiProperties);
+        return AiClient.builder()
+                .engine(identificationEngine)
+                .config(config)
+                .build();
+    }
+
+    /**
+     * 注册 AI 配置到全局环境
+     *
+     * @param aiProperties AI 配置属性
+     * @return 模块环境注册器
+     */
+    @Bean
+    public ModuleEnvironmentRegistration aiModuleEnvironment(AiProperties aiProperties) {
+        return new ModuleEnvironmentRegistration(AiProperties.PREFIX, aiProperties, aiProperties.isEnabled());
     }
 
     /**

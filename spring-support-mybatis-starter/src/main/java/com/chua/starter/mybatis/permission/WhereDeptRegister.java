@@ -1,4 +1,4 @@
-package com.chua.starter.mybatis.permission;
+﻿package com.chua.starter.mybatis.permission;
 
 import com.chua.starter.common.support.constant.DataFilterTypeEnum;
 import com.chua.starter.common.support.oauth.CurrentUser;

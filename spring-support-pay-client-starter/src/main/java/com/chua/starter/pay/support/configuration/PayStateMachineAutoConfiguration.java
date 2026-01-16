@@ -1,4 +1,4 @@
-package com.chua.starter.pay.support.configuration;
+﻿package com.chua.starter.pay.support.configuration;
 
 import com.chua.starter.pay.support.properties.PayProperties;
 import com.chua.starter.pay.support.statemachine.action.PayOrderTransitionAction;

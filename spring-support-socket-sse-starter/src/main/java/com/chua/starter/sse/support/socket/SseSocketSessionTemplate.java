@@ -1,4 +1,4 @@
-package com.chua.starter.sse.support.socket;
+﻿package com.chua.starter.sse.support.socket;
 
 import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.StringUtils;

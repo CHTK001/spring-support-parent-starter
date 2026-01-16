@@ -1,4 +1,4 @@
-package com.chua.starter.job.support;
+﻿package com.chua.starter.job.support;
 
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.task.scheduler.SchedulerProvider;

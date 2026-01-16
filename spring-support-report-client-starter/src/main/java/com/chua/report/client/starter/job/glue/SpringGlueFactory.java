@@ -1,9 +1,8 @@
-package com.chua.report.client.starter.job.glue;
+﻿package com.chua.report.client.starter.job.glue;
 
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import jakarta.annotation.Resource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
@@ -12,8 +11,8 @@ import org.springframework.core.annotation.AnnotationUtils;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 
+@Slf4j
 public class SpringGlueFactory extends GlueFactory{
-    private static final Logger logger = LoggerFactory.getLogger(SpringGlueFactory.class);
 
     public SpringGlueFactory() {
     }
@@ -59,9 +58,9 @@ public class SpringGlueFactory extends GlueFactory{
                             try {
                                 field.set(instance, fieldBean);
                             } catch (IllegalArgumentException var9) {
-                                logger.error(var9.getMessage(), var9);
+                                log.error(var9.getMessage(), var9);
                             } catch (IllegalAccessException var10) {
-                                logger.error(var10.getMessage(), var10);
+                                log.error(var10.getMessage(), var10);
                             }
                         }
                     }

@@ -1,9 +1,9 @@
-package com.chua.starter.shell.command;
+﻿package com.chua.starter.shell.command;
 
 import com.github.fonimus.ssh.shell.PromptColor;
 import com.github.fonimus.ssh.shell.SshShellHelper;
 import com.github.fonimus.ssh.shell.commands.SshShellComponent;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.logging.LogLevel;
 import org.springframework.boot.logging.LoggingSystem;
 import org.springframework.boot.logging.logback.LogbackLoggingSystem;
@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
  * @author CH
  * @version 4.0.0.32
  */
+@Slf4j
 @SshShellComponent
 @ShellCommandGroup("日志管理")
 public class LogCommand {
@@ -64,7 +65,7 @@ public class LogCommand {
                 sb.append("New Level: ").append(helper.getColored(newLevel.name(), PromptColor.GREEN)).append("\n");
                 
                 // 记录操作日志
-                LoggerFactory.getLogger(LogCommand.class).info("日志等级已修改: {} -> {}", logger, newLevel);
+                log.info("日志等级已修改: {} -> {}", logger, newLevel);
                 
             } catch (IllegalArgumentException e) {
                 sb.append(helper.getColored("错误: 无效的日志等级 '" + level + "'", PromptColor.RED)).append("\n");
@@ -135,7 +136,7 @@ public class LogCommand {
                     "已重置为继承父级配置\n";
             
             // 记录操作日志
-            LoggerFactory.getLogger(LogCommand.class).info("日志等级已重置: {}", logger);
+            log.info("日志等级已重置: {}", logger);
             
             return sb;
             

@@ -1,6 +1,6 @@
 # Spring Support Parent Starter
 
-[![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://www.oracle.com/java/)
+[![Java](https://img.shields.io/badge/Java-25-orange.svg)](https://www.oracle.com/java/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.5-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![Maven](https://img.shields.io/badge/Maven-3.6+-blue.svg)](https://maven.apache.org/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
@@ -11,7 +11,7 @@ Spring Support Parent Starter 是一个基于 Spring Boot 3.x 的企业级应用
 
 ### ✨ 主要特性
 
-- 🚀 **基于最新技术栈** - Spring Boot 3.x + Java 21 LTS
+- 🚀 **基于最新技术栈** - Spring Boot 3.x + Java 25 LTS
 - 🧩 **模块化设计** - 按需引入，避免依赖冗余
 - 🏢 **企业级功能** - 提供生产环境所需的各种组件
 - ⚙️ **统一配置管理** - 一致的配置风格和管理方式
@@ -132,7 +132,7 @@ Spring Support Parent Starter
 
 ### 环境要求
 
-- **Java**: 21 或更高版本
+- **Java**: 25 或更高版本
 - **Maven**: 3.6+ 或 **Gradle**: 7.0+
 - **Spring Boot**: 3.4.5
 
@@ -907,8 +907,8 @@ WebSocket 实时通信：
 
 | Spring Support | Spring Boot | Java | 说明               |
 | -------------- | ----------- | ---- | ------------------ |
-| 4.0.0.32       | 3.4.5       | 21+  | 当前版本，推荐使用 |
-| 4.0.0.x        | 3.2.x       | 21+  | 稳定版本           |
+| 4.0.0.32       | 3.4.5       | 25+  | 当前版本，推荐使用 |
+| 4.0.0.x        | 3.2.x       | 25+  | 稳定版本           |
 
 ## 📝 更新日志
 
@@ -1100,6 +1100,80 @@ WebSocket 实时通信：
 
 - **[spring-support-strategy-starter](spring-support-strategy-starter/README.md)** - 策略模式模块
   - 策略模式实现支持
+
+### 🔌 插件系统模块
+
+#### spring-support-plugin-starter
+
+**企业级插件系统模块（PF4J 兼容）**
+
+基于 PF4J 标准的企业级插件系统，提供完整的插件生命周期管理和 Spring Boot 深度集成。
+
+**Maven 依赖：**
+
+```xml
+<dependency>
+    <groupId>com.chua</groupId>
+    <artifactId>spring-support-plugin-starter</artifactId>
+    <version>4.0.0.32</version>
+</dependency>
+```
+
+#### 插件系统能力（PF4J 兼容）
+
+| 能力项 | 状态 | 说明 | PF4J 兼容性 |
+|--------|------|------|------------|
+| **插件管理** | ✅ | 完整的插件生命周期管理：`loadPlugin`, `startPlugin`, `stopPlugin`, `unloadPlugin`, `reloadPlugin` | ✅ 完全兼容 |
+| **扩展点机制** | ✅ | 支持 `ExtensionPoint` 接口和 `@Extension` 注解，实现插件扩展功能 | ✅ 完全兼容 |
+| **插件生命周期** | ✅ | 完整的生命周期管理：`Plugin.start()`, `Plugin.stop()`, `Plugin.delete()` | ✅ 完全兼容 |
+| **插件依赖管理** | ✅ | 支持 `PluginDependency`，自动解析依赖关系并按正确顺序加载插件 | ✅ 完全兼容 |
+| **类加载器隔离** | ✅ | 每个插件使用独立的 `PluginClassLoader`，实现类隔离，避免冲突 | ✅ 完全兼容 |
+| **插件描述符** | ✅ | 支持 `plugin.properties` 格式，兼容 PF4J 描述符规范 | ✅ 完全兼容 |
+| **热加载** | ✅ | 支持 `DirectoryWatcher` 监听文件变化，自动加载/重载/卸载插件 | ✅ 完全兼容 |
+| **插件状态管理** | ✅ | 完整的插件状态管理：`CREATED`, `STARTED`, `STOPPED`, `DISABLED`, `FAILED` | ✅ 完全兼容 |
+| **插件优先级** | ✅ | 支持插件优先级配置，按优先级顺序加载和启动 | ✅ 完全兼容 |
+| **插件依赖解析** | ✅ | 自动解析插件依赖关系，确保依赖插件先于被依赖插件加载 | ✅ 完全兼容 |
+
+#### 增强功能（PF4J 扩展）
+
+| 能力项 | 状态 | 说明 | PF4J 兼容性 |
+|--------|------|------|------------|
+| **Spring Bean 自动注册** | ✅ | 自动扫描插件中的 `@Service`/`@Component`/`@Repository`/`@Controller` 注解，注册到 Spring 容器 | ❌ PF4J 不支持 |
+| **Controller 映射管理** | ✅ | 动态注册/卸载 Spring MVC 路由，支持热加载时的映射升级 | ❌ PF4J 不支持 |
+| **SPI 扩展支持** | ✅ | 支持 Java SPI 机制，与插件系统无缝集成 | ❌ PF4J 不支持 |
+| **Windows 文件锁处理** | ✅ | 完美解决 Windows 系统下插件文件锁定问题，支持自动重试和 GC 释放 | ⚠️ PF4J 在 Windows 上有问题 |
+| **运行模式** | ✅ | 支持 `DEVELOPMENT`/`PRODUCTION` 模式，自动调整配置（热加载、日志级别等） | ❌ PF4J 不支持 |
+| **Spring Boot 自动配置** | ✅ | 零配置启动，通过 `@ConditionalOnProperty` 自动装配插件系统 | ❌ PF4J 需要手动集成 |
+| **插件 Bean 命名隔离** | ✅ | 插件 Bean 使用 `{pluginId}.{beanName}` 命名规则，避免与主应用 Bean 冲突 | ❌ PF4J 不支持 |
+| **Bean 覆盖策略** | ✅ | 支持 `@Primary` 和 `@Order` 注解控制 Bean 覆盖优先级 | ❌ PF4J 不支持 |
+| **插件上下文管理** | ✅ | 每个插件拥有独立的上下文，管理插件内的 Bean 和资源 | ❌ PF4J 不支持 |
+| **插件卸载资源清理** | ✅ | 完整的资源清理机制：卸载 Bean、关闭 ClassLoader、释放文件锁、触发 GC | ⚠️ PF4J 资源清理不完善 |
+
+#### 功能对比总结
+
+| 功能类别 | PF4J | 本项目 | 说明 |
+|---------|------|-------|------|
+| **核心插件功能** | ✅ | ✅ | 完全兼容 PF4J 所有核心功能 |
+| **Spring 集成** | ⚠️ | ✅ | PF4J 需要手动集成，本项目自动集成 |
+| **Bean 管理** | ❌ | ✅ | PF4J 不支持，本项目完整支持 |
+| **Windows 支持** | ⚠️ | ✅ | PF4J 在 Windows 上有文件锁问题，本项目完美解决 |
+| **热加载** | ✅ | ✅ | 完全兼容，并增强 Spring Bean 和 Controller 映射管理 |
+| **扩展点** | ✅ | ✅ | 完全兼容，并支持 SPI 扩展 |
+
+**配置示例：**
+
+```yaml
+plugin:
+  plugin:
+    enable: true
+    path: ./plugins
+    watch: true  # 启用热加载
+    mode: DEVELOPMENT  # DEVELOPMENT 或 PRODUCTION
+```
+
+**结论：**
+
+本项目实现了 **PF4J 的所有核心功能**，并在此基础上提供了 **Spring Boot 深度集成**和 **增强功能**，是一个功能完整、生产就绪的企业级插件系统。
 
 ---
 

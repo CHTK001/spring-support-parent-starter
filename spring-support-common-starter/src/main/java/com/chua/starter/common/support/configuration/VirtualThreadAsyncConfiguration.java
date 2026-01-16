@@ -1,7 +1,9 @@
 package com.chua.starter.common.support.configuration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 import com.chua.starter.common.support.properties.VirtualThreadProperties;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.aop.interceptor.AsyncUncaughtExceptionHandler;
 import org.springframework.aop.interceptor.SimpleAsyncUncaughtExceptionHandler;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -22,12 +24,13 @@ import java.util.concurrent.Executors;
  * @author CH
  * @since 4.0.0
  */
-@Slf4j
 @Configuration
 @EnableAsync
 @EnableConfigurationProperties(VirtualThreadProperties.class)
 @ConditionalOnProperty(prefix = VirtualThreadProperties.PREFIX, name = "enabled", havingValue = "true")
 public class VirtualThreadAsyncConfiguration implements AsyncConfigurer {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(VirtualThreadAsyncConfiguration.class);
+
 
     private final VirtualThreadProperties properties;
 

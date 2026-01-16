@@ -1,8 +1,5 @@
 package com.chua.starter.common.support.watch;
 
-import lombok.Getter;
-import lombok.Setter;
-
 import java.io.Serializable;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -11,8 +8,6 @@ import java.util.Set;
 /**
  * @author Administrator
  */
-@Getter
-@Setter
 public class Span implements Serializable {
     /**
      * 分布式追踪中的链路ID
@@ -150,6 +145,484 @@ public class Span implements Serializable {
             int i1 = string.indexOf("(");
             parents.add(i1 > -1 ? string.substring(0, i1) : string);
         }
+    /**
+     * 获取 linkId
+     *
+     * @return linkId
+     */
+    public String getLinkId() {
+        return linkId;
+    }
+
+    /**
+     * 设置 linkId
+     *
+     * @param linkId linkId
+     */
+    public void setLinkId(String linkId) {
+        this.linkId = linkId;
+    }
+
+    /**
+     * 获取 id
+     *
+     * @return id
+     */
+    public String getId() {
+        return id;
+    }
+
+    /**
+     * 设置 id
+     *
+     * @param id id
+     */
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    /**
+     * 获取 pid
+     *
+     * @return pid
+     */
+    public String getPid() {
+        return pid;
+    }
+
+    /**
+     * 设置 pid
+     *
+     * @param pid pid
+     */
+    public void setPid(String pid) {
+        this.pid = pid;
+    }
+
+    /**
+     * 获取 enterTime
+     *
+     * @return enterTime
+     */
+    public long getEnterTime() {
+        return enterTime;
+    }
+
+    /**
+     * 设置 enterTime
+     *
+     * @param enterTime enterTime
+     */
+    public void setEnterTime(long enterTime) {
+        this.enterTime = enterTime;
+    }
+
+    /**
+     * 获取 endTime
+     *
+     * @return endTime
+     */
+    public long getEndTime() {
+        return endTime;
+    }
+
+    /**
+     * 设置 endTime
+     *
+     * @param endTime endTime
+     */
+    public void setEndTime(long endTime) {
+        this.endTime = endTime;
+    }
+
+    /**
+     * 获取 costTime
+     *
+     * @return costTime
+     */
+    public long getCostTime() {
+        return costTime;
+    }
+
+    /**
+     * 设置 costTime
+     *
+     * @param costTime costTime
+     */
+    public void setCostTime(long costTime) {
+        this.costTime = costTime;
+    }
+
+    /**
+     * 获取 message
+     *
+     * @return message
+     */
+    public String getMessage() {
+        return message;
+    }
+
+    /**
+     * 设置 message
+     *
+     * @param message message
+     */
+    public void setMessage(String message) {
+        this.message = message;
+    }
+
+    /**
+     * 获取 stack
+     *
+     * @return stack
+     */
+    public List<String> getStack() {
+        return stack;
+    }
+
+    /**
+     * 获取 header
+     *
+     * @return header
+     */
+    public List<String> getHeader() {
+        return header;
+    }
+
+    /**
+     * 设置 header
+     *
+     * @param header header
+     */
+    public void setHeader(List<String> header) {
+        this.header = header;
+    }
+
+    /**
+     * 获取 method
+     *
+     * @return method
+     */
+    public String getMethod() {
+        return method;
+    }
+
+    /**
+     * 设置 method
+     *
+     * @param method method
+     */
+    public void setMethod(String method) {
+        this.method = method;
+    }
+
+    /**
+     * 获取 typeMethod
+     *
+     * @return typeMethod
+     */
+    public String getTypeMethod() {
+        return typeMethod;
+    }
+
+    /**
+     * 设置 typeMethod
+     *
+     * @param typeMethod typeMethod
+     */
+    public void setTypeMethod(String typeMethod) {
+        this.typeMethod = typeMethod;
+    }
+
+    /**
+     * 获取 type
+     *
+     * @return type
+     */
+    public String getType() {
+        return type;
+    }
+
+    /**
+     * 设置 type
+     *
+     * @param type type
+     */
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    /**
+     * 获取 args
+     *
+     * @return args
+     */
+    public Object[] getArgs() {
+        return args;
+    }
+
+    /**
+     * 设置 args
+     *
+     * @param args args
+     */
+    public void setArgs(Object[] args) {
+        this.args = args;
+    }
+
+    /**
+     * 获取 title
+     *
+     * @return title
+     */
+    public boolean getTitle() {
+        return title;
+    }
+
+    /**
+     * 设置 title
+     *
+     * @param title title
+     */
+    public void setTitle(boolean title) {
+        this.title = title;
+    }
+
+    /**
+     * 获取 ex
+     *
+     * @return ex
+     */
+    public String getEx() {
+        return ex;
+    }
+
+    /**
+     * 设置 ex
+     *
+     * @param ex ex
+     */
+    public void setEx(String ex) {
+        this.ex = ex;
+    }
+
+    /**
+     * 获取 error
+     *
+     * @return error
+     */
+    public String getError() {
+        return error;
+    }
+
+    /**
+     * 设置 error
+     *
+     * @param error error
+     */
+    public void setError(String error) {
+        this.error = error;
+    }
+
+    /**
+     * 获取 db
+     *
+     * @return db
+     */
+    public String getDb() {
+        return db;
+    }
+
+    /**
+     * 设置 db
+     *
+     * @param db db
+     */
+    public void setDb(String db) {
+        this.db = db;
+    }
+
+    /**
+     * 获取 model
+     *
+     * @return model
+     */
+    public String getModel() {
+        return model;
+    }
+
+    /**
+     * 设置 model
+     *
+     * @param model model
+     */
+    public void setModel(String model) {
+        this.model = model;
+    }
+
+    /**
+     * 获取 threadName
+     *
+     * @return threadName
+     */
+    public String getThreadName() {
+        return threadName;
+    }
+
+    /**
+     * 设置 threadName
+     *
+     * @param threadName threadName
+     */
+    public void setThreadName(String threadName) {
+        this.threadName = threadName;
+    }
+
+    /**
+     * 获取 from
+     *
+     * @return from
+     */
+    public String getFrom() {
+        return from;
+    }
+
+    /**
+     * 设置 from
+     *
+     * @param from from
+     */
+    public void setFrom(String from) {
+        this.from = from;
+    }
+
+    /**
+     * 获取 children
+     *
+     * @return children
+     */
+    public List<Span> getChildren() {
+        return children;
+    }
+
+    /**
+     * 设置 children
+     *
+     * @param children children
+     */
+    public void setChildren(List<Span> children) {
+        this.children = children;
+    }
+
+    /**
+     * 获取 parents
+     *
+     * @return parents
+     */
+    public Set<String> getParents() {
+        return parents;
+    }
+
+    /**
+     * 设置 parents
+     *
+     * @param parents parents
+     */
+    public void setParents(Set<String> parents) {
+        this.parents = parents;
+    }
+
+    /**
+     * 获取 rs
+     *
+     * @return rs
+     */
+    public List<String> getRs() {
+        return rs;
+    }
+
+    /**
+     * 设置 rs
+     *
+     * @param rs rs
+     */
+    public void setRs(List<String> rs) {
+        this.rs = rs;
+    }
+
+    /**
+     * 获取 element
+     *
+     * @return element
+     */
+    public StackTraceElement getElement() {
+        return element;
+    }
+
+    /**
+     * 设置 element
+     *
+     * @param element element
+     */
+    public void setElement(StackTraceElement element) {
+        this.element = element;
+    }
+
+    /**
+     * 获取 className
+     *
+     * @return className
+     */
+    public String getClassName() {
+        return className;
+    }
+
+    /**
+     * 设置 className
+     *
+     * @param className className
+     */
+    public void setClassName(String className) {
+        this.className = className;
+    }
+
+    /**
+     * 获取 string
+     *
+     * @return string
+     */
+    public String getString() {
+        return string;
+    }
+
+    /**
+     * 设置 string
+     *
+     * @param string string
+     */
+    public void setString(String string) {
+        this.string = string;
+    }
+
+    /**
+     * 获取 i1
+     *
+     * @return i1
+     */
+    public int getI1() {
+        return i1;
+    }
+
+    /**
+     * 设置 i1
+     *
+     * @param i1 i1
+     */
+    public void setI1(int i1) {
+        this.i1 = i1;
+    }
+
+
         this.stack = rs;
     }
 }

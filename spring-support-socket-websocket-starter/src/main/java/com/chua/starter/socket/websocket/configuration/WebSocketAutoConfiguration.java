@@ -1,4 +1,4 @@
-package com.chua.starter.socket.websocket.configuration;
+﻿package com.chua.starter.socket.websocket.configuration;
 
 import com.chua.starter.socket.websocket.handler.DelegatingWebSocketHandler;
 import com.chua.starter.socket.websocket.handler.WebSocketMessageHandler;

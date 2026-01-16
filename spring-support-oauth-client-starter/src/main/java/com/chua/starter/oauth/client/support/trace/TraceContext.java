@@ -1,4 +1,4 @@
-package com.chua.starter.oauth.client.support.trace;
+﻿package com.chua.starter.oauth.client.support.trace;
 
 import com.chua.common.support.utils.IdUtils;
 import lombok.Getter;

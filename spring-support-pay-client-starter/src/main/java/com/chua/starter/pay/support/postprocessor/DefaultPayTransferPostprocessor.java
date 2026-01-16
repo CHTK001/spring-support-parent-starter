@@ -1,6 +1,6 @@
-package com.chua.starter.pay.support.postprocessor;
+﻿package com.chua.starter.pay.support.postprocessor;
 
-import com.chua.common.support.annotations.Spi;
+import com.chua.common.support.core.annotation.Spi;
 import com.chua.common.support.annotations.SpiDefault;
 import com.chua.common.support.constant.Action;
 import com.chua.common.support.objects.annotation.AutoInject;

@@ -1,4 +1,4 @@
-package com.chua.rsocket.support.session;
+﻿package com.chua.rsocket.support.session;
 
 import com.chua.common.support.json.Json;
 import com.chua.socket.support.session.SocketSession;

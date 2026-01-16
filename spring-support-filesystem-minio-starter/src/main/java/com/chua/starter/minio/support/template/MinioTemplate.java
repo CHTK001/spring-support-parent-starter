@@ -1,4 +1,4 @@
-package com.chua.starter.minio.support.template;
+﻿package com.chua.starter.minio.support.template;
 
 import com.chua.common.support.lang.date.DateTime;
 import com.chua.common.support.utils.StringUtils;

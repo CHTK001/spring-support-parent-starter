@@ -1,16 +1,30 @@
-package com.chua.starter.strategy.config;
+﻿package com.chua.starter.strategy.config;
 
 import com.chua.starter.strategy.aspect.*;
 import com.chua.starter.strategy.distributed.StrategyDebounce;
 import com.chua.starter.strategy.distributed.StrategyRateLimiter;
+import com.chua.starter.strategy.config.StrategyProperties;
 import com.chua.starter.strategy.interceptor.CircuitBreakerInterceptor;
 import com.chua.starter.strategy.interceptor.IpAccessControlInterceptor;
+import com.chua.starter.strategy.interceptor.PathTraversalInterceptor;
+import com.chua.starter.strategy.interceptor.SqlInjectionProtectionInterceptor;
+import com.chua.starter.strategy.interceptor.CsrfProtectionInterceptor;
+import com.chua.starter.strategy.interceptor.RequestSizeLimitInterceptor;
+import com.chua.starter.strategy.interceptor.HttpMethodRestrictionInterceptor;
+import com.chua.starter.strategy.interceptor.RequestTimeoutInterceptor;
+import com.chua.starter.strategy.interceptor.ParameterCountLimitInterceptor;
+import com.chua.starter.strategy.interceptor.ContentSecurityPolicyInterceptor;
+import com.chua.starter.strategy.interceptor.ClickjackingProtectionInterceptor;
 import com.chua.starter.strategy.service.SysCircuitBreakerConfigurationService;
 import com.chua.starter.strategy.service.SysCircuitBreakerRecordService;
 import com.chua.starter.strategy.template.DefaultLockTemplate;
+import com.chua.starter.strategy.template.DefaultLimitTemplate;
 import com.chua.starter.strategy.template.DefaultStrategyTemplate;
+import com.chua.starter.strategy.template.LimitTemplate;
 import com.chua.starter.strategy.template.LockTemplate;
 import com.chua.starter.strategy.template.StrategyTemplate;
+import com.chua.common.support.core.spi.ServiceProvider;
+import com.chua.starter.strategy.util.StrategyEventPublisher;
 import com.chua.starter.strategy.warmup.WarmupExecutor;
 import io.github.resilience4j.bulkhead.BulkheadRegistry;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
@@ -23,12 +37,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import jakarta.annotation.PostConstruct;
 
 /**
  * 策略模块自动配置
@@ -155,16 +171,44 @@ public class StrategyAutoConfiguration {
     /**
      * 锁模板
      * <p>
-     * 提供统一的分布式锁API，默认使用JVM内存锁实现。
-     * 分布式环境请引入 redis-starter 使用 Redisson 实现。
+     * 提供统一的分布式锁API，通过 SPI 机制自动发现和加载锁实现。
+     * 默认使用 local 类型的锁实现（基于 JVM 内存）。
+     * 分布式环境可通过 SPI 注册 Redis、Zookeeper 等实现。
      * </p>
      *
      * @return 锁模板
      */
     @Bean
     @ConditionalOnMissingBean
-    public LockTemplate lockTemplate() {
-        return new DefaultLockTemplate();
+    public LockTemplate lockTemplate(@Value("${plugin.strategy.lock.type:local}") String lockType) {
+        var provider = ServiceProvider.of(LockTemplate.class);
+        var template = provider.getExtension(lockType);
+        if (template == null) {
+            // 如果指定类型不存在，使用默认实现
+            return new DefaultLockTemplate();
+        }
+        return template;
+    }
+
+    /**
+     * 限流模板
+     * <p>
+     * 提供统一的限流API，通过 SPI 机制自动发现和加载限流器实现。
+     * 默认使用 default 类型的限流模板，内部会通过 SPI 获取限流器实现。
+     * </p>
+     *
+     * @return 限流模板
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public LimitTemplate limitTemplate(@Value("${plugin.strategy.limit.type:default}") String limitType) {
+        var provider = ServiceProvider.of(LimitTemplate.class);
+        var template = provider.getExtension(limitType);
+        if (template == null) {
+            // 如果指定类型不存在，使用默认实现
+            return new DefaultLimitTemplate();
+        }
+        return template;
     }
 
     // ==================== 新增组件配置 ====================
@@ -224,6 +268,87 @@ public class StrategyAutoConfiguration {
             SysCircuitBreakerConfigurationService configService,
             SysCircuitBreakerRecordService recordService) {
         return new CircuitBreakerInterceptor(configService, recordService);
+    }
+
+    /**
+     * 路径穿透防护拦截器
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public PathTraversalInterceptor pathTraversalInterceptor(StrategyProperties strategyProperties) {
+        return new PathTraversalInterceptor(strategyProperties.getPathTraversal());
+    }
+
+    /**
+     * SQL注入防护拦截器
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public SqlInjectionProtectionInterceptor sqlInjectionProtectionInterceptor(StrategyProperties strategyProperties) {
+        return new SqlInjectionProtectionInterceptor(strategyProperties.getSqlInjection());
+    }
+
+    /**
+     * CSRF防护拦截器
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public CsrfProtectionInterceptor csrfProtectionInterceptor(StrategyProperties strategyProperties) {
+        return new CsrfProtectionInterceptor(strategyProperties.getCsrf());
+    }
+
+    /**
+     * 请求大小限制拦截器
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public RequestSizeLimitInterceptor requestSizeLimitInterceptor(StrategyProperties strategyProperties) {
+        return new RequestSizeLimitInterceptor(strategyProperties.getRequestSizeLimit());
+    }
+
+    /**
+     * HTTP方法限制拦截器
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public HttpMethodRestrictionInterceptor httpMethodRestrictionInterceptor(StrategyProperties strategyProperties) {
+        return new HttpMethodRestrictionInterceptor(strategyProperties.getHttpMethodRestriction());
+    }
+
+    /**
+     * 请求超时控制拦截器
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public RequestTimeoutInterceptor requestTimeoutInterceptor(StrategyProperties strategyProperties) {
+        return new RequestTimeoutInterceptor(strategyProperties.getRequestTimeout());
+    }
+
+    /**
+     * 参数数量限制拦截器
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public ParameterCountLimitInterceptor parameterCountLimitInterceptor(StrategyProperties strategyProperties) {
+        return new ParameterCountLimitInterceptor(strategyProperties.getParameterCountLimit());
+    }
+
+    /**
+     * 内容安全策略拦截器
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public ContentSecurityPolicyInterceptor contentSecurityPolicyInterceptor(StrategyProperties strategyProperties) {
+        return new ContentSecurityPolicyInterceptor(strategyProperties.getContentSecurityPolicy());
+    }
+
+    /**
+     * 点击劫持防护拦截器
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public ClickjackingProtectionInterceptor clickjackingProtectionInterceptor(StrategyProperties strategyProperties) {
+        return new ClickjackingProtectionInterceptor(strategyProperties.getClickjackingProtection());
     }
 
     /**
@@ -304,5 +429,36 @@ public class StrategyAutoConfiguration {
     @ConditionalOnMissingBean
     public RequestCollapseAspect requestCollapseAspect() {
         return new RequestCollapseAspect();
+    }
+
+    /**
+     * 初始化事件发布器
+     * <p>
+     * 将Spring的ApplicationEventPublisher注入到StrategyEventPublisher中
+     * </p>
+     *
+     * @param eventPublisher Spring事件发布器
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public StrategyEventPublisherInitializer strategyEventPublisherInitializer(
+            @Autowired(required = false) ApplicationEventPublisher eventPublisher) {
+        return new StrategyEventPublisherInitializer(eventPublisher);
+    }
+
+    /**
+     * 事件发布器初始化器
+     */
+    public static class StrategyEventPublisherInitializer {
+        private final ApplicationEventPublisher eventPublisher;
+
+        public StrategyEventPublisherInitializer(ApplicationEventPublisher eventPublisher) {
+            this.eventPublisher = eventPublisher;
+        }
+
+        @PostConstruct
+        public void init() {
+            StrategyEventPublisher.setEventPublisher(eventPublisher);
+        }
     }
 }

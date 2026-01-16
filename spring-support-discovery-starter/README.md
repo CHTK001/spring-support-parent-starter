@@ -41,20 +41,22 @@ plugin:
   discovery:
     # 是否启用服务发现
     # 默认: false
-    # 说明: 设置为true时才会启用服务发现功能
     enable: true
 
-    # 服务发现类型（consul/eureka/nacos/zookeeper）
-    type: consul
+    # 多个发现中心配置列表
+    properties:
+      - protocol: nacos           # 必填: 协议, 对应 ServiceDiscovery SPI 实现名
+        address: http://localhost:8848
+        username: nacos
+        password: nacos
+        connection-timeout-millis: 10000
+        session-timeout-millis: 10000
 
-    # 服务发现服务器地址
-    server-url: http://localhost:8500
-
-    # 服务名称
-    service-name: ${spring.application.name}
-
-    # 服务端口
-    service-port: ${server.port}
+        # 要注册的服务节点列表
+        node:
+          - server-id: ${spring.application.name}   # 可选: 服务ID, 为空则自动生成
+            namespace: /demo-service               # 必填: 服务命名空间/业务标识
+            protocol: http                         # 可选: 服务协议, 默认 http
 ```
 
 ### 3. 服务注册
@@ -64,115 +66,69 @@ plugin:
 ### 4. 服务调用
 
 ```java
-@Autowired
-private DiscoveryClient discoveryClient;
+@Service
+public class DemoService {
 
-public List<ServiceInstance> getInstances(String serviceName) {
-    return discoveryClient.getInstances(serviceName);
+    @Resource
+    private DiscoveryService discoveryService;
+
+    public Discovery getOne(String namespace) {
+        // 使用默认协议查询
+        return discoveryService.getDiscovery(namespace);
+    }
+
+    public Set<Discovery> getAll(String namespace) {
+        // 使用默认协议查询所有实例
+        return discoveryService.getDiscoveryAll(namespace);
+    }
 }
 ```
 
 ## ⚙️ 配置说明
 
-### Consul 配置
+### 多协议配置示例
 
 ```yaml
 plugin:
   discovery:
     enable: true
-    type: consul
-    server-url: http://localhost:8500
+    properties:
+      - protocol: nacos
+        address: http://localhost:8848
+        username: nacos
+        password: nacos
+        node:
+          - server-id: demo-nacos
+            namespace: /demo-service
+            protocol: http
 
-    # Consul 特定配置
-    consul:
-      # 健康检查间隔（秒）
-      health-check-interval: 10
-      # 健康检查超时（秒）
-      health-check-timeout: 5
-      # 服务标签
-      tags:
-        - version=1.0.0
-        - env=dev
-```
-
-### Nacos 配置
-
-```yaml
-plugin:
-  discovery:
-    enable: true
-    type: nacos
-    server-url: http://localhost:8848
-
-    # Nacos 特定配置
-    nacos:
-      # 命名空间
-      namespace: public
-      # 分组
-      group: DEFAULT_GROUP
-      # 集群名称
-      cluster-name: DEFAULT
+      - protocol: zookeeper
+        address: 127.0.0.1:2181
+        connection-timeout-millis: 5000
+        session-timeout-millis: 15000
+        node:
+          - server-id: demo-zk
+            namespace: /demo-service
+            protocol: http
 ```
 
 ## 💡 使用示例
 
-### 服务调用
+### 按协议查询服务
 
 ```java
 @Service
-public class UserService {
+public class MultiProtocolService {
 
-    @Autowired
-    private RestTemplate restTemplate;
+    @Resource
+    private DiscoveryService discoveryService;
 
-    @Autowired
-    private DiscoveryClient discoveryClient;
-
-    public String callUserService() {
-        // 获取服务实例
-        List<ServiceInstance> instances =
-            discoveryClient.getInstances("user-service");
-
-        if (instances.isEmpty()) {
-            throw new ServiceException("服务不可用");
-        }
-
-        // 选择第一个实例
-        ServiceInstance instance = instances.get(0);
-        String url = instance.getUri() + "/api/user/list";
-
-        // 调用服务
-        return restTemplate.getForObject(url, String.class);
+    public Discovery selectFromNacos(String namespace) {
+        return discoveryService.getDiscovery("nacos", namespace);
     }
-}
-```
 
-### 负载均衡
-
-```java
-@Configuration
-public class LoadBalancerConfig {
-
-    @Bean
-    @LoadBalanced
-    public RestTemplate restTemplate() {
-        return new RestTemplate();
-    }
-}
-
-// 使用服务名调用
-@Service
-public class OrderService {
-
-    @Autowired
-    private RestTemplate restTemplate;
-
-    public String callUserService() {
-        // 直接使用服务名，自动负载均衡
-        return restTemplate.getForObject(
-            "http://user-service/api/user/list",
-            String.class
-        );
+    public Set<Discovery> selectAllFromZookeeper(String namespace) {
+        return discoveryService.getDiscoveryAll("zookeeper", namespace);
     }
 }
 ```

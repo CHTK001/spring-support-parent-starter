@@ -1,6 +1,10 @@
 package com.chua.starter.swagger.support.converter;
 
-import io.swagger.v3.core.converter.*;
+import io.swagger.v3.core.converter.AnnotatedType;
+import io.swagger.v3.core.converter.ModelConverter;
+import io.swagger.v3.core.converter.ModelConverterContext;
+import io.swagger.v3.core.converter.ModelConverters;
+import io.swagger.v3.core.converter.ResolvedSchema;
 import io.swagger.v3.oas.models.media.Schema;
 
 import java.lang.reflect.Modifier;
@@ -8,13 +12,20 @@ import java.util.Arrays;
 import java.util.Iterator;
 
 /**
- * 自定义转换器
+ * 继承属性解析器
+ * 用于解析父类属性并添加到Schema中
  *
  * @author CH
  * @since 2025/5/27 13:04
  */
 public class InheritedPropertyResolver implements ModelConverter {
 
+    /**
+     * 添加父类属性
+     *
+     * @param clazz 类
+     * @param schema Schema对象
+     */
     private void addParentProperties(Class<?> clazz, Schema schema) {
         Class<?> superClass = clazz.getSuperclass();
         if (superClass != null && !superClass.equals(Object.class)) {
@@ -33,6 +44,14 @@ public class InheritedPropertyResolver implements ModelConverter {
         }
     }
 
+    /**
+     * 解析Schema
+     *
+     * @param type 注解类型
+     * @param context 模型转换器上下文
+     * @param chain 转换器链
+     * @return 解析后的Schema
+     */
     @Override
     public Schema resolve(AnnotatedType type, ModelConverterContext context, Iterator<ModelConverter> chain) {
         ResolvedSchema resolvedSchema = ModelConverters.getInstance()

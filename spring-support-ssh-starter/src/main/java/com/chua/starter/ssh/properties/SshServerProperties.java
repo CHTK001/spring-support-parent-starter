@@ -1,4 +1,4 @@
-package com.chua.starter.ssh.properties;
+﻿package com.chua.starter.ssh.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

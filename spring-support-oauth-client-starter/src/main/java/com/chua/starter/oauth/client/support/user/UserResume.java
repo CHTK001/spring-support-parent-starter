@@ -1,4 +1,4 @@
-package com.chua.starter.oauth.client.support.user;
+﻿package com.chua.starter.oauth.client.support.user;
 
 import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.matcher.PathMatcher;

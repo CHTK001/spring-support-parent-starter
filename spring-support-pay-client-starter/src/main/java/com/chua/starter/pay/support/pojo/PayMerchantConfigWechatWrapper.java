@@ -1,4 +1,4 @@
-package com.chua.starter.pay.support.pojo;
+﻿package com.chua.starter.pay.support.pojo;
 
 import com.chua.starter.pay.support.entity.PayMerchantConfigWechat;
 import lombok.AllArgsConstructor;

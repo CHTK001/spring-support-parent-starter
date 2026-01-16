@@ -1,4 +1,4 @@
-package com.chua.report.client.starter.job.log;
+﻿package com.chua.report.client.starter.job.log;
 
 import cn.hutool.core.date.DateUtil;
 import com.chua.report.client.starter.job.thread.JobContext;

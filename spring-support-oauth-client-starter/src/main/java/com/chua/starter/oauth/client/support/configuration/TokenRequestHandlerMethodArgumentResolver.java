@@ -1,4 +1,4 @@
-package com.chua.starter.oauth.client.support.configuration;
+﻿package com.chua.starter.oauth.client.support.configuration;
 
 import com.chua.common.support.converter.Converter;
 import com.chua.common.support.unit.name.NamingCase;

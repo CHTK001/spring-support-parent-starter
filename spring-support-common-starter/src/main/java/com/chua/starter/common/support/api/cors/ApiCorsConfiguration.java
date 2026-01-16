@@ -1,7 +1,8 @@
 package com.chua.starter.common.support.api.cors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -42,12 +43,23 @@ import java.util.List;
  * @version 1.0.0
  * @since 2024/12/07
  */
-@Slf4j
 @Configuration
-@RequiredArgsConstructor
 @EnableConfigurationProperties(ApiCorsProperties.class)
 @ConditionalOnProperty(name = "plugin.api.cors.enable", matchIfMissing = false, havingValue = "true")
 public class ApiCorsConfiguration {
+    /**
+     * 构造函数
+     *
+     * @param X_HEADER_VERSION String
+     * @param corsProperties ApiCorsProperties
+     */
+    public ApiCorsConfiguration(String X_HEADER_VERSION, ApiCorsProperties corsProperties) {
+        this.X_HEADER_VERSION = X_HEADER_VERSION;
+        this.corsProperties = corsProperties;
+    }
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ApiCorsConfiguration.class);
+
 
     private static final String X_HEADER_VERSION = "x-response-version";
 

@@ -1,10 +1,10 @@
-package com.chua.report.client.starter.sync.handler;
+﻿package com.chua.report.client.starter.sync.handler;
 
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.AppenderBase;
-import com.chua.common.support.annotations.Spi;
+import com.chua.common.support.core.annotation.Spi;
 import com.chua.common.support.json.Json;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.report.client.starter.sync.MonitorTopics;

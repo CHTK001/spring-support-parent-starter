@@ -1,4 +1,4 @@
-package com.chua.starter.oauth.client.support.annotation;
+﻿package com.chua.starter.oauth.client.support.annotation;
 
 
 import com.chua.starter.oauth.client.support.enums.AuthType;

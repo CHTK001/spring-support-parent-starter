@@ -1,4 +1,4 @@
-package com.chua.report.client.starter.report;
+﻿package com.chua.report.client.starter.report;
 
 import com.chua.oshi.support.*;
 import com.chua.report.client.starter.sync.MonitorTopics;

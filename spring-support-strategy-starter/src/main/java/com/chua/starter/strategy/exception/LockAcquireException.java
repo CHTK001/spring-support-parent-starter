@@ -1,4 +1,4 @@
-package com.chua.starter.strategy.exception;
+﻿package com.chua.starter.strategy.exception;
 
 /**
  * 锁获取异常

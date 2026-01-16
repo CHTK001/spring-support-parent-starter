@@ -1,4 +1,4 @@
-package com.chua.starter.queue.rocketmq;
+﻿package com.chua.starter.queue.rocketmq;
 
 import com.chua.starter.queue.MessageTemplate;
 import com.chua.starter.queue.properties.QueueProperties;

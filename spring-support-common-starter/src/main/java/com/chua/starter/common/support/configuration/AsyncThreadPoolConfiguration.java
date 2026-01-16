@@ -1,9 +1,11 @@
 package com.chua.starter.common.support.configuration;
 
+import com.chua.starter.common.support.application.ModuleEnvironmentRegistration;
 import com.chua.starter.common.support.constant.Constant;
 import com.chua.starter.common.support.log.MdcTaskDecorator;
 import com.chua.starter.common.support.properties.AsyncThreadPoolProperties;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.PostConstruct;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.task.TaskDecorator;
@@ -13,7 +15,6 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 /**
  * 异步任务
@@ -23,10 +24,26 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 @EnableAsync
 @EnableConfigurationProperties(AsyncThreadPoolProperties.class)
 @ConditionalOnProperty(prefix = "plugin.async", name = "enable", havingValue = "true", matchIfMissing = false)
-@RequiredArgsConstructor
 public class AsyncThreadPoolConfiguration implements AsyncConfigurer {
+    /**
+     * 构造函数
+     *
+     * @param asyncProperties AsyncThreadPoolProperties
+     */
+    public AsyncThreadPoolConfiguration(AsyncThreadPoolProperties asyncProperties) {
+        this.asyncProperties = asyncProperties;
+    }
+
 
     final AsyncThreadPoolProperties asyncProperties;
+
+    /**
+     * 注册异步线程池配置到全局环境
+     */
+    @PostConstruct
+    public void registerEnvironment() {
+        new ModuleEnvironmentRegistration(AsyncThreadPoolProperties.PRE, asyncProperties, asyncProperties.isEnable());
+    }
 
     @Bean(Constant.DEFAULT_EXECUTOR2)
     public ThreadPoolTaskExecutor febsShiroThreadPoolTaskExecutor() {

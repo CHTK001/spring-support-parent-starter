@@ -1,5 +1,6 @@
-package com.chua.starter.strategy.template;
+﻿package com.chua.starter.strategy.template;
 
+import com.chua.common.support.annotations.Extension;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
@@ -21,6 +22,7 @@ import java.util.function.Supplier;
  * @since 2025-12-25
  */
 @Slf4j
+@Extension("local")
 public class DefaultLockTemplate implements LockTemplate {
 
     private static final Duration DEFAULT_WAIT_TIME = Duration.ofSeconds(10);

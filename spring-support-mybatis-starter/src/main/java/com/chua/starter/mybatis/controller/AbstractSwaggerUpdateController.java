@@ -1,4 +1,4 @@
-package com.chua.starter.mybatis.controller;
+﻿package com.chua.starter.mybatis.controller;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.common.support.function.Splitter;
@@ -19,13 +19,19 @@ import java.util.Set;
 import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
 
 /**
- * 超类
+ * Swagger更新控制器基类
+ * 提供通用的增删改查功能
  *
+ * @param <S> Service类型
+ * @param <T> 实体类型
  * @author CH
  */
 public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> {
 
-    @Autowired
+    /**
+     * 事务模板，用于执行事务操作
+     */
+    @Autowired(required = false)
     protected TransactionTemplate transactionTemplate;
 
     /**
@@ -60,12 +66,21 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
      * @param t 实体
      * @return 分页结果
      */
+    /**
+     * 批量保存或更新数据
+     *
+     * @param t            实体列表
+     * @param bindingResult 绑定结果
+     * @return 操作结果
+     */
     @ResponseBody
     @Operation(summary = "更新/保存数据")
     @PutMapping("saveOrUpdateBatch")
     public ReturnResult<Boolean> saveOrUpdateBatch(@Validated(UpdateGroup.class) @RequestBody List<T> t, BindingResult bindingResult) {
-        if(bindingResult.hasErrors()) {
-            return ReturnResult.illegal(REQUEST_PARAM_ERROR, bindingResult.getAllErrors().getFirst().getDefaultMessage());
+        if (bindingResult.hasErrors()) {
+            var allErrors = bindingResult.getAllErrors();
+            String errorMessage = allErrors.isEmpty() ? "参数验证失败" : allErrors.getFirst().getDefaultMessage();
+            return ReturnResult.illegal(REQUEST_PARAM_ERROR, errorMessage);
         }
 
         return ReturnResult.of(getService().saveOrUpdateBatch(t));
@@ -86,9 +101,18 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
         }
 
 
+        if (transactionTemplate == null) {
+            boolean saveOrUpdate = getService().saveOrUpdate(render(t));
+            if (!saveOrUpdate) {
+                return ReturnResult.error("保存失败");
+            }
+            saveOrUpdateAfter(t);
+            return ReturnResult.of(saveOrUpdate);
+        }
+
         return transactionTemplate.execute(it -> {
             boolean saveOrUpdate = getService().saveOrUpdate(render(t));
-            if(!saveOrUpdate) {
+            if (!saveOrUpdate) {
                 throw new RuntimeException("保存失败");
             }
             saveOrUpdateAfter(t);

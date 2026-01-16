@@ -7,6 +7,7 @@ import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +28,7 @@ public class GlobalSettingFactory {
 
     static final Map<String, Object> CONFIG = new ConcurrentHashMap<>();
     static final Map<String, List<Object>> GROUP = new ConcurrentHashMap<>();
+    static final Map<String, Boolean> GROUP_ENABLED = new ConcurrentHashMap<>();
 
     /**
      * 获取全局设置对象
@@ -118,13 +120,26 @@ public class GlobalSettingFactory {
      * @param <T>   泛型标记
      */
     public <T> void register(String group, T t) {
+        register(group, t, true);
+    }
+
+    /**
+     * 注册全局设置对象, 带启用状态
+     *
+     * @param group   设置名称
+     * @param t       要注册的设置对象
+     * @param enabled 是否启用
+     * @param <T>     泛型标记
+     */
+    public <T> void register(String group, T t, boolean enabled) {
         if (null == t) {
             return;
         }
-        List<Object> objects = GROUP.get(PREFIX + group);
+        String groupKey = PREFIX + group;
+        List<Object> objects = GROUP.get(groupKey);
         if (null == objects) {
-            GROUP.put(PREFIX + group, new LinkedList<>());
-            objects = GROUP.get(PREFIX + group);
+            GROUP.put(groupKey, new LinkedList<>());
+            objects = GROUP.get(groupKey);
         }
 
         for (Object object : objects) {
@@ -134,6 +149,7 @@ public class GlobalSettingFactory {
         }
 
         objects.add(t);
+        GROUP_ENABLED.putIfAbsent(groupKey, enabled);
     }
 
     /**
@@ -143,6 +159,24 @@ public class GlobalSettingFactory {
      */
     public static GlobalSettingFactory getInstance() {
         return INSTANCE;
+    }
+
+    /**
+     * 获取所有分组配置
+     *
+     * @return 分组名称与配置列表映射
+     */
+    public Map<String, List<Object>> getAllGroup() {
+        return Collections.unmodifiableMap(GROUP);
+    }
+
+    /**
+     * 获取所有分组启用状态
+     *
+     * @return 分组名称与启用状态映射
+     */
+    public Map<String, Boolean> getAllGroupEnabled() {
+        return Collections.unmodifiableMap(GROUP_ENABLED);
     }
 
     /**

@@ -8,7 +8,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 配置
+ * Swagger Knife4j 配置
+ *
+ * <p>用于统一管理 Swagger / Knife4j 的基础配置和分组信息。</p>
  *
  * @author CH
  */
@@ -75,6 +77,51 @@ public class Knife4jProperties {
             "  \uD83D\uDCE2请用户在使用API服务之前仔细阅读并理解本条款，如用户不同意本条款的任何内容，请勿使用API服务。<br>\n" +
             "  ⚠\uFE0F用户一旦使用API服务，即视为用户已接受本条款的全部内容。";
 
+    /**
+     * 获取 Knife4j 分组配置
+     *
+     * @return Knife4j 分组配置列表
+     */
+    public List<Knife4j> getKnife4j() {
+        return knife4j;
+    }
+
+    /**
+     * 获取默认请求头
+     *
+     * @return 默认请求头配置
+     */
+    public Map<String, String> getDefaultHeader() {
+        return defaultHeader;
+    }
+
+    /**
+     * 获取描述信息
+     *
+     * @return 描述信息
+     */
+    public String getDescription() {
+        return description;
+    }
+
+    /**
+     * 获取版本号
+     *
+     * @return 版本号
+     */
+    public String getVersion() {
+        return version;
+    }
+
+    /**
+     * 获取服务条款
+     *
+     * @return 服务条款内容
+     */
+    public String getTermsOfService() {
+        return termsOfService;
+    }
+
     @Data
     @Accessors(chain = true)
     public static class Knife4j {
@@ -109,6 +156,69 @@ public class Knife4jProperties {
          * 版本
          */
         private String version = "v1.0.0";
+
+        /**
+         * 获取分组编码
+         *
+         * @return 分组编码
+         */
+        public String getGroup() {
+            return group;
+        }
+
+        /**
+         * 获取分组名称
+         *
+         * @return 分组名称
+         */
+        public String getGroupName() {
+            return groupName;
+        }
+
+        /**
+         * 获取路径匹配配置
+         *
+         * @return 路径匹配数组
+         */
+        public String[] getPathsToMatch() {
+            return pathsToMatch;
+        }
+
+        /**
+         * 获取基础包配置
+         *
+         * @return 基础包数组
+         */
+        public String[] getBasePackage() {
+            return basePackage;
+        }
+
+        /**
+         * 获取标题
+         *
+         * @return 标题
+         */
+        public String getTitle() {
+            return title;
+        }
+
+        /**
+         * 获取描述
+         *
+         * @return 描述
+         */
+        public String getDescription() {
+            return description;
+        }
+
+        /**
+         * 获取版本
+         *
+         * @return 版本号
+         */
+        public String getVersion() {
+            return version;
+        }
 
     }
 }
