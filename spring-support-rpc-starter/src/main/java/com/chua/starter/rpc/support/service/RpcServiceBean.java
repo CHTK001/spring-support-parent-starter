@@ -23,10 +23,6 @@ public class RpcServiceBean<T> extends AbstractRpcServiceSetting<T> implements I
     private RpcType rpcType;
     private final RpcProperties rpcProperties;
     private final RpcServer rpcServer;
-    private String interfaceName;
-    private Class<?> interfaceClass;
-    private Object ref;
-
     public RpcServiceBean(Class<T> type, RpcType rpcType, RpcProperties rpcProperties, RpcServer rpcServer) {
         this.type = type;
         this.rpcType = rpcType;
@@ -50,9 +46,11 @@ public class RpcServiceBean<T> extends AbstractRpcServiceSetting<T> implements I
      * @return 接口名称
      */
     public String getInterfaceName() {
-        if (interfaceName != null) {
+        String interfaceName = super.getInterfaceName();
+        if (interfaceName != null && !interfaceName.isEmpty()) {
             return interfaceName;
         }
+        Class<?> interfaceClass = super.getInterfaceClass();
         if (interfaceClass != null) {
             return interfaceClass.getName();
         }
@@ -60,15 +58,6 @@ public class RpcServiceBean<T> extends AbstractRpcServiceSetting<T> implements I
             return type.getName();
         }
         return null;
-    }
-
-    /**
-     * 获取引用对象
-     *
-     * @return 引用对象
-     */
-    public Object getRef() {
-        return ref;
     }
 
     public RpcType getType() {
