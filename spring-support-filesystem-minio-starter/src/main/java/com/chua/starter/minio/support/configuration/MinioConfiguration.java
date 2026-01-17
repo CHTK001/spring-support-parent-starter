@@ -1,4 +1,4 @@
-﻿package com.chua.starter.minio.support.configuration;
+package com.chua.starter.minio.support.configuration;
 
 import com.chua.starter.minio.support.properties.MinioProperties;
 import com.chua.starter.minio.support.template.MinioTemplate;

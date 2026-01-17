@@ -1,4 +1,4 @@
-﻿package com.chua.starter.oauth.client.support.execute;
+package com.chua.starter.oauth.client.support.execute;
 
 
 import com.chua.starter.oauth.client.support.enums.AuthType;

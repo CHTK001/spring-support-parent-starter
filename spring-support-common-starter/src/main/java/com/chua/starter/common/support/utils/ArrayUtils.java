@@ -2,7 +2,7 @@ package com.chua.starter.common.support.utils;
 
 import java.util.StringJoiner;
 
-import static com.chua.common.support.constant.CommonConstant.EMPTY;
+import static com.chua.common.support.core.constant.CommonConstant.EMPTY;
 
 /**
  * 数组工具类

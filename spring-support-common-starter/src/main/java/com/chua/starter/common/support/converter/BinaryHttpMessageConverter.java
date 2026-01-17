@@ -1,8 +1,4 @@
 package com.chua.starter.common.support.converter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-
 import com.chua.starter.common.support.api.encode.ApiResponseEncodeRegister;
 import com.chua.starter.common.support.utils.RequestUtils;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,17 +12,17 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.List;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * 二进制消息转换器
  *
  * @author CH
  * @since 2025/10/10 14:22
  */
+@Slf4j
 public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConverter<Object> {
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(BinaryHttpMessageConverter.class);
-
-
-    private final ApiResponseEncodeRegister apiResponseEncodeRegister;
+        private final ApiResponseEncodeRegister apiResponseEncodeRegister;
     private final List<HttpMessageConverter<?>> messageConverters;
 
     public BinaryHttpMessageConverter(ApiResponseEncodeRegister apiResponseEncodeRegister, List<HttpMessageConverter<?>> messageConverters) {

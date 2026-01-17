@@ -1,7 +1,7 @@
 package com.chua.starter.common.support.media;
 
-import com.chua.common.support.annotations.Extension;
-import com.chua.common.support.json.Json;
+import com.chua.common.support.core.annotation.Extension;
+import com.chua.common.support.text.json.Json;
 
 /**
  * @author CH

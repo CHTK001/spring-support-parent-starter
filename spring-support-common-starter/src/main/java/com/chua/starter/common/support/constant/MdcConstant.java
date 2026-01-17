@@ -1,6 +1,6 @@
 package com.chua.starter.common.support.constant;
 
-import com.chua.common.support.http.HttpConstant;
+import com.chua.common.support.network.http.HttpConstant;
 
 /**
  * MDC 链路追踪常量

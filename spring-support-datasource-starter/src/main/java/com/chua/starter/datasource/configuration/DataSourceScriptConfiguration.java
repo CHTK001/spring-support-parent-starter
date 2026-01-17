@@ -1,10 +1,10 @@
-﻿package com.chua.starter.datasource.configuration;
+package com.chua.starter.datasource.configuration;
 
 import com.chua.common.support.lang.process.ProgressBar;
 import com.chua.common.support.lang.process.ProgressBarBuilder;
 import com.chua.common.support.lang.process.ProgressBarStyle;
 import com.chua.common.support.lang.version.Version;
-import com.chua.common.support.utils.ObjectUtils;
+import com.chua.common.support.core.utils.ObjectUtils;
 import com.chua.starter.datasource.properties.DataSourceScriptProperties;
 import com.chua.starter.datasource.support.DatabaseFileProvider;
 import lombok.extern.slf4j.Slf4j;
@@ -56,7 +56,8 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
 
     @Override
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
-        if (bean instanceof DataSource ds && dataSourceScriptProperties.isEnable()) {
+        if (bean instanceof DataSource && dataSourceScriptProperties.isEnable()) {
+            DataSource ds = (DataSource) bean;
             // 避免重复处理同一个 DataSource
             if (processedDataSources.add(beanName)) {
                 try {
@@ -110,6 +111,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
      * @version 1.2.0
      * @since 2025/9/3 9:07
      */
+    @Slf4j
     static class FlywayLikePopulator {
 
         private final DataSource ds;
@@ -143,7 +145,8 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
 
                 // 3. 扫描脚本（包括db/init和配置的脚本路径）
                 PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
-                List<Resource> list = new ArrayList<>(Arrays.asList(resolver.getResources(dataSourceScriptProperties.getScriptPath())));
+                Resource[] resources = resolver.getResources(dataSourceScriptProperties.getScriptPath());
+                List<Resource> list = new ArrayList<>(Arrays.asList(resources));
 
                 // 如果配置了数据库类型，则额外加载数据库特定的脚本目录
                 if (dataSourceScriptProperties.getDatabaseType() != null && !dataSourceScriptProperties.getDatabaseType().trim().isEmpty()) {

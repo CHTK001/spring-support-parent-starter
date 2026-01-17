@@ -1,4 +1,4 @@
-﻿package com.chua.starter.queue.configuration;
+package com.chua.starter.queue.configuration;
 
 import com.chua.starter.queue.MessageTemplate;
 import com.chua.starter.queue.properties.DeadLetterProperties;
@@ -11,8 +11,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 
 /**
  * 死信队列自动配置
@@ -28,6 +26,7 @@ import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 @EnableConfigurationProperties(DeadLetterProperties.class)
 @ConditionalOnProperty(prefix = DeadLetterProperties.PREFIX, name = "enable", havingValue = "true")
 public class DeadLetterAutoConfiguration {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(DeadLetterAutoConfiguration.class);
 
     @Autowired
     private DeadLetterProperties deadLetterProperties;
@@ -40,19 +39,20 @@ public class DeadLetterAutoConfiguration {
         // 创建死信队列底层存储
         MessageTemplate dlqStorage = createDlqStorage();
 
-        DeadLetterTemplate.DeadLetterConfig config = DeadLetterTemplate.DeadLetterConfig.builder()
-                .maxRetries(deadLetterProperties.getMaxRetries())
-                .retryDelay(java.time.Duration.ofSeconds(deadLetterProperties.getRetryDelaySeconds()))
-                .maxRetryDelay(java.time.Duration.ofSeconds(deadLetterProperties.getMaxRetryDelaySeconds()))
-                .exponentialBackoff(deadLetterProperties.isExponentialBackoff())
-                .backoffMultiplier(deadLetterProperties.getBackoffMultiplier())
-                .build();
+        // 使用 AllArgsConstructor 创建配置对象
+        var config = new DeadLetterTemplate.DeadLetterConfig(
+                deadLetterProperties.getMaxRetries(),
+                java.time.Duration.ofSeconds(deadLetterProperties.getRetryDelaySeconds()),
+                java.time.Duration.ofSeconds(deadLetterProperties.getMaxRetryDelaySeconds()),
+                deadLetterProperties.isExponentialBackoff(),
+                deadLetterProperties.getBackoffMultiplier()
+        );
 
         // 如果有主队列，使用主队列作为消息源；否则使用死信队列存储
         MessageTemplate sourceTemplate = mainMessageTemplate != null ? mainMessageTemplate : dlqStorage;
 
         log.info("[Queue] 创建死信队列模板, 类型: {}, 最大重试: {}",
-                highlight(deadLetterProperties.getType()), highlight(deadLetterProperties.getMaxRetries()));
+                deadLetterProperties.getType(), deadLetterProperties.getMaxRetries());
         return new DeadLetterTemplate(sourceTemplate, dlqStorage, config);
     }
 

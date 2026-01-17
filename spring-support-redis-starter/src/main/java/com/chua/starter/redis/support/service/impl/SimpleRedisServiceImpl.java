@@ -1,7 +1,7 @@
-﻿package com.chua.starter.redis.support.service.impl;
+package com.chua.starter.redis.support.service.impl;
 
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.utils.NumberUtils;
+import com.chua.starter.redis.support.utils.NumberUtils;
 import com.chua.redis.support.client.RedisClient;
 import com.chua.starter.redis.support.service.SimpleRedisService;
 import org.springframework.beans.factory.annotation.Autowired;

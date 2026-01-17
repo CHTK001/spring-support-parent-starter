@@ -1,11 +1,11 @@
-﻿package com.chua.starter.redis.support.service.impl;
+package com.chua.starter.redis.support.service.impl;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.task.cache.CacheProvider;
 import com.chua.common.support.task.cache.Cacheable;
 import com.chua.common.support.task.cache.GuavaCacheProvider;
-import com.chua.common.support.utils.IdUtils;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.redis.support.utils.IdUtils;
+import com.chua.starter.redis.support.utils.StringUtils;
 import com.chua.redis.support.client.RedisClient;
 import com.chua.redis.support.client.RedisSearch;
 import com.chua.redis.support.search.*;

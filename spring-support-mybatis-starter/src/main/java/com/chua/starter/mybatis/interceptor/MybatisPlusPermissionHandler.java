@@ -1,7 +1,6 @@
-﻿package com.chua.starter.mybatis.interceptor;
+package com.chua.starter.mybatis.interceptor;
 
-import com.chua.common.support.utils.ClassUtils;
-import com.chua.common.support.utils.ObjectUtils;
+import com.chua.starter.datasource.util.ClassUtils;
 import com.chua.starter.mybatis.annotations.DataScope;
 import com.chua.starter.common.support.constant.DataFilterTypeEnum;
 import com.chua.starter.common.support.oauth.CurrentUser;
@@ -18,6 +17,7 @@ import net.sf.jsqlparser.expression.operators.relational.NotEqualsTo;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -27,7 +27,6 @@ import java.util.List;
  * @author CH
  */
 @Slf4j
-@RequiredArgsConstructor
 public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler {
 
     private static final String CREATE_BY = "rule_create_by";
@@ -39,6 +38,15 @@ public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler
     }
 
     final MybatisPlusDataScopeProperties metaDataScopeProperties;
+
+    /**
+     * 构造函数
+     *
+     * @param metaDataScopeProperties 数据权限配置属性
+     */
+    public MybatisPlusPermissionHandler(MybatisPlusDataScopeProperties metaDataScopeProperties) {
+        this.metaDataScopeProperties = metaDataScopeProperties;
+    }
 
 
     /**
@@ -64,12 +72,12 @@ public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler
                 return;
             }
 
-            List<Method> methods = ClassUtils.getMethods(clazz);
+            List<Method> methods = Arrays.asList(clazz.getMethods());
             for (Method method : methods) {
                 DataScope dataScope = method.getAnnotation(DataScope.class);
-                if (ObjectUtils.isNotEmpty(dataScope)) {
+                if (dataScope != null) {
                     if (method.getName().equals(methodName) || (method.getName() + "_COUNT").equals(methodName)) {
-                        DataFilterTypeEnum permission = ObjectUtils.defaultIfNull(dataScope.value(), currentUser.getDataPermission());
+                        DataFilterTypeEnum permission = dataScope.value() != null ? dataScope.value() : currentUser.getDataPermission();
                         dataScopeFilter(plainSelect, currentUser, metaDataScopeProperties, where, permission);
                     }
                     return;

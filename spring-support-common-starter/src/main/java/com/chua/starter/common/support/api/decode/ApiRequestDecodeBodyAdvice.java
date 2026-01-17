@@ -1,13 +1,9 @@
 package com.chua.starter.common.support.api.decode;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-
-import com.chua.common.support.json.Json;
-import com.chua.common.support.json.JsonArray;
-import com.chua.common.support.net.UserAgent;
-import com.chua.common.support.utils.IoUtils;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.text.json.Json;
+import com.chua.common.support.text.json.JsonArray;
+import com.chua.common.support.network.net.UserAgent;
+import com.chua.common.support.core.utils.IoUtils;
+import com.chua.common.support.core.utils.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpHeaders;
@@ -25,6 +21,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * 请求解码处理器
  * <p>
@@ -35,13 +33,11 @@ import java.lang.reflect.Type;
  * @since 2024/12/07
  * @version 1.0.0
  */
+@Slf4j
 @RestControllerAdvice
 @SuppressWarnings("ALL")
 public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice {
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ApiRequestDecodeBodyAdvice.class);
-
-
-    private final ApiRequestDecodeRegister decodeRegister;
+        private final ApiRequestDecodeRegister decodeRegister;
     
     /**
      * 解密失败时是否拒绝请求

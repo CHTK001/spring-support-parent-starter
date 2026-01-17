@@ -1,6 +1,6 @@
-﻿package com.chua.starter.queue.template;
+package com.chua.starter.queue.template;
 
-import com.chua.common.support.json.Json;
+import com.chua.starter.queue.util.Json;
 import com.chua.starter.queue.Acknowledgment;
 import com.chua.starter.queue.Message;
 import com.chua.starter.queue.MessageHandler;
@@ -38,6 +38,7 @@ import static com.chua.starter.common.support.logger.ModuleLog.highlight;
  */
 @Slf4j
 public class LocalMessageTemplate implements MessageTemplate {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(LocalMessageTemplate.class);
 
     private static final String TYPE = "local";
 
@@ -127,14 +128,13 @@ public class LocalMessageTemplate implements MessageTemplate {
         
         try {
             byte[] bytes = serializePayload(payload);
-            Message message = Message.builder()
-                    .id(messageId)
-                    .destination(destination)
-                    .payload(bytes)
-                    .headers(headers != null ? headers : new ConcurrentHashMap<>())
-                    .timestamp(System.currentTimeMillis())
-                    .type(TYPE)
-                    .build();
+            var message = new Message();
+            message.setId(messageId);
+            message.setDestination(destination);
+            message.setPayload(bytes);
+            message.setHeaders(headers != null ? headers : new ConcurrentHashMap<>());
+            message.setTimestamp(System.currentTimeMillis());
+            message.setType(TYPE);
 
             // 使用异步EventBus发送消息
             AsyncEventBus asyncEventBus = getOrCreateAsyncEventBus(destination);
@@ -162,14 +162,13 @@ public class LocalMessageTemplate implements MessageTemplate {
         String messageId = UUID.randomUUID().toString();
         try {
             byte[] bytes = serializePayload(payload);
-            Message message = Message.builder()
-                    .id(messageId)
-                    .destination(destination)
-                    .payload(bytes)
-                    .headers(headers != null ? headers : new ConcurrentHashMap<>())
-                    .timestamp(System.currentTimeMillis())
-                    .type(TYPE)
-                    .build();
+            var message = new Message();
+            message.setId(messageId);
+            message.setDestination(destination);
+            message.setPayload(bytes);
+            message.setHeaders(headers != null ? headers : new ConcurrentHashMap<>());
+            message.setTimestamp(System.currentTimeMillis());
+            message.setType(TYPE);
 
             // 使用同步EventBus发送消息
             EventBus eventBus = getOrCreateEventBus(destination);
@@ -193,13 +192,12 @@ public class LocalMessageTemplate implements MessageTemplate {
         String messageId = UUID.randomUUID().toString();
         try {
             byte[] bytes = serializePayload(payload);
-            Message message = Message.builder()
-                    .id(messageId)
-                    .destination(destination)
-                    .payload(bytes)
-                    .timestamp(System.currentTimeMillis())
-                    .type(TYPE)
-                    .build();
+            var message = new Message();
+            message.setId(messageId);
+            message.setDestination(destination);
+            message.setPayload(bytes);
+            message.setTimestamp(System.currentTimeMillis());
+            message.setType(TYPE);
 
             // 使用平台线程调度，虚拟线程执行
             delayScheduler.schedule(() -> {
@@ -460,6 +458,7 @@ public class LocalMessageTemplate implements MessageTemplate {
     /**
      * EventBus订阅者包装类
      */
+    @Slf4j
     private class EventBusSubscriber {
         private final String destination;
         private final MessageHandler handler;

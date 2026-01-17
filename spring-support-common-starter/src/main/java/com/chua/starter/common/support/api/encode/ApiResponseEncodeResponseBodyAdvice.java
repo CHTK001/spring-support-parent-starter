@@ -1,9 +1,5 @@
 package com.chua.starter.common.support.api.encode;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-
-import com.chua.common.support.json.Json;
+import com.chua.common.support.text.json.Json;
 import com.chua.common.support.lang.code.ReturnResult;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.SneakyThrows;
@@ -22,18 +18,17 @@ import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * 响应加密
  * @author CH
  */
+@Slf4j
 @RestControllerAdvice
 @SuppressWarnings("ALL")
-
 public class ApiResponseEncodeResponseBodyAdvice implements ResponseBodyAdvice<Object> {
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ApiResponseEncodeResponseBodyAdvice.class);
-
-
-    private final ApiResponseEncodeRegister apiResponseEncodeRegister;
+        private final ApiResponseEncodeRegister apiResponseEncodeRegister;
 
 
     public ApiResponseEncodeResponseBodyAdvice(ApiResponseEncodeRegister apiResponseEncodeRegister) {
@@ -54,7 +49,7 @@ public class ApiResponseEncodeResponseBodyAdvice implements ResponseBodyAdvice<O
             return o;
         }
 
-        if( methodParameter.hasMethodAnnotation(com.chua.common.support.annotations.Ignore.class)) {
+        if( methodParameter.hasMethodAnnotation(com.chua.common.support.core.annotation.Ignore.class)) {
             return o;
         }
 

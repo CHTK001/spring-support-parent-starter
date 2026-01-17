@@ -187,5 +187,42 @@ public class RequestUtils {
         }
         return request.getHeader(name);
     }
+
+    /**
+     * 判断是否为静态资源请求
+     * <p>常见的静态资源扩展名：css, js, jpg, jpeg, png, gif, ico, svg, woff, woff2, ttf, eot, map 等</p>
+     *
+     * @param requestURI 请求URI
+     * @return 如果是静态资源返回true，否则返回false
+     */
+    public static boolean isResource(String requestURI) {
+        if (null == requestURI || requestURI.isEmpty()) {
+            return false;
+        }
+
+        // 常见的静态资源扩展名
+        String[] staticExtensions = {
+                ".css", ".js", ".jpg", ".jpeg", ".png", ".gif", ".ico", ".svg",
+                ".woff", ".woff2", ".ttf", ".eot", ".map", ".json", ".xml",
+                ".txt", ".pdf", ".zip", ".rar", ".mp4", ".mp3", ".avi"
+        };
+
+        String lowerURI = requestURI.toLowerCase();
+        for (String ext : staticExtensions) {
+            if (lowerURI.endsWith(ext)) {
+                return true;
+            }
+        }
+
+        // 检查是否为静态资源路径（如 /static/, /assets/, /resources/ 等）
+        String[] staticPaths = {"/static/", "/assets/", "/resources/", "/public/", "/webjars/"};
+        for (String path : staticPaths) {
+            if (lowerURI.startsWith(path)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }
 

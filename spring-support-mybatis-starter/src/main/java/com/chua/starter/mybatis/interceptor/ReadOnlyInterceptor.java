@@ -1,4 +1,4 @@
-﻿package com.chua.starter.mybatis.interceptor;
+package com.chua.starter.mybatis.interceptor;
 
 import com.chua.starter.mybatis.properties.MybatisPlusProperties;
 import lombok.extern.slf4j.Slf4j;

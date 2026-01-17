@@ -1,8 +1,4 @@
 package com.chua.starter.common.support.configuration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-
 import org.springframework.core.io.Resource;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -13,16 +9,17 @@ import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 
-/**
+import lombok.extern.slf4j.Slf4j;
+
+/*@Slf4j
+*
  * resource
  *
  * @author CH
  */
+@Slf4j
 public class ResourceWebMvcConfigurer implements WebMvcConfigurer {
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ResourceWebMvcConfigurer.class);
-
-
-    @Override
+        @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         log.info("当前运行目录: {}", new File(".").getAbsolutePath());
         registry.addResourceHandler("/static/**").addResourceLocations("classpath:/static/", "file:./static/").setCachePeriod(3600);

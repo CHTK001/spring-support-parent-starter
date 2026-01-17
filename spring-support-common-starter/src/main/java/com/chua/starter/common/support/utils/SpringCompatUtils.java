@@ -1,8 +1,4 @@
 package com.chua.starter.common.support.utils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.core.type.MethodMetadata;
 import org.springframework.core.type.StandardMethodMetadata;
@@ -11,16 +7,16 @@ import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
+import lombok.extern.slf4j.Slf4j;
+@Slf4j
+
 /**
  * tools
  *
  * @author CH
  */
 public class SpringCompatUtils {
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(SpringCompatUtils.class);
-
-
-    private static volatile Boolean factoryMethodMetadataEnabled = null;
+        private static volatile Boolean factoryMethodMetadataEnabled = null;
 
     public static String getFactoryMethodReturnType(AnnotatedBeanDefinition annotatedBeanDefinition) {
         try {

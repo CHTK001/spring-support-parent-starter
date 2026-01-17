@@ -1,14 +1,14 @@
-﻿package com.chua.starter.filesystem.support.server;
+package com.chua.starter.filesystem.support.server;
 
-import com.chua.common.support.oss.FileStorage;
-import com.chua.common.support.protocol.ServerSetting;
-import com.chua.common.support.protocol.filter.FileStorageServletFilter;
-import com.chua.common.support.protocol.server.ProtocolServer;
-import com.chua.common.support.protocol.storage.FileStorageFactory;
+import com.chua.common.support.storage.oss.FileStorage;
+import com.chua.common.support.network.protocol.ServerSetting;
+import com.chua.common.support.network.protocol.filter.FileStorageServletFilter;
+import com.chua.common.support.network.protocol.server.ProtocolServer;
+import com.chua.common.support.network.protocol.storage.FileStorageFactory;
+import com.chua.starter.common.support.logger.ModuleLog;
 import com.chua.starter.filesystem.support.properties.FileStorageProperties;
 import com.chua.starter.filesystem.support.template.FileStorageTemplate;
 import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.Map;
@@ -25,7 +25,6 @@ import static com.chua.starter.common.support.logger.ModuleLog.*;
  * @author CH
  * @since 2024/12/28
  */
-@Slf4j
 public class FileServerManager implements AutoCloseable {
 
     /**
@@ -44,6 +43,11 @@ public class FileServerManager implements AutoCloseable {
      */
     private final FileStorageTemplate storageTemplate;
 
+    /**
+     * 日志
+     */
+    private final ModuleLog log = ModuleLog.of("FileServer", FileServerManager.class);
+
     public FileServerManager(FileStorageProperties properties, FileStorageTemplate storageTemplate) {
         this.properties = properties;
         this.storageTemplate = storageTemplate;
@@ -53,47 +57,47 @@ public class FileServerManager implements AutoCloseable {
      * 启动所有配置的文件服务器
      */
     public void startAll() {
-        List<FileStorageProperties.ServerConfig> servers = properties.getServers();
+        List<FileStorageProperties.ServerConfig> servers = properties.servers;
         if (servers == null || servers.isEmpty()) {
-            log.info("[FileServer] 未配置文件服务器，跳过启动");
+            log.info("未配置文件服务器，跳过启动");
             return;
         }
 
-        log.info("[FileServer] ══════════════════════════════════════════════");
-        log.info("[FileServer] 文件服务器配置");
-        log.info("[FileServer] ├─ 服务器数量: {}", highlight(servers.size()));
+        log.info("══════════════════════════════════════════════");
+        log.info("文件服务器配置");
+        log.info("├─ 服务器数量: {}", highlight(servers.size()));
 
         for (FileStorageProperties.ServerConfig serverConfig : servers) {
-            if (!serverConfig.isEnable()) {
-                log.info("[FileServer] ├─ 跳过禁用的服务器: {}", serverConfig.getName());
+            if (!serverConfig.enable) {
+                log.info("├─ 跳过禁用的服务器: {}", serverConfig.name);
                 continue;
             }
 
             try {
                 startServer(serverConfig);
             } catch (Exception e) {
-                log.error("[FileServer] 启动服务器失败: {} - {}", serverConfig.getName(), e.getMessage(), e);
+                log.error("启动服务器失败: {} - {}", serverConfig.name, e.getMessage(), e);
             }
         }
 
-        log.info("[FileServer] ══════════════════════════════════════════════");
+        log.info("══════════════════════════════════════════════");
     }
 
     /**
      * 启动单个文件服务器
      */
     private void startServer(FileStorageProperties.ServerConfig config) throws Exception {
-        String serverName = config.getName();
-        String host = config.getHost();
-        int port = config.getPort();
+        String serverName = config.name;
+        String host = config.host;
+        int port = config.port;
 
         // 创建服务器设置
         ServerSetting serverSetting = ServerSetting.builder()
                 .host(host)
                 .port(port)
-                .sslEnabled(config.isSsl())
-                .readTimeoutMillis(config.getReadTimeoutMillis())
-                .writeTimeoutMillis(config.getWriteTimeoutMillis())
+                .sslEnabled(config.ssl)
+                .readTimeoutMillis(config.readTimeoutMillis)
+                .writeTimeoutMillis(config.writeTimeoutMillis)
                 .build();
 
         // 创建协议服务器
@@ -101,20 +105,20 @@ public class FileServerManager implements AutoCloseable {
 
         // 创建文件存储设置
         FileStorageFactory.FileStorageSetting storageSetting = FileStorageFactory.FileStorageSetting.builder()
-                .openPreview(properties.isOpenPreview())
-                .openDownload(properties.isOpenDownload())
-                .openRange(properties.isOpenRange())
-                .openWatermark(properties.isOpenWatermark())
-                .openWebjars(properties.isOpenWebjars())
-                .openRemoteFile(properties.isOpenRemoteFile())
-                .watermark(properties.getWatermark())
+                .openPreview(properties.openPreview)
+                .openDownload(properties.openDownload)
+                .openRange(properties.openRange)
+                .openWatermark(properties.openWatermark)
+                .openWebjars(properties.openWebjars)
+                .openRemoteFile(properties.openRemoteFile)
+                .watermark(properties.watermark)
                 .build();
 
         // 创建文件存储过滤器
         FileStorageServletFilter fileStorageFilter = new FileStorageServletFilter(storageSetting);
 
         // 注册存储到过滤器
-        registerStoragesToFilter(fileStorageFilter, config.getStorageNames());
+        registerStoragesToFilter(fileStorageFilter, config.storageNames);
 
         // 添加过滤器
         server.addFilter(fileStorageFilter);
@@ -125,7 +129,7 @@ public class FileServerManager implements AutoCloseable {
         // 保存服务器实例
         serverMap.put(serverName, server);
 
-        log.info("[FileServer] ├─ 启动服务器: {} -> {} [{}]",
+        log.info("├─ 启动服务器: {} -> {} [{}]",
                 highlight(serverName),
                 address(host, port),
                 success());
@@ -135,13 +139,13 @@ public class FileServerManager implements AutoCloseable {
      * 注册存储到过滤器
      */
     private void registerStoragesToFilter(FileStorageServletFilter filter, List<String> storageNames) {
-        Map<String, FileStorage> storageMap = storageTemplate.getStorageMap();
+        Map<String, FileStorage> storageMap = storageTemplate.storageMap;
 
         if (storageNames == null || storageNames.isEmpty()) {
             // 注册所有存储
             for (Map.Entry<String, FileStorage> entry : storageMap.entrySet()) {
                 filter.addFileStorage(entry.getKey(), entry.getValue());
-                log.debug("[FileServer]   ├─ 注册存储: {}", entry.getKey());
+                log.debug("  ├─ 注册存储: {}", entry.getKey());
             }
         } else {
             // 仅注册指定的存储
@@ -149,9 +153,9 @@ public class FileServerManager implements AutoCloseable {
                 FileStorage storage = storageMap.get(name);
                 if (storage != null) {
                     filter.addFileStorage(name, storage);
-                    log.debug("[FileServer]   ├─ 注册存储: {}", name);
+                    log.debug("  ├─ 注册存储: {}", name);
                 } else {
-                    log.warn("[FileServer]   ├─ 存储不存在: {}", name);
+                    log.warn("  ├─ 存储不存在: {}", name);
                 }
             }
         }
@@ -164,9 +168,9 @@ public class FileServerManager implements AutoCloseable {
         for (Map.Entry<String, ProtocolServer> entry : serverMap.entrySet()) {
             try {
                 entry.getValue().stop();
-                log.info("[FileServer] 停止服务器: {} [{}]", entry.getKey(), success());
+                log.info("停止服务器: {} [{}]", entry.getKey(), success());
             } catch (Exception e) {
-                log.error("[FileServer] 停止服务器失败: {} [{}]", entry.getKey(), failed(), e);
+                log.error("停止服务器失败: {} [{}]", entry.getKey(), failed(), e);
             }
         }
         serverMap.clear();

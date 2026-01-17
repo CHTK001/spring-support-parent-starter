@@ -1,12 +1,8 @@
 package com.chua.starter.common.support.actuator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-
-import com.chua.common.support.constant.CommonConstant;
+import com.chua.common.support.core.constant.CommonConstant;
 import com.chua.common.support.matcher.PathMatcher;
-import com.chua.common.support.net.NetUtils;
-import com.chua.common.support.utils.ArrayUtils;
+import com.chua.common.support.network.net.NetUtils;
+import com.chua.common.support.core.utils.ArrayUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import jakarta.servlet.*;
 import jakarta.servlet.annotation.WebFilter;
@@ -15,6 +11,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Actuator认证过滤器
@@ -26,12 +24,10 @@ import java.util.Base64;
  * @version 1.0.0
  * @since 2024/6/21
  */
+@Slf4j
 @WebFilter(filterName = "ActuatorAuthenticationFilter", urlPatterns = {"/actuator/**"})
 public class ActuatorAuthenticationFilter implements Filter {
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ActuatorAuthenticationFilter.class);
-
-
-    private static final String AUTHORIZATION = "Authorization";
+        private static final String AUTHORIZATION = "Authorization";
     private static final String BASIC = "Basic ";
 
     private final ActuatorProperties actuatorProperties;

@@ -1,6 +1,6 @@
 package com.chua.starter.common.support.media;
 
-import com.chua.common.support.annotations.Extension;
+import com.chua.common.support.core.annotation.Extension;
 
 import java.io.ByteArrayOutputStream;
 

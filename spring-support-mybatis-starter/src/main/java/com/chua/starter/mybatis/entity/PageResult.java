@@ -1,12 +1,14 @@
-﻿package com.chua.starter.mybatis.entity;
+package com.chua.starter.mybatis.entity;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.PageDTO;
-import com.chua.common.support.bean.BeanUtils;
-import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.base.bean.BeanUtils;
+import com.chua.common.support.core.utils.CollectionUtils;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.util.Collections;
@@ -19,6 +21,8 @@ import java.util.List;
 @Schema(description = "分页信息")
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class PageResult<T> implements Serializable {
     /**
      * 每页显示条数，默认 10
@@ -54,27 +58,27 @@ public class PageResult<T> implements Serializable {
 
 
     public static <T,O> PageResult<O> copyList(IPage<T> tiPage, Class<O> oClass){
-        PageResult.PageResultBuilder<O> oPageDTO = PageResult.<O>builder();
-        oPageDTO.totalPage(tiPage.getPages());
-        oPageDTO.pageNo(tiPage.getCurrent());
-        oPageDTO.total(tiPage.getTotal());
+        var result = new PageResult<O>();
+        result.totalPage = tiPage.getPages();
+        result.pageNo = tiPage.getCurrent();
+        result.total = tiPage.getTotal();
         if (CollectionUtils.isNotEmpty(tiPage.getRecords())){
             List<O> ol = BeanUtils.copyPropertiesList(tiPage.getRecords(), oClass);
-            oPageDTO.records(ol);
+            result.records = ol;
         }
-        return oPageDTO.build();
+        return result;
     }
 
 
     public static <T> PageResult<T> copy(IPage<T> tiPage){
-        PageResult.PageResultBuilder<T> oPageDTO = PageResult.<T>builder();
-        oPageDTO.totalPage(tiPage.getPages());
-        oPageDTO.pageNo(tiPage.getCurrent());
-        oPageDTO.total(tiPage.getTotal());
+        var result = new PageResult<T>();
+        result.totalPage = tiPage.getPages();
+        result.pageNo = tiPage.getCurrent();
+        result.total = tiPage.getTotal();
         if (CollectionUtils.isNotEmpty(tiPage.getRecords())){
-            oPageDTO.records(tiPage.getRecords());
+            result.records = tiPage.getRecords();
         }
-        return oPageDTO.build();
+        return result;
     }
     public static <T> PageDTO<T> empty(){
         PageDTO<T> tPageDTO = new PageDTO<>();

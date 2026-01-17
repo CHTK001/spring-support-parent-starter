@@ -1,11 +1,11 @@
-﻿package com.chua.starter.filesystem.support.configuration;
+package com.chua.starter.filesystem.support.configuration;
 
 import com.chua.starter.filesystem.support.properties.FileStorageProperties;
 import com.chua.starter.filesystem.support.server.FileServerManager;
 import com.chua.starter.filesystem.support.template.FileStorageTemplate;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
-import lombok.extern.slf4j.Slf4j;
+import com.chua.starter.common.support.logger.ModuleLog;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -23,7 +23,6 @@ import static com.chua.starter.common.support.logger.ModuleLog.*;
  * @author CH
  * @since 2024/12/28
  */
-@Slf4j
 @Configuration
 @EnableConfigurationProperties(FileStorageProperties.class)
 @ConditionalOnProperty(prefix = FileStorageProperties.PREFIX, name = "enable", havingValue = "true")
@@ -31,6 +30,7 @@ public class FileSystemAutoConfiguration {
 
     private final FileStorageProperties properties;
     private FileServerManager serverManager;
+    private final ModuleLog log = ModuleLog.of("FileSystem", FileSystemAutoConfiguration.class);
 
     public FileSystemAutoConfiguration(FileStorageProperties properties) {
         this.properties = properties;
@@ -62,15 +62,17 @@ public class FileSystemAutoConfiguration {
      */
     @PostConstruct
     public void init() {
-        log.info("[FileSystem] ══════════════════════════════════════════════");
-        log.info("[FileSystem] 文件存储模块配置");
-        log.info("[FileSystem] ├─ 存储后端数量: {}", highlight(properties.getStorages().size()));
-        log.info("[FileSystem] ├─ 服务器数量: {}", highlight(properties.getServers().size()));
-        log.info("[FileSystem] ├─ 预览功能: [{}]", status(properties.isOpenPreview()));
-        log.info("[FileSystem] ├─ 下载功能: [{}]", status(properties.isOpenDownload()));
-        log.info("[FileSystem] ├─ 断点续传: [{}]", status(properties.isOpenRange()));
-        log.info("[FileSystem] └─ 水印功能: [{}]", status(properties.isOpenWatermark()));
-        log.info("[FileSystem] ══════════════════════════════════════════════");
+        var storages = properties.storages;
+        var servers = properties.servers;
+        log.info("══════════════════════════════════════════════");
+        log.info("文件存储模块配置");
+        log.info("├─ 存储后端数量: {}", highlight(storages != null ? storages.size() : 0));
+        log.info("├─ 服务器数量: {}", highlight(servers != null ? servers.size() : 0));
+        log.info("├─ 预览功能: [{}]", status(properties.openPreview));
+        log.info("├─ 下载功能: [{}]", status(properties.openDownload));
+        log.info("├─ 断点续传: [{}]", status(properties.openRange));
+        log.info("└─ 水印功能: [{}]", status(properties.openWatermark));
+        log.info("══════════════════════════════════════════════");
     }
 
     /**
@@ -89,7 +91,7 @@ public class FileSystemAutoConfiguration {
         if (serverManager != null) {
             serverManager.stopAll();
         }
-        log.info("[FileSystem] 文件存储模块已关闭");
+        log.info("文件存储模块已关闭");
     }
 
     /**

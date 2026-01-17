@@ -1,9 +1,5 @@
 package com.chua.starter.common.support.serialize;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-
-import com.chua.common.support.converter.Converter;
+import com.chua.common.support.base.converter.Converter;
 import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.TreeNode;
@@ -11,16 +7,16 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import java.io.IOException;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * JSON 数组转 Long 反序列化器
  *
  * @author CH
  */
+@Slf4j
 public class JsonArrayToLongDeserialize  extends JsonDeserializer<Long> {
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(JsonArrayToLongDeserialize.class);
-
-
-    @Override
+        @Override
     public Long deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JacksonException {
         TreeNode treeNode = p.getCodec().readTree(p);
         if (log.isTraceEnabled()) {

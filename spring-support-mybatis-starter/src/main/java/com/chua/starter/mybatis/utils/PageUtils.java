@@ -1,4 +1,4 @@
-﻿package com.chua.starter.mybatis.utils;
+package com.chua.starter.mybatis.utils;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;

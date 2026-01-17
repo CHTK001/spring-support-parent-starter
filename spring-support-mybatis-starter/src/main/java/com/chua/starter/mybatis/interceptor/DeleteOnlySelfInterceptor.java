@@ -1,4 +1,4 @@
-﻿package com.chua.starter.mybatis.interceptor;
+package com.chua.starter.mybatis.interceptor;
 
 import com.chua.common.support.core.utils.ClassUtils;
 import com.chua.starter.common.support.oauth.AuthService;
@@ -83,7 +83,7 @@ public class DeleteOnlySelfInterceptor implements Interceptor {
         BoundSql boundSql = ms.getBoundSql(parameter);
         String createUserColumn = anno.createUserColumn();
         String newSql = boundSql.getSql() + " AND " + createUserColumn + " = ?";
-        updateBoundSql(boundSql, newSql, loginUserId);
+        updateBoundSql(ms, boundSql, newSql, loginUserId);
 
         return invocation.proceed();
     }
@@ -120,12 +120,13 @@ public class DeleteOnlySelfInterceptor implements Interceptor {
     /**
      * 更新BoundSql的SQL语句和参数，使用参数化查询防止SQL注入
      *
+     * @param ms       MappedStatement对象，用于获取Configuration
      * @param boundSql BoundSql对象，包含待执行的SQL语句
      * @param newSql   新的SQL语句，包含参数占位符
      *                 例如："DELETE FROM login WHERE id = ? AND create_by = ?"
      * @param userId   用户ID参数值
      */
-    private void updateBoundSql(BoundSql boundSql, String newSql, String userId) {
+    private void updateBoundSql(MappedStatement ms, BoundSql boundSql, String newSql, String userId) {
         try {
             // 使用ClassUtils替代直接反射
             Field sqlField = BoundSql.class.getDeclaredField("sql");
@@ -145,7 +146,7 @@ public class DeleteOnlySelfInterceptor implements Interceptor {
 
             // 添加新的参数映射
             ParameterMapping newMapping = new ParameterMapping.Builder(
-                    boundSql.getConfiguration(),
+                    ms.getConfiguration(),
                     "userId",
                     String.class
             ).build();

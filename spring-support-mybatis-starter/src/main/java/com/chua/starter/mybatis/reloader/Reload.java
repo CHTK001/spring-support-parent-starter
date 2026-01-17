@@ -1,4 +1,4 @@
-﻿package com.chua.starter.mybatis.reloader;
+package com.chua.starter.mybatis.reloader;
 
 import org.springframework.beans.factory.InitializingBean;
 

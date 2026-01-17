@@ -1,4 +1,4 @@
-﻿package com.chua.starter.datasource.properties;
+package com.chua.starter.datasource.properties;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -43,5 +43,26 @@ public class HikariDataSourceProperties extends DataSourceProperties {
      * 连接池中保持的最小空闲连接数。
      */
     private volatile int minIdle = 10;
+
+    // Getter 方法（Lombok 在 Java 25 下可能不工作，手动添加）
+    public int getMinIdle() {
+        return minIdle;
+    }
+
+    public long getIdleTimeout() {
+        return idleTimeout;
+    }
+
+    public long getLeakDetectionThreshold() {
+        return leakDetectionThreshold;
+    }
+
+    public long getMaxLifetime() {
+        return maxLifetime;
+    }
+
+    public int getMaxPoolSize() {
+        return maxPoolSize;
+    }
 }
 

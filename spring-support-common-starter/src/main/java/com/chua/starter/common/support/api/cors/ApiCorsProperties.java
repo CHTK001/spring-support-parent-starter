@@ -41,7 +41,7 @@ public class ApiCorsProperties {
      * </p>
      */
     private Set<String> pattern = new HashSet<>();
-}
+
     /**
      * 获取 enable
      *
@@ -77,6 +77,4 @@ public class ApiCorsProperties {
     public void setPattern(Set<String> pattern) {
         this.pattern = pattern;
     }
-
-
-
+}

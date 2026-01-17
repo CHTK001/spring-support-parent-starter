@@ -1,9 +1,9 @@
 package com.chua.starter.oauth.client.support.logger;
 
-import com.chua.common.support.lang.date.DateTime;
-import com.chua.common.support.net.UserAgent;
-import com.chua.common.support.utils.IdUtils;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.time.date.DateTime;
+import com.chua.common.support.network.net.UserAgent;
+import com.chua.common.support.core.utils.IdUtils;
+import com.chua.common.support.core.utils.StringUtils;
 import com.chua.starter.common.support.annotations.UserLog;
 import com.chua.starter.common.support.logger.AbstractLoggerPointcutAdvisor;
 import com.chua.starter.common.support.logger.LoggerIgnore;
@@ -26,7 +26,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Optional;
 
-import static com.chua.common.support.constant.NameConstant.*;
+import static com.chua.common.support.core.constant.NameConstant.*;
 
 /**
  * 用户操作日志切入点顾问
@@ -123,7 +123,7 @@ public class UserLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
         String content = userLog.content();
         userLoggerInfo.setLogStatus(isSuccess ? 1 : 0);
         userLoggerInfo.setLogMapping(getRequestUrl());
-        userLoggerInfo.setLogCode(IdUtils.createUlid());
+        userLoggerInfo.setLogCode(java.util.UUID.randomUUID().toString().replace("-", ""));
         userLoggerInfo.setLogContent(getContent(content, invocation, proceed));
 
         // 发布日志事件

@@ -1,8 +1,4 @@
 package com.chua.starter.common.support.api.feature;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-
 import com.chua.starter.common.support.api.annotations.ApiFeature;
 import com.chua.starter.common.support.api.interceptor.ApiControlInterceptor;
 import com.chua.starter.common.support.api.properties.ApiProperties;
@@ -20,6 +16,8 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 
 import java.util.Map;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * API 功能开关配置
  * <p>
@@ -30,6 +28,7 @@ import java.util.Map;
  * @since 2024/12/08
  * @version 1.0.0
  */
+@Slf4j
 @Configuration
 @ConditionalOnProperty(name = "plugin.api.feature.enable", havingValue = "true", matchIfMissing = true)
 public class ApiFeatureConfiguration implements WebMvcConfigurer {
@@ -46,10 +45,7 @@ public class ApiFeatureConfiguration implements WebMvcConfigurer {
         this.requestMappingHandlerMapping = requestMappingHandlerMapping;
     }
 
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ApiFeatureConfiguration.class);
-
-
-    private final ApiProperties apiProperties;
+        private final ApiProperties apiProperties;
     private final Environment environment;
     private final RequestMappingHandlerMapping requestMappingHandlerMapping;
 

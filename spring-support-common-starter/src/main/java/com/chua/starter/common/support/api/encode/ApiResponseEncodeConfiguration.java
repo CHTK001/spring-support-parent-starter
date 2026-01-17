@@ -53,6 +53,15 @@ public class ApiResponseEncodeConfiguration extends ApplicationEvent implements 
     }
 
     /**
+     * 判断是否开启响应加密
+     *
+     * @return codecResponseOpen
+     */
+    public boolean isCodecResponseOpen() {
+        return codecResponseOpen;
+    }
+
+    /**
      * 设置 codecResponseOpen
      *
      * @param codecResponseOpen codecResponseOpen

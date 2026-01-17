@@ -34,8 +34,7 @@ import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
 import org.apache.commons.lang3.ArrayUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springdoc.core.models.ControllerAdviceInfo;
 import org.springdoc.core.models.MethodAttributes;
@@ -99,9 +98,8 @@ import static org.springdoc.core.utils.SpringDocAnnotationsUtils.mergeSchema;
  *
  * @author bnasslahsen
  */
+@Slf4j
 public class GenericResponseService implements ApplicationContextAware {
-
-    private static final Logger log = LoggerFactory.getLogger(GenericResponseService.class);
 
     /**
      * This extension name is used to temporary store

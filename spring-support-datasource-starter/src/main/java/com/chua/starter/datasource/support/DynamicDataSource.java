@@ -1,4 +1,4 @@
-﻿package com.chua.starter.datasource.support;
+package com.chua.starter.datasource.support;
 
 import com.chua.starter.datasource.datasource.MultiDataSource;
 import com.google.common.base.Strings;
@@ -64,7 +64,7 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
             connectionHolder.setConnection(value);
             try {
                 Method method = ClassUtils.getMethod(Class.forName(MYBATIS), "bindResource", Object.class, Object.class);
-                com.chua.common.support.utils.ClassUtils.setAccessible(method);
+                method.setAccessible(true);
                 method.invoke(null, this, connectionHolder);
                 this.binder = true;
             } catch (Exception ignored) {

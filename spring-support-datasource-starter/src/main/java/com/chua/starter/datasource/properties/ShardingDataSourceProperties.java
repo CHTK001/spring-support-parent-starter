@@ -1,4 +1,4 @@
-﻿package com.chua.starter.datasource.properties;
+package com.chua.starter.datasource.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -77,5 +77,35 @@ public class ShardingDataSourceProperties {
          * 分片策略: TABLE, DB
          */
         private String strategy = "TABLE";
+
+        // Getter 方法（Lombok 在 Java 25 下可能不工作，手动添加）
+        public String getLogicTable() {
+            return logicTable;
+        }
+
+        public String getShardingColumn() {
+            return shardingColumn;
+        }
+
+        public String getTimeUnit() {
+            return timeUnit;
+        }
+
+        public String getStrategy() {
+            return strategy;
+        }
+    }
+
+    // Getter 方法（Lombok 在 Java 25 下可能不工作，手动添加）
+    public boolean isShowSql() {
+        return showSql;
+    }
+
+    public List<String> getDatabases() {
+        return databases;
+    }
+
+    public List<ShardingTableConfig> getTables() {
+        return tables;
     }
 }

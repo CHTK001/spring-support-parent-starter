@@ -1,6 +1,6 @@
 package com.chua.starter.common.support.converter;
 
-import com.chua.common.support.lang.date.DateUtils;
+import com.chua.common.support.time.date.DateUtils;
 import org.springframework.core.convert.converter.Converter;
 
 import java.text.ParseException;

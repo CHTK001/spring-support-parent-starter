@@ -1,8 +1,8 @@
 package com.chua.starter.common.support.configuration;
 
-import com.chua.common.support.converter.definition.EnumTypeConverter;
-import com.chua.common.support.converter.definition.TypeConverter;
-import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.base.converter.definition.EnumTypeConverter;
+import com.chua.common.support.base.converter.definition.TypeConverter;
+import com.chua.common.support.core.spi.ServiceProvider;
 import com.chua.starter.common.support.converter.*;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -67,7 +67,11 @@ public class TypeConverterRegisterConfiguration {
 
                             @Override
                             public Object convert(Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {
-                                return com.chua.common.support.converter.Converter.convertIfNecessary(source, targetType.getType());
+                                // 使用 TypeConverter 进行转换
+                                if (converter instanceof EnumTypeConverter) {
+                                    return ((EnumTypeConverter) converter).convert(source);
+                                }
+                                return converter.convert(source);
                             }
                         });
                     }

@@ -1,10 +1,6 @@
 package com.chua.starter.common.support.serialize;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-
-import com.chua.common.support.converter.Converter;
-import com.chua.common.support.json.Json;
+import com.chua.common.support.base.converter.Converter;
+import com.chua.common.support.text.json.Json;
 import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.TreeNode;
@@ -15,16 +11,16 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * JSON 数组转字符串反序列化器
  *
  * @author CH
  */
+@Slf4j
 public class JsonArrayToStringDeserialize extends JsonDeserializer<String> {
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(JsonArrayToStringDeserialize.class);
-
-
-    @Override
+        @Override
     public String deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JacksonException {
         TreeNode treeNode = p.getCodec().readTree(p);
         if (log.isTraceEnabled()) {

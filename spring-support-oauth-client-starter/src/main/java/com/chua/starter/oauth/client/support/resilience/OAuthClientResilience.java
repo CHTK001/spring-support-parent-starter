@@ -1,4 +1,4 @@
-﻿package com.chua.starter.oauth.client.support.resilience;
+package com.chua.starter.oauth.client.support.resilience;
 
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.infomation.Information;

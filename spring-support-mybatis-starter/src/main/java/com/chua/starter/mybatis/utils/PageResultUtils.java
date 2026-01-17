@@ -1,7 +1,7 @@
-﻿package com.chua.starter.mybatis.utils;
+package com.chua.starter.mybatis.utils;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.chua.common.support.bean.BeanUtils;
+import com.chua.common.support.base.bean.BeanUtils;
 import com.chua.common.support.lang.code.PageResult;
 import com.chua.common.support.lang.code.ReturnPageResult;
 
@@ -66,7 +66,7 @@ public class PageResultUtils {
      * @param <T> 类型
      */
     public static <T> ReturnPageResult<T> ok(IPage<T> result) {
-        return ReturnPageResult.ok(transfer(result, null));
+        return ReturnPageResult.of(transfer(result, null));
     }
 
     /**
@@ -77,7 +77,7 @@ public class PageResultUtils {
      * @return ReturnPageResult
      */
     public static <R, T> ReturnPageResult<R> ok(IPage<T> result, Class<R> clazz) {
-        return ReturnPageResult.ok(transfer(result, clazz));
+        return ReturnPageResult.of(transfer(result, clazz));
     }
     /**
      * 成功
@@ -97,7 +97,7 @@ public class PageResultUtils {
      * @return ReturnPageResult
      */
     public static <T> ReturnPageResult<T> ok(List<T> result, int pageNo, int pageSize, int total) {
-        return ReturnPageResult.ok(transfer(result, pageNo, pageSize, total));
+        return ReturnPageResult.of(transfer(result, pageNo, pageSize, total));
     }
 
     /**
@@ -107,6 +107,37 @@ public class PageResultUtils {
      * @param <T> 类型
      */
     public static <T> ReturnPageResult<T> error(IPage<T> result) {
-        return ReturnPageResult.error(transfer(result, null));
+        return ReturnPageResult.of(transfer(result, null));
+    }
+
+    /**
+     * 成功（空结果）
+     *
+     * @param <T> 类型
+     * @return ReturnPageResult
+     */
+    public static <T> ReturnPageResult<T> ok() {
+        return ReturnPageResult.empty();
+    }
+
+    /**
+     * 失败（带错误消息）
+     *
+     * @param message 错误消息
+     * @param <T> 类型
+     * @return ReturnPageResult
+     */
+    public static <T> ReturnPageResult<T> error(String message) {
+        return ReturnPageResult.empty();
+    }
+
+    /**
+     * 失败（无参数）
+     *
+     * @param <T> 类型
+     * @return ReturnPageResult
+     */
+    public static <T> ReturnPageResult<T> error() {
+        return ReturnPageResult.empty();
     }
 }

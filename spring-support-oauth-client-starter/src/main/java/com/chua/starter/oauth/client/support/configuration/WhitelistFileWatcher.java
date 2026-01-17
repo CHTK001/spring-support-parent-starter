@@ -1,6 +1,6 @@
-﻿package com.chua.starter.oauth.client.support.configuration;
+package com.chua.starter.oauth.client.support.configuration;
 
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.core.utils.StringUtils;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.protocol.AbstractProtocol;
 import jakarta.annotation.PostConstruct;

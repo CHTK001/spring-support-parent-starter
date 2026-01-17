@@ -1,7 +1,7 @@
-﻿package com.chua.starter.mybatis.type;
+package com.chua.starter.mybatis.type;
 
 import com.chua.common.support.crypto.AesCodec;
-import com.chua.common.support.utils.Preconditions;
+import com.chua.common.support.core.utils.Preconditions;
 import org.apache.ibatis.type.BaseTypeHandler;
 import org.apache.ibatis.type.JdbcType;
 

@@ -1,12 +1,8 @@
 package com.chua.starter.common.support.log;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-
-import com.chua.common.support.constant.NumberConstant;
-import com.chua.common.support.utils.CollectionUtils;
-import com.chua.common.support.utils.IoUtils;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.core.constant.NumberConstant;
+import com.chua.common.support.core.utils.CollectionUtils;
+import com.chua.common.support.core.utils.IoUtils;
+import com.chua.common.support.core.utils.StringUtils;
 import com.chua.starter.common.support.logger.InterfaceLoggerInfo;
 import com.chua.starter.common.support.utils.RequestUtils;
 import jakarta.servlet.*;
@@ -27,10 +23,12 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static com.chua.common.support.constant.NameConstant.*;
-import static com.chua.common.support.http.HttpConstant.HTTP_HEADER_CONTENT_TYPE;
+import static com.chua.common.support.core.constant.NameConstant.*;
+import static com.chua.common.support.network.http.HttpConstant.HTTP_HEADER_CONTENT_TYPE;
 import static java.time.LocalDateTime.*;
 import static java.time.format.DateTimeFormatter.*;
+
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 参数日志过滤器
@@ -57,11 +55,9 @@ import static java.time.format.DateTimeFormatter.*;
  * @version 1.0.0
  * @since 2023/09/08
  */
+@Slf4j
 public class ParameterLogFilter implements Filter {
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ParameterLogFilter.class);
-
-
-    public static final DateTimeFormatter DATE_TIME_FORMATTER = ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+        public static final DateTimeFormatter DATE_TIME_FORMATTER = ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
     private final LogProperties logProperties;
     private final ApplicationContext applicationContext;
     private final ExecutorService interfaceServiceLog = Executors.newVirtualThreadPerTaskExecutor();

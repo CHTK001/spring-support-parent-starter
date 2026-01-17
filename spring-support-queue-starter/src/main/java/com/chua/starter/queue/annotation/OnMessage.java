@@ -1,4 +1,4 @@
-﻿package com.chua.starter.queue.annotation;
+package com.chua.starter.queue.annotation;
 
 import java.lang.annotation.*;
 

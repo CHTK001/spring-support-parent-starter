@@ -2,6 +2,7 @@ package com.chua.starter.common.support.oauth;
 
 import com.chua.starter.common.support.constant.DataFilterTypeEnum;
 import com.google.common.base.Strings;
+import lombok.experimental.Accessors;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.util.CollectionUtils;
 
@@ -527,59 +528,5 @@ public class CurrentUser {
         this.lastIp = lastIp;
     }
 
-            /**
-     * 获取 antPathMatcher
-     *
-     * @return antPathMatcher
-     */
-    public AntPathMatcher getAntPathMatcher() {
-        return antPathMatcher;
-    }
-
-    /**
-     * 设置 antPathMatcher
-     *
-     * @param antPathMatcher antPathMatcher
-     */
-    public void setAntPathMatcher(AntPathMatcher antPathMatcher) {
-        this.antPathMatcher = antPathMatcher;
-    }
-
-                                            /**
-     * 获取 hasRole
-     *
-     * @return hasRole
-     */
-    public boolean getHasRole() {
-        return hasRole;
-    }
-
-    /**
-     * 设置 hasRole
-     *
-     * @param hasRole hasRole
-     */
-    public void setHasRole(boolean hasRole) {
-        this.hasRole = hasRole;
-    }
-
-                    /**
-     * 获取 antPathMatcher
-     *
-     * @return antPathMatcher
-     */
-    public AntPathMatcher getAntPathMatcher() {
-        return antPathMatcher;
-    }
-
-    /**
-     * 设置 antPathMatcher
-     *
-     * @param antPathMatcher antPathMatcher
-     */
-    public void setAntPathMatcher(AntPathMatcher antPathMatcher) {
-        this.antPathMatcher = antPathMatcher;
-    }
-
-                                                        }
+}
 

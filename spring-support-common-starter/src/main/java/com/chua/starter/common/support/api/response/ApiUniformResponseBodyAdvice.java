@@ -1,11 +1,7 @@
 package com.chua.starter.common.support.api.response;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-
-import com.chua.common.support.annotations.IgnoreReturnType;
-import com.chua.common.support.http.ContentDisposition;
-import com.chua.common.support.http.ContentType;
+import com.chua.common.support.core.annotation.IgnoreReturnType;
+import com.chua.common.support.network.http.ContentDisposition;
+import com.chua.common.support.network.http.ContentType;
 import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
@@ -35,7 +31,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import static com.chua.common.support.utils.ClassUtils.isAssignableFrom;
+import static com.chua.common.support.core.utils.ClassUtils.isAssignableFrom;
+
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 统一返回值处理
@@ -47,13 +45,11 @@ import static com.chua.common.support.utils.ClassUtils.isAssignableFrom;
  * @since 2024/01/01
  * @version 1.0.0
  */
+@Slf4j
 @RestControllerAdvice
 @SuppressWarnings("ALL")
 public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>, EnvironmentAware {
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ApiUniformResponseBodyAdvice.class);
-
-
-    /**
+        /**
      * 忽略包装的URL关键字
      */
     private static final String SWAGGER_PATH = "swagger";

@@ -1,4 +1,4 @@
-﻿package com.chua.starter.redis.support;
+package com.chua.starter.redis.support;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;

@@ -1,6 +1,6 @@
-﻿package com.chua.starter.oauth.client.support.contants;
+package com.chua.starter.oauth.client.support.contants;
 
-import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.core.utils.CollectionUtils;
 
 import java.util.Set;
 

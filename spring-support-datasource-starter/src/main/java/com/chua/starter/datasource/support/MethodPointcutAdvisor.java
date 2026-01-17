@@ -1,4 +1,4 @@
-﻿package com.chua.starter.datasource.support;
+package com.chua.starter.datasource.support;
 
 import com.chua.starter.datasource.annotation.DS;
 import com.chua.starter.datasource.properties.MultiDataSourceSettingProperties;
@@ -32,7 +32,7 @@ public class MethodPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor {
                     try {
                         return invocation.proceed();
                     } finally {
-                        dynamicDataSourceAspect.afterSwitchDS(null);
+                        dynamicDataSourceAspect.afterSwitchDS();
                     }
                 }
                 return invocation.proceed();

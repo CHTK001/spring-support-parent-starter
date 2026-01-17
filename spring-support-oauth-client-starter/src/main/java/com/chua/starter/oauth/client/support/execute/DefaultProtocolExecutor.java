@@ -1,8 +1,9 @@
-﻿package com.chua.starter.oauth.client.support.execute;
+package com.chua.starter.oauth.client.support.execute;
 
-import com.chua.common.support.annotations.SpiDefault;
-import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.core.annotation.SpiDefault;
+import com.chua.common.support.core.spi.ServiceProvider;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import org.springframework.boot.context.properties.bind.Binder;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
@@ -29,7 +30,8 @@ public class DefaultProtocolExecutor implements ProtocolExecutor{
     private final String protocol;
 
     public DefaultProtocolExecutor() {
-        this.authClientProperties = SpringBeanUtils.getBinderBean(AuthClientProperties.PRE, AuthClientProperties.class);
+        this.authClientProperties = Binder.get(SpringBeanUtils.getEnvironment())
+                .bindOrCreate(AuthClientProperties.PRE, AuthClientProperties.class);
         this.encryption = authClientProperties.getEncryption();
         this.protocol = authClientProperties.getProtocol();
     }

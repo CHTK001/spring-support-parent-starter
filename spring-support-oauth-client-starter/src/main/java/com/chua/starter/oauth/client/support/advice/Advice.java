@@ -1,7 +1,7 @@
-﻿package com.chua.starter.oauth.client.support.advice;
+package com.chua.starter.oauth.client.support.advice;
 
-import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.core.spi.ServiceProvider;
+import com.chua.common.support.core.utils.StringUtils;
 import com.google.common.base.Strings;
 import lombok.NoArgsConstructor;
 import org.springframework.http.MediaType;

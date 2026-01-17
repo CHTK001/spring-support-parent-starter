@@ -1,4 +1,4 @@
-﻿package com.chua.starter.datasource.datasource;
+package com.chua.starter.datasource.datasource;
 
 import com.chua.starter.datasource.support.DynamicDataSource;
 import com.google.common.collect.HashMultimap;
@@ -152,14 +152,17 @@ public class MultiDataSource implements DataSource {
         this.pool = new GenericObjectPool<>(factory, createConfig());
     }
 
-    @SneakyThrows
     @Override
     public Connection getConnection() throws SQLException {
-        Connection connection = pool.borrowObject();
-        THREAD_LOCAL.remove();
-        THREAD_LOCAL.set(pool);
-        dynamicDataSource.bindResource(connection);
-        return connection;
+        try {
+            Connection connection = pool.borrowObject();
+            THREAD_LOCAL.remove();
+            THREAD_LOCAL.set(pool);
+            dynamicDataSource.bindResource(connection);
+            return connection;
+        } catch (Exception e) {
+            throw new SQLException("获取连接失败", e);
+        }
     }
 
     @Override

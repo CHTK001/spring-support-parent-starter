@@ -1,8 +1,8 @@
-﻿package com.chua.starter.mybatis.permission;
+package com.chua.starter.mybatis.permission;
 
 import com.baomidou.mybatisplus.core.metadata.TableFieldInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
-import com.chua.common.support.utils.ObjectUtils;
+import com.chua.common.support.core.utils.ObjectUtils;
 import com.chua.starter.common.support.constant.DataFilterTypeEnum;
 import com.chua.starter.common.support.oauth.CurrentUser;
 import com.chua.starter.mybatis.properties.MybatisPlusDataScopeProperties;
@@ -19,7 +19,7 @@ import net.sf.jsqlparser.statement.select.PlainSelect;
 import java.util.Collections;
 import java.util.List;
 
-import static com.chua.common.support.constant.CommonConstant.EMPTY;
+import static com.chua.common.support.core.constant.CommonConstant.EMPTY;
 import static com.chua.starter.mybatis.interceptor.MybatisPlusPermissionHandler.NO_DATA;
 
 /**

@@ -1,7 +1,7 @@
-﻿package com.chua.starter.oauth.client.support.interceptor;
+package com.chua.starter.oauth.client.support.interceptor;
 
-import com.chua.common.support.utils.ArrayUtils;
-import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.core.utils.ArrayUtils;
+import com.chua.common.support.core.utils.CollectionUtils;
 import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.contants.AuthConstant;
@@ -61,7 +61,7 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
                          Arrays.toString(permission.role()), 
                          Arrays.toString(permission.value()));
                 
-                UserResume userInfo = RequestUtils.getUserInfo(UserResume.class);
+                UserResume userInfo = com.chua.starter.oauth.client.support.execute.AuthSessionUtils.getUserInfo(UserResume.class);
                 if(null == userInfo) {
                     log.warn("[权限拦截器]用户信息为空，拒绝访问 - 方法: {}", methodName);
                     throw new OauthException("您的账号没有权限, 请联系管理员分配!");
@@ -118,7 +118,7 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
     }
 
     private boolean isAdmin() {
-        UserResume userInfo = RequestUtils.getUserInfo(UserResume.class);
+        UserResume userInfo = com.chua.starter.oauth.client.support.execute.AuthSessionUtils.getUserInfo(UserResume.class);
         if(null == userInfo) {
             return false;
         }
@@ -132,7 +132,7 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
             return true;
         }
 
-        UserResume userInfo = RequestUtils.getUserInfo(UserResume.class);
+        UserResume userInfo = com.chua.starter.oauth.client.support.execute.AuthSessionUtils.getUserInfo(UserResume.class);
         if(null == userInfo) {
             return false;
         }

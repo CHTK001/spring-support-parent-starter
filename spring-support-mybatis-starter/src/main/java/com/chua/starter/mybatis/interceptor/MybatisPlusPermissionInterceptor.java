@@ -1,10 +1,10 @@
-﻿package com.chua.starter.mybatis.interceptor;
+package com.chua.starter.mybatis.interceptor;
 
 import com.baomidou.mybatisplus.core.toolkit.PluginUtils;
 import com.baomidou.mybatisplus.extension.parser.JsqlParserSupport;
 import com.baomidou.mybatisplus.extension.plugins.handler.DataPermissionHandler;
 import com.baomidou.mybatisplus.extension.plugins.inner.InnerInterceptor;
-import com.chua.common.support.utils.ObjectUtils;
+import com.chua.common.support.core.utils.ObjectUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.oauth.AuthService;
 import com.chua.starter.common.support.oauth.CurrentUser;

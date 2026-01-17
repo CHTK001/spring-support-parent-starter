@@ -1,8 +1,4 @@
 package com.chua.starter.common.support.api.feature;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-
 import com.chua.starter.common.support.api.annotations.ApiFeature;
 import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
@@ -11,6 +7,8 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * API 功能开关管理器
@@ -22,12 +20,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * @since 2024/12/08
  * @version 1.0.0
  */
+@Slf4j
 @Component
 public class ApiFeatureManager {
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ApiFeatureManager.class);
-
-
-    /**
+        /**
      * 功能开关状态缓存
      * key: 功能标识
      * value: 是否启用

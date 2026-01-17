@@ -1,6 +1,6 @@
 package com.chua.starter.common.support.logger;
 
-import com.chua.common.support.utils.IoUtils;
+import com.chua.common.support.core.utils.IoUtils;
 import com.chua.starter.common.support.filter.CustomHttpServletRequestWrapper;
 import com.chua.starter.common.support.utils.RequestUtils;
 import jakarta.servlet.http.HttpServletRequest;
@@ -46,6 +46,7 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
 
     public InterfaceLoggerInfo(HttpServletRequest request) {
         super(request);
+        this.request = request;
         this.method = request.getMethod();
         this.url = URLDecoder.decode(request.getRequestURI(), UTF_8);
         this.ip = RequestUtils.getIpAddress(request);
@@ -60,8 +61,7 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
                 }
             } catch (IOException ignored) {
             }
-        }
-        if (request instanceof ContentCachingRequestWrapper wrapper) {
+        } else if (request instanceof ContentCachingRequestWrapper wrapper) {
             String header = wrapper.getHeader("Content-Type");
             if (header != null && (header.contains("application/json") || header.contains("text/"))) {
                 this.body = IoUtils.toString(wrapper.getContentAsByteArray(), UTF_8).getBytes(UTF_8);
@@ -69,6 +69,8 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
                 this.body = wrapper.getContentAsByteArray();
             }
         }
+    }
+
     /**
      * 获取 request
      *
@@ -76,15 +78,6 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
      */
     public HttpServletRequest getRequest() {
         return request;
-    }
-
-    /**
-     * 设置 request
-     *
-     * @param request request
-     */
-    public void setRequest(HttpServletRequest request) {
-        this.request = request;
     }
 
     /**
@@ -177,44 +170,5 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
         this.body = body;
     }
 
-    /**
-     * 获取 header
-     *
-     * @return header
-     */
-    public String getHeader() {
-        return header;
-    }
-
-    /**
-     * 设置 header
-     *
-     * @param header header
-     */
-    public void setHeader(String header) {
-        this.header = header;
-    }
-
-    /**
-     * 获取 header
-     *
-     * @return header
-     */
-    public String getHeader() {
-        return header;
-    }
-
-    /**
-     * 设置 header
-     *
-     * @param header header
-     */
-    public void setHeader(String header) {
-        this.header = header;
-    }
-
-
-        this.request = request;
-    }
 }
 

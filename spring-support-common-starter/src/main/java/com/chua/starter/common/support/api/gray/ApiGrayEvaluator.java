@@ -1,9 +1,5 @@
 package com.chua.starter.common.support.api.gray;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.core.utils.StringUtils;
 import com.chua.starter.common.support.api.annotations.ApiGray;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,6 +13,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * API 灰度规则评估器
  * <p>
@@ -27,11 +25,9 @@ import java.util.concurrent.ThreadLocalRandom;
  * @since 2024/12/18
  * @version 1.0.0
  */
+@Slf4j
 public class ApiGrayEvaluator {
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ApiGrayEvaluator.class);
-
-
-    private static final ExpressionParser PARSER = new SpelExpressionParser();
+        private static final ExpressionParser PARSER = new SpelExpressionParser();
     
     /**
      * SpEL 表达式缓存

@@ -1,8 +1,4 @@
 package com.chua.starter.common.support.api.configuration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-
 import com.chua.starter.common.support.configuration.resolver.VersionArgumentResolver;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletResponse;
@@ -14,6 +10,8 @@ import org.springframework.context.annotation.Bean;
 import java.io.IOException;
 import java.util.Collections;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * API 过滤器配置类
  * <p>
@@ -24,14 +22,12 @@ import java.util.Collections;
  * </p>
  *
  * @author CH
- * @version 1.0.0
+ * @vers@Slf4j
+ion 1.0.0
  * @since 2024/06/21
  */
 public class ApiFilterConfiguration {
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ApiFilterConfiguration.class);
-
-
-    /**
+        /**
      * 响应头中的版本字段名
      */
     private static final String X_HEADER_VERSION = "x-response-version";

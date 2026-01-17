@@ -1,6 +1,6 @@
 package com.chua.starter.common.support.jackson;
 
-import com.chua.common.support.json.Json;
+import com.chua.common.support.text.json.Json;
 import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;

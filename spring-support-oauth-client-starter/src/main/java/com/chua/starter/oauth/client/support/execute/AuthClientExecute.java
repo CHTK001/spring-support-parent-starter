@@ -1,15 +1,16 @@
-﻿package com.chua.starter.oauth.client.support.execute;
+package com.chua.starter.oauth.client.support.execute;
 
-import com.chua.common.support.bean.BeanUtils;
-import com.chua.common.support.constant.CommonConstant;
-import com.chua.common.support.lang.exception.AuthenticationException;
-import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.utils.DigestUtils;
-import com.chua.common.support.utils.Md5Utils;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.base.bean.BeanUtils;
+import com.chua.common.support.core.constant.CommonConstant;
+import com.chua.common.support.core.exception.AuthenticationException;
+import com.chua.common.support.core.spi.ServiceProvider;
+import com.chua.common.support.core.utils.DigestUtils;
+import com.chua.common.support.core.utils.Md5Utils;
+import com.chua.common.support.core.utils.StringUtils;
 import com.chua.common.support.value.Value;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.watch.Watch;
+import org.springframework.boot.context.properties.bind.Binder;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.enums.UpgradeType;
@@ -64,7 +65,8 @@ public class AuthClientExecute {
             .build();
 
     public AuthClientExecute() {
-        this.authClientProperties = SpringBeanUtils.getBinderBean(AuthClientProperties.PRE, AuthClientProperties.class);
+        this.authClientProperties = Binder.get(SpringBeanUtils.getEnvironment())
+                .bindOrCreate(AuthClientProperties.PRE, AuthClientProperties.class);
     }
 
 
@@ -105,7 +107,7 @@ public class AuthClientExecute {
             return null;
         }
 
-        Object attribute = request.getSession().getAttribute(SESSION_USER_INFO);
+        Object attribute = request.getSession().getAttribute(AuthSessionUtils.SESSION_USER_INFO);
         if (attribute == null) {
             return null;
         }
@@ -117,7 +119,7 @@ public class AuthClientExecute {
         if (attribute instanceof UserResume userResume) {
             UserResult userResult = new UserResult();
             BeanUtils.copyProperties(userResume, userResult);
-            request.getSession().setAttribute(SESSION_USER_INFO, userResult);
+            request.getSession().setAttribute(AuthSessionUtils.SESSION_USER_INFO, userResult);
             return userResult;
         }
         return null;
@@ -155,7 +157,7 @@ public class AuthClientExecute {
 
         UserResult userResult = new UserResult();
         BeanUtils.copyProperties(returnResult, userResult);
-        request.getSession().setAttribute(SESSION_USER_INFO, userResult);
+        request.getSession().setAttribute(AuthSessionUtils.SESSION_USER_INFO, userResult);
         return userResult;
     }
 

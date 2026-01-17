@@ -1,4 +1,4 @@
-﻿package com.chua.starter.queue.template;
+package com.chua.starter.queue.template;
 
 import com.chua.starter.queue.Message;
 import com.chua.starter.queue.MessageHandler;
@@ -11,11 +11,15 @@ import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
-
-import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 
 /**
  * 死信队列模板
@@ -31,6 +35,7 @@ import static com.chua.starter.common.support.logger.ModuleLog.highlight;
  */
 @Slf4j
 public class DeadLetterTemplate implements MessageTemplate {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(DeadLetterTemplate.class);
 
     /**
      * 死信队列前缀
@@ -137,7 +142,7 @@ public class DeadLetterTemplate implements MessageTemplate {
             return t;
         });
         log.info("[Queue] 死信队列初始化完成, 最大重试: {}, 重试延迟: {}ms, 类型: {}",
-                highlight(config.getMaxRetries()), highlight(config.getRetryDelay().toMillis()), highlight(dlqMessageTemplate.getType()));
+                config.getMaxRetries(), config.getRetryDelay().toMillis(), dlqMessageTemplate.getType());
     }
     
     /**
@@ -436,7 +441,7 @@ public class DeadLetterTemplate implements MessageTemplate {
         SendResult result = dlqMessageTemplate.send(dlqDestination, message.getPayload(), headers);
         if (result.isSuccess()) {
             log.info("[Queue] 消息已转移到死信队列: {}, 消息ID: {}, 类型: {}", 
-                    highlight(dlqDestination), message.getId(), highlight(dlqMessageTemplate.getType()));
+                    dlqDestination, message.getId(), dlqMessageTemplate.getType());
         }
         return result;
     }
@@ -457,7 +462,7 @@ public class DeadLetterTemplate implements MessageTemplate {
         
         String dlqDestination = getDlqDestination(originalDestination);
         dlqMessageTemplate.subscribe(dlqDestination, handler);
-        log.info("[Queue] 订阅死信队列: {}, 类型: {}", highlight(dlqDestination), highlight(dlqMessageTemplate.getType()));
+        log.info("[Queue] 订阅死信队列: {}, 类型: {}", dlqDestination, dlqMessageTemplate.getType());
     }
 
     /**
@@ -486,7 +491,7 @@ public class DeadLetterTemplate implements MessageTemplate {
 
         SendResult result = messageTemplate.send(originalDestination, message.getPayload(), headers);
         if (result.isSuccess()) {
-            log.info("[Queue] 死信消息已重新处理: {}, 消息ID: {}", highlight(originalDestination), message.getId());
+            log.info("[Queue] 死信消息已重新处理: {}, 消息ID: {}", originalDestination, message.getId());
         }
         return result;
     }
@@ -747,38 +752,65 @@ public class DeadLetterTemplate implements MessageTemplate {
      * 死信队列配置
      */
     @lombok.Data
-    @lombok.Builder
     @lombok.NoArgsConstructor
     @lombok.AllArgsConstructor
     public static class DeadLetterConfig {
         /**
          * 最大重试次数
          */
-        @lombok.Builder.Default
         private int maxRetries = 3;
 
         /**
          * 重试延迟
          */
-        @lombok.Builder.Default
         private Duration retryDelay = Duration.ofSeconds(5);
 
         /**
          * 最大重试延迟
          */
-        @lombok.Builder.Default
         private Duration maxRetryDelay = Duration.ofMinutes(5);
 
         /**
          * 是否启用指数退避
          */
-        @lombok.Builder.Default
         private boolean exponentialBackoff = true;
 
         /**
          * 退避乘数
          */
-        @lombok.Builder.Default
         private double backoffMultiplier = 2.0;
+
+        // Lombok 注解处理器未运行时的手动构造函数
+        public DeadLetterConfig() {
+        }
+
+        public DeadLetterConfig(int maxRetries, Duration retryDelay, Duration maxRetryDelay, boolean exponentialBackoff, double backoffMultiplier) {
+            this.maxRetries = maxRetries;
+            this.retryDelay = retryDelay;
+            this.maxRetryDelay = maxRetryDelay;
+            this.exponentialBackoff = exponentialBackoff;
+            this.backoffMultiplier = backoffMultiplier;
+        }
+
+        // Lombok 注解处理器未运行时的手动 getter 方法
+        public int getMaxRetries() {
+            return maxRetries;
+        }
+
+        public Duration getRetryDelay() {
+            return retryDelay;
+        }
+
+        public Duration getMaxRetryDelay() {
+            return maxRetryDelay;
+        }
+
+        public boolean isExponentialBackoff() {
+            return exponentialBackoff;
+        }
+
+        public double getBackoffMultiplier() {
+            return backoffMultiplier;
+        }
     }
 }

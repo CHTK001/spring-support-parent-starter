@@ -1,16 +1,17 @@
-﻿package com.chua.starter.filesystem.support.template;
+package com.chua.starter.filesystem.support.template;
 
-import com.chua.common.support.oss.FileStorage;
-import com.chua.common.support.oss.request.GetObjectRequest;
-import com.chua.common.support.oss.request.ListObjectRequest;
-import com.chua.common.support.oss.request.PutObjectRequest;
-import com.chua.common.support.oss.result.*;
-import com.chua.common.support.oss.setting.BucketSetting;
-import com.chua.common.support.utils.FileUtils;
-import com.chua.common.support.utils.IoUtils;
+import com.chua.common.support.storage.oss.FileStorage;
+import com.chua.common.support.storage.oss.request.GetObjectRequest;
+import com.chua.common.support.storage.oss.request.ListObjectRequest;
+import com.chua.common.support.storage.oss.request.PutObjectRequest;
+import com.chua.common.support.storage.oss.result.*;
+import com.chua.common.support.storage.oss.result.ResultCode;
+import com.chua.common.support.storage.oss.setting.BucketSetting;
+import com.chua.common.support.core.utils.FileUtils;
+import com.chua.common.support.core.utils.IoUtils;
+import com.chua.starter.common.support.logger.ModuleLog;
 import com.chua.starter.filesystem.support.properties.FileStorageProperties;
 import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
 import java.io.InputStream;
@@ -29,14 +30,13 @@ import static com.chua.starter.common.support.logger.ModuleLog.*;
  * @author CH
  * @since 2024/12/28
  */
-@Slf4j
 public class FileStorageTemplate implements AutoCloseable {
 
     /**
      * 存储实例映射
      */
     @Getter
-    private final Map<String, FileStorage> storageMap = new ConcurrentHashMap<>();
+    public final Map<String, FileStorage> storageMap = new ConcurrentHashMap<>();
 
     /**
      * 默认存储名称
@@ -48,6 +48,11 @@ public class FileStorageTemplate implements AutoCloseable {
      */
     private final FileStorageProperties properties;
 
+    /**
+     * 日志
+     */
+    private final ModuleLog log = ModuleLog.of("FileStorage", FileStorageTemplate.class);
+
     public FileStorageTemplate(FileStorageProperties properties) {
         this.properties = properties;
     }
@@ -56,9 +61,9 @@ public class FileStorageTemplate implements AutoCloseable {
      * 初始化存储
      */
     public void initialize() {
-        List<FileStorageProperties.StorageConfig> storages = properties.getStorages();
+        List<FileStorageProperties.StorageConfig> storages = properties.storages;
         if (storages == null || storages.isEmpty()) {
-            log.warn("[FileStorage] 未配置任何存储后端");
+            log.warn("未配置任何存储后端");
             return;
         }
 
@@ -66,20 +71,20 @@ public class FileStorageTemplate implements AutoCloseable {
             try {
                 FileStorage storage = createFileStorage(config);
                 if (storage != null) {
-                    storageMap.put(config.getName(), storage);
-                    log.info("[FileStorage] 注册存储: {} ({})", highlight(config.getName()), highlight(config.getType()));
+                    storageMap.put(config.name, storage);
+                    log.info("注册存储: {} ({})", highlight(config.name), highlight(config.type));
 
-                    if (config.isDefaultStorage() || defaultStorageName == null) {
-                        defaultStorageName = config.getName();
+                    if (config.defaultStorage || defaultStorageName == null) {
+                        defaultStorageName = config.name;
                     }
                 }
             } catch (Exception e) {
-                log.error("[FileStorage] 创建存储失败: {} - {}", config.getName(), e.getMessage(), e);
+                log.error("创建存储失败: {} - {}", config.name, e.getMessage(), e);
             }
         }
 
         if (defaultStorageName != null) {
-            log.info("[FileStorage] 默认存储: {}", highlight(defaultStorageName));
+            log.info("默认存储: {}", highlight(defaultStorageName));
         }
     }
 
@@ -88,14 +93,14 @@ public class FileStorageTemplate implements AutoCloseable {
      */
     private FileStorage createFileStorage(FileStorageProperties.StorageConfig config) {
         BucketSetting bucketSetting = BucketSetting.builder()
-                .bucket(config.getBucket())
-                .endpoint(config.getEndpoint())
-                .accessKeyId(config.getAccessKeyId())
-                .accessKeySecret(config.getAccessKeySecret())
-                .region(config.getRegion())
+                .bucket(config.bucket)
+                .endpoint(config.endpoint)
+                .accessKeyId(config.accessKeyId)
+                .accessKeySecret(config.accessKeySecret)
+                .region(config.region)
                 .build();
 
-        return FileStorage.createStorage(config.getType(), bucketSetting);
+        return FileStorage.createStorage(config.type, bucketSetting);
     }
 
     // ==================== 存储管理 ====================
@@ -127,7 +132,7 @@ public class FileStorageTemplate implements AutoCloseable {
      */
     public void addStorage(String name, FileStorage storage) {
         storageMap.put(name, storage);
-        log.info("[FileStorage] 动态添加存储: {}", highlight(name));
+        log.info("动态添加存储: {}", highlight(name));
     }
 
     /**
@@ -139,7 +144,7 @@ public class FileStorageTemplate implements AutoCloseable {
         FileStorage storage = storageMap.remove(name);
         if (storage != null) {
             IoUtils.closeQuietly(storage);
-            log.info("[FileStorage] 移除存储: {}", highlight(name));
+            log.info("移除存储: {}", highlight(name));
         }
     }
 
@@ -317,9 +322,9 @@ public class FileStorageTemplate implements AutoCloseable {
         for (Map.Entry<String, FileStorage> entry : storageMap.entrySet()) {
             try {
                 entry.getValue().close();
-                log.info("[FileStorage] 关闭存储: {}", entry.getKey());
+                log.info("关闭存储: {}", entry.getKey());
             } catch (Exception e) {
-                log.error("[FileStorage] 关闭存储失败: {}", entry.getKey(), e);
+                log.error("关闭存储失败: {}", entry.getKey(), e);
             }
         }
         storageMap.clear();

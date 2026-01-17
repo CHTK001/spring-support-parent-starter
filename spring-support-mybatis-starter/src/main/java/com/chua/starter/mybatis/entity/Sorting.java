@@ -1,4 +1,4 @@
-﻿package com.chua.starter.mybatis.entity;
+package com.chua.starter.mybatis.entity;
 
 import lombok.Data;
 
@@ -30,4 +30,22 @@ public class Sorting {
      * 排序方向（asc 或 desc）
      */
     private String order;
+
+    /**
+     * 获取排序方向
+     *
+     * @return 排序方向
+     */
+    public String getOrder() {
+        return order;
+    }
+
+    /**
+     * 获取排序字段名
+     *
+     * @return 排序字段名
+     */
+    public String getField() {
+        return field;
+    }
 }

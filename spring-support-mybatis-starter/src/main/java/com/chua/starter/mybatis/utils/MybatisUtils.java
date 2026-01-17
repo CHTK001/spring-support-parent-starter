@@ -1,9 +1,9 @@
-﻿package com.chua.starter.mybatis.utils;
+package com.chua.starter.mybatis.utils;
 
 import com.baomidou.mybatisplus.core.metadata.OrderItem;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.chua.common.support.bean.BeanUtils;
-import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.base.bean.BeanUtils;
+import com.chua.common.support.core.utils.CollectionUtils;
 import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.mybatis.entity.Sorting;
 

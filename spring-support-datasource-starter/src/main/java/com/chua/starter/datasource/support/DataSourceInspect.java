@@ -1,4 +1,4 @@
-﻿package com.chua.starter.datasource.support;
+package com.chua.starter.datasource.support;
 
 import com.chua.starter.datasource.properties.HikariDataSourceProperties;
 import com.chua.starter.datasource.properties.MultiDataSourceProperties;

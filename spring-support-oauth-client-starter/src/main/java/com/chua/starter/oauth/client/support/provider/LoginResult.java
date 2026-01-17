@@ -1,4 +1,4 @@
-﻿package com.chua.starter.oauth.client.support.provider;
+package com.chua.starter.oauth.client.support.provider;
 
 import lombok.Builder;
 import lombok.Data;

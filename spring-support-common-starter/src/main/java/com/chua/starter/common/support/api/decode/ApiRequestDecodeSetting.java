@@ -59,6 +59,15 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
     }
 
     /**
+     * 判断是否开启请求解密
+     *
+     * @return enable
+     */
+    public boolean isEnable() {
+        return enable;
+    }
+
+    /**
      * 设置 enable
      *
      * @param enable enable

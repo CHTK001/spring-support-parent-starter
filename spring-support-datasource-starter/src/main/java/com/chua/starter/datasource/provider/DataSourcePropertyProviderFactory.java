@@ -1,4 +1,4 @@
-﻿package com.chua.starter.datasource.provider;
+package com.chua.starter.datasource.provider;
 
 import com.chua.starter.datasource.util.ClassUtils;
 import lombok.extern.slf4j.Slf4j;

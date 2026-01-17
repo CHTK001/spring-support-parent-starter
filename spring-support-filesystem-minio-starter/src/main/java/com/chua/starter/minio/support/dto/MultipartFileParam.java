@@ -1,4 +1,4 @@
-﻿package com.chua.starter.minio.support.dto;
+package com.chua.starter.minio.support.dto;
 
 import org.springframework.web.multipart.MultipartFile;
 

@@ -24,7 +24,7 @@
     <parent>
         <artifactId>spring-support-parent-starter</artifactId>
         <groupId>com.chua</groupId>
-        <version>4.0.0.35</version>
+        <version>4.0.0.36</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -54,6 +54,13 @@
             <groupId>org.apache.calcite</groupId>
             <artifactId>calcite-core</artifactId>
             <version>1.36.0</version>
+            <exclusions>
+                <!-- 排除 commons-logging，使用 slf4j 代替 -->
+                <exclusion>
+                    <groupId>commons-logging</groupId>
+                    <artifactId>commons-logging</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- Apache Commons Pool2 - 提供对象池管理，用于数据库连接池 -->
@@ -66,6 +73,12 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-common-starter</artifactId>
+        </dependency>
+
+        <!-- 通用工具类库核心模块 - 提供 ProgressBar, Version 等类 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-common-starter</artifactId>
         </dependency>
 
         <!-- Spring Boot JDBC支持 - 提供数据库访问和事务管理功能 -->

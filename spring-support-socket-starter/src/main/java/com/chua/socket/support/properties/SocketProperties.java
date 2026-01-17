@@ -1,4 +1,4 @@
-﻿package com.chua.socket.support.properties;
+package com.chua.socket.support.properties;
 
 import com.chua.socket.support.SocketProtocol;
 import lombok.Data;
@@ -181,6 +181,42 @@ public class SocketProperties {
          * 房间配置列表
          */
         private List<Room> room = new ArrayList<>();
+
+        /**
+         * 获取协议类型
+         *
+         * @return 协议类型
+         */
+        public SocketProtocol getProtocol() {
+            return protocol;
+        }
+
+        /**
+         * 设置协议类型
+         *
+         * @param protocol 协议类型
+         */
+        public void setProtocol(SocketProtocol protocol) {
+            this.protocol = protocol;
+        }
+
+        /**
+         * 获取房间配置列表
+         *
+         * @return 房间配置列表
+         */
+        public List<Room> getRoom() {
+            return room;
+        }
+
+        /**
+         * 设置房间配置列表
+         *
+         * @param room 房间配置列表
+         */
+        public void setRoom(List<Room> room) {
+            this.room = room;
+        }
     }
 
     /**
@@ -208,6 +244,24 @@ public class SocketProperties {
          * </ul>
          */
         private int port = -1;
+
+        /**
+         * 获取端口号
+         *
+         * @return 端口号
+         */
+        public int getPort() {
+            return port;
+        }
+
+        /**
+         * 设置端口号
+         *
+         * @param port 端口号
+         */
+        public void setPort(int port) {
+            this.port = port;
+        }
 
         /**
          * 本地IP（可选，不设置则使用主配置）

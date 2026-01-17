@@ -13,7 +13,7 @@
     - 开箱即用的集成方案
 
     @author CH
-    @version 4.0.0.35
+    @version 4.0.0.36
 -->
 <project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -26,7 +26,7 @@
   </parent>
   <groupId>com.chua</groupId>
   <artifactId>spring-support-parent-starter</artifactId>
-  <version>4.0.0.35</version>
+  <version>4.0.0.36</version>
   <packaging>pom</packaging>
   <name>Spring Support Parent Starter</name>
   <description>Spring Boot 3.x企业级应用支持框架，提供模块化的功能组件和开箱即用的集成方案</description>
@@ -114,14 +114,14 @@
     <maven-release-plugin.version>3.0.1</maven-release-plugin.version>
     <dubbo.version>3.1.1</dubbo.version>
     <utils.version>4.0.0.34</utils.version>
-    <jackson.version>2.20.0</jackson.version>
+    <jackson.version>2.19.4</jackson.version>
     <guava.version>33.3.1-jre</guava.version>
     <p6spy.version>3.9.0</p6spy.version>
     <flatten-maven-plugin.version>1.6.0</flatten-maven-plugin.version>
     <maven-javadoc-plugin.version>3.6.3</maven-javadoc-plugin.version>
     <freemarker.version>2.3.32</freemarker.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <module.version>4.0.0.35</module.version>
+    <module.version>4.0.0.36</module.version>
     <validation-api.version>2.0.1.Final</validation-api.version>
     <skipTests>true</skipTests>
     <resilience4j.version>2.2.0</resilience4j.version>
@@ -138,8 +138,8 @@
     <easy-captcha.version>1.6.2</easy-captcha.version>
     <maven.repo.releases.url>http://localhost:8081/repository/maven-releases/</maven.repo.releases.url>
     <maven.repo.snapshots.id>maven-snapshots</maven.repo.snapshots.id>
-    <revision>4.0.0.35</revision>
-    <lombok.version>1.18.36</lombok.version>
+    <revision>4.0.0.36</revision>
+    <lombok.version>1.18.40</lombok.version>
     <maven.repo.snapshots.url>http://localhost:8081/repository/maven-snapshots/</maven.repo.snapshots.url>
     <maven.compiler.target>25</maven.compiler.target>
     <maven-enforcer-plugin.version>3.4.1</maven-enforcer-plugin.version>
@@ -451,6 +451,16 @@
         <version>${guava.version}</version>
       </dependency>
       <dependency>
+        <groupId>com.fasterxml.jackson.datatype</groupId>
+        <artifactId>jackson-datatype-jdk8</artifactId>
+        <version>${jackson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.module</groupId>
+        <artifactId>jackson-module-paramnames</artifactId>
+        <version>${jackson.version}</version>
+      </dependency>
+      <dependency>
         <groupId>com.chua</groupId>
         <artifactId>utils-support-guava-starter</artifactId>
         <version>${utils.version}</version>
@@ -468,6 +478,11 @@
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>utils-support-elasticsearch-starter</artifactId>
+        <version>${utils.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.chua</groupId>
+        <artifactId>utils-support-armeria-starter</artifactId>
         <version>${utils.version}</version>
       </dependency>
       <dependency>
@@ -601,7 +616,18 @@
           <encoding>${project.build.sourceEncoding}</encoding>
           <compilerArgs>
             <arg>-parameters</arg>
+            <arg>-J--enable-native-access=ALL-UNNAMED</arg>
+            <arg>-proc:full</arg>
           </compilerArgs>
+          <fork>true</fork>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+              <version>${lombok.version}</version>
+            </path>
+          </annotationProcessorPaths>
+          <generatedSourcesDirectory>${project.build.directory}/generated-sources/annotations</generatedSourcesDirectory>
         </configuration>
       </plugin>
       <plugin>

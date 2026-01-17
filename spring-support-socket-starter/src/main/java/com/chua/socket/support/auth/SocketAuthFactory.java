@@ -1,4 +1,4 @@
-﻿package com.chua.socket.support.auth;
+package com.chua.socket.support.auth;
 
 import com.chua.socket.support.session.SocketUser;
 

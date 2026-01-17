@@ -1,4 +1,4 @@
-﻿package com.chua.starter.datasource.properties;
+package com.chua.starter.datasource.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -51,5 +51,30 @@ public class TransactionProperties {
      * 写事务
      */
     private String writeOnly = "";
+
+    // Getter 方法（Lombok 在 Java 25 下可能不工作，手动添加）
+    public boolean isEnable() {
+        return enable;
+    }
+
+    public Integer getTimeout() {
+        return timeout;
+    }
+
+    public String getTxMapper() {
+        return txMapper;
+    }
+
+    public String getReadOnly() {
+        return readOnly;
+    }
+
+    public String getNoTx() {
+        return noTx;
+    }
+
+    public String getWriteOnly() {
+        return writeOnly;
+    }
 
 }

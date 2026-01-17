@@ -1,14 +1,10 @@
 package com.chua.starter.common.support.api.interceptor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-
-import com.chua.common.support.json.Json;
+import com.chua.common.support.text.json.Json;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.net.Version;
-import com.chua.common.support.utils.ArrayUtils;
-import com.chua.common.support.utils.IoUtils;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.network.net.Version;
+import com.chua.common.support.core.utils.ArrayUtils;
+import com.chua.common.support.core.utils.IoUtils;
+import com.chua.common.support.core.utils.StringUtils;
 import com.chua.starter.common.support.api.annotations.ApiDeprecated;
 import com.chua.starter.common.support.api.annotations.ApiFeature;
 import com.chua.starter.common.support.api.annotations.ApiGray;
@@ -31,6 +27,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * API 控制拦截器
  * <p>
@@ -41,6 +39,7 @@ import java.util.regex.Pattern;
  * @since 2024/12/08
  * @version 1.0.0
  */
+@Slf4j
 public class ApiControlInterceptor implements HandlerInterceptor {
     /**
      * 构造函数
@@ -48,25 +47,14 @@ public class ApiControlInterceptor implements HandlerInterceptor {
      * @param apiProperties ApiProperties
      * @param environment Environment
      * @param featureManager ApiFeatureManager
-     * @param grayEvaluator ApiGrayEvaluator
-     * @param PRIVATE_IP_PATTERN Pattern
-     * @param VERSION_PATTERN Pattern
-     * @param ATTR_SKIP_AUTH String
      */
-    public ApiControlInterceptor(ApiProperties apiProperties, Environment environment, ApiFeatureManager featureManager, ApiGrayEvaluator grayEvaluator, Pattern PRIVATE_IP_PATTERN, Pattern VERSION_PATTERN, String ATTR_SKIP_AUTH) {
+    public ApiControlInterceptor(ApiProperties apiProperties, Environment environment, ApiFeatureManager featureManager) {
         this.apiProperties = apiProperties;
         this.environment = environment;
         this.featureManager = featureManager;
-        this.grayEvaluator = grayEvaluator;
-        this.PRIVATE_IP_PATTERN = PRIVATE_IP_PATTERN;
-        this.VERSION_PATTERN = VERSION_PATTERN;
-        this.ATTR_SKIP_AUTH = ATTR_SKIP_AUTH;
     }
 
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ApiControlInterceptor.class);
-
-
-    private final ApiProperties apiProperties;
+        private final ApiProperties apiProperties;
     private final Environment environment;
     private final ApiFeatureManager featureManager;
     private final ApiGrayEvaluator grayEvaluator = new ApiGrayEvaluator();

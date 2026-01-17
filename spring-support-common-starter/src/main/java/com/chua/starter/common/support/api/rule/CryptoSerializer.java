@@ -3,7 +3,7 @@ package com.chua.starter.common.support.api.rule;
 import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.crypto.CryptoModule;
 import com.chua.common.support.crypto.CryptoType;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.core.utils.StringUtils;
 import com.chua.starter.common.support.annotations.Crypto;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.fasterxml.jackson.core.JsonGenerator;

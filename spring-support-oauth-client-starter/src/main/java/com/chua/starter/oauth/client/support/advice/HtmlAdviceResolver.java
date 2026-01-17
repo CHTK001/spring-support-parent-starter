@@ -1,11 +1,11 @@
-﻿package com.chua.starter.oauth.client.support.advice;
+package com.chua.starter.oauth.client.support.advice;
 
-import com.chua.common.support.json.Json;
+import com.chua.common.support.text.json.Json;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.robin.Node;
-import com.chua.common.support.lang.robin.Robin;
-import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.xml.Xml;
+import com.chua.common.support.lang.robin.LoadBalance;
+import com.chua.common.support.core.spi.ServiceProvider;
+import com.chua.common.support.text.xml.Xml;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
@@ -66,8 +66,8 @@ public class HtmlAdviceResolver implements AdviceResolver {
             return;
         }
 
-        Robin balance1 = ServiceProvider.of(Robin.class).getExtension(authProperties.getBalance());
-        Robin robin1 = balance1.create();
+        LoadBalance balance1 = ServiceProvider.of(LoadBalance.class).getExtension(authProperties.getBalance());
+        LoadBalance robin1 = balance1.create();
         String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(authProperties.getLoginAddress()).split(",");
         robin1.addNode(split);
 

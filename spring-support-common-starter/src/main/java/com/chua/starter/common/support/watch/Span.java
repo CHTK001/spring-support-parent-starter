@@ -145,6 +145,9 @@ public class Span implements Serializable {
             int i1 = string.indexOf("(");
             parents.add(i1 > -1 ? string.substring(0, i1) : string);
         }
+        this.stack = rs;
+    }
+
     /**
      * 获取 linkId
      *
@@ -532,98 +535,5 @@ public class Span implements Serializable {
         this.parents = parents;
     }
 
-    /**
-     * 获取 rs
-     *
-     * @return rs
-     */
-    public List<String> getRs() {
-        return rs;
-    }
-
-    /**
-     * 设置 rs
-     *
-     * @param rs rs
-     */
-    public void setRs(List<String> rs) {
-        this.rs = rs;
-    }
-
-    /**
-     * 获取 element
-     *
-     * @return element
-     */
-    public StackTraceElement getElement() {
-        return element;
-    }
-
-    /**
-     * 设置 element
-     *
-     * @param element element
-     */
-    public void setElement(StackTraceElement element) {
-        this.element = element;
-    }
-
-    /**
-     * 获取 className
-     *
-     * @return className
-     */
-    public String getClassName() {
-        return className;
-    }
-
-    /**
-     * 设置 className
-     *
-     * @param className className
-     */
-    public void setClassName(String className) {
-        this.className = className;
-    }
-
-    /**
-     * 获取 string
-     *
-     * @return string
-     */
-    public String getString() {
-        return string;
-    }
-
-    /**
-     * 设置 string
-     *
-     * @param string string
-     */
-    public void setString(String string) {
-        this.string = string;
-    }
-
-    /**
-     * 获取 i1
-     *
-     * @return i1
-     */
-    public int getI1() {
-        return i1;
-    }
-
-    /**
-     * 设置 i1
-     *
-     * @param i1 i1
-     */
-    public void setI1(int i1) {
-        this.i1 = i1;
-    }
-
-
-        this.stack = rs;
-    }
 }
 

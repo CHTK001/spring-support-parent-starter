@@ -1,8 +1,4 @@
 package com.chua.starter.common.support.api.configuration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-
 import com.chua.starter.common.support.api.control.ApiVersionRequestMappingHandlerMapping;
 import com.chua.starter.common.support.api.decode.ApiRequestDecodeBodyAdvice;
 import com.chua.starter.common.support.api.decode.ApiRequestDecodeRegister;
@@ -30,6 +26,8 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * API 统一配置
  * <p>
@@ -40,14 +38,12 @@ import java.util.concurrent.Executors;
  * @since 2024/12/07
  * @version 1.0.0
  */
+@Slf4j
 @EnableConfigurationProperties(ApiProperties.class)
 @Priority(0)
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)
 public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware {
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ApiConfiguration.class);
-
-
-    private static final String ANSI_GREEN = "\u001B[32m";
+        private static final String ANSI_GREEN = "\u001B[32m";
     private static final String ANSI_RED = "\u001B[31m";
     private static final String ANSI_RESET = "\u001B[0m";
 

@@ -1,9 +1,9 @@
 package com.chua.starter.common.support.utils;
 
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.utils.FileUtils;
-import com.chua.common.support.utils.IoUtils;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.core.utils.FileUtils;
+import com.chua.common.support.core.utils.IoUtils;
+import com.chua.common.support.core.utils.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;

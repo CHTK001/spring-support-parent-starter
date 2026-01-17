@@ -44,13 +44,22 @@ public class ActuatorProperties {
      * 排除的路径
      */
     private Set<String> excludePaths = new LinkedHashSet<>();
-}
+
     /**
      * 获取 enable
      *
      * @return enable
      */
     public boolean getEnable() {
+        return enable;
+    }
+
+    /**
+     * 判断是否启用
+     *
+     * @return enable
+     */
+    public boolean isEnable() {
         return enable;
     }
 
@@ -69,6 +78,15 @@ public class ActuatorProperties {
      * @return enableAuth
      */
     public boolean getEnableAuth() {
+        return enableAuth;
+    }
+
+    /**
+     * 判断是否开启认证
+     *
+     * @return enableAuth
+     */
+    public boolean isEnableAuth() {
         return enableAuth;
     }
 
@@ -152,5 +170,4 @@ public class ActuatorProperties {
     public void setExcludePaths(Set<String> excludePaths) {
         this.excludePaths = excludePaths;
     }
-
-
+}

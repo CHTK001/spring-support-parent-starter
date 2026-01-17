@@ -25,8 +25,7 @@ import com.github.xiaoymin.knife4j.spring.extension.OpenApiExtensionResolver;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.models.OpenAPI;
 import org.apache.commons.lang3.ArrayUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.customizers.GlobalOpenApiCustomizer;
 import org.springdoc.core.properties.SpringDocConfigProperties;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -52,10 +51,9 @@ import java.util.stream.Collectors;
  * 2022/12/11 22:40
  * @since 4.1.0
  */
+@Slf4j
 @Primary
 public class CustomKnife4jOpenApiCustomizer implements GlobalOpenApiCustomizer {
-
-    private static final Logger log = LoggerFactory.getLogger(CustomKnife4jOpenApiCustomizer.class);
     
     /**
      * Knife4j配置属性

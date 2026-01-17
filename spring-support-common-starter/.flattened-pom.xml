@@ -24,10 +24,10 @@
   <parent>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-parent-starter</artifactId>
-    <version>4.0.0.35</version>
+    <version>4.0.0.36</version>
   </parent>
   <artifactId>spring-support-common-starter</artifactId>
-  <version>4.0.0.35</version>
+  <version>4.0.0.36</version>
   <description>Spring Support框架通用功能模块，提供企业级应用开发的基础功能和工具类</description>
   <licenses>
     <license>
@@ -45,7 +45,7 @@
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
-      <version>1.18.34</version>
+      <version>1.18.40</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -87,6 +87,10 @@
       <artifactId>jackson-datatype-jsr310</artifactId>
     </dependency>
     <dependency>
+      <groupId>com.fasterxml.jackson.datatype</groupId>
+      <artifactId>jackson-datatype-jdk8</artifactId>
+    </dependency>
+    <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-httpclient-starter</artifactId>
       <exclusions>
@@ -109,6 +113,10 @@
       <artifactId>utils-support-hibernate-starter</artifactId>
     </dependency>
     <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+    </dependency>
+    <dependency>
       <groupId>com.github.whvcse</groupId>
       <artifactId>easy-captcha</artifactId>
       <version>1.6.2</version>
@@ -120,7 +128,7 @@
     <dependency>
       <groupId>com.fasterxml.jackson.dataformat</groupId>
       <artifactId>jackson-dataformat-xml</artifactId>
-      <version>2.20.0</version>
+      <version>${jackson.version}</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -134,6 +142,21 @@
       <groupId>org.springframework</groupId>
       <artifactId>spring-jdbc</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.apache.tomcat.embed</groupId>
+      <artifactId>tomcat-embed-core</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.undertow</groupId>
+      <artifactId>undertow-core</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.undertow</groupId>
+      <artifactId>undertow-servlet</artifactId>
+      <scope>provided</scope>
+    </dependency>
   </dependencies>
   <build>
     <plugins>
@@ -141,15 +164,19 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.13.0</version>
         <configuration>
-          <source>25</source>
-          <target>25</target>
+          <release>25</release>
           <encoding>UTF-8</encoding>
           <proc>full</proc>
+          <compilerArgs>
+            <arg>-parameters</arg>
+            <arg>-J--enable-native-access=ALL-UNNAMED</arg>
+          </compilerArgs>
+          <fork>true</fork>
           <annotationProcessorPaths>
             <path>
               <groupId>org.projectlombok</groupId>
               <artifactId>lombok</artifactId>
-              <version>1.18.36</version>
+              <version>1.18.40</version>
             </path>
           </annotationProcessorPaths>
         </configuration>

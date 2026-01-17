@@ -1,10 +1,8 @@
-﻿package com.chua.starter.datasource.support;
+package com.chua.starter.datasource.support;
 
-import com.chua.common.support.objects.aop.JoinPoint;
 import com.chua.starter.datasource.annotation.DS;
 import com.chua.starter.datasource.datasource.MultiDataSource;
 import com.chua.starter.datasource.properties.MultiDataSourceSettingProperties;
-import lombok.Setter;
 import org.aopalliance.intercept.MethodInvocation;
 
 import org.springframework.context.ApplicationContext;
@@ -29,8 +27,16 @@ public class DynamicDataSourceAspect {
     /**
      * 上下文
      */
-    @Setter
     private ApplicationContext applicationContext;
+
+    /**
+     * 设置应用上下文
+     *
+     * @param applicationContext 应用上下文
+     */
+    public void setApplicationContext(ApplicationContext applicationContext) {
+        this.applicationContext = applicationContext;
+    }
 
     /**
      * 切入点
@@ -178,10 +184,8 @@ public class DynamicDataSourceAspect {
 
     /**
      * 重置
-     *
-     * @param point 切入点
      */
-    public synchronized void afterSwitchDS(JoinPoint point) {
+    public synchronized void afterSwitchDS() {
         DataSourceContextSupport.clearDbType();
         DataSourceContextSupport.setDbType(DataSourceContextSupport.DEFAULT_DATASOURCE);
     }

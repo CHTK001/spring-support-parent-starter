@@ -1,9 +1,9 @@
-﻿package com.chua.starter.mybatis.marker;
+package com.chua.starter.mybatis.marker;
 
 import com.baomidou.mybatisplus.core.injector.AbstractMethod;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
-import com.chua.common.support.utils.MapUtils;
+import com.chua.common.support.core.utils.MapUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.mybatis.method.DynamicSqlMethod;
 import com.chua.starter.mybatis.watchdog.MysqlWatchdog;

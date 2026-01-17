@@ -1,4 +1,4 @@
-﻿package com.chua.starter.oauth.client.support.fingerprint;
+package com.chua.starter.oauth.client.support.fingerprint;
 
 import java.util.HashSet;
 import java.util.Set;

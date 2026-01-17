@@ -1,6 +1,6 @@
-﻿package com.chua.starter.redis.support.lock;
+package com.chua.starter.redis.support.lock;
 
-import com.chua.starter.strategy.template.LockTemplate;
+import com.chua.starter.redis.support.template.LockTemplate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;

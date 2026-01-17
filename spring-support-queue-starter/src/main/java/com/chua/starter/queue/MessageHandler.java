@@ -1,4 +1,4 @@
-﻿package com.chua.starter.queue;
+package com.chua.starter.queue;
 
 /**
  * 消息处理器接口

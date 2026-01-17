@@ -1,4 +1,4 @@
-﻿package com.chua.starter.mybatis.mapper;
+package com.chua.starter.mybatis.mapper;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -7,7 +7,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.toolkit.Db;
-import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.core.utils.CollectionUtils;
 import com.chua.starter.mybatis.entity.PageResult;
 import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.mybatis.utils.MybatisUtils;
@@ -31,36 +31,24 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
         // 特殊：不分页，直接查询全部
         if (Query.PAGE_SIZE_NONE.equals(pageParam.getPageSize())) {
             List<T> list = selectList(queryWrapper);
-            return PageResult.<T>builder()
-                    .records(list)
-                    .pageSize(pageParam.getPageSize())
-                    .pageNo(pageParam.getPage())
-                    .total(list.size())
-                    .build();
+            com.baomidou.mybatisplus.extension.plugins.pagination.Page<T> tempPage = MybatisUtils.buildPage(pageParam);
+            tempPage.setRecords(list);
+            tempPage.setTotal(list.size());
+            return PageResult.copy(tempPage);
         }
 
         // MyBatis Plus 查询
         IPage<T> mpPage = MybatisUtils.buildPage(pageParam);
         selectPage(mpPage, queryWrapper);
         // 转换返回
-        return PageResult.<T>builder()
-                .records(mpPage.getRecords())
-                .pageSize(pageParam.getPageSize())
-                .pageNo(pageParam.getPage())
-                .total(mpPage.getTotal())
-                .build();
+        return PageResult.copy(mpPage);
     }
 
     default <DTO> PageResult<DTO> selectJoinPage(Query<T> pageParam, Class<DTO> resultTypeClass, MPJBaseJoin<T> joinQueryWrapper) {
         IPage<DTO> mpPage = MybatisUtils.buildPage(pageParam);
         selectJoinPage(mpPage, resultTypeClass, joinQueryWrapper);
         // 转换返回
-        return PageResult.<DTO>builder()
-                .records(mpPage.getRecords())
-                .pageSize(pageParam.getPageSize())
-                .pageNo(pageParam.getPage())
-                .total(mpPage.getTotal())
-                .build();
+        return PageResult.copy(mpPage);
     }
 
     default T selectOne(String field, Object value) {

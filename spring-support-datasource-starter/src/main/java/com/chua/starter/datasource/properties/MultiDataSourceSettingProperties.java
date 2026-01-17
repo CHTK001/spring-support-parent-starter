@@ -1,4 +1,4 @@
-﻿package com.chua.starter.datasource.properties;
+package com.chua.starter.datasource.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -24,4 +24,9 @@ public class MultiDataSourceSettingProperties {
      * 是否强制使用注解上的数据源
      */
     private boolean forceAnnotation = true;
+
+    // Getter 方法（Lombok 在 Java 25 下可能不工作，手动添加）
+    public boolean isForceAnnotation() {
+        return forceAnnotation;
+    }
 }

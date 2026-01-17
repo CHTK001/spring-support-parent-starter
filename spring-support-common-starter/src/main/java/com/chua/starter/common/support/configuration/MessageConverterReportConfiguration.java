@@ -1,8 +1,4 @@
 package com.chua.starter.common.support.configuration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.annotation.Configuration;
@@ -12,6 +8,8 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 
 import java.util.List;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * 消息转换器报告配置
  *
@@ -20,6 +18,7 @@ import java.util.List;
  * @author CH
  * @since 2026/01/14
  */
+@Slf4j
 @Configuration
 public class MessageConverterReportConfiguration implements ApplicationListener<ApplicationReadyEvent> {
     /**
@@ -31,10 +30,7 @@ public class MessageConverterReportConfiguration implements ApplicationListener<
         this.requestMappingHandlerAdapter = requestMappingHandlerAdapter;
     }
 
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(MessageConverterReportConfiguration.class);
-
-
-    private final RequestMappingHandlerAdapter requestMappingHandlerAdapter;
+        private final RequestMappingHandlerAdapter requestMappingHandlerAdapter;
 
     /**
      * 应用启动完成后输出最终生效的消息转换器信息

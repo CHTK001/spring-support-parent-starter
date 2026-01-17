@@ -1,4 +1,4 @@
-﻿package com.chua.starter.mybatis.annotations;
+package com.chua.starter.mybatis.annotations;
 
 import com.chua.starter.common.support.constant.DataFilterTypeEnum;
 

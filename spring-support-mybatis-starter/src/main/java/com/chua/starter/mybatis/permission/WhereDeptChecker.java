@@ -1,4 +1,4 @@
-﻿package com.chua.starter.mybatis.permission;
+package com.chua.starter.mybatis.permission;
 
 import lombok.Getter;
 import net.sf.jsqlparser.expression.BinaryExpression;
@@ -75,5 +75,12 @@ public class WhereDeptChecker {
         return false;
     }
 
-
+    /**
+     * 获取当前表
+     *
+     * @return 当前表
+     */
+    public Table getCurrentTable() {
+        return currentTable;
+    }
 }

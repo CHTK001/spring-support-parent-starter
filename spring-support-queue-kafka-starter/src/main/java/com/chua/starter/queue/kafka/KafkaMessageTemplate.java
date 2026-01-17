@@ -1,4 +1,4 @@
-﻿package com.chua.starter.queue.kafka;
+package com.chua.starter.queue.kafka;
 
 import com.chua.starter.queue.Acknowledgment;
 import com.chua.starter.queue.Message;
@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 public class KafkaMessageTemplate implements MessageTemplate {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(KafkaMessageTemplate.class);
 
     private final KafkaProducer<String, byte[]> producer;
     private final QueueProperties props;

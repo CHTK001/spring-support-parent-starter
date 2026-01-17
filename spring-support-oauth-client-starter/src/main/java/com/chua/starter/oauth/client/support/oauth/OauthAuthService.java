@@ -1,6 +1,6 @@
-﻿package com.chua.starter.oauth.client.support.oauth;
+package com.chua.starter.oauth.client.support.oauth;
 
-import com.chua.common.support.bean.BeanUtils;
+import com.chua.common.support.base.bean.BeanUtils;
 import com.chua.starter.common.support.oauth.AuthService;
 import com.chua.starter.common.support.oauth.CurrentUser;
 import com.chua.starter.common.support.utils.RequestUtils;
@@ -19,7 +19,7 @@ public class OauthAuthService implements AuthService {
 
     @Override
     public CurrentUser getCurrentUser() {
-        UserResume userInfo = RequestUtils.getUserInfo(UserResume.class);
+        UserResume userInfo = com.chua.starter.oauth.client.support.execute.AuthSessionUtils.getUserInfo(UserResume.class);
         if(null == userInfo) {
             return null;
         }

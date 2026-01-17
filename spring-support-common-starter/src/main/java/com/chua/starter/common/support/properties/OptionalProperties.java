@@ -24,8 +24,6 @@ public class OptionalProperties {
      */
     private boolean enable = false;
 
-
-}
     /**
      * 获取 enable
      *
@@ -43,6 +41,4 @@ public class OptionalProperties {
     public void setEnable(boolean enable) {
         this.enable = enable;
     }
-
-
-
+}

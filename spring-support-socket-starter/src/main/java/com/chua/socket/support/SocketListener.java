@@ -1,4 +1,4 @@
-﻿package com.chua.socket.support;
+package com.chua.socket.support;
 
 /**
  * Socket 监听器接口

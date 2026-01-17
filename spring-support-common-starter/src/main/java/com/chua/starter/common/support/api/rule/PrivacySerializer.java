@@ -1,6 +1,6 @@
 package com.chua.starter.common.support.api.rule;
 
-import com.chua.common.support.utils.PrivacyUtils;
+import com.chua.common.support.core.utils.PrivacyUtils;
 import com.chua.starter.common.support.api.annotations.ApiFieldPrivacyEncrypt;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.BeanProperty;
@@ -60,6 +60,21 @@ public class PrivacySerializer extends JsonSerializer<String> implements Context
         this.suffixNoMaskLen = suffixNoMaskLen;
         this.symbol = symbol;
         this.apiFieldPrivacyEncrypt = apiFieldPrivacyEncrypt;
+    }
+
+    /**
+     * 构造函数
+     *
+     * @param privacyTypeEnum 脱敏类型
+     * @param prefixNoMaskLen 前几位不脱敏
+     * @param suffixNoMaskLen 最后几位不脱敏
+     * @param symbol 用什么打码
+     */
+    public PrivacySerializer(PrivacyTypeEnum privacyTypeEnum, Integer prefixNoMaskLen, Integer suffixNoMaskLen, String symbol) {
+        this.privacyTypeEnum = privacyTypeEnum;
+        this.prefixNoMaskLen = prefixNoMaskLen;
+        this.suffixNoMaskLen = suffixNoMaskLen;
+        this.symbol = symbol;
     }
 
     @Override

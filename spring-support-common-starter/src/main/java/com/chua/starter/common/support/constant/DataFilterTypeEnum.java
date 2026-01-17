@@ -23,7 +23,7 @@ public enum DataFilterTypeEnum {
      * @param code Integer
      * @param label String
      */
-    public DataFilterTypeEnum(Integer code, String label) {
+    DataFilterTypeEnum(Integer code, String label) {
         this.code = code;
         this.label = label;
     }
@@ -63,6 +63,4 @@ public enum DataFilterTypeEnum {
     public String getLabel() {
         return label;
     }
-
-        }
-
+}

@@ -1,4 +1,4 @@
-﻿package com.chua.starter.oauth.client.support.principal;
+package com.chua.starter.oauth.client.support.principal;
 
 import com.chua.starter.oauth.client.support.user.UserResume;
 import lombok.Getter;

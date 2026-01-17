@@ -1,4 +1,4 @@
-﻿package com.chua.starter.redis.support.listener;
+package com.chua.starter.redis.support.listener;
 
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.listener.Topic;

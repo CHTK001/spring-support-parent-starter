@@ -1,4 +1,4 @@
-﻿package com.chua.starter.mybatis.annotations;
+package com.chua.starter.mybatis.annotations;
 
 import java.lang.annotation.*;
 

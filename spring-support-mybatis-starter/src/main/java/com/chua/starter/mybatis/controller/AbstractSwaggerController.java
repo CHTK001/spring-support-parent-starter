@@ -1,4 +1,4 @@
-﻿package com.chua.starter.mybatis.controller;
+package com.chua.starter.mybatis.controller;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -6,9 +6,9 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.utils.CollectionUtils;
-import com.chua.common.support.utils.StringUtils;
-import com.chua.common.support.validator.group.SelectGroup;
+import com.chua.common.support.core.utils.CollectionUtils;
+import com.chua.common.support.core.utils.StringUtils;
+import com.chua.common.support.base.validator.group.SelectGroup;
 import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -47,13 +47,13 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> extend
         if (bindingResult.hasErrors()) {
             var fieldError = bindingResult.getFieldError();
             String errorMessage = fieldError != null ? fieldError.getDefaultMessage() : "参数验证失败";
-            return ReturnPageResult.error(errorMessage);
+            return PageResultUtils.error(errorMessage);
         }
         S service = getService();
         IPage<T> tPage = service.page(page.createPage(), createWrapper(entity));
         List<T> records = tPage.getRecords();
         if(CollectionUtils.isEmpty(records)) {
-            return ReturnPageResult.ok();
+            return PageResultUtils.ok();
         }
         pageAfter(records);
         return PageResultUtils.ok(tPage);

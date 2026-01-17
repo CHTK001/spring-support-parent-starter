@@ -1,15 +1,11 @@
 package com.chua.starter.common.support.api.response;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-
 import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.lang.exception.AuthenticationException;
-import com.chua.common.support.lang.exception.RemoteExecutionException;
-import com.chua.common.support.unit.name.NamingCase;
-import com.chua.common.support.utils.StringUtils;
-import com.chua.common.support.validator.Validator;
+import com.chua.common.support.core.exception.AuthenticationException;
+import com.chua.common.support.core.exception.RemoteExecutionException;
+import com.chua.common.support.math.unit.name.NamingCase;
+import com.chua.common.support.core.utils.StringUtils;
+import com.chua.common.support.base.validator.Validator;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.common.support.exception.RuntimeMessageException;
 import com.fasterxml.jackson.core.JsonParseException;
@@ -66,6 +62,8 @@ import java.util.stream.Collectors;
 
 import static com.chua.common.support.lang.code.ReturnCode.*;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * 统一异常处理器
  * <p>
@@ -76,12 +74,10 @@ import static com.chua.common.support.lang.code.ReturnCode.*;
  * @since 2023-08-01
  * @version 1.0.0
  */
+@Slf4j
 @RestControllerAdvice
 public class ApiExceptionAdvice {
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ApiExceptionAdvice.class);
-
-
-    /** 是否为生产环境（生产环境隐藏技术细节） */
+        /** 是否为生产环境（生产环境隐藏技术细节） */
     private static boolean isProduction = false;
     
     /** 是否在响应中返回详细错误信息（字段级别错误） */

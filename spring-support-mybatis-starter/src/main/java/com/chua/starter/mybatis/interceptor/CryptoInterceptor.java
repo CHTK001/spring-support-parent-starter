@@ -1,4 +1,4 @@
-﻿package com.chua.starter.mybatis.interceptor;
+package com.chua.starter.mybatis.interceptor;
 
 import com.chua.common.support.core.utils.ClassUtils;
 import com.chua.common.support.crypto.Codec;

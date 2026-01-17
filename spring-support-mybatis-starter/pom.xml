@@ -27,7 +27,7 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.35</version>
+        <version>4.0.0.36</version>
     </parent>
 
     <!-- 项目基本信息 -->
@@ -48,6 +48,12 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-common-starter</artifactId>
+        </dependency>
+
+        <!-- 数据源模块 - 提供数据源工具类 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-datasource-starter</artifactId>
         </dependency>
 
         <!-- P6Spy SQL监控 - 提供SQL执行监控和性能分析功能 -->
@@ -97,6 +103,12 @@
             <groupId>commons-dbutils</groupId>
             <artifactId>commons-dbutils</artifactId>
             <version>1.8.1</version>
+        </dependency>
+
+        <!-- Apache Commons Lang3 - 提供字符串和对象工具类 -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
         </dependency>
 
         <dependency>

@@ -1,7 +1,6 @@
-﻿package com.chua.starter.mybatis.pojo;
+package com.chua.starter.mybatis.pojo;
 
-import com.chua.common.support.datasource.annotation.ColumnDefinition;
-import io.swagger.annotations.ApiModelProperty;
+import com.chua.common.support.data.datasource.annotation.ColumnDefinition;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -20,6 +19,5 @@ public class SysTenantBase extends SysBase{
      */
     @ColumnDefinition(defaultValue = "0", comment = "租户ID", refresh = true)
     @Schema(description = "租户ID")
-    @ApiModelProperty("租户ID")
     private Integer sysTenantId;
 }

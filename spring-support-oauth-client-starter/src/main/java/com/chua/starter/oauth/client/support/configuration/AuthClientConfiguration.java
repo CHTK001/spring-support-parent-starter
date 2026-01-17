@@ -1,4 +1,4 @@
-﻿package com.chua.starter.oauth.client.support.configuration;
+package com.chua.starter.oauth.client.support.configuration;
 
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.oauth.AuthService;

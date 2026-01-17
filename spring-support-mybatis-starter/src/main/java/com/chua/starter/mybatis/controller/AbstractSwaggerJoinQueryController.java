@@ -1,10 +1,10 @@
-﻿package com.chua.starter.mybatis.controller;
+package com.chua.starter.mybatis.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.validator.group.SelectGroup;
+import com.chua.common.support.base.validator.group.SelectGroup;
 import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.mybatis.utils.PageResultUtils;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
@@ -34,7 +34,7 @@ public abstract class AbstractSwaggerJoinQueryController<S extends IService<T>, 
     @GetMapping("page")
     public ReturnPageResult<T> page(Query<T> page, @Validated(SelectGroup.class)  T entity, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ReturnPageResult.error();
+            return PageResultUtils.error();
         }
         S service = getService();
         Page<T> tPage = service.page(page.createPage(), createJoinWrapper(entity));

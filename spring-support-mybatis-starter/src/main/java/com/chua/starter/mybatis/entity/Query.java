@@ -1,4 +1,4 @@
-﻿package com.chua.starter.mybatis.entity;
+package com.chua.starter.mybatis.entity;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -116,6 +116,24 @@ public class Query<T> implements Serializable {
     @Max(value = 100, message = "每页条数最大值为 100")
     @RequestParamMapping({"pageSize", "size", "count"})
     private Integer pageSize = PAGE_SIZE;
+
+    /**
+     * 获取每页条数
+     *
+     * @return 每页条数
+     */
+    public Integer getPageSize() {
+        return pageSize;
+    }
+
+    /**
+     * 获取页码
+     *
+     * @return 页码
+     */
+    public Integer getPage() {
+        return page;
+    }
 
     /**
      * 查询字段

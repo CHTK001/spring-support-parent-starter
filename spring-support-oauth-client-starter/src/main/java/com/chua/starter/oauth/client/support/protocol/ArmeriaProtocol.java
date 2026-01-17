@@ -1,12 +1,12 @@
-﻿package com.chua.starter.oauth.client.support.protocol;
+package com.chua.starter.oauth.client.support.protocol;
 
-import com.chua.common.support.annotations.Extension;
-import com.chua.common.support.json.Json;
-import com.chua.common.support.json.JsonObject;
+import com.chua.common.support.core.annotation.Extension;
+import com.chua.common.support.text.json.Json;
+import com.chua.common.support.text.json.JsonObject;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.utils.IdUtils;
-import com.chua.common.support.utils.SignUtils;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.core.utils.IdUtils;
+import com.chua.common.support.core.utils.SignUtils;
+import com.chua.common.support.core.utils.StringUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.entity.AppKeySecret;
@@ -126,7 +126,8 @@ public class ArmeriaProtocol extends AbstractProtocol {
         jsonObject.put("x-oauth-token", token);
         jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
         jsonObject.put("x-oauth-secret-key", authClientProperties.getKey().getSecretKey());
-        jsonObject.put("x-oauth-param-address", RequestUtils.getIpAddress());
+        var request = RequestUtils.getRequest();
+        jsonObject.put("x-oauth-param-address", request != null ? RequestUtils.getIpAddress(request) : "unknown");
         jsonObject.put("x-oauth-param-app-name", SpringBeanUtils.getEnvironment().resolvePlaceholders("${spring.application.name:}"));
         return createAuthenticationInformation(jsonObject, null, authClientProperties.getOauthUrl());
     }
@@ -141,7 +142,8 @@ public class ArmeriaProtocol extends AbstractProtocol {
         jsonObject.put("x-oauth-user-code", Json.toJSONBytes(appKeySecret));
         jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
         jsonObject.put("x-oauth-secret-key", authClientProperties.getKey().getSecretKey());
-        jsonObject.put("x-oauth-param-address", RequestUtils.getIpAddress());
+        var request = RequestUtils.getRequest();
+        jsonObject.put("x-oauth-param-address", request != null ? RequestUtils.getIpAddress(request) : "unknown");
         jsonObject.put("x-oauth-param-app-name", SpringBeanUtils.getEnvironment().resolvePlaceholders("${spring.application.name:}"));
         return createAuthenticationInformation(jsonObject, null, authClientProperties.getOauthUrl());
     }
@@ -179,7 +181,7 @@ public class ArmeriaProtocol extends AbstractProtocol {
         AuthenticationInformation authenticationInformation = createAuthenticationInformation(jsonObject, upgradeType, "upgrade");
         if (authenticationInformation.getInformation() == Information.OK) {
             if (upgradeType == UpgradeType.VERSION) {
-                RequestUtils.removeUserInfo();
+                com.chua.starter.oauth.client.support.execute.AuthSessionUtils.removeUserInfo();
                 String cacheKey = getCacheKey(new Cookie[]{cookie}, token);
                 if (hasCache(cacheKey)) {
                     clearAuthenticationInformation(cacheKey);
@@ -384,7 +386,7 @@ public class ArmeriaProtocol extends AbstractProtocol {
             }
             
             // 使用 Armeria WebClient 发送请求
-            com.linecorp.armeria.client.HttpClientRequestPreparation preparation = webClient.prepare()
+            var preparation = webClient.prepare()
                     .post(requestPath)
                     .header(HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8.toString())
                     .header("x-oauth-timestamp", timestamp)

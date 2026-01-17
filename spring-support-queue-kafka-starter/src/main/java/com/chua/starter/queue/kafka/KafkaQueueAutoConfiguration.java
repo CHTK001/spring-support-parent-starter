@@ -1,4 +1,4 @@
-﻿package com.chua.starter.queue.kafka;
+package com.chua.starter.queue.kafka;
 
 import com.chua.starter.queue.MessageTemplate;
 import com.chua.starter.queue.properties.QueueProperties;

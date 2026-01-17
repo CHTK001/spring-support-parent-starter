@@ -1,9 +1,9 @@
-﻿package com.chua.starter.mybatis.query;
+package com.chua.starter.mybatis.query;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.ArrayUtils;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
-import com.chua.common.support.utils.Preconditions;
+import com.chua.common.support.core.utils.Preconditions;
 import com.chua.starter.mybatis.entity.SqlConstants;
 import org.springframework.util.StringUtils;
 

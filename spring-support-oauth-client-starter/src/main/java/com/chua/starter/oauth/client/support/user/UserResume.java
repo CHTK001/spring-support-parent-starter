@@ -1,8 +1,8 @@
-﻿package com.chua.starter.oauth.client.support.user;
+package com.chua.starter.oauth.client.support.user;
 
-import com.chua.common.support.constant.CommonConstant;
+import com.chua.common.support.core.constant.CommonConstant;
 import com.chua.common.support.matcher.PathMatcher;
-import com.chua.common.support.utils.MapUtils;
+import com.chua.common.support.core.utils.MapUtils;
 import com.chua.starter.common.support.constant.DataFilterTypeEnum;
 import com.google.common.base.Strings;
 import io.swagger.v3.oas.annotations.Hidden;
@@ -18,7 +18,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import static com.chua.common.support.constant.CommonConstant.SYMBOL_ASTERISK;
+import static com.chua.common.support.core.constant.CommonConstant.SYMBOL_ASTERISK;
 
 /**
  * 用户认证信息基类

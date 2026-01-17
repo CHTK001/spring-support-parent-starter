@@ -1,6 +1,6 @@
-﻿package com.chua.starter.redis.support.server;
+package com.chua.starter.redis.support.server;
 
-import com.chua.common.support.net.NetUtils;
+import com.chua.starter.redis.support.utils.NetUtils;
 import com.chua.starter.redis.support.properties.RedisServerProperties;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;

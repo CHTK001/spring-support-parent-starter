@@ -1,4 +1,4 @@
-﻿package com.chua.socket.support.handler;
+package com.chua.socket.support.handler;
 
 import com.chua.socket.support.SocketListener;
 import com.chua.socket.support.annotations.OnEvent;

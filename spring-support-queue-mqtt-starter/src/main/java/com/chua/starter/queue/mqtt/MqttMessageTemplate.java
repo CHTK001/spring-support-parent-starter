@@ -1,4 +1,4 @@
-﻿package com.chua.starter.queue.mqtt;
+package com.chua.starter.queue.mqtt;
 
 import com.chua.starter.queue.Acknowledgment;
 import com.chua.starter.queue.Message;
@@ -56,14 +56,13 @@ public class MqttMessageTemplate implements MessageTemplate {
         try {
             IMqttMessageListener listener = (topic, message) -> {
                 MqttAcknowledgment ack = new MqttAcknowledgment();
-                Message msg = Message.builder()
-                        .destination(topic)
-                        .payload(message.getPayload())
-                        .timestamp(System.currentTimeMillis())
-                        .type(getType())
-                        .originalMessage(message)
-                        .acknowledgment(ack)
-                        .build();
+                Message msg = new Message();
+                msg.setDestination(topic);
+                msg.setPayload(message.getPayload());
+                msg.setTimestamp(System.currentTimeMillis());
+                msg.setType(getType());
+                msg.setOriginalMessage(message);
+                msg.setAcknowledgment(ack);
                 handler.handle(msg, ack);
             };
             int qos = Math.max(0, Math.min(2, properties.getMqtt().getQos()));
@@ -136,9 +135,15 @@ public class MqttMessageTemplate implements MessageTemplate {
     }
 
     private byte[] toBytes(Object payload) {
-        if (payload == null) return new byte[0];
-        if (payload instanceof byte[]) return (byte[]) payload;
-        if (payload instanceof String) return ((String) payload).getBytes(StandardCharsets.UTF_8);
+        if (payload == null) {
+            return new byte[0];
+        }
+        if (payload instanceof byte[]) {
+            return (byte[]) payload;
+        }
+        if (payload instanceof String) {
+            return ((String) payload).getBytes(StandardCharsets.UTF_8);
+        }
         return Objects.toString(payload).getBytes(StandardCharsets.UTF_8);
     }
 }

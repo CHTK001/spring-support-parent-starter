@@ -21,13 +21,22 @@ public class LogProperties {
      * 开启接口日志
      */
     private boolean openInterfaceLog = false;
-}
+
     /**
      * 获取 enable
      *
      * @return enable
      */
     public boolean getEnable() {
+        return enable;
+    }
+
+    /**
+     * 判断是否启用
+     *
+     * @return enable
+     */
+    public boolean isEnable() {
         return enable;
     }
 
@@ -50,6 +59,15 @@ public class LogProperties {
     }
 
     /**
+     * 判断是否开启接口日志
+     *
+     * @return openInterfaceLog
+     */
+    public boolean isOpenInterfaceLog() {
+        return openInterfaceLog;
+    }
+
+    /**
      * 设置 openInterfaceLog
      *
      * @param openInterfaceLog openInterfaceLog
@@ -57,5 +75,4 @@ public class LogProperties {
     public void setOpenInterfaceLog(boolean openInterfaceLog) {
         this.openInterfaceLog = openInterfaceLog;
     }
-
-
+}

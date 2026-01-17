@@ -1,7 +1,7 @@
 package com.chua.starter.common.support.utils;
 
 import com.chua.common.support.matcher.PathMatcher;
-import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.core.utils.CollectionUtils;
 import com.chua.starter.common.support.constant.OperatorType;
 
 import java.util.*;

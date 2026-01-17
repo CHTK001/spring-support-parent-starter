@@ -1,9 +1,9 @@
-﻿package com.chua.starter.mybatis.utils;
+package com.chua.starter.mybatis.utils;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.lang.code.ReturnPageResult;
-import com.chua.common.support.utils.PageUtils;
+import com.chua.common.support.core.utils.PageUtils;
 import com.chua.starter.mybatis.page.PagePreconditioning;
 
 import java.util.List;

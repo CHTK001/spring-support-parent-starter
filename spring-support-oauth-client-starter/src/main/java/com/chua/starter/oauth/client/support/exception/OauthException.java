@@ -1,6 +1,6 @@
-﻿package com.chua.starter.oauth.client.support.exception;
+package com.chua.starter.oauth.client.support.exception;
 
-import com.chua.common.support.lang.exception.AuthenticationException;
+import com.chua.common.support.core.exception.AuthenticationException;
 import lombok.Getter;
 
 /**

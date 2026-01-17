@@ -1,11 +1,10 @@
-﻿package com.chua.starter.redis.support.service.impl;
+package com.chua.starter.redis.support.service.impl;
 
-import com.chua.advanced.support.indicator.DataIndicator;
-import com.chua.advanced.support.indicator.TimeIndicator;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.utils.CollectionUtils;
 import com.chua.redis.support.client.RedisClient;
 import com.chua.redis.support.client.RedisTimeSeries;
+import com.chua.starter.redis.support.indicator.DataIndicator;
+import com.chua.starter.redis.support.indicator.TimeIndicator;
 import com.chua.starter.redis.support.service.TimeSeriesService;
 import org.springframework.beans.factory.annotation.Autowired;
 import redis.clients.jedis.Jedis;
@@ -129,7 +128,7 @@ public class TimeSeriesServiceImpl implements TimeSeriesService {
             keys = jedis1.keys(indicator + "*");
         }
 
-        if(CollectionUtils.isEmpty(keys)) {
+        if (keys == null || keys.isEmpty()) {
             return ReturnResult.success(Collections.emptyMap());
         }
 

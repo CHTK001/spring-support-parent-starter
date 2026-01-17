@@ -1,10 +1,11 @@
-﻿package com.chua.starter.mybatis.interceptor;
+package com.chua.starter.mybatis.interceptor;
 
-import com.chua.common.support.http.HttpConstant;
-import com.chua.common.support.lang.formatter.DmlFormatter;
-import com.chua.common.support.lang.formatter.Formatter;
-import com.chua.common.support.lang.formatter.HighlightingFormatter;
-import com.chua.common.support.utils.StringUtils;
+// TODO: 这些类在新结构中找不到，暂时注释掉格式化功能
+// import com.chua.common.support.http.HttpConstant;
+// import com.chua.common.support.lang.formatter.DmlFormatter;
+// import com.chua.common.support.lang.formatter.Formatter;
+// import com.chua.common.support.lang.formatter.HighlightingFormatter;
+import com.chua.common.support.core.utils.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.cache.CacheKey;
 import org.apache.ibatis.executor.Executor;
@@ -28,7 +29,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 
-import static com.chua.common.support.constant.NameConstant.NULL;
+import static com.chua.common.support.core.constant.NameConstant.NULL;
 import static com.chua.starter.common.support.constant.MdcConstant.TRACE_ID;
 
 /**
@@ -51,8 +52,9 @@ public class SqlInterceptor implements Interceptor {
 
     private static final SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-    static final DmlFormatter FORMATTER = new DmlFormatter();
-    static final Formatter HIGHLIGHTING_FORMATTER = HighlightingFormatter.INSTANCE;
+    // TODO: 暂时注释掉格式化功能，待找到新的 Formatter 类后恢复
+    // static final DmlFormatter FORMATTER = new DmlFormatter();
+    // static final Formatter HIGHLIGHTING_FORMATTER = HighlightingFormatter.INSTANCE;
 
     /**
      * 重写intercept，拦截sql，拼接完整sql语句
@@ -128,7 +130,8 @@ public class SqlInterceptor implements Interceptor {
             str.append("[TraceId]").append(traceId).append("\n");
         }
         str.append("[方法]").append(sqlId).append("\n");
-        str.append("[sql]\r\n").append(HIGHLIGHTING_FORMATTER.format(FORMATTER.format(MAP.get("sql").toString())));
+        // TODO: 暂时使用简单的字符串格式化，待找到新的 Formatter 类后恢复
+        str.append("[sql]\r\n").append(MAP.get("sql").toString());
         str.append("\n");
 //        str.append("[参数映射]").append(parameterMappings);
 //        str.append("\n");

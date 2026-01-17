@@ -1,4 +1,4 @@
-﻿package com.chua.starter.mybatis;
+package com.chua.starter.mybatis;
 
 import com.baomidou.mybatisplus.extension.plugins.handler.DataPermissionHandler;
 import net.sf.jsqlparser.expression.Expression;

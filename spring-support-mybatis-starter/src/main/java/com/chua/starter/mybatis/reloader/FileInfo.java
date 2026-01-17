@@ -22,7 +22,7 @@ public class FileInfo {
      * 例如：UserMapper.xml
      * </p>
      */
-    private String name;
+    String name;
 
     /**
      * 文件完整路径或URI
@@ -32,7 +32,7 @@ public class FileInfo {
      * jar包资源：jar:file:/path/to.jar!/mapper/UserMapper.xml
      * </p>
      */
-    private String path;
+    String path;
 
     /**
      * 资源类型
@@ -43,7 +43,7 @@ public class FileInfo {
      * UNKNOWN：未知类型，不可监听
      * </p>
      */
-    private String type;
+    String type;
 
     /**
      * 是否可监听文件变化
@@ -52,6 +52,15 @@ public class FileInfo {
      * false：文件在jar包中或无法访问，无法监听
      * </p>
      */
-    private boolean watchable;
+    boolean watchable;
+
+    /**
+     * 是否可监听
+     *
+     * @return 是否可监听
+     */
+    public boolean isWatchable() {
+        return watchable;
+    }
 }
 

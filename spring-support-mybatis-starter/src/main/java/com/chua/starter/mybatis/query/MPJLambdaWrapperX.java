@@ -1,8 +1,8 @@
-﻿package com.chua.starter.mybatis.query;
+package com.chua.starter.mybatis.query;
 
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
-import com.chua.common.support.utils.ArrayUtils;
-import com.chua.common.support.utils.ObjectUtils;
+import com.chua.common.support.core.utils.ArrayUtils;
+import com.chua.common.support.core.utils.ObjectUtils;
 import com.github.yulichang.toolkit.MPJWrappers;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import org.springframework.util.CollectionUtils;

@@ -1,4 +1,4 @@
-﻿package com.chua.starter.datasource.support;
+package com.chua.starter.datasource.support;
 
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.Environment;

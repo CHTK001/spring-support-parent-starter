@@ -1,4 +1,4 @@
-﻿package com.chua.starter.queue.mqtt;
+package com.chua.starter.queue.mqtt;
 
 import com.chua.starter.queue.MessageTemplate;
 import com.chua.starter.queue.properties.QueueProperties;

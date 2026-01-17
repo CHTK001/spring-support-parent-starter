@@ -1,7 +1,7 @@
 package com.chua.starter.mybatis.logger;
 
-import com.chua.common.support.utils.IdUtils;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.core.utils.IdUtils;
+import com.chua.common.support.core.utils.StringUtils;
 import com.chua.starter.common.support.annotations.SysLog;
 import com.chua.starter.common.support.logger.AbstractLoggerPointcutAdvisor;
 import com.chua.starter.common.support.logger.LoggerIgnore;
@@ -82,7 +82,7 @@ public class SysLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
         String content = sysLog.content();
         sysLoggerInfo.setLogStatus(null == throwable ? 1 : 0);
         sysLoggerInfo.setLogMapping(getRequestUrl());
-        sysLoggerInfo.setLogCode(IdUtils.createUlid());
+        sysLoggerInfo.setLogCode(java.util.UUID.randomUUID().toString());
         sysLoggerInfo.setLogContent(getContent(content, invocation, proceed));
         sysLoggerInfo.setMethodName(method.getName());
 

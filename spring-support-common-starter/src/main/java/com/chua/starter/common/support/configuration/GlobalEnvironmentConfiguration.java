@@ -1,8 +1,4 @@
 package com.chua.starter.common.support.configuration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-
 import com.chua.starter.common.support.application.GlobalSettingFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
@@ -12,6 +8,8 @@ import org.springframework.context.annotation.Configuration;
 import java.util.List;
 import java.util.Map;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * 全局环境配置
  *
@@ -20,12 +18,10 @@ import java.util.Map;
  * @author CH
  * @since 2026/01/14
  */
+@Slf4j
 @Configuration
 public class GlobalEnvironmentConfiguration implements ApplicationListener<ApplicationReadyEvent> {
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(GlobalEnvironmentConfiguration.class);
-
-
-    /**
+        /**
      * 全局环境工厂 Bean
      *
      * @return 全局环境工厂

@@ -1,8 +1,4 @@
 package com.chua.starter.common.support.configuration.environment;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor;
 import org.springframework.boot.env.EnvironmentPostProcessor;
@@ -19,6 +15,8 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 import java.io.IOException;
 import java.util.*;
+
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * DevOps 环境配置后置处理器
@@ -51,11 +49,9 @@ import java.util.*;
  * @since 2024/12/4
  * @version 2.0.0
  */
+@Slf4j
 public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ProfileEnvironmentPostProcessor.class);
-
-
-    /**
+        /**
      * 目录前缀
      */
     private static final String DIR_PREFIX = "ops-";

@@ -1,8 +1,7 @@
 package com.chua.starter.swagger.support;
 
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.env.Environment;
 
@@ -10,9 +9,8 @@ import org.springframework.core.env.Environment;
  * Knife4j日志
  * @author CH
  */
+@Slf4j
 public class Knife4jRunner implements CommandLineRunner {
-
-    private static final Logger log = LoggerFactory.getLogger(Knife4jRunner.class);
 
     private static final String CYAN = "\u001B[36m";
     private static final String RESET = "\u001B[0m";

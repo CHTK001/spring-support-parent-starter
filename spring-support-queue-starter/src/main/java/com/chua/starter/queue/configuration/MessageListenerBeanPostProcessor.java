@@ -1,7 +1,5 @@
-﻿package com.chua.starter.queue.configuration;
+package com.chua.starter.queue.configuration;
 
-import com.chua.common.support.utils.ClassUtils;
-import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.queue.Acknowledgment;
 import com.chua.starter.queue.Message;
 import com.chua.starter.queue.MessageHandler;
@@ -32,10 +30,17 @@ import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 @Slf4j
 @RequiredArgsConstructor
 public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(MessageListenerBeanPostProcessor.class);
 
     private final List<MessageTemplate> messageTemplates;
     private final QueueProperties queueProperties;
     private final Map<String, MessageTemplate> templateMap = new ConcurrentHashMap<>();
+
+    // Lombok 注解处理器未运行时的手动构造函数
+    public MessageListenerBeanPostProcessor(List<MessageTemplate> messageTemplates, QueueProperties queueProperties) {
+        this.messageTemplates = messageTemplates;
+        this.queueProperties = queueProperties;
+    }
 
     @Override
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
@@ -70,7 +75,7 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
     private void registerListener(Object bean, Method method, OnMessage onMessage) {
         String destination = onMessage.value();
         String group = onMessage.group();
-        String type = StringUtils.isNotEmpty(onMessage.type()) ? onMessage.type() : queueProperties.getType();
+        String type = (onMessage.type() != null && !onMessage.type().isEmpty()) ? onMessage.type() : queueProperties.getType();
         Class<?> payloadType = onMessage.payloadType();
         boolean autoAck = onMessage.autoAck();
         int concurrency = onMessage.concurrency();
@@ -82,11 +87,11 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
             return;
         }
 
-        ClassUtils.setAccessible(method);
+        method.setAccessible(true);
         MessageHandler handler = createHandler(bean, method, payloadType, autoAck);
 
         // 使用支持 concurrency 的方法
-        if (StringUtils.isNotEmpty(group)) {
+        if (group != null && !group.isEmpty()) {
             template.subscribe(destination, group, handler, autoAck, concurrency);
         } else {
             template.subscribe(destination, handler, autoAck, concurrency);

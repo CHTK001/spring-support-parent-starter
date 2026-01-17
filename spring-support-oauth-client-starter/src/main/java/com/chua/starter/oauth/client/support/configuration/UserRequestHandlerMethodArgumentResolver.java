@@ -1,9 +1,9 @@
-﻿package com.chua.starter.oauth.client.support.configuration;
+package com.chua.starter.oauth.client.support.configuration;
 
-import com.chua.common.support.converter.Converter;
-import com.chua.common.support.unit.name.NamingCase;
-import com.chua.common.support.utils.MapUtils;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.base.converter.Converter;
+import com.chua.common.support.math.unit.name.NamingCase;
+import com.chua.common.support.core.utils.MapUtils;
+import com.chua.common.support.core.utils.StringUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.common.support.utils.RequestUtils;
@@ -124,7 +124,7 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
         Object o = cacheValue.get(paramName);
 
         if (null == o) {
-            Map<String, Object> beanMap = com.chua.common.support.bean.BeanMap.create(cacheValue.get("ext"));
+            Map<String, Object> beanMap = com.chua.common.support.base.bean.BeanMap.create(cacheValue.get("ext"));
             o = MapUtils.getString(beanMap, paramName);
             if (null == o) {
                 o = MapUtils.getString(beanMap, NamingCase.toCamelCase(paramName));

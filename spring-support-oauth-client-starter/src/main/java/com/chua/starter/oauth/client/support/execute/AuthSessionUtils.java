@@ -1,13 +1,11 @@
-﻿package com.chua.starter.oauth.client.support.execute;
+package com.chua.starter.oauth.client.support.execute;
 
-import com.chua.common.support.bean.BeanUtils;
+import com.chua.common.support.base.bean.BeanUtils;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-
-import static com.chua.starter.common.support.utils.RequestUtils.*;
 
 /**
  * 认证会话工具类
@@ -17,6 +15,26 @@ import static com.chua.starter.common.support.utils.RequestUtils.*;
  * @since 2024/12/11
  */
 public final class AuthSessionUtils {
+
+    /**
+     * Session 中存储用户信息的键
+     */
+    public static final String SESSION_USER_INFO = "userInfo";
+
+    /**
+     * Session 中存储用户名的键
+     */
+    public static final String SESSION_USERNAME = "username";
+
+    /**
+     * Session 中存储用户ID的键
+     */
+    public static final String SESSION_USERID = "userId";
+
+    /**
+     * Session 中存储租户ID的键
+     */
+    public static final String SESSION_TENANT_ID = "tenantId";
 
     private AuthSessionUtils() {
         // 工具类禁止实例化

@@ -1,6 +1,6 @@
 package com.chua.starter.common.support.annotations;
 
-import com.chua.common.support.constant.Action;
+import com.chua.common.support.core.constant.Action;
 
 import java.lang.annotation.*;
 

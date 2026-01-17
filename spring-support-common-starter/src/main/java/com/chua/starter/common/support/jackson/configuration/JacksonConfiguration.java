@@ -1,12 +1,6 @@
 package com.chua.starter.common.support.jackson.configuration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-
-
-import com.chua.common.support.collection.GuavaHashBasedTable;
-import com.chua.common.support.collection.Table;
-import com.chua.common.support.lang.date.DateTime;
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Table;
 import com.chua.starter.common.support.jackson.*;
 import com.chua.starter.common.support.jackson.handler.JacksonProblemHandler;
 import com.chua.starter.common.support.jackson.handler.JsonArray2StringJacksonProblemHandler;
@@ -27,7 +21,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
-import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
+// import com.fasterxml.jackson.module.paramnames.ParameterNamesModule; // 由 Spring Boot 自动提供
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -46,17 +40,18 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.TimeZone;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * Jackson配置
  *
  * @author CH
  * @since 2024/7/19
  */
+@Slf4j
 @EnableConfigurationProperties(JacksonProperties.class)
 public class JacksonConfiguration {
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(JacksonConfiguration.class);
-
-    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
     private static final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -112,13 +107,11 @@ public class JacksonConfiguration {
         javaTimeModule.addDeserializer(LocalDate.class, new CommonLocalDateDeserializer());
         javaTimeModule.addDeserializer(LocalTime.class, new CommonLocalTimeDeserializer());
         javaTimeModule.addDeserializer(Year.class, new CommonYearDeserializer());
-        javaTimeModule.addDeserializer(DateTime.class, new DateTimeDeserializer());
-        log.debug("[Jackson配置]注册时间反序列化器: LocalDateTime={}, LocalDate={}, LocalTime={}, Year={}, DateTime={}", 
+        log.debug("[Jackson配置]注册时间反序列化器: LocalDateTime={}, LocalDate={}, LocalTime={}, Year={}", 
                 CommonLocalDateTimeDeserializer.class.getName(),
                 CommonLocalDateDeserializer.class.getName(),
                 CommonLocalTimeDeserializer.class.getName(),
-                CommonYearDeserializer.class.getName(),
-                DateTimeDeserializer.class.getName());
+                CommonYearDeserializer.class.getName());
 
         javaTimeModule.addSerializer(Date.class, new DateSerializer(true, SIMPLE_DATE_FORMAT));
         log.debug("[Jackson配置]注册 Date 序列化器: {}", DateSerializer.class.getName());
@@ -131,12 +124,12 @@ public class JacksonConfiguration {
         objectMapper.registerModule(javaTimeModule);
         objectMapper.registerModule(new Jdk8Module());
         objectMapper.registerModule(new JsonMixinModule());
-        objectMapper.registerModule(new ParameterNamesModule());
-        log.info("[Jackson配置]注册模块: JavaTimeModule={}, Jdk8Module={}, JsonMixinModule={}, ParameterNamesModule={}", 
+        // ParameterNamesModule 由 Spring Boot 自动注册，无需手动添加
+        // objectMapper.registerModule(new ParameterNamesModule());
+        log.info("[Jackson配置]注册模块: JavaTimeModule={}, Jdk8Module={}, JsonMixinModule={}", 
                 JavaTimeModule.class.getName(),
                 Jdk8Module.class.getName(),
-                JsonMixinModule.class.getName(),
-                ParameterNamesModule.class.getName());
+                JsonMixinModule.class.getName());
         log.info("[Jackson配置]ObjectMapper 创建完成, 类型: {}", objectMapper.getClass().getName());
         return objectMapper;
     }
@@ -173,7 +166,7 @@ public class JacksonConfiguration {
 
     static class NullableFieldsDeserializationProblemHandler extends DeserializationProblemHandler {
 
-        static Table<String, Class<?>, Class<? extends JacksonProblemHandler>> NULLABLE_FIELDS = new GuavaHashBasedTable<>();
+        static Table<String, Class<?>, Class<? extends JacksonProblemHandler>> NULLABLE_FIELDS = HashBasedTable.create();
 
         static {
             NULLABLE_FIELDS.put("START_ARRAY", String.class, JsonArray2StringJacksonProblemHandler.class);

@@ -65,5 +65,4 @@ public enum OperatorType {
     public String getOperator() {
         return operator;
     }
-
-
+}

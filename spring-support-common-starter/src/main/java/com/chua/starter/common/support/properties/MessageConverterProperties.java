@@ -43,7 +43,7 @@ public class MessageConverterProperties {
     private List<MediaType> mediaTypes = Lists.newArrayList(MediaType.APPLICATION_JSON,
             MediaType.TEXT_XML
             );
-}
+
     /**
      * 获取 enable
      *
@@ -133,6 +133,4 @@ public class MessageConverterProperties {
     public void setMediaTypes(List<MediaType> mediaTypes) {
         this.mediaTypes = mediaTypes;
     }
-
-
-
+}

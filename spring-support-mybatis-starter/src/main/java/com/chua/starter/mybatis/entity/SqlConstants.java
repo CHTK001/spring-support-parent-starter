@@ -1,4 +1,4 @@
-﻿package com.chua.starter.mybatis.entity;
+package com.chua.starter.mybatis.entity;
 
 import com.baomidou.mybatisplus.annotation.DbType;
 

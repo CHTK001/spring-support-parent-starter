@@ -1,6 +1,5 @@
-﻿package com.chua.starter.datasource.properties;
+package com.chua.starter.datasource.properties;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -213,6 +212,95 @@ public class DataSourceScriptProperties {
      */
     private int initdataTimeoutMinutes = 5;
 
+    // Getter 方法（Lombok 在 Java 25 下可能不工作，手动添加）
+    public boolean isEnable() {
+        return enable;
+    }
+
+    public boolean isContinueOnError() {
+        return continueOnError;
+    }
+
+    public String getSeparator() {
+        return separator;
+    }
+
+    public String getSqlScriptEncoding() {
+        return sqlScriptEncoding;
+    }
+
+    public String getScriptPath() {
+        return scriptPath;
+    }
+
+    public String getDatabaseType() {
+        return databaseType;
+    }
+
+    public boolean isBaselineOnMigrate() {
+        return baselineOnMigrate;
+    }
+
+    public boolean isCleanDisabled() {
+        return cleanDisabled;
+    }
+
+    public String getVersionTable() {
+        return versionTable;
+    }
+
+    public String getBaselineVersion() {
+        return baselineVersion;
+    }
+
+    public String getBaselineDescription() {
+        return baselineDescription;
+    }
+
+    public String getScriptPrefix() {
+        return scriptPrefix;
+    }
+
+    public String getScriptSuffix() {
+        return scriptSuffix;
+    }
+
+    public String getVersionSeparator() {
+        return versionSeparator;
+    }
+
+    public boolean isValidateChecksum() {
+        return validateChecksum;
+    }
+
+    public boolean isMixed() {
+        return mixed;
+    }
+
+    public int getTimeout() {
+        return timeout;
+    }
+
+    public boolean isVerbose() {
+        return verbose;
+    }
+
+    public ReleaseType getReleaseType() {
+        return releaseType;
+    }
+
+    public Set<ReleaseType> getAllowedReleaseTypes() {
+        return allowedReleaseTypes;
+    }
+
+    public int getInitdataParallelism() {
+        return initdataParallelism;
+    }
+
+    public int getInitdataTimeoutMinutes() {
+        return initdataTimeoutMinutes;
+    }
+
     /**
      * 版本发布类型枚举
      * 用于控制允许执行的脚本版本类型
@@ -220,7 +308,6 @@ public class DataSourceScriptProperties {
      * @author CH
      * @since 2025/12/4
      */
-    @AllArgsConstructor
     @Getter
     public enum ReleaseType {
         
@@ -268,6 +355,17 @@ public class DataSourceScriptProperties {
          * 版本类型优先级（数值越高优先级越高）
          */
         private final int priority;
+
+        /**
+         * 构造器
+         *
+         * @param suffix 版本类型后缀标识
+         * @param priority 版本类型优先级
+         */
+        ReleaseType(String suffix, int priority) {
+            this.suffix = suffix;
+            this.priority = priority;
+        }
 
         /**
          * 判断当前类型是否允许执行指定类型的脚本

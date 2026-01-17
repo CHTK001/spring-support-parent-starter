@@ -1,8 +1,7 @@
 package com.chua.starter.common.support.log;
 
 import com.chua.starter.common.support.application.ModuleEnvironmentRegistration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import jakarta.annotation.PostConstruct;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -34,10 +33,9 @@ import org.springframework.context.annotation.Bean;
  * @version 1.0.0
  * @since 2024/06/21
  */
+@Slf4j
 @EnableConfigurationProperties({LogProperties.class})
 public class LogConfiguration {
-
-    private static final Logger log = LoggerFactory.getLogger(LogConfiguration.class);
 
     private final LogProperties logProperties;
 

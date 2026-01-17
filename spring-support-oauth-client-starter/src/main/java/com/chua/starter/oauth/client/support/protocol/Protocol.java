@@ -1,4 +1,4 @@
-﻿package com.chua.starter.oauth.client.support.protocol;
+package com.chua.starter.oauth.client.support.protocol;
 
 import com.chua.starter.oauth.client.support.entity.AppKeySecret;
 import com.chua.starter.oauth.client.support.enums.AuthType;

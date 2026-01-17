@@ -1,8 +1,8 @@
-﻿package com.chua.starter.oauth.client.support.protocol;
+package com.chua.starter.oauth.client.support.protocol;
 
-import com.chua.common.support.annotations.Extension;
-import com.chua.common.support.json.Json;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.core.annotation.Extension;
+import com.chua.common.support.text.json.Json;
+import com.chua.common.support.core.utils.StringUtils;
 import com.chua.starter.oauth.client.support.entity.AppKeySecret;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;

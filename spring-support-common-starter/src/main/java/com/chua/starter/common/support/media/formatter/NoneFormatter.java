@@ -1,6 +1,6 @@
 package com.chua.starter.common.support.media.formatter;
 
-import com.chua.common.support.annotations.SpiDefault;
+import com.chua.common.support.core.annotation.SpiDefault;
 
 import java.lang.reflect.Field;
 

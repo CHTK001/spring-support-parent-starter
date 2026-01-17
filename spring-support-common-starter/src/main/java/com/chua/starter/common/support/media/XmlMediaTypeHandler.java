@@ -1,9 +1,9 @@
 package com.chua.starter.common.support.media;
 
 import com.chua.common.support.core.annotation.Spi;
-import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.unit.name.NamingCase;
-import com.chua.common.support.utils.ClassUtils;
+import com.chua.common.support.core.spi.ServiceProvider;
+import com.chua.common.support.math.unit.name.NamingCase;
+import com.chua.common.support.core.utils.ClassUtils;
 import com.chua.starter.common.support.media.formatter.Formatter;
 import org.springframework.util.ReflectionUtils;
 

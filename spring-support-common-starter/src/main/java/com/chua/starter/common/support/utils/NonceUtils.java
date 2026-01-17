@@ -1,8 +1,4 @@
 package com.chua.starter.common.support.utils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.util.StringUtils;
 
@@ -10,17 +6,17 @@ import java.security.SecureRandom;
 import java.util.*;
 import java.util.regex.Pattern;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * Nonce解析工具类
  *
  * @author CH
  * @since 2025/01/15
  */
+@Slf4j
 public class NonceUtils {
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(NonceUtils.class);
-
-
-    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+        private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     /**
      * 解析并验证Nonce

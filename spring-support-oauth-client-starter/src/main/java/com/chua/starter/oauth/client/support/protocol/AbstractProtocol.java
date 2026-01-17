@@ -1,18 +1,18 @@
-﻿package com.chua.starter.oauth.client.support.protocol;
+package com.chua.starter.oauth.client.support.protocol;
 
-import com.chua.common.support.bean.BeanUtils;
+import com.chua.common.support.base.bean.BeanUtils;
 import com.chua.common.support.crypto.Codec;
-import com.chua.common.support.json.Json;
-import com.chua.common.support.json.JsonObject;
+import com.chua.common.support.text.json.Json;
+import com.chua.common.support.text.json.JsonObject;
 import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.robin.Node;
-import com.chua.common.support.lang.robin.Robin;
-import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.lang.robin.LoadBalance;
+import com.chua.common.support.core.spi.ServiceProvider;
 import com.chua.common.support.task.cache.CacheProvider;
 import com.chua.common.support.task.cache.Cacheable;
 import com.chua.common.support.task.cache.GuavaCacheProvider;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.core.utils.StringUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.common.support.utils.RequestUtils;
@@ -199,8 +199,8 @@ public abstract class AbstractProtocol implements Protocol {
      * @return 地址
      */
     protected String selectUrl() {
-        Robin balance = ServiceProvider.of(Robin.class).getExtension(authClientProperties.getBalance());
-        Robin stringRobin = balance.create();
+        LoadBalance balance = ServiceProvider.of(LoadBalance.class).getExtension(authClientProperties.getBalance());
+        LoadBalance stringRobin = balance.create();
         String address = authClientProperties.getAddress();
         if (null == address) {
             log.warn("鉴权地址不存在");
@@ -397,10 +397,12 @@ public abstract class AbstractProtocol implements Protocol {
      *
      */
     private void unregisterFromRequest(HttpServletRequest servletRequest) {
-        RequestUtils.removeUsername();
-        RequestUtils.removeUserInfo();
-        RequestUtils.removeUserId();
-        RequestUtils.removeTenantId();
+        com.chua.starter.oauth.client.support.execute.AuthSessionUtils.removeUsername();
+        com.chua.starter.oauth.client.support.execute.AuthSessionUtils.removeUserInfo();
+        if (servletRequest != null) {
+            servletRequest.getSession().removeAttribute(com.chua.starter.oauth.client.support.execute.AuthSessionUtils.SESSION_USERID);
+            servletRequest.getSession().removeAttribute(com.chua.starter.oauth.client.support.execute.AuthSessionUtils.SESSION_TENANT_ID);
+        }
         if(null != servletRequest) {
             CookieUtil.remove(servletRequest, ResponseUtils.getResponse(), "x-oauth-cookie");
         }
@@ -411,10 +413,17 @@ public abstract class AbstractProtocol implements Protocol {
      * @return {@link LoginAuthResult}
      */
     public static void registerToRequest(UserResume userResume) {
-        RequestUtils.setUsername(userResume.getUsername());
-        RequestUtils.setUserId(userResume.getUserId());
-        RequestUtils.setTenantId(userResume.getTenantId());
-        RequestUtils.setUserInfo(userResume);
+        com.chua.starter.oauth.client.support.execute.AuthSessionUtils.setUsername(userResume.getUsername());
+        var request = com.chua.starter.oauth.client.support.execute.AuthSessionUtils.getRequest();
+        if (request != null) {
+            if (userResume.getUserId() != null) {
+                request.getSession().setAttribute(com.chua.starter.oauth.client.support.execute.AuthSessionUtils.SESSION_USERID, userResume.getUserId());
+            }
+            if (userResume.getTenantId() != null) {
+                request.getSession().setAttribute(com.chua.starter.oauth.client.support.execute.AuthSessionUtils.SESSION_TENANT_ID, userResume.getTenantId());
+            }
+        }
+        com.chua.starter.oauth.client.support.execute.AuthSessionUtils.setUserInfo(userResume);
     }
 
     /**
@@ -435,10 +444,17 @@ public abstract class AbstractProtocol implements Protocol {
         AuthenticationInformation authenticationInformation = (AuthenticationInformation) value;
         if (null != authenticationInformation && authenticationInformation.getInformation().getCode() == 200) {
             UserResume userResume = authenticationInformation.getReturnResult();
-            RequestUtils.setUsername(userResume.getUsername());
-            RequestUtils.setUserInfo(userResume);
-            RequestUtils.setUserId(userResume.getUserId());
-            RequestUtils.setTenantId(userResume.getTenantId());
+            com.chua.starter.oauth.client.support.execute.AuthSessionUtils.setUsername(userResume.getUsername());
+            com.chua.starter.oauth.client.support.execute.AuthSessionUtils.setUserInfo(userResume);
+            var request = com.chua.starter.oauth.client.support.execute.AuthSessionUtils.getRequest();
+            if (request != null) {
+                if (userResume.getUserId() != null) {
+                    request.getSession().setAttribute(com.chua.starter.oauth.client.support.execute.AuthSessionUtils.SESSION_USERID, userResume.getUserId());
+                }
+                if (userResume.getTenantId() != null) {
+                    request.getSession().setAttribute(com.chua.starter.oauth.client.support.execute.AuthSessionUtils.SESSION_TENANT_ID, userResume.getTenantId());
+                }
+            }
             return authenticationInformation;
         } else {
             CACHEABLE.remove(cacheKey);

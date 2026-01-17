@@ -1,7 +1,7 @@
 package com.chua.starter.mybatis.plugin;
 
-import com.chua.common.support.core.ServiceProvider;
-import com.chua.common.support.plugin.mybatis.PluginMyBatisMapperRegistry;
+import com.chua.common.support.core.utils.ServiceProvider;
+import com.chua.starter.mybatis.plugin.PluginMyBatisMapperRegistry;
 import com.chua.spring.support.configuration.SpringBeanUtils;
 import com.chua.spring.support.plugin.integration.PluginBeanRegisteredEvent;
 import com.chua.spring.support.plugin.integration.PluginBeanUnregisteredEvent;

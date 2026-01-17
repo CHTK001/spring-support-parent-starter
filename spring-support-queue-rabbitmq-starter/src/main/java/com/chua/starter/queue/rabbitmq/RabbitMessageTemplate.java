@@ -1,4 +1,4 @@
-﻿package com.chua.starter.queue.rabbitmq;
+package com.chua.starter.queue.rabbitmq;
 
 import com.chua.starter.queue.Acknowledgment;
 import com.chua.starter.queue.Message;
@@ -119,9 +119,9 @@ public class RabbitMessageTemplate implements MessageTemplate {
                 container.setMessageListener((org.springframework.amqp.core.Message msg) -> {
                     Map<String, Object> headers = new HashMap<>();
                     if (msg.getMessageProperties() != null && msg.getMessageProperties().getHeaders() != null) {
-                        msg.getMessageProperties().getHeaders().forEach((k, v) -> {
-                            if (v != null) {
-                                headers.put(k, v);
+                        msg.getMessageProperties().getHeaders().forEach((headerKey, headerValue) -> {
+                            if (headerValue != null) {
+                                headers.put(headerKey, headerValue);
                             }
                         });
                     }
@@ -149,9 +149,9 @@ public class RabbitMessageTemplate implements MessageTemplate {
                     
                     Map<String, Object> headers = new HashMap<>();
                     if (msg.getMessageProperties() != null && msg.getMessageProperties().getHeaders() != null) {
-                        msg.getMessageProperties().getHeaders().forEach((k, v) -> {
-                            if (v != null) {
-                                headers.put(k, v);
+                        msg.getMessageProperties().getHeaders().forEach((headerKey2, headerValue2) -> {
+                            if (headerValue2 != null) {
+                                headers.put(headerKey2, headerValue2);
                             }
                         });
                     }

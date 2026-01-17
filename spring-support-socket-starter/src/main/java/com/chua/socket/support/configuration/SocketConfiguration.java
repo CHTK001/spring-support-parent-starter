@@ -1,6 +1,6 @@
-﻿package com.chua.socket.support.configuration;
+package com.chua.socket.support.configuration;
 
-import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.core.spi.ServiceProvider;
 import com.chua.socket.support.SocketListener;
 import com.chua.socket.support.properties.SocketProperties;
 import com.chua.socket.support.session.SocketSessionTemplate;
@@ -143,6 +143,7 @@ public class SocketConfiguration {
      * Socket 生命周期管理类
      * 支持管理多个协议模板的启动和停止
      */
+    @Slf4j
     public static class SocketLifecycle implements InitializingBean, DisposableBean {
 
         private final Map<String, SocketSessionTemplate> templates;

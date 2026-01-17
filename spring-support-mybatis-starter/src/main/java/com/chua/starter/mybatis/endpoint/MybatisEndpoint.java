@@ -1,4 +1,4 @@
-﻿package com.chua.starter.mybatis.endpoint;
+package com.chua.starter.mybatis.endpoint;
 
 import com.chua.starter.mybatis.method.SupportInjector;
 import com.chua.starter.mybatis.reloader.FileInfo;

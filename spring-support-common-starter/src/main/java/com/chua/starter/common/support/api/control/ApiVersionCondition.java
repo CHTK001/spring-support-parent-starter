@@ -1,15 +1,13 @@
 package com.chua.starter.common.support.api.control;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-
-import com.chua.common.support.net.Version;
-import com.chua.common.support.utils.MapUtils;
+import com.chua.common.support.network.net.Version;
+import com.chua.common.support.core.utils.MapUtils;
 import com.chua.starter.common.support.api.annotations.ApiVersion;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.servlet.mvc.condition.RequestCondition;
 
 import java.util.Map;
+
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * API 版本条件
@@ -28,11 +26,9 @@ import java.util.Map;
  * @author CH
  * @since 2020-11-16
  */
+@Slf4j
 public class ApiVersionCondition implements RequestCondition<ApiVersionCondition> {
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ApiVersionCondition.class);
-
-
-    /**
+        /**
      * 版本参数名
      */
     private static final String VERSION_PARAM = "apiVersion";
@@ -177,96 +173,6 @@ Version apiVersionValue = Version.parse(currentApiVersion.value());
      */
     public ApiVersion getApiVersion() {
         return apiVersion;
-    }
-
-    /**
-     * 获取 queryParams
-     *
-     * @return queryParams
-     */
-    public Map<String, String> getQueryParams() {
-        return queryParams;
-    }
-
-    /**
-     * 获取 versionStr
-     *
-     * @return versionStr
-     */
-    public String getVersionStr() {
-        return versionStr;
-    }
-
-            /**
-     * 获取 currentApiVersion
-     *
-     * @return currentApiVersion
-     */
-    public ApiVersion getCurrentApiVersion() {
-        return currentApiVersion;
-    }
-
-        /**
-     * 获取 requestVersion
-     *
-     * @return requestVersion
-     */
-    public Version getRequestVersion() {
-        return requestVersion;
-    }
-
-    /**
-     * 获取 apiVersionValue
-     *
-     * @return apiVersionValue
-     */
-    public Version getApiVersionValue() {
-        return apiVersionValue;
-    }
-
-            /**
-     * 获取 queryParams
-     *
-     * @return queryParams
-     */
-    public Map<String, String> getQueryParams() {
-        return queryParams;
-    }
-
-    /**
-     * 获取 versionStr
-     *
-     * @return versionStr
-     */
-    public String getVersionStr() {
-        return versionStr;
-    }
-
-    /**
-     * 获取 apiVersion
-     *
-     * @return apiVersion
-     */
-    public 当请求指定 getApiVersion() {
-        return apiVersion;
-    }
-
-    /**
-     * 获取 thisVersion
-     *
-     * @return thisVersion
-     */
-    public Version getThisVersion() {
-        return thisVersion;
-    }
-
-    /**
-     * 获取 otherVersion
-     *
-     * @return otherVersion
-     */
-    public Version getOtherVersion() {
-        return otherVersion;
     }
 
 

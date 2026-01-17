@@ -23,7 +23,7 @@ public class JacksonProperties {
      * 是否包含null值
      */
     private boolean includeNull = false;
-}
+
     /**
      * 获取 enable
      *
@@ -52,6 +52,15 @@ public class JacksonProperties {
     }
 
     /**
+     * 判断是否包含null值
+     *
+     * @return includeNull
+     */
+    public boolean isIncludeNull() {
+        return includeNull;
+    }
+
+    /**
      * 设置 includeNull
      *
      * @param includeNull includeNull
@@ -59,5 +68,4 @@ public class JacksonProperties {
     public void setIncludeNull(boolean includeNull) {
         this.includeNull = includeNull;
     }
-
-
+}

@@ -156,14 +156,14 @@
         <utils.version>4.0.0.34</utils.version>
 
         <!-- 框架和库版本管理 -->
-        <lombok.version>1.18.36</lombok.version>              <!-- Lombok版本，支持Java 25 -->
+        <lombok.version>1.18.40</lombok.version>              <!-- Lombok版本，支持Java 25 -->
         <mybatis-plus.version>3.5.11</mybatis-plus.version>  <!-- MyBatis Plus版本 -->
         <mybatis-plus-join.version>1.5.3</mybatis-plus-join.version>  <!-- MyBatis Plus Join版本 -->
         <dubbo.version>3.1.1</dubbo.version>                <!-- Dubbo RPC框架版本 -->
         <resilience4j.version>2.2.0</resilience4j.version>  <!-- Resilience4j熔断降级框架版本 -->
         <p6spy.version>3.9.0</p6spy.version>                <!-- P6Spy SQL监控版本 -->
         <easy-captcha.version>1.6.2</easy-captcha.version>  <!-- 验证码生成器版本 -->
-        <jackson.version>2.20.0</jackson.version>           <!-- Jackson版本 -->
+        <jackson.version>2.19.4</jackson.version>           <!-- Jackson版本，与Spring Boot 3.5.9兼容 -->
         <commons-io.version>2.16.1</commons-io.version>     <!-- Commons IO版本 -->
         <commons-dbutils.version>1.8.1</commons-dbutils.version> <!-- Commons DBUtils版本 -->
         <validation-api.version>2.0.1.Final</validation-api.version> <!-- Validation API版本 -->
@@ -617,6 +617,18 @@
                 <artifactId>guava</artifactId>
                 <version>${guava.version}</version>
             </dependency>
+
+            <!-- Jackson模块版本管理 -->
+            <dependency>
+                <groupId>com.fasterxml.jackson.datatype</groupId>
+                <artifactId>jackson-datatype-jdk8</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.module</groupId>
+                <artifactId>jackson-module-paramnames</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
             
             <dependency>
                 <groupId>com.chua</groupId>
@@ -651,6 +663,12 @@
                 <version>${module.version}</version>
             </dependency>
             -->
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-armeria-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
 
             <dependency>
                 <groupId>com.chua</groupId>
@@ -865,7 +883,18 @@
                     <encoding>${project.build.sourceEncoding}</encoding> <!-- 编码格式 -->
                     <compilerArgs>
                         <arg>-parameters</arg>                          <!-- 保留参数名信息 -->
+                        <arg>-J--enable-native-access=ALL-UNNAMED</arg> <!-- Java 25 需要 -->
+                        <arg>-proc:full</arg>                           <!-- 强制启用注解处理器 -->
                     </compilerArgs>
+                    <fork>true</fork>                                    <!-- 使用独立的 JVM 进程 -->
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                    <generatedSourcesDirectory>${project.build.directory}/generated-sources/annotations</generatedSourcesDirectory>
                 </configuration>
             </plugin>
 

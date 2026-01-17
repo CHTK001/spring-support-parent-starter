@@ -1,4 +1,4 @@
-﻿package com.chua.socket.support.spi;
+package com.chua.socket.support.spi;
 
 import com.chua.common.support.core.annotation.Spi;
 import com.chua.socket.support.SocketListener;

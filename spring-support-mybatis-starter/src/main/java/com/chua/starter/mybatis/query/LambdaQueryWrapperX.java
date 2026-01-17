@@ -1,10 +1,10 @@
-﻿package com.chua.starter.mybatis.query;
+package com.chua.starter.mybatis.query;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
-import com.chua.common.support.utils.ArrayUtils;
-import com.chua.common.support.utils.CollectionUtils;
-import com.chua.common.support.utils.ObjectUtils;
+import com.chua.common.support.core.utils.ArrayUtils;
+import com.chua.common.support.core.utils.CollectionUtils;
+import com.chua.common.support.core.utils.ObjectUtils;
 import org.springframework.util.StringUtils;
 
 import java.util.Collection;

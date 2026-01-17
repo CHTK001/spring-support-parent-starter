@@ -1,8 +1,6 @@
 package com.chua.starter.common.support.application;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-
+import lombok.extern.slf4j.Slf4j;
 /**
  * 模块环境注册器
  *
@@ -11,11 +9,9 @@ import org.slf4j.LoggerFactory;
  * @author CH
  * @since 2026/01/14
  */
+@Slf4j
 public class ModuleEnvironmentRegistration {
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ModuleEnvironmentRegistration.class);
-
-
-    /**
+        /**
      * 使用配置对象类型作为分组标识，将配置注册到全局环境中。
      *
      * @param config 配置对象

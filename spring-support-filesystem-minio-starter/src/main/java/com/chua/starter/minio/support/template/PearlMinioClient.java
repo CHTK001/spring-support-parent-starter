@@ -1,4 +1,4 @@
-﻿package com.chua.starter.minio.support.template;
+package com.chua.starter.minio.support.template;
 
 import io.minio.MinioClient;
 
@@ -8,7 +8,7 @@ import io.minio.MinioClient;
  */
 public class PearlMinioClient extends MinioClient {
 
-    protected PearlMinioClient(MinioClient client) {
+    public PearlMinioClient(MinioClient client) {
         super(client);
     }
 

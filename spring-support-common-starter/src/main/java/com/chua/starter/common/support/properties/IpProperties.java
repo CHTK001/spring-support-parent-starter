@@ -27,7 +27,7 @@ public class IpProperties {
      * ip翻译实现方式
      */
     private String ipType = "qqwry";
-}
+
     /**
      * 获取 enable
      *
@@ -81,6 +81,4 @@ public class IpProperties {
     public void setIpType(String ipType) {
         this.ipType = ipType;
     }
-
-
-
+}

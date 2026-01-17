@@ -1,7 +1,9 @@
-﻿package com.chua.starter.queue;
+package com.chua.starter.queue;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * 消息发送结果
@@ -11,6 +13,8 @@ import lombok.Data;
  */
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class SendResult {
 
     /**
@@ -51,12 +55,12 @@ public class SendResult {
      * @return 发送结果
      */
     public static SendResult success(String messageId, String destination) {
-        return SendResult.builder()
-                .success(true)
-                .messageId(messageId)
-                .destination(destination)
-                .timestamp(System.currentTimeMillis())
-                .build();
+        var result = new SendResult();
+        result.success = true;
+        result.messageId = messageId;
+        result.destination = destination;
+        result.timestamp = System.currentTimeMillis();
+        return result;
     }
 
     /**
@@ -67,11 +71,20 @@ public class SendResult {
      * @return 发送结果
      */
     public static SendResult failure(String destination, Throwable error) {
-        return SendResult.builder()
-                .success(false)
-                .destination(destination)
-                .timestamp(System.currentTimeMillis())
-                .error(error)
-                .build();
+        var result = new SendResult();
+        result.success = false;
+        result.destination = destination;
+        result.timestamp = System.currentTimeMillis();
+        result.error = error;
+        return result;
+    }
+
+    // Lombok 注解处理器未运行时的手动 getter 方法
+    public boolean isSuccess() {
+        return success;
+    }
+
+    public Throwable getError() {
+        return error;
     }
 }

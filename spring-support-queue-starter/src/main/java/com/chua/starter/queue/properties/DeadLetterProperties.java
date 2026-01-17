@@ -1,4 +1,4 @@
-﻿package com.chua.starter.queue.properties;
+package com.chua.starter.queue.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -57,4 +57,33 @@ public class DeadLetterProperties {
      * 退避乘数
      */
     private double backoffMultiplier = 2.0;
+
+    // Lombok 注解处理器未运行时的手动 getter 方法
+    public int getMaxRetries() {
+        return maxRetries;
+    }
+
+    public long getRetryDelaySeconds() {
+        return retryDelaySeconds;
+    }
+
+    public long getMaxRetryDelaySeconds() {
+        return maxRetryDelaySeconds;
+    }
+
+    public boolean isExponentialBackoff() {
+        return exponentialBackoff;
+    }
+
+    public double getBackoffMultiplier() {
+        return backoffMultiplier;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public int getDelayThreads() {
+        return delayThreads;
+    }
 }

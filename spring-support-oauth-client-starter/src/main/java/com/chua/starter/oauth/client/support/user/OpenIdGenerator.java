@@ -1,6 +1,6 @@
-﻿package com.chua.starter.oauth.client.support.user;
+package com.chua.starter.oauth.client.support.user;
 
-import com.chua.common.support.utils.DigestUtils;
+import com.chua.common.support.core.utils.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
 
 /**

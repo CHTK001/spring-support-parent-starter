@@ -1,15 +1,15 @@
-﻿package com.chua.starter.oauth.client.support.provider;
+package com.chua.starter.oauth.client.support.provider;
 
-import com.chua.common.support.annotations.Ignore;
-import com.chua.common.support.collection.ImmutableBuilder;
+import com.chua.common.support.core.annotation.Ignore;
+import com.chua.common.support.base.collection.ImmutableBuilder;
 import com.chua.common.support.function.Splitter;
-import com.chua.common.support.json.Json5;
-import com.chua.common.support.json.JsonObject;
+import com.chua.common.support.text.json.Json5;
+import com.chua.common.support.text.json.JsonObject;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.utils.ArrayUtils;
-import com.chua.common.support.utils.IoUtils;
-import com.chua.common.support.utils.MapUtils;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.core.utils.ArrayUtils;
+import com.chua.common.support.core.utils.IoUtils;
+import com.chua.common.support.core.utils.MapUtils;
+import com.chua.common.support.core.utils.StringUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.oauth.client.support.annotation.UserValue;
@@ -37,7 +37,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
-import static com.chua.common.support.constant.Constants.CAPTCHA_SESSION_KEY;
+import static com.chua.common.support.core.constant.Constants.CAPTCHA_SESSION_KEY;
 import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
 import static com.chua.common.support.lang.code.ReturnCode.USERNAME_OR_PASSWORD_ERROR;
 import static com.chua.starter.common.support.constant.Constant.ADMIN;

@@ -1,10 +1,10 @@
 package com.chua.starter.common.support.application;
 
-import com.chua.common.support.constant.CommonConstant;
+import com.chua.common.support.core.constant.CommonConstant;
 import com.chua.common.support.function.Upgrade;
-import com.chua.common.support.reflection.FieldStation;
-import com.chua.common.support.utils.ClassUtils;
-import com.chua.common.support.utils.MapUtils;
+import com.chua.common.support.base.reflection.FieldStation;
+import com.chua.common.support.core.utils.ClassUtils;
+import com.chua.common.support.core.utils.MapUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 
 import java.util.Collections;

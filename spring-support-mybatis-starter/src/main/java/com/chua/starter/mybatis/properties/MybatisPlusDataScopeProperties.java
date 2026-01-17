@@ -1,4 +1,4 @@
-﻿package com.chua.starter.mybatis.properties;
+package com.chua.starter.mybatis.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -40,4 +40,49 @@ public class MybatisPlusDataScopeProperties {
      * 当前用户ID
      */
     private String currentUserIdColumn = "create_by";
+
+    /**
+     * 是否启用
+     *
+     * @return 是否启用
+     */
+    public boolean isEnable() {
+        return enable;
+    }
+
+    /**
+     * 获取表名
+     *
+     * @return 表名
+     */
+    public String getTableName() {
+        return tableName;
+    }
+
+    /**
+     * 获取部门ID列名
+     *
+     * @return 部门ID列名
+     */
+    public String getDeptIdColumn() {
+        return deptIdColumn;
+    }
+
+    /**
+     * 获取部门树ID列名
+     *
+     * @return 部门树ID列名
+     */
+    public String getDeptTreeIdColumn() {
+        return deptTreeIdColumn;
+    }
+
+    /**
+     * 获取当前用户ID列名
+     *
+     * @return 当前用户ID列名
+     */
+    public String getCurrentUserIdColumn() {
+        return currentUserIdColumn;
+    }
 }

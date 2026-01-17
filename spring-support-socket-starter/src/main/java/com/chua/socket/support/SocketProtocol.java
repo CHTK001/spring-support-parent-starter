@@ -1,4 +1,4 @@
-﻿package com.chua.socket.support;
+package com.chua.socket.support;
 
 /**
  * Socket 协议类型枚举

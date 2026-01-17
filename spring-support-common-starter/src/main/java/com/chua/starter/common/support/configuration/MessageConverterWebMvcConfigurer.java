@@ -1,9 +1,5 @@
 package com.chua.starter.common.support.configuration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-
-import com.chua.common.support.utils.ClassUtils;
+import com.chua.common.support.core.utils.ClassUtils;
 import com.chua.starter.common.support.api.encode.ApiResponseEncodeRegister;
 import com.chua.starter.common.support.configuration.resolver.RequestParamsMapMethodArgumentResolver;
 import com.chua.starter.common.support.converter.BinaryHttpMessageConverter;
@@ -44,11 +40,14 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * 跨域处理
  *
  * @author CH
  */
+@Slf4j
 @EnableConfigurationProperties({MessageConverterProperties.class})
 public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, ApplicationContextAware, WebMvcRegistrations {
     /**
@@ -60,10 +59,7 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
         this.messageConverterProperties = messageConverterProperties;
     }
 
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(MessageConverterWebMvcConfigurer.class);
-
-
-    final MessageConverterProperties messageConverterProperties;
+        final MessageConverterProperties messageConverterProperties;
     private List<HttpMessageConverter<?>> messageConverters;
     private ApplicationContext applicationContext;
     private ApiResponseEncodeRegister apiResponseEncodeRegister;

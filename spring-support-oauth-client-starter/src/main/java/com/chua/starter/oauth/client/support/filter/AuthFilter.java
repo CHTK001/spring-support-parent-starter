@@ -1,8 +1,8 @@
-﻿package com.chua.starter.oauth.client.support.filter;
+package com.chua.starter.oauth.client.support.filter;
 
 
-import com.chua.common.support.utils.MapUtils;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.core.utils.MapUtils;
+import com.chua.common.support.core.utils.StringUtils;
 import com.chua.starter.oauth.client.support.annotation.VerifyFingerprint;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.infomation.Information;

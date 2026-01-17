@@ -1,7 +1,7 @@
 package com.chua.starter.common.support.configuration.environment;
 
-import com.chua.common.support.net.NetUtils;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.network.net.NetUtils;
+import com.chua.common.support.core.utils.StringUtils;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.env.EnvironmentPostProcessor;
 import org.springframework.core.env.ConfigurableEnvironment;

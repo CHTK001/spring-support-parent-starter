@@ -1,4 +1,4 @@
-﻿package com.chua.starter.mybatis.properties;
+package com.chua.starter.mybatis.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -34,9 +34,54 @@ public class MybatisPlusProperties {
     private boolean readOnly = false;
 
     /**
+     * 是否开启只读模式
+     *
+     * @return 是否只读
+     */
+    public boolean isReadOnly() {
+        return readOnly;
+    }
+
+    /**
      * mapper加载源
      */
     private List<SqlMethodProperties> sqlMethod;
+
+    /**
+     * 获取SQL方法配置列表
+     *
+     * @return SQL方法配置列表
+     */
+    public List<SqlMethodProperties> getSqlMethod() {
+        return sqlMethod;
+    }
+
+    /**
+     * 获取重载类型
+     *
+     * @return 重载类型
+     */
+    public ReloadType getReloadType() {
+        return reloadType;
+    }
+
+    /**
+     * 获取重载目录列表
+     *
+     * @return 重载目录列表
+     */
+    public List<ReloadDirectory> getReloadDirectories() {
+        return reloadDirectories;
+    }
+
+    /**
+     * 获取重载时间
+     *
+     * @return 重载时间
+     */
+    public int getReloadTime() {
+        return reloadTime;
+    }
     /**
      * 自动热加载方式
      */
@@ -76,8 +121,43 @@ public class MybatisPlusProperties {
         /**
          * 是否开启检测
          */
-
         private boolean watchdog;
+
+        /**
+         * 获取源信息
+         *
+         * @return 源信息
+         */
+        public String getSource() {
+            return source;
+        }
+
+        /**
+         * 获取类型
+         *
+         * @return 类型
+         */
+        public SqlMethodType getType() {
+            return type;
+        }
+
+        /**
+         * 获取超时时间
+         *
+         * @return 超时时间
+         */
+        public int getTimeout() {
+            return timeout;
+        }
+
+        /**
+         * 是否开启watchdog
+         *
+         * @return 是否开启watchdog
+         */
+        public boolean isWatchdog() {
+            return watchdog;
+        }
     }
 
     /**
@@ -128,8 +208,36 @@ public class MybatisPlusProperties {
         private boolean watchEnabled = true;
 
         /**
-         * 文件匹配模式，默认为 **/*Mapper.xml
+         * 文件匹配模式
+         * 默认为双星号斜杠星号 Mapper.xml
          */
         private String pattern = "**/*Mapper.xml";
+
+        /**
+         * 获取目录路径
+         *
+         * @return 目录路径
+         */
+        public String getPath() {
+            return path;
+        }
+
+        /**
+         * 获取文件匹配模式
+         *
+         * @return 文件匹配模式
+         */
+        public String getPattern() {
+            return pattern;
+        }
+
+        /**
+         * 是否启用监听
+         *
+         * @return 是否启用监听
+         */
+        public boolean isWatchEnabled() {
+            return watchEnabled;
+        }
     }
 }

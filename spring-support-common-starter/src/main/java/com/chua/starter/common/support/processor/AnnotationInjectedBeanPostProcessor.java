@@ -1,6 +1,6 @@
 package com.chua.starter.common.support.processor;
 
-import com.chua.common.support.utils.ClassUtils;
+import com.chua.common.support.core.utils.ClassUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.BeanUtils;

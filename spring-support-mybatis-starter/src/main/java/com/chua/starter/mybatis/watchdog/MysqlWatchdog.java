@@ -1,4 +1,4 @@
-﻿package com.chua.starter.mybatis.watchdog;
+package com.chua.starter.mybatis.watchdog;
 
 import com.chua.mysql.support.binlog.BinaryLogClient;
 import com.chua.mysql.support.binlog.event.Event;

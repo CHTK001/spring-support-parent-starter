@@ -1,7 +1,7 @@
-﻿package com.chua.starter.redis.support;
+package com.chua.starter.redis.support;
 
 import com.chua.starter.redis.support.lock.RedissonLockTemplate;
-import com.chua.starter.strategy.template.LockTemplate;
+import com.chua.starter.redis.support.template.LockTemplate;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RedissonClient;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Bean;
  * @since 2022/08/01
  **/
 @Slf4j
-@ConditionalOnClass(name = "com.chua.starter.strategy.template.LockTemplate")
+@ConditionalOnClass(name = "com.chua.starter.redis.support.template.LockTemplate")
 public class LockTemplateConfiguration {
     /**
      * 基于 Redisson 的分布式锁模板

@@ -1,4 +1,4 @@
-﻿package com.chua.starter.oauth.client.support.enums;
+package com.chua.starter.oauth.client.support.enums;
 
 /**
  * UpgradeType 枚举类定义了升级的类型。

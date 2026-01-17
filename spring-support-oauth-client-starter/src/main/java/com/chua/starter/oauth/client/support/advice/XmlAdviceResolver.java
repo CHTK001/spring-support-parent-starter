@@ -1,8 +1,8 @@
-﻿package com.chua.starter.oauth.client.support.advice;
+package com.chua.starter.oauth.client.support.advice;
 
-import com.chua.common.support.json.JsonObject;
+import com.chua.common.support.text.json.JsonObject;
 import com.chua.common.support.lang.code.ResultCode;
-import com.chua.common.support.xml.Xml;
+import com.chua.common.support.text.xml.Xml;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;

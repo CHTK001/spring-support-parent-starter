@@ -1,10 +1,10 @@
-﻿package com.chua.starter.oauth.client.support.protocol;
+package com.chua.starter.oauth.client.support.protocol;
 
-import com.chua.common.support.annotations.Extension;
+import com.chua.common.support.core.annotation.Extension;
 import com.chua.common.support.crypto.Codec;
-import com.chua.common.support.json.Json;
-import com.chua.common.support.utils.DigestUtils;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.text.json.Json;
+import com.chua.common.support.core.utils.DigestUtils;
+import com.chua.common.support.core.utils.StringUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.entity.AppKeySecret;
 import com.chua.starter.oauth.client.support.enums.AuthType;
@@ -23,7 +23,7 @@ import jakarta.servlet.http.Cookie;
 import java.util.Collections;
 import java.util.Map;
 
-import static com.chua.common.support.constant.NameConstant.NULL;
+import static com.chua.common.support.core.constant.NameConstant.NULL;
 import static com.chua.starter.common.support.constant.Constant.ADMIN;
 import static com.chua.starter.common.support.constant.Constant.OPS;
 import static com.chua.starter.oauth.client.support.contants.AuthConstant.SUPER_ADMIN;
@@ -133,7 +133,7 @@ public class StaticProtocol extends AbstractProtocol {
         // 如果成功解析到用户信息，则设置用户名并保存到请求上下文
         if (null != userResult) {
             userResume.setUsername(userResult.getUsername());
-            RequestUtils.setUsername(userResume.getUsername());
+            com.chua.starter.oauth.client.support.execute.AuthSessionUtils.setUsername(userResume.getUsername());
         }
 
         // 根据用户名设置角色信息
@@ -149,7 +149,7 @@ public class StaticProtocol extends AbstractProtocol {
         // 设置空权限集合
         userResume.setPermission(Collections.emptySet());
         // 将用户信息保存到请求上下文
-        RequestUtils.setUserInfo(userResume);
+        com.chua.starter.oauth.client.support.execute.AuthSessionUtils.setUserInfo(userResume);
         // 返回认证成功的信息
         return new AuthenticationInformation(Information.OK, userResume);
     }

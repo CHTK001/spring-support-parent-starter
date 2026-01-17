@@ -45,13 +45,22 @@ public class AsyncThreadPoolProperties {
      * 线程名称前缀
      */
     private String threadNamePrefix = "async-thread-pool-%d";
-}
+
     /**
      * 获取 enable
      *
      * @return enable
      */
     public boolean getEnable() {
+        return enable;
+    }
+
+    /**
+     * 判断是否启用
+     *
+     * @return enable
+     */
+    public boolean isEnable() {
         return enable;
     }
 
@@ -128,6 +137,15 @@ public class AsyncThreadPoolProperties {
     }
 
     /**
+     * 判断是否等待任务完成再关闭
+     *
+     * @return waitForTasksToCompleteOnShutdown
+     */
+    public boolean isWaitForTasksToCompleteOnShutdown() {
+        return waitForTasksToCompleteOnShutdown;
+    }
+
+    /**
      * 设置 waitForTasksToCompleteOnShutdown
      *
      * @param waitForTasksToCompleteOnShutdown waitForTasksToCompleteOnShutdown
@@ -189,6 +207,4 @@ public class AsyncThreadPoolProperties {
     public void setThreadNamePrefix(String threadNamePrefix) {
         this.threadNamePrefix = threadNamePrefix;
     }
-
-
-
+}

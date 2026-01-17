@@ -1,4 +1,4 @@
-﻿package com.chua.starter.oauth.client.support.configuration;
+package com.chua.starter.oauth.client.support.configuration;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.env.EnvironmentPostProcessor;

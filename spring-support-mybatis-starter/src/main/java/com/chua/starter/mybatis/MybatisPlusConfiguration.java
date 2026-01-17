@@ -1,4 +1,4 @@
-﻿package com.chua.starter.mybatis;
+package com.chua.starter.mybatis;
 
 import com.baomidou.mybatisplus.autoconfigure.ConfigurationCustomizer;
 import com.baomidou.mybatisplus.core.config.GlobalConfig;
@@ -43,7 +43,6 @@ import java.util.List;
 @EnableConfigurationProperties({MybatisPlusProperties.class, MybatisPlusDataScopeProperties.class})
 @ConditionalOnProperty(prefix = "plugin.mybatis", name = "enable", havingValue = "true", matchIfMissing = false)
 //@AutoConfigureOrder(Ordered.LOWEST_PRECEDENCE + 10)
-@RequiredArgsConstructor
 public class MybatisPlusConfiguration {
 
     /**
@@ -63,6 +62,17 @@ public class MybatisPlusConfiguration {
 
     private final MybatisPlusProperties mybatisProperties;
     private final MybatisPlusDataScopeProperties methodSecurityInterceptor;
+
+    /**
+     * 构造函数
+     *
+     * @param mybatisProperties MyBatis Plus配置属性
+     * @param methodSecurityInterceptor 数据权限配置属性
+     */
+    public MybatisPlusConfiguration(MybatisPlusProperties mybatisProperties, MybatisPlusDataScopeProperties methodSecurityInterceptor) {
+        this.mybatisProperties = mybatisProperties;
+        this.methodSecurityInterceptor = methodSecurityInterceptor;
+    }
 
     static {
         JsqlParserGlobal.setParserMultiFunc((sql) -> {

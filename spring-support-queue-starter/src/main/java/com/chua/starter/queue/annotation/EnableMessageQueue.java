@@ -1,4 +1,4 @@
-﻿package com.chua.starter.queue.annotation;
+package com.chua.starter.queue.annotation;
 
 import com.chua.starter.queue.configuration.QueueAutoConfiguration;
 import org.springframework.context.annotation.Import;

@@ -1,10 +1,10 @@
-﻿package com.chua.starter.redis.support;
+package com.chua.starter.redis.support;
 
-import com.chua.common.support.protocol.ClientSetting;
+import com.chua.common.support.network.protocol.ClientSetting;
 import com.chua.starter.common.support.application.ModuleEnvironmentRegistration;
 import com.chua.starter.redis.support.lock.RedissonLockTemplate;
-import com.chua.starter.strategy.template.LockTemplate;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.redis.support.template.LockTemplate;
+import com.chua.starter.redis.support.utils.StringUtils;
 import com.chua.redis.support.client.RedisClient;
 import com.chua.starter.redis.support.listener.RedisListener;
 import com.chua.starter.redis.support.properties.RedisServerProperties;

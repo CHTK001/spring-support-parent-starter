@@ -1,4 +1,4 @@
-﻿package com.chua.starter.datasource.util;
+package com.chua.starter.datasource.util;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;

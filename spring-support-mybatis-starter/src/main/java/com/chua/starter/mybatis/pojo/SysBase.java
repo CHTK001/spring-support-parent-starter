@@ -1,4 +1,4 @@
-﻿package com.chua.starter.mybatis.pojo;
+package com.chua.starter.mybatis.pojo;
 
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;

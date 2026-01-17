@@ -1,4 +1,4 @@
-﻿package com.chua.starter.queue.configuration;
+package com.chua.starter.queue.configuration;
 
 import com.chua.starter.queue.MessageTemplate;
 import com.chua.starter.queue.properties.QueueProperties;
@@ -28,6 +28,7 @@ import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 @ConditionalOnProperty(prefix = QueueProperties.PREFIX, name = "enable", havingValue = "true")
 @ComponentScan("com.chua.starter.queue")
 public class QueueAutoConfiguration {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(QueueAutoConfiguration.class);
 
     @Autowired
     private QueueProperties queueProperties;

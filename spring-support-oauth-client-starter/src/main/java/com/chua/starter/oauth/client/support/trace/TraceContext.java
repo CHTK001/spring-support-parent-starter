@@ -1,11 +1,11 @@
-﻿package com.chua.starter.oauth.client.support.trace;
+package com.chua.starter.oauth.client.support.trace;
 
-import com.chua.common.support.utils.IdUtils;
 import lombok.Getter;
 import org.slf4j.MDC;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -71,7 +71,7 @@ public class TraceContext {
      * 私有构造
      */
     private TraceContext(String traceId) {
-        this.traceId = traceId != null ? traceId : IdUtils.createUlid();
+        this.traceId = traceId != null ? traceId : UUID.randomUUID().toString().replace("-", "");
         this.startTimestamp = System.currentTimeMillis();
     }
 

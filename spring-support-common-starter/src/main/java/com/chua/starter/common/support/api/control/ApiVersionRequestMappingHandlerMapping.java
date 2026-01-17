@@ -1,7 +1,7 @@
 package com.chua.starter.common.support.api.control;
 
-import com.chua.common.support.utils.ArrayUtils;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.core.utils.ArrayUtils;
+import com.chua.common.support.core.utils.StringUtils;
 import com.chua.starter.common.support.api.annotations.ApiPlatform;
 import com.chua.starter.common.support.api.annotations.ApiProfile;
 import com.chua.starter.common.support.api.annotations.ApiVersion;

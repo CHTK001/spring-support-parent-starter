@@ -2,7 +2,7 @@ package com.chua.starter.common.support.api.rule;
 
 import com.chua.common.support.crypto.Codec;
 import com.chua.common.support.crypto.CodecKeyPair;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.core.utils.StringUtils;
 import com.chua.starter.common.support.api.annotations.ApiFieldCrypto;
 import com.chua.starter.common.support.api.annotations.ApiFieldCryptoKey;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;

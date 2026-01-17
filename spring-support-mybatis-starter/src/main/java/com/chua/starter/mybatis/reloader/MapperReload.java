@@ -1,7 +1,7 @@
-﻿package com.chua.starter.mybatis.reloader;
+package com.chua.starter.mybatis.reloader;
 
-import com.chua.common.support.utils.ClassUtils;
-import com.chua.common.support.utils.ThreadUtils;
+import com.chua.common.support.core.utils.ClassUtils;
+import com.chua.common.support.core.utils.ThreadUtils;
 import com.chua.starter.mybatis.properties.MybatisPlusProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.builder.xml.XMLMapperBuilder;
@@ -459,34 +459,35 @@ public class MapperReload implements Reload, DisposableBean {
             Resource resource = entry.getValue();
             
             FileInfo fileInfo = new FileInfo();
-            fileInfo.setName(filename);
             
             try {
                 URI uri = resource.getURI();
-                fileInfo.setPath(uri.toString());
+                fileInfo.name = filename;
+                fileInfo.path = uri.toString();
                 
                 // 判断资源类型和是否可监听
                 String scheme = uri.getScheme();
                 if ("file".equals(scheme)) {
-                    fileInfo.setType("FILE");
-                    fileInfo.setWatchable(true);
+                    fileInfo.type = "FILE";
+                    fileInfo.watchable = true;
                 } else if ("jar".equals(scheme) || "war".equals(scheme)) {
-                    fileInfo.setType("JAR");
-                    fileInfo.setWatchable(false);
+                    fileInfo.type = "JAR";
+                    fileInfo.watchable = false;
                 } else {
-                    fileInfo.setType("CLASSPATH");
+                    fileInfo.type = "CLASSPATH";
                     // classpath资源如果在文件系统中，可以监听
                     try {
                         File file = resource.getFile();
-                        fileInfo.setWatchable(file.exists());
+                        fileInfo.watchable = file.exists();
                     } catch (IOException e) {
-                        fileInfo.setWatchable(false);
+                        fileInfo.watchable = false;
                     }
                 }
             } catch (IOException e) {
-                fileInfo.setPath("未知路径");
-                fileInfo.setType("UNKNOWN");
-                fileInfo.setWatchable(false);
+                fileInfo.name = filename;
+                fileInfo.path = "未知路径";
+                fileInfo.type = "UNKNOWN";
+                fileInfo.watchable = false;
             }
             
             fileInfoList.add(fileInfo);
