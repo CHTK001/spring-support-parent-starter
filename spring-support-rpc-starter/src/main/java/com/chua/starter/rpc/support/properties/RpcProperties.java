@@ -1,11 +1,9 @@
 package com.chua.starter.rpc.support.properties;
 
-import com.chua.common.support.rpc.RpcConsumerConfig;
-import com.chua.common.support.rpc.RpcProtocolConfig;
-import com.chua.common.support.rpc.RpcRegistryConfig;
-import com.chua.common.support.rpc.enums.RpcType;
-import com.chua.common.support.utils.NumberUtils;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.common.support.network.rpc.RpcConsumerConfig;
+import com.chua.common.support.network.rpc.RpcProtocolConfig;
+import com.chua.common.support.network.rpc.RpcRegistryConfig;
+import com.chua.common.support.network.rpc.enums.RpcType;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -74,12 +72,6 @@ public class RpcProperties {
         if(null == registry) {
             return Collections.emptyList();
         }
-
-        for (RpcRegistryConfig config : registry) {
-            config.setAddress(SpringBeanUtils.resolvePlaceholders(config.getAddress()));
-            config.setUsername(SpringBeanUtils.resolvePlaceholders(config.getUsername()));
-            config.setPassword(SpringBeanUtils.resolvePlaceholders(config.getPassword()));
-        }
         return registry;
     }
 
@@ -87,17 +79,7 @@ public class RpcProperties {
         if(null == protocols) {
             return Collections.emptyList();
         }
-
-        for (RpcProtocolConfig config : protocols) {
-            config.setHost(SpringBeanUtils.resolvePlaceholders(config.getHost()));
-            config.setPort(NumberUtils.toInt(SpringBeanUtils.resolvePlaceholders(config.getPort() + "")));
-            config.setName(SpringBeanUtils.resolvePlaceholders(config.getName()));
-        }
         return protocols;
-    }
-
-    public String getApplicationName() {
-        return SpringBeanUtils.resolvePlaceholders(applicationName);
     }
 
     /**
@@ -107,5 +89,77 @@ public class RpcProperties {
      */
     public RpcType getType() {
         return type;
+    }
+
+    /**
+     * 是否启用
+     *
+     * @return 是否启用
+     */
+    public boolean isEnable() {
+        return enable;
+    }
+
+    /**
+     * 设置是否启用
+     *
+     * @param enable 是否启用
+     */
+    public void setEnable(boolean enable) {
+        this.enable = enable;
+    }
+
+    /**
+     * 获取消费者配置
+     *
+     * @return 消费者配置
+     */
+    public RpcConsumerConfig getConsumer() {
+        return consumer;
+    }
+
+    /**
+     * 设置消费者配置
+     *
+     * @param consumer 消费者配置
+     */
+    public void setConsumer(RpcConsumerConfig consumer) {
+        this.consumer = consumer;
+    }
+
+    /**
+     * 获取应用名称
+     *
+     * @return 应用名称
+     */
+    public String getApplicationName() {
+        return applicationName;
+    }
+
+    /**
+     * 设置应用名称
+     *
+     * @param applicationName 应用名称
+     */
+    public void setApplicationName(String applicationName) {
+        this.applicationName = applicationName;
+    }
+
+    /**
+     * 获取扫描包
+     *
+     * @return 扫描包
+     */
+    public Set<String> getScan() {
+        return scan;
+    }
+
+    /**
+     * 设置扫描包
+     *
+     * @param scan 扫描包
+     */
+    public void setScan(Set<String> scan) {
+        this.scan = scan;
     }
 }

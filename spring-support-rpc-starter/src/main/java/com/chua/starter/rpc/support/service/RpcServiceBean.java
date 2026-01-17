@@ -1,8 +1,8 @@
 package com.chua.starter.rpc.support.service;
 
-import com.chua.common.support.rpc.AbstractRpcServiceSetting;
-import com.chua.common.support.rpc.RpcServer;
-import com.chua.common.support.rpc.enums.RpcType;
+import com.chua.common.support.network.rpc.AbstractRpcServiceSetting;
+import com.chua.common.support.network.rpc.RpcServer;
+import com.chua.common.support.network.rpc.enums.RpcType;
 import com.chua.starter.rpc.support.properties.RpcProperties;
 import lombok.Getter;
 import lombok.Setter;

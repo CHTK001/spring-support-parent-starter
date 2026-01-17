@@ -1,6 +1,6 @@
 package com.chua.starter.rpc.support.configuration;
 
-import com.chua.common.support.utils.MapUtils;
+import com.chua.common.support.core.utils.MapUtils;
 import com.chua.starter.rpc.support.attrbute.RpcAttribute;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

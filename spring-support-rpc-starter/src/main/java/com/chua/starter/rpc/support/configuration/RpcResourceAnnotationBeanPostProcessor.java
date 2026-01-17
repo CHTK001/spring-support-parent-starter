@@ -1,8 +1,8 @@
 package com.chua.starter.rpc.support.configuration;
 
-import com.chua.common.support.rpc.RpcClient;
-import com.chua.common.support.rpc.RpcResource;
-import com.chua.common.support.utils.MapUtils;
+import com.chua.common.support.network.rpc.RpcClient;
+import com.chua.common.support.network.rpc.RpcResource;
+import com.chua.common.support.core.utils.MapUtils;
 import com.chua.starter.rpc.support.attrbute.RpcAttribute;
 import com.chua.starter.rpc.support.properties.RpcProperties;
 import com.chua.starter.rpc.support.resource.RpcResourceBean;
@@ -28,7 +28,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import static com.chua.common.support.utils.StringUtils.isBlank;
+import static com.chua.common.support.core.utils.StringUtils.isBlank;
 
 /**
  * rpc资源注释配置
