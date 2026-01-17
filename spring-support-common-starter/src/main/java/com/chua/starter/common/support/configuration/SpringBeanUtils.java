@@ -4,6 +4,8 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
+import java.util.Map;
+
 /**
  * Spring Bean工具类
  * <p>
@@ -97,6 +99,43 @@ public class SpringBeanUtils {
      */
     public static <T> T getBean(Class<T> type) {
         return getApplicationContext().getBean(type);
+    }
+
+    /**
+     * 解析占位符
+     *
+     * @param text 包含占位符的文本
+     * @return 解析后的文本
+     */
+    public static String resolvePlaceholders(String text) {
+        if (text == null) {
+            return null;
+        }
+        return getEnvironment().resolvePlaceholders(text);
+    }
+
+    /**
+     * 解析接口名称
+     *
+     * @param attributes 注解属性
+     * @param beanClass Bean类
+     * @return 接口名称
+     */
+    public static String resolveInterfaceName(Map<String, Object> attributes, Class<?> beanClass) {
+        String interfaceName = (String) attributes.get("interfaceName");
+        if (interfaceName != null && !interfaceName.isEmpty()) {
+            return interfaceName;
+        }
+        Class<?> interfaceClass = (Class<?>) attributes.get("interfaceClass");
+        if (interfaceClass != null) {
+            return interfaceClass.getName();
+        }
+        // 如果都没有，尝试从 beanClass 获取接口
+        Class<?>[] interfaces = beanClass.getInterfaces();
+        if (interfaces.length > 0) {
+            return interfaces[0].getName();
+        }
+        return beanClass.getName();
     }
 }
 

@@ -1,4 +1,4 @@
-﻿package com.chua.starter.sse.support.socket;
+package com.chua.starter.sse.support.socket;
 
 import com.chua.common.support.core.annotation.Spi;
 import com.chua.socket.support.SocketListener;
@@ -7,6 +7,8 @@ import com.chua.socket.support.properties.SocketProperties;
 import com.chua.socket.support.session.SocketSessionTemplate;
 import com.chua.socket.support.spi.SocketProvider;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
@@ -23,6 +25,8 @@ import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 @Slf4j
 @Spi("sse")
 public class SseSocketProvider implements SocketProvider {
+
+    private static final Logger log = LoggerFactory.getLogger(SseSocketProvider.class);
 
     @Override
     public SocketProtocol getProtocol() {

@@ -1,9 +1,9 @@
-﻿package com.chua.starter.sse.support;
+package com.chua.starter.sse.support;
 
 import ch.rasc.sse.eventbus.ClientEvent;
 import ch.rasc.sse.eventbus.SseEventBusListener;
 import ch.rasc.sse.eventbus.config.SseEventBusConfigurer;
-import com.chua.common.support.utils.IoUtils;
+import com.chua.common.support.core.utils.IoUtils;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;

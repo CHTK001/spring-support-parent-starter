@@ -1,10 +1,11 @@
-﻿package com.chua.starter.rpc.support.resource;
+package com.chua.starter.rpc.support.resource;
 
 import com.chua.common.support.rpc.RpcClient;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.dubbo.common.bytecode.Proxy;
 import org.apache.dubbo.common.constants.CommonConstants;
 import org.apache.dubbo.common.utils.Assert;
@@ -36,12 +37,13 @@ import static org.apache.dubbo.common.constants.LoggerCodeConstants.PROXY_FAILED
  */
 @Getter
 @Setter
-@Slf4j
 public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAware,
         BeanClassLoaderAware,
         BeanNameAware,
         InitializingBean,
         DisposableBean {
+
+    private static final Logger log = LoggerFactory.getLogger(RpcResourceBean.class);
     private String id;
 
     private String key;
@@ -56,6 +58,15 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     private Object lazyProxy;
 
     private RpcClient rpcClient;
+
+    /**
+     * 获取 ID
+     *
+     * @return ID
+     */
+    public String getId() {
+        return id;
+    }
 
     @Override
     public T getObject() throws Exception {
@@ -185,7 +196,7 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     }
 
     private Object getCallProxy() throws Exception {
-        synchronized (SpringBeanUtils.getSingletonMutex(applicationContext)) {
+        synchronized (applicationContext) {
            return rpcClient == null ? null : rpcClient.get(interfaceClass);
         }
     }

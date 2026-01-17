@@ -1,4 +1,4 @@
-﻿package com.chua.starter.rpc.support.holder;
+package com.chua.starter.rpc.support.holder;
 
 import java.util.HashSet;
 import java.util.Set;

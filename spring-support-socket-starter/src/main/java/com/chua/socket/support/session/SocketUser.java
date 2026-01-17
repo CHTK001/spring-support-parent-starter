@@ -29,6 +29,24 @@ public class SocketUser implements Serializable {
     private String userId;
 
     /**
+     * 获取用户ID
+     *
+     * @return 用户ID
+     */
+    public String getUserId() {
+        return userId;
+    }
+
+    /**
+     * 设置用户ID
+     *
+     * @param userId 用户ID
+     */
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    /**
      * 用户名
      */
     private String username;

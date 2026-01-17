@@ -2,12 +2,12 @@ package com.chua.starter.mybatis.watchdog;
 
 import com.chua.mysql.support.binlog.BinaryLogClient;
 import com.chua.mysql.support.binlog.event.Event;
+import com.chua.mysql.support.binlog.event.EventData;
 import com.chua.mysql.support.binlog.event.TableMapEventData;
 import com.chua.mysql.support.binlog.event.UpdateRowsEventData;
 import com.chua.mysql.support.binlog.event.WriteRowsEventData;
 import com.chua.starter.mybatis.marker.MysqlSqlMethodMarker;
 import com.chua.starter.mybatis.method.DynamicSqlMethod;
-import com.hazelcast.map.impl.event.EventData;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.ReflectionUtils;
 

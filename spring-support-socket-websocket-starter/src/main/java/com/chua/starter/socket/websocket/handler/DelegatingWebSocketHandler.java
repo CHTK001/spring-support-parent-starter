@@ -1,8 +1,10 @@
-﻿package com.chua.starter.socket.websocket.handler;
+package com.chua.starter.socket.websocket.handler;
 
 import com.chua.starter.socket.websocket.session.WebSocketSessionManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.socket.*;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
@@ -21,8 +23,20 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DelegatingWebSocketHandler extends TextWebSocketHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(DelegatingWebSocketHandler.class);
     private final WebSocketSessionManager sessionManager;
     private final List<WebSocketMessageHandler> handlers;
+
+    /**
+     * 构造器
+     *
+     * @param sessionManager 会话管理器
+     * @param handlers       消息处理器列表
+     */
+    public DelegatingWebSocketHandler(WebSocketSessionManager sessionManager, List<WebSocketMessageHandler> handlers) {
+        this.sessionManager = sessionManager;
+        this.handlers = handlers;
+    }
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -85,3 +99,4 @@ public class DelegatingWebSocketHandler extends TextWebSocketHandler {
         return false;
     }
 }
+

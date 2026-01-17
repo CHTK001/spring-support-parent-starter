@@ -1,8 +1,7 @@
-﻿package com.chua.starter.rpc.support.configuration;
+package com.chua.starter.rpc.support.configuration;
 
 import com.chua.common.support.rpc.RpcServer;
 import com.chua.common.support.rpc.RpcService;
-import com.chua.common.support.utils.CollectionUtils;
 import com.chua.starter.common.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.SpringCompatUtils;
 import com.chua.starter.rpc.support.annotation.AnnotationPropertyValuesAdapter;
@@ -12,7 +11,8 @@ import com.chua.starter.rpc.support.holder.ServicePackagesHolder;
 import com.chua.starter.rpc.support.properties.RpcProperties;
 import com.chua.starter.rpc.support.service.RpcServiceBean;
 import com.google.common.collect.Lists;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static com.chua.starter.common.support.logger.ModuleLog.*;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.MutablePropertyValues;
@@ -43,7 +43,6 @@ import org.springframework.util.StringUtils;
 import java.lang.annotation.Annotation;
 import java.util.*;
 
-import static com.chua.starter.common.support.configuration.SpringBeanUtils.resolveInterfaceName;
 import static org.springframework.context.annotation.AnnotationConfigUtils.CONFIGURATION_BEAN_NAME_GENERATOR;
 import static org.springframework.core.annotation.AnnotationUtils.findAnnotation;
 import static org.springframework.util.ClassUtils.resolveClassName;
@@ -57,9 +56,10 @@ import static org.springframework.util.ClassUtils.resolveClassName;
  */
 @ConditionalOnProperty(prefix = "plugin.rpc", name = "enable", havingValue = "true", matchIfMissing = false)
 @EnableConfigurationProperties(RpcProperties.class)
-@Slf4j
 public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegistryPostProcessor, EnvironmentAware,
         ResourceLoaderAware, BeanClassLoaderAware, ApplicationContextAware, InitializingBean  {
+
+    private static final Logger log = LoggerFactory.getLogger(RpcServiceAnnotationBeanPostProcessor.class);
     private ResourceLoader resourceLoader;
     private Environment environment;
     private Set<String> packagesToScan;
@@ -83,7 +83,7 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
         if(!rpcProperties.isEnable()) {
             return;
         }
-        if (null == rpcProperties || CollectionUtils.isEmpty(rpcProperties.getScan())) {
+        if (null == rpcProperties || rpcProperties.getScan() == null || rpcProperties.getScan().isEmpty()) {
             packagesToScan = Collections.singleton(applicationContext.getBeansWithAnnotation(SpringBootApplication.class).values().iterator().next().getClass().getPackage().getName());
         } else {
             packagesToScan = rpcProperties.getScan();
@@ -237,7 +237,7 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
     private void scanServiceBeans(Set<String> packagesToScan, BeanDefinitionRegistry registry) {
 
         scanned = true;
-        if (CollectionUtils.isEmpty(packagesToScan)) {
+        if (packagesToScan == null || packagesToScan.isEmpty()) {
         if (log.isWarnEnabled()) {
                 log.warn("[RPC] packagesToScan 为空, 跳过服务扫描");
             }
@@ -265,7 +265,7 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
             Set<BeanDefinitionHolder> beanDefinitionHolders =
                     findServiceBeanDefinitionHolders(scanner, packageToScan, registry, beanNameGenerator);
 
-            if (!CollectionUtils.isEmpty(beanDefinitionHolders)) {
+            if (beanDefinitionHolders != null && !beanDefinitionHolders.isEmpty()) {
                 if (log.isInfoEnabled()) {
                     List<String> serviceClasses = new ArrayList<>(beanDefinitionHolders.size());
                     for (BeanDefinitionHolder beanDefinitionHolder : beanDefinitionHolders) {
@@ -351,7 +351,7 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
         // The attributes of @Service annotation
         Map<String, Object> serviceAnnotationAttributes = AnnotationUtils.getAnnotationAttributes(service, true);
 
-        String serviceInterface = resolveInterfaceName(serviceAnnotationAttributes, beanClass);
+        String serviceInterface = SpringBeanUtils.resolveInterfaceName(serviceAnnotationAttributes, beanClass);
 
         String annotatedServiceBeanName = beanDefinitionHolder.getBeanName();
 

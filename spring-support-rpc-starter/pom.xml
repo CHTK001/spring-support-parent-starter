@@ -28,6 +28,12 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-rpc-sofa-starter</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>commons-logging</groupId>
+                    <artifactId>commons-logging</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>

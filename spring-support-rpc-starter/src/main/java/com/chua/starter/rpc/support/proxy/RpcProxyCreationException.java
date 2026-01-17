@@ -1,4 +1,4 @@
-﻿package com.chua.starter.rpc.support.proxy;
+package com.chua.starter.rpc.support.proxy;
 
 /**
  * RPC 代理创建异常

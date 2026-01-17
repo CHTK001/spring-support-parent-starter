@@ -1,4 +1,4 @@
-﻿package com.chua.starter.socket.websocket.configuration;
+package com.chua.starter.socket.websocket.configuration;
 
 import com.chua.starter.socket.websocket.handler.DelegatingWebSocketHandler;
 import com.chua.starter.socket.websocket.handler.WebSocketMessageHandler;
@@ -6,6 +6,8 @@ import com.chua.starter.socket.websocket.properties.WebSocketProperties;
 import com.chua.starter.socket.websocket.session.WebSocketSessionManager;
 import com.chua.starter.socket.websocket.template.WebSocketTemplate;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -38,6 +40,8 @@ import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 @EnableConfigurationProperties(WebSocketProperties.class)
 @ConditionalOnProperty(prefix = WebSocketProperties.PREFIX, name = "enable", havingValue = "true")
 public class WebSocketAutoConfiguration implements WebSocketConfigurer {
+
+    private static final Logger log = LoggerFactory.getLogger(WebSocketAutoConfiguration.class);
 
     @Autowired
     private WebSocketProperties properties;
@@ -74,7 +78,8 @@ public class WebSocketAutoConfiguration implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        DelegatingWebSocketHandler handler = delegatingWebSocketHandler(webSocketSessionManager());
+        WebSocketSessionManager sessionManager = webSocketSessionManager();
+        DelegatingWebSocketHandler handler = delegatingWebSocketHandler(sessionManager);
         
         for (String endpoint : properties.getEndpoints()) {
             log.info("[WebSocket] 注册端点: {}", highlight(endpoint));

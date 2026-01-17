@@ -1,4 +1,4 @@
-﻿package com.chua.starter.rpc.support.configuration;
+package com.chua.starter.rpc.support.configuration;
 
 import com.chua.common.support.rpc.RpcClient;
 import com.chua.common.support.rpc.RpcResource;
@@ -6,7 +6,8 @@ import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.rpc.support.attrbute.RpcAttribute;
 import com.chua.starter.rpc.support.properties.RpcProperties;
 import com.chua.starter.rpc.support.resource.RpcResourceBean;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.PropertyValues;
 import org.springframework.beans.factory.BeanCreationException;
@@ -36,7 +37,6 @@ import static com.chua.common.support.utils.StringUtils.isBlank;
  * @version 1.0.0
  * @since 2024/04/07
  */
-@Slf4j
 public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBeanPostProcessor implements BeanFactoryPostProcessor {
 
     /**

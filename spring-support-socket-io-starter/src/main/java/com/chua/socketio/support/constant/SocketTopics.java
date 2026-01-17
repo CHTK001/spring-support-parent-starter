@@ -1,4 +1,4 @@
-﻿package com.chua.socketio.support.constant;
+package com.chua.socketio.support.constant;
 
 /**
  * Socket.IO 主题常量

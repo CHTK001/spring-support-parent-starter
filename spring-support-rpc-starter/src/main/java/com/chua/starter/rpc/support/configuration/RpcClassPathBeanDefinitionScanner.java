@@ -1,4 +1,4 @@
-﻿package com.chua.starter.rpc.support.configuration;
+package com.chua.starter.rpc.support.configuration;
 
 import lombok.Getter;
 import lombok.Setter;

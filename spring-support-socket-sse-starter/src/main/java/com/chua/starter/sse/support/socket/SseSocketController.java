@@ -1,6 +1,8 @@
-﻿package com.chua.starter.sse.support.socket;
+package com.chua.starter.sse.support.socket;
 
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.http.MediaType;
@@ -22,6 +24,8 @@ import java.util.Map;
 @RequestMapping("/sse")
 @ConditionalOnBean(SseSocketSessionTemplate.class)
 public class SseSocketController {
+
+    private static final Logger log = LoggerFactory.getLogger(SseSocketController.class);
 
     @Autowired
     private SseSocketSessionTemplate sseSocketSessionTemplate;

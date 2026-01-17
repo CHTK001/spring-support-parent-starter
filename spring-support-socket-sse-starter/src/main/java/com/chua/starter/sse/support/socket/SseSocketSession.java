@@ -1,8 +1,8 @@
-﻿package com.chua.starter.sse.support.socket;
+package com.chua.starter.sse.support.socket;
 
-import com.chua.common.support.json.Json;
 import com.chua.socket.support.session.SocketSession;
 import com.chua.socket.support.session.SocketUser;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
@@ -19,6 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class SseSocketSession implements SocketSession {
 
+    private static final ObjectMapper objectMapper = new ObjectMapper();
     private final String id;
     private String clientId;
     private SocketUser user;
@@ -102,7 +103,7 @@ public class SseSocketSession implements SocketSession {
             return;
         }
         try {
-            String jsonData = data instanceof String ? (String) data : Json.toJson(data);
+            String jsonData = data instanceof String ? (String) data : objectMapper.writeValueAsString(data);
             emitter.send(SseEmitter.event()
                     .name(event)
                     .data(jsonData));

@@ -1,4 +1,4 @@
-﻿package com.chua.socketio.support.spi;
+package com.chua.socketio.support.spi;
 
 import com.chua.common.support.core.annotation.Spi;
 import com.chua.socket.support.SocketListener;
@@ -8,6 +8,8 @@ import com.chua.socket.support.session.SocketSessionTemplate;
 import com.chua.socket.support.spi.SocketProvider;
 import com.chua.socketio.support.session.SocketIOSessionTemplate;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
@@ -22,6 +24,8 @@ import java.util.List;
 @Slf4j
 @Spi("socketio")
 public class SocketIOProvider implements SocketProvider {
+
+    private static final Logger log = LoggerFactory.getLogger(SocketIOProvider.class);
 
     @Override
     public SocketProtocol getProtocol() {

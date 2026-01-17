@@ -1,4 +1,4 @@
-﻿package com.chua.starter.socket.websocket.properties;
+package com.chua.starter.socket.websocket.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -57,4 +57,112 @@ public class WebSocketProperties {
      * 发送超时时间（毫秒）
      */
     private int sendTimeLimit = 10000;
+
+    /**
+     * 获取允许的源
+     *
+     * @return 允许的源列表
+     */
+    public List<String> getAllowedOrigins() {
+        return allowedOrigins;
+    }
+
+    /**
+     * 设置允许的源
+     *
+     * @param allowedOrigins 允许的源列表
+     */
+    public void setAllowedOrigins(List<String> allowedOrigins) {
+        this.allowedOrigins = allowedOrigins;
+    }
+
+    /**
+     * 获取是否启用 SockJS
+     *
+     * @return 是否启用 SockJS
+     */
+    public boolean isSockJs() {
+        return sockJs;
+    }
+
+    /**
+     * 设置是否启用 SockJS
+     *
+     * @param sockJs 是否启用 SockJS
+     */
+    public void setSockJs(boolean sockJs) {
+        this.sockJs = sockJs;
+    }
+
+    /**
+     * 获取心跳间隔
+     *
+     * @return 心跳间隔（毫秒）
+     */
+    public long getHeartbeatInterval() {
+        return heartbeatInterval;
+    }
+
+    /**
+     * 设置心跳间隔
+     *
+     * @param heartbeatInterval 心跳间隔（毫秒）
+     */
+    public void setHeartbeatInterval(long heartbeatInterval) {
+        this.heartbeatInterval = heartbeatInterval;
+    }
+
+    /**
+     * 获取消息大小限制
+     *
+     * @return 消息大小限制（字节）
+     */
+    public int getMaxMessageSize() {
+        return maxMessageSize;
+    }
+
+    /**
+     * 设置消息大小限制
+     *
+     * @param maxMessageSize 消息大小限制（字节）
+     */
+    public void setMaxMessageSize(int maxMessageSize) {
+        this.maxMessageSize = maxMessageSize;
+    }
+
+    /**
+     * 获取发送超时时间
+     *
+     * @return 发送超时时间（毫秒）
+     */
+    public int getSendTimeLimit() {
+        return sendTimeLimit;
+    }
+
+    /**
+     * 设置发送超时时间
+     *
+     * @param sendTimeLimit 发送超时时间（毫秒）
+     */
+    public void setSendTimeLimit(int sendTimeLimit) {
+        this.sendTimeLimit = sendTimeLimit;
+    }
+
+    /**
+     * 获取端点列表
+     *
+     * @return 端点列表
+     */
+    public List<String> getEndpoints() {
+        return endpoints;
+    }
+
+    /**
+     * 设置端点列表
+     *
+     * @param endpoints 端点列表
+     */
+    public void setEndpoints(List<String> endpoints) {
+        this.endpoints = endpoints;
+    }
 }

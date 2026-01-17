@@ -1,4 +1,4 @@
-﻿package com.chua.rsocket.support.spi;
+package com.chua.rsocket.support.spi;
 
 import com.chua.common.support.core.annotation.Spi;
 import com.chua.rsocket.support.session.RSocketSessionTemplateImpl;
@@ -8,6 +8,8 @@ import com.chua.socket.support.properties.SocketProperties;
 import com.chua.socket.support.session.SocketSessionTemplate;
 import com.chua.socket.support.spi.SocketProvider;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
@@ -22,6 +24,8 @@ import java.util.List;
 @Slf4j
 @Spi("rsocket")
 public class RSocketProvider implements SocketProvider {
+
+    private static final Logger log = LoggerFactory.getLogger(RSocketProvider.class);
 
     @Override
     public SocketProtocol getProtocol() {

@@ -1,4 +1,4 @@
-﻿package com.chua.starter.sse.support;
+package com.chua.starter.sse.support;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import lombok.Builder;

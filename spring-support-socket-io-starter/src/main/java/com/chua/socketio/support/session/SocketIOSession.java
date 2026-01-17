@@ -1,7 +1,7 @@
-﻿package com.chua.socketio.support.session;
+package com.chua.socketio.support.session;
 
-import com.chua.common.support.json.Json;
 import com.chua.socket.support.properties.SocketProperties;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.chua.socket.support.session.SocketSession;
 import com.chua.socket.support.session.SocketUser;
 import com.corundumstudio.socketio.SocketIOClient;
@@ -88,7 +88,16 @@ public class SocketIOSession implements SocketSession {
     @Override
     public void send(String event, Object data) {
         if (client.isChannelOpen()) {
-            String msg = data instanceof String ? (String) data : Json.toJSONString(data);
+            String msg;
+            if (data instanceof String) {
+                msg = (String) data;
+            } else {
+                try {
+                    msg = new ObjectMapper().writeValueAsString(data);
+                } catch (Exception e) {
+                    msg = data.toString();
+                }
+            }
             client.sendEvent(event, msg);
         }
     }

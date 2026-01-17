@@ -167,6 +167,276 @@ public class SocketProperties {
     private boolean useLinuxNativeEpoll;
 
     /**
+     * 获取是否开启
+     *
+     * @return 是否开启
+     */
+    public boolean isEnable() {
+        return enable;
+    }
+
+    /**
+     * 设置是否开启
+     *
+     * @param enable 是否开启
+     */
+    public void setEnable(boolean enable) {
+        this.enable = enable;
+    }
+
+    /**
+     * 获取协议类型
+     *
+     * @return 协议类型
+     */
+    public SocketProtocol getProtocol() {
+        return protocol;
+    }
+
+    /**
+     * 设置协议类型
+     *
+     * @param protocol 协议类型
+     */
+    public void setProtocol(SocketProtocol protocol) {
+        this.protocol = protocol;
+    }
+
+    /**
+     * 获取房间配置列表
+     *
+     * @return 房间配置列表
+     */
+    public List<Room> getRoom() {
+        return room;
+    }
+
+    /**
+     * 设置房间配置列表
+     *
+     * @param room 房间配置列表
+     */
+    public void setRoom(List<Room> room) {
+        this.room = room;
+    }
+
+    /**
+     * 获取本地IP
+     *
+     * @return 本地IP
+     */
+    public String getHost() {
+        return host;
+    }
+
+    /**
+     * 设置本地IP
+     *
+     * @param host 本地IP
+     */
+    public void setHost(String host) {
+        this.host = host;
+    }
+
+    /**
+     * 获取编解码器类型
+     *
+     * @return 编解码器类型
+     */
+    public String getCodecType() {
+        return codecType;
+    }
+
+    /**
+     * 设置编解码器类型
+     *
+     * @param codecType 编解码器类型
+     */
+    public void setCodecType(String codecType) {
+        this.codecType = codecType;
+    }
+
+    /**
+     * 获取是否开启数据加密
+     *
+     * @return 是否开启数据加密
+     */
+    public boolean isEncryptEnabled() {
+        return encryptEnabled;
+    }
+
+    /**
+     * 设置是否开启数据加密
+     *
+     * @param encryptEnabled 是否开启数据加密
+     */
+    public void setEncryptEnabled(boolean encryptEnabled) {
+        this.encryptEnabled = encryptEnabled;
+    }
+
+    /**
+     * 获取加密密钥
+     *
+     * @return 加密密钥
+     */
+    public String getEncryptKey() {
+        return encryptKey;
+    }
+
+    /**
+     * 设置加密密钥
+     *
+     * @param encryptKey 加密密钥
+     */
+    public void setEncryptKey(String encryptKey) {
+        this.encryptKey = encryptKey;
+    }
+
+    /**
+     * 获取最大帧大小
+     *
+     * @return 最大帧大小
+     */
+    public int getMaxFrameSize() {
+        return maxFrameSize;
+    }
+
+    /**
+     * 设置最大帧大小
+     *
+     * @param maxFrameSize 最大帧大小
+     */
+    public void setMaxFrameSize(int maxFrameSize) {
+        this.maxFrameSize = maxFrameSize;
+    }
+
+    /**
+     * 获取Boss线程数
+     *
+     * @return Boss线程数
+     */
+    public int getBossCount() {
+        return bossCount;
+    }
+
+    /**
+     * 设置Boss线程数
+     *
+     * @param bossCount Boss线程数
+     */
+    public void setBossCount(int bossCount) {
+        this.bossCount = bossCount;
+    }
+
+    /**
+     * 获取工作线程数
+     *
+     * @return 工作线程数
+     */
+    public int getWorkCount() {
+        return workCount;
+    }
+
+    /**
+     * 设置工作线程数
+     *
+     * @param workCount 工作线程数
+     */
+    public void setWorkCount(int workCount) {
+        this.workCount = workCount;
+    }
+
+    /**
+     * 获取是否允许自定义请求
+     *
+     * @return 是否允许自定义请求
+     */
+    public boolean isAllowCustomRequests() {
+        return allowCustomRequests;
+    }
+
+    /**
+     * 设置是否允许自定义请求
+     *
+     * @param allowCustomRequests 是否允许自定义请求
+     */
+    public void setAllowCustomRequests(boolean allowCustomRequests) {
+        this.allowCustomRequests = allowCustomRequests;
+    }
+
+    /**
+     * 获取Ping消息超时时间
+     *
+     * @return Ping消息超时时间
+     */
+    public int getPingTimeout() {
+        return pingTimeout;
+    }
+
+    /**
+     * 设置Ping消息超时时间
+     *
+     * @param pingTimeout Ping消息超时时间
+     */
+    public void setPingTimeout(int pingTimeout) {
+        this.pingTimeout = pingTimeout;
+    }
+
+    /**
+     * 获取Ping消息间隔
+     *
+     * @return Ping消息间隔
+     */
+    public int getPingInterval() {
+        return pingInterval;
+    }
+
+    /**
+     * 设置Ping消息间隔
+     *
+     * @param pingInterval Ping消息间隔
+     */
+    public void setPingInterval(int pingInterval) {
+        this.pingInterval = pingInterval;
+    }
+
+    /**
+     * 获取认证工厂类名
+     *
+     * @return 认证工厂类名
+     */
+    public String getAuthFactory() {
+        return authFactory;
+    }
+
+    /**
+     * 设置认证工厂类名
+     *
+     * @param authFactory 认证工厂类名
+     */
+    public void setAuthFactory(String authFactory) {
+        this.authFactory = authFactory;
+    }
+
+    /**
+     * 获取是否使用Linux的Native Epoll
+     *
+     * @return 是否使用Linux的Native Epoll
+     */
+    public boolean isUseLinuxNativeEpoll() {
+        return useLinuxNativeEpoll;
+    }
+
+    /**
+     * 设置是否使用Linux的Native Epoll
+     *
+     * @param useLinuxNativeEpoll 是否使用Linux的Native Epoll
+     */
+    public void setUseLinuxNativeEpoll(boolean useLinuxNativeEpoll) {
+        this.useLinuxNativeEpoll = useLinuxNativeEpoll;
+    }
+
+    /**
      * 协议配置
      */
     @Data
@@ -277,6 +547,60 @@ public class SocketProperties {
          * 是否启用此房间
          */
         private boolean enable = true;
+
+        /**
+         * 获取客户端标识
+         *
+         * @return 客户端标识
+         */
+        public String getClientId() {
+            return clientId;
+        }
+
+        /**
+         * 设置客户端标识
+         *
+         * @param clientId 客户端标识
+         */
+        public void setClientId(String clientId) {
+            this.clientId = clientId;
+        }
+
+        /**
+         * 获取上下文路径
+         *
+         * @return 上下文路径
+         */
+        public String getContextPath() {
+            return contextPath;
+        }
+
+        /**
+         * 设置上下文路径
+         *
+         * @param contextPath 上下文路径
+         */
+        public void setContextPath(String contextPath) {
+            this.contextPath = contextPath;
+        }
+
+        /**
+         * 获取是否启用
+         *
+         * @return 是否启用
+         */
+        public boolean isEnable() {
+            return enable;
+        }
+
+        /**
+         * 设置是否启用
+         *
+         * @param enable 是否启用
+         */
+        public void setEnable(boolean enable) {
+            this.enable = enable;
+        }
 
         /**
          * 获取实际端口

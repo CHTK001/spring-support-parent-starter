@@ -8,6 +8,8 @@ import com.chua.starter.queue.SendResult;
 import com.chua.starter.queue.properties.QueueProperties;
 import com.rabbitmq.client.Channel;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.AcknowledgeMode;
 import org.springframework.amqp.core.AmqpTemplate;
 import org.springframework.amqp.core.MessageBuilder;
@@ -31,6 +33,7 @@ import java.util.concurrent.Executors;
 @Slf4j
 public class RabbitMessageTemplate implements MessageTemplate {
 
+    private static final Logger log = LoggerFactory.getLogger(RabbitMessageTemplate.class);
     private final AmqpTemplate amqpTemplate;
     private final ConnectionFactory connectionFactory;
     private final QueueProperties props;
@@ -190,7 +193,9 @@ public class RabbitMessageTemplate implements MessageTemplate {
     /**
      * RabbitMQ 手动确认实现
      */
+    @Slf4j
     private static class RabbitAcknowledgment implements Acknowledgment {
+        private static final Logger log = LoggerFactory.getLogger(RabbitAcknowledgment.class);
         private final Channel channel;
         private final long deliveryTag;
         private volatile boolean acknowledged = false;

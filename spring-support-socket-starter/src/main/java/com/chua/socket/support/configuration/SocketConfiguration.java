@@ -6,6 +6,8 @@ import com.chua.socket.support.properties.SocketProperties;
 import com.chua.socket.support.session.SocketSessionTemplate;
 import com.chua.socket.support.spi.SocketProvider;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static com.chua.starter.common.support.logger.ModuleLog.*;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
@@ -32,6 +34,8 @@ import java.util.stream.Collectors;
 @Slf4j
 @EnableConfigurationProperties(SocketProperties.class)
 public class SocketConfiguration {
+
+    private static final Logger log = LoggerFactory.getLogger(SocketConfiguration.class);
 
     /**
      * 创建多协议 Socket 会话模板集合
@@ -146,6 +150,7 @@ public class SocketConfiguration {
     @Slf4j
     public static class SocketLifecycle implements InitializingBean, DisposableBean {
 
+        private static final Logger log = LoggerFactory.getLogger(SocketLifecycle.class);
         private final Map<String, SocketSessionTemplate> templates;
         private final SocketProperties properties;
 

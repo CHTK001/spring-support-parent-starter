@@ -7,6 +7,8 @@ import com.chua.starter.queue.MessageTemplate;
 import com.chua.starter.queue.SendResult;
 import com.chua.starter.queue.properties.QueueProperties;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
 import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyContext;
 import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyStatus;
@@ -28,6 +30,7 @@ import java.util.concurrent.Executors;
 @Slf4j
 public class RocketMessageTemplate implements MessageTemplate {
 
+    private static final Logger log = LoggerFactory.getLogger(RocketMessageTemplate.class);
     private final RocketMQTemplate rocketMQTemplate;
     private final QueueProperties props;
     private final Map<String, DefaultMQPushConsumer> consumers = new ConcurrentHashMap<>();

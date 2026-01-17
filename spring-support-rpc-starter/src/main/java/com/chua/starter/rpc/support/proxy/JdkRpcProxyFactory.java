@@ -1,4 +1,4 @@
-﻿package com.chua.starter.rpc.support.proxy;
+package com.chua.starter.rpc.support.proxy;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;

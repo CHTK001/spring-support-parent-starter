@@ -1,6 +1,7 @@
-﻿package com.chua.starter.rpc.support.proxy;
+package com.chua.starter.rpc.support.proxy;
 
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationHandler;
 import java.util.ArrayList;
@@ -15,8 +16,9 @@ import java.util.List;
  * @version 1.0.0
  * @since 2024/04/07
  */
-@Slf4j
 public class RpcProxyFactoryManager {
+
+    private static final Logger log = LoggerFactory.getLogger(RpcProxyFactoryManager.class);
 
     private static final RpcProxyFactoryManager INSTANCE = new RpcProxyFactoryManager();
 

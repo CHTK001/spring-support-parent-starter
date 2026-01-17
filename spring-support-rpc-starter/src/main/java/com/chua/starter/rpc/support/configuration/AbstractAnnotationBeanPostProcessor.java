@@ -1,8 +1,9 @@
-﻿package com.chua.starter.rpc.support.configuration;
+package com.chua.starter.rpc.support.configuration;
 
 import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.rpc.support.attrbute.RpcAttribute;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.PropertyValues;
@@ -47,10 +48,11 @@ import static org.springframework.core.BridgeMethodResolver.isVisibilityBridgeMe
 /**
  * @author CH
  */
-@Slf4j
 public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanDefinitionPostProcessor,
         ApplicationContextAware,
         BeanFactoryAware, BeanClassLoaderAware, EnvironmentAware, DisposableBean, SmartInstantiationAwareBeanPostProcessor {
+
+    protected static final Logger log = LoggerFactory.getLogger(AbstractAnnotationBeanPostProcessor.class);
 
     private final static int CACHE_SIZE = Integer.getInteger("", 32);
 

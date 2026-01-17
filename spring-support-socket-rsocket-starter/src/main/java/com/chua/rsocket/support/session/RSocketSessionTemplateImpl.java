@@ -1,12 +1,14 @@
-﻿package com.chua.rsocket.support.session;
+package com.chua.rsocket.support.session;
 
-import com.chua.common.support.json.Json;
 import com.chua.socket.support.SocketListener;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.chua.socket.support.properties.SocketProperties;
 import com.chua.socket.support.session.SocketSession;
 import com.chua.socket.support.session.SocketSessionTemplate;
 import com.chua.socket.support.session.SocketUser;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -32,6 +34,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @Slf4j
 public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements SocketSessionTemplate {
 
+    private static final Logger log = LoggerFactory.getLogger(RSocketSessionTemplateImpl.class);
+    private static final ObjectMapper objectMapper = new ObjectMapper();
     private final SocketProperties properties;
     private final List<SocketListener> listeners;
     
@@ -111,7 +115,7 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
         
         // 解析消息并触发事件
         try {
-            Map<String, Object> msg = Json.fromJson(payload, Map.class);
+            Map<String, Object> msg = objectMapper.readValue(payload, Map.class);
             String event = (String) msg.get("event");
             Object data = msg.get("data");
             
@@ -292,11 +296,16 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
      * 创建消息
      */
     private String createMessage(String event, Object data) {
-        Map<String, Object> msg = Map.of(
-                "event", event,
-                "data", data,
-                "timestamp", System.currentTimeMillis()
-        );
-        return Json.toJSONString(msg);
+        try {
+            Map<String, Object> msg = Map.of(
+                    "event", event,
+                    "data", data,
+                    "timestamp", System.currentTimeMillis()
+            );
+            return objectMapper.writeValueAsString(msg);
+        } catch (Exception e) {
+            log.error("[RSocket] 创建消息失败", e);
+            return "{}";
+        }
     }
 }

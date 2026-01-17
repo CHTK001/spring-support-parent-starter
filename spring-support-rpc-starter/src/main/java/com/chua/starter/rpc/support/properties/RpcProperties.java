@@ -1,4 +1,4 @@
-﻿package com.chua.starter.rpc.support.properties;
+package com.chua.starter.rpc.support.properties;
 
 import com.chua.common.support.rpc.RpcConsumerConfig;
 import com.chua.common.support.rpc.RpcProtocolConfig;
@@ -98,5 +98,14 @@ public class RpcProperties {
 
     public String getApplicationName() {
         return SpringBeanUtils.resolvePlaceholders(applicationName);
+    }
+
+    /**
+     * 获取 RPC 类型
+     *
+     * @return RPC 类型
+     */
+    public RpcType getType() {
+        return type;
     }
 }

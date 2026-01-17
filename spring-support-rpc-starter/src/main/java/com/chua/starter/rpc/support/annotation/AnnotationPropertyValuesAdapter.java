@@ -1,4 +1,4 @@
-﻿package com.chua.starter.rpc.support.annotation;
+package com.chua.starter.rpc.support.annotation;
 
 
 import org.springframework.beans.MutablePropertyValues;

@@ -1,8 +1,10 @@
-﻿package com.chua.starter.socket.websocket.template;
+package com.chua.starter.socket.websocket.template;
 
 import com.chua.starter.socket.websocket.session.WebSocketSessionManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -22,7 +24,17 @@ import java.util.Collection;
 @RequiredArgsConstructor
 public class WebSocketTemplate {
 
+    private static final Logger log = LoggerFactory.getLogger(WebSocketTemplate.class);
     private final WebSocketSessionManager sessionManager;
+
+    /**
+     * 构造器
+     *
+     * @param sessionManager 会话管理器
+     */
+    public WebSocketTemplate(WebSocketSessionManager sessionManager) {
+        this.sessionManager = sessionManager;
+    }
 
     /**
      * 发送消息到指定会话
@@ -111,3 +123,4 @@ public class WebSocketTemplate {
         }
     }
 }
+

@@ -1,9 +1,11 @@
-﻿package com.chua.rsocket.support.session;
+package com.chua.rsocket.support.session;
 
-import com.chua.common.support.json.Json;
 import com.chua.socket.support.session.SocketSession;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.chua.socket.support.session.SocketUser;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -22,6 +24,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class RSocketSessionImpl implements SocketSession {
 
+    private static final Logger log = LoggerFactory.getLogger(RSocketSessionImpl.class);
+    private static final ObjectMapper objectMapper = new ObjectMapper();
     private final WebSocketSession session;
     private final Map<String, Object> attributes = new ConcurrentHashMap<>();
     private String clientId;
@@ -132,12 +136,17 @@ public class RSocketSessionImpl implements SocketSession {
      * 创建消息
      */
     private String createMessage(String event, Object data) {
-        String dataStr = data instanceof String ? (String) data : Json.toJSONString(data);
-        Map<String, Object> msg = Map.of(
-                "event", event,
-                "data", dataStr,
-                "timestamp", System.currentTimeMillis()
-        );
-        return Json.toJSONString(msg);
+        try {
+            String dataStr = data instanceof String ? (String) data : objectMapper.writeValueAsString(data);
+            Map<String, Object> msg = Map.of(
+                    "event", event,
+                    "data", dataStr,
+                    "timestamp", System.currentTimeMillis()
+            );
+            return objectMapper.writeValueAsString(msg);
+        } catch (Exception e) {
+            log.error("[RSocket] 创建消息失败", e);
+            return "{}";
+        }
     }
 }

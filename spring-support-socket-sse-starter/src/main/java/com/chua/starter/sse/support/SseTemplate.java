@@ -1,16 +1,16 @@
-﻿package com.chua.starter.sse.support;
+package com.chua.starter.sse.support;
 
 import ch.rasc.sse.eventbus.SseEvent;
 import ch.rasc.sse.eventbus.SseEventBus;
 import ch.rasc.sse.eventbus.config.EnableSseEventBus;
-import com.chua.common.support.json.Json;
-import com.chua.common.support.utils.IdUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 
 /**
@@ -20,6 +20,9 @@ import java.util.List;
  */
 @EnableSseEventBus
 public class SseTemplate {
+    
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+    
     @Autowired
     private SseEventBus sseEventBus;
 
@@ -44,16 +47,19 @@ public class SseTemplate {
      * @param clientIds  通知的客户端
      */
     public void emit(SseMessage sseMessage, Duration retry, String... clientIds) {
-        SseEvent.Builder builder = SseEvent.builder()
-                .id(IdUtils.uuid())
-                .event(sseMessage.getEvent())
-                .clientIds(Arrays.asList(clientIds))
-                .data(Json.toJson(sseMessage));
-        if (null != retry) {
-            builder.retry(retry);
+        try {
+            SseEvent.Builder builder = SseEvent.builder()
+                    .id(UUID.randomUUID().toString())
+                    .event(sseMessage.getEvent())
+                    .clientIds(Arrays.asList(clientIds))
+                    .data(objectMapper.writeValueAsString(sseMessage));
+            if (null != retry) {
+                builder.retry(retry);
+            }
+            this.sseEventBus.handleEvent(builder.build());
+        } catch (Exception e) {
+            throw new RuntimeException("发送SSE消息失败", e);
         }
-        this.sseEventBus.handleEvent(builder.build());
-
     }
     /**
      * 通知
