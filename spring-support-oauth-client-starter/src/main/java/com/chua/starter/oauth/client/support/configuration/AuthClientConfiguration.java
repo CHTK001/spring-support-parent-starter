@@ -1,6 +1,6 @@
 package com.chua.starter.oauth.client.support.configuration;
 
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.spring.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.oauth.AuthService;
 import com.chua.starter.oauth.client.support.filter.AuthFilter;
 import com.chua.starter.oauth.client.support.interceptor.PermissionInterceptor;

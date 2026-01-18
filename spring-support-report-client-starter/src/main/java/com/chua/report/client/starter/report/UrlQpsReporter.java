@@ -1,4 +1,4 @@
-﻿package com.chua.report.client.starter.report;
+package com.chua.report.client.starter.report;
 
 import com.chua.report.client.starter.sync.MonitorTopics;
 import com.chua.sync.support.client.SyncClient;
@@ -26,23 +26,61 @@ import java.util.concurrent.atomic.AtomicLong;
 @Slf4j
 public class UrlQpsReporter {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(UrlQpsReporter.class);
+
     private static final UrlQpsReporter INSTANCE = new UrlQpsReporter();
 
     @Getter
     @Setter
     private SyncClient syncClient;
 
+    /**
+     * 设置 SyncClient
+     *
+     * @param syncClient SyncClient 实例
+     */
+    public void setSyncClient(SyncClient syncClient) {
+        this.syncClient = syncClient;
+    }
+
     @Getter
     @Setter
     private String appName;
+
+    /**
+     * 设置应用名称
+     *
+     * @param appName 应用名称
+     */
+    public void setAppName(String appName) {
+        this.appName = appName;
+    }
 
     @Getter
     @Setter
     private String host;
 
+    /**
+     * 设置主机地址
+     *
+     * @param host 主机地址
+     */
+    public void setHost(String host) {
+        this.host = host;
+    }
+
     @Getter
     @Setter
     private long intervalSeconds = 30;
+
+    /**
+     * 设置上报间隔
+     *
+     * @param intervalSeconds 上报间隔（秒）
+     */
+    public void setIntervalSeconds(long intervalSeconds) {
+        this.intervalSeconds = intervalSeconds;
+    }
 
     /**
      * URL 统计数据

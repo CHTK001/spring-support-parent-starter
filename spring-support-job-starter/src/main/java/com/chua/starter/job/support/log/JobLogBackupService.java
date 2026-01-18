@@ -1,9 +1,9 @@
-﻿package com.chua.starter.job.support.log;
+package com.chua.starter.job.support.log;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.chua.common.support.json.Json;
-import com.chua.common.support.utils.FileUtils;
-import com.chua.common.support.utils.IoUtils;
+import com.chua.common.support.text.json.Json;
+import com.chua.common.support.core.utils.FileUtils;
+import com.chua.common.support.core.utils.IoUtils;
 import com.chua.starter.job.support.JobProperties;
 import com.chua.starter.job.support.entity.SysJobLog;
 import com.chua.starter.job.support.entity.SysJobLogBackup;

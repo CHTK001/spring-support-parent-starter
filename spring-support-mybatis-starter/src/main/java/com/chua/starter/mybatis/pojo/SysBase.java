@@ -28,14 +28,14 @@ public class SysBase implements Serializable {
     @TableField(fill = FieldFill.INSERT)
     @Schema(description = "创建人姓名")
     @ApiFieldIgnore(IgnoreGroup.class)
-    private String createName;
+    protected String createName;
     /**
      * 创建人
      */
     @TableField(fill = FieldFill.INSERT)
     @Schema(description = "创建人")
     @ApiFieldIgnore(IgnoreGroup.class)
-    private Integer createBy;
+    protected Integer createBy;
 
     /**
      * 创建时间
@@ -45,7 +45,7 @@ public class SysBase implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     @JsonSerialize(using = LocalDateTimeSerializer.class)
     @JsonDeserialize(using = LocalDateTimeDeserializer.class)
-    private LocalDateTime createTime;
+    protected LocalDateTime createTime;
 
     /**
      * 更新时间
@@ -55,7 +55,7 @@ public class SysBase implements Serializable {
     @JsonSerialize(using = LocalDateTimeSerializer.class)
     @Schema(description = "更新时间")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
-    private LocalDateTime updateTime;
+    protected LocalDateTime updateTime;
 
 
     /**
@@ -64,7 +64,7 @@ public class SysBase implements Serializable {
     @TableField(fill = FieldFill.UPDATE)
     @Schema(description = "更新人姓名")
     @ApiFieldIgnore(IgnoreGroup.class)
-    private String updateName;
+    protected String updateName;
 
     /**
      * 更新人
@@ -72,5 +72,5 @@ public class SysBase implements Serializable {
     @TableField(fill = FieldFill.UPDATE)
     @Schema(description = "更新人")
     @ApiFieldIgnore(IgnoreGroup.class)
-    private Integer updateBy;
+    protected Integer updateBy;
 }

@@ -1,4 +1,4 @@
-﻿package com.chua.report.client.starter.job.execute;
+package com.chua.report.client.starter.job.execute;
 
 import com.chua.common.support.protocol.request.ServletRequest;
 import com.chua.common.support.protocol.request.ServletResponse;

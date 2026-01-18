@@ -1,4 +1,4 @@
-﻿package com.chua.starter.job.support.handler;
+package com.chua.starter.job.support.handler;
 
 import com.chua.starter.job.support.log.DefaultJobLog;
 import lombok.Getter;

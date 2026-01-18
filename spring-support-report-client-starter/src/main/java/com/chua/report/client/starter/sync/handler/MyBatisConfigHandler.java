@@ -1,7 +1,7 @@
-﻿package com.chua.report.client.starter.sync.handler;
+package com.chua.report.client.starter.sync.handler;
 
 import com.chua.common.support.core.annotation.Spi;
-import com.chua.common.support.utils.MapUtils;
+import com.chua.common.support.core.utils.MapUtils;
 import com.chua.report.client.starter.sync.MonitorTopics;
 import com.chua.sync.support.spi.SyncMessageHandler;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +33,8 @@ import java.util.*;
 @Slf4j
 @Spi("myBatisConfigHandler")
 public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationContextAware {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(MyBatisConfigHandler.class);
 
     private ApplicationContext applicationContext;
 

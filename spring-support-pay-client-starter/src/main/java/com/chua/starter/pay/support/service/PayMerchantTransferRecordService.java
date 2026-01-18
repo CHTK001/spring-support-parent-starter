@@ -1,4 +1,4 @@
-﻿package com.chua.starter.pay.support.service;
+package com.chua.starter.pay.support.service;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.pay.support.entity.PayMerchantTransferRecord;

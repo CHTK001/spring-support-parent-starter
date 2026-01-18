@@ -7,7 +7,8 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.35</version>
+        <version>${revision}</version>
+        
     </parent>
 
     <artifactId>spring-support-report-client-arthas-starter</artifactId>
@@ -30,7 +31,7 @@
         <dependency>
             <groupId>com.taobao.arthas</groupId>
             <artifactId>arthas-agent-attach</artifactId>
-            <version>3.7.2</version>
+            
         </dependency>
 
         <dependency>
@@ -51,9 +52,24 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven-compiler-plugin.version}</version>
                 <configuration>
                     <source>25</source>
                     <target>25</target>
+                    <release>25</release>
+                    <encoding>UTF-8</encoding>
+                    <useIncrementalCompilation>true</useIncrementalCompilation>
+                    <compilerArgs>
+                        <arg>-parameters</arg>
+                        <arg>-J--enable-native-access=ALL-UNNAMED</arg>
+                    </compilerArgs>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
         </plugins>

@@ -1,4 +1,4 @@
-﻿package com.chua.starter.job.support.glue;
+package com.chua.starter.job.support.glue;
 
 import com.chua.starter.job.support.handler.JobHandler;
 import groovy.lang.GroovyClassLoader;

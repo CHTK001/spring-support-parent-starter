@@ -1,4 +1,4 @@
-﻿package com.chua.starter.pay.support.callback;
+package com.chua.starter.pay.support.callback;
 
 import com.alibaba.fastjson.JSONObject;
 import com.chua.starter.pay.support.callback.parser.CallbackNotificationParser;
@@ -8,8 +8,8 @@ import com.chua.starter.pay.support.pojo.PayMerchantConfigWechatWrapper;
 import com.chua.starter.pay.support.service.PayMerchantConfigWechatService;
 import com.chua.starter.pay.support.service.PayMerchantFailureRecordService;
 import com.chua.starter.pay.support.service.PayMerchantOrderService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.*;
  * @author CH
  * @since 2025/9/29 16:52
  */
-@Api(tags = "支付回调(后端内部使用)")
+@Tag(name = "支付回调(后端内部使用)")
 @RestController
 @RequestMapping("/v2/pay/callback/wechat/order")
 @Slf4j
@@ -45,7 +45,7 @@ public class WechatPayOrderCallbackController {
      * @return
      */
     @PostMapping(value = "/{orderCode}", produces = MediaType.APPLICATION_XML_VALUE)
-    @ApiOperation("订单结果通知")
+    @Operation(summary = "订单结果通知")
     public ResponseEntity<?> notifyOrder(
             @RequestBody String requestBody,
             @PathVariable("orderCode") String payMerchantCode,

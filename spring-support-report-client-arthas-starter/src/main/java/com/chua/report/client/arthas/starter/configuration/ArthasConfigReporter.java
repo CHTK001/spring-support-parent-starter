@@ -1,10 +1,8 @@
-﻿package com.chua.report.client.arthas.starter.configuration;
+package com.chua.report.client.arthas.starter.configuration;
 
-import com.chua.common.support.protocol.server.ProtocolServer;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.network.protocol.server.ProtocolServer;
+import com.chua.common.support.core.utils.StringUtils;
 import com.chua.report.client.arthas.starter.properties.ArthasClientProperties;
-import com.chua.starter.common.support.project.SpringProjects;
-import com.chua.starter.common.support.utils.EnvironmentUtils;
 import com.taobao.arthas.agent.attach.ArthasAgent;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.ObjectProvider;
@@ -42,8 +40,11 @@ public class ArthasConfigReporter implements InitializingBean {
             config.put("arthas.tunnelServer", tunnelAddress);
         }
         // 允许使用 spring.application.name 作为 appName（若存在）
-        config.put("arthas.appName", EnvironmentUtils.resolvePlaceholders(arthasClientProperties.getAgentName(), SpringProjects.getNodeId()));
-        config.put("arthas.agentId", EnvironmentUtils.resolvePlaceholders(arthasClientProperties.getAgentId(), SpringProjects.getNodeId()));
+        String nodeId = environment.getProperty("spring.application.name", "unknown");
+        String appName = environment.resolvePlaceholders(arthasClientProperties.getAgentName() != null ? arthasClientProperties.getAgentName() : "${spring.application.name:" + nodeId + "}");
+        String agentId = environment.resolvePlaceholders(arthasClientProperties.getAgentId() != null ? arthasClientProperties.getAgentId() : nodeId);
+        config.put("arthas.appName", appName);
+        config.put("arthas.agentId", agentId);
         // 默认启用 telnet/http 端口，保留 Arthas 默认值即可
         try {
             ArthasAgent.attach(config);

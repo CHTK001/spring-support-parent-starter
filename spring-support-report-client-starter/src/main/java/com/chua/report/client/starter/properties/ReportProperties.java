@@ -1,4 +1,4 @@
-﻿package com.chua.report.client.starter.properties;
+package com.chua.report.client.starter.properties;
 
 import com.chua.report.client.starter.report.MetricType;
 import lombok.Data;
@@ -118,6 +118,7 @@ public class ReportProperties {
      */
     private UrlQps urlQps = new UrlQps();
 
+
     /**
      * 客户端信息配置
      */
@@ -131,6 +132,7 @@ public class ReportProperties {
          * </p>
          */
         private String host;
+
     }
 
     /**

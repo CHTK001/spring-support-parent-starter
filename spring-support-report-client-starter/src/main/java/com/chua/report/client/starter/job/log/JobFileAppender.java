@@ -1,6 +1,6 @@
-﻿package com.chua.report.client.starter.job.log;
+package com.chua.report.client.starter.job.log;
 
-import com.chua.common.support.utils.FileUtils;
+import com.chua.common.support.core.utils.FileUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.*;
@@ -11,6 +11,8 @@ import java.util.Date;
 
 @Slf4j
 public class JobFileAppender {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(JobFileAppender.class);
 
 
     /**

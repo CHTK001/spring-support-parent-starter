@@ -1,4 +1,4 @@
-﻿package com.chua.report.client.starter.job.log;
+package com.chua.report.client.starter.job.log;
 
 
 import lombok.AllArgsConstructor;
@@ -19,8 +19,23 @@ import java.io.Serializable;
 @NoArgsConstructor
 public class LogResult implements Serializable {
     private static final long serialVersionUID = 42L;
+    /**
+     * 起始行号
+     */
     private int fromLineNum;
+
+    /**
+     * 结束行号
+     */
     private int toLineNum;
+
+    /**
+     * 日志内容
+     */
     private String logContent;
+
+    /**
+     * 是否结束
+     */
     private boolean isEnd;
 }

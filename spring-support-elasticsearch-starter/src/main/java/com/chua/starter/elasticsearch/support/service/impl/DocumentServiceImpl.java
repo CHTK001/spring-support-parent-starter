@@ -1,15 +1,15 @@
-﻿package com.chua.starter.elasticsearch.support.service.impl;
+package com.chua.starter.elasticsearch.support.service.impl;
 
-import com.chua.common.support.bean.BeanUtils;
-import com.chua.common.support.json.Json;
-import com.chua.common.support.json.JsonObject;
+import com.chua.common.support.base.bean.BeanUtils;
+import com.chua.common.support.text.json.Json;
+import com.chua.common.support.text.json.JsonObject;
 import com.chua.common.support.lang.code.PageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.elasticsearch.support.pojo.Mapping;
 import com.chua.starter.elasticsearch.support.service.DocumentService;
 import com.google.common.base.Strings;
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
@@ -42,11 +42,24 @@ import java.util.*;
  * @author CH
  */
 @Slf4j
-@AllArgsConstructor(onConstructor_ = @Autowired)
 public class DocumentServiceImpl implements DocumentService {
 
     private final ElasticsearchRestTemplate elasticsearchRestTemplate;
     private final RestHighLevelClient restHighLevelClient;
+    
+    // Lombok @Slf4j 生成的 log 字段（如果 Lombok 未生效，使用这个字段）
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(DocumentServiceImpl.class);
+
+    /**
+     * 构造器
+     *
+     * @param elasticsearchRestTemplate ES Rest 模板
+     * @param restHighLevelClient ES 高级客户端
+     */
+    public DocumentServiceImpl(ElasticsearchRestTemplate elasticsearchRestTemplate, RestHighLevelClient restHighLevelClient) {
+        this.elasticsearchRestTemplate = elasticsearchRestTemplate;
+        this.restHighLevelClient = restHighLevelClient;
+    }
 
     /**
      * 检查人脸索引

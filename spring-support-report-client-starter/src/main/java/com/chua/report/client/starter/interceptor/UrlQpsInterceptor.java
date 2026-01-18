@@ -1,4 +1,4 @@
-﻿package com.chua.report.client.starter.interceptor;
+package com.chua.report.client.starter.interceptor;
 
 import com.chua.report.client.starter.report.UrlQpsReporter;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,6 +18,8 @@ import org.springframework.web.servlet.HandlerInterceptor;
  */
 @Slf4j
 public class UrlQpsInterceptor implements HandlerInterceptor {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(UrlQpsInterceptor.class);
 
     private static final String ATTR_START_TIME = "urlQps_startTime";
 

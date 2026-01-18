@@ -1,6 +1,6 @@
-﻿package com.chua.starter.job.support.glue;
+package com.chua.starter.job.support.glue;
 
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.spring.support.configuration.SpringBeanUtils;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

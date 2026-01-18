@@ -4,7 +4,7 @@ import com.chua.common.support.core.annotation.Ignore;
 import com.chua.common.support.core.spi.ServiceProvider;
 import com.chua.common.support.core.utils.ObjectUtils;
 import com.chua.common.support.core.utils.StringUtils;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.spring.support.configuration.SpringBeanUtils;
 import com.chua.starter.oauth.client.support.annotation.TokenForIgnore;
 import com.chua.starter.oauth.client.support.entity.AppKeySecret;
 import com.chua.starter.oauth.client.support.enums.UpgradeType;

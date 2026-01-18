@@ -1,4 +1,4 @@
-﻿package com.chua.report.client.starter.job;
+package com.chua.report.client.starter.job;
 
 
 import lombok.Data;
@@ -33,4 +33,100 @@ public class TriggerParam {
     private int broadcastIndex; // 广播执行的当前索引
     private int broadcastTotal; // 广播执行的总任务数
 
+    // 手动添加 getter 方法，确保 Lombok 未生效时也能编译通过
+    public String getExecutorHandler() {
+        return executorHandler;
+    }
+
+    public long getGlueUpdatetime() {
+        return glueUpdatetime;
+    }
+
+    public String getGlueSource() {
+        return glueSource;
+    }
+
+    public int getJobId() {
+        return jobId;
+    }
+
+    public String getGlueType() {
+        return glueType;
+    }
+
+    public long getLogId() {
+        return logId;
+    }
+
+    public long getLogDateTime() {
+        return logDateTime;
+    }
+
+    public String getExecutorParams() {
+        return executorParams;
+    }
+
+    public int getBroadcastIndex() {
+        return broadcastIndex;
+    }
+
+    public int getBroadcastTotal() {
+        return broadcastTotal;
+    }
+
+    public int getExecutorTimeout() {
+        return executorTimeout;
+    }
+
+    public void setJobId(int jobId) {
+        this.jobId = jobId;
+    }
+
+    public void setProfile(String profile) {
+        this.profile = profile;
+    }
+
+    public void setExecutorHandler(String executorHandler) {
+        this.executorHandler = executorHandler;
+    }
+
+    public void setExecutorParams(String executorParams) {
+        this.executorParams = executorParams;
+    }
+
+    public void setExecutorBlockStrategy(String executorBlockStrategy) {
+        this.executorBlockStrategy = executorBlockStrategy;
+    }
+
+    public void setExecutorTimeout(int executorTimeout) {
+        this.executorTimeout = executorTimeout;
+    }
+
+    public void setLogId(long logId) {
+        this.logId = logId;
+    }
+
+    public void setLogDateTime(long logDateTime) {
+        this.logDateTime = logDateTime;
+    }
+
+    public void setGlueType(String glueType) {
+        this.glueType = glueType;
+    }
+
+    public void setGlueSource(String glueSource) {
+        this.glueSource = glueSource;
+    }
+
+    public void setGlueUpdatetime(long glueUpdatetime) {
+        this.glueUpdatetime = glueUpdatetime;
+    }
+
+    public void setBroadcastIndex(int broadcastIndex) {
+        this.broadcastIndex = broadcastIndex;
+    }
+
+    public void setBroadcastTotal(int broadcastTotal) {
+        this.broadcastTotal = broadcastTotal;
+    }
 }

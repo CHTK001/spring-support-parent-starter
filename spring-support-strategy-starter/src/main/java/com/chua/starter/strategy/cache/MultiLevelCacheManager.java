@@ -1,6 +1,6 @@
-﻿package com.chua.starter.strategy.cache;
+package com.chua.starter.strategy.cache;
 
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.spring.support.configuration.SpringBeanUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.boot.context.properties.bind.Binder;

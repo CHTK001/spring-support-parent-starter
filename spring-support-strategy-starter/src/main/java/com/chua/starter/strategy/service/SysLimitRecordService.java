@@ -1,4 +1,4 @@
-﻿package com.chua.starter.strategy.service;
+package com.chua.starter.strategy.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.starter.strategy.entity.SysLimitRecord;

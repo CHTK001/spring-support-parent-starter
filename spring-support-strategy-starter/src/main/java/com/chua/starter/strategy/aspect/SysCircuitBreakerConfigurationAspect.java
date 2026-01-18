@@ -1,4 +1,4 @@
-﻿package com.chua.starter.strategy.aspect;
+package com.chua.starter.strategy.aspect;
 
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.strategy.entity.SysCircuitBreakerConfiguration;

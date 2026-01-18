@@ -1,8 +1,10 @@
-﻿package com.chua.starter.job.support.scheduler;
+package com.chua.starter.job.support.scheduler;
 
 import com.chua.starter.job.support.JobProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -46,6 +48,7 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @RequiredArgsConstructor
 public class RingTriggerHandler implements TriggerHandler, Runnable {
+    private static final Logger log = LoggerFactory.getLogger(RingTriggerHandler.class);
 
     private volatile boolean ringThreadToStop = false;
     private static final Map<Integer, List<Integer>> ringData = new ConcurrentHashMap<>();

@@ -1,6 +1,6 @@
-﻿package com.chua.sync.support.server;
+package com.chua.sync.support.server;
 
-import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.core.utils.ServiceProvider;
 import com.chua.sync.support.pojo.ClientInfo;
 import com.chua.sync.support.properties.SyncProperties;
 import com.chua.sync.support.spi.SyncMessageHandler;
@@ -82,7 +82,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
      * 加载消息处理器
      */
     private void loadHandlers() {
-        ServiceProvider<SyncMessageHandler> serviceProvider = ServiceProvider.of(SyncMessageHandler.class);
+        com.chua.common.support.core.spi.ServiceProvider<SyncMessageHandler> serviceProvider = ServiceProvider.of(SyncMessageHandler.class);
         handlers.addAll(serviceProvider.collect());
         handlers.sort(Comparator.comparingInt(SyncMessageHandler::getOrder));
         log.info("[Sync] 加载 {} 个消息处理器", highlight(handlers.size()));
@@ -139,7 +139,9 @@ public class SyncServer implements InitializingBean, DisposableBean {
     private void registerHandlersToInstance(SyncServerInstance instance, SyncProperties.ServerInstance config) {
         // 合并全局配置和实例配置的 topics
         Map<String, String> topics = new HashMap<>(syncProperties.getTopics());
-        topics.putAll(config.getTopics());
+        if (config.getTopics() != null) {
+            topics.putAll(config.getTopics());
+        }
 
         for (Map.Entry<String, String> entry : topics.entrySet()) {
             String topic = entry.getKey();

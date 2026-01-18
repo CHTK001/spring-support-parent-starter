@@ -1,4 +1,4 @@
-﻿package com.chua.plugin.support.configuration;
+package com.chua.plugin.support.configuration;
 
 import com.chua.common.support.objects.ConfigureObjectContext;
 import com.chua.common.support.objects.DefaultConfigureObjectContext;

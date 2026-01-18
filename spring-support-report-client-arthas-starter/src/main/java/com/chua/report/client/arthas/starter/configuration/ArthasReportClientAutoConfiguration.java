@@ -1,6 +1,6 @@
-﻿package com.chua.report.client.arthas.starter.configuration;
+package com.chua.report.client.arthas.starter.configuration;
 
-import com.chua.common.support.protocol.server.ProtocolServer;
+import com.chua.common.support.network.protocol.server.ProtocolServer;
 import com.chua.report.client.arthas.starter.environment.ArthasReportDiscoveryEnvironment;
 import com.chua.report.client.arthas.starter.properties.ArthasClientProperties;
 import org.springframework.beans.factory.ObjectProvider;
@@ -22,8 +22,8 @@ import org.springframework.core.env.Environment;
 public class ArthasReportClientAutoConfiguration {
 
     @Bean
-    public ArthasReportDiscoveryEnvironment arthasReportDiscoveryEnvironment(ArthasClientProperties properties) {
-        return new ArthasReportDiscoveryEnvironment(properties);
+    public ArthasReportDiscoveryEnvironment arthasReportDiscoveryEnvironment(ArthasClientProperties properties, Environment environment) {
+        return new ArthasReportDiscoveryEnvironment(properties, environment);
     }
     @Bean
     public ArthasConfigReporter arthasConfigReporter(ArthasClientProperties properties,

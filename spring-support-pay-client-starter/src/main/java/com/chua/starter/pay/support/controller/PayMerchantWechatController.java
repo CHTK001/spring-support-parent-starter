@@ -1,8 +1,8 @@
-﻿package com.chua.starter.pay.support.controller;
+package com.chua.starter.pay.support.controller;
 
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.validator.group.SaveGroup;
+import com.chua.common.support.base.validator.group.SaveGroup;
 import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.mybatis.utils.ReturnPageResultUtils;
 import com.chua.starter.pay.support.entity.PayMerchant;

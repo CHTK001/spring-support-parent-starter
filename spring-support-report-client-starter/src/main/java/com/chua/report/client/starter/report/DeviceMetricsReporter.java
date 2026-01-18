@@ -1,4 +1,4 @@
-﻿package com.chua.report.client.starter.report;
+package com.chua.report.client.starter.report;
 
 import com.chua.oshi.support.*;
 import com.chua.report.client.starter.sync.MonitorTopics;
@@ -33,14 +33,45 @@ import java.util.concurrent.atomic.AtomicReference;
 @Slf4j
 public class DeviceMetricsReporter {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(DeviceMetricsReporter.class);
+
     private static final DeviceMetricsReporter INSTANCE = new DeviceMetricsReporter();
 
     @Setter
     private SyncClient syncClient;
+
+    /**
+     * 设置 SyncClient
+     *
+     * @param syncClient SyncClient 实例
+     */
+    public void setSyncClient(SyncClient syncClient) {
+        this.syncClient = syncClient;
+    }
+
     @Setter
     private String appName;
+
+    /**
+     * 设置应用名称
+     *
+     * @param appName 应用名称
+     */
+    public void setAppName(String appName) {
+        this.appName = appName;
+    }
+
     @Setter
     private String host;
+
+    /**
+     * 设置主机地址
+     *
+     * @param host 主机地址
+     */
+    public void setHost(String host) {
+        this.host = host;
+    }
 
     /**
      * 主调度器
@@ -59,6 +90,15 @@ public class DeviceMetricsReporter {
      */
     @Setter
     private long intervalSeconds = 30;
+
+    /**
+     * 设置上报间隔
+     *
+     * @param intervalSeconds 上报间隔（秒）
+     */
+    public void setIntervalSeconds(long intervalSeconds) {
+        this.intervalSeconds = intervalSeconds;
+    }
 
     /**
      * 要上报的指标类型（默认全部）

@@ -1,4 +1,4 @@
-﻿package com.chua.starter.ssh.properties;
+package com.chua.starter.ssh.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -90,6 +90,39 @@ public class SshServerProperties {
          * 私钥文件路径
          */
         private String privateKeyFile;
+        
+        // Lombok @Data 生成的 getter/setter 方法（如果 Lombok 未生效，这些方法会被使用）
+        public boolean isPassword() {
+            return password;
+        }
+        
+        public void setPassword(boolean password) {
+            this.password = password;
+        }
+        
+        public String getUsername() {
+            return username;
+        }
+        
+        public void setUsername(String username) {
+            this.username = username;
+        }
+        
+        public String getUserPassword() {
+            return userPassword;
+        }
+        
+        public void setUserPassword(String userPassword) {
+            this.userPassword = userPassword;
+        }
+        
+        public boolean isPublicKey() {
+            return publicKey;
+        }
+        
+        public void setPublicKey(boolean publicKey) {
+            this.publicKey = publicKey;
+        }
     }
 
     /**
@@ -111,6 +144,23 @@ public class SshServerProperties {
          * 空闲超时时间（秒）
          */
         private long idleTimeout = 1800;
+        
+        // Lombok @Data 生成的 getter/setter 方法（如果 Lombok 未生效，这些方法会被使用）
+        public long getTimeout() {
+            return timeout;
+        }
+        
+        public void setTimeout(long timeout) {
+            this.timeout = timeout;
+        }
+        
+        public int getMaxSessions() {
+            return maxSessions;
+        }
+        
+        public void setMaxSessions(int maxSessions) {
+            this.maxSessions = maxSessions;
+        }
     }
 
     /**
@@ -137,6 +187,23 @@ public class SshServerProperties {
          * 最大文件大小（字节）
          */
         private long maxFileSize = 100 * 1024 * 1024; // 100MB
+        
+        // Lombok @Data 生成的 getter/setter 方法（如果 Lombok 未生效，这些方法会被使用）
+        public boolean isSftpEnabled() {
+            return sftpEnabled;
+        }
+        
+        public void setSftpEnabled(boolean sftpEnabled) {
+            this.sftpEnabled = sftpEnabled;
+        }
+        
+        public String getRootDirectory() {
+            return rootDirectory;
+        }
+        
+        public void setRootDirectory(String rootDirectory) {
+            this.rootDirectory = rootDirectory;
+        }
     }
 
     /**
@@ -168,5 +235,62 @@ public class SshServerProperties {
          * 是否启用主机密钥验证
          */
         private boolean hostKeyVerification = true;
+    }
+    
+    // Lombok @Data 生成的 getter/setter 方法（如果 Lombok 未生效，这些方法会被使用）
+    public boolean isEnabled() {
+        return enabled;
+    }
+    
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+    
+    public String getHost() {
+        return host;
+    }
+    
+    public void setHost(String host) {
+        this.host = host;
+    }
+    
+    public int getPort() {
+        return port;
+    }
+    
+    public void setPort(int port) {
+        this.port = port;
+    }
+    
+    public Authentication getAuthentication() {
+        return authentication;
+    }
+    
+    public void setAuthentication(Authentication authentication) {
+        this.authentication = authentication;
+    }
+    
+    public Session getSession() {
+        return session;
+    }
+    
+    public void setSession(Session session) {
+        this.session = session;
+    }
+    
+    public FileTransfer getFileTransfer() {
+        return fileTransfer;
+    }
+    
+    public void setFileTransfer(FileTransfer fileTransfer) {
+        this.fileTransfer = fileTransfer;
+    }
+    
+    public Security getSecurity() {
+        return security;
+    }
+    
+    public void setSecurity(Security security) {
+        this.security = security;
     }
 }

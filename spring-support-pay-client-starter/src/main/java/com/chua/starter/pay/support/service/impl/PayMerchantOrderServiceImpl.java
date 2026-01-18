@@ -1,4 +1,4 @@
-﻿package com.chua.starter.pay.support.service.impl;
+package com.chua.starter.pay.support.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -8,11 +8,12 @@ import com.chua.starter.pay.support.mapper.PayMerchantOrderMapper;
 import com.chua.starter.pay.support.pojo.PayMerchantOrderPageRequest;
 import com.chua.starter.pay.support.pojo.PayMerchantOrderVO;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.lang.date.DateUtils;
-import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.utils.IdUtils;
-import com.chua.common.support.utils.ObjectUtils;
+import com.chua.common.support.time.date.DateUtils;
+import com.chua.common.support.core.utils.ServiceProvider;
+import com.chua.common.support.core.utils.IdUtils;
+import com.chua.common.support.core.utils.ObjectUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.starter.oauth.client.support.execute.AuthSessionUtils;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.chua.starter.pay.support.entity.PayMerchantOrderWater;
 import com.chua.starter.pay.support.enums.PayOrderStatus;
@@ -68,7 +69,7 @@ public class PayMerchantOrderServiceImpl extends ServiceImpl<PayMerchantOrderMap
     @Override
     public ReturnResult<CreateOrderV2Response> createOrder(CreateOrderV2Request request) {
         String userId = RequestUtils.getUserId();
-        String openId = RequestUtils.getUserInfo(UserResume.class).getOpenId();
+        String openId = AuthSessionUtils.getUserInfo(UserResume.class).getOpenId();
         if (!request.hasTradeType()) {
             return ReturnResult.illegal("请选择交易类型");
         }
@@ -98,7 +99,7 @@ public class PayMerchantOrderServiceImpl extends ServiceImpl<PayMerchantOrderMap
     @Override
     public ReturnResult<CreateOrderV2Response> createOrder(CreatePaymentPointsOrderV2Request request) {
         String userId = RequestUtils.getUserId();
-        String openId = RequestUtils.getUserInfo(UserResume.class).getOpenId();
+        String openId = AuthSessionUtils.getUserInfo(UserResume.class).getOpenId();
 
         if (null == request.getPayMerchantId()) {
             return ReturnResult.illegal("请选择商户");

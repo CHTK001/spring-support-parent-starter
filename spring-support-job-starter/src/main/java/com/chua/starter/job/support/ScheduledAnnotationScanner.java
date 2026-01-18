@@ -1,6 +1,6 @@
-﻿package com.chua.starter.job.support;
+package com.chua.starter.job.support;
 
-import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.core.spi.ServiceProvider;
 import com.chua.common.support.task.scheduler.SchedulerProvider;
 import com.chua.common.support.task.scheduler.Scheduled;
 import com.chua.common.support.task.scheduler.Trigger;

@@ -1,7 +1,7 @@
-﻿package com.chua.starter.pay.support.scheduler;
+package com.chua.starter.pay.support.scheduler;
 
 import com.chua.common.support.function.NamedThreadFactory;
-import com.chua.common.support.utils.ThreadUtils;
+import com.chua.common.support.core.utils.ThreadUtils;
 import com.chua.starter.pay.support.entity.PayMerchant;
 import com.chua.starter.pay.support.service.PayMerchantOrderService;
 import com.chua.starter.pay.support.service.PayMerchantService;

@@ -1,4 +1,4 @@
-﻿package com.chua.report.client.starter.job.log;
+package com.chua.report.client.starter.job.log;
 
 import cn.hutool.core.date.DateUtil;
 import com.chua.report.client.starter.job.thread.JobContext;
@@ -15,6 +15,8 @@ import java.util.Date;
  */
 @Slf4j
 public class DefaultJobLog implements JobLog{
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(DefaultJobLog.class);
 
 
     public static boolean log(String appendLogPattern) {

@@ -1,14 +1,12 @@
-﻿package com.chua.sync.support.discovery;
+package com.chua.sync.support.discovery;
 
-import com.chua.common.support.discovery.Discovery;
-import com.chua.common.support.discovery.ServiceDiscovery;
-import com.chua.common.support.lang.robin.LoadBalance;
-import com.chua.common.support.lang.robin.Robin;
-import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.utils.CollectionUtils;
-import com.chua.common.support.utils.MapUtils;
-import com.chua.common.support.utils.ObjectUtils;
-import com.chua.common.support.utils.RandomUtils;
+import com.chua.common.support.network.discovery.Discovery;
+import com.chua.common.support.network.discovery.ServiceDiscovery;
+import com.chua.common.support.core.utils.ServiceProvider;
+import com.chua.common.support.core.utils.CollectionUtils;
+import com.chua.common.support.core.utils.MapUtils;
+import com.chua.common.support.core.utils.ObjectUtils;
+import com.chua.common.support.core.utils.RandomUtils;
 import com.chua.sync.support.pojo.ClientInfo;
 import com.chua.sync.support.server.SyncServer;
 import lombok.Getter;
@@ -189,20 +187,6 @@ public class SyncServerServiceDiscovery implements ServiceDiscovery {
         }
 
         List<Discovery> list = new ArrayList<>(services);
-
-        // 使用 SPI 加载负载均衡策略
-        if (balance != null && !balance.isEmpty()) {
-            try {
-                var robin =
-                        ServiceProvider.of(LoadBalance.class)
-                                .getNewExtension(balance);
-                if (robin != null) {
-                    return robin.select(list);
-                }
-            } catch (Exception e) {
-                log.debug("[SyncServerServiceDiscovery] 加载负载均衡策略失败: {}, 使用默认随机策略", balance);
-            }
-        }
 
         // 默认随机选择
         return list.get(RandomUtils.randomInt(0, list.size()));

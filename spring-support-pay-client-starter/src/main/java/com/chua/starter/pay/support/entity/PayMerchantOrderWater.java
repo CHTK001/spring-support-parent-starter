@@ -1,4 +1,4 @@
-﻿package com.chua.starter.pay.support.entity;
+package com.chua.starter.pay.support.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
@@ -12,6 +12,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 /**
  *
@@ -24,6 +25,7 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @Schema(description="订单流水表")
 @Data
+@ToString(callSuper = true)
 @TableName(value = "pay_merchant_order_water")
 public class PayMerchantOrderWater extends SysBase implements Serializable {
     private static final long serialVersionUID = 1L;

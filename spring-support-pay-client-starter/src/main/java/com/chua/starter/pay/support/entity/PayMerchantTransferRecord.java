@@ -1,4 +1,4 @@
-﻿package com.chua.starter.pay.support.entity;
+package com.chua.starter.pay.support.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 /**
  *
@@ -24,6 +25,7 @@ import lombok.EqualsAndHashCode;
 @Schema(description = "转账记录表")
 @Data
 @EqualsAndHashCode(callSuper = true)
+@ToString(callSuper = true)
 @TableName(value = "pay_merchant_transfer_record")
 public class PayMerchantTransferRecord extends SysBase implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -107,4 +109,5 @@ public class PayMerchantTransferRecord extends SysBase implements Serializable {
     @TableField(value = "pay_merchant_transfer_record_create_time")
     @Schema(description = "转账创建时间")
     private LocalDateTime payMerchantTransferRecordCreateTime;
+
 }

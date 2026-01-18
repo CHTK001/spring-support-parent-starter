@@ -1,10 +1,10 @@
-﻿package com.chua.starter.configcenter.support.processor;
+package com.chua.starter.configcenter.support.processor;
 
 import com.chua.common.support.config.ConfigCenter;
 import com.chua.common.support.config.ConfigListener;
-import com.chua.common.support.converter.Converter;
+import com.chua.common.support.base.converter.Converter;
 import com.chua.common.support.objects.annotation.ConfigValue;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.core.utils.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
@@ -42,6 +42,9 @@ import java.util.regex.Pattern;
  */
 @Slf4j
 public class ConfigValueBeanPostProcessor implements BeanPostProcessor, EnvironmentAware, BeanFactoryAware {
+    
+    // Lombok @Slf4j 生成的 log 变量（如果 Lombok 未生效，这个变量会被使用）
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ConfigValueBeanPostProcessor.class);
 
     /**
      * 占位符正则表达式
@@ -199,15 +202,16 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
 
             // 如果支持热更新，注册监听
             if (annotation.hotReload()) {
-                BindingInfo binding = BindingInfo.builder()
-                        .configKey(parsed.key())
-                        .defaultValue(parsed.defaultValue())
-                        .bean(bean)
-                        .beanName(beanName)
-                        .field(field)
-                        .callback(annotation.callback())
-                        .targetType(field.getType())
-                        .build();
+                BindingInfo binding = new BindingInfo(
+                        parsed.key(),
+                        parsed.defaultValue(),
+                        bean,
+                        beanName,
+                        field,
+                        null,
+                        annotation.callback(),
+                        field.getType()
+                );
 
                 registerBinding(binding);
                 log.debug("注册热更新绑定: key={}, bean={}, field={}",
@@ -242,15 +246,16 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
 
             // 如果支持热更新，注册监听
             if (annotation.hotReload()) {
-                BindingInfo binding = BindingInfo.builder()
-                        .configKey(parsed.key())
-                        .defaultValue(parsed.defaultValue())
-                        .bean(bean)
-                        .beanName(beanName)
-                        .method(method)
-                        .callback(annotation.callback())
-                        .targetType(method.getParameterTypes()[0])
-                        .build();
+                BindingInfo binding = new BindingInfo(
+                        parsed.key(),
+                        parsed.defaultValue(),
+                        bean,
+                        beanName,
+                        null,
+                        method,
+                        annotation.callback(),
+                        method.getParameterTypes()[0]
+                );
 
                 registerBinding(binding);
                 log.debug("注册热更新绑定: key={}, bean={}, method={}",
@@ -269,14 +274,21 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
      */
     private void handlePublish(ConfigValue annotation, ParsedExpression parsed, String beanName, String memberName) {
         // 检查配置中心是否支持推送
+        // 注意：ConfigValue 注解当前不支持 publish 和 publishIfAbsent 方法
+        // 如果需要推送功能，需要在 ConfigValue 注解中添加这些方法
         if (configCenter == null || !configCenter.isSupportPublish()) {
-            if (annotation.publish() || annotation.publishIfAbsent()) {
-                log.warn("配置中心不支持推送，忽略推送配置: key={}, bean={}, member={}",
-                        parsed.key(), beanName, memberName);
-            }
+            // 暂时注释掉，因为 ConfigValue 注解中没有 publish() 和 publishIfAbsent() 方法
+            // if (annotation.publish() || annotation.publishIfAbsent()) {
+            //     log.warn("配置中心不支持推送，忽略推送配置: key={}, bean={}, member={}",
+            //             parsed.key(), beanName, memberName);
+            // }
             return;
         }
 
+        // 注意：ConfigValue 注解当前不支持 publish、publishIfAbsent、dataId、group 方法
+        // 如果需要推送功能，需要在 ConfigValue 注解中添加这些方法
+        // 暂时注释掉推送相关代码
+        /*
         // 获取要推送的值
         String publishValue = getPublishValue(annotation, parsed);
         if (StringUtils.isEmpty(publishValue)) {
@@ -309,6 +321,7 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
                         dataId, group, parsed.key());
             }
         }
+        */
     }
 
     /**
@@ -607,7 +620,12 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
     /**
      * 绑定信息
      */
-    @lombok.Builder
+    /**
+     * 绑定信息
+     * <p>
+     * 注意：record 类型不支持 @Builder 注解，直接使用构造函数
+     * </p>
+     */
     private record BindingInfo(String configKey,
                                String defaultValue,
                                Object bean,

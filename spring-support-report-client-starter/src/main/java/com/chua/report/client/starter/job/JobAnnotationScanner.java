@@ -1,4 +1,4 @@
-﻿package com.chua.report.client.starter.job;
+package com.chua.report.client.starter.job;
 
 import com.chua.report.client.starter.job.handler.BeanJobHandler;
 import com.chua.report.client.starter.job.handler.JobHandlerFactory;
@@ -62,6 +62,8 @@ import java.util.Map;
 @Slf4j
 @RequiredArgsConstructor
 public class JobAnnotationScanner implements BeanPostProcessor {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(JobAnnotationScanner.class);
 
     private final JobHandlerFactory jobHandlerFactory = JobHandlerFactory.getInstance();
 

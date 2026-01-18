@@ -3,7 +3,7 @@ package com.chua.starter.common.support.api.rule;
 import com.chua.common.support.core.utils.ArrayUtils;
 import com.chua.starter.common.support.api.annotations.ApiFieldIgnore;
 import com.chua.starter.common.support.api.annotations.ApiGroup;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.spring.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.BeanProperty;

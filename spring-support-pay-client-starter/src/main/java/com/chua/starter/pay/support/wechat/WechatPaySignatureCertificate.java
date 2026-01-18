@@ -1,4 +1,4 @@
-﻿package com.chua.starter.pay.support.wechat;
+package com.chua.starter.pay.support.wechat;
 
 import com.chua.starter.pay.support.entity.PayMerchantConfigWechat;
 

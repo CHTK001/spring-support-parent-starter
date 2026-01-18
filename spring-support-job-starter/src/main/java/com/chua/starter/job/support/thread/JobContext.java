@@ -1,4 +1,4 @@
-﻿package com.chua.starter.job.support.thread;
+package com.chua.starter.job.support.thread;
 
 import lombok.Data;
 import lombok.Getter;

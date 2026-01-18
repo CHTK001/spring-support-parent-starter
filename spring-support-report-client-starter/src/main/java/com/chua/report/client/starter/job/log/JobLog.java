@@ -1,4 +1,4 @@
-﻿package com.chua.report.client.starter.job.log;
+package com.chua.report.client.starter.job.log;
 
 /**
  * 作业日志

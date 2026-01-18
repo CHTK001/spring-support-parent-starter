@@ -1,4 +1,4 @@
-﻿package com.chua.starter.pay.support.handler;
+package com.chua.starter.pay.support.handler;
 
 import com.chua.starter.pay.support.enums.PayOrderStatus;
 import org.apache.ibatis.type.BaseTypeHandler;
@@ -16,33 +16,33 @@ import java.sql.SQLException;
 public class PayOrderStatusTypeHandler extends BaseTypeHandler<PayOrderStatus> {
     @Override
     public void setNonNullParameter(PreparedStatement ps, int i, PayOrderStatus parameter, JdbcType jdbcType) throws SQLException {
-        ps.setString(i, parameter.getCode());
+        ps.setString(i, parameter.getCode().toString());
     }
 
     @Override
     public PayOrderStatus getNullableResult(ResultSet rs, String columnName) throws SQLException {
-        String ordinal = rs.getString(columnName);
-        if (ordinal == null && rs.wasNull()) {
+        Object value = rs.getObject(columnName);
+        if (value == null || rs.wasNull()) {
             return null;
         }
-        return PayOrderStatus.parse(ordinal);
+        return PayOrderStatus.parse(value.toString());
     }
 
     @Override
     public PayOrderStatus getNullableResult(ResultSet rs, int columnIndex) throws SQLException {
-        String ordinal = rs.getString(columnIndex);
-        if (ordinal == null && rs.wasNull()) {
+        Object value = rs.getObject(columnIndex);
+        if (value == null || rs.wasNull()) {
             return null;
         }
-        return PayOrderStatus.parse(ordinal);
+        return PayOrderStatus.parse(value.toString());
     }
 
     @Override
     public PayOrderStatus getNullableResult(CallableStatement cs, int columnIndex) throws SQLException {
-        String ordinal = cs.getString(columnIndex);
-        if (ordinal == null && cs.wasNull()) {
+        Object value = cs.getObject(columnIndex);
+        if (value == null || cs.wasNull()) {
             return null;
         }
-        return PayOrderStatus.parse(ordinal);
+        return PayOrderStatus.parse(value.toString());
     }
 }

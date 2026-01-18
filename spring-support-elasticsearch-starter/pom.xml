@@ -27,7 +27,8 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.35</version>
+        <version>${revision}</version>
+        
     </parent>
 
     <!-- 项目基本信息 -->
@@ -49,13 +50,19 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-elasticsearch-starter</artifactId>
+            <exclusions>
+                <!-- 排除 commons-logging，使用 slf4j -->
+                <exclusion>
+                    <groupId>commons-logging</groupId>
+                    <artifactId>commons-logging</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- Spring Data Elasticsearch - 提供Spring Data的Elasticsearch支持 -->
         <dependency>
             <groupId>org.springframework.data</groupId>
             <artifactId>spring-data-elasticsearch</artifactId>
-            <version>4.4.12</version>
             <scope>compile</scope>
             <exclusions>
                 <!-- 排除默认的客户端，使用自定义版本 -->
@@ -91,11 +98,25 @@
             </exclusions>
         </dependency>
 
+        <!-- Lombok - 简化Java代码编写 -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- 通用功能模块 - 提供基础的工具类和通用功能 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-common-starter</artifactId>
         </dependency>
+
+        <!-- Utils 通用工具类库 - 提供 BeanUtils、Json 等工具类 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-common-starter</artifactId>
+        </dependency>
     </dependencies>
+
 
 </project>

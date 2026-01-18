@@ -1,8 +1,9 @@
-﻿package com.chua.report.client.starter.job.glue;
+package com.chua.report.client.starter.job.glue;
 
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.spring.support.configuration.SpringBeanUtils;
 import jakarta.annotation.Resource;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
@@ -11,8 +12,8 @@ import org.springframework.core.annotation.AnnotationUtils;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 
-@Slf4j
 public class SpringGlueFactory extends GlueFactory{
+    private static final Logger log = LoggerFactory.getLogger(SpringGlueFactory.class);
 
     public SpringGlueFactory() {
     }

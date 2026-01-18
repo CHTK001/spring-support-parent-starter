@@ -1,4 +1,4 @@
-﻿package com.chua.report.client.starter.job.thread;
+package com.chua.report.client.starter.job.thread;
 
 import lombok.Data;
 import lombok.Getter;
@@ -46,14 +46,31 @@ public class JobContext {
     /**
      * 任务执行参数
      */
-    @Getter
     private final String jobParam;
+
+    /**
+     * 获取任务执行参数
+     *
+     * @return 任务执行参数
+     */
+    public String getJobParam() {
+        return jobParam;
+    }
 
     /**
      * 日志文件名
      */
     @Getter
     private final String jobLogFileName;
+
+    /**
+     * 获取日志文件名
+     *
+     * @return 日志文件名
+     */
+    public String getJobLogFileName() {
+        return jobLogFileName;
+    }
 
     /**
      * 分片索引（从0开始）
@@ -151,5 +168,32 @@ public class JobContext {
     public void setTimeout(String msg) {
         this.handleCode = HANDLE_CODE_TIMEOUT;
         this.handleMsg = msg;
+    }
+
+    /**
+     * 获取处理状态码
+     *
+     * @return 处理状态码
+     */
+    public int getHandleCode() {
+        return handleCode;
+    }
+
+    /**
+     * 获取处理结果消息
+     *
+     * @return 处理结果消息
+     */
+    public String getHandleMsg() {
+        return handleMsg;
+    }
+
+    /**
+     * 设置处理结果消息
+     *
+     * @param handleMsg 处理结果消息
+     */
+    public void setHandleMsg(String handleMsg) {
+        this.handleMsg = handleMsg;
     }
 }

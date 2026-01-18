@@ -1,4 +1,4 @@
-﻿package com.chua.starter.gateway.support.loadbalancer;
+package com.chua.starter.gateway.support.loadbalancer;
 
 import com.chua.common.support.discovery.Discovery;
 

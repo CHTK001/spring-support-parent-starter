@@ -1,6 +1,6 @@
-﻿package com.chua.starter.pay.support.tradebill;
+package com.chua.starter.pay.support.tradebill;
 
-import com.chua.common.support.annotations.SpiDefault;
+import com.chua.common.support.core.annotation.SpiDefault;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.pay.support.pojo.TradebillV2Request;
 import com.chua.starter.pay.support.pojo.TradebillV2Response;

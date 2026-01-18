@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.35</version>
+        <version>${revision}</version>
     </parent>
 
     <artifactId>spring-support-queue-kafka-starter</artifactId>
@@ -16,7 +16,6 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-queue-starter</artifactId>
-            <version>${project.version}</version>
         </dependency>
         
         <dependency>

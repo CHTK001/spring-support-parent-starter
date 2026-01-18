@@ -1,8 +1,8 @@
-﻿package com.chua.report.client.starter.sync.handler;
+package com.chua.report.client.starter.sync.handler;
 
 import com.chua.common.support.core.annotation.Spi;
-import com.chua.common.support.json.Json;
-import com.chua.common.support.utils.MapUtils;
+import com.chua.common.support.text.json.Json;
+import com.chua.common.support.core.utils.MapUtils;
 import com.chua.report.client.starter.sync.MonitorTopics;
 import com.chua.sync.support.spi.SyncMessageHandler;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +37,8 @@ import java.util.zip.ZipOutputStream;
 @Slf4j
 @Spi("nodeMaintenanceHandler")
 public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationContextAware {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(NodeMaintenanceHandler.class);
 
     private ApplicationContext applicationContext;
 

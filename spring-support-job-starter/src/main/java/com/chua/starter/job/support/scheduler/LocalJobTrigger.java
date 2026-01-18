@@ -1,4 +1,4 @@
-﻿package com.chua.starter.job.support.scheduler;
+package com.chua.starter.job.support.scheduler;
 
 import com.chua.starter.job.support.entity.SysJob;
 import com.chua.starter.job.support.entity.SysJobLog;

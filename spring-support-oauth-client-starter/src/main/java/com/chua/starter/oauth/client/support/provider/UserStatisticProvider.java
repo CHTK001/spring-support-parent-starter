@@ -10,7 +10,7 @@ import com.chua.common.support.core.utils.ArrayUtils;
 import com.chua.common.support.core.utils.IoUtils;
 import com.chua.common.support.core.utils.MapUtils;
 import com.chua.common.support.core.utils.StringUtils;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.spring.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.oauth.client.support.annotation.UserValue;
 import com.chua.starter.oauth.client.support.enums.AuthType;

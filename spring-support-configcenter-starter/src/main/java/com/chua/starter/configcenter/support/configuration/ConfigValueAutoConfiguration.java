@@ -1,4 +1,4 @@
-﻿package com.chua.starter.configcenter.support.configuration;
+package com.chua.starter.configcenter.support.configuration;
 
 import com.chua.common.support.config.ConfigCenter;
 import com.chua.starter.common.support.application.ModuleEnvironmentRegistration;
@@ -30,6 +30,9 @@ import org.springframework.context.annotation.Configuration;
 @EnableConfigurationProperties(ConfigCenterProperties.class)
 @ConditionalOnProperty(prefix = ConfigCenterProperties.PRE, name = "enable", havingValue = "true")
 public class ConfigValueAutoConfiguration {
+    
+    // Lombok @Slf4j 生成的 log 变量（如果 Lombok 未生效，这个变量会被使用）
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ConfigValueAutoConfiguration.class);
 
     /**
      * 获取配置中心 Bean

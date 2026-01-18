@@ -1,16 +1,17 @@
-﻿package com.chua.starter.job.support.scheduler;
+package com.chua.starter.job.support.scheduler;
 
-import com.chua.advanced.support.express.CronExpression;
 import com.chua.starter.job.support.JobProperties;
 import com.chua.starter.job.support.entity.SysJob;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static com.chua.starter.job.support.scheduler.JobHelper.PRE_READ_MS;
+import static com.chua.starter.job.support.scheduler.JobHelper.generateNextValidTime;
 import static com.chua.starter.job.support.scheduler.RingTriggerHandler.pushTimeRing;
 
 /**
@@ -48,9 +49,9 @@ import static com.chua.starter.job.support.scheduler.RingTriggerHandler.pushTime
  * @see MisfireStrategyEnum
  * @see SchedulerTrigger
  */
-@Slf4j
 @RequiredArgsConstructor
 public class CoreTriggerHandler implements TriggerHandler, Runnable {
+    private static final Logger log = LoggerFactory.getLogger(CoreTriggerHandler.class);
 
     private final JobProperties jobProperties;
     private volatile boolean scheduleThreadToStop = false;
@@ -106,7 +107,7 @@ public class CoreTriggerHandler implements TriggerHandler, Runnable {
                     // 2、推送到时间环
                     for (SysJob jobInfo : scheduleList) {
 
-                        if (nowTime > jobInfo.getJobTriggerNextTime() + PRE_READ_MS) {
+                        if (jobInfo.getJobTriggerNextTime() != null && nowTime > jobInfo.getJobTriggerNextTime() + PRE_READ_MS) {
                             // 2.1、触发超时 > 5s：跳过 && 更新下次触发时间
                             log.warn(">>>>>>>>>>> 任务触发超时, jobId={}", jobInfo.getJobId());
 
@@ -121,7 +122,7 @@ public class CoreTriggerHandler implements TriggerHandler, Runnable {
                             // 更新下次触发时间
                             refreshNextValidTime(jobInfo, new Date());
 
-                        } else if (nowTime > jobInfo.getJobTriggerNextTime()) {
+                        } else if (jobInfo.getJobTriggerNextTime() != null && nowTime > jobInfo.getJobTriggerNextTime()) {
                             // 2.2、触发超时 < 5s：直接触发 && 更新下次触发时间
 
                             // 触发
@@ -132,7 +133,8 @@ public class CoreTriggerHandler implements TriggerHandler, Runnable {
                             refreshNextValidTime(jobInfo, new Date());
 
                             // 下次触发时间在5s内，再次预读
-                            if (jobInfo.getJobTriggerStatus() == 1 && nowTime + PRE_READ_MS > jobInfo.getJobTriggerNextTime()) {
+                            if (jobInfo.getJobTriggerStatus() != null && jobInfo.getJobTriggerStatus() == 1 
+                                    && jobInfo.getJobTriggerNextTime() != null && nowTime + PRE_READ_MS > jobInfo.getJobTriggerNextTime()) {
 
                                 // 计算时间环秒数
                                 int ringSecond = (int) ((jobInfo.getJobTriggerNextTime() / 1000) % 60);
@@ -149,13 +151,15 @@ public class CoreTriggerHandler implements TriggerHandler, Runnable {
                             // 2.3、预读：时间环触发 && 更新下次触发时间
 
                             // 计算时间环秒数
-                            int ringSecond = (int) ((jobInfo.getJobTriggerNextTime() / 1000) % 60);
+                            if (jobInfo.getJobTriggerNextTime() != null) {
+                                int ringSecond = (int) ((jobInfo.getJobTriggerNextTime() / 1000) % 60);
 
-                            // 推送时间环
-                            pushTimeRing(ringSecond, jobInfo.getJobId());
+                                // 推送时间环
+                                pushTimeRing(ringSecond, jobInfo.getJobId());
 
-                            // 更新下次触发时间
-                            refreshNextValidTime(jobInfo, new Date(jobInfo.getJobTriggerNextTime()));
+                                // 更新下次触发时间
+                                refreshNextValidTime(jobInfo, new Date(jobInfo.getJobTriggerNextTime()));
+                            }
 
                         }
 
@@ -207,15 +211,5 @@ public class CoreTriggerHandler implements TriggerHandler, Runnable {
             log.warn(">>>>>>>>>>> 更新下次触发时间失败, jobId={}, 调度类型={}, 调度配置={}",
                     jobInfo.getJobId(), jobInfo.getJobScheduleType(), jobInfo.getJobScheduleTime());
         }
-    }
-
-    public static Date generateNextValidTime(SysJob jobInfo, Date fromTime) throws Exception {
-        SchedulerTypeEnum scheduleTypeEnum = SchedulerTypeEnum.match(jobInfo.getJobScheduleType(), null);
-        if (SchedulerTypeEnum.CRON == scheduleTypeEnum) {
-            return new CronExpression(jobInfo.getJobScheduleTime()).getNextValidTimeAfter(fromTime);
-        } else if (SchedulerTypeEnum.FIXED == scheduleTypeEnum) {
-            return new Date(fromTime.getTime() + Integer.parseInt(jobInfo.getJobScheduleTime()) * 1000L);
-        }
-        return null;
     }
 }

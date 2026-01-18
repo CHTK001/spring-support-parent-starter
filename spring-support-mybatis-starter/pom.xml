@@ -27,7 +27,7 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.36</version>
+                <version>${revision}</version>
     </parent>
 
     <!-- 项目基本信息 -->
@@ -60,7 +60,6 @@
         <dependency>
             <groupId>p6spy</groupId>
             <artifactId>p6spy</artifactId>
-            <version>3.9.0</version>
         </dependency>
 
         <!-- Spring Boot FreeMarker模板引擎 - 用于代码生成器的模板渲染 -->
@@ -74,35 +73,30 @@
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-generator</artifactId>
-            <version>3.5.5</version>
         </dependency>
 
         <!-- MyBatis Plus关联查询扩展 - 支持多表关联查询 -->
         <dependency>
             <groupId>com.github.yulichang</groupId>
             <artifactId>mybatis-plus-join-boot-starter</artifactId>
-            <version>1.5.3</version>
         </dependency>
 
         <!-- MyBatis Plus Spring Boot 3集成 - 核心ORM框架 -->
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
-            <version>3.5.11</version>
         </dependency>
 
         <!-- MyBatis Plus SQL解析器 - 提供SQL解析和处理功能 -->
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-jsqlparser</artifactId>
-            <version>3.5.11</version>
         </dependency>
 
         <!-- Apache Commons DBUtils - 提供数据库操作工具类 -->
         <dependency>
             <groupId>commons-dbutils</groupId>
             <artifactId>commons-dbutils</artifactId>
-            <version>1.8.1</version>
         </dependency>
 
         <!-- Apache Commons Lang3 - 提供字符串和对象工具类 -->

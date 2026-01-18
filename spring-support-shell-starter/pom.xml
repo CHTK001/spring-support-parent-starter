@@ -26,7 +26,8 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.35</version>
+        <version>${revision}</version>
+        
     </parent>
 
     <!-- 项目基本信息 -->
@@ -46,7 +47,7 @@
         <dependency>
             <groupId>com.github.fonimus</groupId>
             <artifactId>ssh-shell-spring-boot-starter</artifactId>
-            <version>3.1.0</version>
+            
         </dependency>
 
         <!-- 通用功能模块 - 提供基础的工具类和通用功能 -->
@@ -71,7 +72,7 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
-            <version>3.5.9</version>
+            
             <scope>provided</scope>
         </dependency>
     </dependencies>

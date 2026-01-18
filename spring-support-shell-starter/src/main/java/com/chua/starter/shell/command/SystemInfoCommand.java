@@ -1,4 +1,4 @@
-﻿package com.chua.starter.shell.command;
+package com.chua.starter.shell.command;
 
 import com.github.fonimus.ssh.shell.PromptColor;
 import com.github.fonimus.ssh.shell.SshShellHelper;

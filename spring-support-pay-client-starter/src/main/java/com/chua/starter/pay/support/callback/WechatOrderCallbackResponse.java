@@ -1,4 +1,4 @@
-﻿package com.chua.starter.pay.support.callback;
+package com.chua.starter.pay.support.callback;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;

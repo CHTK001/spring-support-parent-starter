@@ -1,4 +1,4 @@
-﻿package com.chua.starter.pay.support.statemachine.persist;
+package com.chua.starter.pay.support.statemachine.persist;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;

@@ -1,4 +1,4 @@
-﻿package com.chua.starter.strategy.warmup;
+package com.chua.starter.strategy.warmup;
 
 /**
  * 预热参数提供者接口

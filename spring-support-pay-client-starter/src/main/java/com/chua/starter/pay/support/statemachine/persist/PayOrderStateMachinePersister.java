@@ -1,4 +1,4 @@
-﻿package com.chua.starter.pay.support.statemachine.persist;
+package com.chua.starter.pay.support.statemachine.persist;
 
 import com.chua.starter.pay.support.enums.PayOrderEvent;
 import com.chua.starter.pay.support.enums.PayOrderStatus;

@@ -1,4 +1,4 @@
-﻿package com.chua.report.client.starter.job;
+package com.chua.report.client.starter.job;
 
 import com.chua.report.client.starter.sync.MonitorTopics;
 import com.chua.sync.support.client.SyncClient;
@@ -20,10 +20,21 @@ import java.util.Map;
 @Slf4j
 public class JobReporter {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(JobReporter.class);
+
     private static final JobReporter INSTANCE = new JobReporter();
 
     @Setter
     private SyncClient syncClient;
+
+    /**
+     * 设置 SyncClient
+     *
+     * @param syncClient SyncClient 实例
+     */
+    public void setSyncClient(SyncClient syncClient) {
+        this.syncClient = syncClient;
+    }
 
     public static JobReporter getInstance() {
         return INSTANCE;

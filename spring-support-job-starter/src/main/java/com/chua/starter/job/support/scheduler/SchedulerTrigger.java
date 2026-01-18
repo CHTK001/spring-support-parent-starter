@@ -1,8 +1,9 @@
-﻿package com.chua.starter.job.support.scheduler;
+package com.chua.starter.job.support.scheduler;
 
 import com.chua.starter.job.support.JobProperties;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
@@ -44,8 +45,8 @@ import java.util.concurrent.TimeUnit;
  * @see JobTriggerPoolHelper
  */
 @Slf4j
-@RequiredArgsConstructor
 public class SchedulerTrigger implements InitializingBean, DisposableBean, ApplicationContextAware {
+    private static final Logger log = LoggerFactory.getLogger(SchedulerTrigger.class);
 
     /**
      * 核心触发处理器，负责扫描即将执行的任务

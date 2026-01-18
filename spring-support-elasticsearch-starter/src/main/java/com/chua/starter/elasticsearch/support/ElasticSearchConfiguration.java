@@ -1,4 +1,4 @@
-﻿package com.chua.starter.elasticsearch.support;
+package com.chua.starter.elasticsearch.support;
 
 import com.chua.starter.elasticsearch.support.properties.ElasticSearchProperties;
 import com.chua.starter.elasticsearch.support.service.impl.DocumentServiceImpl;
@@ -22,11 +22,18 @@ import java.util.List;
  */
 @EnableConfigurationProperties(ElasticSearchProperties.class)
 @Import(DocumentServiceImpl.class)
-@RequiredArgsConstructor
 public class ElasticSearchConfiguration {
 
+    private final ElasticSearchProperties elasticSearchProperties;
 
-    final ElasticSearchProperties elasticSearchProperties;
+    /**
+     * 构造器
+     *
+     * @param elasticSearchProperties ES 配置属性
+     */
+    public ElasticSearchConfiguration(ElasticSearchProperties elasticSearchProperties) {
+        this.elasticSearchProperties = elasticSearchProperties;
+    }
 
     @Bean
     @ConditionalOnExpression("!T(org.springframework.util.StringUtils).isEmpty('${plugin.elasticsearch.address:}')")

@@ -4,7 +4,7 @@ import com.chua.common.support.base.converter.Converter;
 import com.chua.common.support.math.unit.name.NamingCase;
 import com.chua.common.support.core.utils.MapUtils;
 import com.chua.common.support.core.utils.StringUtils;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.spring.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.annotation.TokenValue;

@@ -1,4 +1,4 @@
-﻿package com.chua.starter.pay.support.service;
+package com.chua.starter.pay.support.service;
 
 import com.chua.starter.pay.support.entity.PayMerchantConfigWechat;
 import com.baomidou.mybatisplus.extension.service.IService;

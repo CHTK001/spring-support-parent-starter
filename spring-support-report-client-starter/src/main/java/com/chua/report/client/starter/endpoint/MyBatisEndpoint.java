@@ -1,4 +1,4 @@
-﻿package com.chua.report.client.starter.endpoint;
+package com.chua.report.client.starter.endpoint;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.mapping.MappedStatement;
@@ -29,6 +29,8 @@ import java.util.*;
 @Endpoint(id = "mybatis")
 @ConditionalOnClass(SqlSessionFactory.class)
 public class MyBatisEndpoint {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(MyBatisEndpoint.class);
 
     @Autowired(required = false)
     private SqlSessionFactory sqlSessionFactory;

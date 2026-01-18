@@ -1,4 +1,4 @@
-﻿package com.chua.starter.discovery.support.service;
+package com.chua.starter.discovery.support.service;
 
 import java.util.Properties;
 

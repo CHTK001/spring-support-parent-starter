@@ -1,7 +1,6 @@
-﻿package com.chua.starter.pay.support.pojo;
+package com.chua.starter.pay.support.pojo;
 
-import com.chua.common.support.validator.group.AddGroup;
-import io.swagger.annotations.ApiModelProperty;
+import com.chua.common.support.base.validator.group.AddGroup;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -22,14 +21,14 @@ public class CreateOrderV2Response implements Serializable {
     /**
      * 订单编号
      */
-    @ApiModelProperty("订单编号")
+    @Schema(description = "订单编号")
     @NotEmpty(message = "订单编号不能为空", groups = {AddGroup.class})
     private final String payMerchantOrderCode;
 
     /**
      * 预支付ID
      */
-    @ApiModelProperty("预支付ID")
+    @Schema(description = "预支付ID")
     private String prepayId;
 
     /**

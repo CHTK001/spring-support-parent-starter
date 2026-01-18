@@ -1,4 +1,4 @@
-﻿package com.chua.report.client.starter.job.handler;
+package com.chua.report.client.starter.job.handler;
 
 import com.chua.report.client.starter.job.log.DefaultJobLog;
 import lombok.Getter;
@@ -18,11 +18,22 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class GlueJobHandler implements JobHandler {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(GlueJobHandler.class);
+
     /**
      * GLUE代码更新时间戳
      */
     @Getter
     private final long glueUpdatetime;
+
+    /**
+     * 获取 GLUE 代码更新时间戳
+     *
+     * @return GLUE 代码更新时间戳
+     */
+    public long getGlueUpdatetime() {
+        return glueUpdatetime;
+    }
 
     /**
      * 实际执行的JobHandler

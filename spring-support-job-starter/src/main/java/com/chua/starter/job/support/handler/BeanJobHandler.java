@@ -1,4 +1,4 @@
-﻿package com.chua.starter.job.support.handler;
+package com.chua.starter.job.support.handler;
 
 import com.chua.common.support.core.annotation.Spi;
 import lombok.extern.slf4j.Slf4j;

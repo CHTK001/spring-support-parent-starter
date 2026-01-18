@@ -2,7 +2,7 @@ package com.chua.starter.rpc.support.configuration;
 
 import com.chua.common.support.network.rpc.RpcServer;
 import com.chua.common.support.network.rpc.RpcService;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.spring.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.SpringCompatUtils;
 import com.chua.starter.rpc.support.annotation.AnnotationPropertyValuesAdapter;
 import com.chua.starter.rpc.support.attrbute.RpcAttribute;

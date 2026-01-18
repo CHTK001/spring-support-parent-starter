@@ -1,4 +1,4 @@
-﻿package com.chua.starter.pay.support.refund;
+package com.chua.starter.pay.support.refund;
 
 import com.chua.common.support.core.annotation.Spi;
 import com.chua.common.support.lang.code.ReturnResult;

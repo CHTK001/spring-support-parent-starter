@@ -1,4 +1,4 @@
-﻿package com.chua.starter.job.support;
+package com.chua.starter.job.support;
 
 import com.chua.starter.job.support.log.JobFileAppender;
 import com.chua.starter.job.support.log.JobLogBackupService;
@@ -8,6 +8,8 @@ import com.chua.starter.job.support.mapper.SysJobLogDetailMapper;
 import com.chua.starter.job.support.mapper.SysJobLogMapper;
 import com.chua.starter.job.support.scheduler.SchedulerTrigger;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static com.chua.starter.common.support.logger.ModuleLog.*;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -58,6 +60,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 @ComponentScan("com.chua.starter.job.support.log")
 @ConditionalOnProperty(prefix = JobProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = false)
 public class JobConfiguration {
+    private static final Logger log = LoggerFactory.getLogger(JobConfiguration.class);
 
     /**
      * Job线程池任务调度器

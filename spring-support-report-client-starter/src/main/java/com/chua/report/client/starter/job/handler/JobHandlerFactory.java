@@ -1,4 +1,4 @@
-﻿package com.chua.report.client.starter.job.handler;
+package com.chua.report.client.starter.job.handler;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -19,6 +19,8 @@ import java.util.concurrent.ConcurrentMap;
  */
 @Slf4j
 public class JobHandlerFactory {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(JobHandlerFactory.class);
 
     /**
      * 单例实例

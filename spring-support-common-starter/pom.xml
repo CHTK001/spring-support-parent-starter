@@ -27,7 +27,7 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>${revision}</version>
     </parent>
 
     <!-- 项目基本信息 -->
@@ -47,7 +47,6 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.40</version>
             <scope>provided</scope>
         </dependency>
 
@@ -58,7 +57,6 @@
         <dependency>
             <groupId>kim.nzxy</groupId>
             <artifactId>spel-extension</artifactId>
-            <version>1.0.0</version>
             <scope>provided</scope> <!-- 编译时依赖，运行时由其他模块提供 -->
         </dependency>
 
@@ -98,7 +96,6 @@
         <dependency>
             <groupId>javax.validation</groupId>
             <artifactId>validation-api</artifactId>
-            <version>2.0.1.Final</version>
             <scope>provided</scope> <!-- 可选依赖，不强制引入 -->
         </dependency>
 
@@ -162,7 +159,6 @@
         <dependency>
             <groupId>com.github.whvcse</groupId>
             <artifactId>easy-captcha</artifactId>
-            <version>1.6.2</version>
         </dependency>
 
         <!-- Caffeine缓存 - 高性能的本地缓存库 -->
@@ -218,7 +214,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.13.0</version>
                 <configuration>
                     <release>25</release>
                     <encoding>UTF-8</encoding>
@@ -232,7 +227,6 @@
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
-                            <version>1.18.40</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>

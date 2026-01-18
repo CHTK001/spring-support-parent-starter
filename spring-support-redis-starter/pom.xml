@@ -27,7 +27,8 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.35</version>
+        <version>${revision}</version>
+        
     </parent>
 
     <!-- 项目基本信息 -->
@@ -53,7 +54,6 @@
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>lock4j-redis-template-spring-boot-starter</artifactId>
-            <version>2.2.7</version>
         </dependency>
 
         <!-- Spring Boot Redis数据访问 - 提供Redis的自动配置和操作模板 -->
@@ -66,7 +66,6 @@
         <dependency>
             <groupId>it.ozimov</groupId>
             <artifactId>embedded-redis</artifactId>
-            <version>0.7.3</version>
             <scope>provided</scope> <!-- 仅在测试环境使用 -->
             <exclusions>
                 <!-- 排除slf4j-simple，避免日志冲突 -->
@@ -92,7 +91,6 @@
         <dependency>
             <groupId>org.redisson</groupId>
             <artifactId>redisson</artifactId>
-            <version>3.28.0</version>
         </dependency>
 
         <!-- 策略模块 - 提供LockTemplate接口定义 -->
@@ -114,7 +112,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.14.1</version>
                 <configuration>
                     <source>25</source>  <!-- 源码Java版本 -->
                     <target>25</target>  <!-- 目标Java版本 -->
@@ -123,7 +120,6 @@
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
-                            <version>1.18.42</version>
                         </path>
                     </annotationProcessorPaths>
                     <!-- 启用预览特性 - 已注释

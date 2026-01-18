@@ -1,4 +1,4 @@
-﻿package com.chua.starter.ai.support.configuration;
+package com.chua.starter.ai.support.configuration;
 
 import com.chua.starter.ai.support.chat.AiChat;
 import com.chua.starter.ai.support.engine.AiClient;

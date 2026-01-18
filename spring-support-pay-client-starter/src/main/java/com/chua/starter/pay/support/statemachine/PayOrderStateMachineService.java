@@ -1,4 +1,4 @@
-﻿package com.chua.starter.pay.support.statemachine;
+package com.chua.starter.pay.support.statemachine;
 
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.enums.PayOrderEvent;

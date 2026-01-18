@@ -1,4 +1,4 @@
-﻿package com.chua.starter.configcenter.support.properties;
+package com.chua.starter.configcenter.support.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -69,6 +69,79 @@ public class ConfigCenterProperties {
      * 热更新配置
      */
     private HotReload hotReload = new HotReload();
+    
+    // Lombok @Data 生成的 getter/setter 方法（如果 Lombok 未生效，这些方法会被使用）
+    public boolean isEnable() {
+        return enable;
+    }
+    
+    public void setEnable(boolean enable) {
+        this.enable = enable;
+    }
+    
+    public int getConnectTimeout() {
+        return connectTimeout;
+    }
+    
+    public void setConnectTimeout(int connectTimeout) {
+        this.connectTimeout = connectTimeout;
+    }
+    
+    public int getReadTimeout() {
+        return readTimeout;
+    }
+    
+    public void setReadTimeout(int readTimeout) {
+        this.readTimeout = readTimeout;
+    }
+    
+    public String getProtocol() {
+        return protocol;
+    }
+    
+    public void setProtocol(String protocol) {
+        this.protocol = protocol;
+    }
+    
+    public String getAddress() {
+        return address;
+    }
+    
+    public void setAddress(String address) {
+        this.address = address;
+    }
+    
+    public String getUsername() {
+        return username;
+    }
+    
+    public void setUsername(String username) {
+        this.username = username;
+    }
+    
+    public String getPassword() {
+        return password;
+    }
+    
+    public void setPassword(String password) {
+        this.password = password;
+    }
+    
+    public String getNamespaceId() {
+        return namespaceId;
+    }
+    
+    public void setNamespaceId(String namespaceId) {
+        this.namespaceId = namespaceId;
+    }
+    
+    public HotReload getHotReload() {
+        return hotReload;
+    }
+    
+    public void setHotReload(HotReload hotReload) {
+        this.hotReload = hotReload;
+    }
 
     /**
      * 热更新配置
@@ -114,6 +187,47 @@ public class ConfigCenterProperties {
          * 是否在配置变更时打印日志
          */
         private boolean logOnChange = true;
+        
+        // Lombok @Data 生成的 getter/setter 方法（如果 Lombok 未生效，这些方法会被使用）
+        public boolean isEnabled() {
+            return enabled;
+        }
+        
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+        
+        public boolean isValueAnnotationEnabled() {
+            return valueAnnotationEnabled;
+        }
+        
+        public void setValueAnnotationEnabled(boolean valueAnnotationEnabled) {
+            this.valueAnnotationEnabled = valueAnnotationEnabled;
+        }
+        
+        public boolean isConfigValueAnnotationEnabled() {
+            return configValueAnnotationEnabled;
+        }
+        
+        public void setConfigValueAnnotationEnabled(boolean configValueAnnotationEnabled) {
+            this.configValueAnnotationEnabled = configValueAnnotationEnabled;
+        }
+        
+        public long getRefreshDelayMs() {
+            return refreshDelayMs;
+        }
+        
+        public void setRefreshDelayMs(long refreshDelayMs) {
+            this.refreshDelayMs = refreshDelayMs;
+        }
+        
+        public boolean isLogOnChange() {
+            return logOnChange;
+        }
+        
+        public void setLogOnChange(boolean logOnChange) {
+            this.logOnChange = logOnChange;
+        }
     }
 }
 

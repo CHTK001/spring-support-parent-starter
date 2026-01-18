@@ -1,7 +1,7 @@
-﻿package com.chua.starter.pay.support.postprocessor;
+package com.chua.starter.pay.support.postprocessor;
 
-import com.chua.common.support.constant.Action;
-import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.core.constant.Action;
+import com.chua.common.support.core.utils.ServiceProvider;
 import com.chua.starter.pay.support.entity.PayMerchantTransferRecord;
 
 /**

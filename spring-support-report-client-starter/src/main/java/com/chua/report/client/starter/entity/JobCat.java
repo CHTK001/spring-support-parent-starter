@@ -1,4 +1,4 @@
-﻿package com.chua.report.client.starter.entity;
+package com.chua.report.client.starter.entity;
 
 import lombok.Data;
 

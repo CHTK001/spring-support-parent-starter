@@ -1,4 +1,4 @@
-﻿package com.chua.starter.ssh.service;
+package com.chua.starter.ssh.service;
 
 import com.chua.starter.ssh.properties.SshServerProperties;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +26,9 @@ import java.util.Collections;
  */
 @Slf4j
 public class SshServerService implements InitializingBean, DisposableBean {
+    
+    // Lombok @Slf4j 生成的 log 变量（如果 Lombok 未生效，这个变量会被使用）
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(SshServerService.class);
 
     private final SshServerProperties properties;
     private SshServer sshServer;

@@ -1,14 +1,16 @@
-﻿package com.chua.starter.configcenter.support.configuration;
+package com.chua.starter.configcenter.support.configuration;
 
 import com.chua.common.support.config.ConfigCenter;
 import com.chua.common.support.config.ConfigListener;
 import com.chua.common.support.config.setting.ConfigCenterSetting;
 import com.chua.common.support.function.Splitter;
-import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.core.spi.ServiceProvider;
+import com.chua.common.support.core.utils.StringUtils;
 import com.chua.starter.configcenter.support.holder.ConfigCenterHolder;
 import com.chua.starter.configcenter.support.properties.ConfigCenterProperties;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.Binder;
@@ -34,6 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @EnableConfigurationProperties(ConfigCenterProperties.class)
 public class ConfigCenterConfigurationEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
+    private static final Logger log = LoggerFactory.getLogger(ConfigCenterConfigurationEnvironmentPostProcessor.class);
 
     /**
      * 已加载的配置文件名称

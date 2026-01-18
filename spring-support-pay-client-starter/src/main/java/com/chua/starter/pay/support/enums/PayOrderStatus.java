@@ -1,7 +1,6 @@
-﻿package com.chua.starter.pay.support.enums;
+package com.chua.starter.pay.support.enums;
 
 import com.chua.starter.swagger.support.SwaggerEnum;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 import java.io.Serializable;
@@ -12,7 +11,6 @@ import java.io.Serializable;
  * @since 2025/10/14 13:11
  */
 @Getter
-@AllArgsConstructor
 public enum PayOrderStatus implements SwaggerEnum, Serializable {
 
     /**
@@ -74,6 +72,17 @@ public enum PayOrderStatus implements SwaggerEnum, Serializable {
     private final String code;
     private final String name;
 
+    /**
+     * 构造函数
+     *
+     * @param code 状态码
+     * @param name 状态名称
+     */
+    PayOrderStatus(String code, String name) {
+        this.code = code;
+        this.name = name;
+    }
+
 
 
     /**
@@ -88,6 +97,16 @@ public enum PayOrderStatus implements SwaggerEnum, Serializable {
             }
         }
         return null;
+    }
+
+    @Override
+    public Object getCode() {
+        return code;
+    }
+
+    @Override
+    public String getName() {
+        return name;
     }
 
 }

@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.36</version>
+                <version>${revision}</version>
     </parent>
 
     <artifactId>spring-support-oauth-client-starter</artifactId>
@@ -28,7 +28,7 @@
         <dependency>
             <groupId>com.konghq</groupId>
             <artifactId>unirest-java</artifactId>
-            <version>3.14.1</version>
+            
             <exclusions>
                 <exclusion>
                     <groupId>commons-logging</groupId>
@@ -50,7 +50,7 @@
         <dependency>
             <groupId>me.zhyd.oauth</groupId>
             <artifactId>JustAuth</artifactId>
-            <version>1.16.6</version>
+            
         </dependency>
 
         <dependency>
@@ -68,7 +68,7 @@
         <dependency>
             <groupId>javax.annotation</groupId>
             <artifactId>javax.annotation-api</artifactId>
-            <version>1.3.2</version>
+            
         </dependency>
 
         <!-- Jakarta Servlet API - 提供 Servlet 相关接口 -->

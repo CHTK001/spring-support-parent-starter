@@ -7,7 +7,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.core.utils.IdUtils;
 import com.chua.common.support.core.utils.SignUtils;
 import com.chua.common.support.core.utils.StringUtils;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.spring.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.entity.AppKeySecret;
 import com.chua.starter.oauth.client.support.enums.AuthType;

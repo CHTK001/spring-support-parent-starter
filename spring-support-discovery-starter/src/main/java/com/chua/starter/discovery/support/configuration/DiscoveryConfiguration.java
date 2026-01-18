@@ -1,10 +1,11 @@
-﻿package com.chua.starter.discovery.support.configuration;
+package com.chua.starter.discovery.support.configuration;
 
-import com.chua.common.support.discovery.*;
-import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.utils.DigestUtils;
-import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.common.support.network.discovery.*;
+import com.chua.common.support.network.discovery.Event;
+import com.chua.common.support.core.spi.ServiceProvider;
+import com.chua.common.support.core.utils.DigestUtils;
+import com.chua.common.support.core.utils.StringUtils;
+import com.chua.spring.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.project.Project;
 import com.chua.starter.discovery.support.properties.DiscoveryListProperties;
 import com.chua.starter.discovery.support.properties.DiscoveryNodeProperties;
@@ -12,6 +13,8 @@ import com.chua.starter.discovery.support.properties.DiscoveryProperties;
 import com.chua.starter.discovery.support.service.DiscoveryEnvironment;
 import com.chua.starter.discovery.support.service.DiscoveryService;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static com.chua.starter.common.support.logger.ModuleLog.*;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.FactoryBean;
@@ -36,6 +39,7 @@ import java.util.*;
 @Slf4j
 @EnableConfigurationProperties(DiscoveryListProperties.class)
 public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionRegistryPostProcessor {
+    private static final Logger log = LoggerFactory.getLogger(DiscoveryConfiguration.class);
     private Environment environment;
 
     @Override
@@ -218,7 +222,7 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
                     serviceDiscovery.subscribe(discovery.getUriSpec(), new ServiceDiscoveryListener() {
                         @Override
                         public void listen(String s, Discovery discovery, Event event) {
-                            log.info("[Discovery] 服务变更: {} -> {}", highlight(discovery.getUriSpec()), event);
+                            DiscoveryConfiguration.log.info("[Discovery] 服务变更: {} -> {}", highlight(discovery.getUriSpec()), event);
                         }
                     });
                 }

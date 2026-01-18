@@ -1,4 +1,4 @@
-﻿package com.chua.starter.ai.support.service.impl;
+package com.chua.starter.ai.support.service.impl;
 
 import com.chua.starter.ai.support.model.*;
 import com.chua.starter.ai.support.service.AiService;

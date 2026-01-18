@@ -1,4 +1,4 @@
-﻿package com.chua.starter.pay.support.enums;
+package com.chua.starter.pay.support.enums;
 
 import com.google.gson.annotations.SerializedName;
 import lombok.Getter;

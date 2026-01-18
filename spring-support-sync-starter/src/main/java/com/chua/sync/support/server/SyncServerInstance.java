@@ -1,12 +1,12 @@
-﻿package com.chua.sync.support.server;
+package com.chua.sync.support.server;
 
-import com.chua.common.support.bean.BeanUtils;
-import com.chua.common.support.protocol.ProtocolSetting;
-import com.chua.common.support.protocol.ServerSetting;
-import com.chua.common.support.protocol.sync.SyncConnectionListener;
-import com.chua.common.support.protocol.sync.SyncMessage;
-import com.chua.common.support.protocol.sync.SyncMessageListener;
-import com.chua.common.support.protocol.sync.SyncSession;
+import com.chua.common.support.base.bean.BeanUtils;
+import com.chua.common.support.network.protocol.ProtocolSetting;
+import com.chua.common.support.network.protocol.ServerSetting;
+import com.chua.common.support.network.protocol.sync.SyncConnectionListener;
+import com.chua.common.support.network.protocol.sync.SyncMessage;
+import com.chua.common.support.network.protocol.sync.SyncMessageListener;
+import com.chua.common.support.network.protocol.sync.SyncSession;
 import com.chua.sync.support.pojo.ClientInfo;
 import com.chua.sync.support.properties.SyncProperties;
 import com.chua.sync.support.spi.SyncMessageHandler;
@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
 
-import static com.chua.common.support.utils.ArrayUtils.EMPTY_STRING_ARRAY;
+import static com.chua.common.support.core.utils.ArrayUtils.EMPTY_STRING_ARRAY;
 
 /**
  * 同步服务端实例
@@ -59,7 +59,7 @@ public class SyncServerInstance {
      * 同步服务端
      */
     @Getter
-    private com.chua.common.support.protocol.sync.SyncServer syncServer;
+    private com.chua.common.support.network.protocol.sync.SyncServer syncServer;
 
     /**
      * 消息处理器映射
@@ -141,7 +141,7 @@ public class SyncServerInstance {
                     .build();
 
             // 使用新的 SyncServer 接口创建服务端
-            syncServer = com.chua.common.support.protocol.sync.SyncServer.create(protocol, protocolSetting);
+            syncServer = com.chua.common.support.network.protocol.sync.SyncServer.create(protocol, protocolSetting);
 
             // 添加监听器
             syncServer.addConnectionListener(new InternalConnectionListener());

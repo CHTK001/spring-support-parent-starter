@@ -1,4 +1,4 @@
-﻿package com.chua.starter.pay.support.tradebill;
+package com.chua.starter.pay.support.tradebill;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.pay.support.pojo.TradebillV2Request;

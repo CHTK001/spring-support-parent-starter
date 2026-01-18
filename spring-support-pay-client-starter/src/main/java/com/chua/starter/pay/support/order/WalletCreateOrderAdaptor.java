@@ -1,12 +1,10 @@
-﻿package com.chua.starter.pay.support.order;
+package com.chua.starter.pay.support.order;
 
 import com.chua.common.support.core.annotation.Spi;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.net.UserAgent;
 import com.chua.common.support.objects.annotation.AutoInject;
-import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.utils.IdUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import com.chua.starter.pay.support.constant.PayConstant;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.chua.starter.pay.support.entity.PayUserWallet;
@@ -20,7 +18,6 @@ import com.chua.starter.pay.support.service.PayUserWalletService;
 import com.chua.starter.pay.support.service.impl.PayUserWalletServiceImpl;
 import com.wechat.pay.java.core.http.JsonRequestBody;
 import com.wechat.pay.java.core.http.RequestBody;
-import jakarta.servlet.http.HttpServletRequest;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -88,7 +85,8 @@ public class WalletCreateOrderAdaptor implements CreateOrderAdaptor{
                                                PayTradeType payTradeType,
                                                PayOrderStatus payOrderStatus) {
         PayMerchantOrder payMerchantOrder = new PayMerchantOrder();
-        payMerchantOrder.setPayMerchantOrderCode("P" + IdUtils.createTimeId(31));
+        // 生成时间戳ID: P + 时间戳 + 随机数
+        payMerchantOrder.setPayMerchantOrderCode("P" + System.currentTimeMillis() + (int)(Math.random() * 1000));
         payMerchantOrder.setPayMerchantOrderOpenid(openId);
         payMerchantOrder.setPayMerchantOrderAmount(request.getAmount());
         payMerchantOrder.setPayMerchantOrderType(request.getPayMerchantOrderType());
@@ -97,9 +95,25 @@ public class WalletCreateOrderAdaptor implements CreateOrderAdaptor{
         try {
             HttpServletRequest servletRequest = RequestUtils.getRequest();
             String header = servletRequest.getHeader("login-agent");
-            UserAgent userAgent = UserAgent.parseUserAgentString(header);
-            payMerchantOrder.setPayMerchantOrderBrowserSystem(userAgent.getOperatingSystem().getName());
-            payMerchantOrder.setPayMerchantOrderBrowser(userAgent.getBrowser().toString());
+            if (header != null && !header.isEmpty()) {
+                // 简单的 User-Agent 解析，提取浏览器和操作系统信息
+                String[] parts = header.split(" ");
+                if (parts.length > 0) {
+                    payMerchantOrder.setPayMerchantOrderBrowser(parts[0]);
+                }
+                // 操作系统信息可以从 User-Agent 中提取，这里简化处理
+                if (header.contains("Windows")) {
+                    payMerchantOrder.setPayMerchantOrderBrowserSystem("Windows");
+                } else if (header.contains("Mac")) {
+                    payMerchantOrder.setPayMerchantOrderBrowserSystem("Mac");
+                } else if (header.contains("Linux")) {
+                    payMerchantOrder.setPayMerchantOrderBrowserSystem("Linux");
+                } else if (header.contains("Android")) {
+                    payMerchantOrder.setPayMerchantOrderBrowserSystem("Android");
+                } else if (header.contains("iOS")) {
+                    payMerchantOrder.setPayMerchantOrderBrowserSystem("iOS");
+                }
+            }
         } catch (Exception ignored) {
         }
         payMerchantOrder.setPayMerchantTradeType(payTradeType);

@@ -1,6 +1,6 @@
-﻿package com.chua.starter.job.support.log;
+package com.chua.starter.job.support.log;
 
-import com.chua.common.support.utils.FileUtils;
+import com.chua.common.support.core.utils.FileUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.*;

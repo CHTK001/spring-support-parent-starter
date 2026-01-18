@@ -1,4 +1,4 @@
-﻿package com.chua.report.client.starter.job;
+package com.chua.report.client.starter.job;
 
 import lombok.Getter;
 
@@ -32,6 +32,42 @@ public enum GlueTypeEnum {
             }
         }
         return null;
+    }
+
+    /**
+     * 判断是否为脚本类型
+     *
+     * @return 是否为脚本类型
+     */
+    public boolean isScript() {
+        return isScript;
+    }
+
+    /**
+     * 获取执行命令
+     *
+     * @return 执行命令
+     */
+    public String getCmd() {
+        return cmd;
+    }
+
+    /**
+     * 获取文件后缀
+     *
+     * @return 文件后缀
+     */
+    public String getSuffix() {
+        return suffix;
+    }
+
+    /**
+     * 获取描述
+     *
+     * @return 描述
+     */
+    public String getDesc() {
+        return desc;
     }
 
 }

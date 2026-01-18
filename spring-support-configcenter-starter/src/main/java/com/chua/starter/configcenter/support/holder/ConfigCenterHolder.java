@@ -1,4 +1,4 @@
-﻿package com.chua.starter.configcenter.support.holder;
+package com.chua.starter.configcenter.support.holder;
 
 import com.chua.common.support.config.ConfigCenter;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +15,9 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public class ConfigCenterHolder {
+    
+    // Lombok @Slf4j 生成的 log 变量（如果 Lombok 未生效，这个变量会被使用）
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ConfigCenterHolder.class);
 
     /**
      * 全局 ConfigCenter 实例

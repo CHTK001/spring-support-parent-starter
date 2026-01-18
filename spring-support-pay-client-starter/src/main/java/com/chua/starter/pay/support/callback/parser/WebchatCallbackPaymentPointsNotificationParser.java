@@ -1,8 +1,7 @@
-﻿package com.chua.starter.pay.support.callback.parser;
+package com.chua.starter.pay.support.callback.parser;
 
 import com.alibaba.fastjson.JSON;
-import com.chua.common.support.json.Json;
-import com.chua.common.support.json.JsonObject;
+import com.alibaba.fastjson.JSONObject;
 import com.chua.starter.pay.support.callback.OrderCallbackRequest;
 import com.chua.starter.pay.support.callback.WechatOrderCallbackRequest;
 import com.chua.starter.pay.support.callback.WechatOrderCallbackResponse;
@@ -112,7 +111,7 @@ public class WebchatCallbackPaymentPointsNotificationParser implements CallbackN
         NotificationConfig config = getNotificationConfig();
         // 初始化 NotificationParser
         NotificationParser notificationParser = new NotificationParser(config);
-        JsonObject jsonObject1 = Json.getJsonObject(requestBody);
+        JSONObject jsonObject1 = JSON.parseObject(requestBody);
         String eventType = jsonObject1.getString("event_type");
         log.info("当前订单事件类型{}", eventType);
         try {

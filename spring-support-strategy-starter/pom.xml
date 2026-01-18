@@ -25,7 +25,8 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.35</version>
+        <version>${revision}</version>
+        
     </parent>
 
     <artifactId>spring-support-strategy-starter</artifactId>
@@ -70,7 +71,7 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-resilience4j-starter</artifactId>
-            <version>4.0.0.33</version>
+            
         </dependency>
 
         <!-- Spring Data Redis - 分布式缓存支持 -->

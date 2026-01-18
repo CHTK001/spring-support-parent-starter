@@ -1,4 +1,4 @@
-﻿package com.chua.sync.support.properties;
+package com.chua.sync.support.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -57,6 +57,17 @@ public class SyncProperties {
         private boolean enable = false;
 
         /**
+         * 是否启用
+         *
+         * @return 是否启用
+         * @author CH
+         * @since 1.0.0
+         */
+        public boolean isEnable() {
+            return enable;
+        }
+
+        /**
          * 服务实例列表 (支持多端口)
          */
         private List<ServerInstance> instances = new ArrayList<>();
@@ -97,15 +108,16 @@ public class SyncProperties {
          */
         public List<ServerInstance> getEffectiveInstances() {
             if (instances == null || instances.isEmpty()) {
-                ServerInstance defaultInstance = new ServerInstance();
-                defaultInstance.setName("default");
-                defaultInstance.setHost(host);
-                defaultInstance.setPort(port);
-                defaultInstance.setProtocol(protocol);
+                var defaultInstance = new ServerInstance();
+                defaultInstance.name = "default";
+                defaultInstance.host = host;
+                defaultInstance.port = port;
+                defaultInstance.protocol = protocol;
                 return List.of(defaultInstance);
             }
             return instances;
         }
+
     }
 
     /**
@@ -118,6 +130,39 @@ public class SyncProperties {
          * 实例名称 (用于标识)
          */
         private String name = UUID.randomUUID().toString();
+
+        /**
+         * 是否启用
+         *
+         * @return 是否启用
+         * @author CH
+         * @since 1.0.0
+         */
+        public boolean isEnable() {
+            return enable;
+        }
+
+        /**
+         * 获取实例名称
+         *
+         * @return 实例名称
+         * @author CH
+         * @since 1.0.0
+         */
+        public String getName() {
+            return name;
+        }
+
+        /**
+         * 获取主题映射
+         *
+         * @return 主题映射
+         * @author CH
+         * @since 1.0.0
+         */
+        public Map<String, String> getTopics() {
+            return topics;
+        }
 
         /**
          * 绑定地址
@@ -148,6 +193,7 @@ public class SyncProperties {
          * 该实例的主题映射 (可覆盖全局)
          */
         private Map<String, String> topics = new LinkedHashMap<>();
+
     }
 
     // ==================== 客户端配置 ====================
@@ -162,6 +208,17 @@ public class SyncProperties {
          * 是否启用客户端
          */
         private boolean enable = false;
+
+        /**
+         * 是否启用
+         *
+         * @return 是否启用
+         * @author CH
+         * @since 1.0.0
+         */
+        public boolean isEnable() {
+            return enable;
+        }
 
         /**
          * 实例ID (默认自动生成)
@@ -266,6 +323,7 @@ public class SyncProperties {
             }
             return serverHost + ":" + serverPort;
         }
+
     }
 
     // ==================== 便捷方法 ====================
@@ -292,5 +350,38 @@ public class SyncProperties {
     public boolean isClientEnabled() {
         return ("client".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type))
                 && client.isEnable();
+    }
+
+    /**
+     * 获取客户端配置
+     *
+     * @return 客户端配置
+     * @author CH
+     * @since 1.0.0
+     */
+    public ClientConfig getClient() {
+        return client;
+    }
+
+    /**
+     * 获取服务端配置
+     *
+     * @return 服务端配置
+     * @author CH
+     * @since 1.0.0
+     */
+    public ServerConfig getServer() {
+        return server;
+    }
+
+    /**
+     * 获取主题映射
+     *
+     * @return 主题映射
+     * @author CH
+     * @since 1.0.0
+     */
+    public Map<String, String> getTopics() {
+        return topics;
     }
 }

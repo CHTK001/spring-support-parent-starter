@@ -1,4 +1,4 @@
-﻿package com.chua.starter.pay.support.transfer;
+package com.chua.starter.pay.support.transfer;
 
 import lombok.Data;
 

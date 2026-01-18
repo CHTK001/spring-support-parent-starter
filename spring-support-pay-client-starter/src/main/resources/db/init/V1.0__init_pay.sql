@@ -239,4 +239,31 @@ CREATE TABLE `pay_user_wallet`  (
 -- Records of pay_user_wallet
 -- ----------------------------
 
+-- ----------------------------
+-- Table structure for pay_merchant_config_alipay
+-- ----------------------------
+DROP TABLE IF EXISTS `pay_merchant_config_alipay`;
+CREATE TABLE `pay_merchant_config_alipay`  (
+  `pay_merchant_config_alipay_id` int NOT NULL AUTO_INCREMENT,
+  `pay_merchant_config_alipay_app_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '支付宝应用ID',
+  `pay_merchant_config_alipay_private_key` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '商户私钥',
+  `pay_merchant_config_alipay_public_key` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '支付宝公钥',
+  `pay_merchant_config_alipay_trade_type` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '支付类型',
+  `pay_merchant_config_alipay_pay_notify_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '支付回调地址',
+  `pay_merchant_config_alipay_refund_notify_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '退款回调地址',
+  `pay_merchant_config_status` int NULL DEFAULT NULL COMMENT '是否启用 0-禁用',
+  `pay_merchant_config_test_account` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '测试账号',
+  `pay_merchant_id` int NULL DEFAULT NULL COMMENT '商户ID',
+  `pay_merchant_config_alipay_sign_type` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '签名类型',
+  `pay_merchant_config_alipay_charset` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '字符编码格式',
+  `pay_merchant_config_alipay_gateway_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '网关地址',
+  `create_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '创建人姓名',
+  `create_by` int NULL DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime NULL DEFAULT NULL COMMENT '创建时间',
+  `update_time` datetime NULL DEFAULT NULL COMMENT '更新时间',
+  `update_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '更新人姓名',
+  `update_by` int NULL DEFAULT NULL COMMENT '更新人',
+  PRIMARY KEY (`pay_merchant_config_alipay_id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '支付支付宝配置' ROW_FORMAT = Dynamic;
+
 SET FOREIGN_KEY_CHECKS = 1;

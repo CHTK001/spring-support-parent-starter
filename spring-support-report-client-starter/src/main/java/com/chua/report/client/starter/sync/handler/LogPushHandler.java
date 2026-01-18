@@ -1,12 +1,12 @@
-﻿package com.chua.report.client.starter.sync.handler;
+package com.chua.report.client.starter.sync.handler;
 
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.AppenderBase;
 import com.chua.common.support.core.annotation.Spi;
-import com.chua.common.support.json.Json;
-import com.chua.common.support.utils.MapUtils;
+import com.chua.common.support.text.json.Json;
+import com.chua.common.support.core.utils.MapUtils;
 import com.chua.report.client.starter.sync.MonitorTopics;
 import com.chua.sync.support.client.SyncClient;
 import com.chua.sync.support.spi.SyncMessageHandler;
@@ -41,6 +41,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Slf4j
 @Spi("logPushHandler")
 public class LogPushHandler implements SyncMessageHandler, ApplicationContextAware {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(LogPushHandler.class);
 
     private ApplicationContext applicationContext;
 

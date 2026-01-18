@@ -73,6 +73,7 @@
     </issueManagement>
     <!-- 子模块列表 -->
     <modules>
+        <module>spring-support-bom</module>                    <!-- BOM依赖版本统一管理 -->
         <module>spring-support-datasource-starter</module>
         <module>spring-support-common-starter</module>          <!-- 通用功能和工具类 -->
         <module>spring-support-mybatis-starter</module>         <!-- MyBatis Plus集成 -->
@@ -156,7 +157,8 @@
         <utils.version>4.0.0.34</utils.version>
 
         <!-- 框架和库版本管理 -->
-        <lombok.version>1.18.40</lombok.version>              <!-- Lombok版本，支持Java 25 -->
+        <lombok.version>1.18.42</lombok.version>              <!-- Lombok版本，支持 Java 25 -->
+        <maven.compiler.proc>full</maven.compiler.proc>      <!-- Java 25 需要，确保启用注解处理 -->
         <mybatis-plus.version>3.5.11</mybatis-plus.version>  <!-- MyBatis Plus版本 -->
         <mybatis-plus-join.version>1.5.3</mybatis-plus-join.version>  <!-- MyBatis Plus Join版本 -->
         <dubbo.version>3.1.1</dubbo.version>                <!-- Dubbo RPC框架版本 -->
@@ -173,7 +175,7 @@
         <freemarker.version>2.3.32</freemarker.version>     <!-- FreeMarker模板引擎版本 -->
         
         <!-- Maven插件版本管理 -->
-        <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
+        <maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
         <maven-source-plugin.version>3.3.0</maven-source-plugin.version>
         <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
         <maven-javadoc-plugin.version>3.6.3</maven-javadoc-plugin.version>
@@ -207,6 +209,31 @@
     <!-- 依赖版本管理 -->
     <dependencyManagement>
         <dependencies>
+            <!-- Spring Boot BOM - 统一管理 Spring Boot 相关依赖版本 -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>3.5.9</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            
+            <!-- Spring Support BOM - 统一管理 Spring Support 框架依赖版本 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-bom</artifactId>
+                <version>${module.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            
+            <!-- Lombok 版本管理 - 显式声明以覆盖 Spring Boot 父 POM 中的版本 -->
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+            </dependency>
+            
             <!-- ========== Spring Boot 基础模块（可选） ========== -->
             
             <!-- Spring Boot Web Starter - Web应用基础，子模块按需引入 -->
@@ -879,14 +906,15 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${maven-compiler-plugin.version}</version>
                 <configuration>
-                    <release>${java.version}</release>                   <!-- 使用release参数，自动处理source和target -->
-                    <encoding>${project.build.sourceEncoding}</encoding> <!-- 编码格式 -->
+                    <source>25</source>                                  <!-- 源代码兼容性：Java 25 -->
+                    <target>25</target>                                  <!-- 目标字节码版本：Java 25 -->
+                    <release>25</release>                                <!-- 发布版本：Java 25 -->
+                    <encoding>UTF-8</encoding>                          <!-- 编码格式 -->
+                    <useIncrementalCompilation>true</useIncrementalCompilation> <!-- 启用增量编译 -->
                     <compilerArgs>
                         <arg>-parameters</arg>                          <!-- 保留参数名信息 -->
                         <arg>-J--enable-native-access=ALL-UNNAMED</arg> <!-- Java 25 需要 -->
-                        <arg>-proc:full</arg>                           <!-- 强制启用注解处理器 -->
                     </compilerArgs>
-                    <fork>true</fork>                                    <!-- 使用独立的 JVM 进程 -->
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
@@ -894,7 +922,6 @@
                             <version>${lombok.version}</version>
                         </path>
                     </annotationProcessorPaths>
-                    <generatedSourcesDirectory>${project.build.directory}/generated-sources/annotations</generatedSourcesDirectory>
                 </configuration>
             </plugin>
 
@@ -1032,7 +1059,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
-                        <version>3.1.0</version>
+                        <version>3.2.4</version>
                         <executions>
                             <execution>
                                 <id>sign-artifacts</id>

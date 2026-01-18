@@ -1,4 +1,4 @@
-﻿package com.chua.report.client.starter.job.handler;
+package com.chua.report.client.starter.job.handler;
 
 import com.chua.report.client.starter.job.GlueTypeEnum;
 import com.chua.report.client.starter.job.ScriptUtil;
@@ -23,6 +23,8 @@ import java.io.File;
 @Slf4j
 public class ScriptJobHandler implements JobHandler {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ScriptJobHandler.class);
+
     /**
      * 任务ID
      */
@@ -33,6 +35,15 @@ public class ScriptJobHandler implements JobHandler {
      */
     @Getter
     private final long glueUpdatetime;
+
+    /**
+     * 获取 GLUE 更新时间戳
+     *
+     * @return GLUE 更新时间戳
+     */
+    public long getGlueUpdatetime() {
+        return glueUpdatetime;
+    }
 
     /**
      * 脚本源码

@@ -1,7 +1,8 @@
-﻿package com.chua.report.client.starter.job.handler;
+package com.chua.report.client.starter.job.handler;
 
 import com.chua.common.support.core.annotation.Spi;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
 
@@ -17,8 +18,8 @@ import java.lang.reflect.Method;
  * @since 2024/03/11
  */
 @Spi("bean")
-@Slf4j
 public class BeanJobHandler implements JobHandler {
+    private static final Logger log = LoggerFactory.getLogger(BeanJobHandler.class);
 
     /**
      * 目标Bean对象

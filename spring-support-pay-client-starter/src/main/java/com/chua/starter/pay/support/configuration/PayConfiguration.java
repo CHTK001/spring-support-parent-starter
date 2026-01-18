@@ -1,4 +1,4 @@
-﻿package com.chua.starter.pay.support.configuration;
+package com.chua.starter.pay.support.configuration;
 
 import com.chua.starter.common.support.properties.IpProperties;
 import com.chua.starter.common.support.service.IptablesService;

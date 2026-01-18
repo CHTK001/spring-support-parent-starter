@@ -2,7 +2,7 @@ package com.chua.starter.oauth.client.support.execute;
 
 import com.chua.common.support.core.annotation.SpiDefault;
 import com.chua.common.support.core.spi.ServiceProvider;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.spring.support.configuration.SpringBeanUtils;
 import org.springframework.boot.context.properties.bind.Binder;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;

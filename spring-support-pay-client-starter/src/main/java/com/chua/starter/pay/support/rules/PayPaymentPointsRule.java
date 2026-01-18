@@ -1,6 +1,6 @@
-﻿package com.chua.starter.pay.support.rules;
+package com.chua.starter.pay.support.rules;
 
-import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.core.utils.ServiceProvider;
 import com.chua.starter.pay.support.entity.PayMerchantConfigWechat;
 import com.chua.starter.pay.support.pojo.PaymentPointRequest;
 

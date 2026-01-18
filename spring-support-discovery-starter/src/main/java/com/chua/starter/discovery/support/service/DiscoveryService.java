@@ -1,8 +1,8 @@
-﻿package com.chua.starter.discovery.support.service;
+package com.chua.starter.discovery.support.service;
 
-import com.chua.common.support.discovery.Discovery;
-import com.chua.common.support.discovery.ServiceDiscovery;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.network.discovery.Discovery;
+import com.chua.common.support.network.discovery.ServiceDiscovery;
+import com.chua.common.support.core.utils.StringUtils;
 
 import java.util.Collections;
 import java.util.Map;

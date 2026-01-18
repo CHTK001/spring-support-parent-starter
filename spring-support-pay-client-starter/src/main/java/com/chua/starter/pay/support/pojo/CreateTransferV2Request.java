@@ -1,6 +1,6 @@
-﻿package com.chua.starter.pay.support.pojo;
+package com.chua.starter.pay.support.pojo;
 
-import com.chua.common.support.validator.group.AddGroup;
+import com.chua.common.support.base.validator.group.AddGroup;
 import com.chua.starter.pay.support.enums.PayTransfer;
 import com.google.gson.annotations.SerializedName;
 import io.swagger.v3.oas.annotations.media.Schema;

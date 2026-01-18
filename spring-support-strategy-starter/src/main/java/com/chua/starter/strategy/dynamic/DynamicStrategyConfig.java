@@ -1,4 +1,4 @@
-﻿package com.chua.starter.strategy.dynamic;
+package com.chua.starter.strategy.dynamic;
 
 import io.github.resilience4j.bulkhead.BulkheadConfig;
 import io.github.resilience4j.bulkhead.BulkheadRegistry;

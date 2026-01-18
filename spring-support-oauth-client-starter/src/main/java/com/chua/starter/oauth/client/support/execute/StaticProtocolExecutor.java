@@ -6,7 +6,7 @@ import com.chua.common.support.text.json.Json;
 import com.chua.common.support.core.utils.CollectionUtils;
 import com.chua.common.support.core.utils.DigestUtils;
 import com.chua.common.support.core.utils.StringUtils;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.spring.support.configuration.SpringBeanUtils;
 import org.springframework.boot.context.properties.bind.Binder;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.common.support.utils.RequestUtils;

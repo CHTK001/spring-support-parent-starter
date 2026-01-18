@@ -1,4 +1,4 @@
-﻿package com.chua.report.client.starter.sync.handler;
+package com.chua.report.client.starter.sync.handler;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -28,6 +28,8 @@ import java.util.stream.Collectors;
 @Slf4j
 @Spi("loggingConfigHandler")
 public class LoggingConfigHandler implements SyncMessageHandler {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(LoggingConfigHandler.class);
 
     @Override
     public String getName() {

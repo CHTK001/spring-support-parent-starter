@@ -1,13 +1,13 @@
-﻿package com.chua.sync.support.client;
+package com.chua.sync.support.client;
 
-import com.chua.common.support.protocol.ClientSetting;
-import com.chua.common.support.protocol.ProtocolSetting;
-import com.chua.common.support.protocol.ServerSetting;
-import com.chua.common.support.protocol.listener.ConnectionEvent;
-import com.chua.common.support.protocol.listener.ConnectionListener;
-import com.chua.common.support.protocol.listener.DataEvent;
-import com.chua.common.support.protocol.listener.TopicListener;
-import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.network.protocol.ClientSetting;
+import com.chua.common.support.network.protocol.ProtocolSetting;
+import com.chua.common.support.network.protocol.ServerSetting;
+import com.chua.common.support.network.protocol.listener.ConnectionEvent;
+import com.chua.common.support.network.protocol.listener.ConnectionListener;
+import com.chua.common.support.network.protocol.listener.DataEvent;
+import com.chua.common.support.network.protocol.listener.TopicListener;
+import com.chua.common.support.core.spi.ServiceProvider;
 import com.chua.sync.support.pojo.ClientInfo;
 import com.chua.sync.support.pojo.SyncResponse;
 import com.chua.sync.support.properties.SyncProperties;
@@ -60,7 +60,7 @@ public class SyncClient implements InitializingBean, DisposableBean {
      * 同步客户端
      */
     @Getter
-    private com.chua.common.support.protocol.sync.SyncClient syncClient;
+    private com.chua.common.support.network.protocol.sync.SyncClient syncClient;
 
     /**
      * 定时同步调度器
@@ -292,7 +292,7 @@ public class SyncClient implements InitializingBean, DisposableBean {
                     .build();
 
             // 使用新的 SyncClient 接口创建客户端
-            syncClient = com.chua.common.support.protocol.sync.SyncClient.create(protocol, protocolSetting);
+            syncClient = com.chua.common.support.network.protocol.sync.SyncClient.create(protocol, protocolSetting);
 
             // 订阅所有配置的主题 + 系统主题
             List<String> allTopics = new ArrayList<>(syncProperties.getTopics().keySet());

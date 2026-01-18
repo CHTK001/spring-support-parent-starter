@@ -1,4 +1,4 @@
-﻿package com.chua.starter.pay.support.callback;
+package com.chua.starter.pay.support.callback;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

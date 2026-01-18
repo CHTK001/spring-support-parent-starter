@@ -1,4 +1,4 @@
-﻿package com.chua.report.client.starter.sync.handler;
+package com.chua.report.client.starter.sync.handler;
 
 import com.chua.common.support.core.annotation.Spi;
 import com.chua.report.client.starter.sync.MonitorTopics;
@@ -26,6 +26,8 @@ import java.util.stream.Stream;
 @Slf4j
 @Spi("fileHandler")
 public class FileHandler implements SyncMessageHandler {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(FileHandler.class);
 
     @Override
     public String getName() {

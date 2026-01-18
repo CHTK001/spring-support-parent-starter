@@ -1,4 +1,4 @@
-﻿package com.chua.starter.strategy.logger;
+package com.chua.starter.strategy.logger;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

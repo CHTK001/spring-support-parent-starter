@@ -1,4 +1,4 @@
-﻿package com.chua.starter.job.support;
+package com.chua.starter.job.support;
 
 import com.chua.starter.job.support.annotation.Job;
 import com.chua.starter.job.support.glue.GlueFactory;
@@ -6,6 +6,8 @@ import com.chua.starter.job.support.handler.BeanJobHandler;
 import com.chua.starter.job.support.handler.JobHandler;
 import com.chua.starter.job.support.handler.JobHandlerFactory;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.SmartInitializingSingleton;
@@ -60,6 +62,7 @@ import java.util.Map;
  */
 @Slf4j
 public class JobAnnotationScanner implements BeanPostProcessor, SmartInitializingSingleton, DisposableBean {
+    private static final Logger log = LoggerFactory.getLogger(JobAnnotationScanner.class);
 
     @Override
     public void afterSingletonsInstantiated() {

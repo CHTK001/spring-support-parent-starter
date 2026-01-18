@@ -26,7 +26,8 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.35</version>
+        <version>${revision}</version>
+        
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -41,21 +42,21 @@
         <dependency>
             <groupId>org.apache.sshd</groupId>
             <artifactId>sshd-core</artifactId>
-            <version>2.12.0</version>
+            
         </dependency>
 
         <!-- Apache SSHD SCP - 提供SCP文件传输功能 -->
         <dependency>
             <groupId>org.apache.sshd</groupId>
             <artifactId>sshd-scp</artifactId>
-            <version>2.12.0</version>
+            
         </dependency>
 
         <!-- Apache SSHD SFTP - 提供SFTP文件传输功能 -->
         <dependency>
             <groupId>org.apache.sshd</groupId>
             <artifactId>sshd-sftp</artifactId>
-            <version>2.12.0</version>
+            
         </dependency>
 
         <!-- Spring Boot Starter - 提供Spring Boot基础功能 -->

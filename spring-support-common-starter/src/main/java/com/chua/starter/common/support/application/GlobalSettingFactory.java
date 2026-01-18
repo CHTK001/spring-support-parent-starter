@@ -5,7 +5,7 @@ import com.chua.common.support.function.Upgrade;
 import com.chua.common.support.base.reflection.FieldStation;
 import com.chua.common.support.core.utils.ClassUtils;
 import com.chua.common.support.core.utils.MapUtils;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.spring.support.configuration.SpringBeanUtils;
 
 import java.util.Collections;
 import java.util.LinkedList;

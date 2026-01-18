@@ -1,4 +1,4 @@
-﻿package com.chua.starter.strategy.aspect;
+package com.chua.starter.strategy.aspect;
 
 import com.chua.starter.strategy.annotation.RequestCollapse;
 import lombok.extern.slf4j.Slf4j;

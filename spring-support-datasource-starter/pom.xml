@@ -22,9 +22,9 @@
 
     <!-- 继承父项目配置 -->
     <parent>
-        <artifactId>spring-support-parent-starter</artifactId>
         <groupId>com.chua</groupId>
-        <version>4.0.0.36</version>
+        <artifactId>spring-support-parent-starter</artifactId>
+        <version>${revision}</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -46,14 +46,14 @@
         <dependency>
             <groupId>p6spy</groupId>
             <artifactId>p6spy</artifactId>
-            <version>3.8.7</version>
+            
         </dependency>
 
         <!-- Apache Calcite SQL解析引擎 - 提供SQL解析、验证和优化功能 -->
         <dependency>
             <groupId>org.apache.calcite</groupId>
             <artifactId>calcite-core</artifactId>
-            <version>1.36.0</version>
+            
             <exclusions>
                 <!-- 排除 commons-logging，使用 slf4j 代替 -->
                 <exclusion>
@@ -93,7 +93,7 @@
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>druid-spring-boot-3-starter</artifactId>
-            <version>1.2.21</version>
+            
             <scope>provided</scope>
         </dependency>
 
@@ -122,7 +122,7 @@
         <dependency>
             <groupId>com.mchange</groupId>
             <artifactId>c3p0</artifactId>
-            <version>0.9.5.5</version>
+            
             <scope>provided</scope>
         </dependency>
 

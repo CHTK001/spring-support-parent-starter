@@ -1,4 +1,4 @@
-﻿package com.chua.starter.strategy.template;
+package com.chua.starter.strategy.template;
 
 import java.util.function.Function;
 import java.util.function.Supplier;

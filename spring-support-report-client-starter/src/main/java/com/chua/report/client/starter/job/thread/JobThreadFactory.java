@@ -1,7 +1,7 @@
-﻿package com.chua.report.client.starter.job.thread;
+package com.chua.report.client.starter.job.thread;
 
 import com.chua.report.client.starter.job.handler.JobHandler;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.spring.support.configuration.SpringBeanUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -20,6 +20,8 @@ import java.util.concurrent.ConcurrentMap;
  */
 @Slf4j
 public class JobThreadFactory {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(JobThreadFactory.class);
 
     /**
      * 单例实例

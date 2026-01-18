@@ -1,4 +1,4 @@
-﻿package com.chua.starter.job.support.mapper;
+package com.chua.starter.job.support.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.chua.starter.job.support.entity.SysJobLogDetail;

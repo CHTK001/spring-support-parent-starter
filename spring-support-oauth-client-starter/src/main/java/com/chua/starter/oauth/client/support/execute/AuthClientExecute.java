@@ -8,7 +8,7 @@ import com.chua.common.support.core.utils.DigestUtils;
 import com.chua.common.support.core.utils.Md5Utils;
 import com.chua.common.support.core.utils.StringUtils;
 import com.chua.common.support.value.Value;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.spring.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.watch.Watch;
 import org.springframework.boot.context.properties.bind.Binder;
 import com.chua.starter.oauth.client.support.enums.AuthType;

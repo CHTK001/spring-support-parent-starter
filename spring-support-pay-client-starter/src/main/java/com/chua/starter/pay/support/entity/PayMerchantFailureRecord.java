@@ -1,4 +1,4 @@
-﻿package com.chua.starter.pay.support.entity;
+package com.chua.starter.pay.support.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
@@ -10,6 +10,9 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
 /**
  *
@@ -22,7 +25,10 @@ import lombok.EqualsAndHashCode;
  */
 @Schema(description = "支付失败记录")
 @Data
+@Getter
+@Setter
 @EqualsAndHashCode(callSuper = true)
+@ToString(callSuper = true)
 @TableName(value = "pay_merchant_failure_record")
 public class PayMerchantFailureRecord extends SysBase implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -92,4 +98,5 @@ public class PayMerchantFailureRecord extends SysBase implements Serializable {
     @TableField(value = "pay_merchant_failure_type")
     @Schema(description = "失败类型")
     private String payMerchantFailureType;
+
 }

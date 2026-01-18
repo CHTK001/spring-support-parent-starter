@@ -1,9 +1,10 @@
-﻿package com.chua.starter.pay.support.controller;
+package com.chua.starter.pay.support.controller;
 
 import com.chua.common.support.lang.code.ReturnPageResult;
-import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.validator.group.AddGroup;
-import com.chua.common.support.validator.group.SelectGroup;
+import com.chua.starter.mybatis.utils.PageResultUtils;
+import com.chua.common.support.core.utils.ServiceProvider;
+import com.chua.common.support.base.validator.group.AddGroup;
+import com.chua.common.support.base.validator.group.SelectGroup;
 import com.chua.starter.pay.support.complaints.ComplaintsAdaptor;
 import com.chua.starter.pay.support.dto.SearchComplaintsResponse;
 import com.chua.starter.pay.support.pojo.SearchComplaintsV2Request;
@@ -37,7 +38,7 @@ public class PayComplaintsController {
     @Operation(summary = "搜索投诉单")
     public ReturnPageResult<SearchComplaintsV2Response> search(@Validated(SelectGroup.class) @RequestBody SearchComplaintsV2Request request, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return ReturnPageResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
+            return PageResultUtils.error(bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
         return ServiceProvider.of(ComplaintsAdaptor.class).getExtension(request.getTradeType()).search(request);
     }

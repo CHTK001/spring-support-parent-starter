@@ -1,4 +1,4 @@
-﻿package com.chua.report.client.starter.configuration;
+package com.chua.report.client.starter.configuration;
 
 import com.chua.report.client.starter.job.JobAnnotationScanner;
 import com.chua.report.client.starter.job.JobReporter;
@@ -49,6 +49,8 @@ import org.springframework.core.env.Environment;
 @ConditionalOnBean(SyncClient.class)
 @EnableConfigurationProperties(ReportProperties.class)
 public class ReportClientConfiguration implements ApplicationContextAware {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ReportClientConfiguration.class);
 
     private final SyncClient syncClient;
     private final Environment environment;

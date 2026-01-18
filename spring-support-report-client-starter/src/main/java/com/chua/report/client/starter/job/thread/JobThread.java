@@ -1,4 +1,4 @@
-﻿package com.chua.report.client.starter.job.thread;
+package com.chua.report.client.starter.job.thread;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.report.client.starter.job.JobReporter;
@@ -30,6 +30,8 @@ import java.util.concurrent.*;
 @Slf4j
 @SuppressWarnings("ALL")
 public class JobThread extends Thread {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(JobThread.class);
 
     /**
      * 任务ID

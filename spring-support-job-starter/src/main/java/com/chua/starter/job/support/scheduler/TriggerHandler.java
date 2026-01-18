@@ -1,4 +1,4 @@
-﻿package com.chua.starter.job.support.scheduler;
+package com.chua.starter.job.support.scheduler;
 
 /**
  * 触发处理器接口

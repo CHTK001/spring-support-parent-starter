@@ -1,4 +1,4 @@
-﻿package com.chua.starter.strategy.config;
+package com.chua.starter.strategy.config;
 
 import com.chua.starter.strategy.interceptor.CircuitBreakerInterceptor;
 import com.chua.starter.strategy.interceptor.IpAccessControlInterceptor;

@@ -1,4 +1,4 @@
-﻿package com.chua.starter.pay.support.enums;
+package com.chua.starter.pay.support.enums;
 
 import lombok.Getter;
 
@@ -46,7 +46,7 @@ public enum WechatTransferBatchStatus {
      */
     public static WechatTransferBatchStatus getByCode(String code) {
         for (WechatTransferBatchStatus status : values()) {
-            if (status.getCode().equals(code)) {
+            if (status.code.equals(code)) {
                 return status;
             }
         }

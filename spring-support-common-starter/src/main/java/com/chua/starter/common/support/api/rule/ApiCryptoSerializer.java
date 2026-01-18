@@ -5,7 +5,7 @@ import com.chua.common.support.crypto.CodecKeyPair;
 import com.chua.common.support.core.utils.StringUtils;
 import com.chua.starter.common.support.api.annotations.ApiFieldCrypto;
 import com.chua.starter.common.support.api.annotations.ApiFieldCryptoKey;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.spring.support.configuration.SpringBeanUtils;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.JsonMappingException;

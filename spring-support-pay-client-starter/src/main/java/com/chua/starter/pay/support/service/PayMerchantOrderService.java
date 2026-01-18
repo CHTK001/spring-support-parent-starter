@@ -1,8 +1,8 @@
-﻿package com.chua.starter.pay.support.service;
+package com.chua.starter.pay.support.service;
 
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.validator.group.AddGroup;
-import com.chua.common.support.validator.group.UpdateGroup;
+import com.chua.common.support.base.validator.group.AddGroup;
+import com.chua.common.support.base.validator.group.UpdateGroup;
 import com.chua.starter.pay.support.entity.PayMerchantOrder;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.starter.pay.support.enums.PayOrderStatus;

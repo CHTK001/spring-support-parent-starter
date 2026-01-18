@@ -1,0 +1,694 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Spring Support BOM - 依赖版本统一管理
+
+    这是一个 BOM (Bill of Materials) 模块，用于统一管理 Spring Support 框架中
+    所有第三方依赖的版本。使用 BOM 可以确保项目中所有模块使用相同版本的依赖，
+    避免版本冲突和兼容性问题。
+
+    使用方式：
+    1. 在项目的 pom.xml 中引入此 BOM：
+       <dependencyManagement>
+           <dependencies>
+               <dependency>
+                   <groupId>com.chua</groupId>
+                   <artifactId>spring-support-bom</artifactId>
+                   <version>${revision}</version>
+                   <type>pom</type>
+                   <scope>import</scope>
+               </dependency>
+           </dependencies>
+       </dependencyManagement>
+
+    2. 在依赖中无需指定版本，版本由 BOM 统一管理：
+       <dependency>
+           <groupId>com.baomidou</groupId>
+           <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+       </dependency>
+
+    @author CH
+    @version 4.0.0.36
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 继承父项目配置 -->
+    <parent>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-parent-starter</artifactId>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <!-- 项目基本信息 -->
+    <artifactId>spring-support-bom</artifactId>
+    <packaging>pom</packaging>
+    <name>Spring Support BOM</name>
+    <description>Spring Support 框架依赖版本统一管理 BOM</description>
+
+    <!-- BOM 依赖版本管理 -->
+    <dependencyManagement>
+        <dependencies>
+            <!-- ========== Spring Support 内部模块版本管理 ========== -->
+            
+            <!-- 基础功能模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-common-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-datasource-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-mybatis-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <!-- 认证和安全模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-oauth-client-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <!-- 缓存和存储模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-redis-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-filesystem-minio-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-filesystem-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <!-- API文档模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-swagger-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-swagger2-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <!-- 消息队列模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-queue-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-queue-mqtt-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-queue-kafka-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-queue-rabbitmq-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-queue-rocketmq-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <!-- Socket通信模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-socket-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-socket-websocket-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-socket-io-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-socket-rsocket-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-socket-sse-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-rpc-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-sync-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <!-- 搜索和数据处理模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-elasticsearch-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <!-- 服务发现和配置模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-discovery-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-configcenter-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <!-- 监控和上报模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-report-client-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-report-client-arthas-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <!-- 第三方服务集成 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-tencent-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-pay-client-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <!-- 容错和策略模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-strategy-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <!-- 运维管理模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-shell-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-ssh-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <!-- 定时任务模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-job-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <!-- AI深度学习模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-ai-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <!-- 消息推送模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-message-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+            
+            <!-- API网关模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-gateway-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <!-- 插件模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-plugin-starter</artifactId>
+                <version>${module.version}</version>
+            </dependency>
+
+            <!-- ========== Utils Support 工具类模块版本管理 ========== -->
+
+            <!-- 微服务框架支持 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-mica-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-log-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-extension-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-mysql-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            
+            <!-- 网络通信框架 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-netty-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-deeplearning-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-deeplearning-onnx-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-datasource-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- Apache Calcite SQL解析引擎 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-calcite-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-nacos-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- 消息总线支持 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-zbus-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- Spring框架扩展工具 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-spring-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- Shell命令执行工具 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-shell-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- Hibernate ORM框架支持 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-hibernate-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-redis-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-httpclient-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-jdk15on-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-groovy-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-vertx-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-guava-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- RPC远程调用框架 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-rpc-dubbo-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- SOFA RPC框架支持 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-rpc-sofa-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-elasticsearch-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-armeria-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-rsocket-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-email-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-shardingv5-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- Nginx配置管理工具 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-nginx-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- GeoIP2地理位置查询工具 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-geoip2-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- MinIO对象存储工具 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-minio-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- 通用工具类库 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-common-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-gateway-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-milvus-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- Lucene全文搜索工具 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-lucene-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-tencent-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- 百度云SDK -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-baidu-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- SSH连接工具 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-ssh-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- OSHI系统硬件信息工具 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-oshi-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- ========== 第三方依赖版本管理 ========== -->
+
+            <!-- Lombok - 简化Java代码编写 -->
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+            </dependency>
+
+            <!-- MyBatis Plus 相关 -->
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-jsqlparser</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-generator</artifactId>
+                <version>${mybatis-plus-generator.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.github.yulichang</groupId>
+                <artifactId>mybatis-plus-join-boot-starter</artifactId>
+                <version>${mybatis-plus-join.version}</version>
+            </dependency>
+
+            <!-- Dubbo RPC框架 -->
+            <dependency>
+                <groupId>org.apache.dubbo</groupId>
+                <artifactId>dubbo</artifactId>
+                <version>${dubbo.version}</version>
+            </dependency>
+
+            <!-- Resilience4j熔断降级框架 -->
+            <dependency>
+                <groupId>io.github.resilience4j</groupId>
+                <artifactId>resilience4j-spring-boot3</artifactId>
+                <version>${resilience4j.version}</version>
+            </dependency>
+
+            <!-- P6Spy SQL监控 -->
+            <dependency>
+                <groupId>p6spy</groupId>
+                <artifactId>p6spy</artifactId>
+                <version>${p6spy.version}</version>
+            </dependency>
+
+            <!-- Easy Captcha验证码生成器 -->
+            <dependency>
+                <groupId>com.github.whvcse</groupId>
+                <artifactId>easy-captcha</artifactId>
+                <version>${easy-captcha.version}</version>
+            </dependency>
+
+            <!-- Jackson JSON处理 -->
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.fasterxml.jackson.datatype</groupId>
+                <artifactId>jackson-datatype-jdk8</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.fasterxml.jackson.datatype</groupId>
+                <artifactId>jackson-datatype-jsr310</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.fasterxml.jackson.module</groupId>
+                <artifactId>jackson-module-paramnames</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.fasterxml.jackson.dataformat</groupId>
+                <artifactId>jackson-dataformat-xml</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+
+            <!-- Apache Commons -->
+            <dependency>
+                <groupId>commons-io</groupId>
+                <artifactId>commons-io</artifactId>
+                <version>${commons-io.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>commons-dbutils</groupId>
+                <artifactId>commons-dbutils</artifactId>
+                <version>${commons-dbutils.version}</version>
+            </dependency>
+
+            <!-- Validation API -->
+            <dependency>
+                <groupId>javax.validation</groupId>
+                <artifactId>validation-api</artifactId>
+                <version>${validation-api.version}</version>
+            </dependency>
+
+            <!-- SpEL扩展 -->
+            <dependency>
+                <groupId>kim.nzxy</groupId>
+                <artifactId>spel-extension</artifactId>
+                <version>${spel-extension.version}</version>
+            </dependency>
+
+            <!-- Google Guava工具库 -->
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>${guava.version}</version>
+            </dependency>
+
+            <!-- FreeMarker模板引擎 -->
+            <dependency>
+                <groupId>org.freemarker</groupId>
+                <artifactId>freemarker</artifactId>
+                <version>${freemarker.version}</version>
+            </dependency>
+
+            <!-- Redisson Redis客户端 -->
+            <dependency>
+                <groupId>org.redisson</groupId>
+                <artifactId>redisson</artifactId>
+                <version>3.32.0</version>
+            </dependency>
+
+            <!-- Lock4j分布式锁 -->
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>lock4j-redis-template-spring-boot-starter</artifactId>
+                <version>2.2.2</version>
+            </dependency>
+
+            <!-- 嵌入式Redis -->
+            <dependency>
+                <groupId>it.ozimov</groupId>
+                <artifactId>embedded-redis</artifactId>
+                <version>0.7.3</version>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
+</project>
+

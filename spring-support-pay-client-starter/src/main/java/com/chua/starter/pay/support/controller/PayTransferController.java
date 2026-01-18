@@ -1,7 +1,7 @@
-﻿package com.chua.starter.pay.support.controller;
+package com.chua.starter.pay.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.validator.group.AddGroup;
+import com.chua.common.support.base.validator.group.AddGroup;
 import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.pay.support.pojo.CreateTransferV2Response;
 import com.chua.starter.pay.support.pojo.CreateTransferV2Request;

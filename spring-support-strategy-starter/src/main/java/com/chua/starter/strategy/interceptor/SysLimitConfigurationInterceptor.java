@@ -1,4 +1,4 @@
-﻿package com.chua.starter.strategy.interceptor;
+package com.chua.starter.strategy.interceptor;
 
 import com.chua.starter.strategy.entity.SysLimitConfiguration;
 import com.chua.starter.strategy.entity.SysLimitRecord;

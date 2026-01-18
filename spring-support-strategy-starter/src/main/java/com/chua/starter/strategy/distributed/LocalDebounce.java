@@ -1,4 +1,4 @@
-﻿package com.chua.starter.strategy.distributed;
+package com.chua.starter.strategy.distributed;
 
 import com.chua.common.support.annotations.Extension;
 import lombok.extern.slf4j.Slf4j;

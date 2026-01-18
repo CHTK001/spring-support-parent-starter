@@ -1,7 +1,7 @@
-﻿package com.chua.report.client.starter.sync.handler;
+package com.chua.report.client.starter.sync.handler;
 
 import com.chua.common.support.core.annotation.Spi;
-import com.chua.common.support.protocol.request.HttpServletRequest;
+import com.chua.common.support.protocol.request.ServletRequest;
 import com.chua.common.support.protocol.request.ServletResponse;
 import com.chua.report.client.starter.job.TriggerParam;
 import com.chua.report.client.starter.job.execute.DefaultJobExecute;
@@ -25,6 +25,8 @@ import java.util.Map;
 @Slf4j
 @Spi("jobDispatchHandler")
 public class JobDispatchHandler implements SyncMessageHandler {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(JobDispatchHandler.class);
 
     private final JobExecute jobExecute = new DefaultJobExecute();
 
@@ -58,13 +60,13 @@ public class JobDispatchHandler implements SyncMessageHandler {
             TriggerParam param = buildTriggerParam(data);
             
             // 调用作业执行逻辑
-            ServletResponse response = jobExecute.run(HttpServletRequest.builder().build(), param);
+            ServletResponse response = jobExecute.run(new ServletRequest(), param);
             
             if (response.isSuccess()) {
                 log.info("[JobHandler] 任务接收成功: jobId={}", param.getJobId());
                 return Map.of("code", 200, "message", "SUCCESS", "jobId", param.getJobId());
             } else {
-                String errorMsg = response.getErrorMessage() != null ? response.getErrorMessage() : response.getStatusMessage();
+                String errorMsg = response.getMessage();
                 log.warn("[JobHandler] 任务接收失败: jobId={}, msg={}", param.getJobId(), errorMsg);
                 return Map.of("code", 500, "message", errorMsg != null ? errorMsg : "任务执行失败", "jobId", param.getJobId());
             }

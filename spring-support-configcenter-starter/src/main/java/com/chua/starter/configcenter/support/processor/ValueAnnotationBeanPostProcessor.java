@@ -1,8 +1,8 @@
-﻿package com.chua.starter.configcenter.support.processor;
+package com.chua.starter.configcenter.support.processor;
 
 import com.chua.common.support.config.ConfigCenter;
 import com.chua.common.support.config.ConfigListener;
-import com.chua.common.support.converter.Converter;
+import com.chua.common.support.base.converter.Converter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
@@ -42,6 +42,9 @@ import java.util.regex.Pattern;
  */
 @Slf4j
 public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, EnvironmentAware, BeanFactoryAware {
+    
+    // Lombok @Slf4j 生成的 log 变量（如果 Lombok 未生效，这个变量会被使用）
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ValueAnnotationBeanPostProcessor.class);
 
     /**
      * 占位符正则表达式
@@ -190,14 +193,15 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
 
             // 如果支持热更新，注册监听
             if (hotReloadEnabled) {
-                ValueBindingInfo binding = ValueBindingInfo.builder()
-                        .configKey(parsed.key())
-                        .defaultValue(parsed.defaultValue())
-                        .bean(bean)
-                        .beanName(beanName)
-                        .field(field)
-                        .targetType(field.getType())
-                        .build();
+                ValueBindingInfo binding = new ValueBindingInfo(
+                        parsed.key(),
+                        parsed.defaultValue(),
+                        bean,
+                        beanName,
+                        field,
+                        null,
+                        field.getType()
+                );
 
                 registerBinding(binding);
                 log.debug("注册@Value热更新绑定: key={}, bean={}, field={}",
@@ -231,14 +235,15 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
 
             // 如果支持热更新，注册监听
             if (hotReloadEnabled) {
-                ValueBindingInfo binding = ValueBindingInfo.builder()
-                        .configKey(parsed.key())
-                        .defaultValue(parsed.defaultValue())
-                        .bean(bean)
-                        .beanName(beanName)
-                        .method(method)
-                        .targetType(method.getParameterTypes()[0])
-                        .build();
+                ValueBindingInfo binding = new ValueBindingInfo(
+                        parsed.key(),
+                        parsed.defaultValue(),
+                        bean,
+                        beanName,
+                        null,
+                        method,
+                        method.getParameterTypes()[0]
+                );
 
                 registerBinding(binding);
                 log.debug("注册@Value热更新绑定: key={}, bean={}, method={}",

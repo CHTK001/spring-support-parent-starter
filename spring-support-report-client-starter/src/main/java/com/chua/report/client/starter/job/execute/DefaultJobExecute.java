@@ -1,4 +1,4 @@
-﻿package com.chua.report.client.starter.job.execute;
+package com.chua.report.client.starter.job.execute;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.protocol.request.ServletRequest;
@@ -12,9 +12,6 @@ import com.chua.report.client.starter.job.handler.JobHandlerFactory;
 import com.chua.report.client.starter.job.handler.ScriptJobHandler;
 import com.chua.report.client.starter.job.thread.JobThread;
 import com.chua.report.client.starter.job.thread.JobThreadFactory;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -31,6 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class DefaultJobExecute implements JobExecute {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(DefaultJobExecute.class);
 
     @Override
     public ServletResponse run(ServletRequest request, TriggerParam triggerParam) {
@@ -148,11 +146,41 @@ public class DefaultJobExecute implements JobExecute {
     }
 }
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 class HandlerResult {
     private JobHandler jobHandler;
     private JobThread jobThread;
     private String removeOldReason;
+
+    public HandlerResult() {
+    }
+
+    public HandlerResult(JobHandler jobHandler, JobThread jobThread, String removeOldReason) {
+        this.jobHandler = jobHandler;
+        this.jobThread = jobThread;
+        this.removeOldReason = removeOldReason;
+    }
+
+    public JobHandler getJobHandler() {
+        return jobHandler;
+    }
+
+    public void setJobHandler(JobHandler jobHandler) {
+        this.jobHandler = jobHandler;
+    }
+
+    public JobThread getJobThread() {
+        return jobThread;
+    }
+
+    public void setJobThread(JobThread jobThread) {
+        this.jobThread = jobThread;
+    }
+
+    public String getRemoveOldReason() {
+        return removeOldReason;
+    }
+
+    public void setRemoveOldReason(String removeOldReason) {
+        this.removeOldReason = removeOldReason;
+    }
 }

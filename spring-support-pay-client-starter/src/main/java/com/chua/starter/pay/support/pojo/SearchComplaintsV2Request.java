@@ -1,8 +1,8 @@
-﻿package com.chua.starter.pay.support.pojo;
+package com.chua.starter.pay.support.pojo;
 
-import com.chua.common.support.validator.group.AddGroup;
-import com.chua.common.support.validator.group.SelectGroup;
-import com.chua.common.support.validator.group.UpdateGroup;
+import com.chua.common.support.base.validator.group.AddGroup;
+import com.chua.common.support.base.validator.group.SelectGroup;
+import com.chua.common.support.base.validator.group.UpdateGroup;
 import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.pay.support.dto.SearchComplaintsResponse;
 import com.chua.starter.pay.support.enums.PayTradeType;

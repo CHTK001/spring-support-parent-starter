@@ -1,4 +1,4 @@
-﻿package com.chua.starter.pay.support.pojo;
+package com.chua.starter.pay.support.pojo;
 
 import com.chua.starter.pay.support.dto.SearchComplaintsResponse;
 import io.swagger.v3.oas.annotations.media.Schema;

@@ -1,4 +1,4 @@
-﻿package com.chua.starter.job.support.handler;
+package com.chua.starter.job.support.handler;
 
 /**
  * 作业处理程序接口

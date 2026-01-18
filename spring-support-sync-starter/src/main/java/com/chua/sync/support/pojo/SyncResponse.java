@@ -1,4 +1,4 @@
-﻿package com.chua.sync.support.pojo;
+package com.chua.sync.support.pojo;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -90,4 +90,5 @@ public class SyncResponse implements Serializable {
     public static SyncResponse error(String requestId, String clientId, String message) {
         return fail(requestId, clientId, 500, message);
     }
+
 }

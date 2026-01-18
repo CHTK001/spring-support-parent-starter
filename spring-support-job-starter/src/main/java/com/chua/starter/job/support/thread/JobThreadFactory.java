@@ -1,11 +1,10 @@
-﻿package com.chua.starter.job.support.thread;
+package com.chua.starter.job.support.thread;
 
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.spring.support.configuration.SpringBeanUtils;
 import com.chua.starter.job.support.handler.JobHandler;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * 任务线程工厂
@@ -16,7 +15,7 @@ import java.util.concurrent.ConcurrentMap;
  *
  * <h3>核心功能</h3>
  * <ul>
- *     <li>{@link #registJobThread(int, JobHandler, String)} - 注册新的任务线程</li>
+ *     <li>{@link #registerJobThread(int, JobHandler, String)} - 注册新的任务线程</li>
  *     <li>{@link #removeJobThread(int, String)} - 移除并停止任务线程</li>
  *     <li>{@link #loadJobThread(int)} - 加载已存在的任务线程</li>
  * </ul>
@@ -31,7 +30,7 @@ import java.util.concurrent.ConcurrentMap;
  * <h3>使用示例</h3>
  * <pre>{@code
  * // 注册任务线程
- * JobThread thread = JobThreadFactory.registJobThread(jobId, handler, "新任务处理器");
+ * JobThread thread = JobThreadFactory.registerJobThread(jobId, handler, "新任务处理器");
  *
  * // 加载已存在的线程
  * JobThread existing = JobThreadFactory.loadJobThread(jobId);
@@ -53,11 +52,11 @@ public class JobThreadFactory {
     private static final JobThreadFactory INSTANCE = new JobThreadFactory();
     
     /** 
-     * 任务线程编存器
+     * 任务线程寄存器
      * key: 任务ID
      * value: 对应的JobThread实例
      */
-    private static final ConcurrentMap<Integer, JobThread> jobThreadRepository = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<Integer, JobThread> jobThreadRepository = new ConcurrentHashMap<>();
 
     /**
      * 注册作业线程
@@ -67,12 +66,12 @@ public class JobThreadFactory {
      * @param removeOldReason 删除旧线程的原因
      * @return 作业线程
      */
-    public static JobThread registJobThread(int jobId, JobHandler handler, String removeOldReason) {
-        JobThread newJobThread = new JobThread(jobId, handler);
+    public static JobThread registerJobThread(int jobId, JobHandler handler, String removeOldReason) {
+        var newJobThread = new JobThread(jobId, handler);
+        SpringBeanUtils.autowireBean(newJobThread);
         newJobThread.start();
         log.info(">>>>>>>>>>> 注册任务线程成功, jobId={}, handler={}", jobId, handler);
-        SpringBeanUtils.autowireBean(newJobThread);
-        JobThread oldJobThread = jobThreadRepository.put(jobId, newJobThread);
+        var oldJobThread = jobThreadRepository.put(jobId, newJobThread);
         if (oldJobThread != null) {
             oldJobThread.toStop(removeOldReason);
             oldJobThread.interrupt();
@@ -88,7 +87,7 @@ public class JobThreadFactory {
      * @return 旧的作业线程
      */
     public static JobThread removeJobThread(int jobId, String removeOldReason) {
-        JobThread oldJobThread = jobThreadRepository.remove(jobId);
+        var oldJobThread = jobThreadRepository.remove(jobId);
         if (oldJobThread != null) {
             oldJobThread.toStop(removeOldReason);
             oldJobThread.interrupt();

@@ -1,7 +1,7 @@
-﻿package com.chua.report.client.arthas.starter.configuration;
+package com.chua.report.client.arthas.starter.configuration;
 
 import com.chua.common.support.invoke.annotation.GetRequestLine;
-import com.chua.common.support.protocol.request.HttpServletResponse;
+import com.chua.common.support.network.protocol.request.HttpServletResponse;
 import com.chua.report.client.arthas.starter.properties.ArthasClientProperties;
 
 /**
@@ -16,8 +16,8 @@ public class ArthasMappingConfiguration {
     }
 
     @GetRequestLine("arthas-config")
-    public com.chua.common.support.protocol.request.ServletResponse config(
-            com.chua.common.support.protocol.request.ServletRequest request) {
+    public com.chua.common.support.network.protocol.request.ServletResponse config(
+            com.chua.common.support.network.protocol.request.ServletRequest request) {
         return HttpServletResponse.ok("{\"enable\":" + properties.isEnable() + ",\"tunnelAddress\":\"" +
                 (properties.getTunnelAddress() == null ? "" : properties.getTunnelAddress()) + "\"}");
     }

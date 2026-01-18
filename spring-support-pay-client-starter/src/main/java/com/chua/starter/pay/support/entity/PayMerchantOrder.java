@@ -1,4 +1,4 @@
-﻿package com.chua.starter.pay.support.entity;
+package com.chua.starter.pay.support.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
@@ -15,6 +15,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
 /**
  *
@@ -27,6 +30,9 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @Schema(description="订单表")
 @Data
+@Getter
+@Setter
+@ToString(callSuper = true)
 @TableName(value = "pay_merchant_order")
 public class PayMerchantOrder extends SysBase implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -244,4 +250,5 @@ public class PayMerchantOrder extends SysBase implements Serializable {
     @TableField(value = "pay_merchant_order_refund_reason")
     @Schema(description="退款原因")
     private String payMerchantOrderRefundReason;
+
 }

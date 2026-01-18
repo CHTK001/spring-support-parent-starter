@@ -52,6 +52,7 @@
     </developer>
   </developers>
   <modules>
+    <module>spring-support-bom</module>
     <module>spring-support-datasource-starter</module>
     <module>spring-support-common-starter</module>
     <module>spring-support-mybatis-starter</module>
@@ -118,6 +119,7 @@
     <guava.version>33.3.1-jre</guava.version>
     <p6spy.version>3.9.0</p6spy.version>
     <flatten-maven-plugin.version>1.6.0</flatten-maven-plugin.version>
+    <maven.compiler.proc>full</maven.compiler.proc>
     <maven-javadoc-plugin.version>3.6.3</maven-javadoc-plugin.version>
     <freemarker.version>2.3.32</freemarker.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -133,13 +135,13 @@
     <maven.compiler.source>25</maven.compiler.source>
     <mybatis-plus-join.version>1.5.3</mybatis-plus-join.version>
     <versions-maven-plugin.version>2.16.2</versions-maven-plugin.version>
-    <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
+    <maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
     <mybatis-plus.version>3.5.11</mybatis-plus.version>
     <easy-captcha.version>1.6.2</easy-captcha.version>
     <maven.repo.releases.url>http://localhost:8081/repository/maven-releases/</maven.repo.releases.url>
     <maven.repo.snapshots.id>maven-snapshots</maven.repo.snapshots.id>
     <revision>4.0.0.36</revision>
-    <lombok.version>1.18.40</lombok.version>
+    <lombok.version>1.18.42</lombok.version>
     <maven.repo.snapshots.url>http://localhost:8081/repository/maven-snapshots/</maven.repo.snapshots.url>
     <maven.compiler.target>25</maven.compiler.target>
     <maven-enforcer-plugin.version>3.4.1</maven-enforcer-plugin.version>
@@ -148,6 +150,18 @@
   </properties>
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>3.5.9</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <version>4.0.0.36</version>
+      </dependency>
       <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-web</artifactId>
@@ -583,7 +597,7 @@
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
-      <version>${lombok.version}</version>
+      <version>4.0.0.36</version>
       <scope>provided</scope>
     </dependency>
   </dependencies>
@@ -612,22 +626,22 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>${maven-compiler-plugin.version}</version>
         <configuration>
-          <release>${java.version}</release>
-          <encoding>${project.build.sourceEncoding}</encoding>
+          <source>25</source>
+          <target>25</target>
+          <release>25</release>
+          <encoding>UTF-8</encoding>
+          <useIncrementalCompilation>true</useIncrementalCompilation>
           <compilerArgs>
             <arg>-parameters</arg>
             <arg>-J--enable-native-access=ALL-UNNAMED</arg>
-            <arg>-proc:full</arg>
           </compilerArgs>
-          <fork>true</fork>
           <annotationProcessorPaths>
             <path>
               <groupId>org.projectlombok</groupId>
               <artifactId>lombok</artifactId>
-              <version>${lombok.version}</version>
+              <version>4.0.0.36</version>
             </path>
           </annotationProcessorPaths>
-          <generatedSourcesDirectory>${project.build.directory}/generated-sources/annotations</generatedSourcesDirectory>
         </configuration>
       </plugin>
       <plugin>
@@ -744,7 +758,7 @@
         <plugins>
           <plugin>
             <artifactId>maven-gpg-plugin</artifactId>
-            <version>3.1.0</version>
+            <version>4.0.0.36</version>
             <executions>
               <execution>
                 <id>sign-artifacts</id>

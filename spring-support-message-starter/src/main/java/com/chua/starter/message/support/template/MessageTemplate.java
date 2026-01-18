@@ -1,4 +1,4 @@
-﻿package com.chua.starter.message.support.template;
+package com.chua.starter.message.support.template;
 
 import com.chua.common.support.json.JsonObject;
 import com.chua.common.support.lang.message.MessagePush;

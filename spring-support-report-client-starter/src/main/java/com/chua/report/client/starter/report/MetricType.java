@@ -1,4 +1,4 @@
-﻿package com.chua.report.client.starter.report;
+package com.chua.report.client.starter.report;
 
 import lombok.Getter;
 
@@ -87,5 +87,14 @@ public enum MetricType {
             }
         }
         return null;
+    }
+
+    /**
+     * 获取指标代码
+     *
+     * @return 指标代码
+     */
+    public String getCode() {
+        return code;
     }
 }

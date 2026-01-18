@@ -1,4 +1,4 @@
-﻿package com.chua.starter.pay.support.transfer;
+package com.chua.starter.pay.support.transfer;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.pay.support.pojo.*;

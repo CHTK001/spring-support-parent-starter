@@ -1,7 +1,6 @@
-﻿package com.chua.starter.pay.support.enums;
+package com.chua.starter.pay.support.enums;
 
 import com.chua.starter.swagger.support.SwaggerEnum;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /**
@@ -10,7 +9,6 @@ import lombok.Getter;
  * @since 2025/10/14 13:41
  */
 @Getter
-@AllArgsConstructor
 public enum PayTransfer implements SwaggerEnum {
 
     PAY_WECHAT_BILLS("PAY_WECHAT_BILLS", "微信转账"),
@@ -18,6 +16,11 @@ public enum PayTransfer implements SwaggerEnum {
     ;
     private final String code;
     private final String name;
+
+    PayTransfer(String code, String name) {
+        this.code = code;
+        this.name = name;
+    }
 
 
     /**
@@ -32,5 +35,15 @@ public enum PayTransfer implements SwaggerEnum {
             }
         }
         return null;
+    }
+
+    @Override
+    public Object getCode() {
+        return code;
+    }
+
+    @Override
+    public String getName() {
+        return name;
     }
 }

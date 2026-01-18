@@ -1,4 +1,4 @@
-﻿package com.chua.plugin.support.properties;
+package com.chua.plugin.support.properties;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.validation.constraints.Max;

@@ -1,11 +1,9 @@
-﻿package com.chua.starter.pay.support.complaints;
+package com.chua.starter.pay.support.complaints;
 
 import com.chua.common.support.core.annotation.Spi;
-import com.chua.common.support.bean.BeanUtils;
 import com.chua.common.support.lang.code.ReturnPageResult;
-import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.lang.date.DateUtils;
-import com.chua.common.support.lang.date.constant.DateFormatConstant;
+import com.chua.starter.mybatis.utils.PageResultUtils;
+import org.springframework.beans.BeanUtils;
 import com.chua.common.support.objects.annotation.AutoInject;
 import com.chua.starter.pay.support.entity.PayMerchantConfigWechat;
 import com.chua.starter.pay.support.pojo.PayMerchantConfigWechatWrapper;
@@ -23,6 +21,10 @@ import com.wechat.pay.java.core.exception.ServiceException;
 import com.wechat.pay.java.core.http.*;
 import org.redisson.api.RedissonClient;
 import org.springframework.transaction.support.TransactionTemplate;
+
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.chua.starter.pay.support.enums.PayTradeType.PAY_WECHAT_JS_API;
 
@@ -56,7 +58,7 @@ public class WechatComplaintsAdaptor implements ComplaintsAdaptor{
         PayMerchantConfigWechatWrapper payMerchantConfigWechatWrapper = payMerchantConfigWechatService.getByCodeForPayMerchantConfigWechat
                 (request.getMerchantId(), PAY_WECHAT_JS_API.getName());
         if (!payMerchantConfigWechatWrapper.hasConfig()) {
-            return ReturnPageResult.illegal("商户未开启微信支付");
+            return PageResultUtils.error("商户未开启微信支付");
         }
         PayMerchantConfigWechat payMerchantConfigWechat = payMerchantConfigWechatWrapper.getPayMerchantConfigWechat();
         // 参数配置
@@ -69,11 +71,12 @@ public class WechatComplaintsAdaptor implements ComplaintsAdaptor{
                         .build();
 
         PrivacyEncryptor encryptor = config.createEncryptor();
-        String requestPath = "https://api.mch.weixin.qq.com/v3/merchant-service/complaints-v2?limit=%s&offset=%s&begin_date=%s1&end_date=%s".formatted(
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        String requestPath = "https://api.mch.weixin.qq.com/v3/merchant-service/complaints-v2?limit=%s&offset=%s&begin_date=%s&end_date=%s".formatted(
                 request.getPageSize(),
                 request.getPage() * request.getPageSize(),
-                DateUtils.format(request.getStartDate(), DateFormatConstant.YYYY_MM_DD),
-                DateUtils.format(request.getEndDate(), DateFormatConstant.YYYY_MM_DD)
+                request.getStartDate().format(formatter),
+                request.getEndDate().format(formatter)
         );
         HttpHeaders headers = new HttpHeaders();
         headers.addHeader(Constant.ACCEPT, MediaType.APPLICATION_JSON.getValue());
@@ -89,13 +92,22 @@ public class WechatComplaintsAdaptor implements ComplaintsAdaptor{
         try {
             HttpResponse<SearchComplaintsResponse> httpResponse =
                     httpClient.execute(httpRequest, SearchComplaintsResponse.class);
-            return ReturnPageResult.<SearchComplaintsV2Response>ok(
-                    BeanUtils.copyPropertiesList(httpResponse.getServiceResponse().getData(), SearchComplaintsV2Response.class),
+            List<SearchComplaintsV2Response> responseList = httpResponse.getServiceResponse().getData().stream()
+                    .map(source -> {
+                        SearchComplaintsV2Response target = new SearchComplaintsV2Response();
+                        BeanUtils.copyProperties(source, target);
+                        return target;
+                    })
+                    .collect(Collectors.toList());
+            return PageResultUtils.ok(
+                    responseList,
+                    request.getPage(),
+                    request.getPageSize(),
                     httpResponse.getServiceResponse().getTotalCount());
         } catch (ServiceException e) {
             // 获取错误码和错误信息
             String errorMessage = e.getErrorMessage().trim();
-            return ReturnPageResult.illegal("查询投诉单订单失败：" + errorMessage);
+            return PageResultUtils.error("查询投诉单订单失败：" + errorMessage);
         }
     }
 }

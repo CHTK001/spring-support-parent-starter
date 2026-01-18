@@ -1,4 +1,4 @@
-﻿package com.chua.starter.job.support.thread;
+package com.chua.starter.job.support.thread;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.job.support.TriggerParam;
@@ -41,7 +41,7 @@ import java.util.concurrent.*;
  * <h3>使用示例</h3>
  * <pre>{@code
  * // 通过工厂创建并注册线程
- * JobThread thread = JobThreadFactory.registJobThread(jobId, handler, "new handler");
+ * JobThread thread = JobThreadFactory.registerJobThread(jobId, handler, "new handler");
  *
  * // 推送任务到执行队列
  * ReturnResult<String> result = thread.pushTriggerQueue(triggerParam);

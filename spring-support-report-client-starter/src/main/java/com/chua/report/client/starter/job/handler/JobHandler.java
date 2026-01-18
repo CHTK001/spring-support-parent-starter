@@ -1,4 +1,4 @@
-﻿package com.chua.report.client.starter.job.handler;
+package com.chua.report.client.starter.job.handler;
 
 /**
  * 作业处理程序接口

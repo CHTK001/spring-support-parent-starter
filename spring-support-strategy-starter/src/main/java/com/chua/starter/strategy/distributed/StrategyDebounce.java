@@ -1,4 +1,4 @@
-﻿package com.chua.starter.strategy.distributed;
+package com.chua.starter.strategy.distributed;
 
 /**
  * 策略防抖器接口

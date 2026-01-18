@@ -1,7 +1,7 @@
 package com.chua.starter.rpc.support.resource;
 
 import com.chua.common.support.network.rpc.RpcClient;
-import com.chua.starter.common.support.configuration.SpringBeanUtils;
+import com.chua.spring.support.configuration.SpringBeanUtils;
 import lombok.Getter;
 import lombok.Setter;
 import org.slf4j.Logger;

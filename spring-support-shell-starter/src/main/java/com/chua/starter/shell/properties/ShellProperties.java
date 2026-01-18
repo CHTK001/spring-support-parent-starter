@@ -1,4 +1,4 @@
-﻿package com.chua.starter.shell.properties;
+package com.chua.starter.shell.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

@@ -1,8 +1,8 @@
-﻿package com.chua.starter.pay.support.callback;
+package com.chua.starter.pay.support.callback;
 
 
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
-import io.swagger.annotations.ApiModel;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 @JacksonXmlRootElement
-@ApiModel("支付通知回调接收")
+@Schema(description = "支付通知回调接收")
 @Data
 public class WechatOrderCallbackRequest extends OrderCallbackRequest {
 
