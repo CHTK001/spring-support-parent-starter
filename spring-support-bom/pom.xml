@@ -34,16 +34,31 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <!-- 继承父项目配置 -->
-    <parent>
-        <groupId>com.chua</groupId>
-        <artifactId>spring-support-parent-starter</artifactId>
-        <version>${revision}</version>
-        <relativePath>../pom.xml</relativePath>
-    </parent>
-
-    <!-- 项目基本信息 -->
+    <!-- 项目基本信息 - BOM不继承父项目，避免循环依赖 -->
+    <groupId>com.chua</groupId>
     <artifactId>spring-support-bom</artifactId>
+    <version>********</version>
+
+    <properties>
+        <module.version>${project.version}</module.version>
+        <utils.version>${project.version}</utils.version>
+        <!-- 第三方依赖版本 -->
+        <lombok.version>1.18.42</lombok.version>
+        <mybatis-plus.version>3.5.11</mybatis-plus.version>
+        <mybatis-plus-join.version>1.5.3</mybatis-plus-join.version>
+        <mybatis-plus-generator.version>3.5.5</mybatis-plus-generator.version>
+        <dubbo.version>3.1.1</dubbo.version>
+        <resilience4j.version>2.2.0</resilience4j.version>
+        <p6spy.version>3.9.0</p6spy.version>
+        <easy-captcha.version>1.6.2</easy-captcha.version>
+        <jackson.version>2.19.4</jackson.version>
+        <commons-io.version>2.16.1</commons-io.version>
+        <commons-dbutils.version>1.8.1</commons-dbutils.version>
+        <validation-api.version>2.0.1.Final</validation-api.version>
+        <spel-extension.version>1.0.0</spel-extension.version>
+        <guava.version>33.3.1-jre</guava.version>
+        <freemarker.version>2.3.32</freemarker.version>
+    </properties>
     <packaging>pom</packaging>
     <name>Spring Support BOM</name>
     <description>Spring Support 框架依赖版本统一管理 BOM</description>
