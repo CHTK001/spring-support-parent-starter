@@ -152,7 +152,7 @@
         <maven.compiler.target>25</maven.compiler.target>
 
         <!-- 项目版本管理 -->
-        <revision>4.0.0.36</revision>               <!-- 当前项目版本，使用revision便于统一管理 -->
+        <revision>3</revision>               <!-- 当前项目版本，使用revision便于统一管理 -->
         <module.version>${revision}</module.version>        <!-- 当前项目模块版本 -->
         <!-- 工具类库版本与 utils-support-parent-starter 保持一致，当前为 4.0.0.34 -->
         <utils.version>4.0.0.34</utils.version>
