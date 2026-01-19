@@ -5,10 +5,10 @@
   <parent>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-parent-starter</artifactId>
-    <version>4.0.0.35</version>
+    <version>4.0.0.36</version>
   </parent>
   <artifactId>spring-support-socket-websocket-starter</artifactId>
-  <version>4.0.0.35</version>
+  <version>4.0.0.36</version>
   <description>WebSocket 实现模块 - 基于 Spring Boot 原生 WebSocket，与应用同端口运行</description>
   <licenses>
     <license>
@@ -29,7 +29,6 @@
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>spring-support-socket-starter</artifactId>
-      <version>${project.version}</version>
       <optional>true</optional>
     </dependency>
   </dependencies>

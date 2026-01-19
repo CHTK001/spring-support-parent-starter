@@ -458,8 +458,8 @@ public class LocalMessageTemplate implements MessageTemplate {
     /**
      * EventBus订阅者包装类
      */
-    @Slf4j
     private class EventBusSubscriber {
+        private final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(EventBusSubscriber.class);
         private final String destination;
         private final MessageHandler handler;
         private final boolean autoAck;

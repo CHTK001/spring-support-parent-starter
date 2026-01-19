@@ -5,10 +5,10 @@
   <parent>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-parent-starter</artifactId>
-    <version>4.0.0.35</version>
+    <version>4.0.0.36</version>
   </parent>
   <artifactId>spring-support-pay-client-starter</artifactId>
-  <version>4.0.0.35</version>
+  <version>4.0.0.36</version>
   <description>支付客户端</description>
   <licenses>
     <license>
@@ -84,13 +84,13 @@
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
-      <version>1.18.42</version>
+      <version>${lombok.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.alipay.sdk</groupId>
       <artifactId>alipay-sdk-java</artifactId>
-      <version>4.38.200.ALL</version>
+      <version>4.40.483.ALL</version>
       <exclusions>
         <exclusion>
           <groupId>commons-logging</groupId>
@@ -108,7 +108,6 @@
             <path>
               <groupId>org.projectlombok</groupId>
               <artifactId>lombok</artifactId>
-              <version>1.18.42</version>
             </path>
           </annotationProcessorPaths>
         </configuration>

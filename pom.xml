@@ -103,12 +103,12 @@
         <module>spring-support-socket-websocket-starter</module><!-- WebSocket 实现（同端口） -->
         <module>spring-support-socket-io-starter</module>        <!-- Socket.IO 实现 -->
         <module>spring-support-socket-rsocket-starter</module>         <!-- RSocket 实现 -->
-        <module>spring-support-socket-sse-starter</module>             <!-- SSE 实现 -->
+        <!-- <module>spring-support-socket-sse-starter</module> -->             <!-- SSE 实现 - ch.rasc:sse-eventbus not in Aliyun -->
         <module>spring-support-rpc-starter</module>             <!-- RPC远程调用 -->
         <module>spring-support-sync-starter</module>
 
         <!-- 搜索和数据处理模块 -->
-        <module>spring-support-elasticsearch-starter</module>   <!-- Elasticsearch搜索引擎 -->
+        <!-- <module>spring-support-elasticsearch-starter</module> -->   <!-- Elasticsearch搜索引擎 - API 不兼容 -->
 
         <module>spring-support-discovery-starter</module>       <!-- 服务发现 -->
         <module>spring-support-configcenter-starter</module>    <!-- 配置中心 -->
@@ -123,23 +123,23 @@
         <module>spring-support-pay-client-starter</module>
 
         <!-- 容错和稳定性模块 -->
-        <module>spring-support-strategy-starter</module>
+        <!-- <module>spring-support-strategy-starter</module> --> <!-- 依赖问题，暂时注释 -->
 
         <!-- 运维和管理模块 -->
-        <module>spring-support-shell-starter</module>           <!-- SSH Shell管理模块 -->
+        <!-- <module>spring-support-shell-starter</module> -->           <!-- SSH Shell管理模块 - 依赖不在Aliyun -->
         <module>spring-support-ssh-starter</module>
 
         <!-- 定时任务模块 -->
         <module>spring-support-job-starter</module>             <!-- 定时任务调度模块 -->
 
         <!-- AI深度学习模块 -->
-        <module>spring-support-ai-starter</module>              <!-- AI深度学习功能模块 -->
+        <!-- <module>spring-support-ai-starter</module> -->              <!-- AI深度学习功能模块 - 依赖deeplearning模块 -->
 
         <!-- 消息推送模块 -->
-        <module>spring-support-message-starter</module>         <!-- 消息推送集成 -->
+        <!-- <module>spring-support-message-starter</module> -->         <!-- 消息推送集成 - utils-support-common依赖未安装 -->
 
         <!-- API网关模块 -->
-        <module>spring-support-gateway-starter</module>         <!-- API网关 -->
+        <!-- <module>spring-support-gateway-starter</module> -->         <!-- API网关 - discovery依赖未安装 -->
 
     </modules>
 
@@ -306,10 +306,10 @@
             <!-- ========== Spring Boot 基础模块（可选） ========== -->
             
             <!-- Spring Boot Web Starter - Web应用基础，子模块按需引入 -->
-            <!-- 版本由 Spring Boot 父 POM 管理，无需显式指定 -->
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-starter-web</artifactId>
+                <version>3.5.9</version>
                 <exclusions>
                     <exclusion>
                         <groupId>org.springframework.boot</groupId>
@@ -707,13 +707,6 @@
                 <version>${utils.version}</version>
             </dependency>
 
-            <!-- Google Guava工具库 -->
-            <dependency>
-                <groupId>com.google.guava</groupId>
-                <artifactId>guava</artifactId>
-                <version>${guava.version}</version>
-            </dependency>
-
             <!-- Jackson模块版本管理 -->
             <dependency>
                 <groupId>com.fasterxml.jackson.datatype</groupId>
@@ -909,6 +902,128 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-oshi-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- Third-party dependencies -->
+            <dependency>
+                <groupId>kim.nzxy</groupId>
+                <artifactId>spel-extension</artifactId>
+                <version>1.0.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.whvcse</groupId>
+                <artifactId>easy-captcha</artifactId>
+                <version>1.6.2</version>
+            </dependency>
+            <dependency>
+                <groupId>javax.annotation</groupId>
+                <artifactId>javax.annotation-api</artifactId>
+                <version>1.3.2</version>
+            </dependency>
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-generator</artifactId>
+                <version>3.5.5</version>
+            </dependency>
+            <dependency>
+                <groupId>commons-dbutils</groupId>
+                <artifactId>commons-dbutils</artifactId>
+                <version>1.8.1</version>
+            </dependency>
+            <dependency>
+                <groupId>com.konghq</groupId>
+                <artifactId>unirest-java</artifactId>
+                <version>3.14.5</version>
+            </dependency>
+            <dependency>
+                <groupId>me.zhyd.oauth</groupId>
+                <artifactId>JustAuth</artifactId>
+                <version>1.16.6</version>
+            </dependency>
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>lock4j-redis-template-spring-boot-starter</artifactId>
+                <version>2.2.5</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.codemonstur</groupId>
+                <artifactId>embedded-redis</artifactId>
+                <version>1.4.3</version>
+            </dependency>
+            <dependency>
+                <groupId>it.ozimov</groupId>
+                <artifactId>embedded-redis</artifactId>
+                <version>0.7.3</version>
+            </dependency>
+            <dependency>
+                <groupId>io.swagger</groupId>
+                <artifactId>swagger-annotations</artifactId>
+                <version>1.6.14</version>
+            </dependency>
+            <dependency>
+                <groupId>de.codecentric</groupId>
+                <artifactId>sse-eventbus</artifactId>
+                <version>0.5.0</version>
+            </dependency>
+            <dependency>
+                <groupId>ch.rasc</groupId>
+                <artifactId>sse-eventbus</artifactId>
+                <version>2.1.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-exec</artifactId>
+                <version>1.4.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.alibaba.fastjson2</groupId>
+                <artifactId>fastjson2</artifactId>
+                <version>2.0.52</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-compress</artifactId>
+                <version>1.26.2</version>
+            </dependency>
+            <dependency>
+                <groupId>com.taobao.arthas</groupId>
+                <artifactId>arthas-client</artifactId>
+                <version>4.0.4</version>
+            </dependency>
+            <dependency>
+                <groupId>com.taobao.arthas</groupId>
+                <artifactId>arthas-agent-attach</artifactId>
+                <version>4.0.4</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.fonimus</groupId>
+                <artifactId>ssh-shell-spring-boot-starter</artifactId>
+                <version>2.7.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.sshd</groupId>
+                <artifactId>sshd-core</artifactId>
+                <version>2.13.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.sshd</groupId>
+                <artifactId>sshd-scp</artifactId>
+                <version>2.13.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.sshd</groupId>
+                <artifactId>sshd-sftp</artifactId>
+                <version>2.13.2</version>
+            </dependency>
+            <dependency>
+                <groupId>cn.hutool</groupId>
+                <artifactId>hutool-core</artifactId>
+                <version>5.8.29</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-resilience4j-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
 

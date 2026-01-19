@@ -5,10 +5,10 @@
   <parent>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-parent-starter</artifactId>
-    <version>4.0.0.35</version>
+    <version>4.0.0.36</version>
   </parent>
   <artifactId>spring-support-queue-starter</artifactId>
-  <version>4.0.0.35</version>
+  <version>4.0.0.36</version>
   <description>消息队列抽象层 - 提供统一的消息队列操作接口</description>
   <licenses>
     <license>
@@ -26,7 +26,6 @@
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>spring-support-common-starter</artifactId>
-      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>com.chua</groupId>

@@ -52,7 +52,6 @@
     </developer>
   </developers>
   <modules>
-    <module>spring-support-bom</module>
     <module>spring-support-datasource-starter</module>
     <module>spring-support-common-starter</module>
     <module>spring-support-mybatis-starter</module>
@@ -71,23 +70,16 @@
     <module>spring-support-socket-websocket-starter</module>
     <module>spring-support-socket-io-starter</module>
     <module>spring-support-socket-rsocket-starter</module>
-    <module>spring-support-socket-sse-starter</module>
     <module>spring-support-rpc-starter</module>
     <module>spring-support-sync-starter</module>
-    <module>spring-support-elasticsearch-starter</module>
     <module>spring-support-discovery-starter</module>
     <module>spring-support-configcenter-starter</module>
     <module>spring-support-report-client-starter</module>
     <module>spring-support-report-client-arthas-starter</module>
     <module>spring-support-tencent-starter</module>
     <module>spring-support-pay-client-starter</module>
-    <module>spring-support-strategy-starter</module>
-    <module>spring-support-shell-starter</module>
     <module>spring-support-ssh-starter</module>
     <module>spring-support-job-starter</module>
-    <module>spring-support-ai-starter</module>
-    <module>spring-support-message-starter</module>
-    <module>spring-support-gateway-starter</module>
   </modules>
   <scm>
     <connection>scm:git:git://github.com/your-org/spring-support-parent-starter.git</connection>
@@ -158,13 +150,89 @@
         <scope>import</scope>
       </dependency>
       <dependency>
+        <groupId>p6spy</groupId>
+        <artifactId>p6spy</artifactId>
+        <version>${p6spy.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.calcite</groupId>
+        <artifactId>calcite-core</artifactId>
+        <version>1.37.0</version>
+      </dependency>
+      <dependency>
+        <groupId>com.alibaba</groupId>
+        <artifactId>druid-spring-boot-3-starter</artifactId>
+        <version>1.2.20</version>
+      </dependency>
+      <dependency>
+        <groupId>com.mchange</groupId>
+        <artifactId>c3p0</artifactId>
+        <version>0.10.1</version>
+      </dependency>
+      <dependency>
+        <groupId>javax.validation</groupId>
+        <artifactId>validation-api</artifactId>
+        <version>${validation-api.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.swagger.core.v3</groupId>
+        <artifactId>swagger-annotations</artifactId>
+        <version>2.2.15</version>
+      </dependency>
+      <dependency>
+        <groupId>com.baomidou</groupId>
+        <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+        <version>${mybatis-plus.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.baomidou</groupId>
+        <artifactId>mybatis-plus-jsqlparser</artifactId>
+        <version>${mybatis-plus.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.yulichang</groupId>
+        <artifactId>mybatis-plus-join-boot-starter</artifactId>
+        <version>${mybatis-plus-join.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.redisson</groupId>
+        <artifactId>redisson</artifactId>
+        <version>3.32.0</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.paho</groupId>
+        <artifactId>org.eclipse.paho.client.mqttv3</artifactId>
+        <version>1.2.5</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.rocketmq</groupId>
+        <artifactId>rocketmq-spring-boot-starter</artifactId>
+        <version>2.3.1</version>
+      </dependency>
+      <dependency>
+        <groupId>com.corundumstudio.socketio</groupId>
+        <artifactId>netty-socketio</artifactId>
+        <version>2.0.12</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-io</groupId>
+        <artifactId>commons-io</artifactId>
+        <version>${commons-io.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>${guava.version}</version>
+      </dependency>
+      <dependency>
         <groupId>org.projectlombok</groupId>
         <artifactId>lombok</artifactId>
-        <version>4.0.0.36</version>
+        <version>${lombok.version}</version>
       </dependency>
       <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-web</artifactId>
+        <version>3.5.9</version>
         <exclusions>
           <exclusion>
             <groupId>org.springframework.boot</groupId>
@@ -460,11 +528,6 @@
         <version>${utils.version}</version>
       </dependency>
       <dependency>
-        <groupId>com.google.guava</groupId>
-        <artifactId>guava</artifactId>
-        <version>${guava.version}</version>
-      </dependency>
-      <dependency>
         <groupId>com.fasterxml.jackson.datatype</groupId>
         <artifactId>jackson-datatype-jdk8</artifactId>
         <version>${jackson.version}</version>
@@ -591,13 +654,133 @@
         <artifactId>utils-support-oshi-starter</artifactId>
         <version>${utils.version}</version>
       </dependency>
+      <dependency>
+        <groupId>kim.nzxy</groupId>
+        <artifactId>spel-extension</artifactId>
+        <version>1.0.0</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.whvcse</groupId>
+        <artifactId>easy-captcha</artifactId>
+        <version>1.6.2</version>
+      </dependency>
+      <dependency>
+        <groupId>javax.annotation</groupId>
+        <artifactId>javax.annotation-api</artifactId>
+        <version>1.3.2</version>
+      </dependency>
+      <dependency>
+        <groupId>com.baomidou</groupId>
+        <artifactId>mybatis-plus-generator</artifactId>
+        <version>3.5.5</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-dbutils</groupId>
+        <artifactId>commons-dbutils</artifactId>
+        <version>1.8.1</version>
+      </dependency>
+      <dependency>
+        <groupId>com.konghq</groupId>
+        <artifactId>unirest-java</artifactId>
+        <version>3.14.5</version>
+      </dependency>
+      <dependency>
+        <groupId>me.zhyd.oauth</groupId>
+        <artifactId>JustAuth</artifactId>
+        <version>1.16.6</version>
+      </dependency>
+      <dependency>
+        <groupId>com.baomidou</groupId>
+        <artifactId>lock4j-redis-template-spring-boot-starter</artifactId>
+        <version>2.2.5</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.codemonstur</groupId>
+        <artifactId>embedded-redis</artifactId>
+        <version>1.4.3</version>
+      </dependency>
+      <dependency>
+        <groupId>it.ozimov</groupId>
+        <artifactId>embedded-redis</artifactId>
+        <version>0.7.3</version>
+      </dependency>
+      <dependency>
+        <groupId>io.swagger</groupId>
+        <artifactId>swagger-annotations</artifactId>
+        <version>1.6.14</version>
+      </dependency>
+      <dependency>
+        <groupId>de.codecentric</groupId>
+        <artifactId>sse-eventbus</artifactId>
+        <version>0.5.0</version>
+      </dependency>
+      <dependency>
+        <groupId>ch.rasc</groupId>
+        <artifactId>sse-eventbus</artifactId>
+        <version>2.1.0</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-exec</artifactId>
+        <version>1.4.0</version>
+      </dependency>
+      <dependency>
+        <groupId>com.alibaba.fastjson2</groupId>
+        <artifactId>fastjson2</artifactId>
+        <version>2.0.52</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-compress</artifactId>
+        <version>1.26.2</version>
+      </dependency>
+      <dependency>
+        <groupId>com.taobao.arthas</groupId>
+        <artifactId>arthas-client</artifactId>
+        <version>4.0.4</version>
+      </dependency>
+      <dependency>
+        <groupId>com.taobao.arthas</groupId>
+        <artifactId>arthas-agent-attach</artifactId>
+        <version>4.0.4</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.fonimus</groupId>
+        <artifactId>ssh-shell-spring-boot-starter</artifactId>
+        <version>2.7.0</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.sshd</groupId>
+        <artifactId>sshd-core</artifactId>
+        <version>2.13.2</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.sshd</groupId>
+        <artifactId>sshd-scp</artifactId>
+        <version>2.13.2</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.sshd</groupId>
+        <artifactId>sshd-sftp</artifactId>
+        <version>2.13.2</version>
+      </dependency>
+      <dependency>
+        <groupId>cn.hutool</groupId>
+        <artifactId>hutool-core</artifactId>
+        <version>5.8.29</version>
+      </dependency>
+      <dependency>
+        <groupId>com.chua</groupId>
+        <artifactId>utils-support-resilience4j-starter</artifactId>
+        <version>${utils.version}</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
   <dependencies>
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
-      <version>4.0.0.36</version>
+      <version>${lombok.version}</version>
       <scope>provided</scope>
     </dependency>
   </dependencies>
@@ -639,7 +822,7 @@
             <path>
               <groupId>org.projectlombok</groupId>
               <artifactId>lombok</artifactId>
-              <version>4.0.0.36</version>
+              <version>${lombok.version}</version>
             </path>
           </annotationProcessorPaths>
         </configuration>
@@ -758,7 +941,7 @@
         <plugins>
           <plugin>
             <artifactId>maven-gpg-plugin</artifactId>
-            <version>4.0.0.36</version>
+            <version>3.2.4</version>
             <executions>
               <execution>
                 <id>sign-artifacts</id>

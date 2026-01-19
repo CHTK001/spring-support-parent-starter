@@ -1,4 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Spring Support Gateway Starter - API网关模块
+
+    这是Spring Support框架的API网关模块，提供动态代理和负载均衡功能。
+    主要特性包括：
+
+    1. 客户端/服务端模式 - 客户端注册到发现服务，服务端从发现服务获取路由
+    2. 多端口支持 - 支持同时启动多个HTTP/TCP代理端口
+    3. 动态路由 - 基于服务发现自动更新路由
+    4. 负载均衡 - 支持轮询、随机、权重等策略
+    5. 基于Netty - 高性能异步IO
+
+    @author CH
+    @version 4.0.0.35
+-->
 <project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
@@ -7,9 +22,9 @@
     <artifactId>spring-support-parent-starter</artifactId>
     <version>4.0.0.36</version>
   </parent>
-  <artifactId>spring-support-sync-starter</artifactId>
+  <artifactId>spring-support-gateway-starter</artifactId>
   <version>4.0.0.36</version>
-  <description>同步协议模块 - 基于 SyncProtocol 实现客户端/服务端通信</description>
+  <description>Spring Support框架API网关模块，提供动态代理和服务发现集成</description>
   <licenses>
     <license>
       <name>Apache License, Version 2.0</name>
@@ -24,27 +39,16 @@
   </properties>
   <dependencies>
     <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-configuration-processor</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>org.projectlombok</groupId>
-      <artifactId>lombok</artifactId>
-      <version>${lombok.version}</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>utils-support-common-starter</artifactId>
-    </dependency>
-    <dependency>
       <groupId>com.chua</groupId>
       <artifactId>spring-support-common-starter</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-discovery-starter</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-netty-starter</artifactId>
     </dependency>
   </dependencies>
   <build>
@@ -54,19 +58,6 @@
         <configuration>
           <source>25</source>
           <target>25</target>
-          <release>25</release>
-          <encoding>UTF-8</encoding>
-          <useIncrementalCompilation>true</useIncrementalCompilation>
-          <compilerArgs>
-            <arg>-parameters</arg>
-            <arg>-J--enable-native-access=ALL-UNNAMED</arg>
-          </compilerArgs>
-          <annotationProcessorPaths>
-            <path>
-              <groupId>org.projectlombok</groupId>
-              <artifactId>lombok</artifactId>
-            </path>
-          </annotationProcessorPaths>
         </configuration>
       </plugin>
     </plugins>

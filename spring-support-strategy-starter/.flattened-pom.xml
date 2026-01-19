@@ -1,4 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Spring Support Strategy Starter - 策略管理模块
+
+    统一的策略管理模块，提供限流、熔断、降级、重试等策略的配置管理和 API 接口。
+    
+    主要功能：
+    1. 限流策略（Rate Limiting） - API 接口访问频率控制
+    2. 熔断策略（Circuit Breaker） - 防止级联故障
+    3. 降级策略（Degradation） - 服务降级配置
+    4. 重试策略（Retry） - 失败重试配置
+    5. 舱壁隔离（Bulkhead） - 资源隔离配置
+    6. 超时控制（Time Limiter） - 超时配置
+    7. 策略记录 - 记录策略触发日志
+    
+    @author CH
+    @version 1.0.0
+    @since 2025-12-02
+-->
 <project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
@@ -7,9 +25,9 @@
     <artifactId>spring-support-parent-starter</artifactId>
     <version>4.0.0.36</version>
   </parent>
-  <artifactId>spring-support-oauth-client-starter</artifactId>
+  <artifactId>spring-support-strategy-starter</artifactId>
   <version>4.0.0.36</version>
-  <description>单点登录客户端</description>
+  <description>策略管理模块 - 提供限流、熔断、降级等策略的配置管理和API接口</description>
   <licenses>
     <license>
       <name>Apache License, Version 2.0</name>
@@ -28,14 +46,8 @@
       <artifactId>spring-support-common-starter</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.konghq</groupId>
-      <artifactId>unirest-java</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>commons-logging</groupId>
-          <artifactId>commons-logging</artifactId>
-        </exclusion>
-      </exclusions>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-mybatis-starter</artifactId>
     </dependency>
     <dependency>
       <groupId>com.chua</groupId>
@@ -43,25 +55,30 @@
     </dependency>
     <dependency>
       <groupId>com.chua</groupId>
-      <artifactId>spring-support-mybatis-starter</artifactId>
+      <artifactId>spring-support-datasource-starter</artifactId>
     </dependency>
     <dependency>
-      <groupId>me.zhyd.oauth</groupId>
-      <artifactId>JustAuth</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>utils-support-armeria-starter</artifactId>
-      <version>${utils.version}</version>
+      <groupId>org.aspectj</groupId>
+      <artifactId>aspectjweaver</artifactId>
     </dependency>
     <dependency>
       <groupId>com.chua</groupId>
-      <artifactId>utils-support-rsocket-starter</artifactId>
-      <version>${utils.version}</version>
+      <artifactId>utils-support-resilience4j-starter</artifactId>
     </dependency>
     <dependency>
-      <groupId>javax.annotation</groupId>
-      <artifactId>javax.annotation-api</artifactId>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-redis</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.github.ben-manes.caffeine</groupId>
+      <artifactId>caffeine</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>jakarta.servlet</groupId>
@@ -70,28 +87,7 @@
     </dependency>
     <dependency>
       <groupId>com.chua</groupId>
-      <artifactId>utils-support-extension-starter</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.chua</groupId>
       <artifactId>utils-support-common-starter</artifactId>
     </dependency>
-    <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>utils-support-httpclient-starter</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>utils-support-spring-starter</artifactId>
-    </dependency>
   </dependencies>
-  <build>
-    <extensions>
-      <extension>
-        <groupId>kr.motd.maven</groupId>
-        <artifactId>os-maven-plugin</artifactId>
-        <version>1.7.1</version>
-      </extension>
-    </extensions>
-  </build>
 </project>

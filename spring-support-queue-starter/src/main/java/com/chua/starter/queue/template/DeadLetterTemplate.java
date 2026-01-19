@@ -779,38 +779,5 @@ public class DeadLetterTemplate implements MessageTemplate {
          * 退避乘数
          */
         private double backoffMultiplier = 2.0;
-
-        // Lombok 注解处理器未运行时的手动构造函数
-        public DeadLetterConfig() {
-        }
-
-        public DeadLetterConfig(int maxRetries, Duration retryDelay, Duration maxRetryDelay, boolean exponentialBackoff, double backoffMultiplier) {
-            this.maxRetries = maxRetries;
-            this.retryDelay = retryDelay;
-            this.maxRetryDelay = maxRetryDelay;
-            this.exponentialBackoff = exponentialBackoff;
-            this.backoffMultiplier = backoffMultiplier;
-        }
-
-        // Lombok 注解处理器未运行时的手动 getter 方法
-        public int getMaxRetries() {
-            return maxRetries;
-        }
-
-        public Duration getRetryDelay() {
-            return retryDelay;
-        }
-
-        public Duration getMaxRetryDelay() {
-            return maxRetryDelay;
-        }
-
-        public boolean isExponentialBackoff() {
-            return exponentialBackoff;
-        }
-
-        public double getBackoffMultiplier() {
-            return backoffMultiplier;
-        }
     }
 }

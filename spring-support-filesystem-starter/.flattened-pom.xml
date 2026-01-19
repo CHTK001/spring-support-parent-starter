@@ -24,10 +24,10 @@
   <parent>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-parent-starter</artifactId>
-    <version>4.0.0.35</version>
+    <version>4.0.0.36</version>
   </parent>
   <artifactId>spring-support-filesystem-starter</artifactId>
-  <version>4.0.0.35</version>
+  <version>4.0.0.36</version>
   <name>Spring Support FileSystem Starter - 文件存储模块</name>
   <description>统一文件存储抽象层，支持 MinIO、OSS、COS 等多种存储后端</description>
   <licenses>

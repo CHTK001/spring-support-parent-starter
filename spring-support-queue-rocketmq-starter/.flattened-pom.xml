@@ -5,10 +5,10 @@
   <parent>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-parent-starter</artifactId>
-    <version>4.0.0.35</version>
+    <version>4.0.0.36</version>
   </parent>
   <artifactId>spring-support-queue-rocketmq-starter</artifactId>
-  <version>4.0.0.35</version>
+  <version>4.0.0.36</version>
   <description>RocketMQ消息队列实现模块</description>
   <licenses>
     <license>
@@ -21,12 +21,10 @@
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>spring-support-queue-starter</artifactId>
-      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.rocketmq</groupId>
       <artifactId>rocketmq-spring-boot-starter</artifactId>
-      <version>2.2.3</version>
       <exclusions>
         <exclusion>
           <groupId>commons-logging</groupId>

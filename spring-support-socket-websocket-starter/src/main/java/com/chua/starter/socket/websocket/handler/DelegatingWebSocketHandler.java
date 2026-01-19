@@ -20,10 +20,8 @@ import java.util.List;
  * @since 2025-12-25
  */
 @Slf4j
-@RequiredArgsConstructor
 public class DelegatingWebSocketHandler extends TextWebSocketHandler {
 
-    private static final Logger log = LoggerFactory.getLogger(DelegatingWebSocketHandler.class);
     private final WebSocketSessionManager sessionManager;
     private final List<WebSocketMessageHandler> handlers;
 

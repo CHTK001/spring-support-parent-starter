@@ -5,10 +5,10 @@
   <parent>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-parent-starter</artifactId>
-    <version>4.0.0.35</version>
+    <version>4.0.0.36</version>
   </parent>
   <artifactId>spring-support-configcenter-starter</artifactId>
-  <version>4.0.0.35</version>
+  <version>4.0.0.36</version>
   <licenses>
     <license>
       <name>Apache License, Version 2.0</name>

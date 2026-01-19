@@ -1,4 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Spring Support Message Starter - 消息推送集成模块
+
+    这是Spring Support框架的消息推送模块，提供统一的消息推送解决方案。
+    主要特性包括：
+
+    1. 多渠道支持 - 钉钉、飞书、邮件、短信等
+    2. MessageTemplate - 简化消息发送的模板类
+    3. 统一配置 - 通过YAML配置多个渠道
+    4. 自动装配 - Spring Boot自动配置
+
+    @author CH
+    @version 4.0.0.35
+-->
 <project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
@@ -7,9 +21,9 @@
     <artifactId>spring-support-parent-starter</artifactId>
     <version>4.0.0.36</version>
   </parent>
-  <artifactId>spring-support-socket-starter</artifactId>
+  <artifactId>spring-support-message-starter</artifactId>
   <version>4.0.0.36</version>
-  <description>Socket 基础模块 - 提供统一的 Socket 抽象接口和 SPI 机制</description>
+  <description>Spring Support框架消息推送模块，提供统一的多渠道消息推送功能</description>
   <licenses>
     <license>
       <name>Apache License, Version 2.0</name>
@@ -25,20 +39,23 @@
   <dependencies>
     <dependency>
       <groupId>com.chua</groupId>
-      <artifactId>utils-support-common-starter</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.chua</groupId>
       <artifactId>spring-support-common-starter</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-configuration-processor</artifactId>
-      <optional>true</optional>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-common-starter</artifactId>
+      <version>${utils.version}</version>
     </dependency>
   </dependencies>
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>25</source>
+          <target>25</target>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 </project>

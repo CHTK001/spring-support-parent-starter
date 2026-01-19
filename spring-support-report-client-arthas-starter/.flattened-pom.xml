@@ -5,10 +5,10 @@
   <parent>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-parent-starter</artifactId>
-    <version>4.0.0.35</version>
+    <version>4.0.0.36</version>
   </parent>
   <artifactId>spring-support-report-client-arthas-starter</artifactId>
-  <version>4.0.0.35</version>
+  <version>4.0.0.36</version>
   <name>spring-support-report-client-arthas-starter</name>
   <description>Report Client Arthas integration starter</description>
   <licenses>
@@ -31,7 +31,6 @@
     <dependency>
       <groupId>com.taobao.arthas</groupId>
       <artifactId>arthas-agent-attach</artifactId>
-      <version>3.7.2</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -63,7 +62,6 @@
             <path>
               <groupId>org.projectlombok</groupId>
               <artifactId>lombok</artifactId>
-              <version>1.18.42</version>
             </path>
           </annotationProcessorPaths>
         </configuration>

@@ -28,15 +28,12 @@ import static com.chua.starter.common.support.logger.ModuleLog.highlight;
  * @since 2025-12-25
  */
 @Slf4j
-@RequiredArgsConstructor
 public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(MessageListenerBeanPostProcessor.class);
 
     private final List<MessageTemplate> messageTemplates;
     private final QueueProperties queueProperties;
     private final Map<String, MessageTemplate> templateMap = new ConcurrentHashMap<>();
 
-    // Lombok 注解处理器未运行时的手动构造函数
     public MessageListenerBeanPostProcessor(List<MessageTemplate> messageTemplates, QueueProperties queueProperties) {
         this.messageTemplates = messageTemplates;
         this.queueProperties = queueProperties;

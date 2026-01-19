@@ -24,10 +24,10 @@
   <parent>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-parent-starter</artifactId>
-    <version>4.0.0.35</version>
+    <version>4.0.0.36</version>
   </parent>
   <artifactId>spring-support-elasticsearch-starter</artifactId>
-  <version>4.0.0.35</version>
+  <version>4.0.0.36</version>
   <description>Spring Support框架Elasticsearch集成模块，提供完整的搜索引擎功能支持</description>
   <licenses>
     <license>
@@ -56,7 +56,6 @@
     <dependency>
       <groupId>org.springframework.data</groupId>
       <artifactId>spring-data-elasticsearch</artifactId>
-      <version>4.4.12</version>
       <scope>compile</scope>
       <exclusions>
         <exclusion>
@@ -88,7 +87,6 @@
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
-      <version>1.18.42</version>
       <scope>provided</scope>
     </dependency>
     <dependency>

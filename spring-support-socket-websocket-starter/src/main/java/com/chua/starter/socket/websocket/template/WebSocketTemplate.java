@@ -21,10 +21,8 @@ import java.util.Collection;
  * @since 2025-12-25
  */
 @Slf4j
-@RequiredArgsConstructor
 public class WebSocketTemplate {
 
-    private static final Logger log = LoggerFactory.getLogger(WebSocketTemplate.class);
     private final WebSocketSessionManager sessionManager;
 
     /**
