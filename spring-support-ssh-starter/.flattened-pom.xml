@@ -15,7 +15,7 @@
     8. 日志记录 - 记录SSH连接和操作日志
 
     @author CH
-    @version 4.0.0.34
+    @version 4.0.0.36
 -->
 <project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">

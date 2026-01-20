@@ -16,7 +16,7 @@
     9. 工具类集成 - 集成各种常用工具类库
 
     @author CH
-    @version 4.0.0.34
+    @version 4.0.0.36
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -27,7 +27,7 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>${revision}</version>
+        <version>4.0.0.36</version>
     </parent>
 
     <!-- 项目基本信息 -->
@@ -143,10 +143,11 @@
             <artifactId>utils-support-jdk15on-starter</artifactId>
         </dependency>
 
-        <!-- Hibernate ORM支持 - 提供Hibernate相关功能 -->
+        <!-- ByteBuddy - 用于动态生成类 -->
         <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-hibernate-starter</artifactId>
+            <groupId>net.bytebuddy</groupId>
+            <artifactId>byte-buddy</artifactId>
+            <version>1.17.8</version>
         </dependency>
 
         <!-- Google Guava工具库 - 提供Table等集合工具 -->

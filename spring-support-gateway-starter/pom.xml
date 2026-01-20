@@ -12,7 +12,7 @@
     5. 基于Netty - 高性能异步IO
 
     @author CH
-    @version 4.0.0.35
+    @version 4.0.0.36
 -->
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xmlns="http://maven.apache.org/POM/4.0.0"
@@ -23,7 +23,7 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>${revision}</version>
+        <version>4.0.0.36</version>
         
     </parent>
 

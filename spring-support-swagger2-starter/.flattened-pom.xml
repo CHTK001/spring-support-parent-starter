@@ -11,7 +11,7 @@
     - 通过反射机制，common-starter 中的日志组件可以自动识别 Swagger 2.x 注解
 
     @author CH
-    @version 4.0.0.35
+    @version 4.0.0.36
 -->
 <project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">

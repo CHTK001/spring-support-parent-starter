@@ -14,7 +14,7 @@
     7. 数据源健康检查 - 提供数据源连接状态监控
 
     @author CH
-    @version 4.0.0.34
+    @version 4.0.0.36
 -->
 <project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">

@@ -106,7 +106,7 @@
     <maven-source-plugin.version>3.3.0</maven-source-plugin.version>
     <maven-release-plugin.version>3.0.1</maven-release-plugin.version>
     <dubbo.version>3.1.1</dubbo.version>
-    <utils.version>4.0.0.34</utils.version>
+    <utils.version>4.0.0.35</utils.version>
     <jackson.version>2.19.4</jackson.version>
     <guava.version>33.3.1-jre</guava.version>
     <p6spy.version>3.9.0</p6spy.version>
@@ -255,172 +255,172 @@
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-common-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-datasource-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-mybatis-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-oauth-client-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-redis-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-filesystem-minio-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-filesystem-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-swagger-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-queue-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-queue-mqtt-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-queue-kafka-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-queue-rabbitmq-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-queue-rocketmq-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-socket-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-socket-websocket-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-socket-io-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-socket-rsocket-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-socket-sse-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-rpc-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-sync-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-elasticsearch-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-discovery-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-configcenter-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-report-client-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-report-client-arthas-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-tencent-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-pay-client-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-strategy-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-shell-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-ssh-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-job-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-ai-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-message-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-gateway-starter</artifactId>
-        <version>${module.version}</version>
+        <version>4.0.0.36</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>

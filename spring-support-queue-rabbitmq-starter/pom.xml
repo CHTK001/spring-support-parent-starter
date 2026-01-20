@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>${revision}</version>
+        <version>4.0.0.36</version>
         
     </parent>
 

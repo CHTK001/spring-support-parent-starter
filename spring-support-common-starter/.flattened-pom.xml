@@ -16,7 +16,7 @@
     9. 工具类集成 - 集成各种常用工具类库
 
     @author CH
-    @version 4.0.0.34
+    @version 4.0.0.36
 -->
 <project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -106,8 +106,9 @@
       <artifactId>utils-support-jdk15on-starter</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>utils-support-hibernate-starter</artifactId>
+      <groupId>net.bytebuddy</groupId>
+      <artifactId>byte-buddy</artifactId>
+      <version>1.17.8</version>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
