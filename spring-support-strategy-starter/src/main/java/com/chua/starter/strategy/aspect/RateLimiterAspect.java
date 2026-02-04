@@ -1,10 +1,10 @@
 package com.chua.starter.strategy.aspect;
 
-import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.task.limit.RateLimiter;
-import com.chua.common.support.task.limit.RateLimiterProvider;
-import com.chua.common.support.task.limit.RateLimiterSetting;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.core.spi.ServiceProvider;
+import com.chua.common.support.resilience.rate.RateLimiter;
+import com.chua.common.support.resilience.rate.RateLimiterProvider;
+import com.chua.common.support.resilience.rate.RateLimiterSetting;
+import com.chua.common.support.core.utils.StringUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -95,7 +95,7 @@ public class RateLimiterAspect {
     /**
      * 切入点：所有标注 @RateLimiter 注解的方法
      */
-    @Pointcut("@annotation(com.chua.common.support.task.limit.RateLimiter)")
+    @Pointcut("@annotation(com.chua.common.support.resilience.rate.RateLimiter)")
     public void rateLimiterPointcut() {
     }
 
@@ -201,26 +201,25 @@ public class RateLimiterAspect {
      */
     private String getClientIp() {
         try {
-            return RequestUtils.getIpAddress();
-        } catch (Exception e) {
-            // 尝试从 RequestContextHolder 获取
-            try {
-                ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-                if (attrs != null) {
-                    HttpServletRequest request = attrs.getRequest();
-                    String ip = request.getHeader("X-Forwarded-For");
-                    if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-                        ip = request.getHeader("X-Real-IP");
-                    }
-                    if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-                        ip = request.getRemoteAddr();
-                    }
-                    return ip != null ? ip.split(",")[0].trim() : "unknown";
+            var attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs != null) {
+                var request = attrs.getRequest();
+                String ip = RequestUtils.getIpAddress(request);
+                if (ip != null) {
+                    return ip;
                 }
-            } catch (Exception ignored) {
+                ip = request.getHeader("X-Forwarded-For");
+                if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+                    ip = request.getHeader("X-Real-IP");
+                }
+                if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+                    ip = request.getRemoteAddr();
+                }
+                return ip != null ? ip.split(",")[0].trim() : "unknown";
             }
-            return "unknown";
+        } catch (Exception ignored) {
         }
+        return "unknown";
     }
 
     /**

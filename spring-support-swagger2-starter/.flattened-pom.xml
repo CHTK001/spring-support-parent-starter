@@ -11,7 +11,7 @@
     - 通过反射机制，common-starter 中的日志组件可以自动识别 Swagger 2.x 注解
 
     @author CH
-    @version 4.0.0.36
+    @version 4.0.0.37
 -->
 <project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -19,10 +19,10 @@
   <parent>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-parent-starter</artifactId>
-    <version>4.0.0.36</version>
+    <version>4.0.0.37</version>
   </parent>
   <artifactId>spring-support-swagger2-starter</artifactId>
-  <version>4.0.0.36</version>
+  <version>4.0.0.37</version>
   <description>Swagger 2.x 兼容模块，提供 Swagger 2.x 注解支持</description>
   <licenses>
     <license>

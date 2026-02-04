@@ -1,15 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Spring Support Gateway Starter - API网关模块
+    Spring Support Shell Starter - SSH Shell集成模块
 
-    这是Spring Support框架的API网关模块，提供动态代理和负载均衡功能。
+    这是Spring Support框架的SSH Shell集成模块，提供了完整的SSH Shell解决方案。
     主要特性包括：
 
-    1. 客户端/服务端模式 - 客户端注册到发现服务，服务端从发现服务获取路由
-    2. 多端口支持 - 支持同时启动多个HTTP/TCP代理端口
-    3. 动态路由 - 基于服务发现自动更新路由
-    4. 负载均衡 - 支持轮询、随机、权重等策略
-    5. 基于Netty - 高性能异步IO
+    1. SSH Shell服务 - 基于ssh-shell-spring-boot-starter的SSH Shell功能
+    2. 内置命令 - 提供help、日志等级修改等基础命令
+    3. 登录追踪 - 使用Redis记录30天内的IP登录信息和认证次数
+    4. 安全认证 - 支持用户名密码认证和公钥认证
+    5. 命令扩展 - 支持自定义命令扩展
+    6. 会话管理 - 提供会话管理和监控功能
+    7. 日志记录 - 记录Shell操作日志
+    8. 权限控制 - 支持基于角色的命令权限控制
 
     @author CH
     @version 4.0.0.37
@@ -22,9 +25,9 @@
     <artifactId>spring-support-parent-starter</artifactId>
     <version>4.0.0.37</version>
   </parent>
-  <artifactId>spring-support-gateway-starter</artifactId>
+  <artifactId>spring-support-shell-starter</artifactId>
   <version>4.0.0.37</version>
-  <description>Spring Support框架API网关模块，提供动态代理和服务发现集成</description>
+  <description>Spring Support框架SSH Shell集成模块，提供完整的SSH Shell功能和登录追踪支持</description>
   <licenses>
     <license>
       <name>Apache License, Version 2.0</name>
@@ -39,16 +42,25 @@
   </properties>
   <dependencies>
     <dependency>
+      <groupId>org.springframework.shell</groupId>
+      <artifactId>spring-shell-starter</artifactId>
+    </dependency>
+    <dependency>
       <groupId>com.chua</groupId>
       <artifactId>spring-support-common-starter</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>spring-support-discovery-starter</artifactId>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>utils-support-netty-starter</artifactId>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+      <scope>provided</scope>
     </dependency>
   </dependencies>
   <build>

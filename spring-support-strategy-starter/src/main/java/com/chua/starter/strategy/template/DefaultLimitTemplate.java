@@ -1,6 +1,6 @@
 package com.chua.starter.strategy.template;
 
-import com.chua.common.support.annotations.Extension;
+import com.chua.common.support.core.annotation.Extension;
 import com.chua.common.support.core.spi.ServiceProvider;
 import com.chua.starter.strategy.distributed.StrategyRateLimiter;
 import lombok.extern.slf4j.Slf4j;

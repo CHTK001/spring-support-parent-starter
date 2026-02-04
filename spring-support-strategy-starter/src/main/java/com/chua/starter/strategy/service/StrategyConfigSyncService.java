@@ -1,6 +1,6 @@
 package com.chua.starter.strategy.service;
 
-import com.chua.common.support.json.Json;
+import com.chua.common.support.text.json.Json;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

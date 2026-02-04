@@ -21,9 +21,9 @@ public class QueueProperties {
     private boolean enable = false;
 
     /**
-     * 消息队列类型（local/mqtt/kafka/rabbitmq/rocketmq）
+     * 消息队列类型（chronicle-queue/local/mqtt/kafka/rabbitmq/rocketmq）
      */
-    private String type = "local";
+    private String type = "chronicle-queue";
 
     /**
      * 默认目标地址

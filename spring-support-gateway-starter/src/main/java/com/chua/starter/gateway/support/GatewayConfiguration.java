@@ -1,6 +1,6 @@
 package com.chua.starter.gateway.support;
 
-import com.chua.common.support.discovery.ServiceDiscovery;
+import com.chua.common.support.network.discovery.ServiceDiscovery;
 import com.chua.starter.discovery.support.service.DiscoveryService;
 import com.chua.starter.gateway.support.client.GatewayClient;
 import com.chua.starter.gateway.support.discovery.DynamicServiceDiscoveryManager;

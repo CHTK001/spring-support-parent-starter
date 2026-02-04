@@ -1,6 +1,6 @@
 package com.chua.starter.strategy.template;
 
-import com.chua.common.support.annotations.Extension;
+import com.chua.common.support.core.annotation.Extension;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;

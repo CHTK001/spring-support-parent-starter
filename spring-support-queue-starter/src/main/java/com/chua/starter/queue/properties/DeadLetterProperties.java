@@ -24,9 +24,9 @@ public class DeadLetterProperties {
     private boolean enable = false;
 
     /**
-     * 队列类型（local/mqtt/kafka/rabbitmq/rocketmq）
+     * 队列类型（chronicle-queue/local/mqtt/kafka/rabbitmq/rocketmq）
      */
-    private String type = "local";
+    private String type = "chronicle-queue";
 
     /**
      * 延迟消息调度线程数

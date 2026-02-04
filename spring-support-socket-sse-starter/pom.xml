@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
         
     </parent>
 
@@ -22,12 +22,6 @@
     <dependencies>
 
         <dependency>
-            <groupId>ch.rasc</groupId>
-            <artifactId>sse-eventbus</artifactId>
-            
-        </dependency>
-
-        <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-common-starter</artifactId>
         </dependency>
@@ -37,6 +31,13 @@
             <artifactId>spring-support-socket-starter</artifactId>
             
             <optional>true</optional>
+        </dependency>
+
+        <!-- Spring Web MVC -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webmvc</artifactId>
+            <scope>provided</scope>
         </dependency>
 
         <!-- Jakarta Servlet API -->

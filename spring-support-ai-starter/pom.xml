@@ -26,7 +26,7 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
         
     </parent>
 
@@ -67,6 +67,12 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-common-starter</artifactId>
+        </dependency>
+
+        <!-- Spring Support Common - 提供Spring模块通用功能 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-common-starter</artifactId>
         </dependency>
 
         <!-- Spring Boot自动配置 - 提供自动配置功能 -->

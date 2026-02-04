@@ -1,12 +1,12 @@
 package com.chua.starter.message.support.template;
 
-import com.chua.common.support.json.JsonObject;
+import com.chua.common.support.text.json.JsonObject;
 import com.chua.common.support.lang.message.MessagePush;
 import com.chua.common.support.lang.message.config.PushSetting;
 import com.chua.common.support.lang.message.option.ContentTemplateSetting;
 import com.chua.common.support.lang.message.option.TemplateSetting;
 import com.chua.common.support.lang.message.result.PushResult;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.core.utils.StringUtils;
 import com.chua.starter.message.support.properties.MessageProperties;
 import lombok.extern.slf4j.Slf4j;
 

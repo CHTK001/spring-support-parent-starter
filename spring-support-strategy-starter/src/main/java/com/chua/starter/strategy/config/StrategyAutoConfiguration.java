@@ -165,7 +165,7 @@ public class StrategyAutoConfiguration {
             @Autowired(required = false) RateLimiterRegistry rateLimiterRegistry,
             @Autowired(required = false) CircuitBreakerRegistry circuitBreakerRegistry,
             @Autowired(required = false) RetryRegistry retryRegistry) {
-        return new DefaultStrategyTemplate(rateLimiterRegistry, circuitBreakerRegistry, retryRegistry);
+        return new DefaultStrategyTemplate();
     }
 
     /**

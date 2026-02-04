@@ -4,8 +4,6 @@ import com.chua.socket.support.session.SocketSession;
 import com.chua.socket.support.session.SocketSessionTemplate;
 import com.chua.socket.support.session.SocketUser;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -28,8 +26,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class SseSocketSessionTemplate implements SocketSessionTemplate {
 
-    private static final Logger log = LoggerFactory.getLogger(SseSocketSessionTemplate.class);
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     /**
      * SSE 连接超时时间（毫秒），默认30分钟
@@ -96,7 +93,7 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
         try {
             emitter.send(SseEmitter.event()
                     .name("connected")
-                    .data(objectMapper.writeValueAsString(Map.of(
+                    .data(OBJECT_MAPPER.writeValueAsString(Map.of(
                             "clientId", clientId,
                             "timestamp", System.currentTimeMillis(),
                             "message", "连接成功"

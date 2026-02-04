@@ -14,7 +14,7 @@
     7. 策略记录 - 记录策略触发日志
     
     @author CH
-    @version 1.0.0
+    @version 4.0.0.37
     @since 2025-12-02
 -->
 <project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
@@ -23,10 +23,10 @@
   <parent>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-parent-starter</artifactId>
-    <version>4.0.0.36</version>
+    <version>4.0.0.37</version>
   </parent>
   <artifactId>spring-support-strategy-starter</artifactId>
-  <version>4.0.0.36</version>
+  <version>4.0.0.37</version>
   <description>策略管理模块 - 提供限流、熔断、降级等策略的配置管理和API接口</description>
   <licenses>
     <license>
@@ -84,6 +84,11 @@
       <groupId>jakarta.servlet</groupId>
       <artifactId>jakarta.servlet-api</artifactId>
       <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-core</artifactId>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>com.chua</groupId>

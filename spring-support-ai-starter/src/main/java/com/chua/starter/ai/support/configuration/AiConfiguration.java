@@ -1,10 +1,10 @@
 package com.chua.starter.ai.support.configuration;
 
 import com.chua.starter.ai.support.chat.AiChat;
-import com.chua.starter.ai.support.engine.AiClient;
-import com.chua.starter.ai.support.engine.AiClientConfigUtils;
-import com.chua.starter.ai.support.engine.IdentificationEngine;
-import com.chua.starter.ai.support.engine.impl.AiChatIdentificationEngine;
+import com.chua.starter.ai.support.engine.FaceClient;
+import com.chua.starter.ai.support.engine.FaceEngine;
+import com.chua.starter.ai.support.engine.impl.AiChatFaceEngine;
+import com.chua.starter.ai.support.engine.impl.DefaultFaceClient;
 import com.chua.starter.ai.support.properties.AiProperties;
 import com.chua.starter.ai.support.service.AiService;
 import com.chua.starter.ai.support.service.AsyncAiService;
@@ -21,6 +21,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 /**
  * AI模块自动配置类
@@ -74,34 +75,29 @@ public class AiConfiguration {
     }
 
     /**
-     * 注册身份识别引擎Bean
+     * 注册人脸识别引擎
      *
      * @param aiService AI服务实例
-     * @return 身份识别引擎实例
+     * @return 人脸识别引擎实例
      */
     @Bean
-    @ConditionalOnMissingBean(IdentificationEngine.class)
+    @ConditionalOnMissingBean(FaceEngine.class)
     @Lazy
-    public IdentificationEngine identificationEngine(AiService aiService) {
-        return new AiChatIdentificationEngine(aiService);
+    public FaceEngine faceEngine(AiService aiService) {
+        return new AiChatFaceEngine(aiService);
     }
 
     /**
-     * 注册AI客户端Bean
+     * 注册人脸识别客户端
      *
-     * @param identificationEngine 身份识别引擎实例
-     * @param aiProperties         AI配置属性
-     * @return AI客户端实例
+     * @param faceEngine 人脸识别引擎实例
+     * @return 人脸识别客户端实例
      */
     @Bean
-    @ConditionalOnMissingBean(AiClient.class)
+    @ConditionalOnMissingBean(FaceClient.class)
     @Lazy
-    public AiClient aiClient(IdentificationEngine identificationEngine, AiProperties aiProperties) {
-        var config = AiClientConfigUtils.fromProperties(aiProperties);
-        return AiClient.builder()
-                .engine(identificationEngine)
-                .config(config)
-                .build();
+    public FaceClient faceClient(FaceEngine faceEngine) {
+        return new DefaultFaceClient(faceEngine, Schedulers.boundedElastic());
     }
 
     /**
@@ -117,8 +113,6 @@ public class AiConfiguration {
 
     /**
      * 注册AiChat工厂Bean
-     * <p>
-     * 用于创建链式调用的AI聊天对象
      *
      * @param aiService         AI服务实例
      * @param asyncAiService    异步AI服务实例

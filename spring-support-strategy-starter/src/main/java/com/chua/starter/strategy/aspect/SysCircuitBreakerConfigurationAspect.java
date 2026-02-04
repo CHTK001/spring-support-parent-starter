@@ -1,6 +1,6 @@
 package com.chua.starter.strategy.aspect;
 
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.core.utils.StringUtils;
 import com.chua.starter.strategy.entity.SysCircuitBreakerConfiguration;
 import com.chua.starter.strategy.entity.SysCircuitBreakerRecord;
 import com.chua.starter.strategy.service.SysCircuitBreakerConfigurationService;

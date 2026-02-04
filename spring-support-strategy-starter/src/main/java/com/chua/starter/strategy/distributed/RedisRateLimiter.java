@@ -1,6 +1,6 @@
 package com.chua.starter.strategy.distributed;
 
-import com.chua.common.support.annotations.Extension;
+import com.chua.common.support.core.annotation.Extension;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;

@@ -13,7 +13,7 @@
     - 开箱即用的集成方案
 
     @author CH
-    @version 4.0.0.36
+    @version 4.0.0.37
 -->
 <project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -26,7 +26,7 @@
   </parent>
   <groupId>com.chua</groupId>
   <artifactId>spring-support-parent-starter</artifactId>
-  <version>4.0.0.36</version>
+  <version>4.0.0.37</version>
   <packaging>pom</packaging>
   <name>Spring Support Parent Starter</name>
   <description>Spring Boot 3.x企业级应用支持框架，提供模块化的功能组件和开箱即用的集成方案</description>
@@ -70,16 +70,22 @@
     <module>spring-support-socket-websocket-starter</module>
     <module>spring-support-socket-io-starter</module>
     <module>spring-support-socket-rsocket-starter</module>
+    <module>spring-support-socket-sse-starter</module>
     <module>spring-support-rpc-starter</module>
     <module>spring-support-sync-starter</module>
+    <module>spring-support-elasticsearch-starter</module>
     <module>spring-support-discovery-starter</module>
     <module>spring-support-configcenter-starter</module>
     <module>spring-support-report-client-starter</module>
     <module>spring-support-report-client-arthas-starter</module>
     <module>spring-support-tencent-starter</module>
     <module>spring-support-pay-client-starter</module>
+    <module>spring-support-strategy-starter</module>
+    <module>spring-support-shell-starter</module>
     <module>spring-support-ssh-starter</module>
     <module>spring-support-job-starter</module>
+    <module>spring-support-message-starter</module>
+    <module>spring-support-gateway-starter</module>
   </modules>
   <scm>
     <connection>scm:git:git://github.com/your-org/spring-support-parent-starter.git</connection>
@@ -106,7 +112,7 @@
     <maven-source-plugin.version>3.3.0</maven-source-plugin.version>
     <maven-release-plugin.version>3.0.1</maven-release-plugin.version>
     <dubbo.version>3.1.1</dubbo.version>
-    <utils.version>4.0.0.35</utils.version>
+    <utils.version>4.0.0.36</utils.version>
     <jackson.version>2.19.4</jackson.version>
     <guava.version>33.3.1-jre</guava.version>
     <p6spy.version>3.9.0</p6spy.version>
@@ -115,7 +121,7 @@
     <maven-javadoc-plugin.version>3.6.3</maven-javadoc-plugin.version>
     <freemarker.version>2.3.32</freemarker.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <module.version>4.0.0.36</module.version>
+    <module.version>4.0.0.37</module.version>
     <validation-api.version>2.0.1.Final</validation-api.version>
     <skipTests>true</skipTests>
     <resilience4j.version>2.2.0</resilience4j.version>
@@ -132,7 +138,7 @@
     <easy-captcha.version>1.6.2</easy-captcha.version>
     <maven.repo.releases.url>http://localhost:8081/repository/maven-releases/</maven.repo.releases.url>
     <maven.repo.snapshots.id>maven-snapshots</maven.repo.snapshots.id>
-    <revision>4.0.0.36</revision>
+    <revision>4.0.0.37</revision>
     <lombok.version>1.18.42</lombok.version>
     <maven.repo.snapshots.url>http://localhost:8081/repository/maven-snapshots/</maven.repo.snapshots.url>
     <maven.compiler.target>25</maven.compiler.target>
@@ -200,6 +206,11 @@
         <version>3.32.0</version>
       </dependency>
       <dependency>
+        <groupId>org.springframework.shell</groupId>
+        <artifactId>spring-shell-starter</artifactId>
+        <version>3.4.0</version>
+      </dependency>
+      <dependency>
         <groupId>org.eclipse.paho</groupId>
         <artifactId>org.eclipse.paho.client.mqttv3</artifactId>
         <version>1.2.5</version>
@@ -255,172 +266,172 @@
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-common-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-datasource-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-mybatis-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-oauth-client-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-redis-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-filesystem-minio-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-filesystem-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-swagger-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-queue-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-queue-mqtt-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-queue-kafka-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-queue-rabbitmq-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-queue-rocketmq-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-socket-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-socket-websocket-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-socket-io-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-socket-rsocket-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-socket-sse-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-rpc-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-sync-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-elasticsearch-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-discovery-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-configcenter-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-report-client-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-report-client-arthas-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-tencent-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-pay-client-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-strategy-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-shell-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-ssh-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-job-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-ai-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-message-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-gateway-starter</artifactId>
-        <version>4.0.0.36</version>
+        <version>4.0.0.37</version>
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>

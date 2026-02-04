@@ -1,13 +1,13 @@
 package com.chua.starter.gateway.support.discovery;
 
-import com.chua.common.support.collection.Options;
-import com.chua.common.support.discovery.Discovery;
-import com.chua.common.support.discovery.DiscoveryOption;
-import com.chua.common.support.discovery.Event;
-import com.chua.common.support.discovery.ServiceDiscovery;
-import com.chua.common.support.discovery.ServiceDiscoveryListener;
-import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.base.collection.Options;
+import com.chua.common.support.network.discovery.Discovery;
+import com.chua.common.support.network.discovery.DiscoveryOption;
+import com.chua.common.support.network.discovery.Event;
+import com.chua.common.support.network.discovery.ServiceDiscovery;
+import com.chua.common.support.network.discovery.ServiceDiscoveryListener;
+import com.chua.common.support.core.spi.ServiceProvider;
+import com.chua.common.support.core.utils.StringUtils;
 import com.chua.starter.gateway.support.properties.GatewayProperties;
 import com.chua.starter.gateway.support.route.DiscoveryRouteLocator;
 import lombok.extern.slf4j.Slf4j;
@@ -162,11 +162,11 @@ public class DynamicServiceDiscoveryManager implements AutoCloseable {
                 highlight(serviceName), event, discovery.getHost(), discovery.getPort());
 
         switch (event) {
-            case REGISTER:
+            case ADD, ONLINE:
                 discoveredServices.add(serviceName);
                 log.info("[Gateway] 服务注册 - {}", serviceName);
                 break;
-            case UNREGISTER:
+            case REMOVE, OFFLINE:
                 discoveredServices.remove(serviceName);
                 log.info("[Gateway] 服务注销 - {}", serviceName);
                 break;

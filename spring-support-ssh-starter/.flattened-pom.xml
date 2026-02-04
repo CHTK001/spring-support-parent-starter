@@ -15,7 +15,7 @@
     8. 日志记录 - 记录SSH连接和操作日志
 
     @author CH
-    @version 4.0.0.36
+    @version 4.0.0.37
 -->
 <project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -23,10 +23,10 @@
   <parent>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-parent-starter</artifactId>
-    <version>4.0.0.36</version>
+    <version>4.0.0.37</version>
   </parent>
   <artifactId>spring-support-ssh-starter</artifactId>
-  <version>4.0.0.36</version>
+  <version>4.0.0.37</version>
   <name>Spring Support SSH Starter</name>
   <description>SSH服务端集成模块，提供SSH服务端功能和文件传输支持</description>
   <licenses>

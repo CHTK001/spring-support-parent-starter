@@ -1,6 +1,8 @@
 package com.chua.starter.ai.support.chat;
 
 import com.chua.common.support.core.spi.ServiceProvider;
+import com.chua.deeplearning.support.ml.mcp.model.ChatContext;
+import com.chua.starter.ai.support.mcp.ChatContextAdapter;
 import com.chua.starter.ai.support.mcp.McpPostprocessor;
 import com.chua.starter.ai.support.mcp.McpPreprocessor;
 import lombok.extern.slf4j.Slf4j;
@@ -8,29 +10,36 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 
 /**
- * LLM语言模型聊天客户端接口
+ * Spring层聊天客户端接口
+ * <p>
+ * 继承自 utils 模块的 ChatClient，提供 Spring 层的扩展功能
  *
  * @author CH
  * @since 2024-01-01
  */
-public interface ChatClient {
+public interface ChatClient extends com.chua.deeplearning.support.api.ChatClient {
 
     /**
-     * 发送聊天消息
+     * 发送聊天消息（带 Spring 层上下文）
      *
      * @param message 用户消息
+     * @param context Spring 层上下文信息
      * @return LLM回复内容
      */
-    String chat(String message);
-
-    /**
-     * 发送聊天消息（带上下文）
-     *
-     * @param message 用户消息
-     * @param context 上下文信息
-     * @return LLM回复内容
-     */
-    String chat(String message, ChatContext context);
+    default String chat(String message, com.chua.starter.ai.support.chat.ChatContext context) {
+        var deepLearningContext = ChatContextAdapter.toDeepLearningContext(context);
+        // 添加历史消息
+        if (context != null && context.getHistory() != null) {
+            for (var msg : context.getHistory()) {
+                if ("user".equals(msg.getRole())) {
+                    addUserHistory(msg.getContent());
+                } else if ("assistant".equals(msg.getRole())) {
+                    addAssistantHistory(msg.getContent());
+                }
+            }
+        }
+        return chatSync(message);
+    }
 
     /**
      * 聊天客户端构建器
@@ -38,7 +47,7 @@ public interface ChatClient {
     @Slf4j
     class Builder {
 
-        private ChatClient chatClient;
+        private com.chua.deeplearning.support.api.ChatClient chatClient;
         private List<McpPreprocessor> preprocessors;
         private List<McpPostprocessor> postprocessors;
 
@@ -48,7 +57,7 @@ public interface ChatClient {
          * @param chatClient 聊天客户端
          * @return 构建器
          */
-        public Builder client(ChatClient chatClient) {
+        public Builder client(com.chua.deeplearning.support.api.ChatClient chatClient) {
             this.chatClient = chatClient;
             return this;
         }
@@ -105,4 +114,3 @@ public interface ChatClient {
         return new Builder();
     }
 }
-

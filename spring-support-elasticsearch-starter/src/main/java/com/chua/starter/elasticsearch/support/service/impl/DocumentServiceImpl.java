@@ -1,109 +1,85 @@
 package com.chua.starter.elasticsearch.support.service.impl;
 
 import com.chua.common.support.base.bean.BeanUtils;
-import com.chua.common.support.text.json.Json;
-import com.chua.common.support.text.json.JsonObject;
 import com.chua.common.support.lang.code.PageResult;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.text.json.Json;
 import com.chua.starter.elasticsearch.support.pojo.Mapping;
 import com.chua.starter.elasticsearch.support.service.DocumentService;
 import com.google.common.base.Strings;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.elasticsearch.action.search.SearchRequest;
-import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.client.RequestOptions;
-import org.elasticsearch.client.RestHighLevelClient;
-import org.elasticsearch.client.indices.PutMappingRequest;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.query.functionscore.FunctionScoreQueryBuilder;
-import org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders;
-import org.elasticsearch.script.Script;
-import org.elasticsearch.script.ScriptType;
-import org.elasticsearch.search.builder.SearchSourceBuilder;
-import org.elasticsearch.search.fetch.subphase.highlight.HighlightBuilder;
-import org.elasticsearch.xcontent.XContentBuilder;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
+import org.springframework.data.elasticsearch.client.elc.ElasticsearchTemplate;
+import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.core.IndexOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
-import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
-import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
+import org.springframework.data.elasticsearch.core.document.Document;
+import org.springframework.data.elasticsearch.core.query.Query;
+import org.springframework.data.elasticsearch.core.query.StringQuery;
 
-import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 /**
- * 文档服务
+ * 文档服务实现
+ * 提供 Elasticsearch 文档的增删改查功能
  *
  * @author CH
+ * @since 2024-12-24
  */
 @Slf4j
+@RequiredArgsConstructor
 public class DocumentServiceImpl implements DocumentService {
 
-    private final ElasticsearchRestTemplate elasticsearchRestTemplate;
-    private final RestHighLevelClient restHighLevelClient;
-    
-    // Lombok @Slf4j 生成的 log 字段（如果 Lombok 未生效，使用这个字段）
-    private static final Logger log = org.slf4j.LoggerFactory.getLogger(DocumentServiceImpl.class);
-
     /**
-     * 构造器
-     *
-     * @param elasticsearchRestTemplate ES Rest 模板
-     * @param restHighLevelClient ES 高级客户端
+     * Elasticsearch 操作模板
      */
-    public DocumentServiceImpl(ElasticsearchRestTemplate elasticsearchRestTemplate, RestHighLevelClient restHighLevelClient) {
-        this.elasticsearchRestTemplate = elasticsearchRestTemplate;
-        this.restHighLevelClient = restHighLevelClient;
-    }
+    private final ElasticsearchTemplate elasticsearchTemplate;
 
-    /**
-     * 检查人脸索引
-     */
     @Override
     public void checkIndex(String indexName) {
-        if(!existIndex(indexName)) {
-            elasticsearchRestTemplate.indexOps(IndexCoordinates.of(indexName.toLowerCase())).create();
+        if (!existIndex(indexName)) {
+            elasticsearchTemplate.indexOps(IndexCoordinates.of(indexName.toLowerCase())).create();
         }
     }
 
     @Override
     public boolean addDocument(String indexName, Object[] document) {
         try {
-            IndexCoordinates indexCoordinates = IndexCoordinates.of(indexName.toLowerCase());
-            if(!existIndex(indexCoordinates)) {
-                log.warn("索引[{}]不存在", indexName);
+            var indexCoordinates = IndexCoordinates.of(indexName.toLowerCase());
+            if (!existIndex(indexCoordinates)) {
+                log.warn("[ES][文档] 索引[{}]不存在", indexName);
                 return false;
             }
-            elasticsearchRestTemplate.save(Arrays.asList(document), IndexCoordinates.of(indexName.toLowerCase()));
+            elasticsearchTemplate.save(Arrays.asList(document), indexCoordinates);
+            return true;
         } catch (Exception e) {
-            log.error("", e);
+            log.error("[ES][文档] 添加文档失败, index={}", indexName, e);
             return false;
         }
-        return true;
     }
-
 
     @Override
     public boolean deleteDocument(String indexName, Object[] did) {
         try {
-            IndexCoordinates indexCoordinates = IndexCoordinates.of(indexName.toLowerCase());
-            if(!existIndex(indexCoordinates)) {
-                log.warn("索引[{}]不存在", indexName);
+            var indexCoordinates = IndexCoordinates.of(indexName.toLowerCase());
+            if (!existIndex(indexCoordinates)) {
+                log.warn("[ES][文档] 索引[{}]不存在", indexName);
                 return false;
             }
             for (Object o : did) {
-                elasticsearchRestTemplate.delete(o, indexCoordinates);
+                elasticsearchTemplate.delete(o, indexCoordinates);
             }
+            return true;
         } catch (Exception e) {
-            log.error("", e);
+            log.error("[ES][文档] 删除文档失败, index={}", indexName, e);
             return false;
         }
-        return true;
     }
 
     @Override
@@ -112,27 +88,23 @@ public class DocumentServiceImpl implements DocumentService {
         if (Strings.isNullOrEmpty(queries)) {
             queries = "*:*";
         }
-        NativeSearchQuery query = new NativeSearchQueryBuilder()
-                .withQuery(QueryBuilders.queryStringQuery(queries))
-                .withPageable(PageRequest.of(page - 1, pageSize))
-                .withHighlightBuilder(new HighlightBuilder().field("name").preTags("<font color='#dd4b39'>").postTags("</font>"))
-                .build();
-        SearchHits<T> search = elasticsearchRestTemplate.search(query, target, IndexCoordinates.of(indexName.toLowerCase()));
-        long totalHits = search.getTotalHits();
-        if (totalHits <= 0) {
-            return PageResult.empty();
-        }
-        PageResult.PageResultBuilder<T> builder = PageResult.builder();
-        builder.total(totalHits)
-                .pageNo(page)
-                .pageSize(pageSize);
-        List<T> searchAnswerList = new ArrayList((int) search.getTotalHits());
-        for (SearchHit<T> tSearchHit : search) {
-            T content = tSearchHit.getContent();
-            searchAnswerList.add(content);
-        }
-        builder.data(searchAnswerList);
-        return builder.build();
+
+        // 使用 StringQuery 构建查询
+        var queryString = String.format("""
+                {
+                    "query_string": {
+                        "query": "%s"
+                    }
+                }
+                """, queries.replace("\"", "\\\""));
+
+        Query query = new StringQuery(queryString);
+        query.setPageable(PageRequest.of(page - 1, pageSize));
+
+        var indexCoordinates = IndexCoordinates.of(indexName.toLowerCase());
+        SearchHits<T> searchHits = elasticsearchTemplate.search(query, target, indexCoordinates);
+
+        return buildPageResult(searchHits, page, pageSize);
     }
 
     @Override
@@ -142,70 +114,61 @@ public class DocumentServiceImpl implements DocumentService {
             queries = "*:*";
         }
 
-        SearchRequest searchRequest = new SearchRequest(indexName);
-        Script script = new Script(
-                ScriptType.INLINE,
-                "painless",
-                "(cosineSimilarity(params.queryVector, doc['feature']) + 1)/2",
-                Collections.singletonMap("queryVector", feature));
-
-        FunctionScoreQueryBuilder functionScoreQueryBuilder = QueryBuilders.functionScoreQuery(
-                QueryBuilders.queryStringQuery(queries),
-                ScoreFunctionBuilders.scriptFunction(script));
-
-        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-        searchSourceBuilder.query(functionScoreQueryBuilder)
-                .fetchSource(null, "feature") //不返回vector字段，太多了没用还耗时
-                .size(pageSize);
-
-        searchRequest.source(searchSourceBuilder);
-
-        SearchResponse searchResponse = null;
-        try {
-            searchResponse = restHighLevelClient.search(searchRequest, RequestOptions.DEFAULT);
-        } catch (IOException ignored) {
+        // 构建带脚本评分的查询
+        var featureArray = new StringBuilder("[");
+        for (int i = 0; i < feature.length; i++) {
+            if (i > 0) {
+                featureArray.append(",");
+            }
+            featureArray.append(feature[i]);
         }
-        org.elasticsearch.search.SearchHits hits = searchResponse.getHits();
-        long totalHits = hits.getTotalHits().value;
-        ;
-        if (totalHits <= 0) {
-            return PageResult.empty();
-        }
-        PageResult.PageResultBuilder<T> builder = PageResult.builder();
-        builder.total(totalHits)
-                .pageNo(page)
-                .pageSize(pageSize);
-        List<T> searchAnswerList = new ArrayList((int) totalHits);
-        for (org.elasticsearch.search.SearchHit tSearchHit : hits.getHits()) {
-            Map<String, Object> rs = tSearchHit.getSourceAsMap();
-            rs.put("similarities", tSearchHit.getScore());
-            T content = BeanUtils.copyProperties(rs, target);
-            searchAnswerList.add(content);
-        }
-        builder.data(searchAnswerList);
-        return builder.build();
+        featureArray.append("]");
+
+        var queryJson = String.format("""
+                {
+                    "function_score": {
+                        "query": {
+                            "query_string": {
+                                "query": "%s"
+                            }
+                        },
+                        "script_score": {
+                            "script": {
+                                "source": "(cosineSimilarity(params.queryVector, doc['feature']) + 1)/2",
+                                "params": {
+                                    "queryVector": %s
+                                }
+                            }
+                        }
+                    }
+                }
+                """, queries.replace("\"", "\\\""), featureArray);
+
+        Query query = new StringQuery(queryJson);
+        query.setPageable(PageRequest.of(page - 1, pageSize));
+
+        var indexCoordinates = IndexCoordinates.of(indexName.toLowerCase());
+        SearchHits<T> searchHits = elasticsearchTemplate.search(query, target, indexCoordinates);
+
+        return buildPageResultWithScore(searchHits, page, pageSize, target);
     }
 
     @Override
     public boolean deleteDocument(String indexName, String code) {
-        String code1 = elasticsearchRestTemplate.delete(code, IndexCoordinates.of(indexName.toLowerCase()));
-        return !Strings.isNullOrEmpty(code1);
+        var result = elasticsearchTemplate.delete(code, IndexCoordinates.of(indexName.toLowerCase()));
+        return !Strings.isNullOrEmpty(result);
     }
 
     @Override
     public ReturnResult<String> createIndex(String indexName) {
-        IndexCoordinates coordinates = IndexCoordinates.of(indexName.toLowerCase());
-        IndexOperations indexOperations = elasticsearchRestTemplate.indexOps(coordinates);
-        if (indexOperations.exists()) {
+        var coordinates = IndexCoordinates.of(indexName.toLowerCase());
+        IndexOperations indexOps = elasticsearchTemplate.indexOps(coordinates);
+        if (indexOps.exists()) {
             return ReturnResult.failure("索引已存在");
         }
-        return indexOperations.create() ? ReturnResult.success() : ReturnResult.failure("创建失败");
+        return indexOps.create() ? ReturnResult.success() : ReturnResult.failure("创建失败");
     }
 
-    public boolean existIndex(IndexCoordinates coordinates) {
-        IndexOperations indexOperations = elasticsearchRestTemplate.indexOps(coordinates);
-        return indexOperations.exists();
-    }
     @Override
     public boolean existIndex(String indexName) {
         return existIndex(IndexCoordinates.of(indexName.toLowerCase()));
@@ -213,60 +176,113 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     public ReturnResult<String> deleteIndex(String indexName) {
-        IndexCoordinates coordinates = IndexCoordinates.of(indexName.toLowerCase());
-        IndexOperations indexOperations = elasticsearchRestTemplate.indexOps(coordinates);
-        if (!indexOperations.exists()) {
+        var coordinates = IndexCoordinates.of(indexName.toLowerCase());
+        IndexOperations indexOps = elasticsearchTemplate.indexOps(coordinates);
+        if (!indexOps.exists()) {
             return ReturnResult.failure("索引不存在");
         }
-        return indexOperations.delete() ? ReturnResult.success() : ReturnResult.failure("删除失败");
+        return indexOps.delete() ? ReturnResult.success() : ReturnResult.failure("删除失败");
     }
 
     @Override
     public ReturnResult<String> createMapping(Mapping mapping) {
         if (!existIndex(mapping.getIndexName())) {
-            if(!mapping.isOverIndex()) {
+            if (!mapping.isOverIndex()) {
                 return ReturnResult.failure("索引不存在");
             }
             checkIndex(mapping.getIndexName());
         }
-        PutMappingRequest request = new PutMappingRequest(mapping.getIndexName().toLowerCase());
+
         try {
-            request.source(Json.getJsonObject(mapping.getMapping()));
-            restHighLevelClient.indices().putMapping(request, RequestOptions.DEFAULT);
+            var coordinates = IndexCoordinates.of(mapping.getIndexName().toLowerCase());
+            IndexOperations indexOps = elasticsearchTemplate.indexOps(coordinates);
+
+            // 解析 mapping 并应用
+            var mappingJson = Json.fromJson(mapping.getMapping());
+            indexOps.putMapping(Document.from(mappingJson));
+            return ReturnResult.success("更新成功");
         } catch (Exception e) {
-            log.error("", e);
+            log.error("[ES][映射] 创建映射失败, index={}", mapping.getIndexName(), e);
             return ReturnResult.failure("更新失败");
         }
-        return ReturnResult.success("更新成功");
     }
 
     @Override
     public ReturnResult<String> addMapping(Mapping mapping) {
-        return createMapping( mapping);
+        return createMapping(mapping);
     }
 
-    private void doBuilder(XContentBuilder builder, Object mapping) throws Exception{
-        JsonObject jsonObject = null;
-        if(mapping instanceof JsonObject) {
-            jsonObject = (JsonObject) mapping;
-        } else if(mapping instanceof String ) {
-            String str = mapping.toString();
-            if(str.startsWith("{")) {
-                jsonObject = Json.getJsonObject(mapping.toString());
-                builder.map(jsonObject);
-                return ;
-            }
-        }
-        if(null == jsonObject) {
-            return;
+    /**
+     * 检查索引是否存在
+     *
+     * @param coordinates 索引坐标
+     * @return true 存在, false 不存在
+     */
+    private boolean existIndex(IndexCoordinates coordinates) {
+        return elasticsearchTemplate.indexOps(coordinates).exists();
+    }
+
+    /**
+     * 构建分页结果
+     *
+     * @param searchHits 搜索结果
+     * @param page       页码
+     * @param pageSize   每页大小
+     * @param <T>        结果类型
+     * @return 分页结果
+     */
+    private <T> PageResult<T> buildPageResult(SearchHits<T> searchHits, int page, int pageSize) {
+        long totalHits = searchHits.getTotalHits();
+        if (totalHits <= 0) {
+            return PageResult.empty();
         }
 
-        for (Map.Entry<String, Object> entry : jsonObject.entrySet()) {
-            String k = entry.getKey();
-            Object v = entry.getValue();
-            builder.startObject(k);
-            doBuilder(builder, v);
-            builder.endObject();
+        List<T> dataList = new ArrayList<>((int) Math.min(totalHits, pageSize));
+        for (SearchHit<T> hit : searchHits) {
+            dataList.add(hit.getContent());
         }
+
+        return PageResult.<T>builder()
+                .total(totalHits)
+                .pageNo(page)
+                .pageSize(pageSize)
+                .data(dataList)
+                .build();
+    }
+
+    /**
+     * 构建带评分的分页结果
+     *
+     * @param searchHits 搜索结果
+     * @param page       页码
+     * @param pageSize   每页大小
+     * @param target     目标类型
+     * @param <T>        结果类型
+     * @return 分页结果
+     */
+    private <T> PageResult<T> buildPageResultWithScore(SearchHits<T> searchHits, int page, int pageSize, Class<T> target) {
+        long totalHits = searchHits.getTotalHits();
+        if (totalHits <= 0) {
+            return PageResult.empty();
+        }
+
+        List<T> dataList = new ArrayList<>((int) Math.min(totalHits, pageSize));
+        for (SearchHit<T> hit : searchHits) {
+            T content = hit.getContent();
+            // 将评分添加到结果中
+            var map = BeanUtils.copyProperties(content, Map.class);
+            if (map != null) {
+                map.put("similarities", hit.getScore());
+                content = BeanUtils.copyProperties(map, target);
+            }
+            dataList.add(content);
+        }
+
+        return PageResult.<T>builder()
+                .total(totalHits)
+                .pageNo(page)
+                .pageSize(pageSize)
+                .data(dataList)
+                .build();
     }
 }

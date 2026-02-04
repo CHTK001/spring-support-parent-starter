@@ -3,9 +3,9 @@ package com.chua.starter.queue.annotation;
 import java.lang.annotation.*;
 
 /**
- * 消息监听注解
+ * 队列监听注解
  * <p>
- * 标注在方法上，用于监听指定目标地址的消息。
+ * 标注在方法上，用于监听指定队列或主题的消息。
  * </p>
  *
  * <pre>
@@ -13,12 +13,12 @@ import java.lang.annotation.*;
  * @Component
  * public class OrderMessageHandler {
  *
- *     @OnMessage("order-topic")
+ *     @QueueListener("order-topic")
  *     public void handleOrder(Message message) {
  *         // 处理消息
  *     }
  *
- *     @OnMessage(value = "payment-queue", group = "payment-group")
+ *     @QueueListener(value = "payment-queue", group = "payment-group")
  *     public void handlePayment(PaymentDTO payment) {
  *         // 直接接收反序列化后的对象
  *     }
@@ -32,7 +32,7 @@ import java.lang.annotation.*;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface OnMessage {
+public @interface QueueListener {
 
     /**
      * 目标地址（topic/queue）
@@ -82,3 +82,4 @@ public @interface OnMessage {
      */
     int concurrency() default 1;
 }
+

@@ -1,6 +1,6 @@
 package com.chua.starter.ai.support.mcp;
 
-import com.chua.deeplearning.support.ml.bigmodel.mcp.model.ChatContext;
+import com.chua.deeplearning.support.ml.mcp.model.ChatContext;
 
 /**
  * MCP后置处理器接口（Spring层适配）
@@ -12,7 +12,7 @@ import com.chua.deeplearning.support.ml.bigmodel.mcp.model.ChatContext;
  * @author CH
  * @since 2024-01-01
  */
-public interface McpPostprocessor extends com.chua.deeplearning.support.ml.bigmodel.mcp.McpPostprocessor {
+public interface McpPostprocessor extends com.chua.deeplearning.support.ml.mcp.McpPostprocessor {
 
     /**
      * 后处理LLM输出（Spring层）

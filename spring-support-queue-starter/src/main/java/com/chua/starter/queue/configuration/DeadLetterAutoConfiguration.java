@@ -61,7 +61,7 @@ public class DeadLetterAutoConfiguration {
      */
     private MessageTemplate createDlqStorage() {
         String type = deadLetterProperties.getType();
-        return switch (type != null ? type.toLowerCase() : "local") {
+        return switch (type != null ? type.toLowerCase() : "chronicle-queue") {
             case "local" -> {
                 QueueProperties.LocalConfig localConfig = new QueueProperties.LocalConfig();
                 localConfig.setDelayThreads(deadLetterProperties.getDelayThreads());

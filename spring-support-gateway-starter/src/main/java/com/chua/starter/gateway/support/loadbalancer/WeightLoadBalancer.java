@@ -1,6 +1,6 @@
 package com.chua.starter.gateway.support.loadbalancer;
 
-import com.chua.common.support.discovery.Discovery;
+import com.chua.common.support.network.discovery.Discovery;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,6 +1,6 @@
 package com.chua.starter.gateway.support.route;
 
-import com.chua.common.support.discovery.Discovery;
+import com.chua.common.support.network.discovery.Discovery;
 import com.chua.starter.discovery.support.service.DiscoveryService;
 import com.chua.starter.gateway.support.loadbalancer.LoadBalancer;
 import lombok.RequiredArgsConstructor;

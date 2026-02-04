@@ -3,7 +3,7 @@ package com.chua.starter.strategy.aspect;
 import com.chua.common.support.task.debounce.Debounce;
 import com.chua.common.support.task.debounce.DebounceException;
 import com.chua.common.support.task.debounce.DebounceManager;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.core.utils.StringUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -258,25 +258,25 @@ public class DebounceAspect {
      */
     private String getClientIp() {
         try {
-            return RequestUtils.getIpAddress();
-        } catch (Exception e) {
-            try {
-                ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-                if (attrs != null) {
-                    HttpServletRequest request = attrs.getRequest();
-                    String ip = request.getHeader("X-Forwarded-For");
-                    if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-                        ip = request.getHeader("X-Real-IP");
-                    }
-                    if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-                        ip = request.getRemoteAddr();
-                    }
-                    return ip != null ? ip.split(",")[0].trim() : "unknown";
+            var attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs != null) {
+                var request = attrs.getRequest();
+                String ip = RequestUtils.getIpAddress(request);
+                if (ip != null) {
+                    return ip;
                 }
-            } catch (Exception ignored) {
+                ip = request.getHeader("X-Forwarded-For");
+                if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+                    ip = request.getHeader("X-Real-IP");
+                }
+                if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+                    ip = request.getRemoteAddr();
+                }
+                return ip != null ? ip.split(",")[0].trim() : "unknown";
             }
-            return "unknown";
+        } catch (Exception ignored) {
         }
+        return "unknown";
     }
 
     /**

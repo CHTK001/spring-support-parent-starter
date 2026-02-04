@@ -1,7 +1,7 @@
 package com.chua.starter.ai.support.mcp;
 
-import com.chua.deeplearning.support.ml.bigmodel.mcp.model.ChatContext;
-import com.chua.deeplearning.support.ml.bigmodel.mcp.model.ChatMessage;
+import com.chua.deeplearning.support.ml.mcp.model.ChatContext;
+import com.chua.deeplearning.support.ml.mcp.model.ChatMessage;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -56,7 +56,7 @@ public class ChatContextAdapter {
         context.setSessionId(deepLearningContext.getSessionId());
         if (deepLearningContext.getHistory() != null) {
             List<com.chua.starter.ai.support.chat.ChatMessage> history = deepLearningContext.getHistory().stream()
-                    .map(msg -> new com.chua.starter.ai.support.chat.ChatMessage(msg.getRole(), msg.getContent()))
+                    .map(msg -> new com.chua.starter.ai.support.chat.ChatMessage(msg.role(), msg.content()))
                     .collect(Collectors.toList());
             context.setHistory(history);
         }

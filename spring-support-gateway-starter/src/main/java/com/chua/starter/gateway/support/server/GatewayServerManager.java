@@ -1,8 +1,8 @@
 package com.chua.starter.gateway.support.server;
 
-import com.chua.common.support.protocol.Protocol;
-import com.chua.common.support.protocol.ProtocolSetting;
-import com.chua.common.support.protocol.server.ProtocolServer;
+import com.chua.common.support.network.protocol.Protocol;
+import com.chua.common.support.network.protocol.ProtocolSetting;
+import com.chua.common.support.network.protocol.server.ProtocolServer;
 import com.chua.starter.gateway.support.properties.GatewayProperties;
 import com.chua.starter.gateway.support.route.DiscoveryRouteLocator;
 import lombok.extern.slf4j.Slf4j;

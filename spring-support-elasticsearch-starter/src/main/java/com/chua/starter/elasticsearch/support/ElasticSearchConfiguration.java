@@ -1,27 +1,33 @@
 package com.chua.starter.elasticsearch.support;
 
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.json.jackson.JacksonJsonpMapper;
+import co.elastic.clients.transport.ElasticsearchTransport;
+import co.elastic.clients.transport.rest_client.RestClientTransport;
 import com.chua.starter.elasticsearch.support.properties.ElasticSearchProperties;
+import com.chua.starter.elasticsearch.support.service.DocumentService;
 import com.chua.starter.elasticsearch.support.service.impl.DocumentServiceImpl;
-import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestClientBuilder;
-import org.elasticsearch.client.RestHighLevelClient;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * es
+ * Elasticsearch 自动配置类
+ * 提供 Elasticsearch 客户端和模板的自动配置
  *
  * @author CH
+ * @since 2024-12-24
  */
+@Slf4j
 @EnableConfigurationProperties(ElasticSearchProperties.class)
-@Import(DocumentServiceImpl.class)
 public class ElasticSearchConfiguration {
 
     private final ElasticSearchProperties elasticSearchProperties;
@@ -35,34 +41,95 @@ public class ElasticSearchConfiguration {
         this.elasticSearchProperties = elasticSearchProperties;
     }
 
+    /**
+     * 创建 RestClient
+     *
+     * @return RestClient 实例
+     */
     @Bean
     @ConditionalOnExpression("!T(org.springframework.util.StringUtils).isEmpty('${plugin.elasticsearch.address:}')")
-    public RestHighLevelClient restHighLevelClient() {
-        // 拆分地址
-        List<HttpHost> hostLists = new ArrayList<>();
-        String[] hostList = elasticSearchProperties.getAddress().split(",");
-        for (String addr : hostList) {
-            String host = addr.split(":")[0];
-            String port = addr.split(":")[1];
-            hostLists.add(new HttpHost(host, Integer.parseInt(port), elasticSearchProperties.getSchema()));
+    @ConditionalOnMissingBean
+    public RestClient elasticsearchRestClient() {
+        List<HttpHost> hostList = new ArrayList<>();
+        String[] addresses = elasticSearchProperties.getAddress().split(",");
+        for (String addr : addresses) {
+            String[] parts = addr.split(":");
+            String host = parts[0];
+            int port = Integer.parseInt(parts[1]);
+            hostList.add(new HttpHost(host, port, elasticSearchProperties.getSchema()));
         }
-        // 转换成 HttpHost 数组
-        HttpHost[] httpHost = hostLists.toArray(new HttpHost[]{});
-        // 构建连接对象
-        RestClientBuilder builder = RestClient.builder(httpHost);
-        // 异步连接延时配置
+
+        HttpHost[] httpHosts = hostList.toArray(new HttpHost[0]);
+        RestClientBuilder builder = RestClient.builder(httpHosts);
+
+        // 配置连接超时
         builder.setRequestConfigCallback(requestConfigBuilder -> {
             requestConfigBuilder.setConnectTimeout(elasticSearchProperties.getConnectTimeoutMs());
             requestConfigBuilder.setSocketTimeout(elasticSearchProperties.getSocketTimeoutMs());
             requestConfigBuilder.setConnectionRequestTimeout(elasticSearchProperties.getConnectionRequestTimeoutMs());
             return requestConfigBuilder;
         });
-        // 异步连接数配置
+
+        // 配置连接池
         builder.setHttpClientConfigCallback(httpClientBuilder -> {
             httpClientBuilder.setMaxConnTotal(elasticSearchProperties.getMaxConnectNum());
             httpClientBuilder.setMaxConnPerRoute(elasticSearchProperties.getMaxConnectPerRoute());
             return httpClientBuilder;
         });
-        return new RestHighLevelClient(builder);
+
+        log.info("[ES][配置] 创建 RestClient, address={}", elasticSearchProperties.getAddress());
+        return builder.build();
+    }
+
+    /**
+     * 创建 ElasticsearchTransport
+     *
+     * @param restClient RestClient
+     * @return ElasticsearchTransport 实例
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public ElasticsearchTransport elasticsearchTransport(RestClient restClient) {
+        return new RestClientTransport(restClient, new JacksonJsonpMapper());
+    }
+
+    /**
+     * 创建 ElasticsearchClient
+     *
+     * @param transport ElasticsearchTransport
+     * @return ElasticsearchClient 实例
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public ElasticsearchClient elasticsearchClient(ElasticsearchTransport transport) {
+        log.info("[ES][配置] 创建 ElasticsearchClient");
+        return new ElasticsearchClient(transport);
+    }
+
+    /**
+     * 创建 ElasticsearchTemplate
+     *
+     * @param elasticsearchClient ElasticsearchClient
+     * @return ElasticsearchTemplate 实例
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public org.springframework.data.elasticsearch.client.elc.ElasticsearchTemplate elasticsearchTemplate(
+            ElasticsearchClient elasticsearchClient) {
+        log.info("[ES][配置] 创建 ElasticsearchTemplate");
+        return new org.springframework.data.elasticsearch.client.elc.ElasticsearchTemplate(elasticsearchClient);
+    }
+
+    /**
+     * 创建文档服务
+     *
+     * @param elasticsearchTemplate ElasticsearchTemplate
+     * @return DocumentService 实例
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public DocumentService documentService(
+            org.springframework.data.elasticsearch.client.elc.ElasticsearchTemplate elasticsearchTemplate) {
+        return new DocumentServiceImpl(elasticsearchTemplate);
     }
 }

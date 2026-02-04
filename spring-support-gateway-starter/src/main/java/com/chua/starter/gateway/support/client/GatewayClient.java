@@ -1,7 +1,7 @@
 package com.chua.starter.gateway.support.client;
 
-import com.chua.common.support.discovery.Discovery;
-import com.chua.common.support.discovery.ServiceDiscovery;
+import com.chua.common.support.network.discovery.Discovery;
+import com.chua.common.support.network.discovery.ServiceDiscovery;
 import com.chua.starter.common.support.project.Project;
 import com.chua.starter.gateway.support.properties.GatewayProperties;
 import lombok.extern.slf4j.Slf4j;

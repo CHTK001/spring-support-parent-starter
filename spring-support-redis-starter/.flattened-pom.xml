@@ -16,7 +16,7 @@
     9. Redisson集成 - 提供高级的Redis功能
 
     @author CH
-    @version 4.0.0.36
+    @version 4.0.0.37
 -->
 <project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -24,10 +24,10 @@
   <parent>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-parent-starter</artifactId>
-    <version>4.0.0.36</version>
+    <version>4.0.0.37</version>
   </parent>
   <artifactId>spring-support-redis-starter</artifactId>
-  <version>4.0.0.36</version>
+  <version>4.0.0.37</version>
   <description>Spring Support框架Redis集成模块，提供完整的Redis缓存和分布式功能支持</description>
   <licenses>
     <license>

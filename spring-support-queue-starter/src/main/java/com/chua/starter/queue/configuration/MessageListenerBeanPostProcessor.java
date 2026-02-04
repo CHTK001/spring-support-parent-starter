@@ -4,7 +4,7 @@ import com.chua.starter.queue.Acknowledgment;
 import com.chua.starter.queue.Message;
 import com.chua.starter.queue.MessageHandler;
 import com.chua.starter.queue.MessageTemplate;
-import com.chua.starter.queue.annotation.OnMessage;
+import com.chua.starter.queue.annotation.QueueListener;
 import com.chua.starter.queue.properties.QueueProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +21,7 @@ import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 /**
  * 消息监听注解处理器
  * <p>
- * 扫描 @OnMessage 注解并注册监听器
+ * 扫描 @QueueListener 注解并注册监听器
  * </p>
  *
  * @author CH
@@ -52,15 +52,15 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
             }
         }
 
-        // 扫描@OnMessage注解
+        // 扫描@QueueListener注解
         Class<?> beanClass = bean.getClass();
         for (Method method : beanClass.getDeclaredMethods()) {
-            OnMessage onMessage = method.getAnnotation(OnMessage.class);
-            if (onMessage == null) {
+            QueueListener queueListener = method.getAnnotation(QueueListener.class);
+            if (queueListener == null) {
                 continue;
             }
 
-            registerListener(bean, method, onMessage);
+            registerListener(bean, method, queueListener);
         }
 
         return bean;
@@ -69,13 +69,13 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
     /**
      * 注册消息监听器
      */
-    private void registerListener(Object bean, Method method, OnMessage onMessage) {
-        String destination = onMessage.value();
-        String group = onMessage.group();
-        String type = (onMessage.type() != null && !onMessage.type().isEmpty()) ? onMessage.type() : queueProperties.getType();
-        Class<?> payloadType = onMessage.payloadType();
-        boolean autoAck = onMessage.autoAck();
-        int concurrency = onMessage.concurrency();
+    private void registerListener(Object bean, Method method, QueueListener queueListener) {
+        String destination = queueListener.value();
+        String group = queueListener.group();
+        String type = (queueListener.type() != null && !queueListener.type().isEmpty()) ? queueListener.type() : queueProperties.getType();
+        Class<?> payloadType = queueListener.payloadType();
+        boolean autoAck = queueListener.autoAck();
+        int concurrency = queueListener.concurrency();
 
         MessageTemplate template = templateMap.get(type);
         if (template == null) {

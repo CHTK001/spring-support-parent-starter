@@ -23,10 +23,10 @@
   <parent>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-parent-starter</artifactId>
-    <version>4.0.0.36</version>
+    <version>4.0.0.37</version>
   </parent>
   <artifactId>spring-support-ai-starter</artifactId>
-  <version>4.0.0.36</version>
+  <version>4.0.0.37</version>
   <description>Spring Support框架AI深度学习功能模块，提供人脸检测、特征提取、OCR、版面分析等AI能力</description>
   <licenses>
     <license>
@@ -57,6 +57,10 @@
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-common-starter</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-common-starter</artifactId>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>

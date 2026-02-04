@@ -144,10 +144,10 @@ public class SysDebounceConfigurationInterceptor implements HandlerInterceptor {
                 allowed,
                 reason,
                 null,
-                config.getSysDebounceConfigurationId(),
+                config.getSysDebounceId(),
                 config.getSysDebounceMode(),
                 debounceKey,
-                config.getSysDebounceDuration()
+                parseDurationToMillis(config.getSysDebounceDuration())
         );
 
         StrategyEventPublisher.publishEvent(event);
@@ -164,6 +164,35 @@ public class SysDebounceConfigurationInterceptor implements HandlerInterceptor {
             return request.getSession().getId();
         } catch (Exception e) {
             return "no-session";
+        }
+    }
+
+    /**
+     * 解析时长字符串为毫秒数
+     * 支持格式: 1000, 1S, 1MIN, 1H, 1D
+     *
+     * @param duration 时长字符串
+     * @return 毫秒数
+     */
+    private Long parseDurationToMillis(String duration) {
+        if (duration == null || duration.isBlank()) {
+            return 1000L;
+        }
+        try {
+            var upperDuration = duration.toUpperCase().trim();
+            if (upperDuration.endsWith("D")) {
+                return Long.parseLong(upperDuration.replace("D", "")) * 24 * 60 * 60 * 1000;
+            } else if (upperDuration.endsWith("H")) {
+                return Long.parseLong(upperDuration.replace("H", "")) * 60 * 60 * 1000;
+            } else if (upperDuration.endsWith("MIN")) {
+                return Long.parseLong(upperDuration.replace("MIN", "")) * 60 * 1000;
+            } else if (upperDuration.endsWith("S")) {
+                return Long.parseLong(upperDuration.replace("S", "")) * 1000;
+            } else {
+                return Long.parseLong(duration);
+            }
+        } catch (NumberFormatException e) {
+            return 1000L;
         }
     }
 }

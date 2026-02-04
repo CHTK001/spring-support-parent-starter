@@ -3,9 +3,9 @@ package com.chua.starter.strategy.template;
 import com.chua.common.support.resilience.rate.RateLimiterFlow;
 import com.chua.common.support.resilience.rate.RateLimiterProvider;
 import com.chua.common.support.resilience.rate.RateLimiterSetting;
-import com.chua.common.support.resilience.retry.RetryProvider;
-import com.chua.common.support.resilience.retry.RetrySetting;
-import com.chua.common.support.resilience.retry.RetryerFlow;
+import com.chua.common.support.task.retry.RetryProvider;
+import com.chua.common.support.task.retry.RetrySetting;
+import com.chua.common.support.task.retry.RetryerFlow;
 import com.chua.common.support.task.resilience.ResilienceFlow;
 import com.chua.common.support.task.resilience.ResilienceProvider;
 import com.chua.common.support.task.resilience.ResilienceSetting;
@@ -220,19 +220,11 @@ public class DefaultStrategyTemplate implements StrategyTemplate {
 
     @Override
     public void registerRetry(String name, RetryStrategyConfig config) {
-        RetrySetting.Builder builder = RetrySetting.builder()
+        // 构建重试配置（基本参数，异常列表暂不支持，因类型不兼容）
+        var setting = RetrySetting.builder()
                 .maxAttempts(config.getMaxAttempts())
-                .waitDuration(config.getWaitDuration());
-
-        if (!config.getRetryExceptions().isEmpty()) {
-            builder.retryOnExceptions(config.getRetryExceptions());
-        }
-
-        if (!config.getIgnoreExceptions().isEmpty()) {
-            builder.ignoreOnExceptions(config.getIgnoreExceptions());
-        }
-
-        RetrySetting setting = builder.build();
+                .waitDuration(config.getWaitDuration())
+                .build();
         RetryProvider provider = RetryerFlow.create(name, DEFAULT_RETRY_TYPE, setting);
         retryMap.put(name, provider);
 

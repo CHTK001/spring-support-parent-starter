@@ -37,12 +37,11 @@ public class QueueAutoConfiguration {
      * 本地消息队列模板（基于Guava EventBus）
      * <p>
      * 当配置type=local时启用，基于Guava EventBus实现。
-     * 默认使用本地消息队列（当未指定type或type=local时）。
      * </p>
      */
     @Bean(destroyMethod = "close")
     @ConditionalOnMissingBean(MessageTemplate.class)
-    @ConditionalOnProperty(prefix = QueueProperties.PREFIX, name = "type", havingValue = "local", matchIfMissing = true)
+    @ConditionalOnProperty(prefix = QueueProperties.PREFIX, name = "type", havingValue = "local")
     public MessageTemplate localMessageTemplate() {
         log.info("[Queue] 创建本地消息队列模板 (基于Guava EventBus)");
         return new LocalMessageTemplate(queueProperties.getLocal());
