@@ -160,11 +160,11 @@
         <!-- 框架和库版本管理 -->
         <lombok.version>1.18.42</lombok.version>              <!-- Lombok版本，支持 Java 25 -->
         <maven.compiler.proc>full</maven.compiler.proc>      <!-- Java 25 需要，确保启用注解处理 -->
-        <mybatis-plus.version>3.5.11</mybatis-plus.version>  <!-- MyBatis Plus版本 -->
-        <mybatis-plus-join.version>1.5.3</mybatis-plus-join.version>  <!-- MyBatis Plus Join版本 -->
+        <mybatis-plus.version>3.5.16</mybatis-plus.version>  <!-- MyBatis Plus版本 -->
+        <mybatis-plus-join.version>1.5.6</mybatis-plus-join.version>  <!-- MyBatis Plus Join版本 -->
         <dubbo.version>3.1.1</dubbo.version>                <!-- Dubbo RPC框架版本 -->
         <resilience4j.version>2.2.0</resilience4j.version>  <!-- Resilience4j熔断降级框架版本 -->
-        <p6spy.version>3.9.0</p6spy.version>                <!-- P6Spy SQL监控版本 -->
+        <p6spy.version>3.9.1</p6spy.version>                <!-- P6Spy SQL监控版本 -->
         <easy-captcha.version>1.6.2</easy-captcha.version>  <!-- 验证码生成器版本 -->
         <jackson.version>2.19.4</jackson.version>           <!-- Jackson版本，与Spring Boot 3.5.9兼容 -->
         <commons-io.version>2.16.1</commons-io.version>     <!-- Commons IO版本 -->

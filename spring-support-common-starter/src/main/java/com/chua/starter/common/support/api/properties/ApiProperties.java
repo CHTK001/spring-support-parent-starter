@@ -300,7 +300,7 @@ public class ApiProperties {
         /**
          * 是否开启虚拟映射
          */
-        private boolean enable = false;
+        private boolean enable = true;
 
         /**
          * 虚拟映射

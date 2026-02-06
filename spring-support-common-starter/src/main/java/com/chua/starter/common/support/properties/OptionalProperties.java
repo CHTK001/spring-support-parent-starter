@@ -22,7 +22,7 @@ public class OptionalProperties {
     /**
      *  是否打开
      */
-    private boolean enable = false;
+    private boolean enable = true;
 
     /**
      * 获取 enable

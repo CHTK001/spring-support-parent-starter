@@ -15,7 +15,7 @@ public class LogProperties {
     /**
      * 日志开启
      */
-    private boolean enable = false;
+    private boolean enable = true;
 
     /**
      * 开启接口日志

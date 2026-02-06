@@ -154,7 +154,7 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
                                   List<String> loadedConfigs) {
         try {
             Resource[] resources = resolver.getResources("classpath:/" + profileDir + "/*");
-            log.debug("[OPS配置]扫描 {}/ 目录，发现 {} 个资源", profileDir, resources.length);
+            log.info("[OPS配置]扫描 {}/ 目录，发现 {} 个资源", profileDir, resources.length);
 
             // 按文件名排序
             Arrays.sort(resources, Comparator.comparing(r -> {
@@ -188,7 +188,7 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
                     });
 
                     loadedConfigs.add(filename);
-                    log.debug("[OPS配置]加载配置: {}/{}", profileDir, filename);
+                    log.info("[OPS配置]加载配置: {}/{}", profileDir, filename);
                 } catch (IOException e) {
                     log.warn("[OPS配置]加载配置失败: {}/{}, 原因: {}", profileDir, filename, e.getMessage());
                 }

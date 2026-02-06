@@ -27,7 +27,7 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-                <version>4.0.0.37</version>
+        <version>4.0.0.37</version>
     </parent>
 
     <!-- 项目基本信息 -->
@@ -73,6 +73,7 @@
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-generator</artifactId>
+            <scope>provided</scope>
         </dependency>
 
         <!-- MyBatis Plus关联查询扩展 - 支持多表关联查询 -->

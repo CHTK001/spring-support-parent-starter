@@ -16,7 +16,7 @@ public class MybatisPlusProperties {
     /**
      * 是否启用
      */
-    private boolean enable = false;
+    private boolean enable = true;
 
 
 
