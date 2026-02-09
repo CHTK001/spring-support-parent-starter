@@ -246,13 +246,13 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
             log.debug("[消息转换器]CBOR 转换器不可用 (缺少 CBORFactory 依赖)");
         }
 
-        if(ClassUtils.isPresent("com.google.protobuf.CodedOutputStream")) {
-            ProtobufHttpMessageConverter protobufConverter = new ProtobufHttpMessageConverter();
-            messageConverters.add(protobufConverter);
-            log.info("[消息转换器]注册 Protobuf 转换器: {}", ProtobufHttpMessageConverter.class.getName());
-        } else {
-            log.debug("[消息转换器]Protobuf 转换器不可用 (缺少 protobuf 依赖)");
-        }
+//        if(ClassUtils.isPresent("com.google.protobuf.CodedOutputStream")) {
+//            ProtobufHttpMessageConverter protobufConverter = new ProtobufHttpMessageConverter();
+//            messageConverters.add(protobufConverter);
+//            log.info("[消息转换器]注册 Protobuf 转换器: {}", ProtobufHttpMessageConverter.class.getName());
+//        } else {
+//            log.debug("[消息转换器]Protobuf 转换器不可用 (缺少 protobuf 依赖)");
+//        }
 
         log.info("[消息转换器]消息转换器初始化完成, 共注册 {} 个转换器", messageConverters.size());
         try {
