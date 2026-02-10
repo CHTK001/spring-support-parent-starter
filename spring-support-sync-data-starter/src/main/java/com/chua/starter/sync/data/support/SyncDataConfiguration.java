@@ -10,6 +10,7 @@ import org.springframework.context.annotation.ComponentScan;
  */
 @ComponentScan(basePackages = {
         "com.chua.sync.data.support.service",
+        "com.chua.starter.sync.data.support.controller",
         "com.chua.sync.data.support.configuration"
 })
 @MapperScan("com.chua.sync.data.support.mapper")

@@ -17,6 +17,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
 
+import static com.chua.common.support.network.protocol.sync.SyncServer.*;
+
 /**
  * 同步服务端实例
  * <p>
@@ -138,7 +140,7 @@ public class SyncServerInstance {
                     .build();
 
             // 使用新的 SyncServer 接口创建服务端
-            syncServer = com.chua.common.support.network.protocol.sync.SyncServer.create(protocol, protocolSetting);
+            syncServer = create(protocol, protocolSetting);
 
             // 添加监听器
             syncServer.addConnectionListener(new InternalConnectionListener());
