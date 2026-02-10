@@ -1,23 +1,13 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
         <version>4.0.0.37</version>
-        
     </parent>
-
-    <artifactId>spring-support-sync-starter</artifactId>
-    <description>同步协议模块 - 基于 SyncProtocol 实现客户端/服务端通信</description>
-
-    <properties>
-        <maven.compiler.source>25</maven.compiler.source>
-        <maven.compiler.target>25</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
+    <artifactId>spring-support-sync-data-starter</artifactId>
+    <name>Archetype - spring-support-sync-data-starter</name>
 
     <dependencies>
         <dependency>
@@ -31,12 +21,6 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- 通用工具模块，包含 SyncProtocol、Json 工具和 SPI 支持 -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-common-starter</artifactId>
-        </dependency>
-
         <!-- Spring Support Common Starter - 日志工具 -->
         <dependency>
             <groupId>com.chua</groupId>
@@ -45,18 +29,23 @@
 
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-support-socket-starter</artifactId>
+            <artifactId>spring-support-swagger-starter</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-mybatis-starter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-socket-io-starter</artifactId>
         </dependency>
 
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-job-starter</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-swagger-starter</artifactId>
-            <scope>provided</scope>
         </dependency>
 
     </dependencies>
@@ -80,12 +69,11 @@
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
-                            
+
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
         </plugins>
     </build>
-
 </project>

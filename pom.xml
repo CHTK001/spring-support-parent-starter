@@ -139,7 +139,8 @@
         <module>spring-support-message-starter</module>               <!-- 消息推送集成 -->
 
         <!-- API网关模块 -->
-        <module>spring-support-gateway-starter</module>         <!-- API网关 -->
+        <module>spring-support-gateway-starter</module>
+        <module>spring-support-sync-data-starter</module>         <!-- API网关 -->
 
     </modules>
 
