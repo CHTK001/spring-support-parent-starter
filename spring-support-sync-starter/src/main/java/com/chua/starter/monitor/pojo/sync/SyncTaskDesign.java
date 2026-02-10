@@ -1,8 +1,8 @@
-package com.chua.starter.monitor.pojo.sync;
+package com.chua.starter.sync.pojo.sync;
 
-import com.chua.starter.monitor.entity.MonitorSyncConnection;
-import com.chua.starter.monitor.entity.MonitorSyncNode;
-import com.chua.starter.monitor.entity.MonitorSyncTask;
+import com.chua.starter.sync.entity.MonitorSyncConnection;
+import com.chua.starter.sync.entity.MonitorSyncNode;
+import com.chua.starter.sync.entity.MonitorSyncTask;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 

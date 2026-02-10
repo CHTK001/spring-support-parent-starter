@@ -1,4 +1,4 @@
-package com.chua.starter.monitor.annotation;
+package com.chua.starter.sync.annotation;
 
 import java.lang.annotation.*;
 

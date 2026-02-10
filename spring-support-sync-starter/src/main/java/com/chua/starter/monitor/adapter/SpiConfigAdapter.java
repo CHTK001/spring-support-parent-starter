@@ -1,4 +1,4 @@
-package com.chua.starter.monitor.adapter;
+package com.chua.starter.sync.adapter;
 
 import java.util.Map;
 

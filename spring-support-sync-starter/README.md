@@ -24,6 +24,50 @@ plugin:
     type: client
 ```
 
+### 同步任务配置
+
+同步任务能力与长连接模块同属一个 starter，配置同样使用 `plugin.sync` 前缀：
+
+```yaml
+plugin:
+  sync:
+    # 是否启用同步任务
+    enabled: true
+    # 是否自动创建同步相关表（monitor_sync_*）
+    auto-create-table: false
+    # 是否启用WebSocket实时推送
+    websocket-enabled: true
+    # 是否启用定时任务调度集成
+    scheduler-enabled: true
+    # 默认批处理大小
+    default-batch-size: 1000
+    # 默认消费超时时间(ms)
+    default-consume-timeout: 30000
+    # 默认重试次数
+    default-retry-count: 3
+    # 默认重试间隔(ms)
+    default-retry-interval: 1000
+    # 任务执行日志保留天数
+    log-retention-days: 30
+    # 是否启用任务执行日志清理
+    log-cleanup-enabled: true
+```
+
+### 同步任务配置项说明
+
+| 配置项                     | 说明                            | 默认值  |
+| -------------------------- | ------------------------------- | ------- |
+| `enabled`                  | 是否启用同步任务                | `true`  |
+| `auto-create-table`        | 启动时自动创建同步表            | `false` |
+| `websocket-enabled`        | 是否启用WebSocket实时推送        | `true`  |
+| `scheduler-enabled`        | 是否启用定时任务调度集成         | `true`  |
+| `default-batch-size`       | 默认批处理大小                  | `1000`  |
+| `default-consume-timeout`  | 默认消费超时时间(毫秒)          | `30000` |
+| `default-retry-count`      | 默认重试次数                    | `3`     |
+| `default-retry-interval`   | 默认重试间隔(毫秒)              | `1000`  |
+| `log-retention-days`       | 任务执行日志保留天数            | `30`    |
+| `log-cleanup-enabled`      | 是否启用任务执行日志清理         | `true`  |
+
 ### 客户端配置
 
 ```yaml

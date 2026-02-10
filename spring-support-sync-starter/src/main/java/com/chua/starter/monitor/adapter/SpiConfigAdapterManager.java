@@ -1,4 +1,4 @@
-package com.chua.starter.monitor.adapter;
+package com.chua.starter.sync.adapter;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

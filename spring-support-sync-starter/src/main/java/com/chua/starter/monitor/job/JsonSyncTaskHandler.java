@@ -1,4 +1,4 @@
-package com.chua.starter.monitor.job;
+package com.chua.starter.sync.job;
 
 import com.chua.common.support.text.json.Json;
 import com.chua.common.support.core.spi.ServiceProvider;

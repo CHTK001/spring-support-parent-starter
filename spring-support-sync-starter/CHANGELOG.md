@@ -22,6 +22,8 @@
   - `server.servlet.context-path` -> contextPath
   - `server.port` -> 应用端口
   - `management.endpoints.web.base-path` -> actuatorPath（默认 `/actuator`）
+- **同步模块命名统一**：同步模块包名统一为 `com.chua.starter.sync`，避免与监控模块命名混淆
+- **同步任务配置前缀统一**：同步任务配置统一使用 `plugin.sync` 前缀
 
 ### Fixed
 

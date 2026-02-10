@@ -1,4 +1,4 @@
-package com.chua.starter.monitor.entity;
+package com.chua.starter.sync.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;

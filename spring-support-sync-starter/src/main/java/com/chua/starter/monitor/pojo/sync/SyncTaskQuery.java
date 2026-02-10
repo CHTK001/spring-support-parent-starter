@@ -1,4 +1,4 @@
-package com.chua.starter.monitor.pojo.sync;
+package com.chua.starter.sync.pojo.sync;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;

@@ -1,9 +1,9 @@
-package com.chua.starter.monitor.service.sync;
+package com.chua.starter.sync.service.sync;
 
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.starter.monitor.pojo.sync.SpiInfo;
-import com.chua.starter.monitor.pojo.sync.SpiParameter;
-import com.chua.starter.monitor.pojo.sync.SpiTypeList;
+import com.chua.starter.sync.pojo.sync.SpiInfo;
+import com.chua.starter.sync.pojo.sync.SpiParameter;
+import com.chua.starter.sync.pojo.sync.SpiTypeList;
 
 import java.util.List;
 import java.util.Map;

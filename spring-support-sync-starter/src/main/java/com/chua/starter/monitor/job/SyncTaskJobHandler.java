@@ -1,8 +1,8 @@
-package com.chua.starter.monitor.job;
+package com.chua.starter.sync.job;
 
 import com.chua.starter.job.support.handler.JobHandler;
 import com.chua.starter.job.support.thread.JobContext;
-import com.chua.starter.monitor.service.sync.MonitorSyncTaskExecutor;
+import com.chua.starter.sync.service.sync.MonitorSyncTaskExecutor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;

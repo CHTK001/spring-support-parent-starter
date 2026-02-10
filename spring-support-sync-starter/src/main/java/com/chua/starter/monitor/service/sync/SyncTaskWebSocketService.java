@@ -1,10 +1,10 @@
-package com.chua.starter.monitor.service.sync;
+package com.chua.starter.sync.service.sync;
 
 import com.chua.common.support.text.json.Json;
 import com.chua.socket.support.session.SocketSessionTemplate;
-import com.chua.starter.monitor.entity.MonitorSyncTask;
-import com.chua.starter.monitor.entity.MonitorSyncTaskLog;
-import com.chua.starter.monitor.message.ServerWebSocketMessage;
+import com.chua.starter.sync.entity.MonitorSyncTask;
+import com.chua.starter.sync.entity.MonitorSyncTaskLog;
+import com.chua.starter.sync.message.ServerWebSocketMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

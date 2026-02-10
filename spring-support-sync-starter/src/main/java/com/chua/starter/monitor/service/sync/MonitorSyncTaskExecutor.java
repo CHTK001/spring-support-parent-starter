@@ -1,4 +1,4 @@
-package com.chua.starter.monitor.service.sync;
+package com.chua.starter.sync.service.sync;
 
 /**
  * 同步任务执行器接口

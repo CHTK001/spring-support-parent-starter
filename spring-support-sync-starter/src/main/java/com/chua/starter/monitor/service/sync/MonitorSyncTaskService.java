@@ -1,15 +1,15 @@
-package com.chua.starter.monitor.service.sync;
+package com.chua.starter.sync.service.sync;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.starter.monitor.entity.MonitorSyncConnection;
-import com.chua.starter.monitor.entity.MonitorSyncNode;
-import com.chua.starter.monitor.entity.MonitorSyncTask;
-import com.chua.starter.monitor.entity.MonitorSyncTaskLog;
-import com.chua.starter.monitor.pojo.sync.SyncTaskDesign;
-import com.chua.starter.monitor.pojo.sync.SyncTaskQuery;
-import com.chua.starter.monitor.pojo.sync.SyncTaskStatistics;
+import com.chua.starter.sync.entity.MonitorSyncConnection;
+import com.chua.starter.sync.entity.MonitorSyncNode;
+import com.chua.starter.sync.entity.MonitorSyncTask;
+import com.chua.starter.sync.entity.MonitorSyncTaskLog;
+import com.chua.starter.sync.pojo.sync.SyncTaskDesign;
+import com.chua.starter.sync.pojo.sync.SyncTaskQuery;
+import com.chua.starter.sync.pojo.sync.SyncTaskStatistics;
 
 import java.time.LocalDateTime;
 import java.util.List;

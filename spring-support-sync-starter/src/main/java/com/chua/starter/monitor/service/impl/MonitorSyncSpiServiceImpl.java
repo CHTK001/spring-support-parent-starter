@@ -1,14 +1,14 @@
-package com.chua.starter.monitor.service.impl;
+package com.chua.starter.sync.service.impl;
 
 import com.chua.common.support.core.spi.ServiceProvider;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.starter.monitor.adapter.SpiConfigAdapterManager;
-import com.chua.starter.monitor.pojo.sync.SpiInfo;
-import com.chua.starter.monitor.pojo.sync.SpiParameter;
-import com.chua.starter.monitor.pojo.sync.SpiTypeList;
-import com.chua.starter.monitor.service.sync.MonitorSyncSpiService;
-import com.chua.starter.monitor.util.SpiParameterResolver;
-import com.chua.starter.monitor.util.SyncDataSourceFactory;
+import com.chua.starter.sync.adapter.SpiConfigAdapterManager;
+import com.chua.starter.sync.pojo.sync.SpiInfo;
+import com.chua.starter.sync.pojo.sync.SpiParameter;
+import com.chua.starter.sync.pojo.sync.SpiTypeList;
+import com.chua.starter.sync.service.sync.MonitorSyncSpiService;
+import com.chua.starter.sync.util.SpiParameterResolver;
+import com.chua.starter.sync.util.SyncDataSourceFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

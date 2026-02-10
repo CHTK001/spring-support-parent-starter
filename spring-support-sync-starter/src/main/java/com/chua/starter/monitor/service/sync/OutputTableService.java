@@ -1,7 +1,7 @@
-package com.chua.starter.monitor.service.sync;
+package com.chua.starter.sync.service.sync;
 
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.starter.monitor.pojo.sync.ColumnDefinition;
+import com.chua.starter.sync.pojo.sync.ColumnDefinition;
 
 import java.util.List;
 

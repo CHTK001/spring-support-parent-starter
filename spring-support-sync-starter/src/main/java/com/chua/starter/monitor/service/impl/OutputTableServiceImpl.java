@@ -1,10 +1,10 @@
-package com.chua.starter.monitor.service.impl;
+package com.chua.starter.sync.service.impl;
 
 import com.chua.common.support.text.json.Json;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.core.utils.StringUtils;
-import com.chua.starter.monitor.pojo.sync.ColumnDefinition;
-import com.chua.starter.monitor.service.sync.OutputTableService;
+import com.chua.starter.sync.pojo.sync.ColumnDefinition;
+import com.chua.starter.sync.service.sync.OutputTableService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

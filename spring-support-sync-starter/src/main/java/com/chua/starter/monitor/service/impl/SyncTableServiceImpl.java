@@ -1,8 +1,8 @@
-package com.chua.starter.monitor.service.impl;
+package com.chua.starter.sync.service.impl;
 
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.starter.monitor.pojo.sync.SyncTableStatus;
-import com.chua.starter.monitor.service.sync.SyncTableService;
+import com.chua.starter.sync.pojo.sync.SyncTableStatus;
+import com.chua.starter.sync.service.sync.SyncTableService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;

@@ -1,7 +1,7 @@
-package com.chua.starter.monitor.mapper;
+package com.chua.starter.sync.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.chua.starter.monitor.entity.MonitorSyncConnection;
+import com.chua.starter.sync.entity.MonitorSyncConnection;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

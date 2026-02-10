@@ -1,11 +1,11 @@
-package com.chua.starter.monitor.util;
+package com.chua.starter.sync.util;
 
 import com.chua.common.support.core.spi.ServiceProvider;
 import com.chua.common.support.core.spi.definition.ServiceDefinition;
-import com.chua.starter.monitor.annotation.SpiMeta;
-import com.chua.starter.monitor.annotation.SpiParam;
-import com.chua.starter.monitor.pojo.sync.SpiInfo;
-import com.chua.starter.monitor.pojo.sync.SpiParameter;
+import com.chua.starter.sync.annotation.SpiMeta;
+import com.chua.starter.sync.annotation.SpiParam;
+import com.chua.starter.sync.pojo.sync.SpiInfo;
+import com.chua.starter.sync.pojo.sync.SpiParameter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.Field;

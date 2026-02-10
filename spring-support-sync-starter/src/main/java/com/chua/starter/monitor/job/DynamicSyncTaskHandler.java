@@ -1,4 +1,4 @@
-package com.chua.starter.monitor.job;
+package com.chua.starter.sync.job;
 
 import com.chua.common.support.text.json.Json;
 import com.chua.common.support.core.spi.ServiceProvider;
@@ -23,7 +23,7 @@ import java.util.Map;
  *
  * <p>使用示例（Groovy脚本）:</p>
  * <pre>{@code
- * import com.chua.starter.monitor.job.DynamicSyncTaskHandler
+ * import com.chua.starter.sync.job.DynamicSyncTaskHandler
  *
  * class MySyncTask extends DynamicSyncTaskHandler {
  *     @Override

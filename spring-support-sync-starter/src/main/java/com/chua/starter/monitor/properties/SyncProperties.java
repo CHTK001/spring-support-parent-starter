@@ -1,4 +1,4 @@
-package com.chua.starter.monitor.properties;
+package com.chua.starter.sync.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -13,7 +13,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = SyncProperties.PRE)
 public class SyncProperties {
 
-    public static final String PRE = "plugin.monitor.sync";
+    public static final String PRE = "plugin.sync";
 
     /**
      * 是否启用同步功能

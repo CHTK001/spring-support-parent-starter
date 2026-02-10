@@ -1,7 +1,7 @@
-package com.chua.starter.monitor.configuration;
+package com.chua.starter.sync.configuration;
 
-import com.chua.starter.monitor.properties.SyncProperties;
-import com.chua.starter.monitor.service.sync.SyncTableService;
+import com.chua.starter.sync.properties.SyncProperties;
+import com.chua.starter.sync.service.sync.SyncTableService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -13,7 +13,7 @@ import org.springframework.context.event.EventListener;
 /**
  * 同步任务表自动初始化器
  * <p>
- * 根据配置 plugin.monitor.sync.auto-create-table=true 自动创建同步相关表
+ * 根据配置 plugin.sync.auto-create-table=true 自动创建同步相关表
  * </p>
  *
  * @author CH
@@ -38,7 +38,7 @@ public class SyncTableInitializer {
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationReady() {
         if (!syncProperties.isAutoCreateTable()) {
-            log.debug("同步表自动创建已禁用 (plugin.monitor.sync.auto-create-table=false)");
+            log.debug("同步表自动创建已禁用 (plugin.sync.auto-create-table=false)");
             return;
         }
 
