@@ -28,6 +28,7 @@
 ### Fixed
 
 - **同步 SPI 服务可用性修复**：移除对不存在适配器与过滤器类型的强依赖，过滤器 SPI 在缺失类时返回内置列表，避免启动失败
+- **WebSocket 消息补齐**：完善 ServerWebSocketMessage 的消息类型与工厂方法，覆盖远程桌面/RDP/VNC/SSH/服务器指标场景
 
 ### Removed
 

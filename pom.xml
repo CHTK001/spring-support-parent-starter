@@ -133,7 +133,7 @@
         <module>spring-support-job-starter</module>             <!-- 定时任务调度模块 -->
 
         <!-- AI深度学习模块 -->
-        <!--<module>spring-support-ai-starter</module>-->              <!-- AI深度学习功能模块, 依赖deeplearning模块 -->
+        <module>spring-support-ai-starter</module>
 
         <!-- 消息推送模块 -->
         <module>spring-support-message-starter</module>               <!-- 消息推送集成 -->

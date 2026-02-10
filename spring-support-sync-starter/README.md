@@ -12,6 +12,7 @@
 - 同步请求/响应
 - 客户端信息注册
 - 提供同步任务 SPI 列表与参数定义（Input/Output/DataCenter/Filter）
+- 提供远程桌面/RDP/VNC/SSH 的 WebSocket 消息类型与创建方法
 
 ## 配置说明
 

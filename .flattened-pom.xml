@@ -84,6 +84,7 @@
     <module>spring-support-shell-starter</module>
     <module>spring-support-ssh-starter</module>
     <module>spring-support-job-starter</module>
+    <module>spring-support-ai-starter</module>
     <module>spring-support-message-starter</module>
     <module>spring-support-gateway-starter</module>
   </modules>
