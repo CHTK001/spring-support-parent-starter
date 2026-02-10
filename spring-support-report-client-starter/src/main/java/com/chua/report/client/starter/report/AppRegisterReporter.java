@@ -1,7 +1,7 @@
 package com.chua.report.client.starter.report;
 
 import com.chua.report.client.starter.sync.MonitorTopics;
-import com.chua.sync.support.client.SyncClient;
+import com.chua.starter.sync.support.client.SyncClient;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.Setter;

@@ -5,7 +5,7 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
 import com.chua.common.support.core.annotation.Spi;
 import com.chua.report.client.starter.sync.MonitorTopics;
-import com.chua.sync.support.spi.SyncMessageHandler;
+import com.chua.starter.sync.support.spi.SyncMessageHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.LoggerFactory;
 

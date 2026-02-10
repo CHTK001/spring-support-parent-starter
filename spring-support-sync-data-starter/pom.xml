@@ -48,6 +48,11 @@
             <artifactId>spring-support-job-starter</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-sync-starter</artifactId>
+        </dependency>
+
     </dependencies>
 
     <build>

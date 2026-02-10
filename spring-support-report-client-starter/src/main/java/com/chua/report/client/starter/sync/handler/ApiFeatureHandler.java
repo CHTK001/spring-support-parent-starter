@@ -2,7 +2,7 @@ package com.chua.report.client.starter.sync.handler;
 
 import com.chua.common.support.core.utils.MapUtils;
 import com.chua.starter.common.support.api.feature.ApiFeatureManager;
-import com.chua.sync.support.spi.SyncMessageHandler;
+import com.chua.starter.sync.support.spi.SyncMessageHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 

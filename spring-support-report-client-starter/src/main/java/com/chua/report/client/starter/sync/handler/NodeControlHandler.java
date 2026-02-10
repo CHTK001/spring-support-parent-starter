@@ -3,7 +3,7 @@ package com.chua.report.client.starter.sync.handler;
 import com.chua.common.support.core.annotation.Spi;
 import com.chua.common.support.core.utils.MapUtils;
 import com.chua.report.client.starter.sync.MonitorTopics;
-import com.chua.sync.support.spi.SyncMessageHandler;
+import com.chua.starter.sync.support.spi.SyncMessageHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.boot.SpringApplication;

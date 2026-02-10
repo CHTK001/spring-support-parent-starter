@@ -1,2 +1,2 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-  com.chua.sync.support.configuration.SyncAutoConfiguration
+  com.chua.starter.sync.support.configuration.SyncAutoConfiguration

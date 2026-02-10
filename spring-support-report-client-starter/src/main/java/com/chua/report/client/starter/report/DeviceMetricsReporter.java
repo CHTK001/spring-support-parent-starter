@@ -2,7 +2,7 @@ package com.chua.report.client.starter.report;
 
 import com.chua.oshi.support.*;
 import com.chua.report.client.starter.sync.MonitorTopics;
-import com.chua.sync.support.client.SyncClient;
+import com.chua.starter.sync.support.client.SyncClient;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;

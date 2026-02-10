@@ -2,16 +2,14 @@ package com.chua.report.client.starter.sync.handler;
 
 import com.chua.common.support.core.annotation.Spi;
 import com.chua.report.client.starter.sync.MonitorTopics;
-import com.chua.sync.support.spi.SyncMessageHandler;
+import com.chua.starter.sync.support.spi.SyncMessageHandler;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * 文件操作处理器
