@@ -45,7 +45,12 @@
 
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-support-socket-starter</artifactId>
+            <artifactId>spring-support-socket-rsocket-starter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-socket-io-starter</artifactId>
         </dependency>
 
         <dependency>
