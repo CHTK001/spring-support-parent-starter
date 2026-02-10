@@ -23,6 +23,10 @@
   - `server.port` -> 应用端口
   - `management.endpoints.web.base-path` -> actuatorPath（默认 `/actuator`）
 
+### Fixed
+
+- **同步 SPI 服务可用性修复**：移除对不存在适配器与过滤器类型的强依赖，过滤器 SPI 在缺失类时返回内置列表，避免启动失败
+
 ### Removed
 
 - **ClientConfig**：删除 `appName`、`contextPath`、`actuatorPath`、`port`、`reconnectInterval`、`maxReconnectAttempts`、`schedule` 字段

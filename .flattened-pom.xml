@@ -115,7 +115,7 @@
     <utils.version>4.0.0.36</utils.version>
     <jackson.version>2.19.4</jackson.version>
     <guava.version>33.3.1-jre</guava.version>
-    <p6spy.version>3.9.0</p6spy.version>
+    <p6spy.version>3.9.1</p6spy.version>
     <flatten-maven-plugin.version>1.6.0</flatten-maven-plugin.version>
     <maven.compiler.proc>full</maven.compiler.proc>
     <maven-javadoc-plugin.version>3.6.3</maven-javadoc-plugin.version>
@@ -131,10 +131,10 @@
     <spel-extension.version>1.0.0</spel-extension.version>
     <java.version>25</java.version>
     <maven.compiler.source>25</maven.compiler.source>
-    <mybatis-plus-join.version>1.5.3</mybatis-plus-join.version>
+    <mybatis-plus-join.version>1.5.6</mybatis-plus-join.version>
     <versions-maven-plugin.version>2.16.2</versions-maven-plugin.version>
     <maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
-    <mybatis-plus.version>3.5.11</mybatis-plus.version>
+    <mybatis-plus.version>3.5.16</mybatis-plus.version>
     <easy-captcha.version>1.6.2</easy-captcha.version>
     <maven.repo.releases.url>http://localhost:8081/repository/maven-releases/</maven.repo.releases.url>
     <maven.repo.snapshots.id>maven-snapshots</maven.repo.snapshots.id>

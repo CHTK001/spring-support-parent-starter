@@ -11,6 +11,7 @@
 - 心跳保活
 - 同步请求/响应
 - 客户端信息注册
+- 提供同步任务 SPI 列表与参数定义（Input/Output/DataCenter/Filter）
 
 ## 配置说明
 

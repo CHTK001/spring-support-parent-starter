@@ -62,6 +62,7 @@
     <dependency>
       <groupId>com.baomidou</groupId>
       <artifactId>mybatis-plus-generator</artifactId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.github.yulichang</groupId>
