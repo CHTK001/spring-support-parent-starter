@@ -12,16 +12,25 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.boot.autoconfigure.AutoConfigureOrder;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.Ordered;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.jdbc.support.JdbcTransactionManager;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionManager;
 import org.springframework.transaction.interceptor.*;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import javax.sql.DataSource;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -178,5 +187,40 @@ public class DataSourceTransactionConfiguration implements
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
         this.transactionProperties = applicationContext.getBean(TransactionProperties.class);
+    }
+
+    /**
+     * 暴露一个默认的 Spring TransactionTemplate
+     *
+     * @param transactionManager 默认事务管理器（建议在多数据源里指定一个主事务管理器为 @Primary）
+     * @return Spring TransactionTemplate
+     */
+    @Bean
+    @ConditionalOnMissingBean(TransactionTemplate.class)
+    public TransactionTemplate transactionTemplate(PlatformTransactionManager transactionManager) {
+        return new TransactionTemplate(transactionManager);
+    }
+
+    /**
+     * 暴露一个默认的 Spring JdbcTransactionManager
+     *
+     * @param dataSource 默认事务管理器（建议在多数据源里指定一个主事务管理器为 @Primary）
+     * @return Spring JdbcTransactionManager
+     */
+    @Bean
+    @ConditionalOnMissingBean(JdbcTransactionManager.class)
+    public JdbcTransactionManager jdbcTransactionManager(DataSource dataSource) {
+        return new JdbcTransactionManager(dataSource);
+    }
+    /**
+     * 暴露一个默认的 Spring JdbcTemplate
+     *
+     * @param dataSource 默认数据源
+     * @return Spring JdbcTemplate
+     */
+    @Bean
+    @ConditionalOnMissingBean(JdbcTemplate.class)
+    public JdbcTemplate jdbcTemplate(DataSource dataSource) {
+        return new JdbcTemplate(dataSource);
     }
 }

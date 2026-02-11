@@ -1,5 +1,2 @@
 com.chua.starter.strategy.config.StrategyAutoConfiguration
 com.chua.starter.strategy.config.StrategyRedisConfiguration
-com.chua.starter.strategy.cache.CacheConfiguration
-com.chua.starter.strategy.cache.CacheProxyCachingConfiguration
-com.chua.starter.strategy.cache.TenantedKeyGenerator

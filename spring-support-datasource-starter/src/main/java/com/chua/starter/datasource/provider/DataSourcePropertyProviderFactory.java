@@ -1,5 +1,6 @@
 package com.chua.starter.datasource.provider;
 
+import com.chua.common.support.core.utils.ServiceProvider;
 import com.chua.starter.datasource.util.ClassUtils;
 import lombok.extern.slf4j.Slf4j;
 
@@ -29,8 +30,8 @@ public class DataSourcePropertyProviderFactory {
      * 使用Java SPI机制加载Provider
      */
     private static void loadProvidersBySpi() {
-        ServiceLoader<DataSourcePropertyProvider> serviceLoader = ServiceLoader.load(DataSourcePropertyProvider.class);
-        for (DataSourcePropertyProvider<?> provider : serviceLoader) {
+        var serviceProvider = ServiceProvider.of(DataSourcePropertyProvider.class);
+        for (DataSourcePropertyProvider<?> provider : serviceProvider.collect()) {
             try {
                 // 检查数据源类是否存在
                 if (isDataSourceClassAvailable(provider)) {

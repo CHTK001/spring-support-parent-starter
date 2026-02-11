@@ -9,10 +9,10 @@ import org.springframework.context.annotation.ComponentScan;
  * @since 2024/12/19
  */
 @ComponentScan(basePackages = {
-        "com.chua.sync.data.support.service",
+        "com.chua.starter.sync.data.support.service",
         "com.chua.starter.sync.data.support.controller",
-        "com.chua.sync.data.support.configuration"
+        "com.chua.starter.sync.data.support.configuration"
 })
-@MapperScan("com.chua.sync.data.support.mapper")
+@MapperScan("com.chua.starter.sync.data.support.mapper")
 public class SyncDataConfiguration {
 }

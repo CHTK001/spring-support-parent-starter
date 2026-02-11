@@ -3,7 +3,6 @@ package com.chua.starter.mybatis.endpoint;
 import com.chua.starter.mybatis.method.SupportInjector;
 import com.chua.starter.mybatis.reloader.FileInfo;
 import com.chua.starter.mybatis.reloader.Reload;
-import lombok.Data;
 import org.apache.ibatis.session.Configuration;
 import org.springframework.boot.actuate.endpoint.annotation.ReadOperation;
 import org.springframework.boot.actuate.endpoint.annotation.Selector;
@@ -59,33 +58,32 @@ public class MybatisEndpoint {
     }
 
     /**
-     * 获取所有已注册的MappedStatement名称列表
+     * 获取MyBatis扩展端点信息（根路径）
+     * 包含MappedStatement列表和可重载文件列表
      *
-     * @return MappedStatement名称集合
+     * @return 端点信息
      */
     @ReadOperation
-    public Collection<String> list() {
-        return configuration.getMappedStatementNames();
-    }
-
-    /**
-     * 获取所有可重载的文件列表
-     *
-     * @return 文件列表信息
-     */
-    @ReadOperation
-    public Map<String, Object> listFiles() {
+    public Map<String, Object> info() {
         Map<String, Object> result = new HashMap<>();
         
-        if (reload == null) {
-            result.put("error", "加载器不存在");
-            return result;
-        }
+        // MappedStatement信息
+        Collection<String> statements = configuration.getMappedStatementNames();
+        result.put("statements", statements);
+        result.put("statementCount", statements.size());
         
-        List<FileInfo> files = reload.listFiles();
-        result.put("files", files);
-        result.put("total", files.size());
-        result.put("watchableCount", files.stream().mapToLong(f -> f.isWatchable() ? 1 : 0).sum());
+        // 文件信息
+        if (reload != null) {
+            List<FileInfo> files = reload.listFiles();
+            result.put("files", files);
+            result.put("fileCount", files.size());
+            result.put("watchableCount", files.stream().mapToLong(f -> f.isWatchable() ? 1 : 0).sum());
+        } else {
+            result.put("files", List.of());
+            result.put("fileCount", 0);
+            result.put("watchableCount", 0);
+            result.put("reloadEnabled", false);
+        }
         
         return result;
     }

@@ -1,7 +1,7 @@
 package com.chua.starter.strategy.actuator;
 
 import com.chua.starter.strategy.aspect.BulkheadAspect;
-import com.chua.starter.strategy.cache.MultiLevelCacheManager;
+import com.chua.starter.common.support.cache.MultiLevelCacheManager;
 import org.springframework.boot.actuate.endpoint.annotation.Endpoint;
 import org.springframework.boot.actuate.endpoint.annotation.ReadOperation;
 import org.springframework.boot.actuate.endpoint.annotation.Selector;
@@ -12,7 +12,6 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.LongAdder;

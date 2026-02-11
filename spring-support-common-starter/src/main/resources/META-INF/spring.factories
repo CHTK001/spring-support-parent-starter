@@ -10,8 +10,9 @@ org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
   com.chua.starter.common.support.configuration.ProjectConfiguration,\
   com.chua.starter.common.support.api.configuration.ApiConfiguration,\
   com.chua.starter.common.support.configuration.FilterConfiguration,\
-  com.chua.starter.common.support.cache.configuration.CacheProxyCachingConfiguration,\
-  com.chua.starter.common.support.cache.configuration.CacheCustomTenantedKeyGenerator,\
+  com.chua.starter.common.support.cache.CacheConfiguration,\
+  com.chua.starter.common.support.cache.CacheProxyCachingConfiguration,\
+  com.chua.starter.common.support.cache.TenantedKeyGenerator,\
   com.chua.starter.common.support.configuration.AutoControllerRegistrar
 
 org.springframework.boot.env.EnvironmentPostProcessor=\

@@ -1,4 +1,4 @@
-package com.chua.starter.strategy.cache;
+package com.chua.starter.common.support.cache;
 
 import com.chua.common.support.core.utils.StringUtils;
 import lombok.RequiredArgsConstructor;

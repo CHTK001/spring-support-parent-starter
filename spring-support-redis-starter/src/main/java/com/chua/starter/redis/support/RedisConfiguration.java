@@ -1,11 +1,8 @@
 package com.chua.starter.redis.support;
 
 import com.chua.common.support.network.protocol.ClientSetting;
-import com.chua.starter.common.support.application.ModuleEnvironmentRegistration;
-import com.chua.starter.redis.support.lock.RedissonLockTemplate;
-import com.chua.starter.redis.support.template.LockTemplate;
-import com.chua.starter.redis.support.utils.StringUtils;
 import com.chua.redis.support.client.RedisClient;
+import com.chua.starter.common.support.application.ModuleEnvironmentRegistration;
 import com.chua.starter.redis.support.listener.RedisListener;
 import com.chua.starter.redis.support.properties.RedisServerProperties;
 import com.chua.starter.redis.support.server.RedisEmbeddedServer;
@@ -15,6 +12,7 @@ import com.chua.starter.redis.support.service.TimeSeriesService;
 import com.chua.starter.redis.support.service.impl.RedisSearchServiceImpl;
 import com.chua.starter.redis.support.service.impl.SimpleRedisServiceImpl;
 import com.chua.starter.redis.support.service.impl.TimeSeriesServiceImpl;
+import com.chua.starter.redis.support.utils.StringUtils;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -53,7 +51,7 @@ import java.util.List;
  */
 @Slf4j
 @EnableConfigurationProperties(RedisServerProperties.class)
-@ConditionalOnProperty(prefix = "plugin.redis.server", name = "enable", havingValue = "true", matchIfMissing = false)
+@ConditionalOnProperty(prefix = "plugin.redis.server", name = "enable", havingValue = "true", matchIfMissing = true)
 public class RedisConfiguration implements ApplicationContextAware, Ordered {
 
     RedisServerProperties redisServerProperties;

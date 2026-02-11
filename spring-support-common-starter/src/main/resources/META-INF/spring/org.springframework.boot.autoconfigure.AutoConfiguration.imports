@@ -13,3 +13,6 @@ com.chua.starter.common.support.actuator.ActuatorConfiguration
 com.chua.starter.common.support.configuration.AutoControllerRegistrar
 com.chua.starter.common.support.configuration.security.RequestFingerprintAutoConfiguration
 com.chua.starter.common.support.configuration.security.SecurityFiltersAutoConfiguration
+com.chua.starter.common.support.cache.CacheConfiguration
+com.chua.starter.common.support.cache.CacheProxyCachingConfiguration
+com.chua.starter.common.support.cache.TenantedKeyGenerator

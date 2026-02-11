@@ -40,7 +40,7 @@ public class Knife4jRunner implements CommandLineRunner {
         String actuatorUrl = StringUtils.isNotBlank(basePath)
                 ? "http://127.0.0.1:" + port + "/" + basePath + "/actuator"
                 : "http://127.0.0.1:" + port + "/actuator";
-        log.info("[Swagger] 文档地址: {}  健康检查: {}",
+        log.info("\n[Swagger] 文档地址: {}  健康检查: {}",
                 CYAN + docUrl + RESET,
                 CYAN + actuatorUrl + RESET);
     }

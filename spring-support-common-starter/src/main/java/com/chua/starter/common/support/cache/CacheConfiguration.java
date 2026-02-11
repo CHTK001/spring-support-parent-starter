@@ -1,4 +1,4 @@
-package com.chua.starter.strategy.cache;
+package com.chua.starter.common.support.cache;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -23,7 +23,6 @@ import org.springframework.context.annotation.Bean;
  */
 @Slf4j
 @EnableConfigurationProperties(CacheProperties.class)
-@ConditionalOnProperty(prefix = CacheProperties.PRE, name = "enable", havingValue = "true")
 public class CacheConfiguration extends CachingConfigurerSupport {
 
     public static final String DEFAULT_CACHE_MANAGER = "default";
