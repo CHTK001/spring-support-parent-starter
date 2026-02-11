@@ -23,7 +23,7 @@ public class LockTemplateConfiguration {
      * @param redissonClient Redisson 客户端
      * @return 分布式锁模板
      */
-    @Bean
+    @Bean("customLockTemplate")
     @ConditionalOnMissingBean
     public LockTemplate lockTemplate(RedissonClient redissonClient) {
         log.info(">>>>> 创建基于Redisson的分布式锁模板");
