@@ -12,6 +12,7 @@ import com.chua.starter.common.support.properties.MessageConverterProperties;
 import com.chua.starter.common.support.api.encode.ApiContentNegotiationStrategy;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.web.servlet.WebMvcRegistrations;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.convert.ApplicationConversionService;
@@ -62,7 +63,6 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
         final MessageConverterProperties messageConverterProperties;
     private List<HttpMessageConverter<?>> messageConverters;
     private ApplicationContext applicationContext;
-    private ApiResponseEncodeRegister apiResponseEncodeRegister;
 
     @Override
     public void addReturnValueHandlers(List<HandlerMethodReturnValueHandler> handlers) {
@@ -75,8 +75,9 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     }
     @Override
     public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
-        if (apiResponseEncodeRegister != null) {
-            BinaryHttpMessageConverter binaryConverter = new BinaryHttpMessageConverter(apiResponseEncodeRegister, messageConverters);
+        ApiResponseEncodeRegister encodeRegister = getApiResponseEncodeRegister();
+        if (encodeRegister != null) {
+            BinaryHttpMessageConverter binaryConverter = new BinaryHttpMessageConverter(encodeRegister, messageConverters);
             converters.addFirst(binaryConverter);
             log.info("[消息转换器]注册二进制转换器到首位: {}", BinaryHttpMessageConverter.class.getName());
         } else {
@@ -89,8 +90,9 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
 
     @Override
     public void configureContentNegotiation(ContentNegotiationConfigurer configurer) {
-        if (apiResponseEncodeRegister != null) {
-            configurer.strategies(List.of(new ApiContentNegotiationStrategy(apiResponseEncodeRegister)));
+        ApiResponseEncodeRegister encodeRegister = getApiResponseEncodeRegister();
+        if (encodeRegister != null) {
+            configurer.strategies(List.of(new ApiContentNegotiationStrategy(encodeRegister)));
         }
     }
 
@@ -207,12 +209,6 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
         log.info("[消息转换器]初始化消息转换器配置");
         this.applicationContext = applicationContext;
         this.messageConverters = new LinkedList<>();
-        try {
-            this.apiResponseEncodeRegister = applicationContext.getBean(ApiResponseEncodeRegister.class);
-            log.info("[消息转换器]已注册 ApiResponseEncodeRegister: {}", apiResponseEncodeRegister.getClass().getName());
-        } catch (BeansException e) {
-            log.debug("[消息转换器]ApiResponseEncodeRegister 未找到, 编码功能已禁用");
-        }
         ObjectMapper objectMapper = applicationContext.getBean(ObjectMapper.class);
         log.info("[消息转换器]获取 ObjectMapper Bean, 类型: {}", objectMapper.getClass().getName());
         MappingJackson2HttpMessageConverter jacksonConverter = new MappingJackson2HttpMessageConverter(objectMapper);
@@ -261,6 +257,26 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
             log.debug("[消息转换器]已为 RestTemplate 注册 TraceId 拦截器");
         } catch (BeansException ignored) {
             log.debug("[消息转换器]RestTemplate Bean 未找到, 跳过 TraceId 拦截器注册");
+        }
+    }
+
+    /**
+     * 延迟获取 ApiResponseEncodeRegister bean
+     * 使用 ObjectProvider 延迟获取，避免在初始化阶段获取导致循环依赖
+     *
+     * @return ApiResponseEncodeRegister 实例，如果不存在则返回 null
+     */
+    private ApiResponseEncodeRegister getApiResponseEncodeRegister() {
+        if (applicationContext == null) {
+            return null;
+        }
+        try {
+            // 使用 ObjectProvider 延迟获取，避免循环依赖
+            var provider = applicationContext.getBeanProvider(ApiResponseEncodeRegister.class);
+            return provider.getIfAvailable();
+        } catch (Exception e) {
+            log.debug("[消息转换器]ApiResponseEncodeRegister 未找到, 编码功能已禁用");
+            return null;
         }
     }
 }

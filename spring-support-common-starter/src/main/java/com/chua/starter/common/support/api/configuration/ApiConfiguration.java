@@ -18,6 +18,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
@@ -139,7 +140,7 @@ public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware {
     @Bean("apiResponseEncodeResponseBodyAdvice")
     @ConditionalOnMissingBean
     @ConditionalOnBean(ApiResponseEncodeRegister.class)
-    @ConditionalOnProperty(name = "plugin.api.encode.enable", havingValue = "true")
+    @ConditionalOnProperty(name = "plugin.api.encode.enable", havingValue = "true", matchIfMissing = true)
     public ApiResponseEncodeResponseBodyAdvice responseEncodeResponseBodyAdvice(ApiResponseEncodeRegister apiResponseEncodeRegister) {
         return new ApiResponseEncodeResponseBodyAdvice(apiResponseEncodeRegister);
     }
@@ -150,6 +151,7 @@ public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware {
      * @return 编码注册器
      */
     @Bean("apiResponseEncodeRegister")
+    @Lazy
     @ConditionalOnMissingBean
     @ConditionalOnProperty(name = "plugin.api.encode.enable", havingValue = "true", matchIfMissing = true)
     public ApiResponseEncodeRegister apiResponseEncodeRegister() {
@@ -167,7 +169,7 @@ public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware {
     @Bean("apiRequestDecodeBodyAdvice")
     @ConditionalOnMissingBean
     @ConditionalOnBean(ApiRequestDecodeRegister.class)
-    @ConditionalOnProperty(name = "plugin.api.decode.enable", havingValue = "true")
+    @ConditionalOnProperty(name = "plugin.api.decode.enable", havingValue = "true", matchIfMissing = true)
     public ApiRequestDecodeBodyAdvice apiRequestDecodeBodyAdvice(ApiRequestDecodeRegister apiRequestDecodeRegister) {
         ApiRequestDecodeBodyAdvice advice = new ApiRequestDecodeBodyAdvice(apiRequestDecodeRegister);
         ApiProperties.RequestDecodeProperties decodeConfig = apiProperties.getDecode();
@@ -181,6 +183,7 @@ public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware {
      * @return 解码注册器
      */
     @Bean("apiRequestDecodeRegister")
+    @Lazy
     @ConditionalOnMissingBean
     @ConditionalOnProperty(name = "plugin.api.decode.enable", havingValue = "true", matchIfMissing = true)
     public ApiRequestDecodeRegister apiRequestDecodeRegister() {
@@ -202,7 +205,7 @@ public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware {
      */
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(name = "plugin.api.uniform", havingValue = "true", matchIfMissing = false)
+    @ConditionalOnProperty(name = "plugin.api.uniform", havingValue = "true", matchIfMissing = true)
     public ApiUniformResponseBodyAdvice uniformResponseBodyAdvice() {
         return new ApiUniformResponseBodyAdvice();
     }

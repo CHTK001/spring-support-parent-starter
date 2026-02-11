@@ -113,10 +113,10 @@ public class ParameterLogFilter implements Filter {
         StringBuilder logBuilder = new StringBuilder();
         
         // 构建请求头日志
-        logBuilder.append("╔══════════════════════════════════════════════════════════════════════════════\n");
+        logBuilder.append("╔═══════════════════════════════════════════════════════════════════════════════════════════════════════\n");
         logBuilder.append("║ [请求开始] TraceId: ").append(traceId).append("\n");
         logBuilder.append("║ 请求时间: ").append(now().format(DATE_TIME_FORMATTER)).append("\n");
-        logBuilder.append("╠══════════════════════════════════════════════════════════════════════════════\n");
+        logBuilder.append("╠═══════════════════════════════════════════════════════════════════════════════════════════════════════\n");
         
         try {
             // form-data 请求
@@ -147,7 +147,7 @@ public class ParameterLogFilter implements Filter {
             if (POST.equalsIgnoreCase(method) || PUT.equalsIgnoreCase(method) || "patch".equalsIgnoreCase(method)) {
                 appendBody(logBuilder, requestWrapper);
                 appendHeader(logBuilder, requestWrapper);
-                log.debug(logBuilder.toString());
+                log.debug("\n{}", logBuilder.toString());
                 filterChain.doFilter(requestWrapper, responseWrapper);
                 injectInterfaceServiceLog(requestWrapper);
                 printResponse(responseWrapper, startTime);
@@ -174,7 +174,7 @@ public class ParameterLogFilter implements Filter {
         int status = responseWrapper.getStatus();
         
         StringBuilder sb = new StringBuilder();
-        sb.append("╠══════════════════════════════════════════════════════════════════════════════\n");
+        sb.append("╠═══════════════════════════════════════════════════════════════════════════════════════════════════════\n");
         sb.append("║ [响应信息]\n");
         sb.append("║ 状态码: ").append(status).append("\n");
         sb.append("║ 响应类型: ").append(responseWrapper.getContentType()).append("\n");
@@ -193,7 +193,7 @@ public class ParameterLogFilter implements Filter {
         }
         
         sb.append("║ 耗时: ").append(costTime).append("ms\n");
-        sb.append("╚══════════════════════════════════════════════════════════════════════════════\n");
+        sb.append("╚═══════════════════════════════════════════════════════════════════════════════════════════════════════\n");
         
         log.debug("\n{}", sb);
         

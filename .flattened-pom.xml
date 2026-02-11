@@ -87,6 +87,7 @@
     <module>spring-support-ai-starter</module>
     <module>spring-support-message-starter</module>
     <module>spring-support-gateway-starter</module>
+    <module>spring-support-sync-data-starter</module>
   </modules>
   <scm>
     <connection>scm:git:git://github.com/your-org/spring-support-parent-starter.git</connection>

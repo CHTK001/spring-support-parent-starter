@@ -4,12 +4,14 @@ import com.chua.common.support.base.converter.definition.EnumTypeConverter;
 import com.chua.common.support.base.converter.definition.TypeConverter;
 import com.chua.common.support.core.spi.ServiceProvider;
 import com.chua.starter.common.support.converter.*;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.core.convert.converter.ConditionalGenericConverter;
 import org.springframework.core.convert.converter.Converter;
-import org.springframework.core.convert.converter.ConverterRegistry;
+import org.springframework.core.convert.converter.GenericConverter;
+import org.springframework.core.convert.support.ConfigurableConversionService;
 
 import java.util.Collections;
 import java.util.Map;
@@ -24,26 +26,27 @@ public class TypeConverterRegisterConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public TypeConverterRegistry typeConverterRegistry(ConverterRegistry converterRegistry) {
-        return new TypeConverterRegistry(converterRegistry);
+    @ConditionalOnBean(ConfigurableConversionService.class)
+    public TypeConverterRegistry typeConverterRegistry(ConfigurableConversionService conversionService) {
+        return new TypeConverterRegistry(conversionService);
     }
 
     public static class TypeConverterRegistry {
 
         @SuppressWarnings("ALL")
-        public TypeConverterRegistry(ConverterRegistry converterRegistry) {
-            converterRegistry.addConverter(new StringToLongTypeConverter());
-            converterRegistry.addConverter(new StringToDateTypeConverter());
-            converterRegistry.addConverter(new StringToLocalTimeTypeConverter());
-            converterRegistry.addConverter(new StringToLocalDateTypeConverter());
-            converterRegistry.addConverter(new StringToLocalDateTimeTypeConverter());
-            converterRegistry.addConverter(new StringToDateTypeConverter());
-            converterRegistry.addConverter(new StringArrayToStringTypeConverter());
+        public TypeConverterRegistry(ConfigurableConversionService conversionService) {
+            conversionService.addConverter(new StringToLongTypeConverter());
+            conversionService.addConverter(new StringToDateTypeConverter());
+            conversionService.addConverter(new StringToLocalTimeTypeConverter());
+            conversionService.addConverter(new StringToLocalDateTypeConverter());
+            conversionService.addConverter(new StringToLocalDateTimeTypeConverter());
+            conversionService.addConverter(new StringToDateTypeConverter());
+            conversionService.addConverter(new StringArrayToStringTypeConverter());
 
             Map<String, TypeConverter> list = ServiceProvider.of(TypeConverter.class).list();
             for (TypeConverter converter : list.values()) {
                 try {
-                    converterRegistry.addConverter(Object.class, converter.getType(), new Converter<Object, Object>() {
+                    conversionService.addConverter(Object.class, converter.getType(), new Converter<Object, Object>() {
                         @Override
                         public Object convert(Object source) {
                             return converter.convert(source);
@@ -53,16 +56,16 @@ public class TypeConverterRegisterConfiguration {
                 }
                 try {
                     if(converter instanceof EnumTypeConverter) {
-                        converterRegistry.removeConvertible(String.class, Enum.class);
-                        converterRegistry.addConverter(new ConditionalGenericConverter() {
+                        conversionService.removeConvertible(String.class, Enum.class);
+                        conversionService.addConverter(new ConditionalGenericConverter() {
                             @Override
                             public boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {
                                 return true;
                             }
 
                             @Override
-                            public Set<ConvertiblePair> getConvertibleTypes() {
-                                return Collections.singleton(new ConvertiblePair(String.class, Enum.class));
+                            public Set<GenericConverter.ConvertiblePair> getConvertibleTypes() {
+                                return Collections.singleton(new GenericConverter.ConvertiblePair(String.class, Enum.class));
                             }
 
                             @Override

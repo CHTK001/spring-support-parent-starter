@@ -1,4 +1,5 @@
 package com.chua.starter.common.support.jackson.configuration;
+
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import com.chua.starter.common.support.jackson.*;
@@ -51,7 +52,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @EnableConfigurationProperties(JacksonProperties.class)
 public class JacksonConfiguration {
-        private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
     private static final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -61,7 +62,7 @@ public class JacksonConfiguration {
     }
 
     public static ObjectMapper createObjectMapper(boolean forEverything, boolean includeNull) {
-        log.info("[Jackson配置]开始创建 ObjectMapper, forEverything={}, includeNull={}", forEverything, includeNull);
+        log.trace("[Jackson配置]开始创建 ObjectMapper, forEverything={}, includeNull={}", forEverything, includeNull);
         ObjectMapper objectMapper = JsonMapper.builder()
                 // 反序列化时对字段名的大小写不敏感
                 .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
@@ -78,61 +79,78 @@ public class JacksonConfiguration {
                 .configure(DeserializationFeature.FAIL_ON_READING_DUP_TREE_KEY, true)
                 .addHandler(new NullableFieldsDeserializationProblemHandler())
                 .build();
-        log.info("[Jackson配置]ObjectMapper 基础类: {}", objectMapper.getClass().getName());
-        if(includeNull) {
+        if (log.isTraceEnabled()) {
+            log.trace("[Jackson配置]ObjectMapper 基础类: {}", objectMapper.getClass().getName());
+        }
+        if (includeNull) {
             objectMapper.setDefaultPropertyInclusion(JsonInclude.Include.ALWAYS);
             log.debug("[Jackson配置]属性包含策略: ALWAYS (包含null值)");
         } else {
             objectMapper.setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL);
             log.debug("[Jackson配置]属性包含策略: NON_NULL (排除null值)");
         }
-        if(forEverything) {
+        if (forEverything) {
             StdTypeResolverBuilder typer = TypeResolverBuilder.forEverything(objectMapper).init(JsonTypeInfo.Id.CLASS, null)
                     .inclusion(JsonTypeInfo.As.PROPERTY);
             objectMapper.setDefaultTyping(typer);
             log.info("[Jackson配置]启用全类型序列化 (forEverything=true)");
         }
         objectMapper.setDateFormat(SIMPLE_DATE_FORMAT);
-        log.debug("[Jackson配置]日期格式: {}", SIMPLE_DATE_FORMAT.toPattern());
+        if (log.isDebugEnabled()) {
+            log.debug("[Jackson配置]日期格式: {}", SIMPLE_DATE_FORMAT.toPattern());
+        }
         JavaTimeModule javaTimeModule = new JavaTimeModule();
         javaTimeModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DATE_TIME_FORMATTER));
         javaTimeModule.addSerializer(LocalDate.class, new LocalDateSerializer(DATE_FORMATTER));
-        javaTimeModule.addSerializer(LocalTime.class, new  LocalTimeSerializer(TIME_FORMATTER));
-        log.debug("[Jackson配置]注册时间序列化器: LocalDateTime={}, LocalDate={}, LocalTime={}", 
-                LocalDateTimeSerializer.class.getName(), 
-                LocalDateSerializer.class.getName(), 
-                LocalTimeSerializer.class.getName());
+        javaTimeModule.addSerializer(LocalTime.class, new LocalTimeSerializer(TIME_FORMATTER));
+        if (log.isDebugEnabled()) {
+            log.debug("[Jackson配置]注册时间序列化器: LocalDateTime={}, LocalDate={}, LocalTime={}",
+                    LocalDateTimeSerializer.class.getName(),
+                    LocalDateSerializer.class.getName(),
+                    LocalTimeSerializer.class.getName());
+        }
 
         javaTimeModule.addDeserializer(LocalDateTime.class, new CommonLocalDateTimeDeserializer());
         javaTimeModule.addDeserializer(LocalDate.class, new CommonLocalDateDeserializer());
         javaTimeModule.addDeserializer(LocalTime.class, new CommonLocalTimeDeserializer());
         javaTimeModule.addDeserializer(Year.class, new CommonYearDeserializer());
-        log.debug("[Jackson配置]注册时间反序列化器: LocalDateTime={}, LocalDate={}, LocalTime={}, Year={}", 
-                CommonLocalDateTimeDeserializer.class.getName(),
-                CommonLocalDateDeserializer.class.getName(),
-                CommonLocalTimeDeserializer.class.getName(),
-                CommonYearDeserializer.class.getName());
+        if (log.isTraceEnabled()) {
+            log.trace("[Jackson配置]注册时间反序列化器: LocalDateTime={}, LocalDate={}, LocalTime={}, Year={}",
+                    CommonLocalDateTimeDeserializer.class.getName(),
+                    CommonLocalDateDeserializer.class.getName(),
+                    CommonLocalTimeDeserializer.class.getName(),
+                    CommonYearDeserializer.class.getName());
+        }
 
         javaTimeModule.addSerializer(Date.class, new DateSerializer(true, SIMPLE_DATE_FORMAT));
-        log.debug("[Jackson配置]注册 Date 序列化器: {}", DateSerializer.class.getName());
+        if(log.isDebugEnabled()) {
+            log.debug("[Jackson配置]注册 Date 序列化器: {}", DateSerializer.class.getName());
+        }
         objectMapper.setTimeZone(TimeZone.getDefault());
-        log.debug("[Jackson配置]时区: {}", TimeZone.getDefault().getID());
+        if(log.isDebugEnabled()) {
+            log.debug("[Jackson配置]时区: {}", TimeZone.getDefault().getID());
+        }
 //        objectMapper.setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE);
         objectMapper.registerModule(new SimpleModule().addSerializer(new NullValueSerializer(null)));
-        log.debug("[Jackson配置]注册 NullValueSerializer: {}", NullValueSerializer.class.getName());
+        if(log.isDebugEnabled()) {
+            log.debug("[Jackson配置]注册 NullValueSerializer: {}", NullValueSerializer.class.getName());
+        }
 
         objectMapper.registerModule(javaTimeModule);
         objectMapper.registerModule(new Jdk8Module());
         objectMapper.registerModule(new JsonMixinModule());
         // ParameterNamesModule 由 Spring Boot 自动注册，无需手动添加
         // objectMapper.registerModule(new ParameterNamesModule());
-        log.info("[Jackson配置]注册模块: JavaTimeModule={}, Jdk8Module={}, JsonMixinModule={}", 
-                JavaTimeModule.class.getName(),
-                Jdk8Module.class.getName(),
-                JsonMixinModule.class.getName());
+        if (log.isTraceEnabled()) {
+            log.trace("[Jackson配置]注册模块: JavaTimeModule={}, Jdk8Module={}, JsonMixinModule={}",
+                    JavaTimeModule.class.getName(),
+                    Jdk8Module.class.getName(),
+                    JsonMixinModule.class.getName());
+        }
         log.info("[Jackson配置]ObjectMapper 创建完成, 类型: {}", objectMapper.getClass().getName());
         return objectMapper;
     }
+
     @Bean
     @ConditionalOnMissingBean
     public ObjectMapper defaultObjectMapper(JacksonProperties jacksonProperties) {
@@ -141,6 +159,7 @@ public class JacksonConfiguration {
         log.info("[Jackson配置]默认 ObjectMapper Bean 创建完成, 类型: {}", objectMapper.getClass().getName());
         return objectMapper;
     }
+
     @Bean
     @ConditionalOnMissingBean
     public Jackson2ObjectMapperBuilder objectMapperBuilder(ObjectMapper objectMapper) {
