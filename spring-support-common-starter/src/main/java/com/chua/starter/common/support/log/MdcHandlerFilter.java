@@ -34,17 +34,13 @@ public class MdcHandlerFilter implements Filter {
             }
             MDC.put(MdcConstant.TRACE_ID, traceId);
             
-            // 设置用户ID
+            // 设置用户ID，如果没有则设置为N/A
             String userId = RequestUtils.getUserId();
-            if (userId != null && !userId.isEmpty()) {
-                MDC.put(MdcConstant.USER_ID, userId);
-            }
+            MDC.put(MdcConstant.USER_ID, (userId != null && !userId.isEmpty()) ? userId : "N/A");
             
-            // 设置请求IP
+            // 设置请求IP，如果没有则设置为N/A
             String requestIp = RequestUtils.getIpAddress(httpRequest);
-            if (requestIp != null && !requestIp.isEmpty()) {
-                MDC.put(MdcConstant.REQUEST_IP, requestIp);
-            }
+            MDC.put(MdcConstant.REQUEST_IP, (requestIp != null && !requestIp.isEmpty()) ? requestIp : "N/A");
             
             chain.doFilter(request, response);
         } finally {

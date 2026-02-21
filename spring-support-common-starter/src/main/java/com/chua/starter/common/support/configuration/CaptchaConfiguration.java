@@ -20,7 +20,7 @@ import lombok.extern.slf4j.Slf4j;
  *
  * @author CH
  * @version 1.0.0
-@ConditionalOnProperty(prefix = "plugin.captcha", name = "enable", havingValue = "true", matchIfMissing = false)
+@ConditionalOnProperty(prefix = "plugin.captcha", name = "enable", havingValue = "true", matchIfMissing = true)
  */
 @Slf4j
 @EnableConfigurationProperties({CaptchaProperties.class, OptionalProperties.class})
@@ -29,7 +29,7 @@ public class CaptchaConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = CaptchaProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = false)
+    @ConditionalOnProperty(prefix = CaptchaProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = true)
     public CaptchaProvider captchaProvider() {
         log.info(">>>>>>> 开启检验码接口");
         return new CaptchaProvider();
@@ -37,7 +37,7 @@ public class CaptchaConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = OptionalProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = false)
+    @ConditionalOnProperty(prefix = OptionalProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = true)
     public OptionalProvider optionalProvider(ApiProperties apiProperties, BeanFactory beanFactory) {
         log.info(">>>>>>> 开启SPI选项接口");
         return new OptionalProvider(apiProperties, beanFactory);

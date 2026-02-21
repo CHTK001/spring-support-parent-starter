@@ -44,7 +44,7 @@ import java.util.List;
 @EnableKnife4j
 @EnableConfigurationProperties(Knife4jProperties.class)
 @Import({MultipleOpenApiSupportConfiguration.class})
-@ConditionalOnProperty(prefix = "plugin.swagger", name = "enable", havingValue = "true", matchIfMissing = false)
+@ConditionalOnProperty(prefix = "plugin.swagger", name = "enable", havingValue = "true", matchIfMissing = true)
 public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware {
 
     /**

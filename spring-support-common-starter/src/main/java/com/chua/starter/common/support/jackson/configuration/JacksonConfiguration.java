@@ -93,7 +93,7 @@ public class JacksonConfiguration {
             StdTypeResolverBuilder typer = TypeResolverBuilder.forEverything(objectMapper).init(JsonTypeInfo.Id.CLASS, null)
                     .inclusion(JsonTypeInfo.As.PROPERTY);
             objectMapper.setDefaultTyping(typer);
-            log.info("[Jackson配置]启用全类型序列化 (forEverything=true)");
+            log.debug("[Jackson配置]启用全类型序列化 (forEverything=true)");
         }
         objectMapper.setDateFormat(SIMPLE_DATE_FORMAT);
         if (log.isDebugEnabled()) {
@@ -147,23 +147,25 @@ public class JacksonConfiguration {
                     Jdk8Module.class.getName(),
                     JsonMixinModule.class.getName());
         }
-        log.info("[Jackson配置]ObjectMapper 创建完成, 类型: {}", objectMapper.getClass().getName());
+        if(log.isDebugEnabled()) {
+            log.debug("[Jackson配置]ObjectMapper 创建完成, 类型: {}", objectMapper.getClass().getName());
+        }
         return objectMapper;
     }
 
     @Bean
     @ConditionalOnMissingBean
     public ObjectMapper defaultObjectMapper(JacksonProperties jacksonProperties) {
-        log.info("[Jackson配置]创建默认 ObjectMapper Bean, includeNull={}", jacksonProperties.isIncludeNull());
+        log.debug("[Jackson配置]创建默认 ObjectMapper Bean, includeNull={}", jacksonProperties.isIncludeNull());
         ObjectMapper objectMapper = createObjectMapper(false, jacksonProperties.isIncludeNull());
-        log.info("[Jackson配置]默认 ObjectMapper Bean 创建完成, 类型: {}", objectMapper.getClass().getName());
+        log.debug("[Jackson配置]默认 ObjectMapper Bean 创建完成, 类型: {}", objectMapper.getClass().getName());
         return objectMapper;
     }
 
     @Bean
     @ConditionalOnMissingBean
     public Jackson2ObjectMapperBuilder objectMapperBuilder(ObjectMapper objectMapper) {
-        log.info("[Jackson配置]创建 Jackson2ObjectMapperBuilder, 使用 ObjectMapper: {}", objectMapper.getClass().getName());
+        log.debug("[Jackson配置]创建 Jackson2ObjectMapperBuilder, 使用 ObjectMapper: {}", objectMapper.getClass().getName());
         Jackson2ObjectMapperBuilder builder = new Jackson2ObjectMapperBuilder();
         builder.configure(objectMapper);
         log.debug("[Jackson配置]Jackson2ObjectMapperBuilder 配置完成");

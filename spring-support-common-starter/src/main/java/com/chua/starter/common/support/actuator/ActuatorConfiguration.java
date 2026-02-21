@@ -38,7 +38,7 @@ import lombok.extern.slf4j.Slf4j;
  * @since 2024/06/21
  */
 @Slf4j
-@ConditionalOnProperty(prefix = "plugin.actuator", name = "enable", havingValue = "true", matchIfMissing = false)
+@ConditionalOnProperty(prefix = "plugin.actuator", name = "enable", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(ActuatorProperties.class)
 public class ActuatorConfiguration {
     /**

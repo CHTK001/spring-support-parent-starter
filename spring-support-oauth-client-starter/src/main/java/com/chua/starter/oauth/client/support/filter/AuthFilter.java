@@ -158,17 +158,12 @@ public class AuthFilter implements Filter {
         // 根据OAuth客户端配置确定认证类型
         String protocol = webRequest.getAuthProperties().getProtocol();
         if (protocol != null) {
-            switch (protocol.toLowerCase()) {
-                case "http":
-                case "lite":
-                    return "OAUTH_HTTP";
-                case "static":
-                    return "OAUTH_STATIC";
-                case "websocket":
-                    return "OAUTH_WEBSOCKET";
-                default:
-                    return "OAUTH_" + protocol.toUpperCase();
-            }
+            return switch (protocol.toLowerCase()) {
+                case "http", "lite" -> "OAUTH_HTTP";
+                case "static" -> "OAUTH_STATIC";
+                case "websocket" -> "OAUTH_WEBSOCKET";
+                default -> "OAUTH_" + protocol.toUpperCase();
+            };
         }
         return "OAUTH";
     }

@@ -5,6 +5,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 
 /**
  * SpringDoc 配置属性兜底注册。
@@ -26,6 +27,7 @@ public class SpringDocConfigPropertiesConfiguration {
      * @return SpringDoc 配置属性
      */
     @Bean
+    @Primary
     @ConditionalOnMissingBean(SpringDocConfigProperties.class)
     public SpringDocConfigProperties springDocConfigProperties() {
         return new SpringDocConfigProperties();

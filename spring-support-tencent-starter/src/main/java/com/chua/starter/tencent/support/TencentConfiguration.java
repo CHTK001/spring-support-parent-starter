@@ -17,7 +17,7 @@ import org.springframework.context.annotation.Bean;
  */
 @Slf4j
 @EnableConfigurationProperties(TencentMiniAppProperties.class)
-@ConditionalOnProperty(prefix = "plugin.tencent.mini-app", name = "enable", havingValue = "true", matchIfMissing = false)
+@ConditionalOnProperty(prefix = "plugin.tencent.mini-app", name = "enable", havingValue = "true", matchIfMissing = true)
 public class TencentConfiguration {
 
     /**

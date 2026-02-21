@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
  * @author CH
  * @version 1.0.0
  * @since 2024-12-04
-@ConditionalOnProperty(prefix = "plugin.socket", name = "enable", havingValue = "true", matchIfMissing = false)
+@ConditionalOnProperty(prefix = "plugin.socket", name = "enable", havingValue = "true", matchIfMissing = true)
  */
 @Slf4j
 @EnableConfigurationProperties(SocketProperties.class)

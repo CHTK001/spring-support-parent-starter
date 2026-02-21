@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.extension.plugins.inner.DataPermissionIntercepto
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
+import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
 import com.chua.starter.common.support.oauth.AuthService;
 import com.chua.starter.mybatis.endpoint.MybatisEndpoint;
 import com.chua.starter.mybatis.interceptor.*;
@@ -21,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import org.apache.ibatis.session.SqlSessionFactory;
+import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -29,6 +31,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
+import javax.sql.DataSource;
 import java.util.List;
 
 /**
@@ -39,10 +42,7 @@ import java.util.List;
  * @since 2021/4/12
  */
 @Slf4j
-@AutoConfigureAfter(SqlSessionFactory.class)
 @EnableConfigurationProperties({MybatisPlusProperties.class, MybatisPlusDataScopeProperties.class})
-@ConditionalOnProperty(prefix = "plugin.mybatis", name = "enable", havingValue = "true", matchIfMissing = false)
-//@AutoConfigureOrder(Ordered.LOWEST_PRECEDENCE + 10)
 public class MybatisPlusConfiguration {
 
     /**
@@ -236,4 +236,40 @@ public class MybatisPlusConfiguration {
     }
 
 
+    /**
+     * 创建 {@link SqlSessionFactory}。
+     * <p>基于动态数据源和 MyBatis Plus 全局配置、拦截器进行构建。</p>
+     *
+     * @param dataSource               主数据源
+     * @param mybatisPlusInterceptor   MyBatis Plus 拦截器
+     * @param globalConfig             MyBatis Plus 全局配置
+     * @return SqlSessionFactory 实例
+     * @throws Exception 创建失败时抛出异常
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public SqlSessionFactory sqlSessionFactory(DataSource dataSource,
+                                               MybatisPlusInterceptor mybatisPlusInterceptor,
+                                               GlobalConfig globalConfig) throws Exception {
+        var factoryBean = new MybatisSqlSessionFactoryBean();
+        factoryBean.setDataSource(dataSource);
+        factoryBean.setPlugins(mybatisPlusInterceptor);
+        factoryBean.setGlobalConfig(globalConfig);
+        var sqlSessionFactory = factoryBean.getObject();
+        log.info("[OAuth][MyBatis]SqlSessionFactory 已创建");
+        return sqlSessionFactory;
+    }
+
+    /**
+     * 创建 {@link SqlSessionTemplate}。
+     * <p>用于给 Mapper 提供实际使用的 SqlSession。</p>
+     *
+     * @param sqlSessionFactory SqlSessionFactory 实例
+     * @return SqlSessionTemplate 实例
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public SqlSessionTemplate sqlSessionTemplate(SqlSessionFactory sqlSessionFactory) {
+        return new SqlSessionTemplate(sqlSessionFactory);
+    }
 }

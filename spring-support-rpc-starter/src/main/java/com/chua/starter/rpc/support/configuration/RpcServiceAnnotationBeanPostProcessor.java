@@ -54,7 +54,7 @@ import static org.springframework.util.ClassUtils.resolveClassName;
  * @version 1.0.0
  * @since 2024/04/07
  */
-@ConditionalOnProperty(prefix = "plugin.rpc", name = "enable", havingValue = "true", matchIfMissing = false)
+@ConditionalOnProperty(prefix = "plugin.rpc", name = "enable", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(RpcProperties.class)
 public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegistryPostProcessor, EnvironmentAware,
         ResourceLoaderAware, BeanClassLoaderAware, ApplicationContextAware, InitializingBean  {

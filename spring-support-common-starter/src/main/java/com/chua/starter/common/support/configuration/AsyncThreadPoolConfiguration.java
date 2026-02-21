@@ -23,7 +23,7 @@ import java.util.concurrent.ThreadPoolExecutor;
  */
 @EnableAsync
 @EnableConfigurationProperties(AsyncThreadPoolProperties.class)
-@ConditionalOnProperty(prefix = "plugin.async", name = "enable", havingValue = "true", matchIfMissing = false)
+@ConditionalOnProperty(prefix = "plugin.async", name = "enable", havingValue = "true", matchIfMissing = true)
 public class AsyncThreadPoolConfiguration implements AsyncConfigurer {
     /**
      * 构造函数

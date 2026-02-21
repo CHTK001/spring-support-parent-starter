@@ -85,14 +85,33 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
     @SuppressWarnings("ALL")
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         // 检查是否启用
-        String enabledValue = environment.getProperty(ENABLED_KEY, "true");
+        var enabledValue = environment.getProperty(ENABLED_KEY, "true");
         if (!"true".equalsIgnoreCase(enabledValue)) {
             log.debug("[OPS配置]已禁用 ({}={})", ENABLED_KEY, enabledValue);
             return;
         }
 
-        String active = environment.getProperty("spring.profiles.active");
-        log.info("[OPS配置]开始加载环境目录配置，当前环境: {}", active);
+        // 只基于 spring.profiles.active 计算激活的环境目录
+        var activeProfiles = new LinkedHashSet<String>();
+        var activeProperty = environment.getProperty("spring.profiles.active");
+        if (activeProperty != null && !activeProperty.isBlank()) {
+            Arrays.stream(activeProperty.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .forEach(activeProfiles::add);
+        }
+
+        // 只基于 spring.profiles.include 决定加载哪些 application-xxx 配置
+        var includeProfiles = new LinkedHashSet<String>();
+        var includeProperty = environment.getProperty("spring.profiles.include");
+        if (includeProperty != null && !includeProperty.isBlank()) {
+            Arrays.stream(includeProperty.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .forEach(includeProfiles::add);
+        }
+
+        log.info("[OPS配置]开始加载环境目录配置，当前 active 环境列表: {}，include 配置列表: {}", activeProfiles, includeProfiles);
 
         PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
         MutablePropertySources propertySources = environment.getPropertySources();
@@ -104,13 +123,25 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
         // 合并后的配置：key=文件名，value=合并后的属性
         Map<String, Map<String, Object>> mergedConfigs = new LinkedHashMap<>();
 
-        // 1. 先加载兜底配置（优先级低）
-        loadConfigsToMap(resolver, DEFAULT_PROFILE_DIR, mergedConfigs, defaultLoadedConfigs);
+        // 1. 计算需要加载的目录列表：
+        //    - 始终加载兜底目录 ops-default/（所有环境共用）
+        //    - 环境配置目录仅基于 spring.profiles.active：每个 active 生成一个 ops-{profile}/
+        var directories = new LinkedHashSet<String>();
+        // 兜底目录
+        directories.add(DEFAULT_PROFILE_DIR);
+        // 环境目录（仅来源于 spring.profiles.active）
+        for (var profile : activeProfiles) {
+            directories.add(DIR_PREFIX + profile);
+        }
 
-        // 2. 再加载环境配置（优先级高，合并到兜底配置）
-        if (active != null && !active.isBlank()) {
-            String profileDir = DIR_PREFIX + active;
-            loadConfigsToMap(resolver, profileDir, mergedConfigs, profileLoadedConfigs);
+        // 2. 逐个目录加载配置：
+        //    - 先处理兜底目录，后处理具体环境目录，保证优先级正确
+        for (var dir : directories) {
+            if (DEFAULT_PROFILE_DIR.equals(dir)) {
+                loadConfigsToMap(resolver, dir, mergedConfigs, defaultLoadedConfigs, includeProfiles);
+            } else {
+                loadConfigsToMap(resolver, dir, mergedConfigs, profileLoadedConfigs, includeProfiles);
+            }
         }
 
         // 3. 注册合并后的配置到 Environment
@@ -133,7 +164,7 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
             log.info("[OPS配置]加载兜底配置 {}/，共 {} 个: {}", DEFAULT_PROFILE_DIR, defaultLoadedConfigs.size(), defaultLoadedConfigs);
         }
         if (!profileLoadedConfigs.isEmpty()) {
-            log.info("[OPS配置]加载环境配置 {}/，共 {} 个: {}", DIR_PREFIX + active, profileLoadedConfigs.size(), profileLoadedConfigs);
+            log.info("[OPS配置]加载环境配置目录前缀 {}，共 {} 个: {}", DIR_PREFIX, profileLoadedConfigs.size(), profileLoadedConfigs);
         }
         if (defaultLoadedConfigs.isEmpty() && profileLoadedConfigs.isEmpty()) {
             log.debug("[OPS配置]未找到任何 ops 目录配置");
@@ -151,7 +182,14 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
     private void loadConfigsToMap(PathMatchingResourcePatternResolver resolver,
                                   String profileDir,
                                   Map<String, Map<String, Object>> mergedConfigs,
-                                  List<String> loadedConfigs) {
+                                  List<String> loadedConfigs,
+                                  Set<String> includeProfiles) {
+        // 未配置 spring.profiles.include 时不加载任何 application-xxx 配置
+        if (includeProfiles == null || includeProfiles.isEmpty()) {
+            log.info("[OPS配置]spring.profiles.include 未配置，跳过目录: {}/", profileDir);
+            return;
+        }
+
         try {
             Resource[] resources = resolver.getResources("classpath:/" + profileDir + "/*");
             log.info("[OPS配置]扫描 {}/ 目录，发现 {} 个资源", profileDir, resources.length);
@@ -168,6 +206,11 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
             for (Resource resource : resources) {
                 String filename = resource.getFilename();
                 if (filename == null || !isSupportedFile(filename)) {
+                    continue;
+                }
+
+                // 只加载 application-{include}.xxx 格式，且 include 在 spring.profiles.include 列表中
+                if (!isIncludedConfig(filename, includeProfiles)) {
                     continue;
                 }
 
@@ -234,6 +277,28 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
             }
         }
         return result;
+    }
+
+    /**
+     * 判断配置文件名是否属于 spring.profiles.include 指定的 application-xxx 配置
+     *
+     * @param filename       文件名
+     * @param includeProfiles include 列表
+     * @return 是否需要加载
+     */
+    private boolean isIncludedConfig(String filename, Set<String> includeProfiles) {
+        if (includeProfiles == null || includeProfiles.isEmpty()) {
+            return false;
+        }
+        if (!filename.startsWith("application-")) {
+            return false;
+        }
+        int dotIndex = filename.indexOf('.');
+        if (dotIndex <= "application-".length()) {
+            return false;
+        }
+        String includeName = filename.substring("application-".length(), dotIndex);
+        return includeProfiles.contains(includeName);
     }
 
     /**
