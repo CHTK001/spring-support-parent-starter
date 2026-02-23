@@ -6,6 +6,8 @@ import com.chua.common.support.objects.ObjectContextSetting;
 import com.chua.starter.common.support.actuator.ActuatorProperties;
 import com.chua.starter.common.support.oauth.AuthService;
 import com.chua.starter.common.support.properties.*;
+import com.chua.starter.common.support.utils.NonceUtils;
+import org.springframework.core.env.Environment;
 import com.chua.starter.common.support.service.IptablesService;
 import com.chua.starter.common.support.service.impl.IptablesServiceImpl;
 import com.chua.starter.common.support.watch.WatchPointcutAdvisor;
@@ -25,6 +27,7 @@ import org.springframework.web.client.RestTemplate;
 @EnableConfigurationProperties({
         ActuatorProperties.class,
         IpProperties.class,
+        NonceSignProperties.class,
 })
 @ComponentScan("com.chua.starter.common.support.service")
 public class CommonConfiguration {
@@ -65,6 +68,18 @@ public class CommonConfiguration {
         return new IptablesServiceImpl(ipProperties);
     }
 
+    /**
+     * 初始化 Nonce 签名密钥（与前端 secretKey 一致）
+     * 支持多路径解析：plugin.nonce.sign、nonce.sign、环境变量
+     */
+    @Bean
+    public Object nonceSignInitializer(NonceSignProperties props, Environment env) {
+        var key = props.resolveSecretKey(env);
+        if (key != null && !key.isBlank() && !NonceSignProperties.DEFAULT_SECRET.equals(key)) {
+            NonceUtils.setSecretKey(key);
+        }
+        return new Object();
+    }
 
     /**
      * 创建对象上下文配置实例。
