@@ -24,8 +24,11 @@ public class NonceSignProperties {
     /** 备用前缀（解析失败时尝试） */
     public static final String PRE_ALT = "nonce.sign";
 
-    /** 默认密钥占位符 */
-    public static final String DEFAULT_SECRET = "your-secret-key-here";
+    /**
+     * 默认签名密钥，与前端 DEFAULT_SECRET_KEY 保持一致。
+     * 仅用于开发或未显式配置时的兜底，生产环境请通过配置覆盖。
+     */
+    public static final String DEFAULT_SECRET = "aP9xL3sV7mQ2zT5kB8nR1cY4wH6eD0fJ";
 
     /** 签名密钥，需与前端 getConfig().secretKey 一致 */
     private String secretKey = DEFAULT_SECRET;

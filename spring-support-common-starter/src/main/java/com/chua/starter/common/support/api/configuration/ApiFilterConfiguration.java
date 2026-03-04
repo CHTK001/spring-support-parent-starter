@@ -32,7 +32,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ApiFilterConfiguration {
 
-    private static final int SC_NONCE_REJECT = 403;
+    private static final int SC_NONCE_REJECT = 400;
         /**
      * 响应头中的版本字段名
      */
@@ -112,7 +112,7 @@ public class ApiFilterConfiguration {
      */
     public static class NonceXhrFilter implements Filter {
 
-        private static final String REJECT_MSG = "{\"code\":403,\"msg\":\"请求校验失败，请勿重放请求\"}";
+        private static final String REJECT_MSG = "{\"code\":400,\"msg\":\"请求校验失败，请勿重放请求\"}";
 
         @Override
         public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)

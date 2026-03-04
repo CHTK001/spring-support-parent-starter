@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.utils;
 
+import com.chua.starter.common.support.properties.NonceSignProperties;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.servlet.http.HttpServletRequest;
@@ -35,8 +36,8 @@ public class NonceUtils {
     /** 排除的参数字段（如 file 等） */
     private static final Set<String> EXCLUDED_PARAM_KEYS = Set.of("file", "files");
 
-    /** 签名密钥，可通过 setSecretKey 或配置注入 */
-    private static volatile String secretKey = "your-secret-key-here";
+    /** 签名密钥，可通过 setSecretKey 或配置注入，默认与 NonceSignProperties.DEFAULT_SECRET 保持一致 */
+    private static volatile String secretKey = NonceSignProperties.DEFAULT_SECRET;
 
     /** 默认有效期 5 分钟 */
     private static final long DEFAULT_MAX_AGE_MS = 5 * 60 * 1000L;
@@ -285,7 +286,7 @@ public class NonceUtils {
             }
             String paramsString = String.join("&", pairs);
             String paramsMd5 = md5Hash(paramsString);
-            String sk = secretKey != null ? secretKey : "your-secret-key-here";
+            String sk = secretKey != null ? secretKey : NonceSignProperties.DEFAULT_SECRET;
             String signInput = nonce + fingerprint + timestamp + paramsMd5 + sk;
             return md5Hash(signInput);
         } catch (Exception e) {
