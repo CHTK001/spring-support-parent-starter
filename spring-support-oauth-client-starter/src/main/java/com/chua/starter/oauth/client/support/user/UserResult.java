@@ -43,6 +43,7 @@ import java.io.Serializable;
 public class UserResult extends UserResume implements Serializable {
 
     private static final long serialVersionUID = 1L;
+    private static final UserResult _EMPTY = new UserResult();
 
     /**
      * 构造函数（用于创建错误消息）
@@ -78,5 +79,13 @@ public class UserResult extends UserResume implements Serializable {
     @Schema(description = "刷新令牌过期时间（秒）")
     private Long refreshExpireTime;
 
+    /**
+     * 获取空用户结果
+     *
+     * @return 空用户结果
+     */
+    public static UserResult emptyUserResult() {
+        return _EMPTY;
+    }
 }
 

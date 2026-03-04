@@ -1,6 +1,8 @@
 package com.chua.starter.oauth.client.support.web;
 
+import com.chua.common.support.base.bean.BeanUtils;
 import com.chua.common.support.core.annotation.Ignore;
+import com.chua.common.support.core.exception.AuthenticationException;
 import com.chua.common.support.core.spi.ServiceProvider;
 import com.chua.common.support.core.utils.ObjectUtils;
 import com.chua.common.support.core.utils.StringUtils;
@@ -8,11 +10,14 @@ import com.chua.spring.support.configuration.SpringBeanUtils;
 import com.chua.starter.oauth.client.support.annotation.TokenForIgnore;
 import com.chua.starter.oauth.client.support.entity.AppKeySecret;
 import com.chua.starter.oauth.client.support.enums.UpgradeType;
+import com.chua.starter.oauth.client.support.execute.AuthSessionUtils;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.infomation.Information;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.protocol.Protocol;
 import com.chua.starter.oauth.client.support.user.LoginResult;
+import com.chua.starter.oauth.client.support.user.UserResult;
+import com.chua.starter.oauth.client.support.user.UserResume;
 import com.google.common.base.Strings;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -388,4 +393,28 @@ public class WebRequest {
     }
 
 
+    /**
+     * 获取用户信息
+     *
+     * @return 用户信息
+     */
+    public UserResult getUserResult(boolean throwOnFailure) {
+        AuthenticationInformation authentication = authentication();
+        UserResume returnResult = authentication.getReturnResult();
+
+        if (returnResult == null) {
+            if(isPass()) {
+                return UserResult.emptyUserResult();
+            }
+            if (throwOnFailure) {
+                throw new AuthenticationException("请重新登录");
+            }
+            return null;
+        }
+
+        UserResult userResult = new UserResult();
+        BeanUtils.copyProperties(returnResult, userResult);
+        request.getSession().setAttribute(AuthSessionUtils.SESSION_USER_INFO, userResult);
+        return userResult;
+    }
 }

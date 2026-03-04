@@ -145,20 +145,7 @@ public class AuthClientExecute {
 
         // 请求服务器验证
         WebRequest webRequest = new WebRequest(authClientProperties, request, null);
-        AuthenticationInformation authentication = webRequest.authentication();
-        UserResume returnResult = authentication.getReturnResult();
-
-        if (returnResult == null) {
-            if (throwOnFailure) {
-                throw new AuthenticationException("请重新登录");
-            }
-            return null;
-        }
-
-        UserResult userResult = new UserResult();
-        BeanUtils.copyProperties(returnResult, userResult);
-        request.getSession().setAttribute(AuthSessionUtils.SESSION_USER_INFO, userResult);
-        return userResult;
+        return webRequest.getUserResult(throwOnFailure);
     }
 
     /**
