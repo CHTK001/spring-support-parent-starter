@@ -1,0 +1,93 @@
+spring:
+  ai:
+    # 是否启用 AI 模块
+    enabled: true
+    
+    # 默认提供商
+    default-provider: aliyun
+    
+    # LLM 配置
+    llm:
+      enabled: true
+      provider: openai
+      model: gpt-4
+      temperature: 0.7
+      max-tokens: 2000
+      timeout: 30000
+      
+      # MCP 配置
+      mcp:
+        enabled: true
+        preprocessors:
+          - com.example.CustomPreprocessor
+        postprocessors:
+          - com.example.CustomPostprocessor
+    
+    # OCR 配置
+    ocr:
+      enabled: true
+      provider: baidu
+      language: chi_sim
+      timeout: 5000
+    
+    # 人脸识别配置
+    face:
+      enabled: true
+      provider: aliyun
+      confidence-threshold: 0.5
+      nms-threshold: 0.4
+      timeout: 5000
+    
+    # 图像识别配置
+    image:
+      enabled: true
+      provider: aliyun
+      feature-dimension: 512
+      timeout: 5000
+    
+    # 云厂商配置
+    providers:
+      # 阿里云配置
+      aliyun:
+        app-key: ${ALIYUN_APP_KEY}
+        secret-key: ${ALIYUN_SECRET_KEY}
+        api-address: https://dashscope.aliyuncs.com/api/v1
+        region: cn-hangzhou
+        timeout: 30000
+      
+      # 百度配置
+      baidu:
+        api-key: ${BAIDU_API_KEY}
+        secret-key: ${BAIDU_SECRET_KEY}
+        api-address: https://aip.baidubce.com
+        timeout: 30000
+      
+      # 腾讯云配置
+      tencent:
+        app-id: ${TENCENT_APP_ID}
+        app-secret: ${TENCENT_APP_SECRET}
+        secret-key: ${TENCENT_SECRET_KEY}
+        api-address: https://hunyuan.tencentcloudapi.com
+        region: ap-guangzhou
+        timeout: 30000
+      
+      # OpenAI 配置
+      openai:
+        api-key: ${OPENAI_API_KEY}
+        api-address: https://api.openai.com/v1
+        base-url: https://api.openai.com
+        timeout: 30000
+      
+      # 讯飞配置
+      xunfei:
+        app-id: ${XUNFEI_APP_ID}
+        app-key: ${XUNFEI_APP_KEY}
+        app-secret: ${XUNFEI_APP_SECRET}
+        api-address: https://spark-api.xf-yun.com
+        timeout: 30000
+      
+      # 本地模型配置
+      local:
+        model-path: /path/to/models
+        device: cuda
+        threads: 4

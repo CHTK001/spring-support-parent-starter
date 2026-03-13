@@ -141,7 +141,7 @@
     <maven.repo.releases.url>http://localhost:8081/repository/maven-releases/</maven.repo.releases.url>
     <maven.repo.snapshots.id>maven-snapshots</maven.repo.snapshots.id>
     <revision>4.0.0.37</revision>
-    <lombok.version>1.18.42</lombok.version>
+    <lombok.version>1.18.44</lombok.version>
     <maven.repo.snapshots.url>http://localhost:8081/repository/maven-snapshots/</maven.repo.snapshots.url>
     <maven.compiler.target>25</maven.compiler.target>
     <maven-enforcer-plugin.version>3.4.1</maven-enforcer-plugin.version>
@@ -829,7 +829,6 @@
           <useIncrementalCompilation>true</useIncrementalCompilation>
           <compilerArgs>
             <arg>-parameters</arg>
-            <arg>-J--enable-native-access=ALL-UNNAMED</arg>
           </compilerArgs>
           <annotationProcessorPaths>
             <path>
@@ -869,8 +868,8 @@
                   <message>Maven 3.6.3或更高版本是必需的</message>
                 </requireMavenVersion>
                 <requireJavaVersion>
-                  <version>[25,)</version>
-                  <message>Java 25或更高版本是必需的</message>
+                  <version>[21,)</version>
+                  <message>Java 21或更高版本是必需的</message>
                 </requireJavaVersion>
                 <bannedDependencies>
                   <excludes>

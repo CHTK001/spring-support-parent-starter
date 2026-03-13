@@ -1,0 +1,57 @@
+spring:
+  ai:
+    enabled: true
+    default-provider: aliyun
+    
+    # LLM 使用 OpenAI
+    llm:
+      enabled: true
+      provider: openai
+      model: gpt-4
+      temperature: 0.7
+      max-tokens: 2000
+    
+    # OCR 使用百度
+    ocr:
+      enabled: true
+      provider: baidu
+      language: chi_sim
+    
+    # 人脸识别使用阿里云
+    face:
+      enabled: true
+      provider: aliyun
+      confidence-threshold: 0.5
+    
+    # 图像识别使用腾讯云
+    image:
+      enabled: true
+      provider: tencent
+    
+    # 多云厂商配置
+    providers:
+      openai:
+        api-key: ${OPENAI_API_KEY}
+        api-address: https://api.openai.com/v1
+        timeout: 30000
+      
+      baidu:
+        api-key: ${BAIDU_API_KEY}
+        secret-key: ${BAIDU_SECRET_KEY}
+        api-address: https://aip.baidubce.com
+        timeout: 30000
+      
+      aliyun:
+        app-key: ${ALIYUN_APP_KEY}
+        secret-key: ${ALIYUN_SECRET_KEY}
+        api-address: https://dashscope.aliyuncs.com/api/v1
+        region: cn-hangzhou
+        timeout: 30000
+      
+      tencent:
+        app-id: ${TENCENT_APP_ID}
+        app-secret: ${TENCENT_APP_SECRET}
+        secret-key: ${TENCENT_SECRET_KEY}
+        api-address: https://hunyuan.tencentcloudapi.com
+        region: ap-guangzhou
+        timeout: 30000

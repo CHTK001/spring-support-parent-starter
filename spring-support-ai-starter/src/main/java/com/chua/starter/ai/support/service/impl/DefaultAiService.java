@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.service.impl;
 
-import com.chua.common.support.core.utils.ServiceProvider;
+import com.chua.common.support.core.spi.ServiceProvider;
+import com.chua.deeplearning.support.api.AiClient;
 import com.chua.deeplearning.support.core.function.api.Detector;
 import com.chua.deeplearning.support.core.function.api.Feature;
 import com.chua.deeplearning.support.core.result.DetectorPredictResult;
@@ -14,6 +15,7 @@ import com.chua.deeplearning.support.ml.ocr.model.OcrResult;
 import com.chua.starter.ai.support.model.*;
 import com.chua.starter.ai.support.properties.AiProperties;
 import com.chua.starter.ai.support.service.AiService;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.ByteArrayOutputStream;
@@ -24,6 +26,8 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * AI服务默认实现
@@ -39,190 +43,199 @@ public class DefaultAiService implements AiService {
     private final AiProperties aiProperties;
     
     /**
-     * 人脸检测器实例
+     * AiClient实例（新架构）
      */
-    private volatile FaceDetector faceDetector;
+    @Getter
+    private final AiClient aiClient;
     
     /**
-     * 人脸特征提取器实例
+     * SPI 加载的所有人脸检测器实现（按 provider 名称索引）
      */
-    private volatile FaceFeature faceFeature;
+    private final Map<String, FaceDetector> faceDetectorMap = new ConcurrentHashMap<>();
     
     /**
-     * 图像检测器实例
+     * SPI 加载的所有人脸特征提取器实现（按 provider 名称索引）
      */
-    private volatile Detector imageDetector;
+    private final Map<String, FaceFeature> faceFeatureMap = new ConcurrentHashMap<>();
     
     /**
-     * 图像特征提取器实例
+     * SPI 加载的所有检测器实现（按名称索引，如 "image-aliyun", "layout-baidu"）
      */
-    private volatile Feature imageFeature;
+    private final Map<String, Detector> detectorMap = new ConcurrentHashMap<>();
     
     /**
-     * 文本特征提取器实例
+     * SPI 加载的所有特征提取器实现（按名称索引，如 "image-aliyun", "text-openai"）
      */
-    private volatile Feature textFeature;
+    private final Map<String, Feature> featureMap = new ConcurrentHashMap<>();
     
     /**
-     * OCR识别器实例
+     * SPI 加载的所有 OCR 识别器实现（按 provider 名称索引）
      */
-    private volatile OcrRecognizer ocrRecognizer;
-    
-    /**
-     * 版面分析检测器实例
-     */
-    private volatile Detector layoutDetector;
-    
-    /**
-     * 性别年龄检测器实例
-     */
-    private volatile Detector genderAgeDetector;
+    private final Map<String, OcrRecognizer> ocrRecognizerMap = new ConcurrentHashMap<>();
 
     /**
      * 构造函数
      *
      * @param aiProperties AI配置属性
+     * @param aiClient AiClient实例
      */
-    public DefaultAiService(AiProperties aiProperties) {
+    public DefaultAiService(AiProperties aiProperties, AiClient aiClient) {
         this.aiProperties = aiProperties;
+        this.aiClient = aiClient;
+        
+        // 使用 SPI 机制加载所有实现
+        loadAllImplementations();
+    }
+    
+    /**
+     * 使用 SPI 机制加载所有 AI 能力实现
+     */
+    private void loadAllImplementations() {
+        // 加载人脸检测器
+        ServiceProvider.of(FaceDetector.class).getExtensions().forEach(name -> {
+            FaceDetector detector = ServiceProvider.of(FaceDetector.class).getExtension(name);
+            if (detector != null) {
+                faceDetectorMap.put(extractProviderName(name), detector);
+            }
+        });
+        
+        // 加载人脸特征提取器
+        ServiceProvider.of(FaceFeature.class).getExtensions().forEach(name -> {
+            FaceFeature feature = ServiceProvider.of(FaceFeature.class).getExtension(name);
+            if (feature != null) {
+                faceFeatureMap.put(extractProviderName(name), feature);
+            }
+        });
+        
+        // 加载检测器
+        ServiceProvider.of(Detector.class).getExtensions().forEach(name -> {
+            Detector detector = ServiceProvider.of(Detector.class).getExtension(name);
+            if (detector != null) {
+                detectorMap.put(name, detector);
+            }
+        });
+        
+        // 加载特征提取器
+        ServiceProvider.of(Feature.class).getExtensions().forEach(name -> {
+            Feature feature = ServiceProvider.of(Feature.class).getExtension(name);
+            if (feature != null) {
+                featureMap.put(name, feature);
+            }
+        });
+        
+        // 加载 OCR 识别器
+        ServiceProvider.of(OcrRecognizer.class).getExtensions().forEach(name -> {
+            OcrRecognizer recognizer = ServiceProvider.of(OcrRecognizer.class).getExtension(name);
+            if (recognizer != null) {
+                ocrRecognizerMap.put(extractProviderName(name), recognizer);
+            }
+        });
+    }
+    
+    /**
+     * 从类名中提取 provider 名称
+     * 例如：AliyunFaceDetector -> aliyun
+     *
+     * @param className 类名（小写）
+     * @return provider 名称
+     */
+    private String extractProviderName(String className) {
+        // 移除常见后缀
+        String name = className
+            .replace("facedetector", "")
+            .replace("facefeature", "")
+            .replace("detector", "")
+            .replace("feature", "")
+            .replace("recognizer", "")
+            .replace("ocr", "");
+        return name;
     }
 
     // ==================== 获取检测器实例 ====================
 
     /**
-     * 获取人脸检测器实例（懒加载）
+     * 获取人脸检测器实例（从 SPI 加载的 Map 中获取）
      *
      * @return 人脸检测器
      */
     private FaceDetector getFaceDetector() {
-        if (faceDetector == null) {
-            synchronized (this) {
-                if (faceDetector == null) {
-                    var provider = aiProperties.getFaceDetection().getProvider();
-                    faceDetector = ServiceProvider.of(FaceDetector.class).getNewExtension(provider);
-                }
-            }
-        }
-        return faceDetector;
+        var provider = aiProperties.getFaceDetection().getProvider();
+        return faceDetectorMap.get(provider);
     }
 
     /**
-     * 获取人脸特征提取器实例（懒加载）
+     * 获取人脸特征提取器实例（从 SPI 加载的 Map 中获取）
      *
      * @return 人脸特征提取器
      */
     private FaceFeature getFaceFeature() {
-        if (faceFeature == null) {
-            synchronized (this) {
-                if (faceFeature == null) {
-                    var provider = aiProperties.getFaceDetection().getProvider();
-                    faceFeature = ServiceProvider.of(FaceFeature.class).getNewExtension(provider);
-                }
-            }
-        }
-        return faceFeature;
+        var provider = aiProperties.getFaceDetection().getProvider();
+        return faceFeatureMap.get(provider);
     }
 
     /**
-     * 获取图像检测器实例（懒加载）
+     * 获取图像检测器实例（从 SPI 加载的 Map 中获取）
      *
      * @return 图像检测器
      */
     private Detector getImageDetector() {
-        if (imageDetector == null) {
-            synchronized (this) {
-                if (imageDetector == null) {
-                    var provider = aiProperties.getImage().getProvider();
-                    imageDetector = ServiceProvider.of(Detector.class).getNewExtension("image-" + provider);
-                }
-            }
-        }
-        return imageDetector;
+        var provider = aiProperties.getImage().getProvider();
+        String key = "image" + provider;
+        return detectorMap.get(key);
     }
 
     /**
-     * 获取图像特征提取器实例（懒加载）
+     * 获取图像特征提取器实例（从 SPI 加载的 Map 中获取）
      *
      * @return 图像特征提取器
      */
     private Feature getImageFeature() {
-        if (imageFeature == null) {
-            synchronized (this) {
-                if (imageFeature == null) {
-                    var provider = aiProperties.getImage().getProvider();
-                    imageFeature = ServiceProvider.of(Feature.class).getNewExtension("image-" + provider);
-                }
-            }
-        }
-        return imageFeature;
+        var provider = aiProperties.getImage().getProvider();
+        String key = "image" + provider;
+        return featureMap.get(key);
     }
 
     /**
-     * 获取文本特征提取器实例（懒加载）
+     * 获取文本特征提取器实例（从 SPI 加载的 Map 中获取）
      *
      * @return 文本特征提取器
      */
     private Feature getTextFeature() {
-        if (textFeature == null) {
-            synchronized (this) {
-                if (textFeature == null) {
-                    var provider = aiProperties.getText().getProvider();
-                    textFeature = ServiceProvider.of(Feature.class).getNewExtension("text-" + provider);
-                }
-            }
-        }
-        return textFeature;
+        var provider = aiProperties.getText().getProvider();
+        String key = "text" + provider;
+        return featureMap.get(key);
     }
 
     /**
-     * 获取OCR识别器实例（懒加载）
+     * 获取OCR识别器实例（从 SPI 加载的 Map 中获取）
      *
      * @return OCR识别器
      */
     private OcrRecognizer getOcrRecognizer() {
-        if (ocrRecognizer == null) {
-            synchronized (this) {
-                if (ocrRecognizer == null) {
-                    var provider = aiProperties.getOcr().getProvider();
-                    ocrRecognizer = ServiceProvider.of(OcrRecognizer.class).getNewExtension(provider);
-                }
-            }
-        }
-        return ocrRecognizer;
+        var provider = aiProperties.getOcr().getProvider();
+        return ocrRecognizerMap.get(provider);
     }
 
     /**
-     * 获取版面分析检测器实例（懒加载）
+     * 获取版面分析检测器实例（从 SPI 加载的 Map 中获取）
      *
      * @return 版面分析检测器
      */
     private Detector getLayoutDetector() {
-        if (layoutDetector == null) {
-            synchronized (this) {
-                if (layoutDetector == null) {
-                    var provider = aiProperties.getImage().getProvider();
-                    layoutDetector = ServiceProvider.of(Detector.class).getNewExtension("layout-" + provider);
-                }
-            }
-        }
-        return layoutDetector;
+        var provider = aiProperties.getImage().getProvider();
+        String key = "layout" + provider;
+        return detectorMap.get(key);
     }
 
     /**
-     * 获取性别年龄检测器实例（懒加载）
+     * 获取性别年龄检测器实例（从 SPI 加载的 Map 中获取）
      *
      * @return 性别年龄检测器
      */
     private Detector getGenderAgeDetector() {
-        if (genderAgeDetector == null) {
-            synchronized (this) {
-                if (genderAgeDetector == null) {
-                    var provider = aiProperties.getFaceDetection().getProvider();
-                    genderAgeDetector = ServiceProvider.of(Detector.class).getNewExtension("genderAge-" + provider);
-                }
-            }
-        }
-        return genderAgeDetector;
+        var provider = aiProperties.getFaceDetection().getProvider();
+        String key = "genderage" + provider;
+        return detectorMap.get(key);
     }
 
     // ==================== 人脸相关 ====================
@@ -235,12 +248,9 @@ public class DefaultAiService implements AiService {
 
         var startTime = System.currentTimeMillis();
         try {
-            var detector = getFaceDetector();
-            if (detector == null) {
-                return FaceDetectionResult.fail("FaceDetector not available");
-            }
-
-            var result = detector.detect(imageData);
+            // 使用新的 AiClient 架构
+            var faceBuilder = aiClient.createFace();
+            var result = faceBuilder.detect(imageData);
             var faces = convertToFaces(result);
             
             return FaceDetectionResult.success(faces, System.currentTimeMillis() - startTime);
@@ -310,12 +320,20 @@ public class DefaultAiService implements AiService {
 
         var startTime = System.currentTimeMillis();
         try {
-            var feature = getFaceFeature();
-            if (feature == null) {
-                return FeatureResult.fail("FaceFeature not available");
+            // 使用新的 AiClient 架构
+            var faceBuilder = aiClient.createFace();
+            var result = faceBuilder.recognize(imageData);
+            
+            // 提取特征值（假设第一个结果包含特征）
+            float[] featureValue = null;
+            if (result != null && !result.isEmpty()) {
+                var firstResult = result.getList().getFirst();
+                if (firstResult instanceof DetectorPredictResult detectorResult) {
+                    // 尝试从结果中提取特征值
+                    featureValue = detectorResult.asFloatArray();
+                }
             }
-
-            var featureValue = feature.feature(imageData);
+            
             return FeatureResult.success(featureValue, System.currentTimeMillis() - startTime);
         } catch (Exception e) {
             log.error("[AI][人脸特征]特征提取失败", e);
@@ -545,20 +563,44 @@ public class DefaultAiService implements AiService {
 
         var startTime = System.currentTimeMillis();
         try {
-            var recognizer = getOcrRecognizer();
-            if (recognizer == null) {
-                return com.chua.starter.ai.support.model.OcrResult.fail("OcrRecognizer not available");
-            }
-
-            var fullText = recognizer.getText(imageData);
-            var results = recognizer.recognizeAll(imageData);
-            var textLines = convertToTextLines(results);
+            // 使用新的 AiClient 架构
+            var ocrBuilder = aiClient.createOcr();
+            
+            // 获取完整文本
+            var fullText = ocrBuilder.recognize(imageData);
+            
+            // 获取详细结果
+            var detailResult = ocrBuilder.recognizeDetail(imageData);
+            var textLines = convertToTextLinesFromPredictResult(detailResult);
             
             return com.chua.starter.ai.support.model.OcrResult.success(fullText, textLines, System.currentTimeMillis() - startTime);
         } catch (Exception e) {
             log.error("[AI][OCR]识别失败", e);
             return com.chua.starter.ai.support.model.OcrResult.fail(e.getMessage());
         }
+    }
+    
+    /**
+     * 从预测结果转换为文本行列表
+     *
+     * @param result 预测结果
+     * @return 文本行列表
+     */
+    private List<com.chua.starter.ai.support.model.OcrResult.TextLine> convertToTextLinesFromPredictResult(PredictResultObject<PredictResult> result) {
+        if (result == null || result.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<com.chua.starter.ai.support.model.OcrResult.TextLine> textLines = new ArrayList<>();
+        for (var predictResult : result.getList()) {
+            if (predictResult instanceof DetectorPredictResult detectorResult) {
+                textLines.add(com.chua.starter.ai.support.model.OcrResult.TextLine.builder()
+                        .text(detectorResult.getClassId())
+                        .confidence((float) detectorResult.getConfidence())
+                        .build());
+            }
+        }
+        return textLines;
     }
 
     /**

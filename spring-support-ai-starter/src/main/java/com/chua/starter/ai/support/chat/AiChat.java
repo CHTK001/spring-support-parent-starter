@@ -4,6 +4,7 @@ import com.chua.starter.ai.support.model.*;
 import com.chua.starter.ai.support.service.AiService;
 import com.chua.starter.ai.support.service.AsyncAiService;
 import com.chua.starter.ai.support.service.ReactiveAiService;
+import com.chua.starter.ai.support.service.impl.DefaultAiService;
 import com.chua.starter.ai.support.service.impl.DefaultAsyncAiService;
 import com.chua.starter.ai.support.service.impl.DefaultReactiveAiService;
 import reactor.core.publisher.Mono;
@@ -88,6 +89,10 @@ public class AiChat {
      * @return AiChat实例
      */
     public static AiChat of(AiService aiService) {
+        // 从 DefaultAiService 获取 AiClient
+        if (aiService instanceof DefaultAiService defaultAiService) {
+            return new AiChat(aiService, new DefaultAsyncAiService(aiService), null);
+        }
         return new AiChat(aiService, new DefaultAsyncAiService(aiService), null);
     }
 

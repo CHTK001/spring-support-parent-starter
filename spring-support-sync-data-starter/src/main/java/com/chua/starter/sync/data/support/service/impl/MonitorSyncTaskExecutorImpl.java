@@ -18,6 +18,12 @@ import com.chua.starter.sync.data.support.sync.ColumnDefinition;
 import com.chua.starter.sync.data.support.service.sync.MonitorSyncTaskExecutor;
 import com.chua.starter.sync.data.support.service.sync.OutputTableService;
 import com.chua.starter.sync.data.support.service.sync.SyncTaskWebSocketService;
+import com.chua.starter.sync.data.support.sync.performance.AdaptiveBatchSizeCalculator;
+import com.chua.starter.sync.data.support.sync.performance.StreamingSyncProcessor;
+import com.chua.starter.sync.data.support.sync.performance.MemoryMonitor;
+import com.chua.starter.sync.data.support.sync.concurrency.RateLimiterConfig;
+import com.chua.starter.sync.data.support.service.MemoryAlertService;
+import com.chua.starter.sync.data.support.properties.SyncProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,6 +56,16 @@ public class MonitorSyncTaskExecutorImpl implements MonitorSyncTaskExecutor, Com
     private final MonitorSyncTaskLogMapper logMapper;
     private final SyncTaskWebSocketService webSocketService;
     private final OutputTableService outputTableService;
+    private final SyncProperties syncProperties;
+    private final AdaptiveBatchSizeCalculator batchSizeCalculator;
+    private final StreamingSyncProcessor streamingProcessor;
+    private final MemoryMonitor memoryMonitor;
+    
+    @Autowired(required = false)
+    private MemoryAlertService memoryAlertService;
+    
+    @Autowired(required = false)
+    private RateLimiterConfig rateLimiterConfig;
 
     /**
      * Job日志详情服务（可选，集成spring-job时使用）
@@ -221,6 +237,14 @@ public class MonitorSyncTaskExecutorImpl implements MonitorSyncTaskExecutor, Com
      * 执行同步任务
      */
     private Long doExecute(Long taskId, String triggerType) {
+        // 限流检查
+        if (rateLimiterConfig != null && syncProperties.isRateLimitEnabled()) {
+            if (!rateLimiterConfig.tryAcquire(taskId, 5, java.util.concurrent.TimeUnit.SECONDS)) {
+                log.warn("任务执行被限流: taskId={}", taskId);
+                return null;
+            }
+        }
+        
         MonitorSyncTask task = taskMapper.selectById(taskId);
         if (task == null) {
             log.error("任务不存在, taskId: {}", taskId);
@@ -245,6 +269,32 @@ public class MonitorSyncTaskExecutorImpl implements MonitorSyncTaskExecutor, Com
 
         logDetail(taskLog.getSyncLogId().intValue(), task.getSyncTaskId().intValue(),
                 "INFO", "同步任务开始执行: " + task.getSyncTaskName(), "START", 0);
+
+        // 检查内存可用性
+        double currentMemoryUsage = memoryMonitor.getCurrentMemoryUsage();
+        if (!memoryMonitor.isMemoryAvailable()) {
+            String errorMsg = String.format("内存不足，无法启动任务。当前内存使用率: %.2f%%", 
+                    currentMemoryUsage * 100);
+            log.warn(errorMsg);
+            
+            // 发送内存告警
+            if (memoryAlertService != null) {
+                memoryAlertService.sendTaskMemoryAlert(taskId, currentMemoryUsage);
+            }
+            
+            taskLog.setSyncLogStatus("FAIL");
+            taskLog.setSyncLogEndTime(LocalDateTime.now());
+            taskLog.setSyncLogMessage(errorMsg);
+            logMapper.updateById(taskLog);
+            
+            logDetail(taskLog.getSyncLogId().intValue(), task.getSyncTaskId().intValue(),
+                    "WARN", errorMsg, "MEMORY_CHECK", 0);
+            
+            webSocketService.pushError(taskId, taskLog.getSyncLogId(), null, "内存不足", 
+                    new RuntimeException(errorMsg));
+            
+            return taskLog.getSyncLogId();
+        }
 
         long startTime = System.currentTimeMillis();
 
@@ -371,7 +421,29 @@ public class MonitorSyncTaskExecutorImpl implements MonitorSyncTaskExecutor, Com
         }
 
         if (task.getSyncTaskBatchSize() != null) {
-            builder.batchSize(task.getSyncTaskBatchSize());
+            // 使用动态批次大小调整
+            if (syncProperties.isAdaptiveBatchSizeEnabled()) {
+                int adjustedBatchSize = batchSizeCalculator.calculateBatchSize(
+                        batchSizeCalculator.getCurrentMemoryUsage(),
+                        task.getSyncTaskBatchSize()
+                );
+                builder.batchSize(adjustedBatchSize);
+                log.debug("动态调整批次大小: {} -> {}", task.getSyncTaskBatchSize(), adjustedBatchSize);
+            } else {
+                builder.batchSize(task.getSyncTaskBatchSize());
+            }
+        } else {
+            // 使用默认批次大小
+            int defaultBatchSize = syncProperties.getDefaultBatchSize();
+            if (syncProperties.isAdaptiveBatchSizeEnabled()) {
+                int adjustedBatchSize = batchSizeCalculator.calculateBatchSize(
+                        batchSizeCalculator.getCurrentMemoryUsage(),
+                        defaultBatchSize
+                );
+                builder.batchSize(adjustedBatchSize);
+            } else {
+                builder.batchSize(defaultBatchSize);
+            }
         }
 
         return builder.build();

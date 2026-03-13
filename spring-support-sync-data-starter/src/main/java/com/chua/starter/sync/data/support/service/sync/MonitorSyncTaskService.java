@@ -166,4 +166,36 @@ public interface MonitorSyncTaskService extends IService<MonitorSyncTask> {
      * @return 统计数据
      */
     ReturnResult<SyncTaskStatistics> getTaskStatistics(Long taskId, LocalDateTime startTime, LocalDateTime endTime, String granularity);
+    
+    /**
+     * 批量操作任务
+     *
+     * @param taskIds 任务ID列表
+     * @param operation 操作类型
+     * @return 操作结果
+     */
+    ReturnResult<Boolean> batchOperation(List<Long> taskIds, String operation);
+    
+    /**
+     * 导出任务配置
+     *
+     * @param taskId 任务ID
+     * @return 任务配置JSON
+     */
+    ReturnResult<String> exportTask(Long taskId);
+    
+    /**
+     * 导入任务配置
+     *
+     * @param taskJson 任务配置JSON
+     * @return 导入结果
+     */
+    ReturnResult<MonitorSyncTask> importTask(String taskJson);
+    
+    /**
+     * 获取任务模板列表
+     *
+     * @return 模板列表
+     */
+    ReturnResult<List<MonitorSyncTask>> listTemplates();
 }

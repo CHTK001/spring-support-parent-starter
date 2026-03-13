@@ -121,7 +121,8 @@ public class MonitorSyncTaskController {
     @Operation(summary = "手动执行一次")
     public ReturnResult<Long> executeOnce(
             @Parameter(description = "任务ID") @PathVariable Long taskId) {
-        return taskService.executeOnce(taskId);
+        ReturnResult<Long> result = taskService.executeOnce(taskId);
+        return result;
     }
 
     /**
@@ -296,5 +297,47 @@ public class MonitorSyncTaskController {
             @Parameter(description = "表名") @RequestParam String tableName,
             @RequestBody List<ColumnDefinition> columns) {
         return outputTableService.syncTableStructure(nodeConfig, tableName, columns);
+    }
+
+    // ==================== 批量操作接口 ====================
+
+    /**
+     * 批量操作任务
+     */
+    @PostMapping("/batch")
+    @Operation(summary = "批量操作任务")
+    public ReturnResult<Boolean> batchOperation(
+            @Parameter(description = "任务ID列表") @RequestParam List<Long> taskIds,
+            @Parameter(description = "操作类型: start/stop/delete") @RequestParam String operation) {
+        return taskService.batchOperation(taskIds, operation);
+    }
+
+    /**
+     * 导出任务配置
+     */
+    @GetMapping("/export/{taskId}")
+    @Operation(summary = "导出任务配置")
+    public ReturnResult<String> exportTask(
+            @Parameter(description = "任务ID") @PathVariable Long taskId) {
+        return taskService.exportTask(taskId);
+    }
+
+    /**
+     * 导入任务配置
+     */
+    @PostMapping("/import")
+    @Operation(summary = "导入任务配置")
+    public ReturnResult<MonitorSyncTask> importTask(
+            @Parameter(description = "任务配置JSON") @RequestBody String taskJson) {
+        return taskService.importTask(taskJson);
+    }
+
+    /**
+     * 获取任务模板列表
+     */
+    @GetMapping("/templates")
+    @Operation(summary = "获取任务模板列表")
+    public ReturnResult<List<MonitorSyncTask>> listTemplates() {
+        return taskService.listTemplates();
     }
 }

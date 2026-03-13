@@ -168,4 +168,54 @@ public class MonitorSyncTask extends SysBase {
     @TableField(value = "sync_task_update_time")
     @Schema(description = "更新时间")
     private LocalDateTime syncTaskUpdateTime;
+
+    /**
+     * 数据转换配置JSON
+     */
+    @TableField(value = "sync_task_transform_config")
+    @Schema(description = "数据转换配置JSON")
+    private String syncTaskTransformConfig;
+
+    /**
+     * 数据过滤配置JSON
+     */
+    @TableField(value = "sync_task_filter_config")
+    @Schema(description = "数据过滤配置JSON")
+    private String syncTaskFilterConfig;
+
+    /**
+     * 同步模式: FULL/INCREMENTAL/BIDIRECTIONAL
+     */
+    @TableField(value = "sync_task_sync_mode")
+    @Schema(description = "同步模式: FULL/INCREMENTAL/BIDIRECTIONAL")
+    private String syncTaskSyncMode;
+
+    /**
+     * 增量同步字段
+     */
+    @TableField(value = "sync_task_incremental_field")
+    @Schema(description = "增量同步字段")
+    @Size(max = 100, message = "增量同步字段最大长度100")
+    private String syncTaskIncrementalField;
+
+    /**
+     * 冲突策略: OVERWRITE/SKIP/MERGE
+     */
+    @TableField(value = "sync_task_conflict_strategy")
+    @Schema(description = "冲突策略: OVERWRITE/SKIP/MERGE")
+    private String syncTaskConflictStrategy;
+
+    /**
+     * 最大内存限制(MB)
+     */
+    @TableField(value = "sync_task_max_memory_mb")
+    @Schema(description = "最大内存限制(MB)")
+    private Integer syncTaskMaxMemoryMb;
+
+    /**
+     * 线程池大小
+     */
+    @TableField(value = "sync_task_thread_pool_size")
+    @Schema(description = "线程池大小")
+    private Integer syncTaskThreadPoolSize;
 }

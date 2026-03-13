@@ -19,8 +19,8 @@
   </licenses>
   <properties>
     <jna-version>5.14.0</jna-version>
-    <maven.compiler.target>25</maven.compiler.target>
-    <maven.compiler.source>25</maven.compiler.source>
+    <maven.compiler.target>21</maven.compiler.target>
+    <maven.compiler.source>21</maven.compiler.source>
     <docker-java-version>3.4.0</docker-java-version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <hutool.version>5.8.34</hutool.version>
@@ -96,9 +96,9 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>${maven-compiler-plugin.version}</version>
         <configuration>
-          <source>25</source>
-          <target>25</target>
-          <release>25</release>
+          <source>21</source>
+          <target>21</target>
+          <release>21</release>
           <encoding>UTF-8</encoding>
           <useIncrementalCompilation>true</useIncrementalCompilation>
           <compilerArgs>

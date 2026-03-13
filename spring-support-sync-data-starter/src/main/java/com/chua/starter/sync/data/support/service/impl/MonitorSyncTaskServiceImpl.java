@@ -820,4 +820,179 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
                 .limit(10)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ReturnResult<Boolean> batchOperation(List<Long> taskIds, String operation) {
+        if (taskIds == null || taskIds.isEmpty()) {
+            return ReturnResult.error("任务ID列表不能为空");
+        }
+        if (StringUtils.isEmpty(operation)) {
+            return ReturnResult.error("操作类型不能为空");
+        }
+
+        log.info("批量操作任务, operation: {}, taskIds: {}", operation, taskIds);
+
+        try {
+            int successCount = 0;
+            int failCount = 0;
+            StringBuilder errors = new StringBuilder();
+
+            for (Long taskId : taskIds) {
+                try {
+                    ReturnResult<Boolean> result;
+                    switch (operation.toLowerCase()) {
+                        case "start":
+                            result = startTask(taskId);
+                            break;
+                        case "stop":
+                            result = stopTask(taskId);
+                            break;
+                        case "delete":
+                            result = deleteTask(taskId);
+                            break;
+                        default:
+                            return ReturnResult.error("不支持的操作类型: " + operation);
+                    }
+
+                    if (result.isSuccess()) {
+                        successCount++;
+                    } else {
+                        failCount++;
+                        errors.append("任务").append(taskId).append(": ").append(result.getMsg()).append("; ");
+                    }
+                } catch (Exception e) {
+                    failCount++;
+                    errors.append("任务").append(taskId).append(": ").append(e.getMessage()).append("; ");
+                    log.error("批量操作任务失败, taskId: {}", taskId, e);
+                }
+            }
+
+            String message = String.format("批量操作完成, 成功: %d, 失败: %d", successCount, failCount);
+            if (failCount > 0) {
+                message += ", 错误详情: " + errors.toString();
+            }
+
+            return failCount == 0 ? ReturnResult.ok(true, message) : ReturnResult.error(message);
+        } catch (Exception e) {
+            log.error("批量操作任务失败", e);
+            return ReturnResult.error("批量操作失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public ReturnResult<String> exportTask(Long taskId) {
+        if (taskId == null) {
+            return ReturnResult.error("任务ID不能为空");
+        }
+
+        log.info("导出任务配置, taskId: {}", taskId);
+
+        try {
+            MonitorSyncTask task = taskMapper.selectById(taskId);
+            if (task == null) {
+                return ReturnResult.error("任务不存在");
+            }
+
+            SyncTaskDesign design = new SyncTaskDesign();
+            design.setTask(task);
+            design.setNodes(nodeMapper.selectByTaskId(taskId));
+            design.setConnections(connectionMapper.selectByTaskId(taskId));
+
+            com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            objectMapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+            String json = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(design);
+
+            return ReturnResult.ok(json);
+        } catch (Exception e) {
+            log.error("导出任务配置失败", e);
+            return ReturnResult.error("导出失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ReturnResult<MonitorSyncTask> importTask(String taskJson) {
+        if (StringUtils.isEmpty(taskJson)) {
+            return ReturnResult.error("任务配置不能为空");
+        }
+
+        log.info("导入任务配置");
+
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            objectMapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+            SyncTaskDesign design = objectMapper.readValue(taskJson, SyncTaskDesign.class);
+
+            MonitorSyncTask task = design.getTask();
+            if (task == null) {
+                return ReturnResult.error("任务信息不能为空");
+            }
+
+            task.setSyncTaskId(null);
+            task.setSyncTaskStatus("STOPPED");
+            task.setSyncTaskRunCount(0L);
+            task.setSyncTaskSuccessCount(0L);
+            task.setSyncTaskFailCount(0L);
+            task.setSyncTaskCreateTime(LocalDateTime.now());
+            task.setSyncTaskUpdateTime(LocalDateTime.now());
+
+            taskMapper.insert(task);
+            Long newTaskId = task.getSyncTaskId();
+
+            Map<String, Long> nodeKeyIdMap = new HashMap<>();
+            List<MonitorSyncNode> nodes = design.getNodes();
+            if (nodes != null && !nodes.isEmpty()) {
+                for (MonitorSyncNode node : nodes) {
+                    String oldKey = node.getSyncNodeKey();
+                    node.setSyncNodeId(null);
+                    node.setSyncTaskId(newTaskId);
+                    node.setSyncNodeCreateTime(LocalDateTime.now());
+                    node.setSyncNodeUpdateTime(LocalDateTime.now());
+                    nodeMapper.insert(node);
+                    if (StringUtils.isNotEmpty(oldKey)) {
+                        nodeKeyIdMap.put(oldKey, node.getSyncNodeId());
+                    }
+                }
+            }
+
+            List<MonitorSyncConnection> connections = design.getConnections();
+            if (connections != null && !connections.isEmpty()) {
+                for (MonitorSyncConnection conn : connections) {
+                    conn.setSyncConnectionId(null);
+                    conn.setSyncTaskId(newTaskId);
+                    conn.setSyncConnectionCreateTime(LocalDateTime.now());
+                    if (StringUtils.isNotEmpty(conn.getSourceNodeKey())) {
+                        conn.setSourceNodeId(nodeKeyIdMap.get(conn.getSourceNodeKey()));
+                    }
+                    if (StringUtils.isNotEmpty(conn.getTargetNodeKey())) {
+                        conn.setTargetNodeId(nodeKeyIdMap.get(conn.getTargetNodeKey()));
+                    }
+                    connectionMapper.insert(conn);
+                }
+            }
+
+            log.info("任务导入成功, newTaskId: {}", newTaskId);
+            return ReturnResult.ok(task);
+        } catch (Exception e) {
+            log.error("导入任务配置失败", e);
+            return ReturnResult.error("导入失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public ReturnResult<List<MonitorSyncTask>> listTemplates() {
+        log.debug("获取任务模板列表");
+
+        try {
+            LambdaQueryWrapper<MonitorSyncTask> wrapper = new LambdaQueryWrapper<MonitorSyncTask>()
+                    .orderByDesc(MonitorSyncTask::getSyncTaskCreateTime);
+
+            List<MonitorSyncTask> templates = taskMapper.selectList(wrapper);
+            return ReturnResult.ok(templates);
+        } catch (Exception e) {
+            log.error("获取任务模板列表失败", e);
+            return ReturnResult.error("获取失败: " + e.getMessage());
+        }
+    }
 }

@@ -37,6 +37,15 @@ public class FeatureResult implements Serializable {
     private float[] features;
 
     /**
+     * 获取特征向量（向后兼容方法）
+     * 
+     * @return 特征向量
+     */
+    public float[] getFeature() {
+        return features;
+    }
+
+    /**
      * 特征维度
      */
     private int dimension;

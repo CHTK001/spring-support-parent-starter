@@ -1,0 +1,11 @@
+spring:
+  ai:
+    # LLM 配置（最小配置）
+    llm:
+      provider: openai
+      model: gpt-4
+    
+    # 云厂商配置
+    providers:
+      openai:
+        api-key: ${OPENAI_API_KEY}
