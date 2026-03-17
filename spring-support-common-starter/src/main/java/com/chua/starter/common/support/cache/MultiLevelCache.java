@@ -101,28 +101,31 @@ public class MultiLevelCache implements Cache {
 
     @Override
     public <T> T get(Object key, Callable<T> valueLoader) {
-        return get(key, valueLoader, 0);
-    }
-
-    private <T> T get(Object key, Callable<T> valueLoader, int index) {
-        if (index >= caches.size()) {
-            missCount.increment();
-            return null;
-        }
-
-        Cache cache = caches.get(index);
-        T value = cache.get(key, valueLoader);
-
-        if (value == null) {
-            T found = get(key, valueLoader, index + 1);
-            if (found != null) {
-                backfill(key, found, index);
+        // 先按普通 key 查找各级缓存
+        for (int i = 0; i < caches.size(); i++) {
+            Cache cache = caches.get(i);
+            ValueWrapper wrapper = cache.get(key);
+            if (wrapper != null) {
+                hitCount.increment();
+                @SuppressWarnings("unchecked")
+                T value = (T) wrapper.get();
+                // 回填到更低层级
+                backfill(key, value, i - 1);
+                log.debug("缓存命中: cache={}, level={}, key={}", name, i, key);
+                return value;
             }
-            return found;
         }
-
-        hitCount.increment();
-        return value;
+        // 所有层级均未命中，调用 valueLoader 加载并写入所有层级
+        missCount.increment();
+        try {
+            T value = valueLoader.call();
+            if (value != null) {
+                put(key, value);
+            }
+            return value;
+        } catch (Exception e) {
+            throw new Cache.ValueRetrievalException(key, valueLoader, e);
+        }
     }
 
     /**

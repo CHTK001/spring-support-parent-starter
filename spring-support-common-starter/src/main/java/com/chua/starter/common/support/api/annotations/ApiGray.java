@@ -20,7 +20,7 @@ import java.lang.annotation.*;
  * <ul>
  *   <li><strong>百分比灰度</strong>: 按指定比例随机分配流量</li>
  *   <li><strong>规则灰度</strong>: 基于 SpEL 表达式匹配请求</li>
- *   <li><strong>白名单灰度</strong>: 指定用户/IP 进入灰度</li>
+ *   <li><strong>白名单灰度</strong>: 指定用户/IP/角色 进入灰度</li>
  * </ul>
  *
  * <h3>上下文变量（SpEL 表达式可用）</h3>
@@ -131,6 +131,16 @@ public @interface ApiGray {
      * @return IP列表
      */
     String[] ips() default {};
+
+    /**
+     * 灰度角色白名单
+     * <p>
+     * 指定角色直接进入灰度版本，角色来源于 request/session 中的 "roles" 属性（Collection 或逗号分隔字符串）
+     * </p>
+     *
+     * @return 角色列表
+     */
+    String[] roles() default {};
 
     /**
      * 灰度请求头匹配

@@ -34,9 +34,9 @@ public class AsyncThreadPoolProperties {
      */
     private boolean waitForTasksToCompleteOnShutdown;
     /**
-     * 等待时间：等待秒后强制停止
+     * 等待时间：等待秒后强制停止（默认60秒，避免应用关闭时无限等待）
      */
-    private int awaitTerminationSeconds = Integer.MAX_VALUE;
+    private int awaitTerminationSeconds = 60;
     /**
      * 允许空闲时间：超过核心线程之外的线程到达x秒后会被销毁
      */

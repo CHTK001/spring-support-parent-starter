@@ -76,30 +76,20 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @RestControllerAdvice
-public class ApiExceptionAdvice {
-        /** 是否为生产环境（生产环境隐藏技术细节） */
-    private static boolean isProduction = false;
-    
+public class ApiExceptionAdvice implements org.springframework.context.EnvironmentAware {
+    /** 是否为生产环境（生产环境隐藏技术细节） */
+    private boolean isProduction = false;
+
     /** 是否在响应中返回详细错误信息（字段级别错误） */
-    private static boolean returnDetailedErrors = true;
-    
+    private boolean returnDetailedErrors = true;
+
     /** 请求追踪ID的Header名称 */
     private static final String TRACE_ID_HEADER = "X-Trace-Id";
-    
-    /**
-     * 设置是否为生产环境
-     * @param production 是否为生产环境
-     */
-    public static void setProduction(boolean production) {
-        isProduction = production;
-    }
-    
-    /**
-     * 设置是否返回详细错误信息
-     * @param detailed 是否返回详细错误
-     */
-    public static void setReturnDetailedErrors(boolean detailed) {
-        returnDetailedErrors = detailed;
+
+    @Override
+    public void setEnvironment(org.springframework.core.env.Environment environment) {
+        this.isProduction = environment.getProperty("spring.profiles.active", "").contains("prod");
+        this.returnDetailedErrors = environment.getProperty("plugin.api.exception.detailed-errors", Boolean.class, true);
     }
 
     private static final Pattern DATA_TOO_LONG_PATTERN = Pattern.compile("Data too long for column '([^']*)' at row");

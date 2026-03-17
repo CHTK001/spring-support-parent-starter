@@ -432,6 +432,15 @@ public class ApiProperties {
         private List<String> globalIps = Collections.emptyList();
 
         /**
+         * 全局灰度角色白名单
+         * <p>
+         * 拥有这些角色的用户始终进入灰度版本
+         * </p>
+         */
+        @NotNull(message = "全局灰度角色白名单不能为null，可以为空列表")
+        private List<String> globalRoles = Collections.emptyList();
+
+        /**
          * 默认灰度百分比
          * <p>
          * 注解未指定百分比时使用此默认值

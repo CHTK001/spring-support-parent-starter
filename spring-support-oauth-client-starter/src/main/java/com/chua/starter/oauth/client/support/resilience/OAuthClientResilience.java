@@ -93,14 +93,19 @@ public class OAuthClientResilience {
                 AuthenticationInformation result = supplier.get();
                 
                 // 如果认证成功或明确失败（非网络错误），不需要重试
+                // 注意：AUTHENTICATION_SERVER_EXCEPTION 且 errorMessage 不为空，说明是业务错误（如密码错误），不应重试
                 if (result != null && result.getInformation() != Information.AUTHENTICATION_SERVER_EXCEPTION) {
                     if (attempt > 1) {
                         log.info("[重试机制]第{}次重试成功", attempt);
                     }
                     return result;
                 }
+                // 业务错误（服务端返回了明确的错误消息），不重试
+                if (result != null && result.getErrorMessage() != null) {
+                    return result;
+                }
 
-                // 服务器异常，需要重试
+                // 服务器网络异常，需要重试
                 if (attempt < maxAttempts) {
                     log.warn("[重试机制]第{}次请求失败，{}ms后重试 (共{}次)", attempt, delay, maxAttempts);
                     Thread.sleep(delay);

@@ -2,6 +2,7 @@ package com.chua.starter.common.support.watch;
 
 import com.chua.common.support.span.trace.TrackContext;
 import com.chua.common.support.core.utils.StringUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.aop.support.StaticMethodMatcherPointcutAdvisor;
@@ -21,6 +22,7 @@ import java.util.*;
  * @author CH
  */
 @Lazy
+@Slf4j
 public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor implements InitializingBean {
     @Override
     public boolean matches(Method method, Class<?> targetClass) {
@@ -45,15 +47,44 @@ public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor imp
                 }
                 Span entrySpan = NewTrackManager.createEntrySpan();
                 Method method = invocation.getMethod();
-                Object obj = invocation.getThis();
                 Object[] objects = invocation.getArguments();
+
+                // 读取注解属性
+                Watch watch = AnnotatedElementUtils.findMergedAnnotation(method, Watch.class);
+                if (watch == null) {
+                    watch = AnnotatedElementUtils.findMergedAnnotation(method.getDeclaringClass(), Watch.class);
+                }
+                final Watch watchAttr = watch;
+
+                // 记录入参
+                if (watchAttr != null && watchAttr.logArgs() && log.isDebugEnabled()) {
+                    log.debug("[Watch] {}.{} args={}", method.getDeclaringClass().getSimpleName(),
+                            method.getName(), java.util.Arrays.toString(objects));
+                }
+
+                long start = System.currentTimeMillis();
+                Object result = null;
                 try {
-                    return invocation.proceed();
+                    result = invocation.proceed();
+                    return result;
                 } finally {
-                    endSpan(currentSpan, entrySpan, method, obj, objects);
+                    endSpan(currentSpan, entrySpan, method, invocation.getThis(), objects);
+                    long cost = System.currentTimeMillis() - start;
+
+                    // 超时告警
+                    if (watchAttr != null && watchAttr.timeoutMs() > 0 && cost > watchAttr.timeoutMs()) {
+                        log.warn("[Watch 超时] {}.{} 耗时: {}ms, 阈值: {}ms",
+                                method.getDeclaringClass().getSimpleName(), method.getName(),
+                                cost, watchAttr.timeoutMs());
+                    }
+
+                    // 记录返回值
+                    if (watchAttr != null && watchAttr.logResult() && log.isDebugEnabled()) {
+                        log.debug("[Watch] {}.{} result={}", method.getDeclaringClass().getSimpleName(),
+                                method.getName(), result);
+                    }
                 }
             }
-
         });
     }
 

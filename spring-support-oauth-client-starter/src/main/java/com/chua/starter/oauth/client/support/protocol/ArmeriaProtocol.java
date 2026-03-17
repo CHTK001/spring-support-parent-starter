@@ -198,16 +198,22 @@ public class ArmeriaProtocol extends AbstractProtocol {
         jsonObject.put("x-oauth-secret-key", authClientProperties.getKey().getSecretKey());
         jsonObject.put("x-oauth-username", username);
         jsonObject.put("x-oauth-password", password);
-        jsonObject.put("x-oauth-auth-type", authType);
+        // 传 code（如 "WEB"）而非枚举名，NONE 时 fallback 到 WEB
+        String authTypeCode = (authType == null || authType == com.chua.starter.oauth.client.support.enums.AuthType.NONE)
+                ? "WEB" : authType.getCode().toUpperCase();
+        jsonObject.put("x-oauth-auth-type", authTypeCode);
         jsonObject.put("x-oauth-ext", ext);
         
         AuthenticationInformation information = createAuthenticationInformation(jsonObject, null, authClientProperties.getLoginPage());
-        log.info("当前状态: {}", information.getInformation().getCode());
-        log.info("当前信息: {}", information.getInformation().getMessage());
+        log.info("[Login] 状态={}, 用户={}, 类型={}",
+                information.getInformation().getCode(), username, authTypeCode);
+        log.debug("[Login] 信息={}", information.getInformation().getMessage());
         
         LoginAuthResult loginAuthResult = new LoginAuthResult();
         loginAuthResult.setCode(information.getInformation().getCode());
-        loginAuthResult.setMessage(information.getInformation().getMessage());
+        // 优先使用服务端透传的真实错误消息，fallback 到 Information 枚举的固定消息
+        String msg = information.getErrorMessage() != null ? information.getErrorMessage() : information.getInformation().getMessage();
+        loginAuthResult.setMessage(msg);
         loginAuthResult.setUserResume(information.getReturnResult());
         String token = information.getToken();
         if(null != token) {
@@ -227,6 +233,12 @@ public class ArmeriaProtocol extends AbstractProtocol {
         
         AuthenticationInformation information = createAuthenticationInformation(jsonObject, null, authClientProperties.getLogoutPage());
         if (information.getInformation() == Information.OK) {
+            // 清除本地缓存，防止登出后仍命中缓存
+            if (logoutType == LogoutType.LOGOUT_ALL || logoutType == LogoutType.UN_REGISTER) {
+                invalidateAllCache();
+            } else {
+                invalidateCache(uid);
+            }
             return LoginAuthResult.OK;
         }
         throw new AuthException(information.getInformation().getMessage());

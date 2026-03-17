@@ -21,9 +21,16 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class GlobalSettingFactory {
 
-    // 全局设置工厂类，用于管理和提供全局设置对象
     private static final GlobalSettingFactory INSTANCE = new GlobalSettingFactory();
-    public static String PREFIX = "";
+
+    /**
+     * 平台前缀
+     * <p>
+     * 使用 volatile 保证多线程可见性。PREFIX 在应用启动时由平台配置写入一次，
+     * 运行期只读，不存在并发写问题。如需多租户动态切换前缀，请使用 ThreadLocal 方案。
+     * </p>
+     */
+    public static volatile String PREFIX = "";
 
 
     static final Map<String, Object> CONFIG = new ConcurrentHashMap<>();

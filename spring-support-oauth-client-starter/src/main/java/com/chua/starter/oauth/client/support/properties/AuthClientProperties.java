@@ -20,29 +20,46 @@ public class AuthClientProperties {
     /**
      * 是否启用
      */
-    private boolean enable = false;
+    private boolean enable = true;
 
     public static final String PRE = "plugin.oauth";
 
+    /**
+     * 内置默认白名单（不会被 yaml 配置覆盖）
+     */
+    private static final List<String> DEFAULT_WHITELIST = List.of(
+            "/**/captcha",
+            "/**/login",
+            "/**/oauth",
+            "/**/doLogin",
+            "/**/logout",
+            "/doc.html",
+            "/actuator",
+            "/actuator/**",
+            "/report",
+            "/webjars/**",
+            "/markdown/**",
+            "/v1/sys/setting",
+            "/static/**",
+            "/v1/file/**",
+            "/**/*.html",
+            "/**/users/loginCode",
+            "/v3/api-docs/**",
+            "/**/node/receive_push"
+    );
+
     public AuthClientProperties() {
-        whitelist.add("/**/captcha");
-        whitelist.add("/**/login");
-        whitelist.add("/**/oauth");
-        whitelist.add("/**/doLogin");
-        whitelist.add("/**/logout");
-        whitelist.add("/doc.html");
-        whitelist.add("/actuator");
-        whitelist.add("/actuator/**");
-        whitelist.add("/report");
-        whitelist.add("/webjars/**");
-        whitelist.add("/markdown/**");
-        whitelist.add("/v1/sys/setting");
-        whitelist.add("/static/**");
-        whitelist.add("/v1/file/**");
-        whitelist.add("/**/*.html");
-        whitelist.add("/**/users/loginCode");
-        whitelist.add("/v3/api-docs/**");
-        whitelist.add("/**/node/receive_push");
+    }
+
+    /**
+     * 获取完整白名单（内置默认 + yaml 自定义）
+     */
+    public List<String> getEffectiveWhitelist() {
+        List<String> effective = new java.util.ArrayList<>(DEFAULT_WHITELIST);
+        if (whitelist != null) {
+            effective.addAll(whitelist);
+        }
+        return effective;
     }
     /**
      * 连接超时时间（毫秒）
@@ -153,7 +170,7 @@ public class AuthClientProperties {
     /**
      * 鉴权地址
      */
-    private String oauthUrl = "/oauth";
+    private String oauthUrl = "/verify";
     /**
      * 均衡模式
      */

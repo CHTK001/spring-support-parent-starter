@@ -8,6 +8,7 @@ import com.chua.common.support.core.spi.ServiceProvider;
 import com.chua.common.support.core.utils.StringUtils;
 import com.chua.starter.common.support.properties.IpProperties;
 import com.chua.starter.common.support.service.IptablesService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
  * @version 1.0.0
  * @since 2024/01/19
  */
+@Slf4j
 @Service
 public class IptablesServiceImpl implements IptablesService {
 
@@ -73,5 +75,6 @@ public class IptablesServiceImpl implements IptablesService {
 
         return ReturnResult.ok(ipPosition.getCity(address));
     }
+
 }
 

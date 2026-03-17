@@ -14,6 +14,7 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -130,6 +131,7 @@ public class AuthClientConfiguration
      */
     @Bean("authFilterFilterRegistrationBean")
     @ConditionalOnMissingClass("com.chua.starter.oauth.server.support.SsoServer")
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
     public FilterRegistrationBean<AuthFilter> authFilterFilterRegistrationBean(
             RequestMappingHandlerMapping requestMappingHandlerMapping,
             AuthClientProperties authClientProperties) {

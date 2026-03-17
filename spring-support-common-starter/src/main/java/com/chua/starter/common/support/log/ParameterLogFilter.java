@@ -126,6 +126,7 @@ public class ParameterLogFilter implements Filter {
                 logBuilder.append("║ 请求类型: multipart/form-data (文件上传)\n");
                 log.debug(logBuilder.toString());
                 filterChain.doFilter(requestWrapper, responseWrapper);
+                responseWrapper.copyBodyToResponse();
                 injectInterfaceServiceLog(requestWrapper);
                 printResponse(responseWrapper, startTime);
                 return;
@@ -198,7 +199,7 @@ public class ParameterLogFilter implements Filter {
         log.debug("\n{}", sb);
         
         // 慢请求警告
-        if (costTime > 3000) {
+        if (costTime > logProperties.getSlowRequestThresholdMs()) {
             log.warn("[慢请求警告] 耗时: {}ms, 状态码: {}", costTime, status);
         }
     }
@@ -213,9 +214,10 @@ public class ParameterLogFilter implements Filter {
      */
     private void printCostTime(String method, String uri, long startTime, int status) {
         long costTime = System.currentTimeMillis() - startTime;
-        if (costTime > 3000) {
+        long threshold = logProperties.getSlowRequestThresholdMs();
+        if (costTime > threshold) {
             log.warn("[慢请求] {} {} 状态码: {} 耗时: {}ms", method, uri, status, costTime);
-        } else if (costTime > 1000) {
+        } else if (costTime > threshold / 3) {
             log.info("[请求耗时] {} {} 状态码: {} 耗时: {}ms", method, uri, status, costTime);
         } else {
             log.debug("[请求耗时] {} {} 状态码: {} 耗时: {}ms", method, uri, status, costTime);

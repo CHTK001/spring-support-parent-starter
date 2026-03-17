@@ -34,6 +34,11 @@ public class AuthenticationInformation {
      * 刷新token
      */
     private String refreshToken;
+
+    /**
+     * 服务端透传的错误消息（业务错误时使用，优先级高于 Information.message）
+     */
+    private String errorMessage;
     /**
      * 无密钥
      *

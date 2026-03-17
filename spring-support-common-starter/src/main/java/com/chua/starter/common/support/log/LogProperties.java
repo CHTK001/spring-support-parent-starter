@@ -23,6 +23,11 @@ public class LogProperties {
     private boolean openInterfaceLog = false;
 
     /**
+     * 慢请求阈值（毫秒），超过此值将打印 WARN 日志，默认 3000ms
+     */
+    private long slowRequestThresholdMs = 3000;
+
+    /**
      * 获取 enable
      *
      * @return enable
@@ -74,5 +79,23 @@ public class LogProperties {
      */
     public void setOpenInterfaceLog(boolean openInterfaceLog) {
         this.openInterfaceLog = openInterfaceLog;
+    }
+
+    /**
+     * 获取慢请求阈值（毫秒）
+     *
+     * @return slowRequestThresholdMs
+     */
+    public long getSlowRequestThresholdMs() {
+        return slowRequestThresholdMs;
+    }
+
+    /**
+     * 设置慢请求阈值（毫秒）
+     *
+     * @param slowRequestThresholdMs 阈值
+     */
+    public void setSlowRequestThresholdMs(long slowRequestThresholdMs) {
+        this.slowRequestThresholdMs = slowRequestThresholdMs;
     }
 }

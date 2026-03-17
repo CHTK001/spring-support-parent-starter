@@ -3,6 +3,7 @@ import com.chua.common.support.core.constant.CommonConstant;
 import com.chua.common.support.matcher.PathMatcher;
 import com.chua.common.support.network.net.NetUtils;
 import com.chua.common.support.core.utils.ArrayUtils;
+import com.chua.starter.common.support.utils.IpUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import jakarta.servlet.*;
 import jakarta.servlet.annotation.WebFilter;
@@ -88,7 +89,7 @@ public class ActuatorAuthenticationFilter implements Filter {
     }
 
     /**
-     * 检查IP是否在白名单中
+     * 检查IP是否在白名单中，支持精确匹配、通配符（192.168.1.*）和 CIDR（192.168.0.0/24）
      *
      * @param ip IP地址
      * @return 是否在白名单中
@@ -97,7 +98,8 @@ public class ActuatorAuthenticationFilter implements Filter {
         if (actuatorProperties.getIpWhitelist().isEmpty()) {
             return false;
         }
-        return actuatorProperties.getIpWhitelist().contains(ip);
+        return actuatorProperties.getIpWhitelist().stream()
+                .anyMatch(pattern -> IpUtils.matchIp(ip, pattern));
     }
 
     /**

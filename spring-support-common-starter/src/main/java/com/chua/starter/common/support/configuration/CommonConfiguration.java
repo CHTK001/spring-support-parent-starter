@@ -51,16 +51,11 @@ public class CommonConfiguration {
     }
 
     /**
-     * 创建IP服务实例。
-     * 当容器中没有提供IptablesService实例时，使用此实现。
-     *
-     * @param ipProperties IP属性配置对象，包含IP相关配置信息
-     * @return {@link IptablesService} IP服务实例
-     * @example <pre>
-     * // 使用示例
-     * &#64;Autowired
-     * private IptablesService iptablesService;
-     * </pre>
+     * 创建IP访问控制服务实例。
+     * <p>
+     * IptablesService 提供基于配置的 IP 黑白名单访问控制，
+     * 不依赖系统 iptables 命令，仅在应用层做请求过滤。
+     * </p>
      */
     @Bean
     @ConditionalOnMissingBean

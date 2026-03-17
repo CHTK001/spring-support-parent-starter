@@ -7,6 +7,8 @@ import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
@@ -15,6 +17,9 @@ import org.springframework.core.annotation.Order;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Spring 请求指纹过滤器自动配置
@@ -26,15 +31,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * @since 2025-08-15
  */
 @Configuration
+@EnableConfigurationProperties(RequestFingerprintAutoConfiguration.FingerprintProps.class)
 public class RequestFingerprintAutoConfiguration {
-
-    /**
-     * 指纹配置 Bean，供其他 Bean 注入使用
-     */
-    @Bean
-    public FingerprintProps fingerprintProps() {
-        return new FingerprintProps();
-    }
 
     /**
      * 创建请求指纹过滤器
@@ -46,6 +44,16 @@ public class RequestFingerprintAutoConfiguration {
     @Order(Ordered.HIGHEST_PRECEDENCE + 20)
     public Filter requestFingerprintFilter(FingerprintProps props) {
         final Map<String, Long> cache = new ConcurrentHashMap<>();
+        // 定时清理过期指纹，每分钟执行一次，替代原来概率触发的不可靠清理
+        ScheduledExecutorService cleaner = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "fingerprint-cache-cleaner");
+            t.setDaemon(true);
+            return t;
+        });
+        cleaner.scheduleAtFixedRate(
+                () -> cache.entrySet().removeIf(e -> e.getValue() < System.currentTimeMillis()),
+                1, 1, TimeUnit.MINUTES
+        );
         return (ServletRequest req, ServletResponse res, FilterChain chain) -> {
             if (!props.isEnabled()) { chain.doFilter(req, res); return; }
             HttpServletRequest request = (HttpServletRequest) req;
@@ -74,11 +82,6 @@ public class RequestFingerprintAutoConfiguration {
             if (props.getValidityMs() > 0) cache.put(fp, now + props.getValidityMs());
             response.setHeader(props.getHeaderName(), fp);
             chain.doFilter(request, res);
-
-            // 简单清理
-            if ((now & 0xFF) == 1) {
-                cache.entrySet().removeIf(e -> e.getValue() < System.currentTimeMillis());
-            }
         };
     }
 
@@ -172,6 +175,7 @@ public class RequestFingerprintAutoConfiguration {
     /**
      * 指纹配置属性
      */
+    @ConfigurationProperties(prefix = "plugin.security.fingerprint")
     public static class FingerprintProps {
         private boolean enabled = false;
         private String headerName = "X-Request-Fingerprint";

@@ -211,10 +211,11 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory factory) {
         StringRedisTemplate template = new StringRedisTemplate();
         template.setConnectionFactory(factory);
+        // StringRedisTemplate 的 key/value 必须用 StringRedisSerializer，否则 get() 返回类型不匹配
         template.setKeySerializer(new StringRedisSerializer());
-        template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+        template.setValueSerializer(new StringRedisSerializer());
         template.setHashKeySerializer(new StringRedisSerializer());
-        template.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
+        template.setHashValueSerializer(new StringRedisSerializer());
         return template;
     }
 

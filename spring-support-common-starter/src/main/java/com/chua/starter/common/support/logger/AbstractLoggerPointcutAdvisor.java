@@ -25,6 +25,7 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static com.chua.common.support.core.constant.NameConstant.*;
 
@@ -61,6 +62,13 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
      * Swagger 2.x ApiOperation 注解类
      */
     private static final Class<? extends Annotation> API_OPERATION = (Class<? extends Annotation>) ClassUtils.forName("io.swagger.annotations.ApiOperation");
+
+    /**
+     * SpEL 表达式缓存，避免每次调用都重新解析
+     */
+    private static final ConcurrentHashMap<String, Expression> EXPRESSION_CACHE = new ConcurrentHashMap<>();
+    private static final ExpressionParser EXPRESSION_PARSER = new SpelExpressionParser();
+    private static final ParserContext TEMPLATE_PARSER_CONTEXT = new TemplateParserContext();
 
     @Override
     public void afterPropertiesSet() throws Exception {
@@ -214,21 +222,19 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
             return "";
         }
 
-        ParserContext parserContext = new TemplateParserContext();
-        ExpressionParser expressionParser = new SpelExpressionParser();
-        EvaluationContext evaluationContext = new StandardEvaluationContext();
+        // 复用缓存的 Expression，避免每次重新解析
+        Expression expression = EXPRESSION_CACHE.computeIfAbsent(content,
+                key -> EXPRESSION_PARSER.parseExpression(key, TEMPLATE_PARSER_CONTEXT));
 
+        EvaluationContext evaluationContext = new StandardEvaluationContext();
         Method method = invocation.getMethod();
         Object[] arguments = invocation.getArguments();
         for (int i = 0; i < arguments.length; i++) {
-            Object argument = arguments[i];
-            evaluationContext.setVariable("$arg" + i, argument);
+            evaluationContext.setVariable("$arg" + i, arguments[i]);
         }
-
         evaluationContext.setVariable("$method", method);
         evaluationContext.setVariable("$result", proceed);
 
-        Expression expression = expressionParser.parseExpression(content, parserContext);
         return Optional.ofNullable(expression.getValue(evaluationContext)).orElse(content).toString();
     }
 

@@ -2,10 +2,14 @@ package com.chua.starter.common.support.cache;
 
 import com.chua.spring.support.configuration.SpringBeanUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.core.env.Environment;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -24,13 +28,21 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @SuppressWarnings("ALL")
-public class MultiLevelCacheManager implements CacheManager, InitializingBean {
+public class MultiLevelCacheManager implements CacheManager, InitializingBean, ApplicationContextAware {
 
     private final Map<String, CacheManager> cacheManagerMap = new ConcurrentHashMap<>();
     private final List<CacheManager> cacheManagers = new LinkedList<>();
     private final Map<String, Cache> cacheMap = new ConcurrentHashMap<>();
-    
+
+    private ApplicationContext applicationContext;
+    private Environment environment;
     private CacheProperties cacheProperties;
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.applicationContext = applicationContext;
+        this.environment = applicationContext.getEnvironment();
+    }
 
     @Override
     public Cache getCache(String name) {
@@ -63,16 +75,15 @@ public class MultiLevelCacheManager implements CacheManager, InitializingBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        // 获取所有 CacheManager
-        Map<String, CacheManager> beansOfType = SpringBeanUtils.getApplicationContext()
-                .getBeansOfType(CacheManager.class);
+        // 通过 ApplicationContext 获取所有 CacheManager，避免 SpringBeanUtils 静态上下文依赖
+        Map<String, CacheManager> beansOfType = applicationContext.getBeansOfType(CacheManager.class);
         
         for (Map.Entry<String, CacheManager> entry : beansOfType.entrySet()) {
             cacheManagerMap.put(entry.getKey().toUpperCase(), entry.getValue());
         }
 
         // 加载配置
-        cacheProperties = Binder.get(SpringBeanUtils.getEnvironment())
+        cacheProperties = Binder.get(environment)
                 .bindOrCreate(CacheProperties.PRE, CacheProperties.class);
 
         // 按配置顺序添加缓存管理器

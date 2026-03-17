@@ -55,78 +55,51 @@ public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware {
 
     @Override
     public RequestMappingHandlerMapping getRequestMappingHandlerMapping() {
-        return requestMappingInfoHandlerMapping();
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
-    public RequestMappingHandlerMapping requestMappingInfoHandlerMapping() {
         if (apiProperties.isControlEnabled()) {
             log.info("[API控制] [注册开始]");
-            
-            // 版本控制
-            ApiProperties.Version version = apiProperties.getVersion();
-            if (version != null && version.isEnable()) {
-                log.info("[API控制] [@ApiVersion] [版本控制] [{}开启{}]", ANSI_GREEN, ANSI_RESET);
-            } else {
-                log.info("[API控制] [@ApiVersion] [版本控制] [{}关闭{}]", ANSI_RED, ANSI_RESET);
-            }
-            
-            // 平台控制
-            ApiProperties.Platform platform = apiProperties.getPlatform();
-            if (platform != null && platform.isEnable()) {
-                log.info("[API控制] [@ApiPlatform] [平台控制] [{}开启{}] [平台: {}]", ANSI_GREEN, ANSI_RESET, platform.getPlatformName());
-            } else {
-                log.info("[API控制] [@ApiPlatform] [平台控制] [{}关闭{}]", ANSI_RED, ANSI_RESET);
-            }
-            
-            log.info("[API控制] [@ApiProfile] [环境控制] [{}开启{}]", ANSI_GREEN, ANSI_RESET);
-            
-            // 废弃接口控制
-            ApiProperties.DeprecatedConfig deprecated = apiProperties.getDeprecated();
-            if (deprecated != null && deprecated.isEnable()) {
-                log.info("[API控制] [@ApiDeprecated] [废弃提示] [{}开启{}]", ANSI_GREEN, ANSI_RESET);
-            } else {
-                log.info("[API控制] [@ApiDeprecated] [废弃提示] [{}关闭{}]", ANSI_RED, ANSI_RESET);
-            }
-            
-            // 功能开关控制
-            ApiProperties.FeatureConfig feature = apiProperties.getFeature();
-            if (feature != null && feature.isEnable()) {
-                log.info("[API控制] [@ApiFeature] [功能开关] [{}开启{}]", ANSI_GREEN, ANSI_RESET);
-            } else {
-                log.info("[API控制] [@ApiFeature] [功能开关] [{}关闭{}]", ANSI_RED, ANSI_RESET);
-            }
-            
-            // 内部接口控制
-            ApiProperties.InternalConfig internal = apiProperties.getInternal();
-            if (internal != null && internal.isEnable()) {
-                log.info("[API控制] [@ApiInternal] [内部接口] [{}开启{}]", ANSI_GREEN, ANSI_RESET);
-            } else {
-                log.info("[API控制] [@ApiInternal] [内部接口] [{}关闭{}]", ANSI_RED, ANSI_RESET);
-            }
-            
-            // Mock 控制
-            ApiProperties.MockConfig mock = apiProperties.getMock();
-            if (mock != null && mock.isEnable()) {
-                log.info("[API控制] [@ApiMock] [Mock模式] [{}开启{}] [环境: {}]", ANSI_GREEN, ANSI_RESET, mock.getProfiles());
-            } else {
-                log.info("[API控制] [@ApiMock] [Mock模式] [{}关闭{}]", ANSI_RED, ANSI_RESET);
-            }
-            
-            // 灰度发布控制
-            ApiProperties.GrayConfig gray = apiProperties.getGray();
-            if (gray != null && gray.isEnable()) {
-                log.info("[API控制] [@ApiGray] [灰度发布] [{}开启{}]", ANSI_GREEN, ANSI_RESET);
-            } else {
-                log.info("[API控制] [@ApiGray] [灰度发布] [{}关闭{}]", ANSI_RED, ANSI_RESET);
-            }
-            
+            logControlStatus();
             log.info("[API控制] [注册完成]");
             return new ApiVersionRequestMappingHandlerMapping(apiProperties, environment);
         }
         log.debug("[API控制] 未开启版本/平台控制，使用默认 RequestMappingHandlerMapping");
         return new RequestMappingHandlerMapping();
+    }
+
+    private void logControlStatus() {
+        ApiProperties.Version version = apiProperties.getVersion();
+        if (version != null && version.isEnable()) {
+            log.info("[API控制] [@ApiVersion] [版本控制] [{}开启{}]", ANSI_GREEN, ANSI_RESET);
+        } else {
+            log.info("[API控制] [@ApiVersion] [版本控制] [{}关闭{}]", ANSI_RED, ANSI_RESET);
+        }
+        ApiProperties.Platform platform = apiProperties.getPlatform();
+        if (platform != null && platform.isEnable()) {
+            log.info("[API控制] [@ApiPlatform] [平台控制] [{}开启{}] [平台: {}]", ANSI_GREEN, ANSI_RESET, platform.getPlatformName());
+        } else {
+            log.info("[API控制] [@ApiPlatform] [平台控制] [{}关闭{}]", ANSI_RED, ANSI_RESET);
+        }
+        log.info("[API控制] [@ApiProfile] [环境控制] [{}开启{}]", ANSI_GREEN, ANSI_RESET);
+        ApiProperties.DeprecatedConfig deprecated = apiProperties.getDeprecated();
+        log.info("[API控制] [@ApiDeprecated] [废弃提示] [{}{}{}]",
+                deprecated != null && deprecated.isEnable() ? ANSI_GREEN : ANSI_RED,
+                deprecated != null && deprecated.isEnable() ? "开启" : "关闭", ANSI_RESET);
+        ApiProperties.FeatureConfig feature = apiProperties.getFeature();
+        log.info("[API控制] [@ApiFeature] [功能开关] [{}{}{}]",
+                feature != null && feature.isEnable() ? ANSI_GREEN : ANSI_RED,
+                feature != null && feature.isEnable() ? "开启" : "关闭", ANSI_RESET);
+        ApiProperties.InternalConfig internal = apiProperties.getInternal();
+        log.info("[API控制] [@ApiInternal] [内部接口] [{}{}{}]",
+                internal != null && internal.isEnable() ? ANSI_GREEN : ANSI_RED,
+                internal != null && internal.isEnable() ? "开启" : "关闭", ANSI_RESET);
+        ApiProperties.MockConfig mock = apiProperties.getMock();
+        log.info("[API控制] [@ApiMock] [Mock模式] [{}{}{}]{}",
+                mock != null && mock.isEnable() ? ANSI_GREEN : ANSI_RED,
+                mock != null && mock.isEnable() ? "开启" : "关闭", ANSI_RESET,
+                mock != null && mock.isEnable() ? " [环境: " + mock.getProfiles() + "]" : "");
+        ApiProperties.GrayConfig gray = apiProperties.getGray();
+        log.info("[API控制] [@ApiGray] [灰度发布] [{}{}{}]",
+                gray != null && gray.isEnable() ? ANSI_GREEN : ANSI_RED,
+                gray != null && gray.isEnable() ? "开启" : "关闭", ANSI_RESET);
     }
 
     // ==================== 响应编码配置 ====================

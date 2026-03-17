@@ -84,7 +84,7 @@ public class WebRequest {
             log.debug("[WebRequest白名单]OAuth认证已禁用，直接放行 - URI: {}", uri);
             return true;
         }
-        List<String> whitelist = authProperties.getWhitelist();
+        List<String> whitelist = authProperties.getEffectiveWhitelist();
         if (null == whitelist) {
             log.debug("[WebRequest白名单]白名单为空，需要认证 - URI: {}", uri);
             return false;
@@ -383,6 +383,12 @@ public class WebRequest {
         // 快速获取认证数据
         Cookie[] cookie = getCookie();
         String token = getToken();
+
+        // REFRESH 类型只需要 refreshToken，不需要现有的 accessToken
+        if (upgradeType == UpgradeType.REFRESH && refreshToken != null && !refreshToken.isEmpty()) {
+            return ServiceProvider.of(Protocol.class).getNewExtension(protocol, authProperties).upgrade(cookie, token,
+                    upgradeType, refreshToken);
+        }
 
         // 快速检查是否有可用的认证数据
         if ((cookie == null || cookie.length == 0) && (token == null || token.isEmpty())) {

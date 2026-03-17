@@ -271,7 +271,9 @@ public abstract class AbstractProtocol implements Protocol {
     @Override
     public LoginResult upgrade(Cookie[] cookies, String token, UpgradeType upgradeType, String refreshToken) {
         Cookie cookie = CookieUtil.get(cookies, "x-oauth-cookie");
-        if (!hasValid(cookie, token)) {
+        // REFRESH 类型只需要 refreshToken，不需要现有的 cookie/accessToken
+        boolean isRefresh = upgradeType == UpgradeType.REFRESH && refreshToken != null && !refreshToken.isEmpty();
+        if (!isRefresh && !hasValid(cookie, token)) {
             throw new IllegalArgumentException("认证失败");
         }
         AuthenticationInformation authenticationInformation = upgradeInformation(cookie, token, upgradeType, refreshToken);
@@ -356,7 +358,18 @@ public abstract class AbstractProtocol implements Protocol {
         if (Objects.isNull(data)) {
             unregisterFromRequest(servletRequest);
             log.error("认证失败 ==> {}", returnResult.getMsg());
-            return new AuthenticationInformation(AUTHENTICATION_SERVER_EXCEPTION, null);
+            // 透传服务端的真实错误消息（如"账号/密码不正确"），而非固定的"鉴权服务器异常"
+            // 鉴权路径（verify/oauth）返回 AUTHENTICATION_FAILURE(403)，符合 HTTP 语义
+            // 登录/其他路径返回 AUTHENTICATION_SERVER_EXCEPTION(500)，保持原有行为
+            String oauthUrl = authClientProperties.getOauthUrl();
+            boolean isVerifyPath = path != null && (path.equals(oauthUrl)
+                    || path.endsWith("/verify") || path.endsWith("/oauth"));
+            Information failInformation = isVerifyPath ? AUTHENTICATION_FAILURE : AUTHENTICATION_SERVER_EXCEPTION;
+            AuthenticationInformation failInfo = new AuthenticationInformation(failInformation, null);
+            if (returnResult.getMsg() != null && !returnResult.getMsg().isEmpty()) {
+                failInfo.setErrorMessage(returnResult.getMsg());
+            }
+            return failInfo;
         }
 
         String body;
@@ -385,6 +398,7 @@ public abstract class AbstractProtocol implements Protocol {
             UserResult userResume = Json.fromJson(body, UserResult.class);
             AuthenticationInformation authenticationInformation = new AuthenticationInformation(OK, userResume);
             authenticationInformation.setToken(userResume.getToken());
+            authenticationInformation.setRefreshToken(userResume.getRefreshToken());
             return authenticationInformation;
         }
 

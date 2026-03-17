@@ -1,6 +1,7 @@
 package com.chua.starter.common.support.api.gray;
 import com.chua.common.support.core.utils.StringUtils;
 import com.chua.starter.common.support.api.annotations.ApiGray;
+import com.chua.starter.common.support.utils.IpUtils;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.expression.EvaluationContext;
@@ -37,50 +38,65 @@ public class ApiGrayEvaluator {
     /**
      * 评估请求是否命中灰度
      *
-     * @param apiGray 灰度注解
-     * @param request HTTP请求
-     * @param userId  用户ID
+     * @param apiGray  灰度注解
+     * @param request  HTTP请求
+     * @param userId   用户ID
      * @param username 用户名
+     * @param roles    当前用户角色集合（可为 null）
      * @return 是否命中灰度
      */
-    public boolean evaluate(ApiGray apiGray, HttpServletRequest request, Object userId, String username) {
-        String clientIp = getClientIp(request);
-        
+    public boolean evaluate(ApiGray apiGray, HttpServletRequest request, Object userId, String username,
+                            java.util.Collection<String> roles) {
+        String clientIp = IpUtils.getClientIp(request);
+
         // 1. 检查用户白名单
         if (matchUserWhitelist(apiGray.users(), username)) {
             log.debug("灰度命中: 用户白名单匹配 - user={}", username);
             return true;
         }
-        
-        // 2. 检查IP白名单
+
+        // 2. 检查角色白名单
+        if (matchRoleWhitelist(apiGray.roles(), roles)) {
+            log.debug("灰度命中: 角色白名单匹配 - roles={}", roles);
+            return true;
+        }
+
+        // 3. 检查IP白名单
         if (matchIpWhitelist(apiGray.ips(), clientIp)) {
             log.debug("灰度命中: IP白名单匹配 - ip={}", clientIp);
             return true;
         }
-        
-        // 3. 检查请求头匹配
+
+        // 4. 检查请求头匹配
         if (matchHeaders(apiGray.headers(), request)) {
             log.debug("灰度命中: 请求头匹配");
             return true;
         }
-        
-        // 4. 检查SpEL规则
+
+        // 5. 检查SpEL规则
         if (StringUtils.isNotBlank(apiGray.rule())) {
-            if (evaluateSpelRule(apiGray.rule(), request, userId, username, clientIp)) {
+            if (evaluateSpelRule(apiGray.rule(), request, userId, username, clientIp, roles)) {
                 log.debug("灰度命中: SpEL规则匹配 - rule={}", apiGray.rule());
                 return true;
             }
         }
-        
-        // 5. 检查百分比灰度
+
+        // 6. 检查百分比灰度
         if (apiGray.percentage() > 0) {
             if (matchPercentage(apiGray.percentage(), userId, username, clientIp)) {
                 log.debug("灰度命中: 百分比匹配 - percentage={}%", apiGray.percentage());
                 return true;
             }
         }
-        
+
         return false;
+    }
+
+    /**
+     * 兼容旧调用（无角色参数）
+     */
+    public boolean evaluate(ApiGray apiGray, HttpServletRequest request, Object userId, String username) {
+        return evaluate(apiGray, request, userId, username, null);
     }
 
     /**
@@ -92,6 +108,21 @@ public class ApiGrayEvaluator {
         }
         for (String user : users) {
             if (user.equalsIgnoreCase(username)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 检查角色白名单
+     */
+    private boolean matchRoleWhitelist(String[] roles, java.util.Collection<String> userRoles) {
+        if (roles == null || roles.length == 0 || userRoles == null || userRoles.isEmpty()) {
+            return false;
+        }
+        for (String role : roles) {
+            if (userRoles.stream().anyMatch(r -> r.equalsIgnoreCase(role))) {
                 return true;
             }
         }
@@ -117,19 +148,7 @@ public class ApiGrayEvaluator {
      * IP匹配（支持通配符）
      */
     private boolean matchIp(String clientIp, String pattern) {
-        if (StringUtils.isBlank(clientIp) || StringUtils.isBlank(pattern)) {
-            return false;
-        }
-        // 精确匹配
-        if (clientIp.equals(pattern)) {
-            return true;
-        }
-        // 通配符匹配
-        if (pattern.contains("*")) {
-            String regex = pattern.replace(".", "\\.").replace("*", ".*");
-            return clientIp.matches(regex);
-        }
-        return false;
+        return IpUtils.matchIp(clientIp, pattern);
     }
 
     /**
@@ -162,11 +181,12 @@ public class ApiGrayEvaluator {
     /**
      * 评估SpEL表达式
      */
-    private boolean evaluateSpelRule(String rule, HttpServletRequest request, 
-                                     Object userId, String username, String clientIp) {
+    private boolean evaluateSpelRule(String rule, HttpServletRequest request,
+                                     Object userId, String username, String clientIp,
+                                     java.util.Collection<String> roles) {
         try {
             Expression expression = expressionCache.computeIfAbsent(rule, PARSER::parseExpression);
-            EvaluationContext context = createEvaluationContext(request, userId, username, clientIp);
+            EvaluationContext context = createEvaluationContext(request, userId, username, clientIp, roles);
             Boolean result = expression.getValue(context, Boolean.class);
             return Boolean.TRUE.equals(result);
         } catch (Exception e) {
@@ -178,31 +198,33 @@ public class ApiGrayEvaluator {
     /**
      * 创建SpEL评估上下文
      */
-    private EvaluationContext createEvaluationContext(HttpServletRequest request, 
-                                                       Object userId, String username, String clientIp) {
+    private EvaluationContext createEvaluationContext(HttpServletRequest request,
+                                                       Object userId, String username, String clientIp,
+                                                       java.util.Collection<String> roles) {
         StandardEvaluationContext context = new StandardEvaluationContext();
-        
+
         // 设置变量
         context.setVariable("userId", userId);
         context.setVariable("username", username);
         context.setVariable("ip", clientIp);
+        context.setVariable("roles", roles);
         context.setVariable("request", request);
-        
+
         // 注册方法
         try {
-            context.registerFunction("header", 
+            context.registerFunction("header",
                     ApiGrayEvaluator.class.getDeclaredMethod("getHeader", HttpServletRequest.class, String.class));
-            context.registerFunction("param", 
+            context.registerFunction("param",
                     ApiGrayEvaluator.class.getDeclaredMethod("getParam", HttpServletRequest.class, String.class));
-            context.registerFunction("cookie", 
+            context.registerFunction("cookie",
                     ApiGrayEvaluator.class.getDeclaredMethod("getCookie", HttpServletRequest.class, String.class));
         } catch (NoSuchMethodException e) {
             log.warn("注册SpEL函数失败", e);
         }
-        
+
         // 设置根对象为请求，方便直接访问
-        context.setRootObject(new GrayContext(request, userId, username, clientIp));
-        
+        context.setRootObject(new GrayContext(request, userId, username, clientIp, roles));
+
         return context;
     }
 
@@ -245,29 +267,6 @@ public class ApiGrayEvaluator {
         return sb.toString();
     }
 
-    /**
-     * 获取客户端真实IP
-     */
-    private String getClientIp(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (StringUtils.isBlank(ip) || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("Proxy-Client-IP");
-        }
-        if (StringUtils.isBlank(ip) || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("WL-Proxy-Client-IP");
-        }
-        if (StringUtils.isBlank(ip) || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("X-Real-IP");
-        }
-        if (StringUtils.isBlank(ip) || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getRemoteAddr();
-        }
-        if (ip != null && ip.contains(",")) {
-            ip = ip.split(",")[0].trim();
-        }
-        return ip;
-    }
-
     // ==================== SpEL 辅助方法 ====================
 
     /**
@@ -302,18 +301,23 @@ public class ApiGrayEvaluator {
     /**
      * 灰度上下文（SpEL 根对象）
      */
-    public record GrayContext(HttpServletRequest request, Object userId, String username, String ip) {
-        
+    public record GrayContext(HttpServletRequest request, Object userId, String username, String ip,
+                              java.util.Collection<String> roles) {
+
         public String header(String name) {
             return request.getHeader(name);
         }
-        
+
         public String param(String name) {
             return request.getParameter(name);
         }
-        
+
         public String cookie(String name) {
             return getCookie(request, name);
+        }
+
+        public boolean hasRole(String role) {
+            return roles != null && roles.stream().anyMatch(r -> r.equalsIgnoreCase(role));
         }
     }
 }

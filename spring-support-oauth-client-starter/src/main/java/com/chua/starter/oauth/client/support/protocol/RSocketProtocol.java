@@ -151,7 +151,9 @@ public class RSocketProtocol extends AbstractProtocol {
         jsonObject.put("x-oauth-secret-key", authClientProperties.getKey().getSecretKey());
         jsonObject.put("x-oauth-username", username);
         jsonObject.put("x-oauth-password", password);
-        jsonObject.put("x-oauth-auth-type", authType);
+        String authTypeCode = (authType == null || authType == com.chua.starter.oauth.client.support.enums.AuthType.NONE)
+                ? "WEB" : authType.getCode().toUpperCase();
+        jsonObject.put("x-oauth-auth-type", authTypeCode);
         jsonObject.put("x-oauth-ext", ext);
 
         AuthenticationInformation information = sendRSocketRequest("login", jsonObject, null);

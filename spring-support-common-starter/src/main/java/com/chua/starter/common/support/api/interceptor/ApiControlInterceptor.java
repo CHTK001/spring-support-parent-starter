@@ -13,6 +13,7 @@ import com.chua.starter.common.support.api.annotations.ApiMock;
 import com.chua.starter.common.support.api.feature.ApiFeatureManager;
 import com.chua.starter.common.support.api.gray.ApiGrayEvaluator;
 import com.chua.starter.common.support.api.properties.ApiProperties;
+import com.chua.starter.common.support.utils.IpUtils;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -59,23 +60,6 @@ public class ApiControlInterceptor implements HandlerInterceptor {
     private final ApiFeatureManager featureManager;
     private final ApiGrayEvaluator grayEvaluator = new ApiGrayEvaluator();
 
-    /**
-     * 内网IP正则表达式（预编译）
-     * <p>
-     * 支持的内网IP范围：
-     * - 127.0.0.0/8 (Loopback)
-     * - 10.0.0.0/8 (Private Network)
-     * - 172.16.0.0/12 (Private Network)
-     * - 192.168.0.0/16 (Private Network)
-     * - ::1 (IPv6 Loopback)
-     * - fc00::/7 (IPv6 Unique Local Address)
-     * - fe80::/10 (IPv6 Link-Local)
-     * </p>
-     */
-    private static final Pattern PRIVATE_IP_PATTERN = Pattern.compile(
-            "^(127\\.)|(10\\.)|(172\\.(1[6-9]|2[0-9]|3[0-1])\\.)|(192\\.168\\.)|(::1)|(fc00:)|(fe80:)$"
-    );
-    
     /**
      * 语义化版本正则（预编译）
      */
@@ -143,11 +127,11 @@ public class ApiControlInterceptor implements HandlerInterceptor {
             request.setAttribute(ATTR_SKIP_AUTH, true);
         }
 
-        String clientIp = getClientIp(request);
+        String clientIp = IpUtils.getClientIp(request);
         log.debug("内部接口访问检查: uri={}, clientIp={}", request.getRequestURI(), clientIp);
 
         // 检查是否允许内网IP
-        if (apiInternal.allowPrivateNetwork() && isPrivateIp(clientIp)) {
+        if (apiInternal.allowPrivateNetwork() && IpUtils.isPrivateIp(clientIp)) {
             log.debug("内网IP访问内部接口: {}", clientIp);
             return true;
         }
@@ -156,7 +140,7 @@ public class ApiControlInterceptor implements HandlerInterceptor {
         String[] allowedIps = apiInternal.allowedIps();
         if (allowedIps.length > 0) {
             for (String allowedIp : allowedIps) {
-                if (matchIp(clientIp, allowedIp)) {
+                if (IpUtils.matchIp(clientIp, allowedIp)) {
                     log.debug("白名单IP访问内部接口: {}", clientIp);
                     return true;
                 }
@@ -195,104 +179,6 @@ public class ApiControlInterceptor implements HandlerInterceptor {
         log.warn("非内网IP访问内部接口被拒绝: uri={}, clientIp={}", request.getRequestURI(), clientIp);
         writeResponse(response, apiInternal.status(), ReturnResult.error(apiInternal.message()));
         return false;
-    }
-
-    /**
-     * 获取客户端真实IP
-     */
-    private String getClientIp(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (StringUtils.isBlank(ip) || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("Proxy-Client-IP");
-        }
-        if (StringUtils.isBlank(ip) || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("WL-Proxy-Client-IP");
-        }
-        if (StringUtils.isBlank(ip) || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("X-Real-IP");
-        }
-        if (StringUtils.isBlank(ip) || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getRemoteAddr();
-        }
-        // 多个代理时取第一个IP
-        if (ip != null && ip.contains(",")) {
-            ip = ip.split(",")[0].trim();
-        }
-        return ip;
-    }
-
-    /**
-     * 判断是否为内网IP
-     */
-    private boolean isPrivateIp(String ip) {
-        if (StringUtils.isBlank(ip)) {
-            return false;
-        }
-        // localhost
-        if ("localhost".equalsIgnoreCase(ip)) {
-            return true;
-        }
-        return PRIVATE_IP_PATTERN.matcher(ip).find();
-    }
-
-    /**
-     * 匹配IP（支持CIDR格式）
-     */
-    private boolean matchIp(String clientIp, String pattern) {
-        if (StringUtils.isBlank(clientIp) || StringUtils.isBlank(pattern)) {
-            return false;
-        }
-        // 精确匹配
-        if (clientIp.equals(pattern)) {
-            return true;
-        }
-        // 简单通配符匹配（如 192.168.1.*）
-        if (pattern.contains("*")) {
-            String regex = pattern.replace(".", "\\.").replace("*", ".*");
-            return clientIp.matches(regex);
-        }
-        // CIDR格式匹配（如 192.168.1.0/24）
-        if (pattern.contains("/")) {
-            return matchCidr(clientIp, pattern);
-        }
-        return false;
-    }
-
-    /**
-     * CIDR格式IP匹配
-     */
-    private boolean matchCidr(String ip, String cidr) {
-        try {
-            String[] parts = cidr.split("/");
-            if (parts.length != 2) {
-                return false;
-            }
-            String baseIp = parts[0];
-            int prefixLength = Integer.parseInt(parts[1]);
-
-            long ipLong = ipToLong(ip);
-            long baseIpLong = ipToLong(baseIp);
-            long mask = -1L << (32 - prefixLength);
-
-            return (ipLong & mask) == (baseIpLong & mask);
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    /**
-     * IP转长整型
-     */
-    private long ipToLong(String ip) {
-        String[] parts = ip.split("\\.");
-        if (parts.length != 4) {
-            return 0;
-        }
-        long result = 0;
-        for (String part : parts) {
-            result = result * 256 + Integer.parseInt(part);
-        }
-        return result;
     }
 
     /**
@@ -462,8 +348,11 @@ public class ApiControlInterceptor implements HandlerInterceptor {
             username = (String) session.getAttribute("username");
         }
 
+        // 获取角色信息
+        java.util.Collection<String> roles = resolveRoles(request, session);
+
         // 评估灰度规则
-        boolean hitGray = grayEvaluator.evaluate(apiGray, request, userId, username);
+        boolean hitGray = grayEvaluator.evaluate(apiGray, request, userId, username, roles);
 
         if (hitGray) {
             // 命中灰度，添加响应头并继续执行
@@ -507,6 +396,29 @@ public class ApiControlInterceptor implements HandlerInterceptor {
      */
     private boolean isGrayEnabled() {
         return apiProperties.getGray() != null && apiProperties.getGray().isEnable();
+    }
+
+    /**
+     * 从 request/session 中解析当前用户角色
+     * <p>
+     * 支持 Collection&lt;String&gt; 或逗号分隔字符串两种存储形式，
+     * 属性名为 "roles"，优先从 request attribute 取，其次从 session 取。
+     * </p>
+     */
+    @SuppressWarnings("unchecked")
+    private java.util.Collection<String> resolveRoles(HttpServletRequest request,
+                                                       jakarta.servlet.http.HttpSession session) {
+        Object raw = request.getAttribute("roles");
+        if (raw == null && session != null) {
+            raw = session.getAttribute("roles");
+        }
+        if (raw instanceof java.util.Collection) {
+            return (java.util.Collection<String>) raw;
+        }
+        if (raw instanceof String str && !str.isBlank()) {
+            return java.util.Arrays.asList(str.split(","));
+        }
+        return java.util.Collections.emptyList();
     }
 
     /**
