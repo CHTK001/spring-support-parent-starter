@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-parent-starter</artifactId>
+        <version>4.0.0.37</version>
+    </parent>
+
+    <artifactId>spring-support-email-starter</artifactId>
+    <packaging>jar</packaging>
+
+    <name>Spring Support Email Starter</name>
+    <description>
+        Spring Boot 邮箱收发管理模块，提供完整的邮箱收发 REST API 接口。
+        
+        主要特性：
+        - 📧 邮件收发接口
+        - 📥 邮件列表查询
+        - 📁 文件夹管理
+        - 👤 邮箱账户管理
+        - 🔍 邮件搜索
+        - 📎 附件处理
+        - 🔔 WebSocket 实时推送
+    </description>
+
+    <dependencies>
+        <!-- Spring Boot Web -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- Spring Boot WebSocket -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
+
+        <!-- 邮件核心模块 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-email-starter</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
+
+        <!-- 通用工具模块 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-common-starter</artifactId>
+        </dependency>
+
+        <!-- Swagger API 文档 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-swagger-starter</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

@@ -138,6 +138,9 @@
         <!-- 消息推送模块 -->
         <module>spring-support-message-starter</module>               <!-- 消息推送集成 -->
 
+        <!-- 邮箱管理模块 -->
+        <module>spring-support-email-starter</module>                 <!-- 邮箱收发管理 -->
+
         <!-- API网关模块 -->
         <module>spring-support-gateway-starter</module>
         <module>spring-support-sync-data-starter</module>         <!-- API网关 -->
