@@ -589,7 +589,13 @@ public class AuthClientExecute {
         if (approve.getInformation().getCode() != 200) {
             return null;
         }
-        UserResult userResult = BeanUtils.copyProperties(approve.getReturnResult(), UserResult.class);
+        UserResume returnResult = approve.getReturnResult();
+        UserResult userResult;
+        if (returnResult instanceof UserResult ur) {
+            userResult = ur;
+        } else {
+            userResult = BeanUtils.copyProperties(returnResult, UserResult.class);
+        }
         CACHE.put(token, Value.of(userResult));
         return userResult;
     }

@@ -162,8 +162,12 @@ public class RSocketProtocol extends AbstractProtocol {
         loginAuthResult.setCode(information.getInformation().getCode());
         loginAuthResult.setMessage(information.getInformation().getMessage());
         loginAuthResult.setUserResume(information.getReturnResult());
-        loginAuthResult.setToken(information.getToken());
-        loginAuthResult.setRefreshToken(information.getRefreshToken());
+        if (information.getToken() != null) {
+            loginAuthResult.setToken(information.getToken());
+        }
+        if (information.getRefreshToken() != null) {
+            loginAuthResult.setRefreshToken(information.getRefreshToken());
+        }
         return loginAuthResult;
     }
 
@@ -246,8 +250,15 @@ public class RSocketProtocol extends AbstractProtocol {
             }
 
             // 解析响应
-            JsonObject responseMeta = Json.fromJson(responseMetadata, JsonObject.class);
-            String responseSerial = responseMeta != null ? responseMeta.getString("x-oauth-response-serial") : null;
+            String responseSerial = null;
+            if (responseMetadata != null && !responseMetadata.isEmpty()) {
+                try {
+                    JsonObject responseMeta = Json.fromJson(responseMetadata, JsonObject.class);
+                    responseSerial = responseMeta != null ? responseMeta.getString("x-oauth-response-serial") : null;
+                } catch (Exception ignored) {
+                    // metadata 解析失败时忽略，responseSerial 保持 null
+                }
+            }
 
             return createAuthenticationInformation(
                     Json.fromJson(responseBody, ReturnResult.class),

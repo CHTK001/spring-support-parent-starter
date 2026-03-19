@@ -178,7 +178,7 @@ public class ArmeriaProtocol extends AbstractProtocol {
         jsonObject.put("x-oauth-refresh-token", refreshToken);
         jsonObject.put("x-oauth-upgrade-type", upgradeType.name().toUpperCase());
         
-        AuthenticationInformation authenticationInformation = createAuthenticationInformation(jsonObject, upgradeType, "upgrade");
+        AuthenticationInformation authenticationInformation = createAuthenticationInformation(jsonObject, upgradeType, authClientProperties.getUpgradePage());
         if (authenticationInformation.getInformation() == Information.OK) {
             if (upgradeType == UpgradeType.VERSION) {
                 com.chua.starter.oauth.client.support.execute.AuthSessionUtils.removeUserInfo();
@@ -186,6 +186,13 @@ public class ArmeriaProtocol extends AbstractProtocol {
                 if (hasCache(cacheKey)) {
                     clearAuthenticationInformation(cacheKey);
                 }
+            } else if (upgradeType == UpgradeType.REFRESH) {
+                // REFRESH: 旧 AT 已失效，必须清除客户端缓存，防止旧 AT 仍能命中缓存
+                String cacheKey = getCacheKey(new Cookie[]{cookie}, token);
+                if (hasCache(cacheKey)) {
+                    clearAuthenticationInformation(cacheKey);
+                }
+                invalidateCache(token);
             }
         }
         return authenticationInformation;
@@ -242,6 +249,29 @@ public class ArmeriaProtocol extends AbstractProtocol {
             return LoginAuthResult.OK;
         }
         throw new AuthException(information.getInformation().getMessage());
+    }
+
+    @Override
+    public LoginAuthResult createTemporaryToken(String sourceToken, Map<String, Object> ext) {
+        JsonObject jsonObject = new JsonObject();
+        jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
+        jsonObject.put("x-oauth-secret-key", authClientProperties.getKey().getSecretKey());
+        jsonObject.put("x-oauth-source-token", sourceToken);
+        jsonObject.put("x-oauth-ext", ext);
+
+        AuthenticationInformation information = createAuthenticationInformation(
+                jsonObject, null, authClientProperties.getTemporaryTokenPage());
+
+        LoginAuthResult result = new LoginAuthResult();
+        result.setCode(information.getInformation().getCode());
+        String msg = information.getErrorMessage() != null
+                ? information.getErrorMessage() : information.getInformation().getMessage();
+        result.setMessage(msg);
+        if (information.getInformation() == Information.OK) {
+            result.setToken(information.getToken());
+            result.setUserResume(information.getReturnResult());
+        }
+        return result;
     }
 
     @Override

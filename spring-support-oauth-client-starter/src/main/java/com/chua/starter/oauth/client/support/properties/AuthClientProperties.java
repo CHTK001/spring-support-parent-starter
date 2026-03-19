@@ -168,6 +168,10 @@ public class AuthClientProperties {
      */
     private String temporaryTokenPage = "/temporary-token";
     /**
+     * 升级页
+     */
+    private String upgradePage = "/upgrade";
+    /**
      * 鉴权地址
      */
     private String oauthUrl = "/verify";

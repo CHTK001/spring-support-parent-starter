@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: payment-test
+  
+  # 数据源配置（H2内存数据库用于测试）
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: 
+  
+  # H2控制台
+  h2:
+    console:
+      enabled: true
+  
+  # JPA配置
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  
+  # Redis配置（使用嵌入式Redis用于测试）
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
+
+# MyBatis Plus配置
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# 日志配置
+logging:
+  level:
+    com.chua.payment.support: DEBUG
+    org.springframework.statemachine: DEBUG

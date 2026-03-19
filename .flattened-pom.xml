@@ -79,7 +79,7 @@
     <module>spring-support-report-client-starter</module>
     <module>spring-support-report-client-arthas-starter</module>
     <module>spring-support-tencent-starter</module>
-    <module>spring-support-pay-client-starter</module>
+    <module>spring-support-payment-starter</module>
     <module>spring-support-strategy-starter</module>
     <module>spring-support-shell-starter</module>
     <module>spring-support-ssh-starter</module>
@@ -397,7 +397,7 @@
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
-        <artifactId>spring-support-pay-client-starter</artifactId>
+        <artifactId>spring-support-payment-starter</artifactId>
         <version>4.0.0.37</version>
       </dependency>
       <dependency>

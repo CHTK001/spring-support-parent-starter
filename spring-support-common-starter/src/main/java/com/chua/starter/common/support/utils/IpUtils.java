@@ -3,6 +3,8 @@ package com.chua.starter.common.support.utils;
 import com.chua.common.support.core.utils.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.regex.Pattern;
 
 /**
@@ -83,6 +85,33 @@ public final class IpUtils {
             return matchCidr(clientIp, pattern);
         }
         return false;
+    }
+
+    /**
+     * 根据 User-Agent 字符串生成浏览器指纹（SHA-256 前 32 位十六进制）
+     * <p>
+     * 当客户端未上报真实指纹时，可用 UA 作为 fallback 生成一个稳定的伪指纹。
+     * 同一 UA 每次生成结果相同，可用于日志关联，但安全性低于真实指纹。
+     * </p>
+     *
+     * @param userAgent User-Agent 字符串
+     * @return 32 位十六进制指纹，UA 为空时返回 null
+     */
+    public static String fingerprintFromUserAgent(String userAgent) {
+        if (StringUtils.isBlank(userAgent)) {
+            return null;
+        }
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(userAgent.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder(32);
+            for (int i = 0; i < 16; i++) {
+                sb.append(String.format("%02x", hash[i]));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     // ---- private helpers ----

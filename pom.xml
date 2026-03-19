@@ -120,7 +120,7 @@
         <module>spring-support-report-client-arthas-starter</module>   <!-- 上报客户端 Arthas集成 -->
 
         <module>spring-support-tencent-starter</module>         <!-- 腾讯云服务集成 -->
-        <module>spring-support-pay-client-starter</module>
+        <module>spring-support-payment-starter</module>
 
         <!-- 容错和稳定性模块 -->
         <module>spring-support-strategy-starter</module>
@@ -512,7 +512,7 @@
             
             <dependency>
                 <groupId>com.chua</groupId>
-                <artifactId>spring-support-pay-client-starter</artifactId>
+                <artifactId>spring-support-payment-starter</artifactId>
                 <version>4.0.0.37</version>
             </dependency>
             

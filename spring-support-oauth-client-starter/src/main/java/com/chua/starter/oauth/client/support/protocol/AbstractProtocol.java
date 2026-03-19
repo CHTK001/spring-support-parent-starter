@@ -321,8 +321,8 @@ public abstract class AbstractProtocol implements Protocol {
 
         String body;
         if (ReturnCode.OK.getCode().equals(code)) {
-            // 根据加密配置决定是否解密
-            if (authClientProperties.isEnableEncryption()) {
+            // 根据加密配置决定是否解密（key 为 null 时说明服务端未加密响应，直接用原始数据）
+            if (authClientProperties.isEnableEncryption() && key != null) {
                 body = Codec.build(encryption, key).decodeHex(data.toString());
             } else {
                 body = data.toString();
@@ -350,20 +350,20 @@ public abstract class AbstractProtocol implements Protocol {
             if (null != servletRequest) {
                 unregisterFromRequest(servletRequest);
             }
-            log.error("认证失败 ==> {}", returnResult.getMsg());
+            log.warn("认证失败 ==> {}", returnResult.getMsg());
             return new AuthenticationInformation(AUTHENTICATION_FAILURE, null);
         }
 
         Object data = returnResult.getData();
         if (Objects.isNull(data)) {
             unregisterFromRequest(servletRequest);
-            log.error("认证失败 ==> {}", returnResult.getMsg());
+            log.warn("认证失败 ==> {}", returnResult.getMsg());
             // 透传服务端的真实错误消息（如"账号/密码不正确"），而非固定的"鉴权服务器异常"
             // 鉴权路径（verify/oauth）返回 AUTHENTICATION_FAILURE(403)，符合 HTTP 语义
             // 登录/其他路径返回 AUTHENTICATION_SERVER_EXCEPTION(500)，保持原有行为
             String oauthUrl = authClientProperties.getOauthUrl();
             boolean isVerifyPath = path != null && (path.equals(oauthUrl)
-                    || path.endsWith("/verify") || path.endsWith("/oauth"));
+                    || path.endsWith("/verify") || path.endsWith("/oauth") || path.equals("oauth"));
             Information failInformation = isVerifyPath ? AUTHENTICATION_FAILURE : AUTHENTICATION_SERVER_EXCEPTION;
             AuthenticationInformation failInfo = new AuthenticationInformation(failInformation, null);
             if (returnResult.getMsg() != null && !returnResult.getMsg().isEmpty()) {
@@ -374,8 +374,8 @@ public abstract class AbstractProtocol implements Protocol {
 
         String body;
         if (ReturnCode.OK.getCode().equals(code)) {
-            // 根据加密配置决定是否解密
-            if (authClientProperties.isEnableEncryption()) {
+            // 根据加密配置决定是否解密（key 为 null 时说明服务端未加密响应，直接用原始数据）
+            if (authClientProperties.isEnableEncryption() && key != null) {
                 body = Codec.build(encryption, key).decodeHex(data.toString());
             } else {
                 body = data.toString();
@@ -395,6 +395,14 @@ public abstract class AbstractProtocol implements Protocol {
                 unregisterFromRequest(servletRequest);
                 return new AuthenticationInformation(Information.OK, null);
             }
+
+            // temporary-token 路径：服务端返回的 data 是 token 字符串
+            if(path.endsWith("temporary-token")) {
+                AuthenticationInformation authenticationInformation = new AuthenticationInformation(OK, null);
+                authenticationInformation.setToken(body);
+                return authenticationInformation;
+            }
+
             UserResult userResume = Json.fromJson(body, UserResult.class);
             AuthenticationInformation authenticationInformation = new AuthenticationInformation(OK, userResume);
             authenticationInformation.setToken(userResume.getToken());
