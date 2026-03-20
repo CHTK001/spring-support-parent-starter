@@ -40,7 +40,7 @@ public class SyncMonitorServiceImpl implements SyncMonitorService {
     public Map<String, Object> collectRealtimeData(Long taskId) {
         Map<String, Object> data = new HashMap<>();
         
-        MonitorSyncTask task = taskMapper.selectById(taskId);
+        MonitorSyncTask task = taskMapper.selectCompatibleById(taskId);
         if (task == null) {
             return data;
         }

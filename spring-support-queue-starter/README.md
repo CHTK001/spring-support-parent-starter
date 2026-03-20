@@ -1,183 +1,122 @@
-# Spring Support Queue Starter
+# Spring Support Queue Starter 完整增强文档
 
-[![Maven Central](https://img.shields.io/maven-central/v/com.chua/spring-support-queue-starter.svg)](https://search.maven.org/artifact/com.chua/spring-support-queue-starter)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+## 概述
 
-## 📖 模块简介
+spring-support-queue-starter 是一个统一的消息队列抽象层，支持多种消息队列实现（Kafka、RabbitMQ、RocketMQ、MQTT、Local），并提供了丰富的企业级特性。
 
-Spring Support Queue Starter 是一个消息队列抽象模块，提供统一的消息队列接口，支持多种消息队列实现（RabbitMQ、Kafka、RocketMQ、MQTT）的无缝切换。
+## 核心特性
 
-### ✨ 主要特性
+### 1. 事件驱动架构支持
+### 2. 消息拦截器（Interceptor）
+### 3. 消息过滤器（Filter）
+### 4. 消息转换器（Converter）
+### 5. 重试策略（Retry Policy）
+### 6. 死信队列（Dead Letter Queue）
+### 7. 事务消息（Transactional Message）
 
-- 🔌 **统一接口** - 提供统一的消息发送和接收接口
-- 🔄 **多实现支持** - 支持RabbitMQ、Kafka、RocketMQ、MQTT
-- 💀 **死信队列** - 支持死信队列配置
-- 📊 **消息追踪** - 消息发送和消费日志追踪
-- ⚙️ **灵活配置** - 丰富的配置选项
+详细文档请查看 [QUEUE_ENHANCEMENT.md](./QUEUE_ENHANCEMENT.md)
 
-## 🚀 快速开始
+## 快速开始
 
-### Maven 依赖
+### 1. 添加依赖
 
 ```xml
-<!-- 队列抽象模块 -->
 <dependency>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-queue-starter</artifactId>
-    <version>4.0.0.33-SNAPSHOT</version>
-</dependency>
-
-<!-- 根据需要选择具体实现 -->
-<!-- RabbitMQ实现 -->
-<dependency>
-    <groupId>com.chua</groupId>
-    <artifactId>spring-support-queue-rabbitmq-starter</artifactId>
-    <version>4.0.0.33-SNAPSHOT</version>
-</dependency>
-
-<!-- 或者 Kafka实现 -->
-<dependency>
-    <groupId>com.chua</groupId>
-    <artifactId>spring-support-queue-kafka-starter</artifactId>
-    <version>4.0.0.33-SNAPSHOT</version>
-</dependency>
-
-<!-- 或者 RocketMQ实现 -->
-<dependency>
-    <groupId>com.chua</groupId>
-    <artifactId>spring-support-queue-rocketmq-starter</artifactId>
-    <version>4.0.0.33-SNAPSHOT</version>
-</dependency>
-
-<!-- 或者 MQTT实现 -->
-<dependency>
-    <groupId>com.chua</groupId>
-    <artifactId>spring-support-queue-mqtt-starter</artifactId>
-    <version>4.0.0.33-SNAPSHOT</version>
+    <version>1.0.0</version>
 </dependency>
 ```
 
-## ⚙️ 配置说明
-
-### 通用队列配置
-
-**配置前缀**: `plugin.queue`
-
-| 参数名 | 类型 | 默认值 | 说明 |
-|------|------|------|------|
-| `enable` | Boolean | false | 是否启用消息队列 |
-| `type` | String | rabbitmq | 队列类型：rabbitmq, kafka, rocketmq, mqtt |
-
-### 死信队列配置
-
-**配置前缀**: `plugin.queue.dead-letter`
-
-| 参数名 | 类型 | 默认值 | 说明 |
-|------|------|------|------|
-| `enabled` | Boolean | false | 是否启用死信队列 |
-| `exchange` | String | - | 死信交换机 |
-| `routing-key` | String | - | 死信路由键 |
-| `queue` | String | - | 死信队列 |
-| `ttl` | Long | 86400000 | 消息存活时间（毫秒） |
-
-### 配置示例
+### 2. 配置
 
 ```yaml
 plugin:
   queue:
     enable: true
-    type: rabbitmq  # 选择消息队列类型
-    
-    # 死信队列配置
-    dead-letter:
-      enabled: true
-      exchange: dlx.exchange
-      routing-key: dlx.routing.key
-      queue: dlx.queue
-      ttl: 86400000  # 24小时
+    type: local  # 或 kafka, rabbitmq, rocketmq, mqtt
 ```
 
-## 📝 使用示例
-
-### 发送消息
+### 3. 使用
 
 ```java
-@Service
-public class OrderService {
+// 定义事件
+@EventToQueue("payment.order.created")
+public class OrderCreatedEvent extends ApplicationEvent {
+    // ...
+}
 
-    @Autowired
-    private QueueTemplate queueTemplate;
-    
-    public void createOrder(Order order) {
-        // 保存订单
-        orderRepository.save(order);
-        
-        // 发送订单创建消息
-        queueTemplate.send("order.created", order);
-    }
-    
-    public void sendDelayedMessage(Order order) {
-        // 发送延迟消息（30秒后处理）
-        queueTemplate.send("order.timeout.check", order, 30000);
-    }
+// 发布事件（自动发送到队列）
+eventPublisher.publishEvent(new OrderCreatedEvent(...));
+
+// 接收事件
+@QueueEventListener(value = "payment.order.created", eventType = OrderCreatedEvent.class)
+public void handleOrderCreated(OrderCreatedEvent event) {
+    // 处理事件
 }
 ```
 
-### 接收消息
+## 新增功能
 
-```java
-@Service
-public class OrderMessageListener {
+### 事件自动转队列
+- @EventToQueue: 标注在ApplicationEvent类上，自动将事件发送到队列
+- @QueueEventListener: 从队列接收消息并自动转换为ApplicationEvent
+- ApplicationEventToQueueListener: 自动监听所有标注了@EventToQueue的事件
 
-    @QueueListener(queue = "order.created")
-    public void handleOrderCreated(Order order) {
-        log.info("收到订单创建消息: {}", order);
-        // 处理订单创建逻辑
-        notificationService.sendOrderConfirmation(order);
-    }
-    
-    @QueueListener(queue = "order.timeout.check")
-    public void handleOrderTimeout(Order order) {
-        log.info("检查订单超时: {}", order);
-        // 检查订单支付状态
-        if (!order.isPaid()) {
-            orderService.cancelOrder(order.getId());
-        }
-    }
-}
-```
+### 消息拦截器
+- MessageInterceptor: 拦截器接口
+- LoggingMessageInterceptor: 日志记录拦截器
+- MetricsMessageInterceptor: 性能监控拦截器
 
-## 🔗 具体实现模块
+### 消息过滤器
+- MessageFilter: 过滤器接口
+- DuplicateMessageFilter: 消息去重过滤器
 
-### RabbitMQ 实现
-- [spring-support-queue-rabbitmq-starter](../spring-support-queue-rabbitmq-starter/README.md)
-- 支持Exchange、Queue、Binding配置
-- 支持死信队列、延迟消息
-- 支持消息确认机制
+### 消息转换器
+- MessageConverter: 转换器接口
+- GzipMessageConverter: GZIP压缩转换器
 
-### Kafka 实现
-- [spring-support-queue-kafka-starter](../spring-support-queue-kafka-starter/README.md)
-- 支持分区、副本配置
-- 支持消费组管理
-- 支持事务消息
+### 重试和死信
+- RetryPolicy: 重试策略配置
+- @DeadLetterListener: 死信队列监听注解
 
-### RocketMQ 实现
-- [spring-support-queue-rocketmq-starter](../spring-support-queue-rocketmq-starter/README.md)
-- 支持顺序消息
-- 支持延迟消息
-- 支持事务消息
+### 事务消息
+- TransactionalMessageTemplate: 事务消息模板，支持在Spring事务提交后发送消息
 
-### MQTT 实现
-- [spring-support-queue-mqtt-starter](../spring-support-queue-mqtt-starter/README.md)
-- 支持QoS配置
-- 支持主题订阅
-- 适用于物联网场景
+## 文件清单
 
-## 🔗 相关链接
+### 注解
+- EventToQueue.java
+- QueueEventListener.java
+- DeadLetterListener.java
 
-- [返回主文档](../README.md)
-- [配置示例文件](../application-example.yml)
+### 拦截器
+- MessageInterceptor.java
+- LoggingMessageInterceptor.java
+- MetricsMessageInterceptor.java
 
-## 📄 许可证
+### 过滤器
+- MessageFilter.java
+- DuplicateMessageFilter.java
 
-本项目采用 [Apache License 2.0](../LICENSE) 许可证。
+### 转换器
+- MessageConverter.java
+- GzipMessageConverter.java
+
+### 重试和事务
+- RetryPolicy.java
+- TransactionalMessageTemplate.java
+
+### 监听器
+- ApplicationEventToQueueListener.java
+
+## 最佳实践
+
+1. 使用事务消息确保消息发送与数据库操作的一致性
+2. 启用消息去重防止重复消息处理
+3. 配置死信队列处理失败消息
+4. 使用消息压缩减少网络传输成本
+5. 监控性能指标及时发现问题
+6. 合理设置并发数提高处理效率
+7. 实现幂等性确保消息处理的正确性
+8. 添加消息签名确保消息安全性

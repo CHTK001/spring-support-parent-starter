@@ -6,6 +6,7 @@ import com.chua.common.support.sync.SyncFlow;
 import com.chua.common.support.sync.Input;
 import com.chua.common.support.sync.Output;
 import com.chua.common.support.core.utils.StringUtils;
+import com.chua.starter.sync.data.support.sync.sink.InMemorySyncSink;
 import com.chua.starter.job.support.handler.JobHandler;
 import com.chua.starter.job.support.log.DefaultJobLog;
 import com.chua.starter.job.support.thread.JobContext;
@@ -114,6 +115,8 @@ public abstract class DynamicSyncTaskHandler implements JobHandler {
             builder.addOutput(output);
         }
 
+        builder.sink(new InMemorySyncSink(resolveSinkCapacity(config.getBatchSize())));
+
         if (config.getBatchSize() != null) {
             builder.batchSize(config.getBatchSize());
         }
@@ -129,6 +132,10 @@ public abstract class DynamicSyncTaskHandler implements JobHandler {
     private Output createOutput(String type, Map<String, Object> config) {
         ServiceProvider<Output> provider = ServiceProvider.of(Output.class);
         return provider.getNewExtension(type, config != null ? config : new HashMap<>());
+    }
+
+    private int resolveSinkCapacity(Integer batchSize) {
+        return Math.max(batchSize != null ? batchSize * 4 : 1000, 1000);
     }
 
     /**

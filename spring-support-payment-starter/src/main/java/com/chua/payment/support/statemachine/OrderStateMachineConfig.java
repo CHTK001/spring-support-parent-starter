@@ -85,6 +85,11 @@ public class OrderStateMachineConfig extends EnumStateMachineConfigurerAdapter<O
                 // 待支付 → 已取消
                 .withExternal()
                 .source(OrderState.PENDING).target(OrderState.CANCELLED)
+                .event(OrderEvent.CANCEL)
+                .and()
+                // 支付中 → 已取消
+                .withExternal()
+                .source(OrderState.PAYING).target(OrderState.CANCELLED)
                 .event(OrderEvent.CANCEL);
     }
 }

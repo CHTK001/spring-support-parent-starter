@@ -57,4 +57,16 @@ public enum OrderState {
     public String getDescription() {
         return description;
     }
+
+    public static String descriptionOf(String code) {
+        if (code == null) {
+            return "";
+        }
+        for (OrderState value : values()) {
+            if (value.name().equalsIgnoreCase(code)) {
+                return value.description;
+            }
+        }
+        return "";
+    }
 }

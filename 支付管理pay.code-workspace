@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../utils-support-parent-starter"
+		},
+		{
+			"path": "../vue-support-parent-starter"
+		}
+	]
+}

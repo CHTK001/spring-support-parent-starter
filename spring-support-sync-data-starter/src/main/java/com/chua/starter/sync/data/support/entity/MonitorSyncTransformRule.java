@@ -22,7 +22,10 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true)
 @Schema(description = "数据转换规则")
 @Data
-@TableName(value = "monitor_sync_transform_rule")
+@TableName(
+        value = "monitor_sync_transform_rule",
+        excludeProperty = {"createName", "createBy", "createTime", "updateName", "updateBy", "updateTime"}
+)
 public class MonitorSyncTransformRule extends SysBase {
 
     @TableId(value = "rule_id", type = IdType.AUTO)

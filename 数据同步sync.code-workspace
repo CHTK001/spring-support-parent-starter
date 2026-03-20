@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../tep"
+		},
+		{
+			"path": "../utils-support-parent-starter"
+		},
+		{
+			"path": "../vue-support-parent-starter"
+		}
+	]
+}

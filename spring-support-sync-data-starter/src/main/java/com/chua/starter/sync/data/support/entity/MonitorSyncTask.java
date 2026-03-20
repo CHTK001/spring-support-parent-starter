@@ -22,7 +22,12 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true)
 @Schema(description = "同步任务")
 @Data
-@TableName(value = "monitor_sync_task")
+@TableName(
+        value = "monitor_sync_task",
+        excludeProperty = {
+                "createName", "createBy", "createTime", "updateName", "updateBy", "updateTime"
+        }
+)
 public class MonitorSyncTask extends SysBase {
 
     /**

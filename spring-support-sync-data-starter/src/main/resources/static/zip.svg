@@ -1,0 +1,23 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景矩形 -->
+  <rect x="2" y="2" width="20" height="20" rx="3" fill="#4CAF50" opacity="0.2"/>
+  
+  <!-- 文件轮廓 -->
+  <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" 
+        fill="#FAFAFA" stroke="#4CAF50" stroke-width="1.5" stroke-linejoin="round"/>
+  
+  <!-- 折角效果 -->
+  <path d="M14 2V8H20" stroke="#4CAF50" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- ZIP文字 -->
+  <path d="M12 14H14V16H12V14Z" fill="#4CAF50"/>
+  <path d="M12 16H14V18H12V16Z" fill="#4CAF50"/>
+  <path d="M12 12H14V14H12V12Z" fill="#4CAF50"/>
+  <path d="M12 10H14V12H12V10Z" fill="#4CAF50"/>
+  <path d="M12 18H14V20H12V18Z" fill="#4CAF50"/>
+  
+  <!-- ZIP标签 -->
+  <rect x="9" y="18" width="6" height="2" rx="0.5" fill="#4CAF50"/>
+  <path d="M9.5 18.5H14.5" stroke="white" stroke-width="0.5"/>
+  <path d="M10 19.5L14 19.5" stroke="white" stroke-width="0.5"/>
+</svg>

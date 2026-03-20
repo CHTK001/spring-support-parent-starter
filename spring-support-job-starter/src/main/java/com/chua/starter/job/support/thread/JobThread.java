@@ -157,6 +157,7 @@ public class JobThread extends Thread {
 
                     String logFileName = JobFileAppender.makeLogFileName(new Date(triggerParam.getLogDateTime()), triggerParam.getLogId());
                     JobContext jobContext = new JobContext(
+                            triggerParam.getLogId(),
                             triggerParam.getJobId(),
                             triggerParam.getExecutorParams(),
                             logFileName,

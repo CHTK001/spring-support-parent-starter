@@ -1,0 +1,11 @@
+﻿{
+    "baseUrl":  "http://127.0.0.1:19170/monitor/api/v1/sync",
+    "taskId":  7,
+    "taskName":  "codex-smoke-sync-20260319-151114",
+    "taskStatus":  "RUNNING",
+    "executeLogId":  4,
+    "latestLogId":  4,
+    "latestStatus":  "SUCCESS",
+    "latestMessage":  "执行成功",
+    "artifactPath":  "H:\\workspace\\2\\spring-support-parent-starter\\.codex\\artifacts\\sync-smoke-last.json"
+}

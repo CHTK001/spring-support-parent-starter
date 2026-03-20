@@ -22,7 +22,10 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true)
 @Schema(description = "同步统计")
 @Data
-@TableName(value = "monitor_sync_statistics")
+@TableName(
+        value = "monitor_sync_statistics",
+        excludeProperty = {"createName", "createBy", "createTime", "updateName", "updateBy", "updateTime"}
+)
 public class MonitorSyncStatistics extends SysBase {
 
     @TableId(value = "stat_id", type = IdType.AUTO)

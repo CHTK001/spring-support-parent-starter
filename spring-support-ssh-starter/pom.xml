@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <!--
     Spring Support SSH Starter - SSH服务端集成模块
 
@@ -94,8 +94,8 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <source>21</source>
-                    <target>21</target>
+                    <source>25</source>
+                    <target>25</target>
                     <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>
@@ -111,3 +111,4 @@
         </plugins>
     </build>
 </project>
+

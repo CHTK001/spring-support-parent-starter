@@ -20,7 +20,7 @@ import java.util.Map;
  * @since 2026/03/09
  */
 @Slf4j
-@Service
+@Service("syncAlertServiceImpl")
 @RequiredArgsConstructor
 public class AlertServiceImpl implements AlertService {
 

@@ -13,39 +13,33 @@ import java.math.BigDecimal;
  */
 @Data
 public class OrderCreateDTO implements Serializable {
-
-    /**
-     * 商户ID
-     */
     private Long merchantId;
 
-    /**
-     * 用户ID
-     */
+    private Long channelId;
+
     private Long userId;
 
-    /**
-     * 支付渠道
-     */
+    private String businessOrderNo;
+
     private String channelType;
 
-    /**
-     * 渠道子类型
-     */
     private String channelSubType;
 
-    /**
-     * 订单金额
-     */
     private BigDecimal orderAmount;
 
-    /**
-     * 优惠金额
-     */
     private BigDecimal discountAmount;
 
-    /**
-     * 备注
-     */
+    private String currency;
+
+    private String subject;
+
+    private String body;
+
+    private String notifyUrl;
+
+    private String returnUrl;
+
+    private Integer expireMinutes;
+
     private String remark;
 }

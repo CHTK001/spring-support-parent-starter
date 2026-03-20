@@ -22,7 +22,10 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true)
 @Schema(description = "同步节点连线")
 @Data
-@TableName(value = "monitor_sync_connection")
+@TableName(
+        value = "monitor_sync_connection",
+        excludeProperty = {"createName", "createBy", "createTime", "updateName", "updateBy", "updateTime"}
+)
 public class MonitorSyncConnection extends SysBase {
 
     /**

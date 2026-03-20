@@ -38,6 +38,16 @@ public class SyncTableServiceImpl implements SyncTableService {
     private static final String SYNC_DDL_PATH = "db/sync/V1.0__init_sync_tables.sql";
 
     /**
+     * Migration 脚本路径
+     */
+    private static final String[] MIGRATION_PATHS = {
+            "db/migration/V1.1__enhance_sync_task_table.sql",
+            "db/migration/V1.2__create_sync_statistics_table.sql",
+            "db/migration/V1.3__create_sync_alert_table.sql",
+            "db/migration/V1.4__create_sync_transform_rule_table.sql"
+    };
+
+    /**
      * 同步相关表定义
      */
     private static final String[][] SYNC_TABLES = {
@@ -45,7 +55,10 @@ public class SyncTableServiceImpl implements SyncTableService {
             {"monitor_sync_node", "同步节点表"},
             {"monitor_sync_connection", "同步连线表"},
             {"monitor_sync_task_log", "同步任务执行日志表"},
-            {"monitor_sync_task_log_detail", "同步任务实时日志详情表"}
+            {"monitor_sync_task_log_detail", "同步任务实时日志详情表"},
+            {"monitor_sync_statistics", "同步统计表"},
+            {"monitor_sync_alert", "同步告警表"},
+            {"monitor_sync_transform_rule", "同步转换规则表"}
     };
 
     @Override
@@ -61,6 +74,7 @@ public class SyncTableServiceImpl implements SyncTableService {
             log.info("开始{}同步任务相关表...", force ? "强制重建" : "创建");
 
             executeDdlScript();
+            executeMigrations();
 
             SyncTableStatus newStatus = checkTablesInternal();
             newStatus.setMessage(force ? "表已强制重建完成" : "表初始化完成");
@@ -167,6 +181,46 @@ public class SyncTableServiceImpl implements SyncTableService {
                 } catch (Exception e) {
                     log.warn("SQL 执行警告: {} - {}", truncate(trimmed, 50), e.getMessage());
                 }
+            }
+        }
+    }
+
+    /**
+     * 执行 Migration 脚本
+     */
+    private void executeMigrations() {
+        JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+
+        for (String migrationPath : MIGRATION_PATHS) {
+            try {
+                ClassPathResource resource = new ClassPathResource(migrationPath);
+                if (!resource.exists()) {
+                    log.warn("Migration 脚本不存在，跳过: {}", migrationPath);
+                    continue;
+                }
+
+                String migrationScript;
+                try (InputStream is = resource.getInputStream()) {
+                    migrationScript = StreamUtils.copyToString(is, StandardCharsets.UTF_8);
+                }
+
+                String[] statements = splitSqlStatements(migrationScript);
+                for (String statement : statements) {
+                    String trimmed = statement.trim();
+                    if (!trimmed.isEmpty() && !trimmed.startsWith("--")) {
+                        try {
+                            jdbcTemplate.execute(trimmed);
+                            log.debug("执行 Migration SQL: {}", truncate(trimmed, 100));
+                        } catch (Exception e) {
+                            // Migration 可能已执行过，忽略重复执行错误
+                            log.debug("Migration SQL 执行跳过(可能已存在): {} - {}",
+                                    truncate(trimmed, 50), e.getMessage());
+                        }
+                    }
+                }
+                log.info("Migration 执行完成: {}", migrationPath);
+            } catch (Exception e) {
+                log.warn("Migration 执行失败: {} - {}", migrationPath, e.getMessage());
             }
         }
     }

@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -53,7 +54,8 @@ public class QueueAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public MessageListenerBeanPostProcessor messageListenerBeanPostProcessor(
-            @Autowired(required = false) List<MessageTemplate> messageTemplates) {
-        return new MessageListenerBeanPostProcessor(messageTemplates, queueProperties);
+            @Autowired(required = false) List<MessageTemplate> messageTemplates,
+            ApplicationEventPublisher eventPublisher) {
+        return new MessageListenerBeanPostProcessor(messageTemplates, queueProperties, eventPublisher);
     }
 }

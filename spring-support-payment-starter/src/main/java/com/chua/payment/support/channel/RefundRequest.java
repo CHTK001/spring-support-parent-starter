@@ -12,7 +12,11 @@ import java.math.BigDecimal;
 @Data
 public class RefundRequest {
     private String orderNo;
+    private Long userId;
+    private String tradeNo;
     private String refundNo;
     private BigDecimal refundAmount;
+    private BigDecimal totalAmount;
     private String reason;
+    private String notifyUrl;
 }

@@ -1,0 +1,45 @@
+# ===========================================
+# 测试应用配置
+# ===========================================
+spring:
+  application:
+    name: sync-data-test
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:test-schema.sql
+      data-locations: classpath:test-data.sql
+      continue-on-error: true
+
+# ===========================================
+# 服务器配置
+# ===========================================
+server:
+  port: 18080
+  servlet:
+    context-path: /
+
+# ===========================================
+# MyBatis配置
+# ===========================================
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: auto
+
+# ===========================================
+# 日志配置
+# ===========================================
+logging:
+  level:
+    root: INFO
+    com.chua.starter.sync.data: DEBUG
+    com.chua.starter.sync.data.support.mapper: DEBUG

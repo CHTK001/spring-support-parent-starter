@@ -21,7 +21,10 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true)
 @Schema(description = "同步任务执行日志")
 @Data
-@TableName(value = "monitor_sync_task_log")
+@TableName(
+        value = "monitor_sync_task_log",
+        excludeProperty = {"createName", "createBy", "createTime", "updateName", "updateBy", "updateTime"}
+)
 public class MonitorSyncTaskLog extends SysBase {
 
     /**

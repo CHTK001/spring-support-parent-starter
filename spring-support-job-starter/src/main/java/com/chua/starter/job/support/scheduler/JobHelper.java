@@ -51,6 +51,8 @@ public class JobHelper {
             }
         } else if (SchedulerTypeEnum.FIXED == scheduleTypeEnum) {
             return new Date(fromTime.getTime() + Integer.parseInt(jobInfo.getJobScheduleTime()) * 1000L);
+        } else if (SchedulerTypeEnum.FIXED_MS == scheduleTypeEnum) {
+            return new Date(fromTime.getTime() + Long.parseLong(jobInfo.getJobScheduleTime()));
         }
         return null;
     }

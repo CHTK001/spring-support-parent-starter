@@ -79,6 +79,7 @@
     <module>spring-support-report-client-starter</module>
     <module>spring-support-report-client-arthas-starter</module>
     <module>spring-support-tencent-starter</module>
+    <module>spring-support-aliyun-starter</module>
     <module>spring-support-payment-starter</module>
     <module>spring-support-strategy-starter</module>
     <module>spring-support-shell-starter</module>
@@ -393,6 +394,11 @@
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-tencent-starter</artifactId>
+        <version>4.0.0.37</version>
+      </dependency>
+      <dependency>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-aliyun-starter</artifactId>
         <version>4.0.0.37</version>
       </dependency>
       <dependency>

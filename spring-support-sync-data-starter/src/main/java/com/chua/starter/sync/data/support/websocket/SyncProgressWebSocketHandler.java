@@ -92,15 +92,22 @@ public class SyncProgressWebSocketHandler extends TextWebSocketHandler {
      * 广播进度更新
      */
     public void broadcastProgress(Long taskId, Map<String, Object> progress) {
+        broadcastTaskMessage(taskId, progress);
+    }
+
+    /**
+     * 广播任务消息
+     */
+    public void broadcastTaskMessage(Long taskId, Map<String, Object> payload) {
         Set<WebSocketSession> sessions = taskSessions.get(taskId);
         if (sessions == null || sessions.isEmpty()) {
             return;
         }
-        
+
         try {
-            String json = objectMapper.writeValueAsString(progress);
+            String json = objectMapper.writeValueAsString(payload);
             TextMessage message = new TextMessage(json);
-            
+
             sessions.removeIf(session -> {
                 if (!session.isOpen()) {
                     return true;
@@ -109,12 +116,12 @@ public class SyncProgressWebSocketHandler extends TextWebSocketHandler {
                     session.sendMessage(message);
                     return false;
                 } catch (IOException e) {
-                    log.error("发送进度消息失败: sessionId={}", session.getId(), e);
+                    log.error("发送任务消息失败: sessionId={}", session.getId(), e);
                     return true;
                 }
             });
         } catch (Exception e) {
-            log.error("广播进度失败: taskId={}", taskId, e);
+            log.error("广播任务消息失败: taskId={}", taskId, e);
         }
     }
 

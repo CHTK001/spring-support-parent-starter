@@ -1,0 +1,22 @@
+{
+  "properties": [
+    {
+      "name": "plugin.payment.provider.default-spi",
+      "type": "java.lang.String",
+      "defaultValue": "default",
+      "description": "支付 provider SPI 的全局默认实现名。未按渠道类型单独指定时使用该值。"
+    },
+    {
+      "name": "plugin.payment.provider.alipay-spi",
+      "type": "java.lang.String",
+      "defaultValue": "default",
+      "description": "支付宝渠道默认使用的 provider SPI 实现名，例如 default、alipay、mock、alipay-mock。"
+    },
+    {
+      "name": "plugin.payment.provider.wechat-spi",
+      "type": "java.lang.String",
+      "defaultValue": "default",
+      "description": "微信支付渠道默认使用的 provider SPI 实现名，例如 default、wechat-pay、mock、wechat-mock。"
+    }
+  ]
+}

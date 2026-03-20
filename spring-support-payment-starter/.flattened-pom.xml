@@ -18,8 +18,8 @@
     </license>
   </licenses>
   <properties>
-    <maven.compiler.target>21</maven.compiler.target>
-    <maven.compiler.source>21</maven.compiler.source>
+    <maven.compiler.target>25</maven.compiler.target>
+    <maven.compiler.source>25</maven.compiler.source>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
   <dependencies>
@@ -55,13 +55,11 @@
     </dependency>
     <dependency>
       <groupId>com.chua</groupId>
-      <artifactId>utils-support-tencent-starter</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>commons-logging</groupId>
-          <artifactId>commons-logging</artifactId>
-        </exclusion>
-      </exclusions>
+      <artifactId>spring-support-tencent-starter</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-aliyun-starter</artifactId>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.dataformat</groupId>
@@ -88,17 +86,6 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>com.alipay.sdk</groupId>
-      <artifactId>alipay-sdk-java</artifactId>
-      <version>4.40.483.ALL</version>
-      <exclusions>
-        <exclusion>
-          <groupId>commons-logging</groupId>
-          <artifactId>commons-logging</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
       <scope>test</scope>
@@ -114,9 +101,9 @@
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
-          <source>21</source>
-          <target>21</target>
-          <release>21</release>
+          <source>25</source>
+          <target>25</target>
+          <release>25</release>
           <annotationProcessorPaths>
             <path>
               <groupId>org.projectlombok</groupId>

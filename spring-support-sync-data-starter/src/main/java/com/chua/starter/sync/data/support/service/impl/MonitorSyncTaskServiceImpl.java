@@ -1,6 +1,6 @@
 package com.chua.starter.sync.data.support.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.common.support.lang.code.ReturnResult;
@@ -13,14 +13,17 @@ import com.chua.starter.sync.data.support.mapper.MonitorSyncConnectionMapper;
 import com.chua.starter.sync.data.support.mapper.MonitorSyncNodeMapper;
 import com.chua.starter.sync.data.support.mapper.MonitorSyncTaskLogMapper;
 import com.chua.starter.sync.data.support.mapper.MonitorSyncTaskMapper;
+import com.chua.starter.sync.data.support.properties.SyncJobIntegrationProperties;
 import com.chua.starter.sync.data.support.sync.SyncTaskDesign;
 import com.chua.starter.sync.data.support.sync.SyncTaskQuery;
 import com.chua.starter.sync.data.support.sync.SyncTaskStatistics;
 import com.chua.starter.sync.data.support.service.sync.MonitorSyncTaskExecutor;
 import com.chua.starter.sync.data.support.service.sync.MonitorSyncTaskService;
+import com.chua.starter.sync.data.support.service.sync.SyncJobIntegrationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,6 +50,8 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
     private final MonitorSyncNodeMapper nodeMapper;
     private final MonitorSyncConnectionMapper connectionMapper;
     private final MonitorSyncTaskLogMapper logMapper;
+    private final SyncJobIntegrationProperties syncJobIntegrationProperties;
+    private final ObjectProvider<SyncJobIntegrationService> syncJobIntegrationServiceProvider;
 
     @Autowired
     @Lazy
@@ -58,22 +63,22 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
 
         try {
             Page<MonitorSyncTask> page = new Page<>(query.getPage(), query.getSize());
-            LambdaQueryWrapper<MonitorSyncTask> wrapper = new LambdaQueryWrapper<>();
+            QueryWrapper<MonitorSyncTask> wrapper = taskMapper.compatibleQuery();
 
             if (StringUtils.isNotEmpty(query.getTaskName())) {
-                wrapper.like(MonitorSyncTask::getSyncTaskName, query.getTaskName());
+                wrapper.like("sync_task_name", query.getTaskName());
             }
             if (StringUtils.isNotEmpty(query.getTaskStatus())) {
-                wrapper.eq(MonitorSyncTask::getSyncTaskStatus, query.getTaskStatus());
+                wrapper.eq("sync_task_status", query.getTaskStatus());
             }
 
             if (Boolean.TRUE.equals(query.getDesc())) {
-                wrapper.orderByDesc(MonitorSyncTask::getSyncTaskCreateTime);
+                wrapper.orderByDesc("sync_task_create_time");
             } else {
-                wrapper.orderByAsc(MonitorSyncTask::getSyncTaskCreateTime);
+                wrapper.orderByAsc("sync_task_create_time");
             }
 
-            Page<MonitorSyncTask> result = taskMapper.selectPage(page, wrapper);
+            Page<MonitorSyncTask> result = taskMapper.selectCompatiblePage(page, wrapper);
             return ReturnResult.ok(result);
         } catch (Exception e) {
             log.error("查询同步任务列表失败", e);
@@ -111,6 +116,9 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
             }
 
             taskMapper.insert(task);
+            if (isJobIntegrationEnabled()) {
+                requireSyncJobIntegrationService().createOrUpdateJob(task);
+            }
             log.info("同步任务创建成功, taskId: {}", task.getSyncTaskId());
             return ReturnResult.ok(task);
         } catch (Exception e) {
@@ -129,7 +137,7 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
         log.info("更新同步任务: {}", task.getSyncTaskId());
 
         try {
-            MonitorSyncTask existing = taskMapper.selectById(task.getSyncTaskId());
+            MonitorSyncTask existing = taskMapper.selectCompatibleById(task.getSyncTaskId());
             if (existing == null) {
                 return ReturnResult.error("任务不存在");
             }
@@ -140,6 +148,10 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
 
             task.setSyncTaskUpdateTime(LocalDateTime.now());
             taskMapper.updateById(task);
+            if (isJobIntegrationEnabled()) {
+                MonitorSyncTask updatedTask = taskMapper.selectCompatibleById(task.getSyncTaskId());
+                requireSyncJobIntegrationService().createOrUpdateJob(updatedTask);
+            }
             return ReturnResult.ok(true);
         } catch (Exception e) {
             log.error("更新同步任务失败", e);
@@ -157,7 +169,7 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
         log.info("删除同步任务: {}", taskId);
 
         try {
-            MonitorSyncTask task = taskMapper.selectById(taskId);
+            MonitorSyncTask task = taskMapper.selectCompatibleById(taskId);
             if (task == null) {
                 return ReturnResult.error("任务不存在");
             }
@@ -166,6 +178,9 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
                 return ReturnResult.error("运行中的任务不允许删除, 请先停止任务");
             }
 
+            if (isJobIntegrationEnabled()) {
+                requireSyncJobIntegrationService().deleteJob(taskId);
+            }
             connectionMapper.deleteByTaskId(taskId);
             nodeMapper.deleteByTaskId(taskId);
             logMapper.deleteByTaskId(taskId);
@@ -186,7 +201,7 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
         }
 
         try {
-            MonitorSyncTask task = taskMapper.selectById(taskId);
+            MonitorSyncTask task = taskMapper.selectCompatibleById(taskId);
             if (task == null) {
                 return ReturnResult.error("任务不存在");
             }
@@ -214,7 +229,7 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
         log.info("保存任务设计, taskId: {}", taskId);
 
         try {
-            MonitorSyncTask task = taskMapper.selectById(taskId);
+            MonitorSyncTask task = taskMapper.selectCompatibleById(taskId);
             if (task == null) {
                 return ReturnResult.error("任务不存在");
             }
@@ -282,7 +297,7 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
         log.info("启动同步任务: {}", taskId);
 
         try {
-            MonitorSyncTask task = taskMapper.selectById(taskId);
+            MonitorSyncTask task = taskMapper.selectCompatibleById(taskId);
             if (task == null) {
                 return ReturnResult.error("任务不存在");
             }
@@ -301,10 +316,15 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
                 return ReturnResult.error("任务设计验证失败: " + validateResult.getMsg());
             }
 
-            taskExecutor.start(taskId);
-
             task.setSyncTaskStatus("RUNNING");
             task.setSyncTaskUpdateTime(LocalDateTime.now());
+            if (isJobIntegrationEnabled()) {
+                SyncJobIntegrationService syncJobIntegrationService = requireSyncJobIntegrationService();
+                syncJobIntegrationService.createOrUpdateJob(task);
+                syncJobIntegrationService.startJob(taskId);
+            } else {
+                taskExecutor.start(taskId);
+            }
             taskMapper.updateById(task);
 
             return ReturnResult.ok(true);
@@ -324,7 +344,7 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
         log.info("停止同步任务: {}", taskId);
 
         try {
-            MonitorSyncTask task = taskMapper.selectById(taskId);
+            MonitorSyncTask task = taskMapper.selectCompatibleById(taskId);
             if (task == null) {
                 return ReturnResult.error("任务不存在");
             }
@@ -333,7 +353,11 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
                 return ReturnResult.error("任务未在运行中");
             }
 
-            taskExecutor.stop(taskId);
+            if (isJobIntegrationEnabled()) {
+                requireSyncJobIntegrationService().stopJob(taskId);
+            } else {
+                taskExecutor.stop(taskId);
+            }
 
             task.setSyncTaskStatus("STOPPED");
             task.setSyncTaskUpdateTime(LocalDateTime.now());
@@ -355,12 +379,23 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
         log.info("手动执行同步任务: {}", taskId);
 
         try {
-            MonitorSyncTask task = taskMapper.selectById(taskId);
+            MonitorSyncTask task = taskMapper.selectCompatibleById(taskId);
             if (task == null) {
                 return ReturnResult.error("任务不存在");
             }
 
-            Long logId = taskExecutor.executeOnce(taskId);
+            Long logId;
+            if (isJobIntegrationEnabled()) {
+                SyncJobIntegrationService syncJobIntegrationService = requireSyncJobIntegrationService();
+                syncJobIntegrationService.createOrUpdateJob(task);
+                if (!syncJobIntegrationService.triggerJob(taskId)) {
+                    return ReturnResult.error("触发 Job 执行失败");
+                }
+                MonitorSyncTaskLog latestLog = logMapper.selectLatestByTaskId(taskId);
+                logId = latestLog != null ? latestLog.getSyncLogId() : null;
+            } else {
+                logId = taskExecutor.executeOnce(taskId);
+            }
             return ReturnResult.ok(logId);
         } catch (Exception e) {
             log.error("执行同步任务失败", e);
@@ -376,11 +411,11 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
 
         try {
             Page<MonitorSyncTaskLog> pageParam = new Page<>(page != null ? page : 1, size != null ? size : 10);
-            LambdaQueryWrapper<MonitorSyncTaskLog> wrapper = new LambdaQueryWrapper<MonitorSyncTaskLog>()
-                    .eq(MonitorSyncTaskLog::getSyncTaskId, taskId)
-                    .orderByDesc(MonitorSyncTaskLog::getSyncLogStartTime);
+            QueryWrapper<MonitorSyncTaskLog> wrapper = logMapper.compatibleQuery()
+                    .eq("sync_task_id", taskId)
+                    .orderByDesc("sync_log_start_time");
 
-            Page<MonitorSyncTaskLog> result = logMapper.selectPage(pageParam, wrapper);
+            Page<MonitorSyncTaskLog> result = logMapper.selectCompatiblePage(pageParam, wrapper);
             return ReturnResult.ok(result);
         } catch (Exception e) {
             log.error("获取任务日志失败", e);
@@ -395,7 +430,7 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
         }
 
         try {
-            MonitorSyncTaskLog log = logMapper.selectById(logId);
+            MonitorSyncTaskLog log = logMapper.selectCompatibleById(logId);
             if (log == null) {
                 return ReturnResult.error("日志不存在");
             }
@@ -450,7 +485,7 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
         log.info("复制任务, 原taskId: {}, 新名称: {}", taskId, newName);
 
         try {
-            MonitorSyncTask originTask = taskMapper.selectById(taskId);
+            MonitorSyncTask originTask = taskMapper.selectCompatibleById(taskId);
             if (originTask == null) {
                 return ReturnResult.error("原任务不存在");
             }
@@ -580,13 +615,13 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
                 granularity = "day";
             }
 
-            LambdaQueryWrapper<MonitorSyncTaskLog> wrapper = new LambdaQueryWrapper<MonitorSyncTaskLog>()
-                    .ge(MonitorSyncTaskLog::getSyncLogStartTime, startTime)
-                    .le(MonitorSyncTaskLog::getSyncLogStartTime, endTime);
+            QueryWrapper<MonitorSyncTaskLog> wrapper = logMapper.compatibleQuery()
+                    .ge("sync_log_start_time", startTime)
+                    .le("sync_log_start_time", endTime);
             if (taskId != null) {
-                wrapper.eq(MonitorSyncTaskLog::getSyncTaskId, taskId);
+                wrapper.eq("sync_task_id", taskId);
             }
-            List<MonitorSyncTaskLog> logs = logMapper.selectList(wrapper);
+            List<MonitorSyncTaskLog> logs = logMapper.selectCompatibleList(wrapper);
 
             SyncTaskStatistics statistics = new SyncTaskStatistics();
 
@@ -784,7 +819,7 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
         Set<Long> taskIds = taskLogs.keySet();
         Map<Long, String> taskNames = new HashMap<>();
         if (!taskIds.isEmpty()) {
-            List<MonitorSyncTask> tasks = taskMapper.selectBatchIds(taskIds);
+            List<MonitorSyncTask> tasks = taskMapper.selectCompatibleBatchIds(taskIds);
             taskNames = tasks.stream()
                     .collect(Collectors.toMap(MonitorSyncTask::getSyncTaskId, MonitorSyncTask::getSyncTaskName));
         }
@@ -889,7 +924,7 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
         log.info("导出任务配置, taskId: {}", taskId);
 
         try {
-            MonitorSyncTask task = taskMapper.selectById(taskId);
+            MonitorSyncTask task = taskMapper.selectCompatibleById(taskId);
             if (task == null) {
                 return ReturnResult.error("任务不存在");
             }
@@ -985,14 +1020,26 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
         log.debug("获取任务模板列表");
 
         try {
-            LambdaQueryWrapper<MonitorSyncTask> wrapper = new LambdaQueryWrapper<MonitorSyncTask>()
-                    .orderByDesc(MonitorSyncTask::getSyncTaskCreateTime);
+            QueryWrapper<MonitorSyncTask> wrapper = taskMapper.compatibleQuery()
+                    .orderByDesc("sync_task_create_time");
 
-            List<MonitorSyncTask> templates = taskMapper.selectList(wrapper);
+            List<MonitorSyncTask> templates = taskMapper.selectCompatibleList(wrapper);
             return ReturnResult.ok(templates);
         } catch (Exception e) {
             log.error("获取任务模板列表失败", e);
             return ReturnResult.error("获取失败: " + e.getMessage());
         }
+    }
+
+    private boolean isJobIntegrationEnabled() {
+        return syncJobIntegrationProperties.isEnabled();
+    }
+
+    private SyncJobIntegrationService requireSyncJobIntegrationService() {
+        SyncJobIntegrationService syncJobIntegrationService = syncJobIntegrationServiceProvider.getIfAvailable();
+        if (syncJobIntegrationService == null) {
+            throw new IllegalStateException("Sync Job 集成已启用，但 Job 模块未就绪");
+        }
+        return syncJobIntegrationService;
     }
 }

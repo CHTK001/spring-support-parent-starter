@@ -20,7 +20,10 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true)
 @Schema(description = "同步告警")
 @Data
-@TableName(value = "monitor_sync_alert")
+@TableName(
+        value = "monitor_sync_alert",
+        excludeProperty = {"createName", "createBy", "createTime", "updateName", "updateBy", "updateTime"}
+)
 public class MonitorSyncAlert extends SysBase {
 
     @TableId(value = "alert_id", type = IdType.AUTO)

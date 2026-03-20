@@ -1,0 +1,303 @@
+# 应用配置模板
+# 说明：本文件列出了所有支持的配置项，并附带中文注释说明。
+# 使用方式：复制本文件为 app.yml 或在 app.yaml 同目录下按需拷贝配置键值。
+
+# ===========================================
+# 应用程序基础配置
+# ===========================================
+# 系统名称（显示在浏览器标签页和侧边栏顶部）
+# Title: 系统管理
+# 平台版本号（默认: 0.7.0）
+# Version: "1.0.0"
+# 平台标识码（用于接口请求和缓存隔离，默认: system）
+# SystemCode: system
+# 远程API地址（后端接口基础路径）
+# BaseUrl: /system/api
+# API 接口地址（优先级高于 BaseUrl；配置后所有 HTTP/SSE 请求都走该地址）
+# ApiAddress: ""
+# API版本号（接口版本控制）
+# apiVersion: v1
+# 是否自动提示错误信息
+# AutoErrorMessage: true
+
+# ===========================================
+# 角色权限配置
+# ===========================================
+# 管理员角色列表
+# AdminRoles:
+#   - ADMIN
+#   - SUPER_ADMIN
+# 运维角色列表
+# OpsRoles:
+#   - ADMIN
+#   - SUPER_ADMIN
+#   - OPS
+
+# ===========================================
+# 鉴权与登录配置
+# ===========================================
+# 是否开启远程权限控制
+# OpenAuth: false
+# 是否开启动态配置面板
+# OpenSetting: true
+# 是否开启租户登录
+# OpenTenantLogin: false
+# 是否开启基础登录
+# OpenBaseLogin: false
+# 是否开启刷新token
+# OpenShowRefreshToken: false
+# 配置加载失败时是否保持加载页面（true 时失败不进入应用）
+# BlockOnConfigLoadFail: false
+# 是否显示错误页面风格切换按钮
+# ShowErrorPageStyleSwitcher: true
+# 是否显示加载动画样式切换按钮（默认: false）
+# ShowLoadingPageStyleSwitcher: false
+# 默认错误页面风格：pixel / space / minimal / forbidden / notfound / servererror
+# ErrorPageStyle: minimal
+# 系统加载页面风格：spinner / clock / pixel / cube / dots / pulse
+# LoadingPageStyle: spinner
+# 账户类型（如 tenant）
+# AccountType: tenant
+
+# ===========================================
+# 系统设置模块配置
+# ===========================================
+# 是否开启邮箱设置
+# OpenSettingEmail: true
+# 是否开启短信设置
+# OpenSettingSms: true
+# 是否开启 LLM 设置
+# OpenSettingLlm: true
+
+# ===========================================
+# 布局与菜单配置
+# ===========================================
+# 是否自动远程菜单-从后端获取菜单
+# RemoteMenu: false
+# 是否自动远程布局-从后端获取布局配置
+# RemoteLayout: false
+# 是否开启布局远程保存
+# RemoteLayoutSave: false
+# 使用本地布局组件
+# LocationLayout: true
+# 是否开启远程动画
+# RemoteAnimation: true
+# 是否开启菜单动画
+# MenuTransition: false
+# 是否开启菜单动画（用于部分布局动效开关）
+# MenuAnimation: true
+# 路由模式：AUTO/MIX/NORMAL
+# RouterModule: NORMAL
+# 是否启用自动路由（兼容旧配置；true 等同于 RouterModule=AUTO）
+# AutoRouter: false
+# 是否显示云同步功能
+# ShowCloudSync: false
+# 云同步服务地址（默认: /v2/user/preference）
+# CloudSyncUrl: "/v2/user/preference"
+
+# ===========================================
+# 界面显示配置
+# ===========================================
+# 是否固定页头和标签页-内容区超出出现纵向滚动条
+# FixedHeader: true
+# 隐藏菜单和页头-只显示标签页和内容区
+# HiddenSideBar: false
+# 是否隐藏标签页
+# HideTabs: false
+# 是否隐藏页脚
+# HideFooter: true
+# 是否显示Logo
+# ShowLogo: true
+# 侧边栏状态-true展开-false收起
+# SidebarStatus: true
+# 是否显示卡片边框
+# CardBody: false
+# 内容区边距（像素）
+# contentMargin: 16
+
+# ===========================================
+# 顶部工具栏配置
+# ===========================================
+# 是否显示设置按钮
+# ShowBarSetting: true
+# 是否显示通知按钮
+# ShowBarNotice: false
+# 是否显示消息按钮
+# ShowBarMessage: false
+# 是否显示语言切换
+# ShowLanguage: true
+# 是否显示搜索按钮
+# ShowBarSearch: true
+# 是否显示AI助手
+# ShowAiChat: true
+# AI助手皮肤主题：default / blue / green / orange / pink / dark
+# AiChatTheme: default
+
+# ===========================================
+# 主题与样式配置
+# ===========================================
+# 主题模式：light / dark
+# Theme: light
+# 是否开启暗黑模式
+# DarkMode: false
+# 整体风格：light / dark / system
+# OverallStyle: light
+# 主题色
+# EpThemeColor: "#409EFF"
+# 灰色模式
+# Grey: false
+# 色弱模式
+# Weak: false
+# 反色模式
+# Invert: false
+# 黑白模式
+# Monochrome: false
+# 布局圆角（像素）
+# LayoutRadius: 10
+# 布局模糊程度
+# LayoutBlur: 10
+# 内容区是否拉伸
+# Stretch: false
+
+# ===========================================
+# 标签页配置
+# ===========================================
+# 标签页风格：smart / card / chrome / modern
+# ShowModel: chrome
+# 是否开启持久化标签
+# MultiTagsCache: true
+# 标签页最大层级
+# MaxTagsLevel: 3
+
+# ===========================================
+# 导航菜单配置
+# ===========================================
+# 导航菜单模式：vertical / horizontal / mix / double / hover
+# Layout: vertical
+# 菜单展开收起图标是否开启动画
+# MenuArrowIconNoTransition: false
+# 菜单搜索历史的最大条目
+# MenuSearchHistory: 6
+
+# ===========================================
+# 缓存与存储配置
+# ===========================================
+# 是否开启缓存加密
+# StorageEncode: false
+# 缓存加密密钥-16位
+# StorageKey: "2XNN4K8LC0ELVWN4"
+# 本地响应式存储的命名空间
+# ResponsiveStorageNameSpace: "responsive-"
+# 是否开启组件缓存
+# KeepAlive: true
+# 是否开启动态路由缓存
+# CachingAsyncRoutes: true
+
+# ===========================================
+# WASM 加解密配置
+# ===========================================
+# 是否启用 WASM 加解密
+# wasmEnable: true
+
+# ===========================================
+# 国际化配置
+# ===========================================
+# 默认语言：zh-CN / en
+# Locale: zh-CN
+# Tooltip 效果：light / dark
+# TooltipEffect: light
+
+# ===========================================
+# 新菜单提示配置
+# ===========================================
+# 是否显示新增菜单标识
+# ShowNewMenu: false
+# 新菜单显示文本
+# NewMenuText: "NEW"
+# 新菜单显示时间限制（小时）
+# NewMenuTimeLimit: 72
+
+# ===========================================
+# 远程加载配置
+# ===========================================
+# vue3-sfc-loader 加载地址
+# SfcScriptUrl: "https://unpkg.com/vue3-sfc-loader@0.9.5/dist/vue3-sfc-loader.js"
+
+# ===========================================
+# 会话配置
+# ===========================================
+# Session:
+#   enable: false              # 是否启用会话超时检测
+#   timeout: 0                 # 超时时间（秒），0表示不超时
+#   warningTime: 60            # 超时前提醒时间（秒）
+#   autoLogout: false          # 超时自动登出
+
+# ===========================================
+# 请求配置
+# ===========================================
+# Request:
+#   enable: true               # 是否启用请求配置
+#   timeout: 30000             # 请求超时时间（毫秒）
+#   retryCount: 3              # 重试次数
+#   retryDelay: 1000           # 重试间隔（毫秒）
+#   showLoading: true          # 显示加载状态
+#   enableSign: true           # 是否启用请求签名（x-sign），默认 true
+#   secretKey: "aP9xL3sV7mQ2zT5kB8nR1cY4wH6eD0fJ"  # Nonce 签名密钥，需与后端 NonceSignProperties.DEFAULT_SECRET 保持一致
+
+# ===========================================
+# 错误处理配置
+# ===========================================
+# ErrorHandler:
+#   enable: false              # 是否启用错误处理
+#   showNotification: true     # 显示错误通知
+#   logToConsole: true         # 输出到控制台
+#   reportToServer: false      # 上报到服务器
+#   reportUrl: "/v1/error/report"  # 上报接口地址
+
+# ===========================================
+# 页面行为配置
+# ===========================================
+# PageBehavior:
+#   enable: false              # 是否启用页面行为管理
+#   rememberScroll: false      # 记住滚动位置
+#   autoRefreshInterval: 0     # 自动刷新间隔（秒），0表示不刷新
+#   confirmOnLeave: false      # 离开页面确认
+#   showHeaderClock: false     # 顶部是否显示时间（适合大屏/全屏展示时开启）
+#   uiScale: 1.0               # 页面缩放比例（0.8 - 1.5，1 为默认）
+#   screenReaderMode: false    # 读屏优化模式
+#   highContrastMode: false    # 高对比度模式（独立于深色模式）
+#   devLiteTools: false        # DevTools 精简版总开关（仅开发环境生效）
+#   devRuler: false            # 显示标尺
+#   devGrid: false             # 显示布局网格
+#   devHoverInspector: false   # 悬停显示元素信息
+
+# ===========================================
+# 性能配置
+# ===========================================
+# Performance:
+#   enable: true               # 是否启用性能优化
+#   lazyLoadImages: true       # 图片懒加载
+#   virtualScroll: false       # 虚拟滚动（组件需单独支持）
+#   prefetchRoutes: true       # 预加载路由
+
+# ===========================================
+# 登录页面主题配置
+# ===========================================
+# LoginTheme: modern           # 默认登录主题
+# EnableFestivalTheme: false   # 是否启用节日主题自动切换
+# EnableThemeManagement: true  # 是否启用后台主题管理
+# EnableLoginThemeSwitcher: true # 是否启用登录页主题切换器
+
+
+# ===========================================
+# 用户热度（Heatmap）配置
+# ===========================================
+# Heatmap:
+#   enable: false            # 是否启用用户行为采集（默认: false）
+#   sampleRate: 1.0          # 采样率 0.0-1.0（默认: 1，全量采集）
+#   reportUrl: ""            # 数据上报地址（空则仅本地存储）
+#   maxLocalEntries: 1000    # 本地最大存储条数（默认: 1000）
+#   flushInterval: 5000      # 批量上报间隔（毫秒，默认: 5000）
+#   trackClick: true         # 采集点击事件（默认: true）
+#   trackMouseMove: false    # 采集鼠标移动（默认: false，数据量大）
+#   trackScroll: true        # 采集滚动事件（默认: true）

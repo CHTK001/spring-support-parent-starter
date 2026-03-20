@@ -217,10 +217,19 @@ public class WebRequest {
      */
     private String getToken() {
         String header = request.getHeader(authProperties.getTokenName());
-        return Strings.isNullOrEmpty(header) ? StringUtils.defaultString(
+        if (!Strings.isNullOrEmpty(header)) {
+            return header;
+        }
+
+        String authorization = request.getHeader("Authorization");
+        if (StringUtils.isNotBlank(authorization) && authorization.startsWith("Bearer ")) {
+            return authorization.substring(7).trim();
+        }
+
+        return StringUtils.defaultString(
                 request.getParameter(authProperties.getTokenName()),
                 ObjectUtils.defaultIfStringNull(request.getAttribute(authProperties.getTokenName()), null)
-        ) : header;
+        );
     }
 
     /**

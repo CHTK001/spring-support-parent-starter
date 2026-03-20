@@ -96,6 +96,14 @@ public class StaticProtocol extends AbstractProtocol {
         }
     }
 
+    private String encodeUserResult(UserResult userResult) {
+        try {
+            return SM4.encodeHex(Json.toJson(userResult));
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
 
     /**
      * 创建新的认证信息对象
@@ -109,7 +117,10 @@ public class StaticProtocol extends AbstractProtocol {
         UserResult userResult = null;
         // 如果token不为空且不为"null"，则尝试解析token
         if (StringUtils.isNotBlank(token) && !NULL.equals(token)) {
-            userResult = Json.fromJson(SM4.decodeHex(token), UserResult.class);
+            try {
+                userResult = Json.fromJson(SM4.decodeHex(token), UserResult.class);
+            } catch (Exception ignored) {
+            }
         }
 
         // 如果通过token未能获取到用户信息，则尝试从cookie中解析
@@ -130,24 +141,36 @@ public class StaticProtocol extends AbstractProtocol {
             }
         }
 
-        // 如果成功解析到用户信息，则设置用户名并保存到请求上下文
-        if (null != userResult) {
-            userResume.setUsername(userResult.getUsername());
-            com.chua.starter.oauth.client.support.execute.AuthSessionUtils.setUsername(userResume.getUsername());
+        if (null == userResult || StringUtils.isBlank(userResult.getUsername())) {
+            return AuthenticationInformation.noAuth();
         }
 
+        // 如果成功解析到用户信息，则设置用户名并保存到请求上下文
+        userResume.setUsername(userResult.getUsername());
+        userResume.setLoginType(userResult.getLoginType());
+        userResume.setNickName(userResult.getNickName());
+        userResume.setPhone(userResult.getPhone());
+        userResume.setTenantId(userResult.getTenantId());
+        userResume.setDeptId(userResult.getDeptId());
+        userResume.setAddress(userResult.getAddress());
+        userResume.setExt(userResult.getExt());
+        com.chua.starter.oauth.client.support.execute.AuthSessionUtils.setUsername(userResume.getUsername());
+
         // 根据用户名设置角色信息
-        if (ADMIN.equalsIgnoreCase(userResume.getUsername())) {
+        if (userResult.getRoles() != null && !userResult.getRoles().isEmpty()) {
+            userResume.setRoles(userResult.getRoles());
+        } else if (ADMIN.equalsIgnoreCase(userResume.getUsername())) {
             userResume.setRoles(Sets.newHashSet(SUPER_ADMIN, ADMIN));
         } else {
             userResume.setRoles(Sets.newHashSet(OPS));
         }
-        userResume.setUserId("1");
-        userResume.setUid(DigestUtils.sha1Hex(userResume.getUserId()));
-        userResume.setOpenId(userResume.getUid());
-        userResume.setUnionId(userResume.getUid());
-        // 设置空权限集合
-        userResume.setPermission(Collections.emptySet());
+        userResume.setUserId(StringUtils.defaultString(userResult.getUserId(), "1"));
+        userResume.setUid(StringUtils.defaultString(userResult.getUid(), DigestUtils.sha1Hex(userResume.getUserId())));
+        userResume.setOpenId(StringUtils.defaultString(userResult.getOpenId(), userResume.getUid()));
+        userResume.setUnionId(StringUtils.defaultString(userResult.getUnionId(), userResume.getUid()));
+        userResume.setPermission(userResult.getPermission() == null ? Collections.emptySet() : userResult.getPermission());
+        userResume.setFingerprint(userResult.getFingerprint());
+        userResume.setExpireTime(userResult.getExpireTime());
         // 将用户信息保存到请求上下文
         com.chua.starter.oauth.client.support.execute.AuthSessionUtils.setUserInfo(userResume);
         // 返回认证成功的信息
@@ -165,7 +188,47 @@ public class StaticProtocol extends AbstractProtocol {
      */
     @Override
     public LoginResult upgrade(Cookie[] cookie, String token, UpgradeType upgradeType, String refreshToken) {
-        return new LoginAuthResult(0, null);
+        initial();
+        String sourceToken = StringUtils.isNotBlank(refreshToken) ? refreshToken : token;
+        if (StringUtils.isBlank(sourceToken)) {
+            return null;
+        }
+
+        AuthenticationInformation authenticationInformation = newAuthenticationInformation(sourceToken, cookie);
+        if (authenticationInformation == null
+                || authenticationInformation.getInformation() == null
+                || authenticationInformation.getInformation().getCode() != Information.OK.getCode()
+                || authenticationInformation.getReturnResult() == null) {
+            return null;
+        }
+
+        UserResume userResume = authenticationInformation.getReturnResult();
+        UserResult userResult = new UserResult();
+        userResult.setUid(userResume.getUid());
+        userResult.setUserId(userResume.getUserId());
+        userResult.setUsername(userResume.getUsername());
+        userResult.setNickName(userResume.getNickName());
+        userResult.setPhone(userResume.getPhone());
+        userResult.setAddress(userResume.getAddress());
+        userResult.setLoginType(userResume.getLoginType());
+        userResult.setTenantId(userResume.getTenantId());
+        userResult.setDeptId(userResume.getDeptId());
+        userResult.setOpenId(userResume.getOpenId());
+        userResult.setUnionId(userResume.getUnionId());
+        userResult.setFingerprint(userResume.getFingerprint());
+        userResult.setPermission(userResume.getPermission() == null ? Collections.emptySet() : userResume.getPermission());
+        userResult.setRoles(userResume.getRoles());
+        userResult.setExt(userResume.getExt());
+        userResult.setExpireTime(System.currentTimeMillis() / 1000 + 7L * 24 * 60 * 60);
+
+        String refreshedToken = encodeUserResult(userResult);
+        if (StringUtils.isBlank(refreshedToken)) {
+            return null;
+        }
+
+        userResult.setToken(refreshedToken);
+        userResult.setRefreshToken(refreshedToken);
+        return new LoginResult(refreshedToken, refreshedToken, userResume.getFingerprint(), userResult);
     }
 
     /**

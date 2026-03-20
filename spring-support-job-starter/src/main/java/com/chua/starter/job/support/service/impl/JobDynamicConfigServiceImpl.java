@@ -271,6 +271,9 @@ public class JobDynamicConfigServiceImpl implements JobDynamicConfigService {
                 // 固定间隔
                 long interval = Long.parseLong(scheduleTime);
                 return System.currentTimeMillis() + interval;
+            } else if ("fixed_ms".equalsIgnoreCase(scheduleType)) {
+                long interval = Long.parseLong(scheduleTime);
+                return System.currentTimeMillis() + interval;
             }
         } catch (Exception e) {
             log.error("计算下次执行时间失败: scheduleType={}, scheduleTime={}", scheduleType, scheduleTime, e);

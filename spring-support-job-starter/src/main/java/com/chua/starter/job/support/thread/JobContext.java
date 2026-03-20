@@ -44,6 +44,12 @@ public class JobContext {
     private final long jobId;
 
     /**
+     * 任务日志ID
+     */
+    @Getter
+    private final long jobLogId;
+
+    /**
      * 任务执行参数
      */
     @Getter
@@ -87,6 +93,21 @@ public class JobContext {
      * @param shardTotal     分片总数
      */
     public JobContext(long jobId, String jobParam, String jobLogFileName, int shardIndex, int shardTotal) {
+        this(-1L, jobId, jobParam, jobLogFileName, shardIndex, shardTotal);
+    }
+
+    /**
+     * 构造函数
+     *
+     * @param jobLogId       任务日志ID
+     * @param jobId          任务ID
+     * @param jobParam       任务参数
+     * @param jobLogFileName 日志文件名
+     * @param shardIndex     分片索引
+     * @param shardTotal     分片总数
+     */
+    public JobContext(long jobLogId, long jobId, String jobParam, String jobLogFileName, int shardIndex, int shardTotal) {
+        this.jobLogId = jobLogId;
         this.jobId = jobId;
         this.jobParam = jobParam;
         this.jobLogFileName = jobLogFileName;
@@ -140,6 +161,16 @@ public class JobContext {
     public static long getCurrentJobId() {
         JobContext context = getJobContext();
         return context != null ? context.jobId : -1;
+    }
+
+    /**
+     * 获取当前任务日志ID
+     *
+     * @return 任务日志ID，如果不存在返回-1
+     */
+    public static long getCurrentJobLogId() {
+        JobContext context = getJobContext();
+        return context != null ? context.jobLogId : -1;
     }
 
     /**

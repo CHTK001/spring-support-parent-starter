@@ -42,6 +42,12 @@ public enum SchedulerTypeEnum {
      * <p>配置值为间隔秒数，如 "30" 表示每30秒执行一次</p>
      */
     FIXED("固定频率"),
+
+    /**
+     * 固定毫秒频率调度
+     * <p>配置值为间隔毫秒数，如 "30000" 表示每30秒执行一次</p>
+     */
+    FIXED_MS("固定毫秒频率"),
     ;
     private final String name;
 

@@ -26,7 +26,10 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true)
 @Schema(description = "同步节点")
 @Data
-@TableName(value = "monitor_sync_node")
+@TableName(
+        value = "monitor_sync_node",
+        excludeProperty = {"createName", "createBy", "createTime", "updateName", "updateBy", "updateTime"}
+)
 public class MonitorSyncNode extends SysBase {
 
     /**

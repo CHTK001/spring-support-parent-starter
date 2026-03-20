@@ -1,8 +1,10 @@
 package com.chua.payment.support.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.chua.payment.support.entity.PaymentOrder;
 import com.chua.payment.support.enums.OrderEvent;
 import com.chua.payment.support.enums.OrderState;
+import com.chua.payment.support.enums.OrderTransitionResult;
 import com.chua.payment.support.mapper.PaymentOrderMapper;
 import com.chua.payment.support.service.OrderStateLogService;
 import com.chua.payment.support.service.OrderStateMachineService;
@@ -12,15 +14,11 @@ import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.statemachine.StateMachine;
 import org.springframework.statemachine.config.StateMachineFactory;
-import org.springframework.statemachine.persist.StateMachinePersister;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 订单状态机服务实现类
- *
- * @author CH
- * @since 2026-03-18
  */
 @Slf4j
 @Service
@@ -33,71 +31,64 @@ public class OrderStateMachineServiceImpl implements OrderStateMachineService {
 
     @Override
     public void createStateMachine(Long orderId) {
-        // 状态机在sendEvent时动态创建，此方法保留用于接口兼容
-        log.debug("状态机将在首次事件发送时创建: orderId={}", orderId);
+        log.debug("订单状态机初始化完成: orderId={}", orderId);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean sendEvent(Long orderId, OrderEvent event, String operator) {
-        try {
-            // 查询订单
-            PaymentOrder order = paymentOrderMapper.selectById(orderId);
-            if (order == null) {
-                log.error("订单不存在: orderId={}", orderId);
-                return false;
-            }
+    public OrderTransitionResult sendEvent(Long orderId, OrderEvent event, String operator) {
+        PaymentOrder order = paymentOrderMapper.selectById(orderId);
+        if (order == null) {
+            return OrderTransitionResult.REJECTED;
+        }
 
-            // 创建状态机
-            StateMachine<OrderState, OrderEvent> stateMachine = stateMachineFactory.getStateMachine();
-            
-            // 获取当前状态
-            OrderState currentState = OrderState.valueOf(order.getStatus());
-            OrderState fromState = currentState;
-            
-            // 启动状态机并设置初始状态
-            stateMachine.start();
-            stateMachine.getStateMachineAccessor()
-                    .doWithAllRegions(accessor -> {
-                        accessor.resetStateMachine(new org.springframework.statemachine.support.DefaultStateMachineContext<>(
-                                currentState, null, null, null));
-                    });
+        OrderState fromState = OrderState.valueOf(order.getStatus());
+        StateMachine<OrderState, OrderEvent> stateMachine = stateMachineFactory.getStateMachine();
+        stateMachine.start();
+        stateMachine.getStateMachineAccessor().doWithAllRegions(accessor ->
+                accessor.resetStateMachine(new org.springframework.statemachine.support.DefaultStateMachineContext<>(
+                        fromState, null, null, null))
+        );
 
-            // 发送事件
-            Message<OrderEvent> message = MessageBuilder
-                    .withPayload(event)
-                    .setHeader("orderId", orderId)
-                    .setHeader("operator", operator)
-                    .build();
-            
-            boolean result = stateMachine.sendEvent(message);
-            
-            if (result) {
-                // 获取新状态
-                OrderState newState = stateMachine.getState().getId();
-                
-                // 更新订单状态
-                order.setStatus(newState.name());
-                paymentOrderMapper.updateById(order);
-                
-                // 记录状态流转日志
-                orderStateLogService.log(orderId, fromState, newState, event, operator, 
-                        String.format("状态转换: %s → %s", fromState.getDescription(), newState.getDescription()));
-                
-                log.info("订单状态机事件处理成功: orderId={}, event={}, {} → {}", 
-                        orderId, event, fromState, newState);
-            } else {
-                log.warn("订单状态机事件处理失败: orderId={}, event={}, currentState={}", 
-                        orderId, event, currentState);
-            }
-            
-            // 停止状态机
+        Message<OrderEvent> message = MessageBuilder.withPayload(event)
+                .setHeader("orderId", orderId)
+                .setHeader("operator", operator)
+                .build();
+
+        boolean accepted = stateMachine.sendEvent(message);
+        if (!accepted) {
             stateMachine.stop();
-            
-            return result;
-        } catch (Exception e) {
-            log.error("订单状态机事件处理异常: orderId={}, event={}", orderId, event, e);
-            throw new RuntimeException("状态机事件处理失败", e);
+            PaymentOrder latest = paymentOrderMapper.selectById(orderId);
+            if (isDuplicateTargetState(event, latest)) {
+                log.info("订单状态已由其他节点满足事件结果: orderId={}, event={}, state={}", orderId, event, latest.getStatus());
+                return OrderTransitionResult.DUPLICATED;
+            }
+            log.warn("订单状态机拒绝事件: orderId={}, state={}, event={}", orderId, fromState, event);
+            return OrderTransitionResult.REJECTED;
+        }
+
+        OrderState toState = stateMachine.getState().getId();
+        try {
+            int updated = paymentOrderMapper.update(null, new LambdaUpdateWrapper<PaymentOrder>()
+                    .eq(PaymentOrder::getId, orderId)
+                    .eq(PaymentOrder::getStatus, fromState.name())
+                    .and(wrapper -> wrapper.isNull(PaymentOrder::getDeleted).or().eq(PaymentOrder::getDeleted, 0))
+                    .set(PaymentOrder::getStatus, toState.name()));
+            if (updated == 0) {
+                PaymentOrder latest = paymentOrderMapper.selectById(orderId);
+                if (latest != null && toState.name().equals(latest.getStatus())) {
+                    log.info("订单状态已由其他节点完成转换: orderId={}, event={}, target={}", orderId, event, toState);
+                    return OrderTransitionResult.DUPLICATED;
+                }
+                log.warn("订单状态并发更新失败: orderId={}, fromState={}, event={}", orderId, fromState, event);
+                return OrderTransitionResult.REJECTED;
+            }
+
+            orderStateLogService.log(orderId, fromState, toState, event.name(), operator,
+                    String.format("状态转换: %s -> %s", fromState.getDescription(), toState.getDescription()));
+            return OrderTransitionResult.APPLIED;
+        } finally {
+            stateMachine.stop();
         }
     }
 
@@ -105,5 +96,29 @@ public class OrderStateMachineServiceImpl implements OrderStateMachineService {
     public OrderState getCurrentState(Long orderId) {
         PaymentOrder order = paymentOrderMapper.selectById(orderId);
         return order != null ? OrderState.valueOf(order.getStatus()) : null;
+    }
+
+    private boolean isDuplicateTargetState(OrderEvent event, PaymentOrder order) {
+        if (order == null) {
+            return false;
+        }
+        String status = order.getStatus();
+        return switch (event) {
+            case PAY -> OrderState.PAYING.name().equals(status)
+                    || OrderState.PAID.name().equals(status)
+                    || OrderState.COMPLETED.name().equals(status)
+                    || OrderState.REFUNDING.name().equals(status)
+                    || OrderState.REFUNDED.name().equals(status);
+            case PAY_SUCCESS -> OrderState.PAID.name().equals(status)
+                    || OrderState.COMPLETED.name().equals(status)
+                    || OrderState.REFUNDING.name().equals(status)
+                    || OrderState.REFUNDED.name().equals(status);
+            case PAY_FAIL -> OrderState.FAILED.name().equals(status);
+            case COMPLETE -> OrderState.COMPLETED.name().equals(status);
+            case CANCEL -> OrderState.CANCELLED.name().equals(status);
+            case REFUND -> OrderState.REFUNDING.name().equals(status) || OrderState.REFUNDED.name().equals(status);
+            case REFUND_SUCCESS -> OrderState.REFUNDED.name().equals(status);
+            case REFUND_FAIL -> OrderState.PAID.name().equals(status) || OrderState.COMPLETED.name().equals(status);
+        };
     }
 }

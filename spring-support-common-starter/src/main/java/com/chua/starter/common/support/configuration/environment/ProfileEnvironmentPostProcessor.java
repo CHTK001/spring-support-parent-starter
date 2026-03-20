@@ -91,14 +91,22 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
             return;
         }
 
-        // 只基于 spring.profiles.active 计算激活的环境目录
+        // 优先使用 Environment 已解析的激活环境（兼容 profile group / include 派生）
         var activeProfiles = new LinkedHashSet<String>();
-        var activeProperty = environment.getProperty("spring.profiles.active");
-        if (activeProperty != null && !activeProperty.isBlank()) {
-            Arrays.stream(activeProperty.split(","))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .forEach(activeProfiles::add);
+        Arrays.stream(environment.getActiveProfiles())
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .forEach(activeProfiles::add);
+
+        // 兜底回退到 spring.profiles.active，兼容极早期解析阶段
+        if (activeProfiles.isEmpty()) {
+            var activeProperty = environment.getProperty("spring.profiles.active");
+            if (activeProperty != null && !activeProperty.isBlank()) {
+                Arrays.stream(activeProperty.split(","))
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .forEach(activeProfiles::add);
+            }
         }
 
         // 只基于 spring.profiles.include 决定加载哪些 application-xxx 配置
@@ -125,11 +133,11 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
 
         // 1. 计算需要加载的目录列表：
         //    - 始终加载兜底目录 ops-default/（所有环境共用）
-        //    - 环境配置目录仅基于 spring.profiles.active：每个 active 生成一个 ops-{profile}/
+        //    - 环境配置目录基于 Environment 已解析的 active profiles：每个 active 生成一个 ops-{profile}/
         var directories = new LinkedHashSet<String>();
         // 兜底目录
         directories.add(DEFAULT_PROFILE_DIR);
-        // 环境目录（仅来源于 spring.profiles.active）
+        // 环境目录（来源于 Environment 已解析的 active profiles）
         for (var profile : activeProfiles) {
             directories.add(DIR_PREFIX + profile);
         }

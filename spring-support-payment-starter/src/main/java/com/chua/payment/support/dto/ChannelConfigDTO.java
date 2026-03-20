@@ -12,12 +12,20 @@ import lombok.Data;
 public class ChannelConfigDTO {
     private Long merchantId;
     private String channelType;
+    private String channelSubType;
     private String channelName;
     private String appId;
+    private String merchantNo;
     private String apiKey;
     private String privateKey;
     private String publicKey;
     private String certPath;
-    private Boolean sandbox;
+    private Integer sandboxMode;
+    private String notifyUrl;
+    private String returnUrl;
+    private String onboardingStatus;
+    private String onboardingLink;
+    private Integer status;
+    private String providerSpi;
     private String extConfig;
 }

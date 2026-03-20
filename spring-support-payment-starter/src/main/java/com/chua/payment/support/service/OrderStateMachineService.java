@@ -2,6 +2,7 @@ package com.chua.payment.support.service;
 
 import com.chua.payment.support.enums.OrderEvent;
 import com.chua.payment.support.enums.OrderState;
+import com.chua.payment.support.enums.OrderTransitionResult;
 
 /**
  * 订单状态机服务接口
@@ -26,7 +27,7 @@ public interface OrderStateMachineService {
      * @param operator  操作人
      * @return 是否成功
      */
-    boolean sendEvent(Long orderId, OrderEvent event, String operator);
+    OrderTransitionResult sendEvent(Long orderId, OrderEvent event, String operator);
 
     /**
      * 获取订单当前状态

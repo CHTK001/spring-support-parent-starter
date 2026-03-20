@@ -12,34 +12,29 @@ import java.io.Serializable;
  */
 @Data
 public class MerchantDTO implements Serializable {
-
-    /**
-     * 商户名称
-     */
     private String merchantName;
 
-    /**
-     * 联系人
-     */
     private String contactName;
 
-    /**
-     * 联系电话
-     */
     private String contactPhone;
 
-    /**
-     * 联系邮箱
-     */
     private String contactEmail;
 
-    /**
-     * 营业执照
-     */
     private String businessLicense;
 
-    /**
-     * 法人
-     */
     private String legalPerson;
+
+    private String defaultNotifyUrl;
+
+    private String defaultReturnUrl;
+
+    private Boolean walletEnabled;
+
+    private Boolean compositeEnabled;
+
+    private Boolean autoCloseEnabled;
+
+    private Integer autoCloseMinutes;
+
+    private String remark;
 }

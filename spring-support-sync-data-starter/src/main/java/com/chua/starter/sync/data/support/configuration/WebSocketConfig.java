@@ -1,6 +1,7 @@
 package com.chua.starter.sync.data.support.configuration;
 
 import com.chua.starter.sync.data.support.properties.SyncProperties;
+import com.chua.starter.sync.data.support.websocket.SyncProgressWebSocketHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -22,13 +23,17 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 @ConditionalOnProperty(prefix = SyncProperties.PRE, name = "websocket-enabled", havingValue = "true", matchIfMissing = true)
 public class WebSocketConfig implements WebSocketConfigurer {
 
+    private static final String SYNC_PROGRESS_ENDPOINT = "/ws/sync/progress";
+
     private final SyncProperties syncProperties;
+    private final SyncProgressWebSocketHandler syncProgressWebSocketHandler;
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        log.info("WebSocket配置已加载，实时推送功能已启用");
-        // WebSocket Handler将在后续阶段实现
-        // registry.addHandler(syncProgressHandler(), "/ws/sync/progress")
-        //         .setAllowedOrigins("*");
+        registry.addHandler(syncProgressWebSocketHandler, SYNC_PROGRESS_ENDPOINT)
+                .setAllowedOriginPatterns("*");
+
+        log.info("WebSocket配置已加载，实时推送功能已启用: enabled={}, endpoint={}",
+                syncProperties.isWebsocketEnabled(), SYNC_PROGRESS_ENDPOINT);
     }
 }

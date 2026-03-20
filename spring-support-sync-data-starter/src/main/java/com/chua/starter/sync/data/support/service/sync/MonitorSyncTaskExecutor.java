@@ -31,6 +31,15 @@ public interface MonitorSyncTaskExecutor {
     Long executeOnce(Long taskId);
 
     /**
+     * 按指定触发类型执行一次
+     *
+     * @param taskId      任务ID
+     * @param triggerType 触发类型
+     * @return 执行日志ID
+     */
+    Long executeOnce(Long taskId, String triggerType);
+
+    /**
      * 检查任务是否在运行
      *
      * @param taskId 任务ID

@@ -8,6 +8,7 @@ import com.chua.common.support.sync.Output;
 import com.chua.common.support.sync.Sink;
 import com.chua.common.support.core.utils.StringUtils;
 import com.chua.starter.job.support.log.JobLogDetailService;
+import com.chua.starter.sync.data.support.properties.SyncJobIntegrationProperties;
 import com.chua.starter.sync.data.support.entity.MonitorSyncNode;
 import com.chua.starter.sync.data.support.entity.MonitorSyncTask;
 import com.chua.starter.sync.data.support.entity.MonitorSyncTaskLog;
@@ -17,16 +18,20 @@ import com.chua.starter.sync.data.support.mapper.MonitorSyncTaskMapper;
 import com.chua.starter.sync.data.support.sync.ColumnDefinition;
 import com.chua.starter.sync.data.support.service.sync.MonitorSyncTaskExecutor;
 import com.chua.starter.sync.data.support.service.sync.OutputTableService;
+import com.chua.starter.sync.data.support.service.sync.SyncJobIntegrationService;
+import com.chua.starter.sync.data.support.service.sync.SyncTaskLogAdapter;
 import com.chua.starter.sync.data.support.service.sync.SyncTaskWebSocketService;
 import com.chua.starter.sync.data.support.sync.performance.AdaptiveBatchSizeCalculator;
 import com.chua.starter.sync.data.support.sync.performance.StreamingSyncProcessor;
 import com.chua.starter.sync.data.support.sync.performance.MemoryMonitor;
+import com.chua.starter.sync.data.support.sync.sink.InMemorySyncSink;
 import com.chua.starter.sync.data.support.sync.concurrency.RateLimiterConfig;
 import com.chua.starter.sync.data.support.service.MemoryAlertService;
 import com.chua.starter.sync.data.support.properties.SyncProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.scheduling.support.CronTrigger;
@@ -57,9 +62,12 @@ public class MonitorSyncTaskExecutorImpl implements MonitorSyncTaskExecutor, Com
     private final SyncTaskWebSocketService webSocketService;
     private final OutputTableService outputTableService;
     private final SyncProperties syncProperties;
+    private final SyncJobIntegrationProperties syncJobIntegrationProperties;
     private final AdaptiveBatchSizeCalculator batchSizeCalculator;
     private final StreamingSyncProcessor streamingProcessor;
     private final MemoryMonitor memoryMonitor;
+    private final ObjectProvider<SyncJobIntegrationService> syncJobIntegrationServiceProvider;
+    private final ObjectProvider<SyncTaskLogAdapter> syncTaskLogAdapterProvider;
     
     @Autowired(required = false)
     private MemoryAlertService memoryAlertService;
@@ -90,10 +98,12 @@ public class MonitorSyncTaskExecutorImpl implements MonitorSyncTaskExecutor, Com
 
     @PostConstruct
     public void init() {
-        taskScheduler = new ThreadPoolTaskScheduler();
-        taskScheduler.setPoolSize(10);
-        taskScheduler.setThreadNamePrefix("sync-task-scheduler-");
-        taskScheduler.initialize();
+        if (!isJobIntegrationEnabled()) {
+            taskScheduler = new ThreadPoolTaskScheduler();
+            taskScheduler.setPoolSize(10);
+            taskScheduler.setThreadNamePrefix("sync-task-scheduler-");
+            taskScheduler.initialize();
+        }
         log.info("同步任务执行器初始化完成");
 
     }
@@ -107,6 +117,27 @@ public class MonitorSyncTaskExecutorImpl implements MonitorSyncTaskExecutor, Com
             List<MonitorSyncTask> runningTasks = taskMapper.selectRunningTasks();
             if (runningTasks == null || runningTasks.isEmpty()) {
                 log.info("没有需要恢复的运行中任务");
+                return;
+            }
+
+            if (isJobIntegrationEnabled()) {
+                SyncJobIntegrationService syncJobIntegrationService = syncJobIntegrationServiceProvider.getIfAvailable();
+                if (syncJobIntegrationService == null) {
+                    log.warn("Sync Job 集成已启用，但未找到可用的集成服务，跳过恢复");
+                    return;
+                }
+
+                log.info("开始恢复 {} 个运行中的 Sync Job 映射", runningTasks.size());
+                for (MonitorSyncTask task : runningTasks) {
+                    try {
+                        syncJobIntegrationService.createOrUpdateJob(task);
+                        syncJobIntegrationService.startJob(task.getSyncTaskId());
+                    } catch (Exception e) {
+                        log.error("恢复 Sync Job 映射失败, taskId: {}, taskName: {}",
+                                task.getSyncTaskId(), task.getSyncTaskName(), e);
+                    }
+                }
+                log.info("Sync Job 映射恢复完成");
                 return;
             }
 
@@ -144,12 +175,16 @@ public class MonitorSyncTaskExecutorImpl implements MonitorSyncTaskExecutor, Com
             throw new IllegalArgumentException("任务ID不能为空");
         }
 
+        if (isJobIntegrationEnabled()) {
+            throw new IllegalStateException("当前已启用 Job 集成，请通过 SyncJobIntegrationService 启动任务");
+        }
+
         if (runningFlows.containsKey(taskId)) {
             log.warn("任务已在运行中, taskId: {}", taskId);
             return;
         }
 
-        MonitorSyncTask task = taskMapper.selectById(taskId);
+        MonitorSyncTask task = taskMapper.selectCompatibleById(taskId);
         if (task == null) {
             throw new IllegalArgumentException("任务不存在: " + taskId);
         }
@@ -190,6 +225,11 @@ public class MonitorSyncTaskExecutorImpl implements MonitorSyncTaskExecutor, Com
             return;
         }
 
+        if (isJobIntegrationEnabled()) {
+            runningFlows.remove(taskId);
+            return;
+        }
+
         log.info("停止同步任务, taskId: {}", taskId);
 
         ScheduledFuture<?> future = scheduledFutures.remove(taskId);
@@ -220,6 +260,14 @@ public class MonitorSyncTaskExecutorImpl implements MonitorSyncTaskExecutor, Com
     }
 
     @Override
+    public Long executeOnce(Long taskId, String triggerType) {
+        if (taskId == null) {
+            throw new IllegalArgumentException("任务ID不能为空");
+        }
+        return doExecute(taskId, triggerType);
+    }
+
+    @Override
     public boolean isRunning(Long taskId) {
         return runningFlows.containsKey(taskId);
     }
@@ -245,7 +293,7 @@ public class MonitorSyncTaskExecutorImpl implements MonitorSyncTaskExecutor, Com
             }
         }
         
-        MonitorSyncTask task = taskMapper.selectById(taskId);
+        MonitorSyncTask task = taskMapper.selectCompatibleById(taskId);
         if (task == null) {
             log.error("任务不存在, taskId: {}", taskId);
             return null;
@@ -265,9 +313,12 @@ public class MonitorSyncTaskExecutorImpl implements MonitorSyncTaskExecutor, Com
         taskLog.setSyncLogFilterCount(0L);
         logMapper.insert(taskLog);
 
+        SyncTaskLogAdapter syncTaskLogAdapter = syncTaskLogAdapterProvider.getIfAvailable();
+        Integer jobLogId = syncTaskLogAdapter != null ? syncTaskLogAdapter.createJobLog(task, taskLog) : null;
+
         webSocketService.pushTaskStarted(task, taskLog);
 
-        logDetail(taskLog.getSyncLogId().intValue(), task.getSyncTaskId().intValue(),
+        logDetail(jobLogId, resolveJobId(task, jobLogId),
                 "INFO", "同步任务开始执行: " + task.getSyncTaskName(), "START", 0);
 
         // 检查内存可用性
@@ -286,8 +337,11 @@ public class MonitorSyncTaskExecutorImpl implements MonitorSyncTaskExecutor, Com
             taskLog.setSyncLogEndTime(LocalDateTime.now());
             taskLog.setSyncLogMessage(errorMsg);
             logMapper.updateById(taskLog);
+            if (syncTaskLogAdapter != null) {
+                syncTaskLogAdapter.updateJobLog(task, taskLog, jobLogId);
+            }
             
-            logDetail(taskLog.getSyncLogId().intValue(), task.getSyncTaskId().intValue(),
+            logDetail(jobLogId, resolveJobId(task, jobLogId),
                     "WARN", errorMsg, "MEMORY_CHECK", 0);
             
             webSocketService.pushError(taskId, taskLog.getSyncLogId(), null, "内存不足", 
@@ -313,8 +367,11 @@ public class MonitorSyncTaskExecutorImpl implements MonitorSyncTaskExecutor, Com
             taskLog.setSyncLogMessage("执行成功");
 
             logMapper.updateById(taskLog);
+            if (syncTaskLogAdapter != null) {
+                syncTaskLogAdapter.updateJobLog(task, taskLog, jobLogId);
+            }
 
-            logDetail(taskLog.getSyncLogId().intValue(), task.getSyncTaskId().intValue(),
+            logDetail(jobLogId, resolveJobId(task, jobLogId),
                     "INFO", String.format("同步任务执行成功, 读取: %d, 写入: %d, 成功: %d, 失败: %d, 耗时: %dms",
                             taskLog.getSyncLogReadCount(), taskLog.getSyncLogWriteCount(),
                             taskLog.getSyncLogSuccessCount(), taskLog.getSyncLogFailCount(), cost),
@@ -334,7 +391,7 @@ public class MonitorSyncTaskExecutorImpl implements MonitorSyncTaskExecutor, Com
         } catch (Exception e) {
             log.error("同步任务执行失败, taskId: {}", taskId, e);
 
-            logDetailError(taskLog.getSyncLogId().intValue(), task.getSyncTaskId().intValue(),
+            logDetailError(jobLogId, resolveJobId(task, jobLogId),
                     "同步任务执行失败", e);
 
             long cost = System.currentTimeMillis() - startTime;
@@ -344,12 +401,14 @@ public class MonitorSyncTaskExecutorImpl implements MonitorSyncTaskExecutor, Com
             taskLog.setSyncLogMessage("执行失败: " + e.getMessage());
             taskLog.setSyncLogStackTrace(getStackTrace(e));
             logMapper.updateById(taskLog);
+            if (syncTaskLogAdapter != null) {
+                syncTaskLogAdapter.updateJobLog(task, taskLog, jobLogId);
+            }
 
             task.setSyncTaskLastRunTime(LocalDateTime.now());
             task.setSyncTaskLastRunStatus("FAIL");
             task.setSyncTaskRunCount(task.getSyncTaskRunCount() + 1);
             task.setSyncTaskFailCount(task.getSyncTaskFailCount() + 1);
-            task.setSyncTaskStatus("ERROR");
             taskMapper.updateById(task);
 
             webSocketService.pushTaskCompleted(task, taskLog);
@@ -418,6 +477,8 @@ public class MonitorSyncTaskExecutorImpl implements MonitorSyncTaskExecutor, Com
             MonitorSyncNode dataCenterNode = dataCenterNodes.get(0);
             Sink sink = createSink(dataCenterNode);
             builder.sink(sink);
+        } else {
+            builder.sink(createDefaultSink(task));
         }
 
         if (task.getSyncTaskBatchSize() != null) {
@@ -564,6 +625,12 @@ public class MonitorSyncTaskExecutorImpl implements MonitorSyncTaskExecutor, Com
         return provider.getNewExtension(spiName, config);
     }
 
+    private Sink createDefaultSink(MonitorSyncTask task) {
+        Integer batchSize = task != null ? task.getSyncTaskBatchSize() : null;
+        int sinkCapacity = Math.max(batchSize != null ? batchSize * 4 : 1000, 1000);
+        return new InMemorySyncSink(sinkCapacity);
+    }
+
     /**
      * 解析配置JSON
      */
@@ -608,7 +675,7 @@ public class MonitorSyncTaskExecutorImpl implements MonitorSyncTaskExecutor, Com
      */
     private void logDetail(Integer logId, Integer taskId, String level, String content,
                            String phase, Integer progress) {
-        if (jobLogDetailService != null) {
+        if (logId != null && taskId != null && jobLogDetailService != null) {
             try {
                 jobLogDetailService.log(logId, taskId, level, content, phase, progress);
             } catch (Exception e) {
@@ -621,13 +688,31 @@ public class MonitorSyncTaskExecutorImpl implements MonitorSyncTaskExecutor, Com
      * 记录错误详细日志
      */
     private void logDetailError(Integer logId, Integer taskId, String content, Throwable e) {
-        if (jobLogDetailService != null) {
+        if (logId != null && taskId != null && jobLogDetailService != null) {
             try {
                 jobLogDetailService.error(logId, taskId, content, e);
             } catch (Exception ex) {
                 log.warn("记录错误详细日志失败: {}", ex.getMessage());
             }
         }
+    }
+
+    private Integer resolveJobId(MonitorSyncTask task, Integer jobLogId) {
+        if (jobLogId == null) {
+            return null;
+        }
+
+        SyncJobIntegrationService syncJobIntegrationService = syncJobIntegrationServiceProvider.getIfAvailable();
+        if (syncJobIntegrationService == null) {
+            return task.getSyncTaskId() != null ? task.getSyncTaskId().intValue() : null;
+        }
+
+        Integer jobId = syncJobIntegrationService.getJobId(task.getSyncTaskId());
+        return jobId != null ? jobId : (task.getSyncTaskId() != null ? task.getSyncTaskId().intValue() : null);
+    }
+
+    private boolean isJobIntegrationEnabled() {
+        return syncJobIntegrationProperties.isEnabled();
     }
 
     @Override

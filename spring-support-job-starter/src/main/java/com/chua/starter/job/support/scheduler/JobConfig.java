@@ -172,6 +172,7 @@ public class JobConfig {
 
         // 设置任务执行上下文
         JobContext context = new JobContext(
+                jobLog.getJobLogId(),
                 jobInfo.getJobId(),
                 jobInfo.getJobExecuteParam(),
                 null,

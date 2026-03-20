@@ -14,13 +14,12 @@ import com.chua.starter.common.support.utils.ResponseUtils;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
-import com.chua.starter.oauth.client.support.provider.UserInfoVO;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
-import com.chua.starter.oauth.client.support.user.UserResume;
 import com.google.common.collect.Sets;
 import jakarta.servlet.http.Cookie;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -79,26 +78,42 @@ public class StaticProtocolExecutor implements ProtocolExecutor {
                 List<String> userAndPassword = Splitter.on(":").omitEmptyStrings().limit(2).trimResults().splitToList(string);
                 if (isMatch(userAndPassword, username, password)) {
                     loginAuthResult.setCode(200);
-                    UserResume userResult = new UserResume();
+                    UserResult userResult = new UserResult();
                     userResult.setUserId("1");
                     userResult.setLoginType("STATIC");
                     userResult.setUsername(username);
-                    if ("admin".equals(username)) {
-                        userResult.setRoles(Sets.newHashSet("admin"));
-                    }
-                    loginAuthResult.setUserResume(userResult);
-                    try {
-                        loginAuthResult.setToken(Codec.build(encryption, DEFAULT_KEY).encodeHex(Json.toJson(userResult)));
-                    } catch (Exception ignored) {
+                    userResult.setNickName(username);
+                    userResult.setPermission(Collections.emptySet());
+                    userResult.setExpireTime(System.currentTimeMillis() / 1000 + 7L * 24 * 60 * 60);
+                    if ("admin".equalsIgnoreCase(username)) {
+                        userResult.setRoles(Sets.newHashSet("SUPER_ADMIN", "ADMIN"));
+                    } else {
+                        userResult.setRoles(Sets.newHashSet("OPS"));
                     }
 
-                    Map<String, Object> map = Map.of(
-                            "sysUserUsername", userResult.getUsername()
-                    );
                     userResult.setUid(DigestUtils.md5Hex(userResult.getUserId()));
-                    userResult.setExt(map);
-                    userResult.setOpenId(userResult.getOpenId());
-                    userResult.setUnionId(userResult.getUnionId());
+                    userResult.setExt(Map.of(
+                            "sysUserId", 1,
+                            "sysUserUsername", userResult.getUsername(),
+                            "sysUserNickname", userResult.getNickName(),
+                            "sysUserAvatar", "",
+                            "avatar", ""
+                    ));
+                    userResult.setOpenId(userResult.getUid());
+                    userResult.setUnionId(userResult.getUid());
+
+                    String token = encodeUserResult(userResult);
+                    if (StringUtils.isBlank(token)) {
+                        loginAuthResult.setCode(500);
+                        loginAuthResult.setMessage("静态登录令牌生成失败");
+                        return loginAuthResult;
+                    }
+
+                    userResult.setToken(token);
+                    userResult.setRefreshToken(token);
+                    loginAuthResult.setUserResume(userResult);
+                    loginAuthResult.setToken(token);
+                    loginAuthResult.setRefreshToken(token);
                     return loginAuthResult;
                 }
             }
@@ -108,6 +123,14 @@ public class StaticProtocolExecutor implements ProtocolExecutor {
         loginAuthResult.setMessage("账号或密码错误");
         return loginAuthResult;
 
+    }
+
+    private String encodeUserResult(UserResult userResult) {
+        try {
+            return Codec.build(encryption, DEFAULT_KEY).encodeHex(Json.toJson(userResult));
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
 

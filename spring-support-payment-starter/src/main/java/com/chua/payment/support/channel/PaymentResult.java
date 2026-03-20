@@ -2,6 +2,9 @@ package com.chua.payment.support.channel;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
+import java.util.Map;
+
 /**
  * 支付结果
  *
@@ -14,4 +17,10 @@ public class PaymentResult {
     private String tradeNo;
     private String message;
     private String payUrl;
+    private String launchType;
+    private String formHtml;
+    private Map<String, Object> sdkParams;
+    private BigDecimal paidAmount;
+    private String status;
+    private String rawResponse;
 }
