@@ -87,6 +87,7 @@
     <module>spring-support-job-starter</module>
     <module>spring-support-ai-starter</module>
     <module>spring-support-message-starter</module>
+    <module>spring-support-email-starter</module>
     <module>spring-support-gateway-starter</module>
     <module>spring-support-sync-data-starter</module>
   </modules>
