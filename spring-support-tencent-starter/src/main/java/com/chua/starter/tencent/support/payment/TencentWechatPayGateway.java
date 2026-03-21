@@ -34,4 +34,22 @@ public interface TencentWechatPayGateway {
     TencentWechatPayNotifyPayload parsePayNotify(TencentWechatPayProperties properties, TencentWechatNotifyRequest request);
 
     TencentWechatRefundNotifyPayload parseRefundNotify(TencentWechatPayProperties properties, TencentWechatNotifyRequest request);
+
+    TencentWechatPayResponse nativePay(TencentWechatPayProperties properties, TencentWechatPayRequest request);
+
+    TencentWechatOrderResponse queryNativeOrder(TencentWechatPayProperties properties, String orderNo);
+
+    boolean closeNativeOrder(TencentWechatPayProperties properties, String orderNo);
+
+    TencentWechatPayResponse appPay(TencentWechatPayProperties properties, TencentWechatPayRequest request);
+
+    TencentWechatOrderResponse queryAppOrder(TencentWechatPayProperties properties, String orderNo);
+
+    boolean closeAppOrder(TencentWechatPayProperties properties, String orderNo);
+
+    TencentWechatPayResponse miniProgramPay(TencentWechatPayProperties properties, TencentWechatPayRequest request);
+
+    TencentWechatOrderResponse queryMiniProgramOrder(TencentWechatPayProperties properties, String orderNo);
+
+    boolean closeMiniProgramOrder(TencentWechatPayProperties properties, String orderNo);
 }

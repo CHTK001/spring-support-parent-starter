@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
     Spring Support Redis Starter - Redis缓存集成模块
 
@@ -36,13 +36,8 @@
     <description>Spring Support框架Redis集成模块，提供完整的Redis缓存和分布式功能支持</description>
 
     <!-- 项目属性配置 -->
-    <properties>
-        <maven.compiler.source>25</maven.compiler.source>
-        <maven.compiler.target>25</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
 
-    <!-- 依赖配置 -->
+<!-- 依赖配置 -->
     <dependencies>
         <!-- Redis工具类库 - 提供Redis操作的工具类和扩展功能 -->
         <dependency>
@@ -113,8 +108,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <source>25</source>  <!-- 源码Java版本 -->
-                    <target>25</target>  <!-- 目标Java版本 -->
                     <parameters>true</parameters>
                     <annotationProcessorPaths>
                         <path>

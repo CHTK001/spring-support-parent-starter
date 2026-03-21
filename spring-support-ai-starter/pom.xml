@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
     Spring Support AI Starter - AI深度学习功能模块
 
@@ -35,13 +35,8 @@
     <description>Spring Support框架AI深度学习功能模块，提供人脸检测、特征提取、OCR、版面分析等AI能力</description>
 
     <!-- 项目属性配置 -->
-    <properties>
-        <maven.compiler.source>25</maven.compiler.source>
-        <maven.compiler.target>25</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
 
-    <!-- 依赖配置 -->
+<!-- 依赖配置 -->
     <dependencies>
         <!-- Lombok - 简化Java代码编写 -->
         <dependency>
@@ -110,8 +105,6 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 
                 <configuration>
-                    <source>25</source>
-                    <target>25</target>
                     <encoding>UTF-8</encoding>
                     <proc>full</proc>
                     <annotationProcessorPaths>

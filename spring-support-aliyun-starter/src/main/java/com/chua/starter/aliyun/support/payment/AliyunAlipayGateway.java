@@ -28,4 +28,6 @@ public interface AliyunAlipayGateway {
 
     AliyunAlipayPayNotifyPayload verifyAndParsePayNotify(AliyunAlipayProperties properties,
                                                          AliyunAlipayNotifyRequest request);
+
+    AliyunAlipayPayResponse appPay(AliyunAlipayProperties properties, AliyunAlipayPayRequest request);
 }

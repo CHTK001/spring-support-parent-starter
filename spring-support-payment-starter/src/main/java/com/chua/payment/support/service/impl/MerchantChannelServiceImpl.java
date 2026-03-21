@@ -1,8 +1,10 @@
 package com.chua.payment.support.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.chua.payment.support.channel.PaymentChannelRegistry;
 import com.chua.common.support.core.spi.ServiceProvider;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.payment.support.channel.support.AbstractMerchantPaymentChannel;
+import com.chua.payment.support.configuration.PaymentCipherService;
 import com.chua.payment.support.configuration.PaymentProviderProperties;
 import com.chua.payment.support.dto.ChannelConfigDTO;
 import com.chua.payment.support.entity.Merchant;
@@ -27,12 +29,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import javax.crypto.Cipher;
-import javax.crypto.spec.SecretKeySpec;
-import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -45,12 +43,12 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class MerchantChannelServiceImpl implements MerchantChannelService {
 
-    private static final String AES_KEY = "PaymentSystem16";
-
     private final MerchantChannelMapper channelMapper;
     private final MerchantMapper merchantMapper;
     private final ObjectMapper objectMapper;
     private final PaymentProviderProperties paymentProviderProperties;
+    private final PaymentCipherService paymentCipherService;
+    private final PaymentChannelRegistry paymentChannelRegistry;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -67,6 +65,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
         channel.setOnboardingStatus(StringUtils.hasText(dto.getOnboardingStatus()) ? dto.getOnboardingStatus() : defaultOnboardingStatus(dto.getChannelType()));
         PaymentMethodGuideVO guide = findGuide(dto.getChannelType(), dto.getChannelSubType());
         channel.setOnboardingLink(StringUtils.hasText(dto.getOnboardingLink()) ? dto.getOnboardingLink() : defaultGuideUrl(guide));
+        validateEnabledChannelSupport(channel);
         channelMapper.insert(channel);
         return convertToVO(channel, merchant, guide);
     }
@@ -98,6 +97,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
         if (!StringUtils.hasText(channel.getOnboardingLink())) {
             channel.setOnboardingLink(defaultGuideUrl(guide));
         }
+        validateEnabledChannelSupport(channel);
         channelMapper.updateById(channel);
         return convertToVO(channel, merchant, guide);
     }
@@ -135,6 +135,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
     public boolean enableChannel(Long id) {
         MerchantChannel channel = requireChannel(id);
         channel.setStatus(ChannelStatus.ENABLED.getCode());
+        validateEnabledChannelSupport(channel);
         return channelMapper.updateById(channel) > 0;
     }
 
@@ -211,6 +212,19 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
                 List.of("钱包开关", "充值策略", "风控规则"),
                 List.of("启用钱包", "配置余额扣减和退款规则", "配置对账策略"),
                 List.of("钱包能力不依赖第三方开户，但对账责任在平台自身")));
+
+        list.add(guide("UNIONPAY", "APP", "云闪付APP支付", "中国银联", "https://open.unionpay.com", "https://open.unionpay.com/tjweb/acproduct/list", "https://open.unionpay.com/tjweb/acproduct/sandbox",
+                "适用于APP内拉起云闪付客户端完成支付。",
+                List.of("AppId", "AppKey", "商户号", "回调地址", "返回地址"),
+                List.of("注册银联开放平台账号", "创建应用获取AppId", "签约商户号", "配置回调地址", "下载SDK集成"),
+                List.of("支持沙箱环境测试", "需要配置商户私钥和银联公钥")));
+
+        list.add(guide("UNIONPAY", "H5", "云闪付H5支付", "中国银联", "https://open.unionpay.com", "https://open.unionpay.com/tjweb/acproduct/list", "https://open.unionpay.com/tjweb/acproduct/sandbox",
+                "适用于手机浏览器内跳转云闪付完成支付。",
+                List.of("AppId", "AppKey", "商户号", "回调地址", "返回地址"),
+                List.of("注册银联开放平台账号", "创建应用获取AppId", "签约商户号", "配置回调地址"),
+                List.of("支持沙箱环境测试", "需要配置商户私钥和银联公钥")));
+
         return list;
     }
 
@@ -232,28 +246,12 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
 
     @Override
     public String encryptApiKey(String apiKey) {
-        try {
-            SecretKeySpec key = new SecretKeySpec(AES_KEY.getBytes(StandardCharsets.UTF_8), "AES");
-            Cipher cipher = Cipher.getInstance("AES");
-            cipher.init(Cipher.ENCRYPT_MODE, key);
-            byte[] encrypted = cipher.doFinal(apiKey.getBytes(StandardCharsets.UTF_8));
-            return Base64.getEncoder().encodeToString(encrypted);
-        } catch (Exception e) {
-            throw new PaymentException("加密失败", e);
-        }
+        return paymentCipherService.encrypt(apiKey);
     }
 
     @Override
     public String decryptApiKey(String encryptedKey) {
-        try {
-            SecretKeySpec key = new SecretKeySpec(AES_KEY.getBytes(StandardCharsets.UTF_8), "AES");
-            Cipher cipher = Cipher.getInstance("AES");
-            cipher.init(Cipher.DECRYPT_MODE, key);
-            byte[] decrypted = cipher.doFinal(Base64.getDecoder().decode(encryptedKey));
-            return new String(decrypted, StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            throw new PaymentException("解密失败", e);
-        }
+        return paymentCipherService.decrypt(encryptedKey);
     }
 
     private Merchant requireMerchant(Long merchantId) {
@@ -277,6 +275,59 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
 
     private String encryptIfPresent(String value) {
         return StringUtils.hasText(value) ? encryptApiKey(value) : null;
+    }
+
+    private void validateEnabledChannelSupport(MerchantChannel channel) {
+        if (channel == null || !Integer.valueOf(ChannelStatus.ENABLED.getCode()).equals(channel.getStatus())) {
+            return;
+        }
+        if (!paymentChannelRegistry.supports(channel.getChannelType(), channel.getChannelSubType())) {
+            throw new PaymentException("当前版本未提供可启用的支付渠道实现: "
+                    + channel.getChannelType()
+                    + (StringUtils.hasText(channel.getChannelSubType()) ? "/" + channel.getChannelSubType() : ""));
+        }
+        validateRequiredConfig(channel);
+    }
+
+    private void validateRequiredConfig(MerchantChannel channel) {
+        String channelType = upper(channel.getChannelType());
+        String channelSubType = upper(channel.getChannelSubType());
+        if ("WECHAT".equals(channelType)) {
+            requireText(channel.getAppId(), "微信 AppId 不能为空");
+            requireText(channel.getMerchantNo(), "微信商户号不能为空");
+            requireText(channel.getPrivateKey(), "微信商户私钥不能为空");
+            requireText(channel.getApiKey(), "微信 APIv3 Key 不能为空");
+            requireText(extText(parseExtConfig(channel.getExtConfig()), "merchantSerialNumber"),
+                    "微信商户证书序列号不能为空，请在 extConfig 中提供 merchantSerialNumber");
+            return;
+        }
+        if ("ALIPAY".equals(channelType)) {
+            requireText(channel.getAppId(), "支付宝应用ID不能为空");
+            requireText(channel.getPrivateKey(), "支付宝私钥不能为空");
+            requireText(channel.getPublicKey(), "支付宝公钥不能为空");
+            return;
+        }
+        if ("COMPOSITE".equals(channelType) && "AGGREGATE_ROUTE".equals(channelSubType)) {
+            Long targetChannelId = resolveRouteChannelId(channel.getExtConfig());
+            if (targetChannelId == null) {
+                throw new PaymentException("综合支付路由必须在 extConfig 中提供 targetChannelId 或 defaultChannelId");
+            }
+            if (channel.getId() != null && channel.getId().equals(targetChannelId)) {
+                throw new PaymentException("综合支付路由不能指向自身");
+            }
+            MerchantChannel targetChannel = channelMapper.selectById(targetChannelId);
+            if (targetChannel == null) {
+                throw new PaymentException("综合支付路由目标渠道不存在: " + targetChannelId);
+            }
+            if ("COMPOSITE".equalsIgnoreCase(targetChannel.getChannelType())) {
+                throw new PaymentException("综合支付路由不能嵌套指向 COMPOSITE 渠道");
+            }
+            if (!paymentChannelRegistry.supports(targetChannel.getChannelType(), targetChannel.getChannelSubType())) {
+                throw new PaymentException("综合支付路由目标渠道当前版本不可执行: "
+                        + targetChannel.getChannelType()
+                        + "/" + targetChannel.getChannelSubType());
+            }
+        }
     }
 
     private String normalizeExtConfig(String channelType, String extConfigText) {
@@ -500,5 +551,66 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
             }
         }
         return null;
+    }
+
+    private Long resolveRouteChannelId(String extConfigText) {
+        Map<String, Object> extConfig = parseExtConfig(extConfigText);
+        return parseLong(extConfig.get("targetChannelId"), extConfig.get("defaultChannelId"));
+    }
+
+    private Long parseLong(Object... values) {
+        if (values == null) {
+            return null;
+        }
+        for (Object value : values) {
+            if (value == null) {
+                continue;
+            }
+            if (value instanceof Number number) {
+                return number.longValue();
+            }
+            String text = String.valueOf(value).trim();
+            if (!text.isEmpty()) {
+                try {
+                    return Long.parseLong(text);
+                } catch (NumberFormatException ignored) {
+                    throw new PaymentException("渠道扩展配置中的路由 channelId 格式错误: " + text);
+                }
+            }
+        }
+        return null;
+    }
+
+    private String upper(String value) {
+        return value == null ? null : value.toUpperCase(Locale.ROOT);
+    }
+
+    private String extText(Map<String, Object> extConfig, String key) {
+        Object value = extConfig.get(key);
+        return value == null ? null : String.valueOf(value);
+    }
+
+    private String requireText(String value, String message) {
+        if (!StringUtils.hasText(value)) {
+            throw new PaymentException(message);
+        }
+        return value;
+    }
+
+    @Override
+    public MerchantChannel getWalletChannel(Long merchantId) {
+        if (merchantId == null) {
+            throw new PaymentException("商户ID不能为空");
+        }
+        MerchantChannel channel = channelMapper.selectOne(new LambdaQueryWrapper<MerchantChannel>()
+                .eq(MerchantChannel::getMerchantId, merchantId)
+                .eq(MerchantChannel::getChannelType, "WALLET")
+                .eq(MerchantChannel::getChannelSubType, "BALANCE")
+                .eq(MerchantChannel::getStatus, 1)
+                .last("limit 1"));
+        if (channel == null) {
+            throw new PaymentException("商户未开通钱包渠道");
+        }
+        return channel;
     }
 }

@@ -44,7 +44,16 @@ public interface PaymentOrderService {
 
     boolean refundSuccess(Long id, BigDecimal refundAmount, String operator);
 
+    boolean refundSuccess(String refundNo,
+                          BigDecimal refundAmount,
+                          String thirdPartyRefundNo,
+                          String operator,
+                          String responsePayload,
+                          String remark);
+
     boolean refundFail(Long id, String reason, String operator);
+
+    boolean refundFail(String refundNo, String responsePayload, String operator, String reason);
 
     boolean deleteOrder(Long id);
 

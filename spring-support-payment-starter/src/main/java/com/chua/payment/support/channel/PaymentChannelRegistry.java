@@ -26,4 +26,8 @@ public class PaymentChannelRegistry {
                         + channelType
                         + (StringUtils.hasText(channelSubType) ? "/" + channelSubType : "")));
     }
+
+    public boolean supports(String channelType, String channelSubType) {
+        return channels.stream().anyMatch(channel -> channel.supports(channelType, channelSubType));
+    }
 }

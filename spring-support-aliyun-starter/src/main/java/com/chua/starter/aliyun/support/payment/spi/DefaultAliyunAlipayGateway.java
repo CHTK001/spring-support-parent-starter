@@ -9,6 +9,7 @@ import com.alipay.api.request.AlipayTradePagePayRequest;
 import com.alipay.api.request.AlipayTradeQueryRequest;
 import com.alipay.api.request.AlipayTradeRefundRequest;
 import com.alipay.api.request.AlipayTradeWapPayRequest;
+import com.alipay.api.request.AlipayTradeAppPayRequest;
 import com.alipay.api.response.AlipayTradeFastpayRefundQueryResponse;
 import com.alipay.api.response.AlipayTradePagePayResponse;
 import com.alipay.api.response.AlipayTradeQueryResponse;
@@ -81,6 +82,26 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
             return result;
         } catch (AlipayApiException e) {
             throw new IllegalStateException("发起支付宝手机网站支付失败", e);
+        }
+    }
+
+    @Override
+    public AliyunAlipayPayResponse appPay(AliyunAlipayProperties properties, AliyunAlipayPayRequest request) {
+        try {
+            AlipayTradeAppPayRequest payRequest = new AlipayTradeAppPayRequest();
+            payRequest.setNotifyUrl(request.getNotifyUrl());
+            payRequest.setBizContent(toJson(buildPayBizContent(request)));
+            com.alipay.api.response.AlipayTradeAppPayResponse response = client(properties).sdkExecute(payRequest);
+
+            AliyunAlipayPayResponse result = new AliyunAlipayPayResponse();
+            result.setSuccess(StringUtils.hasText(response.getBody()));
+            result.setBody(response.getBody());
+            result.setTradeNo(response.getTradeNo());
+            result.setMessage(firstNonBlank(response.getSubMsg(), response.getMsg()));
+            result.setRawResponse(response.getBody());
+            return result;
+        } catch (AlipayApiException e) {
+            throw new IllegalStateException("发起支付宝 App 支付失败", e);
         }
     }
 

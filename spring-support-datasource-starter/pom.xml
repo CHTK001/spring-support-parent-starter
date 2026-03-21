@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
     Spring Support Datasource Starter - 数据源配置和管理模块
 
@@ -34,13 +34,8 @@
     <description>Spring Support框架数据源管理模块，提供多数据源配置、监控和管理功能</description>
 
     <!-- 项目属性配置 -->
-    <properties>
-        <maven.compiler.source>25</maven.compiler.source>
-        <maven.compiler.target>25</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
 
-    <!-- 依赖配置 -->
+<!-- 依赖配置 -->
     <dependencies>
         <!-- P6Spy SQL监控 - 提供SQL执行监控和性能分析功能 -->
         <dependency>

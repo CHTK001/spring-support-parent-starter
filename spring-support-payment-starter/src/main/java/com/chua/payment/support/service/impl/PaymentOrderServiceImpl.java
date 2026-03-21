@@ -1,6 +1,7 @@
 package com.chua.payment.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.payment.support.channel.PaymentChannel;
 import com.chua.payment.support.channel.PaymentChannelRegistry;
@@ -15,19 +16,26 @@ import com.chua.payment.support.entity.Merchant;
 import com.chua.payment.support.entity.MerchantChannel;
 import com.chua.payment.support.entity.OrderStateLog;
 import com.chua.payment.support.entity.PaymentOrder;
+import com.chua.payment.support.entity.PaymentRefundOrder;
 import com.chua.payment.support.entity.TransactionRecord;
 import com.chua.payment.support.enums.ChannelStatus;
 import com.chua.payment.support.enums.MerchantStatus;
 import com.chua.payment.support.enums.OrderEvent;
 import com.chua.payment.support.enums.OrderState;
 import com.chua.payment.support.enums.OrderTransitionResult;
+import com.chua.payment.support.enums.RefundOrderStatus;
+import com.chua.payment.support.event.OrderCreatedEvent;
+import com.chua.payment.support.event.PaymentSuccessEvent;
+import com.chua.payment.support.event.RefundSuccessEvent;
 import com.chua.payment.support.exception.PaymentException;
 import com.chua.payment.support.mapper.MerchantChannelMapper;
 import com.chua.payment.support.mapper.MerchantMapper;
 import com.chua.payment.support.mapper.PaymentOrderMapper;
 import com.chua.payment.support.service.OrderStateLogService;
 import com.chua.payment.support.service.OrderStateMachineService;
+import com.chua.payment.support.service.MerchantPaymentConfigService;
 import com.chua.payment.support.service.PaymentOrderService;
+import com.chua.payment.support.service.PaymentRefundOrderService;
 import com.chua.payment.support.service.TransactionRecordService;
 import com.chua.payment.support.vo.OrderStateLogVO;
 import com.chua.payment.support.vo.OrderVO;
@@ -35,6 +43,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,6 +69,9 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
     private final OrderStateLogService orderStateLogService;
     private final TransactionRecordService transactionRecordService;
     private final PaymentChannelRegistry paymentChannelRegistry;
+    private final PaymentRefundOrderService paymentRefundOrderService;
+    private final MerchantPaymentConfigService merchantPaymentConfigService;
+    private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -71,6 +83,8 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         if (dto.getOrderAmount() == null || dto.getOrderAmount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new PaymentException("订单金额必须大于0");
         }
+
+        merchantPaymentConfigService.checkCanCreateOrder(dto.getMerchantId(), dto.getUserId());
 
         Merchant merchant = requireActiveMerchant(dto.getMerchantId());
         MerchantChannel channel = resolveChannel(dto);
@@ -100,6 +114,22 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         order.setReturnUrl(firstNonBlank(dto.getReturnUrl(), channel.getReturnUrl(), merchant.getDefaultReturnUrl()));
         order.setExpireTime(LocalDateTime.now().plusMinutes(resolveExpireMinutes(dto, merchant)));
         order.setDeleted(0);
+
+        PaymentChannel paymentChannel = paymentChannelRegistry.getChannel(order.getChannelType(), order.getChannelSubType());
+        com.chua.payment.support.channel.OrderCreateRequest createRequest = new com.chua.payment.support.channel.OrderCreateRequest();
+        createRequest.setOrderNo(orderNo);
+        createRequest.setUserId(dto.getUserId());
+        createRequest.setAmount(dto.getOrderAmount());
+        createRequest.setSubject(order.getSubject());
+        createRequest.setBody(order.getBody());
+        createRequest.setCurrency(order.getCurrency());
+        createRequest.setAttach(businessOrderNo);
+
+        com.chua.payment.support.channel.OrderCreateResult createResult = paymentChannel.createOrder(channel, createRequest);
+        if (!createResult.isSuccess()) {
+            throw new PaymentException("订单创建失败: " + createResult.getMessage());
+        }
+
         try {
             orderMapper.insert(order);
         } catch (DuplicateKeyException e) {
@@ -113,6 +143,20 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
         stateMachineService.createStateMachine(order.getId());
         orderStateLogService.log(order.getId(), null, OrderState.PENDING, "CREATE", "system", "订单创建");
+
+        eventPublisher.publishEvent(new OrderCreatedEvent(
+                this,
+                null,
+                order.getMerchantId(),
+                order.getId(),
+                order.getOrderNo(),
+                order.getUserId(),
+                order.getOrderAmount(),
+                order.getChannelType(),
+                order.getChannelSubType(),
+                order.getSubject()
+        ));
+
         return convertToVO(order);
     }
 
@@ -154,6 +198,8 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PaymentResult payOrder(Long id, OrderPayDTO dto) {
+        merchantPaymentConfigService.checkCanPayOrder(id);
+
         PaymentOrder order = requireOrder(id);
         MerchantChannel channel = requireEnabledChannel(order.getChannelId());
         PaymentChannel paymentChannel = paymentChannelRegistry.getChannel(order.getChannelType(), order.getChannelSubType());
@@ -265,6 +311,11 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         latest = requireOrder(id);
         if (transitionResult == OrderTransitionResult.APPLIED) {
             recordTransaction(latest, "PAY", latest.getPaidAmount(), 1, thirdPartyOrderNo, null, null, "支付成功");
+            eventPublisher.publishEvent(new PaymentSuccessEvent(
+                this, null, latest.getMerchantId(), latest.getId(),
+                latest.getOrderNo(), latest.getUserId(), latest.getPaidAmount(),
+                thirdPartyOrderNo, latest.getChannelType(), latest.getChannelSubType()
+            ));
         }
         return true;
     }
@@ -342,53 +393,85 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
     @Transactional(rollbackFor = Exception.class)
     public boolean refundOrder(Long id, RefundApplyDTO dto) {
         PaymentOrder order = requireOrder(id);
-        if (OrderState.REFUNDING.name().equals(order.getStatus()) || OrderState.REFUNDED.name().equals(order.getStatus())) {
+        if (OrderState.REFUNDED.name().equals(order.getStatus())) {
             return true;
         }
-        if (!(OrderState.PAID.name().equals(order.getStatus()) || OrderState.COMPLETED.name().equals(order.getStatus()))) {
+        if (!(OrderState.PAID.name().equals(order.getStatus())
+                || OrderState.COMPLETED.name().equals(order.getStatus())
+                || OrderState.REFUNDING.name().equals(order.getStatus()))) {
             throw new PaymentException("当前订单状态不允许退款");
         }
-        BigDecimal refundAmount = dto != null && dto.getRefundAmount() != null ? dto.getRefundAmount() : refundableAmount(order);
+        if (paymentRefundOrderService.hasProcessingRefund(order.getId())) {
+            throw new PaymentException("存在处理中退款单，请稍后再试");
+        }
+
+        BigDecimal currentRefunded = aggregateRefundedAmount(order);
+        syncRefundAggregate(order, currentRefunded);
+        order = requireOrder(id);
+        BigDecimal refundAmount = dto != null && dto.getRefundAmount() != null ? dto.getRefundAmount() : refundableAmount(order, currentRefunded);
         if (refundAmount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new PaymentException("退款金额必须大于0");
         }
-        if (refundAmount.compareTo(refundableAmount(order)) > 0) {
+        if (refundAmount.compareTo(refundableAmount(order, currentRefunded)) > 0) {
             throw new PaymentException("退款金额超过可退金额");
         }
+
         MerchantChannel channel = requireEnabledChannel(order.getChannelId());
         PaymentChannel paymentChannel = paymentChannelRegistry.getChannel(order.getChannelType(), order.getChannelSubType());
-        OrderTransitionResult transitionResult = sendStateEvent(order.getId(), OrderEvent.REFUND, defaultOperator(dto != null ? dto.getOperator() : null));
-        if (transitionResult == OrderTransitionResult.DUPLICATED) {
-            return true;
+        String operator = defaultOperator(dto != null ? dto.getOperator() : null);
+        if (!OrderState.REFUNDING.name().equals(order.getStatus())) {
+            OrderTransitionResult transitionResult = sendStateEvent(order.getId(), OrderEvent.REFUND, operator);
+            if (transitionResult == OrderTransitionResult.DUPLICATED && OrderState.REFUNDED.name().equals(requireOrder(id).getStatus())) {
+                return true;
+            }
         }
+
         PaymentOrder latest = requireOrder(id);
-        latest.setRemark(dto != null ? dto.getRefundReason() : null);
-        orderMapper.updateById(latest);
+        backfillRemark(latest, dto != null ? dto.getRefundReason() : null);
 
         RefundRequest request = new RefundRequest();
-        request.setOrderNo(order.getOrderNo());
-        request.setUserId(order.getUserId());
-        request.setTradeNo(order.getThirdPartyOrderNo());
+        request.setOrderNo(latest.getOrderNo());
+        request.setUserId(latest.getUserId());
+        request.setTradeNo(latest.getThirdPartyOrderNo());
         request.setRefundNo(generateRefundNo());
         request.setRefundAmount(refundAmount);
-        request.setTotalAmount(order.getOrderAmount());
+        request.setTotalAmount(resolvedPaidAmount(latest));
         request.setReason(dto != null ? dto.getRefundReason() : null);
-        request.setNotifyUrl(order.getNotifyUrl());
+        request.setNotifyUrl(latest.getNotifyUrl());
+        String requestPayload = safeJson(request);
+
+        paymentRefundOrderService.createRefundOrder(latest,
+                request.getRefundNo(),
+                refundAmount,
+                dto != null ? dto.getRefundReason() : null,
+                operator,
+                requestPayload);
 
         RefundResult result = paymentChannel.refund(channel, request);
+        String responsePayload = safeJson(result);
+        String thirdPartyRefundNo = firstNonBlank(result.getTradeNo(), result.getRefundNo());
         if ("REFUNDED".equals(result.getStatus())) {
-            return refundSuccess(id, refundAmount, defaultOperator(dto != null ? dto.getOperator() : null));
+            return refundSuccess(request.getRefundNo(),
+                    result.getRefundAmount() != null ? result.getRefundAmount() : refundAmount,
+                    thirdPartyRefundNo,
+                    operator,
+                    responsePayload,
+                    firstNonBlank(result.getMessage(), dto != null ? dto.getRefundReason() : null));
         }
         if ("FAILED".equals(result.getStatus())) {
-            return refundFail(id, firstNonBlank(result.getMessage(), "渠道退款失败"), defaultOperator(dto != null ? dto.getOperator() : null));
+            return refundFail(request.getRefundNo(),
+                    responsePayload,
+                    operator,
+                    firstNonBlank(result.getMessage(), "渠道退款失败"));
         }
+        paymentRefundOrderService.markProcessing(request.getRefundNo(), thirdPartyRefundNo, responsePayload, firstNonBlank(result.getMessage(), "真实退款发起"));
         recordTransaction(latest,
                 "REFUND",
                 refundAmount,
                 transactionStatusOfRefundResult(result),
-                result.getTradeNo(),
-                safeJson(request),
-                safeJson(result),
+                thirdPartyRefundNo,
+                requestPayload,
+                responsePayload,
                 "真实退款发起");
         return result.isSuccess();
     }
@@ -397,40 +480,100 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
     @Transactional(rollbackFor = Exception.class)
     public boolean refundSuccess(Long id, BigDecimal refundAmount, String operator) {
         PaymentOrder order = requireOrder(id);
-        if (OrderState.REFUNDED.name().equals(order.getStatus())) {
-            backfillRefundSuccess(order, refundAmount);
+        PaymentRefundOrder refundOrder = resolveManualRefundOrder(order, refundAmount, defaultOperator(operator), "手动标记退款成功");
+        if (refundOrder == null) {
+            syncRefundAggregate(order, aggregateRefundedAmount(order));
             return true;
         }
-        if (!OrderState.REFUNDING.name().equals(order.getStatus())) {
-            throw new PaymentException("当前订单状态不允许标记退款成功");
-        }
-        BigDecimal amount = refundAmount != null && refundAmount.compareTo(BigDecimal.ZERO) > 0 ? refundAmount : refundableAmount(order);
-        OrderTransitionResult transitionResult = sendStateEvent(order.getId(), OrderEvent.REFUND_SUCCESS, defaultOperator(operator));
-        PaymentOrder latest = requireOrder(id);
-        backfillRefundSuccess(latest, amount);
-        latest = requireOrder(id);
-        if (transitionResult == OrderTransitionResult.APPLIED) {
-            recordTransaction(latest, "REFUND", amount, 1, null, null, null, "退款成功");
-        }
-        return true;
+        return refundSuccess(refundOrder.getRefundNo(), refundAmount, refundOrder.getThirdPartyRefundNo(), operator, null, "手动标记退款成功");
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean refundFail(Long id, String reason, String operator) {
         PaymentOrder order = requireOrder(id);
-        if (OrderState.PAID.name().equals(order.getStatus()) || OrderState.COMPLETED.name().equals(order.getStatus())) {
+        PaymentRefundOrder refundOrder = resolveManualRefundOrder(order, null, defaultOperator(operator), reason);
+        if (refundOrder == null) {
             backfillRemark(order, reason);
             return true;
         }
-        if (!OrderState.REFUNDING.name().equals(order.getStatus())) {
-            throw new PaymentException("当前订单状态不允许标记退款失败");
+        return refundFail(refundOrder.getRefundNo(), null, operator, reason);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean refundSuccess(String refundNo,
+                                 BigDecimal refundAmount,
+                                 String thirdPartyRefundNo,
+                                 String operator,
+                                 String responsePayload,
+                                 String remark) {
+        PaymentRefundOrder refundOrder = requireRefundOrder(refundNo);
+        boolean alreadyRefunded = RefundOrderStatus.REFUNDED.name().equals(refundOrder.getStatus());
+        BigDecimal amount = refundAmount != null && refundAmount.compareTo(BigDecimal.ZERO) > 0
+                ? refundAmount
+                : nullToZero(refundOrder.getRefundAmount());
+        PaymentRefundOrder latestRefundOrder = paymentRefundOrderService.markRefunded(refundNo,
+                amount,
+                thirdPartyRefundNo,
+                responsePayload,
+                defaultOperator(operator),
+                firstNonBlank(remark, refundOrder.getReason()));
+
+        PaymentOrder order = requireOrder(refundOrder.getOrderId());
+        BigDecimal totalRefunded = aggregateRefundedAmount(order);
+        syncRefundAggregate(order, totalRefunded);
+        PaymentOrder latestOrder = requireOrder(order.getId());
+        String targetStatus = resolveOrderStatusAfterRefundSuccess(latestOrder, totalRefunded);
+        changeOrderStatusIfNecessary(latestOrder, targetStatus, OrderEvent.REFUND_SUCCESS, operator, firstNonBlank(remark, "退款成功"));
+        latestOrder = requireOrder(order.getId());
+        if (!alreadyRefunded) {
+            recordTransaction(latestOrder,
+                    "REFUND",
+                    latestRefundOrder.getRefundAmount(),
+                    1,
+                    firstNonBlank(latestRefundOrder.getThirdPartyRefundNo(), thirdPartyRefundNo),
+                    latestRefundOrder.getRequestPayload(),
+                    responsePayload,
+                    firstNonBlank(remark, "退款成功"));
+            eventPublisher.publishEvent(new RefundSuccessEvent(
+                this, null, latestOrder.getMerchantId(), latestOrder.getId(),
+                latestOrder.getOrderNo(), latestRefundOrder.getId(), latestRefundOrder.getRefundNo(),
+                latestOrder.getUserId(), latestRefundOrder.getRefundAmount(),
+                firstNonBlank(latestRefundOrder.getThirdPartyRefundNo(), thirdPartyRefundNo),
+                latestOrder.getChannelType(), latestOrder.getChannelSubType()
+            ));
         }
-        OrderTransitionResult transitionResult = sendStateEvent(order.getId(), OrderEvent.REFUND_FAIL, defaultOperator(operator));
-        PaymentOrder latest = requireOrder(id);
-        backfillRemark(latest, reason);
-        if (transitionResult == OrderTransitionResult.APPLIED) {
-            recordTransaction(latest, "REFUND", refundableAmount(order), 0, null, null, reason, "退款失败");
+        return true;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean refundFail(String refundNo, String responsePayload, String operator, String reason) {
+        PaymentRefundOrder refundOrder = requireRefundOrder(refundNo);
+        boolean alreadyFailed = RefundOrderStatus.FAILED.name().equals(refundOrder.getStatus());
+        PaymentRefundOrder latestRefundOrder = paymentRefundOrderService.markFailed(refundNo,
+                responsePayload,
+                defaultOperator(operator),
+                firstNonBlank(reason, refundOrder.getReason(), "退款失败"));
+
+        PaymentOrder order = requireOrder(refundOrder.getOrderId());
+        BigDecimal totalRefunded = aggregateRefundedAmount(order);
+        syncRefundAggregate(order, totalRefunded);
+        PaymentOrder latestOrder = requireOrder(order.getId());
+        String targetStatus = resolveOrderStatusAfterRefundFailure(latestOrder, totalRefunded, latestRefundOrder);
+        changeOrderStatusIfNecessary(latestOrder, targetStatus, OrderEvent.REFUND_FAIL, operator, firstNonBlank(reason, "退款失败"));
+        latestOrder = requireOrder(order.getId());
+        backfillRemark(latestOrder, reason);
+        if (!alreadyFailed) {
+            recordTransaction(latestOrder,
+                    "REFUND",
+                    latestRefundOrder.getRefundAmount(),
+                    0,
+                    latestRefundOrder.getThirdPartyRefundNo(),
+                    latestRefundOrder.getRequestPayload(),
+                    responsePayload,
+                    firstNonBlank(reason, "退款失败"));
         }
         return true;
     }
@@ -484,6 +627,14 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return order;
     }
 
+    private PaymentRefundOrder requireRefundOrder(String refundNo) {
+        PaymentRefundOrder refundOrder = paymentRefundOrderService.getByRefundNo(refundNo);
+        if (refundOrder == null) {
+            throw new PaymentException("退款单不存在: " + refundNo);
+        }
+        return refundOrder;
+    }
+
     private MerchantChannel requireEnabledChannel(Long channelId) {
         if (channelId == null) {
             throw new PaymentException("订单未绑定支付方式");
@@ -528,7 +679,75 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         if (!Integer.valueOf(ChannelStatus.ENABLED.getCode()).equals(channel.getStatus())) {
             throw new PaymentException("支付方式未启用");
         }
-        return channel;
+        return resolveEffectiveChannel(channel, dto.getMerchantId());
+    }
+
+    private MerchantChannel resolveEffectiveChannel(MerchantChannel channel, Long merchantId) {
+        if (channel == null || !"COMPOSITE".equalsIgnoreCase(channel.getChannelType())
+                || !"AGGREGATE_ROUTE".equalsIgnoreCase(channel.getChannelSubType())) {
+            return channel;
+        }
+        Long targetChannelId = resolveRouteChannelId(channel);
+        if (targetChannelId == null) {
+            throw new PaymentException("综合支付路由未配置 targetChannelId 或 defaultChannelId");
+        }
+        if (channel.getId() != null && channel.getId().equals(targetChannelId)) {
+            throw new PaymentException("综合支付路由不能指向自身");
+        }
+        MerchantChannel targetChannel = merchantChannelMapper.selectById(targetChannelId);
+        if (targetChannel == null) {
+            throw new PaymentException("综合支付路由目标渠道不存在: " + targetChannelId);
+        }
+        if (!merchantId.equals(targetChannel.getMerchantId())) {
+            throw new PaymentException("综合支付路由目标渠道和订单商户不匹配");
+        }
+        if ("COMPOSITE".equalsIgnoreCase(targetChannel.getChannelType())) {
+            throw new PaymentException("综合支付路由不能嵌套 COMPOSITE 渠道");
+        }
+        if (!Integer.valueOf(ChannelStatus.ENABLED.getCode()).equals(targetChannel.getStatus())) {
+            throw new PaymentException("综合支付路由目标渠道未启用");
+        }
+        if (!paymentChannelRegistry.supports(targetChannel.getChannelType(), targetChannel.getChannelSubType())) {
+            throw new PaymentException("综合支付路由目标渠道当前版本不可执行: "
+                    + targetChannel.getChannelType() + "/" + targetChannel.getChannelSubType());
+        }
+        return targetChannel;
+    }
+
+    private Long resolveRouteChannelId(MerchantChannel channel) {
+        if (!StringUtils.hasText(channel.getExtConfig())) {
+            return null;
+        }
+        try {
+            java.util.Map<String, Object> config = objectMapper.readValue(channel.getExtConfig(), new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {
+            });
+            return parseLong(config.get("targetChannelId"), config.get("defaultChannelId"));
+        } catch (Exception e) {
+            throw new PaymentException("综合支付路由配置格式错误", e);
+        }
+    }
+
+    private Long parseLong(Object... values) {
+        if (values == null) {
+            return null;
+        }
+        for (Object value : values) {
+            if (value == null) {
+                continue;
+            }
+            if (value instanceof Number number) {
+                return number.longValue();
+            }
+            String text = String.valueOf(value).trim();
+            if (!text.isEmpty()) {
+                try {
+                    return Long.parseLong(text);
+                } catch (NumberFormatException e) {
+                    throw new PaymentException("综合支付路由 channelId 格式错误: " + text, e);
+                }
+            }
+        }
+        return null;
     }
 
     private PaymentOrder findActiveOrderByBusinessOrderNo(Long merchantId, String businessOrderNo) {
@@ -582,16 +801,57 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return 30;
     }
 
+    private PaymentRefundOrder resolveManualRefundOrder(PaymentOrder order,
+                                                        BigDecimal refundAmount,
+                                                        String operator,
+                                                        String reason) {
+        PaymentRefundOrder refundOrder = paymentRefundOrderService.getProcessingByOrderId(order.getId());
+        if (refundOrder != null) {
+            return refundOrder;
+        }
+        refundOrder = paymentRefundOrderService.getLatestByOrderId(order.getId());
+        if (refundOrder != null) {
+            return refundOrder;
+        }
+        if (OrderState.REFUNDED.name().equals(order.getStatus())) {
+            return null;
+        }
+        BigDecimal amount = refundAmount != null && refundAmount.compareTo(BigDecimal.ZERO) > 0
+                ? refundAmount
+                : refundableAmount(order);
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            amount = resolvedPaidAmount(order);
+        }
+        return paymentRefundOrderService.createRefundOrder(order,
+                generateRefundNo(),
+                amount,
+                reason,
+                operator,
+                null);
+    }
+
+    private BigDecimal aggregateRefundedAmount(PaymentOrder order) {
+        BigDecimal refundedFromOrder = nullToZero(order.getRefundAmount());
+        BigDecimal refundedFromRefundOrder = paymentRefundOrderService.sumRefundedAmount(order.getId());
+        return refundedFromOrder.compareTo(refundedFromRefundOrder) >= 0 ? refundedFromOrder : refundedFromRefundOrder;
+    }
+
     private BigDecimal refundableAmount(PaymentOrder order) {
-        return nullToZero(order.getPaidAmount()).subtract(nullToZero(order.getRefundAmount()));
+        return refundableAmount(order, aggregateRefundedAmount(order));
+    }
+
+    private BigDecimal refundableAmount(PaymentOrder order, BigDecimal refundedAmount) {
+        BigDecimal refundable = resolvedPaidAmount(order).subtract(nullToZero(refundedAmount));
+        return refundable.compareTo(BigDecimal.ZERO) > 0 ? refundable : BigDecimal.ZERO;
+    }
+
+    private BigDecimal resolvedPaidAmount(PaymentOrder order) {
+        BigDecimal paidAmount = nullToZero(order.getPaidAmount());
+        return paidAmount.compareTo(BigDecimal.ZERO) > 0 ? paidAmount : nullToZero(order.getOrderAmount());
     }
 
     private BigDecimal nullToZero(BigDecimal value) {
         return value == null ? BigDecimal.ZERO : value;
-    }
-
-    private BigDecimal max(BigDecimal left, BigDecimal right) {
-        return nullToZero(left).compareTo(nullToZero(right)) >= 0 ? nullToZero(left) : nullToZero(right);
     }
 
     private boolean canCancelByState(String status) {
@@ -628,23 +888,81 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         updateOrderIfChanged(order, changed);
     }
 
-    private void backfillRefundSuccess(PaymentOrder order, BigDecimal refundAmount) {
+    private void syncRefundAggregate(PaymentOrder order, BigDecimal refundAmount) {
         if (order == null) {
             return;
         }
         boolean changed = false;
-        BigDecimal targetRefundAmount = refundAmount != null && refundAmount.compareTo(BigDecimal.ZERO) > 0
-                ? max(order.getRefundAmount(), refundAmount)
-                : order.getRefundAmount();
-        if (refundAmount != null && targetRefundAmount.compareTo(nullToZero(order.getRefundAmount())) != 0) {
-            order.setRefundAmount(targetRefundAmount);
+        BigDecimal normalizedRefundAmount = nullToZero(refundAmount);
+        if (normalizedRefundAmount.compareTo(nullToZero(order.getRefundAmount())) != 0) {
+            order.setRefundAmount(normalizedRefundAmount);
             changed = true;
         }
-        if (order.getRefundTime() == null) {
+        if (normalizedRefundAmount.compareTo(BigDecimal.ZERO) > 0 && order.getRefundTime() == null) {
             order.setRefundTime(LocalDateTime.now());
             changed = true;
         }
         updateOrderIfChanged(order, changed);
+    }
+
+    private String resolveOrderStatusAfterRefundSuccess(PaymentOrder order, BigDecimal refundedAmount) {
+        BigDecimal paidAmount = resolvedPaidAmount(order);
+        if (paidAmount.compareTo(BigDecimal.ZERO) > 0 && nullToZero(refundedAmount).compareTo(paidAmount) >= 0) {
+            return OrderState.REFUNDED.name();
+        }
+        return OrderState.REFUNDING.name();
+    }
+
+    private String resolveOrderStatusAfterRefundFailure(PaymentOrder order,
+                                                        BigDecimal refundedAmount,
+                                                        PaymentRefundOrder refundOrder) {
+        BigDecimal paidAmount = resolvedPaidAmount(order);
+        if (paidAmount.compareTo(BigDecimal.ZERO) > 0 && nullToZero(refundedAmount).compareTo(paidAmount) >= 0) {
+            return OrderState.REFUNDED.name();
+        }
+        if (nullToZero(refundedAmount).compareTo(BigDecimal.ZERO) > 0) {
+            return OrderState.REFUNDING.name();
+        }
+        if (refundOrder != null && isRefundBaseState(refundOrder.getSourceOrderStatus())) {
+            return refundOrder.getSourceOrderStatus();
+        }
+        return OrderState.PAID.name();
+    }
+
+    private boolean isRefundBaseState(String status) {
+        return OrderState.PAID.name().equals(status) || OrderState.COMPLETED.name().equals(status);
+    }
+
+    private void changeOrderStatusIfNecessary(PaymentOrder order,
+                                              String targetStatus,
+                                              OrderEvent event,
+                                              String operator,
+                                              String remark) {
+        if (order == null || !StringUtils.hasText(targetStatus) || targetStatus.equals(order.getStatus())) {
+            return;
+        }
+        OrderState fromState = OrderState.valueOf(order.getStatus());
+        OrderState toState = OrderState.valueOf(targetStatus);
+        int updated = orderMapper.update(null, new LambdaUpdateWrapper<PaymentOrder>()
+                .eq(PaymentOrder::getId, order.getId())
+                .eq(PaymentOrder::getStatus, order.getStatus())
+                .and(wrapper -> wrapper.isNull(PaymentOrder::getDeleted).or().eq(PaymentOrder::getDeleted, 0))
+                .set(PaymentOrder::getStatus, targetStatus));
+        if (updated == 0) {
+            PaymentOrder latest = requireOrder(order.getId());
+            if (targetStatus.equals(latest.getStatus())) {
+                return;
+            }
+            throw new PaymentException("订单状态更新失败: " + event.name());
+        }
+        orderStateLogService.log(order.getId(),
+                fromState,
+                toState,
+                event.name(),
+                defaultOperator(operator),
+                StringUtils.hasText(remark)
+                        ? remark
+                        : String.format("状态转换: %s -> %s", fromState.getDescription(), toState.getDescription()));
     }
 
     private void backfillCompleteTime(PaymentOrder order) {

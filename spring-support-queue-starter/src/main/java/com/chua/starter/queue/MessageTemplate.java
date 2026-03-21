@@ -35,6 +35,18 @@ public interface MessageTemplate {
     CompletableFuture<SendResult> sendAsync(String destination, Object payload);
 
     /**
+     * 异步发送带Header的消息
+     *
+     * @param destination 目标地址
+     * @param payload     消息内容
+     * @param headers     消息头
+     * @return 异步发送结果
+     */
+    default CompletableFuture<SendResult> sendAsync(String destination, Object payload, Map<String, Object> headers) {
+        return CompletableFuture.completedFuture(send(destination, payload, headers));
+    }
+
+    /**
      * 发送带Header的消息
      *
      * @param destination 目标地址

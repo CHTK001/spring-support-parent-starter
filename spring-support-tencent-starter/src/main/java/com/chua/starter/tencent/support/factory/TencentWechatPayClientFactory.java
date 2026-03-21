@@ -4,8 +4,11 @@ import com.chua.starter.tencent.support.properties.TencentWechatPayProperties;
 import com.wechat.pay.java.core.Config;
 import com.wechat.pay.java.core.RSAAutoCertificateConfig;
 import com.wechat.pay.java.core.notification.NotificationParser;
+import com.wechat.pay.java.service.payments.app.AppService;
+import com.wechat.pay.java.service.payments.app.AppServiceExtension;
 import com.wechat.pay.java.service.payments.h5.H5Service;
 import com.wechat.pay.java.service.payments.jsapi.JsapiServiceExtension;
+import com.wechat.pay.java.service.payments.nativepay.NativePayService;
 import com.wechat.pay.java.service.refund.RefundService;
 
 /**
@@ -50,6 +53,24 @@ public class TencentWechatPayClientFactory {
 
     public RefundService createRefundService(Config config) {
         return new RefundService.Builder()
+                .config(config)
+                .build();
+    }
+
+    public NativePayService createNativePayService(Config config) {
+        return new NativePayService.Builder()
+                .config(config)
+                .build();
+    }
+
+    public AppService createAppService(Config config) {
+        return new AppService.Builder()
+                .config(config)
+                .build();
+    }
+
+    public AppServiceExtension createAppServiceExtension(Config config) {
+        return new AppServiceExtension.Builder()
                 .config(config)
                 .build();
     }

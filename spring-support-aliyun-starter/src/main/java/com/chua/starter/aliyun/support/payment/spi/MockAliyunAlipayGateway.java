@@ -33,6 +33,18 @@ public class MockAliyunAlipayGateway implements AliyunAlipayGateway {
     }
 
     @Override
+    public AliyunAlipayPayResponse appPay(AliyunAlipayProperties properties, AliyunAlipayPayRequest request) {
+        AliyunAlipayPayResponse result = new AliyunAlipayPayResponse();
+        result.setSuccess(true);
+        // App 支付返回 SDK 调起字符串
+        result.setBody("mock_app_pay_sdk_string&out_trade_no=" + request.getOrderNo() + "&total_amount=" + request.getTotalAmount());
+        result.setTradeNo(null);
+        result.setMessage("支付宝 mock App 支付下单成功");
+        result.setRawResponse("{\"provider\":\"alipay-mock\",\"channel\":\"APP\",\"orderNo\":\"" + request.getOrderNo() + "\"}");
+        return result;
+    }
+
+    @Override
     public AliyunAlipayTradeQueryResponse queryOrder(AliyunAlipayProperties properties, String orderNo) {
         AliyunAlipayTradeQueryResponse result = new AliyunAlipayTradeQueryResponse();
         result.setSuccess(true);

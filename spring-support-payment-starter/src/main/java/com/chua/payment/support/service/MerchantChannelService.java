@@ -1,6 +1,7 @@
 package com.chua.payment.support.service;
 
 import com.chua.payment.support.dto.ChannelConfigDTO;
+import com.chua.payment.support.entity.MerchantChannel;
 import com.chua.payment.support.vo.MerchantChannelVO;
 import com.chua.payment.support.vo.PaymentMethodGuideVO;
 import com.chua.payment.support.vo.ProviderSpiOptionVO;
@@ -31,4 +32,9 @@ public interface MerchantChannelService {
     String encryptApiKey(String apiKey);
 
     String decryptApiKey(String encryptedKey);
+
+    /**
+     * 获取商户的钱包渠道
+     */
+    MerchantChannel getWalletChannel(Long merchantId);
 }

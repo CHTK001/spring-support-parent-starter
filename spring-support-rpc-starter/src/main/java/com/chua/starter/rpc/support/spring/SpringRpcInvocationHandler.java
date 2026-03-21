@@ -10,6 +10,7 @@ import org.springframework.context.ApplicationContext;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.time.Duration;
 import java.util.List;
 
 /**
@@ -78,8 +79,8 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
 
         // 熔断器检查
         RpcCircuitBreaker circuitBreaker = null;
-        if (circuitBreakerManager != null && consumerConfig.getCircuitBreakerEnabled() != null
-            && consumerConfig.getCircuitBreakerEnabled()) {
+        Boolean circuitBreakerEnabled = readBoolean(consumerConfig, "getCircuitBreakerEnabled");
+        if (circuitBreakerManager != null && Boolean.TRUE.equals(circuitBreakerEnabled)) {
             circuitBreaker = circuitBreakerManager.getOrCreate(serviceName);
             if (!circuitBreaker.tryAcquire()) {
                 throw new RuntimeException("服务熔断中: " + serviceName);
@@ -174,18 +175,42 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
     private RpcRetryPolicy createRetryPolicy(RpcConsumerConfig config) {
         RpcRetryPolicy policy = new RpcRetryPolicy();
 
-        if (config.getRetryEnabled() != null) {
-            policy.setEnabled(config.getRetryEnabled());
+        Boolean retryEnabled = readBoolean(config, "getRetryEnabled");
+        if (retryEnabled != null) {
+            policy.setEnabled(retryEnabled);
         }
 
         if (config.getRetries() != null) {
             policy.setMaxRetries(config.getRetries());
         }
 
-        if (config.getRetryDelay() != null) {
-            policy.setInitialDelay(java.time.Duration.ofMillis(config.getRetryDelay()));
+        Integer retryDelay = readInteger(config, "getRetryDelay");
+        if (retryDelay != null) {
+            policy.setInitialDelay(Duration.ofMillis(retryDelay));
         }
 
         return policy;
+    }
+
+    private Boolean readBoolean(RpcConsumerConfig config, String methodName) {
+        Object value = invokeOptionalGetter(config, methodName);
+        return value instanceof Boolean bool ? bool : null;
+    }
+
+    private Integer readInteger(RpcConsumerConfig config, String methodName) {
+        Object value = invokeOptionalGetter(config, methodName);
+        return value instanceof Integer integer ? integer : null;
+    }
+
+    private Object invokeOptionalGetter(RpcConsumerConfig config, String methodName) {
+        if (config == null) {
+            return null;
+        }
+        try {
+            Method method = config.getClass().getMethod(methodName);
+            return method.invoke(config);
+        } catch (ReflectiveOperationException ignored) {
+            return null;
+        }
     }
 }

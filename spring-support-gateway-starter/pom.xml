@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
     Spring Support Gateway Starter - API网关模块
 
@@ -32,13 +32,8 @@
     <description>Spring Support框架API网关模块，提供动态代理和服务发现集成</description>
 
     <!-- 项目属性配置 -->
-    <properties>
-        <maven.compiler.source>25</maven.compiler.source>
-        <maven.compiler.target>25</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
 
-    <!-- 依赖配置 -->
+<!-- 依赖配置 -->
     <dependencies>
         <!-- 通用功能模块 -->
         <dependency>
@@ -66,8 +61,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <source>25</source>
-                    <target>25</target>
                 </configuration>
             </plugin>
         </plugins>

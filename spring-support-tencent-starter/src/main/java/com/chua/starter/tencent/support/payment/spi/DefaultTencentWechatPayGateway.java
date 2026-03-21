@@ -18,6 +18,7 @@ import com.wechat.pay.java.core.notification.RequestParam;
 import com.wechat.pay.java.service.payments.h5.H5Service;
 import com.wechat.pay.java.service.payments.h5.model.H5Info;
 import com.wechat.pay.java.service.payments.model.Transaction;
+import com.wechat.pay.java.service.payments.nativepay.NativePayService;
 import com.wechat.pay.java.service.refund.RefundService;
 import com.wechat.pay.java.service.refund.model.Refund;
 import com.wechat.pay.java.service.refund.model.RefundNotification;
@@ -158,6 +159,124 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
         request.setOutTradeNo(orderNo);
         service.closeOrder(request);
         return true;
+    }
+
+    @Override
+    public TencentWechatPayResponse nativePay(TencentWechatPayProperties properties, TencentWechatPayRequest request) {
+        Config config = clientFactory.createAutoCertificateConfig(properties);
+        NativePayService service = clientFactory.createNativePayService(config);
+        var prepayRequest = new com.wechat.pay.java.service.payments.nativepay.model.PrepayRequest();
+        prepayRequest.setAppid(properties.getAppId());
+        prepayRequest.setMchid(properties.getMerchantId());
+        prepayRequest.setDescription(request.getDescription());
+        prepayRequest.setOutTradeNo(request.getOrderNo());
+        prepayRequest.setNotifyUrl(request.getNotifyUrl());
+        prepayRequest.setTimeExpire(request.getExpireTime());
+        prepayRequest.setAttach(request.getAttach());
+        var amount = new com.wechat.pay.java.service.payments.nativepay.model.Amount();
+        amount.setTotal(request.getAmountFen().intValue());
+        amount.setCurrency(firstNonBlank(request.getCurrency(), "CNY"));
+        prepayRequest.setAmount(amount);
+        var response = service.prepay(prepayRequest);
+        TencentWechatPayResponse result = new TencentWechatPayResponse();
+        result.setSuccess(true);
+        result.setPayUrl(response.getCodeUrl());
+        result.setMessage("微信 Native 支付下单成功");
+        result.setRawResponse(String.valueOf(response));
+        return result;
+    }
+
+    @Override
+    public TencentWechatOrderResponse queryNativeOrder(TencentWechatPayProperties properties, String orderNo) {
+        Config config = clientFactory.createAutoCertificateConfig(properties);
+        NativePayService service = clientFactory.createNativePayService(config);
+        var request = new com.wechat.pay.java.service.payments.nativepay.model.QueryOrderByOutTradeNoRequest();
+        request.setMchid(properties.getMerchantId());
+        request.setOutTradeNo(orderNo);
+        Transaction response = service.queryOrderByOutTradeNo(request);
+        return toOrderResponse(response);
+    }
+
+    @Override
+    public boolean closeNativeOrder(TencentWechatPayProperties properties, String orderNo) {
+        Config config = clientFactory.createAutoCertificateConfig(properties);
+        NativePayService service = clientFactory.createNativePayService(config);
+        var request = new com.wechat.pay.java.service.payments.nativepay.model.CloseOrderRequest();
+        request.setMchid(properties.getMerchantId());
+        request.setOutTradeNo(orderNo);
+        service.closeOrder(request);
+        return true;
+    }
+
+    @Override
+    public TencentWechatPayResponse appPay(TencentWechatPayProperties properties, TencentWechatPayRequest request) {
+        Config config = clientFactory.createAutoCertificateConfig(properties);
+        var service = clientFactory.createAppServiceExtension(config);
+        var prepayRequest = new com.wechat.pay.java.service.payments.app.model.PrepayRequest();
+        prepayRequest.setAppid(properties.getAppId());
+        prepayRequest.setMchid(properties.getMerchantId());
+        prepayRequest.setDescription(request.getDescription());
+        prepayRequest.setOutTradeNo(request.getOrderNo());
+        prepayRequest.setNotifyUrl(request.getNotifyUrl());
+        prepayRequest.setTimeExpire(request.getExpireTime());
+        prepayRequest.setAttach(request.getAttach());
+        var amount = new com.wechat.pay.java.service.payments.app.model.Amount();
+        amount.setTotal(request.getAmountFen().intValue());
+        amount.setCurrency(firstNonBlank(request.getCurrency(), "CNY"));
+        prepayRequest.setAmount(amount);
+        var response = service.prepayWithRequestPayment(prepayRequest);
+        TencentWechatPayResponse result = new TencentWechatPayResponse();
+        result.setSuccess(true);
+        Map<String, Object> sdkParams = new LinkedHashMap<>();
+        sdkParams.put("appid", response.getAppid());
+        sdkParams.put("partnerid", response.getPartnerId());
+        sdkParams.put("prepayid", response.getPrepayId());
+        sdkParams.put("package", response.getPackageVal());
+        sdkParams.put("noncestr", response.getNonceStr());
+        sdkParams.put("timestamp", response.getTimestamp());
+        sdkParams.put("sign", response.getSign());
+        result.setSdkParams(sdkParams);
+        result.setMessage("微信 App 支付下单成功");
+        result.setRawResponse(String.valueOf(response));
+        return result;
+    }
+
+    @Override
+    public TencentWechatOrderResponse queryAppOrder(TencentWechatPayProperties properties, String orderNo) {
+        Config config = clientFactory.createAutoCertificateConfig(properties);
+        var service = clientFactory.createAppService(config);
+        var request = new com.wechat.pay.java.service.payments.app.model.QueryOrderByOutTradeNoRequest();
+        request.setMchid(properties.getMerchantId());
+        request.setOutTradeNo(orderNo);
+        Transaction response = service.queryOrderByOutTradeNo(request);
+        return toOrderResponse(response);
+    }
+
+    @Override
+    public boolean closeAppOrder(TencentWechatPayProperties properties, String orderNo) {
+        Config config = clientFactory.createAutoCertificateConfig(properties);
+        var service = clientFactory.createAppService(config);
+        var request = new com.wechat.pay.java.service.payments.app.model.CloseOrderRequest();
+        request.setMchid(properties.getMerchantId());
+        request.setOutTradeNo(orderNo);
+        service.closeOrder(request);
+        return true;
+    }
+
+    @Override
+    public TencentWechatPayResponse miniProgramPay(TencentWechatPayProperties properties, TencentWechatPayRequest request) {
+        // 小程序支付与 JSAPI 使用相同通道，openId 必须是小程序 openId
+        return jsapiPay(properties, request);
+    }
+
+    @Override
+    public TencentWechatOrderResponse queryMiniProgramOrder(TencentWechatPayProperties properties, String orderNo) {
+        return queryJsapiOrder(properties, orderNo);
+    }
+
+    @Override
+    public boolean closeMiniProgramOrder(TencentWechatPayProperties properties, String orderNo) {
+        return closeJsapiOrder(properties, orderNo);
     }
 
     @Override

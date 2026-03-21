@@ -59,7 +59,7 @@ public class SpringRpcServer implements RpcServer, ApplicationContextAware {
     }
 
     @Override
-    public void afterPropertiesSet() throws Exception {
+    public void afterPropertiesSet() {
         if (initialized) {
             return;
         }

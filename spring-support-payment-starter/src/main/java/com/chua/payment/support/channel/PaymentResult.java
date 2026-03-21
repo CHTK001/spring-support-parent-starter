@@ -19,6 +19,7 @@ public class PaymentResult {
     private String payUrl;
     private String launchType;
     private String formHtml;
+    private String body;
     private Map<String, Object> sdkParams;
     private BigDecimal paidAmount;
     private String status;

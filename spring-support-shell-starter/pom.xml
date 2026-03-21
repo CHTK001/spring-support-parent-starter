@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
     Spring Support Shell Starter - SSH Shell集成模块
 
@@ -35,13 +35,8 @@
     <description>Spring Support框架SSH Shell集成模块，提供完整的SSH Shell功能和登录追踪支持</description>
 
     <!-- 项目属性配置 -->
-    <properties>
-        <maven.compiler.source>25</maven.compiler.source>
-        <maven.compiler.target>25</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
 
-    <!-- 依赖配置 -->
+<!-- 依赖配置 -->
     <dependencies>
         <!-- Spring Shell - 提供Shell命令行功能 -->
         <dependency>
@@ -84,8 +79,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <source>25</source>  <!-- 源码Java版本 -->
-                    <target>25</target>  <!-- 目标Java版本 -->
                 </configuration>
             </plugin>
         </plugins>

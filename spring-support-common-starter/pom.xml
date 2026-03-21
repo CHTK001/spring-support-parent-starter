@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
     Spring Support Common Starter - 通用功能模块
 
@@ -35,12 +35,6 @@
     <description>Spring Support框架通用功能模块，提供企业级应用开发的基础功能和工具类</description>
 
     <!-- 项目属性配置 -->
-    <properties>
-        <maven.compiler.source>25</maven.compiler.source>
-        <maven.compiler.target>25</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
-
     <!-- 依赖配置 -->
     <dependencies>
         <!-- Lombok - 简化Java代码编写 -->
@@ -216,9 +210,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <release>25</release>
-                    <encoding>UTF-8</encoding>
-                    <proc>full</proc>
                     <compilerArgs>
                         <arg>-parameters</arg>
                         <arg>-J--enable-native-access=ALL-UNNAMED</arg>

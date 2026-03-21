@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -13,13 +13,7 @@
     <artifactId>spring-support-socket-starter</artifactId>
     <description>Socket 基础模块 - 提供统一的 Socket 抽象接口和 SPI 机制</description>
 
-    <properties>
-        <maven.compiler.source>25</maven.compiler.source>
-        <maven.compiler.target>25</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
-
-    <dependencies>
+<dependencies>
         <!-- Utils Support Common Starter - 通用工具和 SPI 支持 -->
         <dependency>
             <groupId>com.chua</groupId>

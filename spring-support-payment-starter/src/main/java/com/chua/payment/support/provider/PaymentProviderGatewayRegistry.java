@@ -3,8 +3,6 @@ package com.chua.payment.support.provider;
 import com.chua.common.support.core.spi.ServiceProvider;
 import com.chua.payment.support.configuration.PaymentProviderProperties;
 import com.chua.payment.support.exception.PaymentException;
-import com.chua.starter.aliyun.support.payment.AliyunAlipayGateway;
-import com.chua.starter.tencent.support.payment.TencentWechatPayGateway;
 import org.springframework.stereotype.Component;
 
 import java.util.Set;
@@ -15,26 +13,37 @@ import java.util.Set;
 @Component
 public class PaymentProviderGatewayRegistry {
 
+    private static final String ALIYUN_ALIPAY_GATEWAY = "com.chua.starter.aliyun.support.payment.AliyunAlipayGateway";
+    private static final String TENCENT_WECHAT_PAY_GATEWAY = "com.chua.starter.tencent.support.payment.TencentWechatPayGateway";
+
     private final PaymentProviderProperties properties;
 
     public PaymentProviderGatewayRegistry(PaymentProviderProperties properties) {
         this.properties = properties;
     }
 
-    public AliyunAlipayGateway aliyunAlipayGateway() {
+    public <T> T aliyunAlipayGateway() {
         return aliyunAlipayGateway(null);
     }
 
-    public TencentWechatPayGateway tencentWechatPayGateway() {
+    public <T> T tencentWechatPayGateway() {
         return tencentWechatPayGateway(null);
     }
 
-    public AliyunAlipayGateway aliyunAlipayGateway(String extension) {
-        return required(AliyunAlipayGateway.class, resolveAliyunExtension(extension), "Aliyun Alipay");
+    public <T> T aliyunAlipayGateway(String extension) {
+        return required(ALIYUN_ALIPAY_GATEWAY, resolveAliyunExtension(extension), "Aliyun Alipay");
     }
 
-    public TencentWechatPayGateway tencentWechatPayGateway(String extension) {
-        return required(TencentWechatPayGateway.class, resolveWechatExtension(extension), "Tencent Wechat Pay");
+    public <T> T tencentWechatPayGateway(String extension) {
+        return required(TENCENT_WECHAT_PAY_GATEWAY, resolveWechatExtension(extension), "Tencent Wechat Pay");
+    }
+
+    public Set<String> availableAliyunExtensions() {
+        return availableExtensions(ALIYUN_ALIPAY_GATEWAY);
+    }
+
+    public Set<String> availableWechatExtensions() {
+        return availableExtensions(TENCENT_WECHAT_PAY_GATEWAY);
     }
 
     public String resolveAliyunExtension(String extension) {
@@ -60,8 +69,17 @@ public class PaymentProviderGatewayRegistry {
         return extensionName;
     }
 
-    private <T> T required(Class<T> type, String extensionName, String providerName) {
+    private Set<String> availableExtensions(String typeName) {
+        Class<Object> type = loadType(typeName, false, typeName);
+        if (type == null) {
+            return Set.of();
+        }
+        return ServiceProvider.of(type).getExtensions();
+    }
+
+    private <T> T required(String typeName, String extensionName, String providerName) {
         String targetExtension = normalizeExtension(extensionName, properties.getDefaultSpi());
+        Class<T> type = loadType(typeName, true, providerName);
         ServiceProvider<T> provider = ServiceProvider.of(type);
         T extension = provider.getExtension(targetExtension);
         Set<String> extensions = provider.getExtensions();
@@ -74,5 +92,21 @@ public class PaymentProviderGatewayRegistry {
                     + " (" + type.getName() + "), 可选实现: " + extensions);
         }
         return extension;
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> Class<T> loadType(String typeName, boolean required, String providerName) {
+        try {
+            ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+            if (classLoader == null) {
+                classLoader = PaymentProviderGatewayRegistry.class.getClassLoader();
+            }
+            return (Class<T>) Class.forName(typeName, false, classLoader);
+        } catch (ClassNotFoundException | LinkageError e) {
+            if (required) {
+                throw new PaymentException("未找到支付 provider 依赖: " + providerName + " (" + typeName + ")", e);
+            }
+            return null;
+        }
     }
 }

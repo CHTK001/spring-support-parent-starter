@@ -68,6 +68,74 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     @Override
+    public TencentWechatPayResponse nativePay(TencentWechatPayProperties properties, TencentWechatPayRequest request) {
+        TencentWechatPayResponse result = new TencentWechatPayResponse();
+        result.setSuccess(true);
+        result.setPayUrl("weixin://wxpay/bizpayurl?mock=1&out_trade_no=" + request.getOrderNo());
+        result.setMessage("微信支付 mock Native 下单成功");
+        result.setRawResponse(raw("wechat-mock", "NATIVE", request.getOrderNo()));
+        return result;
+    }
+
+    @Override
+    public TencentWechatOrderResponse queryNativeOrder(TencentWechatPayProperties properties, String orderNo) {
+        return buildOrderResponse(orderNo);
+    }
+
+    @Override
+    public boolean closeNativeOrder(TencentWechatPayProperties properties, String orderNo) {
+        return true;
+    }
+
+    @Override
+    public TencentWechatPayResponse appPay(TencentWechatPayProperties properties, TencentWechatPayRequest request) {
+        TencentWechatPayResponse result = new TencentWechatPayResponse();
+        result.setSuccess(true);
+        Map<String, Object> sdkParams = new LinkedHashMap<>();
+        sdkParams.put("appid", firstNonBlank(properties.getAppId(), "wx_mock_appid"));
+        sdkParams.put("partnerid", firstNonBlank(properties.getMerchantId(), "mock_mchid"));
+        sdkParams.put("prepayid", "mock_prepay_" + request.getOrderNo());
+        sdkParams.put("package", "Sign=WXPay");
+        sdkParams.put("noncestr", "mock_nonce_" + System.currentTimeMillis());
+        sdkParams.put("timestamp", String.valueOf(System.currentTimeMillis() / 1000));
+        sdkParams.put("sign", "mock_sign");
+        result.setSdkParams(sdkParams);
+        result.setMessage("微信支付 mock App 下单成功");
+        result.setRawResponse(raw("wechat-mock", "APP", request.getOrderNo()));
+        return result;
+    }
+
+    @Override
+    public TencentWechatOrderResponse queryAppOrder(TencentWechatPayProperties properties, String orderNo) {
+        return buildOrderResponse(orderNo);
+    }
+
+    @Override
+    public boolean closeAppOrder(TencentWechatPayProperties properties, String orderNo) {
+        return true;
+    }
+
+    @Override
+    public TencentWechatPayResponse miniProgramPay(TencentWechatPayProperties properties, TencentWechatPayRequest request) {
+        TencentWechatPayResponse result = new TencentWechatPayResponse();
+        result.setSuccess(true);
+        result.setSdkParams(buildSdkParams(request.getOrderNo(), firstNonBlank(properties.getAppId(), "wx_mock_appid")));
+        result.setMessage("微信支付 mock 小程序下单成功");
+        result.setRawResponse(raw("wechat-mock", "MINIPROGRAM", request.getOrderNo()));
+        return result;
+    }
+
+    @Override
+    public TencentWechatOrderResponse queryMiniProgramOrder(TencentWechatPayProperties properties, String orderNo) {
+        return buildOrderResponse(orderNo);
+    }
+
+    @Override
+    public boolean closeMiniProgramOrder(TencentWechatPayProperties properties, String orderNo) {
+        return true;
+    }
+
+    @Override
     public TencentWechatRefundResponse refund(TencentWechatPayProperties properties, TencentWechatRefundRequest request) {
         return buildRefundResponse(request, "SUCCESS", "微信支付 mock 退款成功");
     }

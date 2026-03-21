@@ -114,9 +114,10 @@ public class LocalMessageTemplate implements MessageTemplate {
     }
 
     /**
-     * 异步发送带Header的消息（内部方法）
+     * 异步发送带Header的消息
      */
-    private CompletableFuture<SendResult> sendAsync(String destination, Object payload, Map<String, Object> headers) {
+    @Override
+    public CompletableFuture<SendResult> sendAsync(String destination, Object payload, Map<String, Object> headers) {
         String messageId = UUID.randomUUID().toString();
         CompletableFuture<SendResult> future = new CompletableFuture<>();
         
