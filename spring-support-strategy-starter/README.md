@@ -1,14 +1,14 @@
 # Spring Support Strategy Starter
 
-策略管理模块 - 提供限流、熔断、降级等策略的统一配置管理和 API 接口。
+策略模块负责“运行时治理与防护”，而不是业务编排。它当前提供方法级策略、HTTP 请求防护、动态配置、轻控制台和监控指标。
 
-## 功能特性
+## 当前能力
 
-- 🚦 **限流策略** - API 接口访问频率控制，支持多维度限流
-- 🔥 **熔断策略** - 防止级联故障，快速失败机制
-- 📉 **降级策略** - 服务降级配置，支持降级方法和固定返回值
-- 🔄 **重试策略** - 失败重试配置（开发中）
-- 📊 **策略记录** - 记录策略触发日志
+- 运行时治理：限流、防抖、熔断、重试、超时控制、舱壁隔离
+- 并发安全：幂等、分布式锁
+- 请求安全：IP 访问控制、XSS、SQL 注入、CSRF、路径穿透、请求体大小、参数数量、HTTP 方法、点击劫持、CSP
+- 运维支撑：Redis 配置同步、Actuator 指标包装、轻控制台、嵌入式账号密码登录
+- 存储形态：限流/防抖支持 `local` 与 `redis` 两类实现，未引入 Redis 依赖时自动回退为本地能力
 
 ## 快速开始
 
@@ -18,126 +18,68 @@
 <dependency>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-strategy-starter</artifactId>
-    <version>4.0.0.35</version>
+    <version>4.0.0.37</version>
 </dependency>
 ```
 
-### 2. 执行数据库脚本
+### 2. 基础配置
 
-执行 `src/main/resources/db/strategy-schema.sql` 初始化数据库表。
-
-### 3. API 接口
-
-#### 限流配置管理
-
-| 接口                         | 方法   | 说明                        |
-| ---------------------------- | ------ | --------------------------- |
-| `/v2/strategy/limit/page`    | GET    | 分页查询限流配置            |
-| `/v2/strategy/limit/list`    | GET    | 查询所有限流配置            |
-| `/v2/strategy/limit/enabled` | GET    | 查询启用的限流配置          |
-| `/v2/strategy/limit/{id}`    | GET    | 根据 ID 查询限流配置        |
-| `/v2/strategy/limit/save`    | POST   | 保存限流配置                |
-| `/v2/strategy/limit/update`  | PUT    | 更新限流配置                |
-| `/v2/strategy/limit/delete`  | DELETE | 删除限流配置                |
-| `/v2/strategy/limit/refresh` | POST   | 刷新限流配置到 Resilience4j |
-
-#### 熔断配置管理
-
-| 接口                                   | 方法   | 说明                        |
-| -------------------------------------- | ------ | --------------------------- |
-| `/v2/strategy/circuit-breaker/page`    | GET    | 分页查询熔断配置            |
-| `/v2/strategy/circuit-breaker/list`    | GET    | 查询所有熔断配置            |
-| `/v2/strategy/circuit-breaker/enabled` | GET    | 查询启用的熔断配置          |
-| `/v2/strategy/circuit-breaker/{id}`    | GET    | 根据 ID 查询熔断配置        |
-| `/v2/strategy/circuit-breaker/save`    | POST   | 保存熔断配置                |
-| `/v2/strategy/circuit-breaker/update`  | PUT    | 更新熔断配置                |
-| `/v2/strategy/circuit-breaker/delete`  | DELETE | 删除熔断配置                |
-| `/v2/strategy/circuit-breaker/refresh` | POST   | 刷新熔断配置到 Resilience4j |
-
-#### 熔断记录管理
-
-| 接口                                         | 方法   | 说明                   |
-| -------------------------------------------- | ------ | ---------------------- |
-| `/v2/strategy/circuit-breaker-record/page`   | GET    | 分页查询熔断记录       |
-| `/v2/strategy/circuit-breaker-record/{id}`   | GET    | 根据 ID 查询熔断记录   |
-| `/v2/strategy/circuit-breaker-record/delete` | DELETE | 删除熔断记录           |
-| `/v2/strategy/circuit-breaker-record/clean`  | DELETE | 清理指定天数之前的记录 |
-
-## 限流维度说明
-
-| 维度   | 说明                       |
-| ------ | -------------------------- |
-| GLOBAL | 全局限流，所有请求共享配额 |
-| IP     | 按客户端 IP 限流           |
-| USER   | 按用户 ID 限流             |
-| API    | 按接口路径限流             |
-
-## 配置示例
-
-```json
-{
-  "sysLimitPath": "/api/user/**",
-  "sysLimitName": "用户接口限流",
-  "sysLimitForPeriod": 100,
-  "sysLimitRefreshPeriodSeconds": 1,
-  "sysLimitTimeoutDurationMillis": 500,
-  "sysLimitDimension": "IP",
-  "sysLimitMessage": "请求过于频繁，请稍后再试",
-  "sysLimitStatus": 1,
-  "sysLimitSort": 10
-}
+```yaml
+plugin:
+  strategy:
+    enable: true
+    rate-limiter:
+      enabled: true
+      type: local
+    debounce:
+      enabled: true
+      type: local
+    circuit-breaker:
+      enabled: true
+    web-auth:
+      mode: embedded
+      username: admin
+      password: admin123
+      session-timeout: 3600
 ```
 
-## 模块结构
+说明：
 
-```
-spring-support-strategy-starter/
-├── src/main/java/com/chua/starter/strategy/
-│   ├── config/           # 自动配置
-│   ├── controller/       # API 控制器
-│   ├── entity/           # 实体类
-│   ├── mapper/           # MyBatis Mapper
-│   └── service/          # 业务服务
-├── src/main/resources/
-│   ├── db/               # 数据库脚本
-│   └── META-INF/         # Spring Boot 自动配置
-└── pom.xml
-```
+- `plugin.strategy.web-auth.mode=embedded` 时，`/strategy-console/**` 和 `/v2/strategy/**` 受轻控制台登录保护。
+- `plugin.strategy.web-auth.mode=none` 时，关闭控制台登录校验。
+- 若要启用 Redis 分布式能力，需要额外引入 Redis 依赖；未引入时不会因为类加载失败导致 starter 启动异常。
 
-## 熔断配置示例
+## 控制台与接口
 
-```json
-{
-  "sysCircuitBreakerName": "用户服务熔断器",
-  "sysCircuitBreakerPath": "/api/user/**",
-  "failureRateThreshold": 50,
-  "slowCallRateThreshold": 100,
-  "slowCallDurationThresholdMs": 60000,
-  "minimumNumberOfCalls": 10,
-  "slidingWindowSize": 10,
-  "slidingWindowType": "COUNT_BASED",
-  "waitDurationInOpenStateMs": 60000,
-  "permittedCallsInHalfOpenState": 3,
-  "fallbackMethod": "userFallback",
-  "sysCircuitBreakerStatus": 1,
-  "sysCircuitBreakerSort": 10
-}
-```
+- 控制台入口：`/strategy-console`
+- 登录状态：`GET /v2/strategy/auth/status`
+- 登录接口：`POST /v2/strategy/auth/login`
+- 指标接口：`GET /v2/strategy/metrics`
 
-## 版本历史
+常见配置管理接口：
 
-### v1.0.0 (2025-12-02)
+- `/v2/strategy/limit/**`
+- `/v2/strategy/debounce/**`
+- `/v2/strategy/circuit-breaker/**`
+- `/v2/strategy/circuit-breaker-record/**`
 
-- 初始版本
-- 支持限流配置管理
-- 支持限流记录日志
-- 支持熔断配置管理
-- 支持熔断记录日志
+## 模块边界
 
-## 作者
+适合放进策略模块的能力：
 
-- CH
+- 决策型、约束型、保护型的通用规则
+- 与具体业务领域无关、可跨系统复用的执行控制
+- 需要动态配置、统一监控和横向复用的运行时治理能力
 
-## 许可证
+不建议放进策略模块的能力：
 
-ISC
+- 业务排程本身，例如支付超时关闭、订单补偿
+- 请求行为分析与 AI 总结，这类更偏观察和分析
+- 支付、租户、OAuth 等强业务领域功能
+
+## 文档
+
+- [接入手册](docs/strategy-integration-manual.md)
+- [模块边界分析](docs/strategy-module-classification.md)
+- [单元与模块测试报告](docs/策略模块单元测试报告.md)
+- [烟雾测试报告](docs/strategy-smoke-test-report.md)
