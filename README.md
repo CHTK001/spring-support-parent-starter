@@ -120,7 +120,8 @@ Spring Support Parent Starter
 ├── 🛠️ 运维管理模块
 │   ├── spring-support-shell-starter           # SSH Shell管理
 │   ├── spring-support-ssh-starter             # SSH服务
-│   └── spring-support-job-starter             # 定时任务调度
+│   ├── spring-support-job-starter             # 定时任务调度
+│   └── spring-support-proxy-starter           # 代理管理与内嵌代理服务
 ├── 🤖 AI深度学习模块
 │   └── spring-support-ai-starter              # AI深度学习功能
 ├── 🌐 API网关模块
@@ -262,7 +263,8 @@ plugin:
 | Arthas Client     | `plugin.arthas.enable`            | false  | Arthas 诊断        |
 | **其他服务**      |
 | Pay Client        | `plugin.pay.enable`               | false  | 支付客户端         |
-| Swagger           | `plugin.knife4j.enable`           | false  | API 文档           |
+| Swagger           | `plugin.swagger.enable`           | false  | API 文档           |
+| Proxy Management  | `plugin.proxy.enable`             | false  | 代理实例管理       |
 | Shell             | `plugin.shell.enable`             | false  | Shell 服务         |
 | SSH               | `plugin.ssh.enable`               | false  | SSH 服务           |
 | Tencent           | `plugin.tencent.mini-app.enable`  | false  | 腾讯云服务         |
@@ -1088,6 +1090,9 @@ WebSocket 实时通信：
 
 - **[spring-support-job-starter](spring-support-job-starter/README.md)** - 定时任务模块
   - 定时任务调度管理
+
+- **[spring-support-proxy-starter](spring-support-proxy-starter/README.md)** - 代理管理模块
+  - 代理实例管理、启停控制、设置项管理与独立 smoke 验证
 
 - **[spring-support-shell-starter](spring-support-shell-starter/README.md)** - Shell命令模块
   - Shell脚本执行

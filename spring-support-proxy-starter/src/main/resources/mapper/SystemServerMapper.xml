@@ -1,0 +1,87 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.proxy.support.mapper.SystemServerMapper">
+
+    <!-- 分页查询服务器列表（包含过滤器数量） -->
+    <select id="pageFor" resultType="com.chua.starter.proxy.support.entity.SystemServer">
+        SELECT
+            s.proxy_server_id AS system_server_id,
+            s.proxy_server_name AS system_server_name,
+            s.proxy_server_host AS system_server_host,
+            s.proxy_server_port AS system_server_port,
+            s.proxy_server_type AS system_server_type,
+            s.proxy_server_context_path AS system_server_context_path,
+            s.proxy_server_status AS system_server_status,
+            s.proxy_server_description AS system_server_description,
+            s.proxy_server_config AS system_server_config,
+            s.proxy_server_auto_start AS system_server_auto_start,
+            s.proxy_server_max_connections AS system_server_max_connections,
+            s.proxy_server_timeout AS system_server_timeout,
+            s.create_name,
+            s.create_by,
+            s.create_time,
+            s.update_name,
+            s.update_by,
+            s.update_time,
+            (SELECT COUNT(*) FROM proxy_server_setting ss
+             WHERE ss.proxy_server_setting_server_id = s.proxy_server_id) AS filter_count
+        FROM proxy_server s
+        <where>
+            <if test="entity.systemServerName != null and entity.systemServerName != ''">
+                AND s.proxy_server_name LIKE CONCAT('%', #{entity.systemServerName}, '%')
+            </if>
+            <if test="entity.systemServerHost != null and entity.systemServerHost != ''">
+                AND s.proxy_server_host LIKE CONCAT('%', #{entity.systemServerHost}, '%')
+            </if>
+            <if test="entity.systemServerPort != null">
+                AND s.proxy_server_port = #{entity.systemServerPort}
+            </if>
+            <if test="entity.systemServerStatus != null">
+                AND s.proxy_server_status = #{entity.systemServerStatus.name}
+            </if>
+            <if test="entity.systemServerType != null and entity.systemServerType != ''">
+                AND s.proxy_server_type = #{entity.systemServerType}
+            </if>
+        </where>
+        ORDER BY s.create_time DESC
+    </select>
+
+    <!-- 根据服务器类型查询服务器列表 -->
+    <select id="selectByServerType" resultType="com.chua.starter.proxy.support.entity.SystemServer">
+        SELECT * FROM proxy_server 
+        WHERE proxy_server_type = #{serverType}
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 根据状态查询服务器列表 -->
+    <select id="selectByStatus" resultType="com.chua.starter.proxy.support.entity.SystemServer">
+        SELECT * FROM proxy_server 
+        WHERE proxy_server_status = #{status}
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 获取服务器统计信息 -->
+    <select id="getStatistics" resultType="java.util.Map">
+        SELECT 
+            COUNT(*) as total,
+            SUM(CASE WHEN proxy_server_status = 'RUNNING' THEN 1 ELSE 0 END) as running,
+            SUM(CASE WHEN proxy_server_status = 'STOPPED' THEN 1 ELSE 0 END) as stopped,
+            SUM(CASE WHEN proxy_server_status = 'ERROR' THEN 1 ELSE 0 END) as error
+        FROM proxy_server
+    </select>
+
+    <!-- 根据端口查询服务器 -->
+    <select id="selectByPort" resultType="com.chua.starter.proxy.support.entity.SystemServer">
+        SELECT * FROM proxy_server WHERE proxy_server_port = #{port}
+    </select>
+
+    <!-- 更新服务器状态 -->
+    <update id="updateStatus">
+        UPDATE proxy_server 
+        SET proxy_server_status = #{status}, update_time = NOW()
+        WHERE proxy_server_id = #{serverId}
+    </update>
+
+</mapper>
+
+

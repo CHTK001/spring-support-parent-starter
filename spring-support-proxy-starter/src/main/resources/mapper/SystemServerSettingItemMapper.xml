@@ -1,0 +1,82 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.proxy.support.mapper.SystemServerSettingItemMapper">
+
+    <!-- 分页查询配置项列表 -->
+    <select id="pageFor" resultType="com.chua.starter.proxy.support.entity.SystemServerSettingItem">
+        SELECT * FROM proxy_server_setting_item
+        <where>
+            <if test="entity.systemServerSettingItemName != null and entity.systemServerSettingItemName != ''">
+                AND proxy_server_setting_item_name LIKE CONCAT('%', #{entity.systemServerSettingItemName}, '%')
+            </if>
+            <if test="entity.systemServerSettingItemSettingId != null">
+                AND proxy_server_setting_item_setting_id = #{entity.systemServerSettingItemSettingId}
+            </if>
+            <if test="entity.systemServerSettingItemType != null and entity.systemServerSettingItemType != ''">
+                AND proxy_server_setting_item_type = #{entity.systemServerSettingItemType}
+            </if>
+            <if test="entity.systemServerSettingItemRequired != null">
+                AND proxy_server_setting_item_required = #{entity.systemServerSettingItemRequired}
+            </if>
+        </where>
+        ORDER BY proxy_server_setting_item_order ASC, create_time DESC
+    </select>
+
+    <!-- 根据配置ID查询配置项列表 -->
+    <select id="selectBySettingId" resultType="com.chua.starter.proxy.support.entity.SystemServerSettingItem">
+        SELECT * FROM proxy_server_setting_item 
+        WHERE proxy_server_setting_item_setting_id = #{settingId} 
+        ORDER BY proxy_server_setting_item_order ASC
+    </select>
+
+    <!-- 根据配置ID和配置项名称查询配置项 -->
+    <select id="selectBySettingIdAndName" resultType="com.chua.starter.proxy.support.entity.SystemServerSettingItem">
+        SELECT * FROM proxy_server_setting_item 
+        WHERE proxy_server_setting_item_setting_id = #{settingId} 
+        AND proxy_server_setting_item_name = #{itemName}
+    </select>
+
+    <!-- 根据配置项名称查询配置项列表 -->
+    <select id="selectByName" resultType="com.chua.starter.proxy.support.entity.SystemServerSettingItem">
+        SELECT * FROM proxy_server_setting_item 
+        WHERE proxy_server_setting_item_name = #{itemName}
+    </select>
+
+    <!-- 获取配置的最大排序值 -->
+    <select id="getMaxOrderBySettingId" resultType="java.lang.Integer">
+        SELECT COALESCE(MAX(proxy_server_setting_item_order), 0) 
+        FROM proxy_server_setting_item 
+        WHERE proxy_server_setting_item_setting_id = #{settingId}
+    </select>
+
+    <!-- 批量更新配置项排序 -->
+    <update id="updateOrder">
+        UPDATE proxy_server_setting_item 
+        SET proxy_server_setting_item_order = #{order} 
+        WHERE proxy_server_setting_item_id = #{itemId}
+    </update>
+
+    <!-- 更新配置项值 -->
+    <update id="updateValue">
+        UPDATE proxy_server_setting_item 
+        SET proxy_server_setting_item_value = #{value} 
+        WHERE proxy_server_setting_item_id = #{itemId}
+    </update>
+
+    <!-- 根据配置ID删除所有配置项 -->
+    <delete id="deleteBySettingId">
+        DELETE FROM proxy_server_setting_item 
+        WHERE proxy_server_setting_item_setting_id = #{settingId}
+    </delete>
+
+    <!-- 根据配置ID和必填状态查询配置项列表 -->
+    <select id="selectBySettingIdAndRequired" resultType="com.chua.starter.proxy.support.entity.SystemServerSettingItem">
+        SELECT * FROM proxy_server_setting_item 
+        WHERE proxy_server_setting_item_setting_id = #{settingId} 
+        AND proxy_server_setting_item_required = #{required} 
+        ORDER BY proxy_server_setting_item_order ASC
+    </select>
+
+</mapper>
+
+
