@@ -1,11 +1,14 @@
 package com.chua.report.client.starter.sync.handler;
 
 import com.chua.common.support.core.annotation.Spi;
-import com.chua.common.support.text.json.Json;
 import com.chua.common.support.core.utils.MapUtils;
+import com.chua.common.support.text.json.Json;
 import com.chua.report.client.starter.sync.MonitorTopics;
 import com.chua.starter.sync.support.spi.SyncMessageHandler;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
+import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.springframework.beans.BeansException;
 import org.springframework.boot.system.ApplicationHome;
 import org.springframework.context.ApplicationContext;
@@ -20,6 +23,8 @@ import java.nio.file.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 /**
  * 节点维护处理器
@@ -48,6 +53,26 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
      * 升级包目录
      */
     private static final String UPGRADE_DIR = "upgrades";
+
+    /**
+     * 回滚快照前缀
+     */
+    private static final String ROLLBACK_PREFIX = "rollback_";
+
+    /**
+     * 回滚元数据文件
+     */
+    private static final String ROLLBACK_METADATA_FILE = "rollback-metadata.json";
+
+    /**
+     * 测试/运维可覆写的应用目录
+     */
+    private static final String HOME_DIR_PROPERTY = "plugin.report.maintenance.home-dir";
+
+    /**
+     * 测试/运维可覆写的当前可执行物路径
+     */
+    private static final String CURRENT_ARTIFACT_PROPERTY = "plugin.report.maintenance.current-artifact";
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
@@ -207,7 +232,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
                 return Map.of("code", 400, "message", "未指定备份文件名");
             }
 
-            Path backupFile = getBackupDirectory().resolve(fileName);
+            Path backupFile = resolveManagedFile(getBackupDirectory(), fileName, "备份文件");
             if (!Files.exists(backupFile)) {
                 return Map.of("code", 404, "message", "备份文件不存在");
             }
@@ -235,7 +260,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
                 return Map.of("code", 400, "message", "未指定备份文件名");
             }
 
-            Path backupFile = getBackupDirectory().resolve(fileName);
+            Path backupFile = resolveManagedFile(getBackupDirectory(), fileName, "备份文件");
             if (!Files.exists(backupFile)) {
                 return Map.of("code", 404, "message", "备份文件不存在");
             }
@@ -263,6 +288,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
             case "upload" -> uploadUpgradePackage(data);
             case "list" -> listUpgradePackages();
             case "execute" -> executeUpgrade(data);
+            case "rollback" -> rollbackUpgrade(data);
             case "status" -> getUpgradeStatus();
             default -> Map.of("code", 400, "message", "未知升级操作: " + action);
         };
@@ -289,7 +315,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
             // 保存到升级目录
             Path upgradeDir = getUpgradeDirectory();
             Files.createDirectories(upgradeDir);
-            Path upgradeFile = upgradeDir.resolve(fileName);
+            Path upgradeFile = resolveManagedFile(upgradeDir, fileName, "升级包");
             Files.write(upgradeFile, fileBytes);
 
             log.info("[NodeMaintenance] 升级包上传成功: {}, 大小: {} bytes", fileName, fileBytes.length);
@@ -322,7 +348,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
 
             List<Map<String, Object>> packages = new ArrayList<>();
             try (var stream = Files.list(upgradeDir)) {
-                stream.filter(path -> path.toString().endsWith(".jar") || path.toString().endsWith(".zip"))
+                stream.filter(this::isSupportedUpgradePackage)
                         .sorted(Comparator.comparing(Path::getFileName).reversed())
                         .forEach(path -> {
                             try {
@@ -360,9 +386,14 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
                 return Map.of("code", 400, "message", "未指定升级包");
             }
 
-            Path upgradeFile = getUpgradeDirectory().resolve(fileName);
+            Path upgradeFile = resolveManagedFile(getUpgradeDirectory(), fileName, "升级包");
             if (!Files.exists(upgradeFile)) {
                 return Map.of("code", 404, "message", "升级包不存在");
+            }
+
+            UpgradePackageType packageType = detectPackageType(fileName);
+            if (packageType == null) {
+                return Map.of("code", 400, "message", "不支持的升级包类型: " + fileName);
             }
 
             // 自动备份当前配置
@@ -373,22 +404,20 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
                 }
             }
 
-            // 获取当前 JAR 路径
-            ApplicationHome home = new ApplicationHome(getClass());
-            File currentJar = home.getSource();
+            Path applicationHome = resolveHomeDirectory();
+            Path currentArtifact = resolveCurrentArtifact();
+            Path rollbackDir = createRollbackSnapshotDirectory();
+            Map<String, Object> rollbackMetadata = applyUpgradePackage(
+                    packageType,
+                    upgradeFile,
+                    applicationHome,
+                    currentArtifact,
+                    rollbackDir
+            );
+            writeRollbackMetadata(rollbackDir, rollbackMetadata);
 
-            if (currentJar == null || !currentJar.exists()) {
-                return Map.of("code", 500, "message", "无法获取当前应用路径");
-            }
-
-            // 备份当前 JAR
-            Path backupJar = currentJar.toPath().resolveSibling(currentJar.getName() + ".bak");
-            Files.copy(currentJar.toPath(), backupJar, StandardCopyOption.REPLACE_EXISTING);
-
-            // 替换 JAR 文件
-            Files.copy(upgradeFile, currentJar.toPath(), StandardCopyOption.REPLACE_EXISTING);
-
-            log.info("[NodeMaintenance] 升级包已替换: {} -> {}", upgradeFile, currentJar);
+            log.info("[NodeMaintenance] 升级包已应用: package={}, type={}, rollbackId={}",
+                    upgradeFile, packageType.name(), rollbackMetadata.get("rollbackId"));
 
             // 如果需要自动重启
             if (autoRestart) {
@@ -408,15 +437,79 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
                     "code", 200,
                     "message", autoRestart ? "升级成功，应用即将重启" : "升级成功，请手动重启应用",
                     "data", Map.of(
-                            "upgradedFrom", currentJar.getName(),
+                            "upgradedFrom", currentArtifact != null ? currentArtifact.getFileName().toString() : "目录分发",
                             "upgradedTo", fileName,
-                            "backupFile", backupJar.toString(),
-                            "autoRestart", autoRestart
+                            "rollbackId", rollbackMetadata.get("rollbackId"),
+                            "packageType", packageType.name(),
+                            "autoRestart", autoRestart,
+                            "applicationHome", applicationHome.toString()
                     )
             );
         } catch (Exception e) {
             log.error("[NodeMaintenance] 执行升级失败", e);
             return Map.of("code", 500, "message", "执行升级失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 回滚最近一次升级快照
+     *
+     * @param data 请求数据
+     * @return 回滚结果
+     */
+    private Map<String, Object> rollbackUpgrade(Map<String, Object> data) {
+        try {
+            String rollbackId = MapUtils.getString(data, "rollbackId");
+            if (rollbackId == null || rollbackId.isEmpty()) {
+                return Map.of("code", 400, "message", "未指定回滚快照");
+            }
+
+            Path rollbackDir = resolveManagedFile(getBackupDirectory(), rollbackId, "回滚快照");
+            Path metadataFile = rollbackDir.resolve(ROLLBACK_METADATA_FILE);
+            if (!Files.exists(metadataFile)) {
+                return Map.of("code", 404, "message", "回滚快照不存在");
+            }
+
+            String metadataContent = Files.readString(metadataFile, StandardCharsets.UTF_8);
+            Map<String, Object> metadata = Json.getJsonObject(metadataContent);
+
+            Path applicationHome = resolveHomeDirectory();
+            List<String> addedFiles = toStringList(metadata.get("addedFiles"));
+            addedFiles.sort(Comparator.comparingInt((String path) -> Path.of(path).getNameCount()).reversed());
+            for (String addedFile : addedFiles) {
+                Path target = resolveSafePath(applicationHome, addedFile);
+                Files.deleteIfExists(target);
+                deleteEmptyDirectories(target.getParent(), applicationHome);
+            }
+
+            Path originalDir = rollbackDir.resolve("original");
+            for (String restoredFile : toStringList(metadata.get("restoredFiles"))) {
+                Path backupFile = resolveSafePath(originalDir, restoredFile);
+                Path target = resolveSafePath(applicationHome, restoredFile);
+                Files.createDirectories(target.getParent());
+                Files.copy(backupFile, target, StandardCopyOption.REPLACE_EXISTING);
+            }
+
+            String artifactTarget = MapUtils.getString(metadata, "artifactTarget");
+            String artifactBackup = MapUtils.getString(metadata, "artifactBackup");
+            if (artifactTarget != null && !artifactTarget.isEmpty()
+                    && artifactBackup != null && !artifactBackup.isEmpty()) {
+                Files.copy(Path.of(artifactBackup), Path.of(artifactTarget), StandardCopyOption.REPLACE_EXISTING);
+            }
+
+            return Map.of(
+                    "code", 200,
+                    "message", "回滚成功",
+                    "data", Map.of(
+                            "rollbackId", rollbackId,
+                            "restoredFiles", toStringList(metadata.get("restoredFiles")).size(),
+                            "deletedFiles", addedFiles.size(),
+                            "needRestart", true
+                    )
+            );
+        } catch (Exception e) {
+            log.error("[NodeMaintenance] 回滚失败", e);
+            return Map.of("code", 500, "message", "回滚失败: " + e.getMessage());
         }
     }
 
@@ -427,15 +520,18 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
      */
     private Map<String, Object> getUpgradeStatus() {
         try {
-            ApplicationHome home = new ApplicationHome(getClass());
-            File currentJar = home.getSource();
+            Path currentArtifact = resolveCurrentArtifact();
+            Path applicationHome = resolveHomeDirectory();
 
             Map<String, Object> status = new LinkedHashMap<>();
             status.put("applicationName", getApplicationName());
             status.put("currentVersion", getApplicationVersion());
-            status.put("jarPath", currentJar != null ? currentJar.getAbsolutePath() : "未知");
-            status.put("jarSize", currentJar != null ? currentJar.length() : 0);
-            status.put("lastModified", currentJar != null ? currentJar.lastModified() : 0);
+            status.put("applicationHome", applicationHome.toString());
+            status.put("jarPath", currentArtifact != null ? currentArtifact.toAbsolutePath().toString() : "未知");
+            status.put("jarSize", currentArtifact != null && Files.exists(currentArtifact) ? Files.size(currentArtifact) : 0);
+            status.put("lastModified", currentArtifact != null && Files.exists(currentArtifact)
+                    ? Files.getLastModifiedTime(currentArtifact).toMillis() : 0);
+            status.put("supportedPackages", List.of("jar", "zip", "tar.gz", "tgz"));
 
             return Map.of("code", 200, "message", "成功", "data", status);
         } catch (Exception e) {
@@ -473,7 +569,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
                 return Map.of("code", 400, "message", "未指定备份文件");
             }
 
-            Path backupFile = getBackupDirectory().resolve(fileName);
+            Path backupFile = resolveManagedFile(getBackupDirectory(), fileName, "备份文件");
             if (!Files.exists(backupFile)) {
                 return Map.of("code", 404, "message", "备份文件不存在");
             }
@@ -534,7 +630,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
                 return Map.of("code", 400, "message", "未指定备份文件");
             }
 
-            Path backupFile = getBackupDirectory().resolve(fileName);
+            Path backupFile = resolveManagedFile(getBackupDirectory(), fileName, "备份文件");
             if (!Files.exists(backupFile)) {
                 return Map.of("code", 404, "message", "备份文件不存在");
             }
@@ -581,18 +677,239 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
      * 获取备份目录
      */
     private Path getBackupDirectory() {
-        ApplicationHome home = new ApplicationHome(getClass());
-        File homeDir = home.getDir();
-        return homeDir.toPath().resolve(BACKUP_DIR);
+        return resolveHomeDirectory().resolve(BACKUP_DIR);
     }
 
     /**
      * 获取升级目录
      */
     private Path getUpgradeDirectory() {
+        return resolveHomeDirectory().resolve(UPGRADE_DIR);
+    }
+
+    private Map<String, Object> applyUpgradePackage(UpgradePackageType packageType,
+                                                    Path packageFile,
+                                                    Path applicationHome,
+                                                    Path currentArtifact,
+                                                    Path rollbackDir) throws IOException {
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        String rollbackId = rollbackDir.getFileName().toString();
+        metadata.put("rollbackId", rollbackId);
+        metadata.put("packageFile", packageFile.getFileName().toString());
+        metadata.put("packageType", packageType.name());
+        metadata.put("appliedAt", System.currentTimeMillis());
+        metadata.put("applicationHome", applicationHome.toString());
+
+        List<String> restoredFiles = new ArrayList<>();
+        List<String> addedFiles = new ArrayList<>();
+        metadata.put("restoredFiles", restoredFiles);
+        metadata.put("addedFiles", addedFiles);
+
+        switch (packageType) {
+            case JAR -> applyJarPackage(packageFile, currentArtifact, rollbackDir, metadata);
+            case ZIP -> extractZipPackage(packageFile, applicationHome, rollbackDir.resolve("original"), restoredFiles, addedFiles);
+            case TAR_GZ -> extractTarGzPackage(packageFile, applicationHome, rollbackDir.resolve("original"), restoredFiles, addedFiles);
+        }
+        return metadata;
+    }
+
+    private void applyJarPackage(Path packageFile,
+                                 Path currentArtifact,
+                                 Path rollbackDir,
+                                 Map<String, Object> metadata) throws IOException {
+        if (currentArtifact == null || !Files.exists(currentArtifact)) {
+            throw new IOException("无法获取当前可执行物路径");
+        }
+        if (Files.isDirectory(currentArtifact)) {
+            throw new IOException("当前可执行物是目录，JAR 升级请改用 zip/tar.gz 分发包");
+        }
+
+        Path artifactBackup = rollbackDir.resolve("artifact").resolve(currentArtifact.getFileName().toString());
+        Files.createDirectories(artifactBackup.getParent());
+        Files.copy(currentArtifact, artifactBackup, StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(packageFile, currentArtifact, StandardCopyOption.REPLACE_EXISTING);
+
+        metadata.put("artifactTarget", currentArtifact.toString());
+        metadata.put("artifactBackup", artifactBackup.toString());
+    }
+
+    private void extractZipPackage(Path packageFile,
+                                   Path applicationHome,
+                                   Path originalDir,
+                                   List<String> restoredFiles,
+                                   List<String> addedFiles) throws IOException {
+        try (ZipInputStream inputStream = new ZipInputStream(Files.newInputStream(packageFile))) {
+            ZipEntry entry;
+            while ((entry = inputStream.getNextEntry()) != null) {
+                applyArchiveEntry(entry.getName(), entry.isDirectory(), inputStream, applicationHome, originalDir, restoredFiles, addedFiles);
+            }
+        }
+    }
+
+    private void extractTarGzPackage(Path packageFile,
+                                     Path applicationHome,
+                                     Path originalDir,
+                                     List<String> restoredFiles,
+                                     List<String> addedFiles) throws IOException {
+        try (InputStream fileInputStream = Files.newInputStream(packageFile);
+             InputStream bufferedInputStream = new BufferedInputStream(fileInputStream);
+             InputStream gzipInputStream = new GzipCompressorInputStream(bufferedInputStream);
+             TarArchiveInputStream tarInputStream = new TarArchiveInputStream(gzipInputStream)) {
+            TarArchiveEntry entry;
+            while ((entry = tarInputStream.getNextTarEntry()) != null) {
+                applyArchiveEntry(entry.getName(), entry.isDirectory(), tarInputStream, applicationHome, originalDir, restoredFiles, addedFiles);
+            }
+        }
+    }
+
+    private void applyArchiveEntry(String entryName,
+                                   boolean directory,
+                                   InputStream inputStream,
+                                   Path applicationHome,
+                                   Path originalDir,
+                                   List<String> restoredFiles,
+                                   List<String> addedFiles) throws IOException {
+        String normalizedEntryName = normalizeEntryName(entryName);
+        if (normalizedEntryName.isEmpty()) {
+            return;
+        }
+
+        Path target = resolveSafePath(applicationHome, normalizedEntryName);
+        if (directory) {
+            Files.createDirectories(target);
+            return;
+        }
+
+        if (Files.exists(target)) {
+            if (Files.isDirectory(target)) {
+                throw new IOException("归档条目与目录冲突: " + normalizedEntryName);
+            }
+            if (!restoredFiles.contains(normalizedEntryName)) {
+                Path backupFile = resolveSafePath(originalDir, normalizedEntryName);
+                Files.createDirectories(backupFile.getParent());
+                Files.copy(target, backupFile, StandardCopyOption.REPLACE_EXISTING);
+                restoredFiles.add(normalizedEntryName);
+            }
+        } else if (!addedFiles.contains(normalizedEntryName)) {
+            addedFiles.add(normalizedEntryName);
+        }
+
+        Files.createDirectories(target.getParent());
+        Files.copy(inputStream, target, StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    private void writeRollbackMetadata(Path rollbackDir, Map<String, Object> metadata) throws IOException {
+        Files.createDirectories(rollbackDir);
+        Files.writeString(rollbackDir.resolve(ROLLBACK_METADATA_FILE), Json.toJson(metadata), StandardCharsets.UTF_8);
+    }
+
+    private Path createRollbackSnapshotDirectory() throws IOException {
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+        Path rollbackDir = getBackupDirectory().resolve(ROLLBACK_PREFIX + timestamp);
+        Files.createDirectories(rollbackDir);
+        return rollbackDir;
+    }
+
+    private boolean isSupportedUpgradePackage(Path path) {
+        return detectPackageType(path.getFileName().toString()) != null;
+    }
+
+    private UpgradePackageType detectPackageType(String fileName) {
+        String lower = fileName.toLowerCase(Locale.ROOT);
+        if (lower.endsWith(".tar.gz") || lower.endsWith(".tgz")) {
+            return UpgradePackageType.TAR_GZ;
+        }
+        if (lower.endsWith(".zip")) {
+            return UpgradePackageType.ZIP;
+        }
+        if (lower.endsWith(".jar")) {
+            return UpgradePackageType.JAR;
+        }
+        return null;
+    }
+
+    private Path resolveHomeDirectory() {
+        String configuredPath = getEnvironmentProperty(HOME_DIR_PROPERTY);
+        if (configuredPath != null && !configuredPath.isBlank()) {
+            return Path.of(configuredPath).toAbsolutePath().normalize();
+        }
+
         ApplicationHome home = new ApplicationHome(getClass());
         File homeDir = home.getDir();
-        return homeDir.toPath().resolve(UPGRADE_DIR);
+        return homeDir.toPath().toAbsolutePath().normalize();
+    }
+
+    private Path resolveCurrentArtifact() {
+        String configuredPath = getEnvironmentProperty(CURRENT_ARTIFACT_PROPERTY);
+        if (configuredPath != null && !configuredPath.isBlank()) {
+            return Path.of(configuredPath).toAbsolutePath().normalize();
+        }
+
+        ApplicationHome home = new ApplicationHome(getClass());
+        File source = home.getSource();
+        return source != null ? source.toPath().toAbsolutePath().normalize() : null;
+    }
+
+    private String getEnvironmentProperty(String propertyName) {
+        if (applicationContext == null) {
+            return null;
+        }
+        return applicationContext.getEnvironment().getProperty(propertyName);
+    }
+
+    private Path resolveManagedFile(Path baseDirectory, String fileName, String description) throws IOException {
+        if (fileName == null || fileName.isBlank()) {
+            throw new IOException(description + "不能为空");
+        }
+        return resolveSafePath(baseDirectory, fileName);
+    }
+
+    private Path resolveSafePath(Path baseDirectory, String relativePath) throws IOException {
+        Path normalizedBase = baseDirectory.toAbsolutePath().normalize();
+        Path resolvedPath = normalizedBase.resolve(relativePath).normalize();
+        if (!resolvedPath.startsWith(normalizedBase)) {
+            throw new IOException("非法路径: " + relativePath);
+        }
+        return resolvedPath;
+    }
+
+    private String normalizeEntryName(String entryName) {
+        String normalized = entryName.replace('\\', '/');
+        while (normalized.startsWith("/")) {
+            normalized = normalized.substring(1);
+        }
+        return normalized;
+    }
+
+    private void deleteEmptyDirectories(Path current, Path stopAt) throws IOException {
+        Path normalizedStopAt = stopAt.toAbsolutePath().normalize();
+        Path cursor = current;
+        while (cursor != null && cursor.startsWith(normalizedStopAt) && !cursor.equals(normalizedStopAt)) {
+            if (!Files.isDirectory(cursor)) {
+                break;
+            }
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(cursor)) {
+                if (stream.iterator().hasNext()) {
+                    break;
+                }
+            }
+            Files.deleteIfExists(cursor);
+            cursor = cursor.getParent();
+        }
+    }
+
+    private List<String> toStringList(Object value) {
+        if (!(value instanceof List<?> listValue)) {
+            return List.of();
+        }
+
+        List<String> results = new ArrayList<>(listValue.size());
+        for (Object item : listValue) {
+            if (item != null) {
+                results.add(item.toString());
+            }
+        }
+        return results;
     }
 
     /**
@@ -672,5 +989,11 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
                     .getProperty("info.app.version", "1.0.0");
         }
         return "1.0.0";
+    }
+
+    private enum UpgradePackageType {
+        JAR,
+        ZIP,
+        TAR_GZ
     }
 }
