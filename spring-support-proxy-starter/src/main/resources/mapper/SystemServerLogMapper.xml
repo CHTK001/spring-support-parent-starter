@@ -1,0 +1,62 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.proxy.support.mapper.SystemServerLogMapper">
+
+    <select id="pageLogs" resultType="com.chua.starter.proxy.support.entity.SystemServerLog">
+        SELECT *
+        FROM proxy_server_log
+        <where>
+            <if test="serverId != null">
+                AND server_id = #{serverId}
+            </if>
+            <if test="filterType != null and filterType != ''">
+                AND filter_type LIKE CONCAT('%', #{filterType}, '%')
+            </if>
+            <if test="processStatus != null and processStatus != ''">
+                AND process_status = #{processStatus}
+            </if>
+            <if test="clientIp != null and clientIp != ''">
+                AND client_ip LIKE CONCAT('%', #{clientIp}, '%')
+            </if>
+            <if test="startTime != null">
+                AND access_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND access_time &lt;= #{endTime}
+            </if>
+        </where>
+        ORDER BY store_time DESC, id DESC
+    </select>
+
+    <select id="selectForExport" resultType="com.chua.starter.proxy.support.entity.SystemServerLog">
+        SELECT *
+        FROM proxy_server_log
+        <where>
+            <if test="serverId != null">
+                AND server_id = #{serverId}
+            </if>
+            <if test="filterType != null and filterType != ''">
+                AND filter_type LIKE CONCAT('%', #{filterType}, '%')
+            </if>
+            <if test="processStatus != null and processStatus != ''">
+                AND process_status = #{processStatus}
+            </if>
+            <if test="clientIp != null and clientIp != ''">
+                AND client_ip LIKE CONCAT('%', #{clientIp}, '%')
+            </if>
+            <if test="startTime != null">
+                AND access_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND access_time &lt;= #{endTime}
+            </if>
+        </where>
+        ORDER BY store_time DESC, id DESC
+    </select>
+
+    <delete id="deleteBefore">
+        DELETE FROM proxy_server_log
+        WHERE store_time &lt; #{beforeTime}
+    </delete>
+</mapper>
+

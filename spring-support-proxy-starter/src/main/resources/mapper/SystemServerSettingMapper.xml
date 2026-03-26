@@ -1,0 +1,76 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.proxy.support.mapper.SystemServerSettingMapper">
+
+    <!-- 分页查询配置列表 -->
+    <select id="pageFor" resultType="com.chua.starter.proxy.support.entity.SystemServerSetting">
+        SELECT * FROM proxy_server_setting
+        <where>
+            <if test="entity.systemServerSettingName != null and entity.systemServerSettingName != ''">
+                AND proxy_server_setting_name LIKE CONCAT('%', #{entity.systemServerSettingName}, '%')
+            </if>
+            <if test="entity.systemServerSettingServerId != null">
+                AND proxy_server_setting_server_id = #{entity.systemServerSettingServerId}
+            </if>
+            <if test="entity.systemServerSettingType != null and entity.systemServerSettingType != ''">
+                AND proxy_server_setting_type = #{entity.systemServerSettingType}
+            </if>
+            <if test="entity.systemServerSettingEnabled != null">
+                AND proxy_server_setting_enabled = #{entity.systemServerSettingEnabled}
+            </if>
+        </where>
+        ORDER BY proxy_server_setting_order ASC, create_time DESC
+    </select>
+
+    <!-- 根据服务器ID查询配置列表 -->
+    <select id="selectByServerId" resultType="com.chua.starter.proxy.support.entity.SystemServerSetting">
+        SELECT * FROM proxy_server_setting 
+        WHERE proxy_server_setting_server_id = #{serverId} 
+        ORDER BY proxy_server_setting_order ASC
+    </select>
+
+    <!-- 根据服务器ID和配置类型查询配置 -->
+    <select id="selectByServerIdAndType" resultType="com.chua.starter.proxy.support.entity.SystemServerSetting">
+        SELECT * FROM proxy_server_setting 
+        WHERE proxy_server_setting_server_id = #{serverId} 
+        AND proxy_server_setting_type = #{settingType}
+    </select>
+
+    <!-- 根据配置类型查询配置列表 -->
+    <select id="selectByType" resultType="com.chua.starter.proxy.support.entity.SystemServerSetting">
+        SELECT * FROM proxy_server_setting 
+        WHERE proxy_server_setting_type = #{settingType}
+    </select>
+
+    <!-- 获取服务器配置的最大排序值 -->
+    <select id="getMaxOrderByServerId" resultType="java.lang.Integer">
+        SELECT COALESCE(MAX(proxy_server_setting_order), 0) 
+        FROM proxy_server_setting 
+        WHERE proxy_server_setting_server_id = #{serverId}
+    </select>
+
+    <!-- 批量更新配置排序 -->
+    <update id="updateOrder">
+        UPDATE proxy_server_setting 
+        SET proxy_server_setting_order = #{order} 
+        WHERE proxy_server_setting_id = #{settingId}
+    </update>
+
+    <!-- 根据服务器ID和启用状态查询配置列表 -->
+    <select id="selectByServerIdAndEnabled" resultType="com.chua.starter.proxy.support.entity.SystemServerSetting">
+        SELECT * FROM proxy_server_setting 
+        WHERE proxy_server_setting_server_id = #{serverId} 
+        AND proxy_server_setting_enabled = #{enabled} 
+        ORDER BY proxy_server_setting_order ASC
+    </select>
+
+    <!-- 更新配置启用状态 -->
+    <update id="updateEnabled">
+        UPDATE proxy_server_setting 
+        SET proxy_server_setting_enabled = #{enabled} 
+        WHERE proxy_server_setting_id = #{settingId}
+    </update>
+
+</mapper>
+
+

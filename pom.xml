@@ -144,7 +144,9 @@
 
         <!-- API网关模块 -->
         <module>spring-support-gateway-starter</module>
+        <module>spring-support-proxy-starter</module>
         <module>spring-support-sync-data-starter</module>         <!-- API网关 -->
+        <module>spring-support-module-smoke-test</module>        <!-- 模块级 Spring Boot 冒烟测试应用 -->
 
     </modules>
 
@@ -217,6 +219,7 @@
         
         <!-- 构建控制属性 -->
         <skipTests>true</skipTests>  <!-- 默认跳过测试，可通过 mvn clean install -DskipTests=false 执行测试 -->
+        <maven.source.skip>true</maven.source.skip>
         
         <!-- Maven仓库配置 - 可通过profile或-D参数覆盖 -->
         <maven.repo.releases.id>maven-releases</maven.repo.releases.id>
@@ -337,6 +340,8 @@
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
                 <version>${lombok.version}</version>
+                <scope>provided</scope>
+                <optional>true</optional>
             </dependency>
             
             <!-- ========== Spring Boot 基础模块（可选） ========== -->
@@ -596,6 +601,12 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-gateway-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-proxy-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
@@ -1059,6 +1070,9 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
                 <version>${maven-source-plugin.version}</version>
+                <configuration>
+                    <skipSource>${maven.source.skip}</skipSource>
+                </configuration>
                 <executions>
                     <!-- 在package阶段生成源码jar包 - 已注释
                     <execution>
@@ -1238,6 +1252,7 @@
             <properties>
                 <skipTests>true</skipTests>
                 <maven.javadoc.skip>true</maven.javadoc.skip>
+                <maven.source.skip>true</maven.source.skip>
             </properties>
         </profile>
         
@@ -1247,6 +1262,7 @@
             <properties>
                 <skipTests>false</skipTests>
                 <maven.javadoc.skip>false</maven.javadoc.skip>
+                <maven.source.skip>false</maven.source.skip>
             </properties>
             <build>
                 <plugins>
